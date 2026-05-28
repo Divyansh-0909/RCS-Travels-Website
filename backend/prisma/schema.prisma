@@ -1,0 +1,145 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Enums ───────────────────────────────────────────────────────────────────
+
+enum BookingStatus {
+  pending
+  assigned
+  en_route
+  reached
+  started
+  completed
+  cancelled
+}
+
+enum VehicleType {
+  SEDAN
+  SUV
+  HATCHBACK
+  INNOVA
+  TEMPO_TRAVELLER
+}
+
+enum BookingSource {
+  website
+  whatsapp
+  admin
+}
+
+enum CancelledBy {
+  user
+  driver
+  admin
+}
+
+// ─── Models ──────────────────────────────────────────────────────────────────
+
+model User {
+  id             String    @id @default(uuid())
+  clerkId        String    @unique @map("clerk_id")
+  phone          String    @unique
+  name           String?
+  languagePref   String    @default("en") @map("language_pref")
+  whatsappNumber String?   @map("whatsapp_number")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  bookings Booking[]
+
+  @@map("users")
+}
+
+model Driver {
+  id            String      @id @default(uuid())
+  clerkId       String?     @unique @map("clerk_id")
+  name          String
+  phone         String      @unique
+  vehicleType   VehicleType @map("vehicle_type")
+  vehicleNumber String      @map("vehicle_number")
+  isActive      Boolean     @default(true) @map("is_active")
+  isOnline      Boolean     @default(false) @map("is_online")
+  fcmToken      String?     @map("fcm_token")
+  dlDocUrl      String?     @map("dl_doc_url")
+  rcDocUrl      String?     @map("rc_doc_url")
+  isVerified    Boolean     @default(false) @map("is_verified")
+
+  location DriverLocation?
+  bookings Booking[]
+
+  @@map("drivers")
+}
+
+// One row per driver — upserted every 4 seconds when driver is online
+model DriverLocation {
+  driverId  String   @id @map("driver_id")
+  latitude  Float
+  longitude Float
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  driver Driver @relation(fields: [driverId], references: [id], onDelete: Cascade)
+
+  @@map("driver_locations")
+}
+
+model Booking {
+  id                 String        @id @default(uuid())
+  bookingCode        String        @unique @map("booking_code")
+  userId             String        @map("user_id")
+  driverId           String?       @map("driver_id")
+  customerPhone      String        @map("customer_phone")
+  pickupAddress      String        @map("pickup_address")
+  pickupLat          Float         @map("pickup_lat")
+  pickupLng          Float         @map("pickup_lng")
+  dropAddress        String        @map("drop_address")
+  dropLat            Float         @map("drop_lat")
+  dropLng            Float         @map("drop_lng")
+  vehicleType        VehicleType   @map("vehicle_type")
+  scheduledAt        DateTime?     @map("scheduled_at")
+  isOutstation       Boolean       @default(false) @map("is_outstation")
+  distanceKm         Float?        @map("distance_km")
+  baseFare           Float         @map("base_fare")
+  tollCharges        Float         @default(0) @map("toll_charges")
+  totalFare          Float         @map("total_fare")
+  commissionPct      Float         @default(0) @map("commission_pct")
+  commissionAmt      Float         @default(0) @map("commission_amt")
+  status             BookingStatus @default(pending)
+  cancelledBy        CancelledBy?  @map("cancelled_by")
+  cancellationCharge Float?        @map("cancellation_charge")
+  source             BookingSource @default(website)
+  createdAt          DateTime      @default(now()) @map("created_at")
+  completedAt        DateTime?     @map("completed_at")
+
+  user   User    @relation(fields: [userId], references: [id])
+  driver Driver? @relation(fields: [driverId], references: [id])
+
+  @@map("bookings")
+}
+
+// Fixed NCR pricing — looked up by destination + vehicle type
+model FareTable {
+  id              String      @id @default(uuid())
+  destinationName String      @map("destination_name")
+  vehicleType     VehicleType @map("vehicle_type")
+  fixedFare       Float       @map("fixed_fare")
+  isActive        Boolean     @default(true) @map("is_active")
+
+  @@unique([destinationName, vehicleType])
+  @@map("fare_table")
+}
+
+// Tracks in-progress WhatsApp booking bot conversations
+model WhatsappSession {
+  phone     String   @id
+  step      String
+  data      Json     @default("{}")
+  language  String   @default("en")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("whatsapp_sessions")
+}
