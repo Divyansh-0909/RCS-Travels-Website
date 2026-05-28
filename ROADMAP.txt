@@ -1,0 +1,162 @@
+RCS TRAVELS — PROJECT ROADMAP
+===============================
+
+
+PHASE 1 — Foundation (Day 1-2)
+--------------------------------
+Goal: Get a working end-to-end skeleton before writing any real features.
+
+Backend:
+  - Create a Neon PostgreSQL database, copy DATABASE_URL into backend/.env
+  - Run: npm run db:generate  (generates Prisma client)
+  - Run: npm run db:migrate   (creates all 6 tables in the DB)
+  - Set up Clerk at clerk.com, add CLERK_SECRET_KEY to backend/.env 
+  (for using protected routes use "protected" keyword
+  eg. router.post('/bookings', protect, createBooking))
+  - Verify backend runs: npm run dev → GET /health should return { status: "ok" }
+
+Frontend:
+  - Add Clerk publishable key to frontend/.env
+  - Add basic routes in App.tsx for /, /book, /login, /booking/:id
+  - Verify Vite dev server runs: npm run dev
+
+
+PHASE 2 — Core Backend APIs (Day 2-4)
+---------------------------------------
+Goal: Build only what the booking flow needs.
+
+  POST  /api/fare/estimate                ← fare calc (fixed table OR Google Distance Matrix)
+  POST  /api/bookings                     ← create booking + auto-trigger driver assignment
+  GET   /api/bookings/:id/status          ← polling endpoint for customer tracking page
+  PATCH /api/driver/rides/:id/accept      ← driver accepts the ride
+  PATCH /api/driver/rides/:id/decline     ← driver declines, system tries next driver
+  GET   /api/admin/bookings               ← list all bookings for admin visibility
+
+Auto-Assignment Flow (runs inside POST /api/bookings):
+  1. Booking is created with status = pending
+  2. Query nearest online + active + verified driver using Haversine distance
+     from driver_locations table
+  3. Send FCM push notification to that driver
+  4. Store assignment attempt timestamp on the booking
+  5. Driver accepts  → status becomes assigned, customer sees driver info
+  6. Driver declines or 30s passes → try next nearest driver
+  7. No drivers available → status stays pending, admin gets WhatsApp alert
+
+Files to create:
+  backend/routes/bookings.ts
+  backend/routes/fare.ts
+  backend/routes/driver.ts
+  backend/services/fare.ts             ← fare calculation logic
+  backend/services/driverAssignment.ts ← find nearest driver + retry logic
+  backend/services/notification.ts     ← FCM + WhatsApp send helpers
+
+Rule: Test every endpoint in Postman before touching any frontend.
+
+
+PHASE 3 — Customer Website (Day 4-7)
+--------------------------------------
+Goal: Build the 3 pages that make the booking flow work.
+
+  /book        → pickup/drop (Google Places autocomplete), vehicle select,
+                 fare preview, confirm button
+  /login       → Clerk phone OTP modal (triggered when user hits confirm
+                 without being logged in)
+  /booking/:id → booking code, status badge, driver info once assigned.
+                 Poll GET /api/bookings/:id/status every 5 seconds.
+
+Note: Don't build the homepage until the booking flow works end-to-end.
+
+
+PHASE 4 — Admin Dashboard (Day 7-9)
+-------------------------------------
+Goal: Visibility and driver management — assignment is automatic.
+
+  /admin/bookings → table of all bookings with live status, manual re-assign
+                    only as a fallback (e.g. when no driver auto-accepted)
+  /admin/drivers  → add a driver (name, phone, vehicle type, vehicle number)
+
+This lets you monitor the full loop:
+  Customer books → System auto-assigns driver → Customer sees driver assigned.
+  Admin only intervenes if auto-assignment fails (no available drivers).
+
+
+PHASE 5 — Driver App (Day 9-14)
+---------------------------------
+Goal: Driver can receive and complete rides.
+
+  Setup: Start a new Expo project in a separate driver-app/ folder at repo root.
+
+  Screens (in priority order):
+    1. Login          → phone OTP via Clerk
+    2. Home           → Go Online / Go Offline toggle
+    3. Incoming ride  → accept/decline with 30-second timer
+    4. Active ride    → "Reached Pickup", "Start Ride", "Complete Ride" buttons
+
+  GPS broadcasting:
+    When driver goes Online → POST /api/driver/location every 4 seconds.
+    When driver goes Offline → stop broadcasting.
+
+
+PHASE 6 — Notifications (Day 14-16)
+--------------------------------------
+Goal: Driver gets notified of new rides. Customer gets booking updates.
+
+  FCM (Firebase Cloud Messaging):
+    - Firebase console → create project → get service account JSON
+    - Add credentials to backend/.env
+    - Driver app receives incoming ride alert as a push notification
+
+  WhatsApp (Meta WhatsApp Cloud API):
+    - Meta developer portal → WhatsApp Cloud API → get phone number ID + token
+    - Customer receives "Booking Confirmed" message
+    - Customer receives "Driver Assigned" message with driver details
+
+
+PHASE 7 — Tracking + Polish (Day 16-18)
+-----------------------------------------
+Goal: Live tracking, ride history, and multi-language support.
+
+  - /booking/:id → show live driver location on Google Maps
+    (polling is already in place — just add the map component)
+  - /my-bookings → ride history + cancel button with 35% charge warning
+    if driver has already reached pickup
+  - Multi-language → wrap all strings with i18next, add Hindi translation file
+  - Homepage → hero, vehicle pricing, trust indicators, language switcher
+
+
+LANGUAGE DECISION
+------------------
+Code is written in JavaScript (ES Modules) for now.
+TypeScript migration will happen later once the full system is working.
+When migrating: add tsconfig.json, rename .js → .ts / .jsx → .tsx,
+add type annotations incrementally. The codebase is structured so this
+conversion will be straightforward.
+
+
+DEPLOYMENT STACK
+-----------------
+  Frontend  → Vercel
+  Backend   → Render (free tier, kept alive via cron-job.org pinging /health every 10 mins)
+  Database  → Neon PostgreSQL
+  Driver app → Expo EAS (later)
+
+
+GOLDEN RULE
+------------
+Always build the API endpoint first → test in Postman → then build the UI.
+Never build UI before the API exists.
+
+
+CURRENT STATUS
+---------------
+  [x] Project folder structure created
+  [x] Frontend dependencies installed (React, Vite, Tailwind, Clerk, i18next, Axios)
+  [x] Backend dependencies installed (Express, Prisma, Clerk, Firebase, Multer, S3, etc.)
+  [x] Prisma schema created with all 6 tables
+  [x] Phase 1 — Foundation
+  [ ] Phase 2 — Core Backend APIs
+  [ ] Phase 3 — Customer Website
+  [ ] Phase 4 — Admin Dashboard
+  [ ] Phase 5 — Driver App
+  [ ] Phase 6 — Notifications
+  [ ] Phase 7 — Tracking + Polish

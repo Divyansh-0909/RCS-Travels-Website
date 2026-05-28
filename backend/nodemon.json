@@ -1,6 +1,6 @@
 {
   "watch": ["."],
-  "ext": "ts",
-  "ignore": ["dist", "node_modules"],
-  "exec": "node --loader ts-node/esm index.ts"
+  "ext": "js",
+  "ignore": ["dist", "node_modules", "generated"],
+  "exec": "node index.js"
 }

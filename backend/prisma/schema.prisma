@@ -1,6 +1,5 @@
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
@@ -24,7 +23,6 @@ enum VehicleType {
   SUV
   HATCHBACK
   INNOVA
-  TEMPO_TRAVELLER
 }
 
 enum BookingSource {
