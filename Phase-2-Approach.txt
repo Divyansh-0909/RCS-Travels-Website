@@ -1,0 +1,72 @@
+X 1. services/fare.js — Start here
+This is the simplest piece and everything else depends on it. It takes pickup/drop coordinates and vehicle type, then returns a fare breakdown.
+
+The logic has two paths:
+
+Fixed table lookup — query fare_table in the DB by destination name + vehicle type. Used for known NCR routes (Gurgaon, Noida, Airport, etc.)
+Per-km fallback — if the destination isn't in the table, call Google Distance Matrix API, get distance in km, multiply by your per-km rate
+Output: { baseFare, tollCharges, totalFare, distanceKm, fareSource }
+
+X 2. routes/fare.js — One endpoint
+Just wires POST /api/fare/estimate to the service above. No auth required — the customer needs to see the fare before logging in.
+
+3. services/driverAssignment.js — The core logic
+This is the most complex piece. It takes a bookingId and finds the best available driver:
+
+Pull the booking's pickup coordinates
+Query driver_locations joined with drivers — filter for is_online = true, is_active = true, is_verified = true
+Sort by Haversine distance from pickup point
+Take the nearest driver, call notification.js to send them an FCM push (stubbed for now — just console.log)
+Record the attempt timestamp on the booking
+Wait 30 seconds — if no accept, move to the next driver and repeat
+If the list is exhausted: on-spot → return null (caller handles 503); scheduled → send WhatsApp alert to admin (stubbed) and leave booking as confirmed
+The retry loop is the tricky part. A clean way to handle it is a recursive async function with a setTimeout for the 30-second wait, iterating through the sorted driver list.
+
+4. services/notification.js — Stubs only for now
+Two functions: sendFCM(driverFcmToken, payload) and sendWhatsApp(phone, message). Both just console.log for Phase 2. You'll plug in real Firebase and Meta API in Phase 6. Keeping them as stubs means the rest of the code is already wired correctly.
+
+5. routes/bookings.js — Three endpoints
+POST /api/bookings (protected — Clerk JWT required):
+
+Validate inputs
+If scheduledAt is set and less than 2 hours away → 422
+If scheduledAt is set and more than 2 hours away → create booking with status = confirmed, set confirmedAt = now, return booking code
+If scheduledAt is null → create booking with status = pending, immediately call driverAssignment.js, if no driver found → delete the booking and return 503
+GET /api/bookings/:id/status (protected):
+
+Fetch booking by ID, verify it belongs to the requesting user
+Return status + driver info (name, phone, vehicle, current location) if assigned
+6. routes/driver.js — Two endpoints (protected, driver JWT)
+PATCH /api/driver/rides/:id/accept:
+
+Set booking.status = assigned, booking.driverId = driver.id
+Cancel the 30-second retry timer for this booking
+PATCH /api/driver/rides/:id/decline:
+
+Log the decline, trigger driverAssignment.js again to try the next driver
+7. jobs/assignScheduledRides.js — Background job
+A setInterval that fires every 5 minutes. Queries for bookings where status = confirmed AND scheduledAt <= now + 60 minutes (or now + 3 hours for outstation). For each match, calls driverAssignment.js. This job starts when the Express server starts.
+
+How it all connects
+
+POST /api/bookings
+    │
+    ├─ scheduledAt set (>2h) ──→ status = confirmed, job picks it up later
+    │
+    └─ scheduledAt null ───────→ driverAssignment.js runs now
+                                      │
+                                      ├─ driver found ──→ FCM stub → wait 30s
+                                      │                        │
+                                      │                   accept → status = assigned
+                                      │                   decline → try next driver
+                                      │
+                                      └─ no drivers ──→ 503, booking deleted
+Build order
+services/fare.js → test POST /api/fare/estimate in Postman
+services/notification.js (stubs)
+services/driverAssignment.js
+routes/bookings.js
+routes/driver.js
+jobs/assignScheduledRides.js → wire into index.js
+GET /api/admin/bookings (last, it's just a DB read with filters)
+Don't move to step N+1 until step N works in Postman. The fare service is completely independent — it's the safest place to start.

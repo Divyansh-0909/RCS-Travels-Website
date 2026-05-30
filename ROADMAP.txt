@@ -1,6 +1,16 @@
 RCS TRAVELS — PROJECT ROADMAP
 ===============================
 
+IMPORTANT:
+For destination which are not in the fixed fare table show "Tolls payable to driver separately" on frontend
+
+Add API call count restriction
+
+Enable these API's: Routes API, Places API (New)
+
+After you deploy to Render:
+Come back to the key, add IP address restriction, and paste in your Render server's outbound IP. At that point the key becomes fully locked down.
+
 
 PHASE 1 — Foundation (Day 1-2)
 --------------------------------
@@ -26,29 +36,49 @@ PHASE 2 — Core Backend APIs (Day 2-4)
 Goal: Build only what the booking flow needs.
 
   POST  /api/fare/estimate                ← fare calc (fixed table OR Google Distance Matrix)
-  POST  /api/bookings                     ← create booking + auto-trigger driver assignment
+  POST  /api/bookings                     ← create booking (scheduled or on-spot)
   GET   /api/bookings/:id/status          ← polling endpoint for customer tracking page
   PATCH /api/driver/rides/:id/accept      ← driver accepts the ride
   PATCH /api/driver/rides/:id/decline     ← driver declines, system tries next driver
   GET   /api/admin/bookings               ← list all bookings for admin visibility
 
-Auto-Assignment Flow (runs inside POST /api/bookings):
-  1. Booking is created with status = pending
-  2. Query nearest online + active + verified driver using Haversine distance
+Booking Modes:
+
+  Scheduled (primary — up to 7 days in advance):
+    - scheduledAt is set and at least 2 hours from now (enforced in POST /api/bookings)
+    - If scheduledAt is set but less than 2 hours away → reject with HTTP 422
+    - Booking created immediately with status = confirmed (fare locked, code issued)
+    - Driver is NOT assigned at booking time
+    - Background job (assignScheduledRides.js) runs every 5 minutes
+      → assigns drivers to bookings where status = confirmed AND scheduledAt <= now + 60 min
+      → for outstation rides: trigger 3 hours before scheduledAt
+    - Status flow: confirmed → assigned → en_route → reached → started → completed
+
+  On-Spot (secondary — subject to availability):
+    - scheduledAt is null (no time given, ride wanted now)
+    - Attempt immediate driver assignment on booking creation
+    - If no driver available → reject with HTTP 503, do not create the booking
+    - Status flow: pending → assigned → en_route → reached → started → completed
+
+Auto-Assignment Flow (shared logic, used by both modes):
+  1. Query nearest online + active + verified driver using Haversine distance
      from driver_locations table
-  3. Send FCM push notification to that driver
-  4. Store assignment attempt timestamp on the booking
-  5. Driver accepts  → status becomes assigned, customer sees driver info
-  6. Driver declines or 30s passes → try next nearest driver
-  7. No drivers available → status stays pending, admin gets WhatsApp alert
+  2. Send FCM push notification to that driver (stub in Phase 2, real in Phase 6)
+  3. Store assignment attempt timestamp on the booking
+  4. Driver accepts  → status becomes assigned, customer sees driver info
+  5. Driver declines or 30s passes → try next nearest driver
+  6. No drivers available:
+       On-spot    → HTTP 503 returned, booking not saved
+       Scheduled  → booking stays confirmed, admin alerted via WhatsApp
 
 Files to create:
-  backend/routes/bookings.ts
-  backend/routes/fare.ts
-  backend/routes/driver.ts
-  backend/services/fare.ts             ← fare calculation logic
-  backend/services/driverAssignment.ts ← find nearest driver + retry logic
-  backend/services/notification.ts     ← FCM + WhatsApp send helpers
+  backend/routes/bookings.js
+  backend/routes/fare.js
+  backend/routes/driver.js
+  backend/services/fare.js                  ← fare calculation logic
+  backend/services/driverAssignment.js      ← find nearest driver + retry logic
+  backend/services/notification.js          ← FCM + WhatsApp helpers (stub for Phase 6)
+  backend/jobs/assignScheduledRides.js      ← runs every 5 mins, assigns upcoming rides
 
 Rule: Test every endpoint in Postman before touching any frontend.
 

@@ -10,6 +10,7 @@ datasource db {
 
 enum BookingStatus {
   pending
+  confirmed   // scheduled ride accepted, driver assigned closer to pickup time
   assigned
   en_route
   reached
@@ -101,12 +102,11 @@ model Booking {
   scheduledAt        DateTime?     @map("scheduled_at")
   isOutstation       Boolean       @default(false) @map("is_outstation")
   distanceKm         Float?        @map("distance_km")
-  baseFare           Float         @map("base_fare")
-  tollCharges        Float         @default(0) @map("toll_charges")
-  totalFare          Float         @map("total_fare")
+  fare               Float         @map("fare")
   commissionPct      Float         @default(0) @map("commission_pct")
   commissionAmt      Float         @default(0) @map("commission_amt")
   status             BookingStatus @default(pending)
+  confirmedAt        DateTime?     @map("confirmed_at")
   cancelledBy        CancelledBy?  @map("cancelled_by")
   cancellationCharge Float?        @map("cancellation_charge")
   source             BookingSource @default(website)
@@ -129,6 +129,16 @@ model FareTable {
 
   @@unique([destinationName, vehicleType])
   @@map("fare_table")
+}
+
+// Tracks monthly usage of external APIs to enforce call limits
+model ApiUsage {
+  service String
+  month   String  // "YYYY-MM"
+  count   Int     @default(0)
+
+  @@id([service, month])
+  @@map("api_usage")
 }
 
 // Tracks in-progress WhatsApp booking bot conversations
