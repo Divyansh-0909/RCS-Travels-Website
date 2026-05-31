@@ -1,0 +1,163 @@
+// ── FIND ───────────────────────────────────────────────
+
+prisma.table.findUnique({ where: { id } })
+// returns one record or null — use when field is @unique
+
+prisma.table.findUniqueOrThrow({ where: { id } })
+// same but throws if not found instead of returning null
+
+prisma.table.findFirst({ where: { ... } })
+// returns first match or null — use with non-unique filters
+
+prisma.table.findFirstOrThrow({ where: { ... } })
+// same but throws if not found
+
+prisma.table.findMany({ where: { ... }, orderBy: { ... }, skip: 0, take: 20 })
+// returns array — supports pagination, filtering, sorting
+
+
+// ── CREATE ─────────────────────────────────────────────
+
+prisma.table.create({ data: { ... } })
+// insert one record, returns it
+
+prisma.table.createMany({ data: [...], skipDuplicates: true })
+// bulk insert — does NOT return records (no include/select)
+
+
+// ── UPDATE ─────────────────────────────────────────────
+
+prisma.table.update({ where: { id }, data: { ... } })
+// update one record — throws if not found
+
+prisma.table.updateMany({ where: { ... }, data: { ... } })
+// bulk update — returns { count } not records
+
+// atomic increment/decrement — no race condition
+prisma.table.update({ where: { id }, data: { count: { increment: 1 } } })
+prisma.table.update({ where: { id }, data: { count: { decrement: 1 } } })
+
+
+// ── UPSERT ─────────────────────────────────────────────
+
+prisma.table.upsert({
+  where:  { id },
+  update: { ... },   // runs if record exists
+  create: { ... },   // runs if record doesn't exist
+})
+
+
+// ── DELETE ─────────────────────────────────────────────
+
+prisma.table.delete({ where: { id } })
+// delete one — throws if not found
+
+prisma.table.deleteMany({ where: { ... } })
+// bulk delete — returns { count }
+
+
+// ── COUNT ──────────────────────────────────────────────
+
+prisma.table.count({ where: { ... } })
+// returns a number
+
+
+// ── RELATIONS ──────────────────────────────────────────
+
+// include: joins related tables
+prisma.booking.findMany({
+  include: { driver: true, user: true }
+})
+
+// select: pick specific fields only (more efficient)
+prisma.booking.findMany({
+  select: { id: true, status: true, driver: { select: { name: true } } }
+})
+
+
+// ── FILTERS ────────────────────────────────────────────
+
+where: { status: 'active' }                        // exact match
+where: { name: { contains: 'ram', mode: 'insensitive' } }  // LIKE %ram%
+where: { fare: { gte: 500, lte: 2000 } }           // between
+where: { createdAt: { gte: new Date('2026-01-01') } }
+where: { driverId: { not: null } }                 // IS NOT NULL
+where: { driverId: null }                          // IS NULL
+where: { status: { in: ['pending', 'confirmed'] } }
+where: { status: { notIn: ['cancelled'] } }
+where: { AND: [ { isActive: true }, { isOnline: true } ] }
+where: { OR:  [ { status: 'pending' }, { status: 'confirmed' } ] }
+
+
+// ── ORDERING & PAGINATION ──────────────────────────────
+
+orderBy: { createdAt: 'desc' }
+orderBy: [{ distanceKm: 'asc' }, { createdAt: 'asc' }]  // multi-column sort
+skip: (page - 1) * limit
+take: limit
+
+
+// ── RAW SQL (when Prisma can't express it) ─────────────
+
+prisma.$queryRaw`SELECT * FROM bookings WHERE fare > ${500}`
+prisma.$executeRaw`UPDATE drivers SET is_online = false WHERE updated_at < ${cutoff}`
+
+
+// ── TRANSACTIONS ───────────────────────────────────────
+
+// use when two operations must succeed or fail together
+await prisma.$transaction([
+  prisma.booking.update({ where: { id }, data: { status: 'assigned' } }),
+  prisma.driver.update({ where: { id: driverId }, data: { isOnline: false } }),
+])
+
+// interactive transaction (when you need results from step 1 in step 2)
+await prisma.$transaction(async (tx) => {
+  const booking = await tx.booking.update({ ... })
+  await tx.driver.update({ where: { id: booking.driverId }, data: { ... } })
+})
+The ones you'll use 80% of the time: findUnique, findMany, create, update, upsert, delete. The rest come up for specific cases.
+
+1. POST /api/bookings
+Auth header: Clerk JWT
+
+Request body:
+
+
+{
+  "pickupAddress": "Connaught Place, New Delhi",
+  "pickupLat": 28.6315,
+  "pickupLng": 77.2167,
+  "dropAddress": "Gurgaon Sector 29",
+  "dropLat": 28.4595,
+  "dropLng": 77.0266,
+  "vehicleType": "SEDAN",
+  "fare": 850,
+  "distanceKm": null,
+  "scheduledAt": "2026-05-31T14:00:00.000Z",
+  "isOutstation": false,
+  "customerPhone": "9876543210"
+}
+scheduledAt is null for on-spot. distanceKm is null for fixed-table routes, a number for per-km routes. fare comes from whatever the customer saw on the estimate screen.
+
+2. GET /api/bookings/:id/status
+Auth header: Clerk JWT
+
+No body. Everything is in the URL:
+
+
+GET /api/bookings/uuid-here/status
+:id is the booking UUID returned from POST /api/bookings.
+
+3. GET /api/admin/bookings
+Auth header: Clerk JWT (admin role)
+
+No body. Filters via query params:
+
+
+GET /api/admin/bookings?status=pending&date=2026-05-31&page=1&limit=20
+Param	Type	Required	Description
+status	string	no	Filter by booking status
+date	string	no	YYYY-MM-DD — filters by createdAt
+page	number	no	Defaults to 1
+limit	number	no	Defaults to 20

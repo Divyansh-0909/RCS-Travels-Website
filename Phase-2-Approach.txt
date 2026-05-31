@@ -33,8 +33,8 @@ Two functions: sendFCM(driverFcmToken, payload) and sendWhatsApp(phone, message)
 POST /api/bookings (protected — Clerk JWT required):
 
 Validate inputs
-If scheduledAt is set and less than 2 hours away → 422
-If scheduledAt is set and more than 2 hours away → create booking with status = confirmed, set confirmedAt = now, return booking code
+If scheduledAt is set and less than 30 minutes away → 422
+If scheduledAt is set and more than 30 minutes away → create booking with status = confirmed, set confirmedAt = now, return booking code
 If scheduledAt is null → create booking with status = pending, immediately call driverAssignment.js, if no driver found → delete the booking and return 503
 GET /api/bookings/:id/status (protected):
 

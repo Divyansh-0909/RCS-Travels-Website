@@ -98,7 +98,7 @@ model DriverLocation {
 
 model Booking {
   id                 String        @id @default(uuid())
-  bookingCode        String        @unique @map("booking_code")
+  bookingCode        String        @unique @map("booking_code") // 6 digit otp
   userId             String        @map("user_id")
   driverId           String?       @map("driver_id")
   customerPhone      String        @map("customer_phone")

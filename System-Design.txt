@@ -9,7 +9,7 @@ Last updated: 2026-05-31
 
 Functional
 ----------
-- Customers schedule rides 2 hours to 7 days in advance (primary use case)
+- Customers schedule rides 30 minutes to 7 days in advance (primary use case)
 - Customers book on-spot rides subject to driver availability (secondary)
 - System auto-assigns the nearest available, approved driver
 - Drivers self-register via phone OTP, upload DL + Aadhar, await admin approval
@@ -119,7 +119,7 @@ BookingStatus flow:
 
 TWO MODES:
 
-  Scheduled (primary — 2 hours to 7 days in advance)
+  Scheduled (primary — 30 minutes to 7 days in advance)
   ---------------------------------------------------
   Client                    Backend                      DB
     │                          │                          │

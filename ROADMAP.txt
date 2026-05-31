@@ -2,15 +2,12 @@ RCS TRAVELS — PROJECT ROADMAP
 ===============================
 
 IMPORTANT:
-For destination which are not in the fixed fare table show "Tolls payable to driver separately" on frontend
-
-Add API call count restriction
-
-Enable these API's: Routes API, Places API (New)
-
-After you deploy to Render:
-Come back to the key, add IP address restriction, and paste in your Render server's outbound IP. At that point the key becomes fully locked down.
-
+- For destination which are not in the fixed fare table show "Tolls payable to driver separately" on frontend
+- Add API call count restriction
+- Enable these API's: Routes API, Places API (New)
+- After you deploy to Render:
+- Come back to the key, add IP address restriction on google console, and paste in your Render server's outbound IP. At that point the key becomes fully locked down.
+- Try changing the ride request notification duration from 30s -> 20s.
 
 PHASE 1 — Foundation (Day 1-2)
 --------------------------------
@@ -45,8 +42,8 @@ Goal: Build only what the booking flow needs.
 Booking Modes:
 
   Scheduled (primary — up to 7 days in advance):
-    - scheduledAt is set and at least 2 hours from now (enforced in POST /api/bookings)
-    - If scheduledAt is set but less than 2 hours away → reject with HTTP 422
+    - scheduledAt is set and at least 30 minutes from now (enforced in POST /api/bookings)
+    - If scheduledAt is set but less than 30 minutes away → reject with HTTP 422
     - Booking created immediately with status = confirmed (fare locked, code issued)
     - Driver is NOT assigned at booking time
     - Background job (assignScheduledRides.js) runs every 5 minutes
