@@ -8,6 +8,7 @@ IMPORTANT:
 - After you deploy to Render:
 - Come back to the key, add IP address restriction on google console, and paste in your Render server's outbound IP. At that point the key becomes fully locked down.
 - Try changing the ride request notification duration from 30s -> 20s.
+- Assign admin role to raju from clerk dashboard.
 
 PHASE 1 — Foundation (Day 1-2)
 --------------------------------

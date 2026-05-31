@@ -12,7 +12,7 @@ app.use(cors())
 app.use(express.json())
 
 app.use('/api/fare', fareRouter)
-app.use('/api/booking', bookingsRouter)
+app.use('/api/bookings', bookingsRouter)
 
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok' })
