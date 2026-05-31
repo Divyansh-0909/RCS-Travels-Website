@@ -35,7 +35,7 @@ PHASE 2 — Core Backend APIs (Day 2-4)
 ---------------------------------------
 Goal: Build only what the booking flow needs.
 
-  POST  /api/fare/estimate                ← fare calc (fixed table OR Google Distance Matrix)
+  POST  /api/fare/estimate                ← fare calc (fixed table OR Google Routes API)
   POST  /api/bookings                     ← create booking (scheduled or on-spot)
   GET   /api/bookings/:id/status          ← polling endpoint for customer tracking page
   PATCH /api/driver/rides/:id/accept      ← driver accepts the ride
@@ -61,7 +61,7 @@ Booking Modes:
     - Status flow: pending → assigned → en_route → reached → started → completed
 
 Auto-Assignment Flow (shared logic, used by both modes):
-  1. Query nearest online + active + verified driver using Haversine distance
+  1. Query nearest online + active driver (verificationStatus = approved) using Haversine distance
      from driver_locations table
   2. Send FCM push notification to that driver (stub in Phase 2, real in Phase 6)
   3. Store assignment attempt timestamp on the booking
@@ -103,11 +103,18 @@ Goal: Visibility and driver management — assignment is automatic.
 
   /admin/bookings → table of all bookings with live status, manual re-assign
                     only as a fallback (e.g. when no driver auto-accepted)
-  /admin/drivers  → add a driver (name, phone, vehicle type, vehicle number)
+  /admin/drivers  → view all drivers, approve/reject pending verifications,
+                    remove (deactivate) any driver
 
 This lets you monitor the full loop:
   Customer books → System auto-assigns driver → Customer sees driver assigned.
   Admin only intervenes if auto-assignment fails (no available drivers).
+
+Driver verification flow:
+  Driver self-registers via phone OTP → uploads DL + Aadhar → verificationStatus = pending
+  Admin reviews documents → approves (verificationStatus = approved, isActive = true)
+                           → or rejects (verificationStatus = rejected)
+  Only approved drivers can go online and receive rides.
 
 
 PHASE 5 — Driver App (Day 9-14)
@@ -117,14 +124,24 @@ Goal: Driver can receive and complete rides.
   Setup: Start a new Expo project in a separate driver-app/ folder at repo root.
 
   Screens (in priority order):
-    1. Login          → phone OTP via Clerk
-    2. Home           → Go Online / Go Offline toggle
-    3. Incoming ride  → accept/decline with 30-second timer
-    4. Active ride    → "Reached Pickup", "Start Ride", "Complete Ride" buttons
+    1. Register/Login  → phone OTP via Clerk
+    2. Onboarding      → upload DL + Aadhar, submit for verification
+                         show "Pending approval" screen until admin approves
+    3. Home            → Go Online / Go Offline toggle (only if approved)
+    4. Incoming ride   → accept/decline with 30-second timer
+    5. Active ride     → "Reached Pickup", "Start Ride", "Complete Ride" buttons
 
   GPS broadcasting:
     When driver goes Online → POST /api/driver/location every 4 seconds.
+    Payload includes bearing + speedKmh (calculated from last two positions).
     When driver goes Offline → stop broadcasting.
+
+  Dead reckoning (client-side, customer tracking page):
+    Between 5-second polls, predict driver position using:
+      predictedLat = lat + (speedKmh/3600 × Δt) × cos(bearing × π/180) / 111
+      predictedLng = lng + (speedKmh/3600 × Δt) × sin(bearing × π/180) / (111 × cos(lat × π/180))
+    where Δt = seconds since last known update.
+    When next poll arrives, snap to actual position.
 
 
 PHASE 6 — Notifications (Day 14-16)

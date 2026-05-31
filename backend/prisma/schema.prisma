@@ -38,6 +38,12 @@ enum CancelledBy {
   admin
 }
 
+enum VerificationStatus {
+  pending
+  approved
+  rejected
+}
+
 // ─── Models ──────────────────────────────────────────────────────────────────
 
 model User {
@@ -63,10 +69,11 @@ model Driver {
   vehicleNumber String      @map("vehicle_number")
   isActive      Boolean     @default(true) @map("is_active")
   isOnline      Boolean     @default(false) @map("is_online")
-  fcmToken      String?     @map("fcm_token")
-  dlDocUrl      String?     @map("dl_doc_url")
-  rcDocUrl      String?     @map("rc_doc_url")
-  isVerified    Boolean     @default(false) @map("is_verified")
+  fcmToken            String?            @map("fcm_token")
+  dlDocUrl            String?            @map("dl_doc_url")
+  aadharDocUrl        String?            @map("aadhar_doc_url")
+  createdAt           DateTime           @default(now()) @map("created_at")
+  verificationStatus  VerificationStatus @default(pending) @map("verification_status")
 
   location DriverLocation?
   bookings Booking[]
@@ -75,11 +82,14 @@ model Driver {
 }
 
 // One row per driver — upserted every 4 seconds when driver is online
+// bearing + speedKmh enable dead reckoning on the client between polling intervals
 model DriverLocation {
-  driverId  String   @id @map("driver_id")
-  latitude  Float
-  longitude Float
-  updatedAt DateTime @updatedAt @map("updated_at")
+  driverId   String   @id @map("driver_id")
+  latitude   Float
+  longitude  Float
+  bearing    Float?   // degrees 0–360, null until second update available
+  speedKmh   Float?   // km/h, null until second update available
+  updatedAt  DateTime @updatedAt @map("updated_at")
 
   driver Driver @relation(fields: [driverId], references: [id], onDelete: Cascade)
 

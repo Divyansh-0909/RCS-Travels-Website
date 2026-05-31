@@ -1,0 +1,362 @@
+RCS TRAVELS — SYSTEM DESIGN
+============================
+Last updated: 2026-05-31
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. REQUIREMENTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Functional
+----------
+- Customers schedule rides 2 hours to 7 days in advance (primary use case)
+- Customers book on-spot rides subject to driver availability (secondary)
+- System auto-assigns the nearest available, approved driver
+- Drivers self-register via phone OTP, upload DL + Aadhar, await admin approval
+- Drivers accept/decline rides via mobile app within a 30-second window
+- Customers track ride status via polling with dead reckoning between updates
+- Admin approves/rejects drivers, monitors all bookings, intervenes when needed
+- Tolls are paid by customer directly to driver — not included in the app fare
+
+Non-Functional
+--------------
+- Expected load: 10–30 rides/day — optimise for simplicity and cost, not throughput
+- CAP choice: Consistency + Availability — single-node PostgreSQL gives ACID
+  transactions and high availability, sacrificing partition tolerance. Right call
+  at this scale. A booking must never be created twice; a fare must never be wrong.
+- Mobile-first — customers and drivers are on phones, mostly mobile data
+- Google Routes API capped at 10,000 calls/month — tracked in DB, hard cutoff at limit
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+2. HIGH-LEVEL ARCHITECTURE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ┌─────────────────┐     ┌─────────────────┐     ┌──────────────────┐
+  │  Customer Web   │     │   Driver App     │     │  Admin Dashboard │
+  │  React + Vite   │     │  Expo (Android)  │     │  React + Vite    │
+  └────────┬────────┘     └────────┬─────────┘     └────────┬─────────┘
+           │                       │                         │
+           └───────────────────────┼─────────────────────────┘
+                                   │ HTTPS
+                      ┌────────────▼─────────────┐
+                      │     Express Backend       │
+                      │   Single Node.js server   │
+                      │                           │
+                      │  ┌─────────────────────┐  │
+                      │  │      REST APIs       │  │
+                      │  │  /api/fare           │  │
+                      │  │  /api/bookings       │  │
+                      │  │  /api/driver         │  │
+                      │  │  /api/admin          │  │
+                      │  └─────────────────────┘  │
+                      │                           │
+                      │  ┌─────────────────────┐  │
+                      │  │   Background Jobs    │  │
+                      │  │  assignScheduled     │  │
+                      │  │  Rides (every 5 min) │  │
+                      │  └─────────────────────┘  │
+                      └──────┬──────────┬──────────┘
+                             │          │
+                 ┌───────────▼──┐  ┌────▼─────────────┐
+                 │  Neon         │  │  External APIs    │
+                 │  PostgreSQL   │  │  Google Routes    │
+                 │  (Primary DB) │  │  Firebase FCM     │
+                 └──────────────┘  │  Meta WhatsApp    │
+                                   └──────────────────┘
+
+Why a single backend?
+  At 10–30 rides/day, microservices add deployment complexity, network overhead,
+  and distributed tracing needs with zero benefit. One server is easier to debug,
+  deploy, and reason about.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+3. DATA MODEL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Seven tables, each with a clear single responsibility:
+
+  users              — Clerk-authenticated customers
+  drivers            — Self-registered, verified by admin before going active
+  driver_locations   — One row per driver, upserted every 4s when online
+                       Includes bearing + speedKmh for dead reckoning
+  bookings           — Core transaction record
+  fare_table         — Fixed NCR pricing (destination + vehicle type)
+  api_usage          — Monthly call counter per external API (hard limit enforcement)
+  whatsapp_sessions  — In-progress WhatsApp bot conversations
+
+Key design decisions:
+  When searching for drivers to assign a ride, distance from the pickup point is
+  taken and the driver closest is alerted first. If there is a tie between drivers
+  based on shortest distance then the driver who joined our drivers app earlier wins.
+
+  driver_locations is a separate table with ONE row per driver, not a time-series.
+  You don't need history — you need the current position. Upsert replaces the
+  previous row. bearing + speedKmh are computed by the driver app from the last
+  two GPS readings and sent with each update. The customer tracking page uses
+  these for dead reckoning between polls.
+
+  fare_table externalises pricing from code. Admin can change prices without a
+  deployment. Google Routes fallback handles destinations not in the table.
+
+  api_usage is a simple counter keyed by (service, month). No Redis needed at
+  this scale — a DB upsert with increment is sufficient.
+
+  verificationStatus enum (pending | approved | rejected) replaces a boolean
+  isVerified flag. Three states are needed: "not yet reviewed" is different from
+  "reviewed and rejected."
+
+BookingStatus flow:
+  Scheduled: confirmed → assigned → en_route → reached → started → completed
+  On-Spot:   pending   → assigned → en_route → reached → started → completed
+  Either:    * → cancelled
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+4. BOOKING FLOW — THE CORE TRANSACTION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+TWO MODES:
+
+  Scheduled (primary — 2 hours to 7 days in advance)
+  ---------------------------------------------------
+  Client                    Backend                      DB
+    │                          │                          │
+    ├─ POST /api/bookings ─────►│                          │
+    │  { scheduledAt: future } │                          │
+    │                          ├─ validate: scheduledAt   │
+    │                          │  must be >= now + 2h     │
+    │                          │  must be <= now + 7 days │
+    │                          ├─ INSERT booking ─────────►│
+    │                          │  status = confirmed      │
+    │                          │  confirmedAt = now       │
+    │◄─ { bookingCode } ───────┤                          │
+    │                          │                          │
+    │       [~60 min before ride time]                    │
+    │                          │◄── background job ───────┤
+    │                          │    polls every 5 minutes │
+    │                          ├─ driverAssignment runs   │
+    │                          │  → driver notified       │
+
+  On-Spot (secondary — subject to availability)
+  ---------------------------------------------
+  Client                    Backend                    Driver App
+    │                          │                          │
+    ├─ POST /api/bookings ─────►│                          │
+    │  { scheduledAt: null }   │                          │
+    │                          ├─ driverAssignment runs   │
+    │                          │  immediately             │
+    │                          ├─ FCM push ───────────────►│
+    │◄─ { bookingCode } ───────┤                          │
+    │                          │   [30 second window]     │
+    │                          │◄── PATCH /accept ────────┤
+    │                          │  OR timeout → next driver│
+
+  If no driver accepts after exhausting all available drivers:
+    On-spot   → booking deleted, HTTP 503 returned to client
+    Scheduled → booking stays confirmed, admin alerted via WhatsApp
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+5. DRIVER ASSIGNMENT ALGORITHM
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Lives in services/driverAssignment.js. Used by both booking modes.
+
+  1. Query drivers WHERE is_online = true
+                        AND is_active = true
+                        AND verificationStatus = 'approved'
+     JOIN driver_locations to get coordinates
+
+  2. Sort by Haversine distance from booking.pickupLat / pickupLng
+     Haversine formula:
+       a = sin²(Δlat/2) + cos(lat1) · cos(lat2) · sin²(Δlng/2)
+       distance = 2R · arcsin(√a)    where R = 6371 km
+
+  3. Take nearest driver → send FCM push (stub in Phase 2, real in Phase 6)
+
+  4. Set 30-second timer
+       Driver sends PATCH /accept → mark assigned, cancel timer
+       Timer fires or PATCH /decline → remove from list, repeat from step 3
+
+  5. List exhausted:
+       On-spot   → return null (caller returns 503, booking deleted)
+       Scheduled → leave as confirmed, WhatsApp admin
+
+Why Haversine and not Google Routes for assignment?
+  Google Routes gives road distance. Haversine gives straight-line distance.
+  For ranking drivers to notify first, straight-line is fast, free, and good
+  enough — you're not routing the driver yet, just ordering the list.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+6. FARE CALCULATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  POST /api/fare/estimate
+           │
+           ├─ destinationName in fare_table?
+           │         │
+           │        YES → return fixedFare  (fast, free, exact)
+           │         │
+           │         NO → check api_usage for current month
+           │                    │
+           │              count >= 10,000 → HTTP 503
+           │              "Fare estimation unavailable. Please call us to book."
+           │                    │
+           │              count < 10,000 → call Google Routes API
+           │                              increment counter in DB
+           │                              return distanceKm × RATE_PER_KM[vehicleType]
+
+  Per-km rates (configurable):
+    SEDAN:    ₹14/km
+    HATCHBACK:₹12/km
+    SUV:      ₹18/km
+    INNOVA:   ₹20/km
+
+  Tolls: NOT included in fare. Customer pays tolls directly to driver.
+  Frontend must show "Tolls payable to driver separately" for per-km routes.
+
+  The fixed table covers all known NCR routes — handles ~90% of bookings.
+  Google Routes only fires for unknown destinations.
+
+  API usage is tracked in the api_usage table:
+    (service='google_routes', month='YYYY-MM', count=N)
+  Resets automatically each month as the month key changes.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+7. DRIVER SELF-REGISTRATION + VERIFICATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Old: admin creates driver accounts manually.
+New: drivers self-register, admin approves.
+
+  Driver downloads app
+         │
+         ├─ Signs up via phone OTP (Clerk)
+         ├─ Fills name, vehicle type, vehicle number
+         ├─ Uploads DL photo + Aadhar photo → stored in Cloudflare R2
+         │
+         └─ verificationStatus = pending, isActive = false
+                      │
+                Admin reviews in /admin/drivers
+                      │
+                ├─ Approves → verificationStatus = approved, isActive = true
+                │             driver can now go online and receive rides
+                └─ Rejects → verificationStatus = rejected
+                              driver sees rejection screen in app, can resubmit
+
+  Only drivers with verificationStatus = approved are included in the
+  Haversine query for ride assignment.
+
+  Admin powers:
+    - View all drivers (any verificationStatus)
+    - Approve / reject pending drivers
+    - Deactivate (remove) any driver at any time
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+8. DEAD RECKONING BETWEEN POLLS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Problem: driver GPS updates every 4s. Customer polls every 5s.
+Without prediction, the driver dot on the map jumps every 5 seconds.
+
+Solution: dead reckoning — predict position between known updates.
+
+  Driver App (every 4 seconds):
+    1. Get current GPS position
+    2. Compute bearing from previous position:
+         bearing = atan2(sin(Δlng)·cos(lat2),
+                         cos(lat1)·sin(lat2) − sin(lat1)·cos(lat2)·cos(Δlng))
+    3. Compute speed:
+         speedKmh = haversineDistance(prev, current) / elapsedSeconds × 3600
+    4. POST /api/driver/location with { lat, lng, bearing, speedKmh }
+    5. Backend upserts driver_locations row
+
+  Customer Tracking Page (requestAnimationFrame loop):
+    Given last known { lat, lng, bearing, speedKmh, updatedAt }:
+      Δt = (now − updatedAt) in seconds
+      predictedLat = lat + (speedKmh/3600 × Δt) × cos(bearing × π/180) / 111
+      predictedLng = lng + (speedKmh/3600 × Δt) × sin(bearing × π/180)
+                         / (111 × cos(lat × π/180))
+
+    When next 5s poll arrives → snap marker to real position.
+
+  Result: smooth continuous movement at zero extra API cost.
+  bearing is null until the driver has sent at least two location updates
+  (can't compute direction from a single point).
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+9. STATUS POLLING vs WEBSOCKETS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Customer tracking page polls GET /api/bookings/:id/status every 5 seconds.
+Deliberate choice not to use WebSockets:
+
+                  Polling              WebSockets
+  Implementation  Trivial              Requires stateful connection management
+  Infra           Any HTTP server      Needs sticky sessions or Redis pub/sub
+  At 30 rides/day ~360 req/hour        Same data, more complexity
+  Failure         Client retries       Must handle reconnection logic
+
+WebSockets become the right answer at hundreds of concurrent rides.
+At this scale, polling wins every time.
+Dead reckoning (section 8) compensates for the 5s polling gap.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+10. AUTHENTICATION MODEL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Three user types, one auth provider (Clerk), phone OTP only:
+
+  Customers  → self-register on website, Clerk OTP on confirm if not logged in
+  Drivers    → self-register on app, Clerk OTP, then upload docs for verification
+  Admin      → separate Clerk role, checked via middleware on /api/admin/* routes
+
+No passwords anywhere. Phone OTP only — appropriate for India where
+phone numbers are the primary identity.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+11. DEPLOYMENT ARCHITECTURE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Vercel          → Customer website + Admin dashboard (static, free)
+  Render          → Express backend (free tier)
+    └─ cron-job.org pings /health every 10 min to prevent cold starts
+  Neon PostgreSQL → Database (serverless, scales to zero, free tier)
+  Cloudflare R2   → Driver document storage (DL + Aadhar photos)
+  Expo EAS        → Driver app Android APK distribution
+
+The Render cold start problem:
+  Free tier servers spin down after 15 min of inactivity. Cold start ~30 seconds —
+  long enough to fail a booking request. The cron ping keeps it warm at zero cost.
+
+Google Maps API key restrictions:
+  - API restrictions: Routes API + Places API (New) only
+  - IP restrictions: add Render server outbound IP after first deployment
+  - In-app limit: 10,000 calls/month enforced in code before IP restriction matters
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+12. WHAT IS INTENTIONALLY LEFT OUT OF MVP
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Feature               Why deferred
+  ─────────────────     ──────────────────────────────────────────
+  WebSockets            Polling + dead reckoning sufficient at this scale
+  Payment gateway       Cash / UPI direct to driver for now
+  Surge pricing         Fixed routes cover most demand
+  Driver ratings        Phase 7+
+  Redis / caching       DB queries fast enough, no hot-path bottleneck
+  TypeScript            Added after full system works end-to-end
+  Toll calculation      Customer pays driver directly, not tracked in app
+  Auto toll via API     TollGuru / Google tolls deferred to Phase 7
+
+The guiding principle: every decision maximises speed of building a working
+system, not building for a scale that may never come.
