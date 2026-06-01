@@ -1,6 +1,7 @@
 import { Router } from 'express'
-const fareRouter = Router();
 import { getFare } from '../services/fares.js'
+
+const fareRouter = Router();
 
 fareRouter.post('/estimate', async (req, res) => {
   const { pickupAddress, dropAddress, vehicleType } = req.body

@@ -29,17 +29,17 @@ x The retry loop is the tricky part. A clean way to handle it is a recursive asy
 X 4. services/notification.js — Stubs only for now
 Two functions: sendFCM(driverFcmToken, payload) and sendWhatsApp(phone, message). Both just console.log for Phase 2. You'll plug in real Firebase and Meta API in Phase 6. Keeping them as stubs means the rest of the code is already wired correctly.
 
-5. routes/bookings.js — Three endpoints
+X 5. routes/bookings.js — Three endpoints
 POST /api/bookings (protected — Clerk JWT required):
 
-Validate inputs
-If scheduledAt is set and less than 30 minutes away → 422
-If scheduledAt is set and more than 30 minutes away → create booking with status = confirmed, set confirmedAt = now, return booking code
-If scheduledAt is null → create booking with status = pending, immediately call driverAssignment.js, if no driver found → delete the booking and return 503
-GET /api/bookings/:id/status (protected):
+x Validate inputs
+x If scheduledAt is set and less than 30 minutes away → 422
+x If scheduledAt is set and more than 30 minutes away → create booking with status = confirmed, set confirmedAt = now, return booking code
+x If scheduledAt is null → create booking with status = pending, immediately call driverAssignment.js, if no driver found → delete the booking and return 503
+x GET /api/bookings/:id/status (protected):
 
-Fetch booking by ID, verify it belongs to the requesting user
-Return status + driver info (name, phone, vehicle, current location + bearing + speedKmh) if assigned
+x Fetch booking by ID, verify it belongs to the requesting user
+x Return status + driver info (name, phone, vehicle, current location + bearing + speedKmh) if assigned
 
 6. routes/driver.js — Two endpoints (protected, driver JWT)
 PATCH /api/driver/rides/:id/accept:
