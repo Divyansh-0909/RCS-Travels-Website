@@ -41,17 +41,17 @@ x GET /api/bookings/:id/status (protected):
 x Fetch booking by ID, verify it belongs to the requesting user
 x Return status + driver info (name, phone, vehicle, current location + bearing + speedKmh) if assigned
 
-6. routes/driver.js — Two endpoints (protected, driver JWT)
-PATCH /api/driver/rides/:id/accept:
+X 6. routes/driver.js — Two endpoints (protected, driver JWT)
+x PATCH /api/driver/rides/:id/accept:
 
-Set booking.status = assigned, booking.driverId = driver.id
-Cancel the 30-second retry timer for this booking
-PATCH /api/driver/rides/:id/decline:
+x Set booking.status = assigned, booking.driverId = driver.id
+x Cancel the 30-second retry timer for this booking
+x PATCH /api/driver/rides/:id/decline:
 
-Log the decline, trigger driverAssignment.js again to try the next driver
+x Log the decline, trigger driverAssignment.js again to try the next driver
 
 7. jobs/assignScheduledRides.js — Background job
-A setInterval that fires every 5 minutes. Queries for bookings where status = confirmed AND scheduledAt <= now + 60 minutes (or now + 3 hours for outstation). For each match, calls driverAssignment.js. This job starts when the Express server starts.
+A setInterval that fires every 5 minutes. Queries for bookings where status = confirmed AND scheduledAt <= now + 12 hours. For each match, calls driverAssignment.js. This job starts when the Express server starts.
 
 How it all connects
 

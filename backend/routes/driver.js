@@ -64,6 +64,8 @@ driverRouter.patch('/rides/:id/decline', protect , async (req,res) => {
 
     if (booking.status === 'assigned') return res.status(409).json({ error: 'Booking already assigned' })
     
+    console.log("Ride declined by the driver")
+    
     return res.json({
         bookingId:      booking.id,
         status:         booking.status
