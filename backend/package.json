@@ -8,7 +8,8 @@
     "db:generate": "prisma generate --config ./prisma.config.js",
     "db:migrate": "prisma migrate dev --config ./prisma.config.js",
     "db:push": "prisma db push --config ./prisma.config.js",
-    "db:studio": "prisma studio --config ./prisma.config.js"
+    "db:studio": "prisma studio --config ./prisma.config.js",
+    "db:seed": "node prisma/seed.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.726.1",

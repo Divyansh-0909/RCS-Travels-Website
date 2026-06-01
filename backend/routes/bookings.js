@@ -15,8 +15,6 @@ bookingsRouter.post('/', protect, async (req, res) => {
         scheduledAt, isOutstation, customerPhone,
     } = req.body
 
-    // ── Validation ────────────────────────────────────────────────────────────
-
     if (!pickupAddress || !dropAddress)
         return res.status(400).json({ error: 'pickupAddress and dropAddress are required' })
 
@@ -59,9 +57,11 @@ bookingsRouter.post('/', protect, async (req, res) => {
     }
     if (!bookingCode) return res.status(500).json({ error: 'Failed to generate booking code' })
 
-    //userId from JWT (never trust client)
-    const user = await prisma.user.findUnique({ where: { clerkId: req.auth.userId } })
-    if (!user) return res.status(401).json({ error: 'User not found' })
+    const user = await prisma.user.upsert({
+      where:  { clerkId: req.auth.userId },
+      update: {},
+      create: { clerkId: req.auth.userId, phone: '' }, // fallback — user should exist from /onboarding
+    })
 
     const bookingData = {
         bookingCode, userId: user.id,

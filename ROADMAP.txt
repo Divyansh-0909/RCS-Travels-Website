@@ -83,14 +83,47 @@ Rule: Test every endpoint in Postman before touching any frontend.
 
 PHASE 3 — Customer Website (Day 4-7)
 --------------------------------------
-Goal: Build the 3 pages that make the booking flow work.
+Goal: Build the pages that make the booking flow work end-to-end.
 
-  /book        → pickup/drop (Google Places autocomplete), vehicle select,
-                 fare preview, confirm button
-  /login       → Clerk phone OTP modal (triggered when user hits confirm
-                 without being logged in)
-  /booking/:id → booking code, status badge, driver info once assigned.
-                 Poll GET /api/bookings/:id/status every 5 seconds.
+Backend (build + test in Postman first):
+  GET  /api/users/me  ← check if user exists, returns { id, name, phone, languagePref }
+  POST /api/users/me  ← create user with name (phone fetched from Clerk, not client)
+
+Frontend pages (build after backend is tested):
+
+  /login       → Renders Clerk <SignIn> (phone OTP)
+                 After sign-in → calls GET /api/users/me
+                   404 (new user)    → redirect to /onboarding
+                   user found        → redirect to ?redirect= param or /book
+
+  /onboarding  → Single name input (protected — must be logged in)
+                 On submit → POST /api/users/me { name }
+                 On success → redirect to /book
+
+  /book        → Protected route. Pickup/drop (Google Places autocomplete),
+                 date/time picker, vehicle select, fare preview, confirm button.
+                 Clicking confirm while logged out → redirect to /login?redirect=/book
+
+  /booking/:id → Protected route. Booking code, status badge, driver info once
+                 assigned. Poll GET /api/bookings/:id/status every 5 seconds.
+
+App.jsx routes:
+  /            → Home (placeholder, built in Phase 7)
+  /login       → LoginPage
+  /onboarding  → OnboardingPage (protected)
+  /book        → BookPage (protected)
+  /booking/:id → TrackingPage (protected)
+
+ProtectedRoute component:
+  Wraps any route that requires auth. Checks Clerk's useAuth().
+  If not signed in → redirects to /login?redirect=<current-path>
+
+User creation flow:
+  User clicks Book Now → not logged in → /login?redirect=/book
+  Phone OTP verified → GET /api/users/me
+    New user (404)  → /onboarding → enter name → POST /api/users/me → /book
+    Existing user   → /book directly
+  Phone stored from Clerk (verified), never from form input.
 
 Note: Don't build the homepage until the booking flow works end-to-end.
 
