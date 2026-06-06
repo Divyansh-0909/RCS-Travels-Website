@@ -9,6 +9,15 @@ IMPORTANT:
 - Come back to the key, add IP address restriction on google console, and paste in your Render server's outbound IP. At that point the key becomes fully locked down.
 - Try changing the ride request notification duration from 30s -> 20s.
 - Assign admin role to raju from clerk dashboard.
+- Complete ThemeToggle.jsx and add Appearance option in profile
+- Store users gender (optional)
+- Store users email (optional)
+- Save users Emergency Contact (optional)
+- Save users DOB (optional) 
+
+OPTIONAL FEATURES:
+- If Users age is more than or equal to 60 enable simple mode where UI simplifies by default. 
+  Also provide a simple mode option in settings for anyone to enable or disable. 
 
 PHASE 1 — Foundation (Day 1-2)
 --------------------------------

@@ -34,3 +34,5 @@ usersRouter.post('/me', protect, async (req, res) => {
   const { id, languagePref } = user
   return res.json({ id, name: user.name, phone: user.phone, languagePref })
 })
+
+export default usersRouter
