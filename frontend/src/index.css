@@ -26,10 +26,7 @@
 @layer base {
     body {
         min-height: 100vh;
-        background: radial-gradient(
-        var(--background-muted) 7%,
-        var(--background) 100%
-        );
+        
     }
 
     p {
@@ -52,6 +49,13 @@
       var(--color-primary-light) 0%,
       var(--color-primary) 30%,
       var(--color-primary-dark) 100%
+    );
+  }
+
+  .bg-gradient {
+    background: radial-gradient(
+        var(--background-muted) 7%,
+        var(--background) 100%
     );
   }
 }
