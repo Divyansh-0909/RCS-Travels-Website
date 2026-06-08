@@ -102,12 +102,17 @@ Frontend pages (build after backend is tested):
 
   /login       → Renders Clerk <SignIn> (phone OTP)
                  After sign-in → calls GET /api/users/me
-                   404 (new user)    → redirect to /onboarding
+                   404 (new user)    → redirect to /signup
                    user found        → redirect to ?redirect= param or /book
 
-  /onboarding  → Single name input (protected — must be logged in)
-                 On submit → POST /api/users/me { name }
-                 On success → redirect to /book
+  /signup      → Single name input & Phone number (Verifiy by phone OTP)
+                 On submit → POST /api/users/me { name , PhoneNumber } 
+                 & redirect to /book
+
+
+  /onboarding  → Select Timing of booking, pickup location, drop location
+                 On Submit → redirect to /book if logged in else to /login
+                  
 
   /book        → Protected route. Pickup/drop (Google Places autocomplete),
                  date/time picker, vehicle select, fare preview, confirm button.
