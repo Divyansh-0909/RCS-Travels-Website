@@ -2,6 +2,7 @@ RCS TRAVELS — PROJECT ROADMAP
 ===============================
 
 IMPORTANT:
+- Before deploying whole code to github, verify from claude if that can cause security issue
 - For destination which are not in the fixed fare table show "Tolls payable to driver separately" on frontend
 - Add API call count restriction
 - Enable these API's: Routes API, Places API (New)
@@ -99,6 +100,10 @@ Backend (build + test in Postman first):
   POST /api/users/me  ← create user with name (phone fetched from Clerk, not client)
 
 Frontend pages (build after backend is tested):
+  /onboarding  → Select Timing of booking, pickup location, drop location, 
+                 Pickup/drop (Google Places autocomplete),
+                 date/time picker,
+                 On Submit → redirect to /book if logged in else to /login
 
   /login       → Renders Clerk <SignIn> (phone OTP)
                  After sign-in → calls GET /api/users/me
@@ -108,14 +113,9 @@ Frontend pages (build after backend is tested):
   /signup      → Single name input & Phone number (Verifiy by phone OTP)
                  On submit → POST /api/users/me { name , PhoneNumber } 
                  & redirect to /book
+                
 
-
-  /onboarding  → Select Timing of booking, pickup location, drop location
-                 On Submit → redirect to /book if logged in else to /login
-                  
-
-  /book        → Protected route. Pickup/drop (Google Places autocomplete),
-                 date/time picker, vehicle select, fare preview, confirm button.
+  /book        → Protected route. vehicle select, fare preview, confirm button.
                  Clicking confirm while logged out → redirect to /login?redirect=/book
 
   /booking/:id → Protected route. Booking code, status badge, driver info once
@@ -123,8 +123,8 @@ Frontend pages (build after backend is tested):
 
 App.jsx routes:
   /            → Home (placeholder, built in Phase 7)
-  /login       → LoginPage
   /onboarding  → OnboardingPage (protected)
+  /login       → LoginPage
   /book        → BookPage (protected)
   /booking/:id → TrackingPage (protected)
 

@@ -14,12 +14,26 @@
 /* Update the light mode color */
 :root {
     --background-muted: #211F3C;
-    --background: #000000;
+    --background-primary: #121220;
+    --background: #0B0B14;
+    --foreground: #ffffff;
+
+    --text: #ffffff;
+    --text-muted: #AEAEAE;
+    --text-foreground: #000000;
+    --text-muted-foreground: #AEAEAE;
 }
 
 .dark{
     --background-muted: #211F3C;
-    --background: #000000;
+    --background-primary: #121220;
+    --background: #0B0B14;
+    --foreground: #ffffff;
+
+    --text: #ffffff;
+    --text-muted: #AEAEAE;
+    --text-foreground: #000000;
+    --text-muted-foreground: #AEAEAE;
 }
 
 
@@ -51,19 +65,29 @@
 }
 
 @layer utilities {
-  .bg-primary-gradient {
-    background: linear-gradient(
-      195deg,
-      var(--color-primary-light) 0%,
-      var(--color-primary) 30%,
-      var(--color-primary-dark) 100%
-    );
-  }
+    .bg-primary-gradient {
+        background: linear-gradient(
+            195deg,
+            var(--color-primary-light) 0%,
+            var(--color-primary) 30%,
+            var(--color-primary-dark) 100%
+        );
+    }
 
-  .bg-gradient {
-    background: radial-gradient(
-        var(--background-muted) 7%,
-        var(--background) 100%
-    );
+    .bg-panel-gradient {
+        background: radial-gradient(
+            circle at top,
+            var(--background-muted) 0%,
+            var(--background-primary) 40%,
+            var(--background) 100%
+        );
+    }
+
+    .bg-gradient {
+        background: radial-gradient(
+            circle at top,
+            var(--background-primary) 20%,
+            var(--background) 100%
+        );
   }
 }

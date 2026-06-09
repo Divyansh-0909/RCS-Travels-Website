@@ -8,6 +8,7 @@ import App from './App'
 import {ThemeProvider} from './context/ThemeContext';
 import ErrorBoundary from './components/ErrorBoundary';
 import OnBoarding from './pages/OnBoarding';
+import VehicleSelect from './pages/VehicleSelect';
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
 
@@ -27,6 +28,10 @@ const router = createBrowserRouter([
   {
     path: "/on-boarding", 
     element: <OnBoarding /> 
+  },
+  {
+    path: "/vehicle-select", 
+    element: <VehicleSelect /> 
   },
 ]);
 

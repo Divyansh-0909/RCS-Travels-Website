@@ -1,5 +1,5 @@
 import { useAuth } from "@clerk/clerk-react";
-import * as api from "../api";
+import * as api from "../api/api";
 
 export function useApi() {
   const { getToken } = useAuth();
