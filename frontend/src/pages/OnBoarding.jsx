@@ -7,21 +7,25 @@ import {
   mdiClockTimeFourOutline,
   mdiChevronDown,
   mdiCalendarMonthOutline,
-} from "@mdi/js";
+} from "@mdi/js"; 
 import Input from "../components/ui/Input";
 import { useApi } from "../hooks/useApi";
 import { useNavigate } from "react-router-dom";
 import { DateTimeSelector } from "../components/ui/DateTimeSelector";
+import { useData } from "../hooks/useData";
 
 const OnBoarding = () => {
   const [timing, setTiming] = useState("Schedule");
   const [expand, setExpand] = useState(false);
   const [expandCalendar, setExpandCalendar] = useState(false);
-  const [pickup, setPickup] = useState("");
-  const [drop, setDrop] = useState("");
+  const pickup = useData(state=>state.pickupLocation);
+  const setPickup = useData(state => state.setPickup);
+  const drop = useData(state=>state.dropLocation);
+  const setDrop = useData(state => state.setDrop)
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [scheduledTime, setScheduledTime] = useState(null);
+  const scheduledTime = useData(state=>state.scheduledTime);
+  const setScheduledTime = useData(state => state.setScheduledTime);
 
   const api = useApi();
   const navigate = useNavigate();
@@ -54,7 +58,6 @@ const OnBoarding = () => {
         navigate("/login");
         return;
       }
-
       navigate("/vehicle-select");
     } catch (err) {
       console.error(err);
@@ -70,25 +73,30 @@ const OnBoarding = () => {
         <div className="flex flex-col text-center sm:text-left text-center justify-center items-center sm:items-start gap-2 sm:gap-4">
           <h2 className="text-[var(--text)] sm:text-6xl">Welcome!</h2>
 
-          <p className="text-[var(--text-muted)] sm:mb-8">
+          <h4 className="text-[var(--text-muted)] sm:mb-8">
             Website for making your daily travel
-            <br />
+            <br className="sm:hidden block"/>
             as convenient and smooth as possible
-          </p>
+          </h4>
 
           <form
             className="flex flex-col sm:pl-3 justify-center items-start gap-2 sm:gap-3 mt-3"
             noValidate
             onSubmit={handleSubmit}
           >
+            {error && (
+                <p className={`${error? "opacity-[1]" : "opacity-[0]"} relative text-red-400 left-1/2 -translate-x-1/2 sm:-left-2 sm:translate-x-0 text-sm`}>
+                  {error}
+                </p>
+            )}
             <div className="flex flex-col relative">
-              <div className="flex scale-[1] sm:scale-[1.1] justify-between items-center w-[73vw] sm:w-[275px]">
+              <div className="flex scale-[1] sm:scale-[1.1] justify-start gap-2 sm:gap-3 justify-center items-center w-[73vw] sm:w-[275px]">
                 <Button
                   prop={{
                     variant: "input",
                     width: "200px",
                   }}
-                  className="relative"
+                  className="relative px-4"
                 >
                   <div
                     onClick={() => setExpand(!expand)}
@@ -96,14 +104,16 @@ const OnBoarding = () => {
                   >
                     <div className="flex justify-center items-center gap-2">
                       {scheduledTime && timing === "Schedule" ? (
-                        scheduledTime.toLocaleString("en-GB", {
-                          hour: "numeric",
-                          minute: "2-digit",
-                          day: "numeric",
-                          month: "numeric",
-                        })
+                        <span className="whitespace-nowrap">
+                          {scheduledTime.toLocaleString("en-GB", {
+                            hour: "numeric",
+                            minute: "2-digit",
+                            day: "numeric",
+                            month: "numeric",
+                          })}
+                        </span>
                       ) : (
-                        <div className="flex gap-2">
+                        <div className="flex justify-center items-center gap-2">
                           <Icon
                             path={mdiClockTimeFourOutline}
                             size={0.9}
@@ -128,10 +138,10 @@ const OnBoarding = () => {
                 <Button
                   prop={{
                     variant: "input",
-                    width: "62px",
+                    width: "50px",
                     error: error === "No Scheduled Time",
                   }}
-                  className={`relative ${
+                  className={`relative px-4 ${
                     timing === "Schedule" ? "block" : "hidden"
                   }`}
                 >
@@ -157,7 +167,7 @@ const OnBoarding = () => {
                 }}
                 className={`${
                   expand ? "block" : "hidden"
-                } absolute z-10 scale-[1] sm:scale-[1.1] top-10 sm:top-12 sm:-left-1`}
+                } absolute z-10 scale-[1] sm:scale-[1.1] top-10 sm:top-12 sm:-left-1 active:opacity-[1] hover:opacity-[1]`}
               >
                 <div className="flex flex-col items-start">
                   <div
@@ -179,6 +189,7 @@ const OnBoarding = () => {
                       setTiming("Now");
                       setExpand(false);
                       setError(null);
+                      setExpandCalendar(false);
                     }}
                     className={`w-full flex items-center gap-2 py-3 ${
                       timing === "Now"
@@ -199,7 +210,7 @@ const OnBoarding = () => {
                 }}
                 className={`${
                   expandCalendar ? "block" : "hidden"
-                } absolute scale-[1] sm:scale-[1.1] z-20 -top-75 sm:-top-50 left-1/2 -translate-x-1/2 sm:left-110`}
+                } absolute scale-[1] sm:scale-[1.1] z-20 -top-75 sm:-top-50 left-1/2 -translate-x-1/2 sm:left-110 active:opacity-[1] hover:opacity-[1]`}
               >
                 <div
                   className="flex flex-col w-full items-start"
@@ -255,12 +266,6 @@ const OnBoarding = () => {
               className="scale-[1] sm:scale-[1.1]"
             />
 
-            {error && (
-                <p className="relative text-red-400 left-1/2 -translate-x-1/2 text-sm">
-                  {error}
-                </p>
-            )}
-
             <Button
               prop={{
                 type: "submit",
@@ -271,10 +276,10 @@ const OnBoarding = () => {
             </Button>
           </form>
 
-          <p className="text-[var(--text-muted)] text-xs sm:text-base">
+          <p className="relative text-[var(--text-muted)] ">
             {timing === "Now"
-              ? "Subject to availability"
-              : "99% guaranteed cab allocation"}
+              ? "* Subject to availability"
+              : "* 99% guaranteed cab allocation"}
           </p>
         </div>
       </div>
@@ -290,7 +295,7 @@ const OnBoarding = () => {
       <img
         src={laptopBackgroundIllustration}
         alt="background-illustration"
-        className="opacity-[0.85] w-[55%] sm:block hidden rounded-3xl"
+        className="opacity-[0.85] scale-[0.8] sm:block hidden rounded-3xl"
       />
     </div>
   );

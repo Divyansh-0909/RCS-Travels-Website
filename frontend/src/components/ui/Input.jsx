@@ -12,8 +12,8 @@ const Input = ({ prop, className }) => {
       required
       className={`
         ${className}
-        flex justify-start items-center font-medium text-default text-white my-1
-        px-4 py-2 w-[275px] rounded-full
+        flex justify-start items-center font-medium text-default text-white my-1 
+        px-4 py-2 w-[275px] rounded-full opacity-[1] hover:opacity-[0.8] transition-opacity duration-300
         ${
           hasError
             ? `
@@ -34,7 +34,8 @@ const Input = ({ prop, className }) => {
             `
         }
         focus:outline-none
-        focus:bg-black
+        focus:opacity-[0.8]
+        acitve:opacity-[0.8]
         transition-all duration-200
       `}
     />

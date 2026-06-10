@@ -15,11 +15,12 @@ const LoginPage = () => {
   const [step, setStep] = useState("phone"); // "phone" | "otp"
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [showSignUp, setShowSignUp] = useState(false);
 
   const api = useApi();
 
   const back = ()=>{
-     navigate(step === "phone" ? "/on-boarding" : "/login")
+     navigate(step === "phone" ? "/" : "/login")
   }
   
   async function handleSubmit(e) {
@@ -47,7 +48,7 @@ const LoginPage = () => {
       }
   }
 
-async function handleOTPSubmit(e) {
+  async function handleOTPSubmit(e) {
       e.preventDefault();
   
       if (!otp) {
@@ -84,7 +85,11 @@ async function handleOTPSubmit(e) {
       });
       setStep("otp");
     } catch (err) {
-      setError(err.errors?.[0]?.message || "Failed to send OTP");
+      const clerkError = err.errors?.[0];
+      setError(clerkError?.message || "Failed to send OTP");
+      if (clerkError?.code === "form_identifier_not_found") {
+        setShowSignUp(true);
+      }
     }
   };
 
@@ -95,11 +100,8 @@ async function handleOTPSubmit(e) {
         code: otp,
       });
       if (result.status === "complete") {
-        // check if new or existing user
-        const res = await fetch("/api/users/me", {
-          headers: { Authorization: `Bearer ${await result.createdSessionId}` }
-        });
-        navigate(res.ok ? "/book" : "/login");
+        const data = await api.getMe();
+        navigate(data.error ? "/signup" : "/book");
       }
     } catch (err) {
       setError(err.errors?.[0]?.message || "Invalid OTP");
@@ -111,7 +113,7 @@ async function handleOTPSubmit(e) {
         <div onClick={back} className="block sm:hidden absolute right-3 top-3 text-[var(--text)]"><Icon path={mdiKeyboardBackspace} size={1.2} /></div>
         {step === "phone" ? ( 
             <form 
-              className="flex flex-col justify-center items-center gap-6" 
+              className="flex flex-col justify-center items-center gap-12" 
               noValidate
               onSubmit={handleSubmit}
             > 
@@ -119,7 +121,14 @@ async function handleOTPSubmit(e) {
                 <h2 className="text-[var(--text)] ">Let's start with your <br /> phone number.</h2>
                 <p className="text-[var(--text-muted)] ">We'll send a OTP to this number.</p>
               </div>
-              <div className="flex flex-col justify-center items-center gap-2 sm:gap-3">
+              <div className="flex flex-col justify-center items-center gap-2 sm:gap-4">
+                
+                {error && (
+                  <p className="text-red-400 text-sm">
+                    {error}
+                  </p>
+                )}
+
                 <Input
                   prop={{
                     type: "tel",
@@ -131,6 +140,7 @@ async function handleOTPSubmit(e) {
                       const digits = value.replace(/\D/g, "").slice(0, 10);
 
                       setPhone(digits);
+                      setShowSignUp(false);
 
                       if (
                         error === "Enter a Phone Number" ||
@@ -146,28 +156,23 @@ async function handleOTPSubmit(e) {
                   className="scale-[1] sm:scale-[1.1]"
                 />
 
-                {error && (
-                  <p className="text-red-400 text-sm">
-                    {error}
-                  </p>
-                )}
-
                 <Button
+                  onClick={showSignUp ? () => navigate('/signup') : undefined}
                   prop={{
-                    type: "submit",
+                    type: showSignUp ? "button" : "submit",
                   }}
                   className="scale-[1] sm:scale-[1.1]"
                 >
-                  {loading ? "Sending OTP..." : "Continue"}
+                  {showSignUp ? "Sign Up" : (loading ? "Sending OTP..." : "Continue")}
                 </Button>
 
-                <p className="text-[var(--text-muted)] text-xs">You consent to receive a OTP <br /> by text or WhatsApp.</p>
+                <p className="text-[var(--text-muted)] text-sm">You consent to receive a OTP <br /> by text or WhatsApp.</p>
               </div>
             </form>
         ) : (
             <div> 
             <form 
-              className="flex flex-col justify-center items-center gap-4" 
+              className="flex flex-col justify-center items-center gap-12" 
               noValidate
               onSubmit={handleOTPSubmit}
             > 
@@ -176,7 +181,14 @@ async function handleOTPSubmit(e) {
                 <p className="text-[var(--text-muted)] ">Enter the OTP we sent to your phone.</p>
               </div>
               
-              <div className="flex flex-col justify-center items-center gap-2 sm:gap-3">
+              <div className="flex flex-col justify-center items-center gap-2 sm:gap-4">
+                
+                {error && (
+                  <p className="text-red-400 text-sm">
+                    {error}
+                  </p>
+                )}
+
                 <Input
                   prop={{
                     type: "tel",
@@ -202,12 +214,6 @@ async function handleOTPSubmit(e) {
                   }}
                   className="scale-[1] sm:scale-[1.1]"
                 />
-
-                {error && (
-                  <p className="text-red-400 text-sm">
-                    {error}
-                  </p>
-                )}
 
                 <Button
                   prop={{

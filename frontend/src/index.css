@@ -44,7 +44,7 @@
     }
 
     p {
-        @apply text-sm md:text-lg lg:text-xl;
+        @apply text-sm;
     }
 
     h1 {

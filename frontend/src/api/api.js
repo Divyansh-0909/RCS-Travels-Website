@@ -1,15 +1,14 @@
-const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 async function request(path, { method = "GET", body, getToken } = {}) {
     const token = await getToken();
 
     const res = await fetch(`${BASE_URL}${path}`, {
-        method: "POST",
-        headers: 
-        { 
+        method,
+        headers:
+        {
             "Content-Type": "application/json",
-            "Authorization": "Bearer ${token}"
-
+            "Authorization": `Bearer ${token}`,
         },
         body: body ? JSON.stringify(body) : undefined,
     });

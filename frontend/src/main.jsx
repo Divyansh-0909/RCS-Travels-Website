@@ -9,6 +9,7 @@ import {ThemeProvider} from './context/ThemeContext';
 import ErrorBoundary from './components/ErrorBoundary';
 import OnBoarding from './pages/OnBoarding';
 import VehicleSelect from './pages/VehicleSelect';
+import SignUpPage from './pages/SignUpPage';
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
 
@@ -26,11 +27,15 @@ const router = createBrowserRouter([
     element: <LoginPage /> 
   },
   {
-    path: "/on-boarding", 
-    element: <OnBoarding /> 
+    path: "/signup", 
+    element: <SignUpPage /> 
   },
+  // {
+  //   path: "/on-boarding", 
+  //   element: <OnBoarding /> 
+  // },
   {
-    path: "/vehicle-select", 
+    path: "/book", 
     element: <VehicleSelect /> 
   },
 ]);
