@@ -341,16 +341,22 @@ If driver already reached pickup:
 
 Authentication method:
 
-Phone OTP using Clerk.
+WhatsApp OTP + Clerk hybrid.
+- OTP delivered via WhatsApp Cloud API (free, no per-SMS cost)
+- Clerk used for session management only (email-based, invisible to user)
+- Fake deterministic email derived from phone: 91{phone}@rcs-travels.com
+- Clerk user created/found via Admin SDK on backend after OTP verified
+- Backend returns a Clerk sign-in ticket; frontend completes session via ticket strategy
 
 Flow:
 
 1. Enter phone number
-2. Receive OTP
-3. Verify OTP
-4. Login complete
+2. Receive OTP on WhatsApp
+3. Verify OTP → backend issues Clerk sign-in ticket
+4. Frontend calls signIn.create({ strategy: "ticket", ticket })
+5. Clerk session established — all existing useAuth() / getToken() work normally
 
-No passwords.
+No passwords. No SMS charges.
 
 ---
 
@@ -577,7 +583,6 @@ Columns:
 - clerk_id
 - phone
 - name
-- language_pref
 - whatsapp_number
 - created_at
 
@@ -673,6 +678,26 @@ Columns:
 - vehicle_type
 - fixed_fare
 - is_active
+
+---
+
+## otp_verifications
+
+Purpose:
+Temporary OTP store for WhatsApp OTP auth.
+
+Columns:
+
+- phone (unique, overwritten on each new OTP request)
+- otp_hash (bcrypt hash of the 6-digit OTP)
+- expires_at (5 minutes from creation)
+- used (boolean, marked true after successful verify)
+
+Notes:
+
+- One row per phone — upsert on each send-otp request
+- Deleted or invalidated after successful verification
+- Rate limiting enforced at API level
 
 ---
 
@@ -881,7 +906,8 @@ cancellation_charge
 
 # Auth
 
-POST /api/auth/verify-otp
+POST /api/auth/send-otp      ← generate OTP, send via WhatsApp, store hash with 5-min expiry
+POST /api/auth/verify-otp    ← verify OTP → find/create Clerk user → return sign-in ticket
 POST /api/auth/driver-login
 
 ---
@@ -933,12 +959,16 @@ GET /api/driver/:id/location
 
 ## Customers
 
-Use Clerk OTP authentication.
+WhatsApp OTP + Clerk hybrid.
 
-Identity:
-- Phone number
+- OTP generated on backend, sent free via WhatsApp Cloud API
+- OTP stored as bcrypt hash in otp_verifications table (expires in 5 min)
+- On verify: backend finds/creates Clerk user using fake email 91{phone}@rcs-travels.com
+- Backend returns Clerk sign-in ticket (signInToken via Admin SDK)
+- Frontend completes session: signIn.create({ strategy: "ticket", ticket })
+- All downstream auth (useAuth, getToken, protect middleware) unchanged
 
-No passwords.
+Identity: Phone number. No passwords. No SMS cost.
 
 ---
 

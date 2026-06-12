@@ -55,6 +55,8 @@ export async function getFare({ pickupAddress, dropAddress, vehicleType }) {
     }),
   })
   const data = await result.json()
+  if (!data.routes?.[0]?.distanceMeters)
+    throw new Error('No route found between the given addresses')
   const distanceKm = data.routes[0].distanceMeters / 1000
   const fare = distanceKm * RATE_PER_KM[vehicleType]
 

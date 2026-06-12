@@ -8,6 +8,7 @@ import bookingsRouter from './routes/bookings.js'
 import driverRouter from './routes/driver.js'
 import startAssignmentJob from './services/assignScheduledRides.js'
 import usersRouter from './routes/users.js'
+import hybridAuthRouter from './routes/hybridAuth.js'
 
 const app = express()
 const PORT = process.env.PORT || 5000
@@ -20,6 +21,7 @@ app.use('/api/fare', fareRouter)
 app.use('/api/bookings', bookingsRouter)
 app.use('/api/driver', driverRouter)
 app.use('/api/users', usersRouter)
+app.use('/api/auth', hybridAuthRouter)
 
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok' })

@@ -51,8 +51,7 @@ model User {
   clerkId        String    @unique @map("clerk_id")
   phone          String    @unique
   name           String?
-  languagePref   String    @default("en") @map("language_pref")
-  whatsappNumber String?   @map("whatsapp_number")
+whatsappNumber String?   @map("whatsapp_number")
   createdAt      DateTime  @default(now()) @map("created_at")
 
   bookings Booking[]
@@ -149,6 +148,16 @@ model ApiUsage {
 
   @@id([service, month])
   @@map("api_usage")
+}
+
+// Temporary OTP store for WhatsApp OTP auth — one row per phone, upserted on each request
+model OtpVerification {
+  phone     String   @id
+  otpHash   String   @map("otp_hash")
+  expiresAt DateTime @map("expires_at")
+  used      Boolean  @default(false)
+
+  @@map("otp_verifications")
 }
 
 // Tracks in-progress WhatsApp booking bot conversations

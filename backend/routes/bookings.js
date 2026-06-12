@@ -57,11 +57,8 @@ bookingsRouter.post('/', protect, async (req, res) => {
     }
     if (!bookingCode) return res.status(500).json({ error: 'Failed to generate booking code' })
 
-    const user = await prisma.user.upsert({
-      where:  { clerkId: req.auth.userId },
-      update: {},
-      create: { clerkId: req.auth.userId, phone: '' }, // fallback — user should exist from /onboarding
-    })
+    const user = await prisma.user.findUnique({ where: { clerkId: req.auth.userId } })
+    if (!user) return res.status(401).json({ error: 'Complete signup before booking' })
 
     const bookingData = {
         bookingCode, userId: user.id,

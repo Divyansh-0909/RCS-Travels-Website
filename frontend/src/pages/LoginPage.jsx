@@ -1,4 +1,4 @@
-import { useSignIn } from "@clerk/clerk-react";
+import { useSignIn } from "@clerk/clerk-react"; // needed for signIn.create({ strategy: "ticket" })
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Input from "../components/ui/Input";
@@ -8,7 +8,7 @@ import Icon from '@mdi/react';
 import { mdiKeyboardBackspace } from '@mdi/js';
 
 const LoginPage = () => {
-  const { signIn, isLoaded } = useSignIn();
+  const { signIn } = useSignIn(); // used only for ticket sign-in after OTP verified
   const navigate = useNavigate();
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
@@ -74,38 +74,29 @@ const LoginPage = () => {
   }
 
   const sendOtp = async () => {
-    if (!isLoaded) return;
-    try {
-      await signIn.create({
-        identifier: `+91${phone}`,
-      });
-      await signIn.prepareFirstFactor({
-        strategy: "phone_code",
-        phoneNumberId: signIn.supportedFirstFactors[0].phoneNumberId,
-      });
-      setStep("otp");
-    } catch (err) {
-      const clerkError = err.errors?.[0];
-      setError(clerkError?.message || "Failed to send OTP");
-      if (clerkError?.code === "form_identifier_not_found") {
-        setShowSignUp(true);
-      }
+    const data = await api.sendOtp(phone); 
+    if (data.error) {
+      setError(data.error);
+      return;
     }
+    setStep("otp");
   };
 
   const verifyOtp = async () => {
-    try {
-      const result = await signIn.attemptFirstFactor({
-        strategy: "phone_code",
-        code: otp,
-      });
-      if (result.status === "complete") {
-        const data = await api.getMe();
-        navigate(data.error ? "/signup" : "/book");
-      }
-    } catch (err) {
-      setError(err.errors?.[0]?.message || "Invalid OTP");
+    const data = await api.verifyOtp(phone, otp);
+    if (data.error) {
+      setError(data.error);
+      return;
     }
+
+    const result = await signIn.create({ strategy: "ticket", ticket: data.ticket });
+    if (result.status !== "complete") {
+      setError("Sign in failed. Please try again.");
+      return;
+    }
+
+    const user = await api.getMe();
+    navigate(user.error ? "/signup" : "/book");
   };
 
   const isPhone = step === "phone";
@@ -147,7 +138,7 @@ const LoginPage = () => {
         >
           <div className="flex flex-col justify-center items-center gap-2 sm:gap-3">
             <h2 className="text-[var(--text)] ">
-              {isPhone ? <>Let's start with your <br /> phone number.</> : "Confirm your code."}
+              {isPhone ? <>Let's get you back <br /> on the.</> : "Confirm your code."}
             </h2>
             <p className="text-[var(--text-muted)] ">
               {isPhone ? "We'll send a OTP to this number." : "Enter the OTP we sent to your phone."}

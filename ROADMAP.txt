@@ -43,6 +43,15 @@ PHASE 2 — Core Backend APIs (Day 2-4)
 ---------------------------------------
 Goal: Build only what the booking flow needs.
 
+  AUTH ENDPOINTS (build first — everything else depends on auth):
+  POST  /api/auth/send-otp                ← generate OTP, store with 5-min expiry, send via WhatsApp
+  POST  /api/auth/verify-otp              ← verify OTP → find/create Clerk user by fake email
+                                            → return Clerk sign-in ticket to frontend
+  Note: Fake email format: 91{phone}@rcs-travels.com
+        OTP stored in otp_verifications table (phone, otp_hash, expires_at, used)
+        On verify: create Clerk user via Admin SDK if not exists, return signInToken
+        Frontend completes sign-in via: signIn.create({ strategy: "ticket", ticket })
+
   POST  /api/fare/estimate                ← fare calc (fixed table OR Google Routes API)
   POST  /api/bookings                     ← create booking (scheduled or on-spot)
   GET   /api/bookings/:id/status          ← polling endpoint for customer tracking page
@@ -96,7 +105,7 @@ PHASE 3 — Customer Website (Day 4-7)
 Goal: Build the pages that make the booking flow work end-to-end.
 
 Backend (build + test in Postman first):
-  GET  /api/users/me  ← check if user exists, returns { id, name, phone, languagePref }
+  GET  /api/users/me  ← check if user exists, returns { id, name, phone }
   POST /api/users/me  ← create user with name (phone fetched from Clerk, not client)
 
 Frontend pages (build after backend is tested):
@@ -105,14 +114,19 @@ Frontend pages (build after backend is tested):
                  date/time picker,
                  On Submit → redirect to /book if logged in else to /login
 
-  /login       → Renders Clerk <SignIn> (phone OTP)
-                 After sign-in → calls GET /api/users/me
-                   404 (new user)    → redirect to /signup
-                   user found        → redirect to ?redirect= param or /book
+  /login       → Phone input → POST /api/auth/send-otp (WhatsApp OTP sent)
+                 OTP input  → POST /api/auth/verify-otp → receive Clerk ticket
+                            → signIn.create({ strategy: "ticket", ticket })
+                            → Clerk session established
+                            → GET /api/users/me
+                                404 (new user) → /signup
+                                found          → ?redirect= param or /book
 
-  /signup      → Single name input & Phone number (Verifiy by phone OTP)
-                 On submit → POST /api/users/me { name , PhoneNumber } 
-                 & redirect to /book
+  /signup      → Phone + OTP (same WhatsApp OTP flow as /login)
+                 After OTP verified → username input
+                 On submit → POST /api/users/me { name }
+                           → phone already on Clerk account, backend reads it
+                           → redirect to /book
                 
 
   /book        → Protected route. vehicle select, fare preview, confirm button.

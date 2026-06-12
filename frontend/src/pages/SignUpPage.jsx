@@ -1,4 +1,5 @@
-import { useSignUp } from "@clerk/clerk-react";
+// import { useSignUp } from "@clerk/clerk-react"; // replaced by WhatsApp OTP + Clerk ticket flow
+import { useSignIn } from "@clerk/clerk-react"; // needed for signIn.create({ strategy: "ticket" })
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Input from "../components/ui/Input";
@@ -7,7 +8,8 @@ import { useApi } from "../hooks/useApi";
 import Icon from '@mdi/react';
 import { mdiKeyboardBackspace } from '@mdi/js';
 const SignUpPage = () => {
-  const { signUp, isLoaded } = useSignUp();
+  // const { signUp, isLoaded } = useSignUp(); // replaced
+  const { signIn } = useSignIn(); // used only for ticket sign-in after OTP verified
   const navigate = useNavigate();
   const [username, setUsername] = useState("");
   const [phone, setPhone] = useState("");
@@ -102,38 +104,18 @@ const SignUpPage = () => {
   }
 
   const sendOtp = async () => {
-    if (!isLoaded) return;
-    try {
-      await signUp.create({
-        phoneNumber: `+91${phone}`,
-      });
-      await signUp.preparePhoneNumberVerification({
-        strategy: "phone_code",
-      });
-      setStep("otp");
-    } catch (err) {
-      const clerkError = err.errors?.[0];
-      setError(clerkError?.message || "Failed to send OTP");
-      if (clerkError?.code === "form_identifier_exists") {
-        setShowLogin(true);
-      }
-    }
+    const data = await api.sendOtp(phone);
+    if (data.error) { setError(data.error); return; }
+    setStep("otp");
   };
 
   const verifyOtp = async () => {
-    try {
-      const result = await signUp.attemptPhoneNumberVerification({
-        strategy: "phone_code",
-        code: otp,
-      });
-      if (result.status === "complete") {
-        setStep("username");
-      }
-    } catch (err) {
-      setError(err.errors?.[0]?.message || "Invalid OTP");
-    }
+    const data = await api.verifyOtp(phone, otp);
+    if (data.error) { setError(data.error); return; }
+    const result = await signIn.create({ strategy: "ticket", ticket: data.ticket });
+    if (result.status !== "complete") { setError("Verification failed. Please try again."); return; }
+    setStep("username");
   };
-
   const isUsername = step === "username";
   const isPhone = step === "phone";
 
