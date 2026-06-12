@@ -94,7 +94,6 @@ const OnBoarding = () => {
                 <Button
                   prop={{
                     variant: "input",
-                    width: "200px",
                   }}
                   className="relative px-4"
                 >

@@ -12,13 +12,14 @@ const VehicleSelect = ()=>{
                 <form className="flex flex-col justify-center items-center gap-2 sm:gap-4" noValidate >
                     <Button 
                         prop={{
-                            variant: "input"
+                            variant: "input",
+                            width: "275px",
                         }}
-                        className={`${vehicleType === "Cab-Economy" ? "outline-2" : "outline-0"} scale-[1] sm:scale-[1.1] outline-primary focus:outline-2 outline-primary`}
+                        className={`${vehicleType === "Cab-Economy" ? "outline-2" : "outline-0"} scale-[1] sm:scale-[1.1] px-4 outline-primary focus:outline-2 outline-primary`}
                     >
                         <div onClick={() => setvehicleType("Cab-Economy")} className="flex justify-between items-center w-full">
-                            <div className="text-left flex flex-col justify-center items-start">
-                                <h3>Cab Economy</h3>
+                            <div className="text-left flex flex-col justify-center items-start gap-0.5">
+                                Cab Economy
                                 <p className="text-[var(--text-muted)]">4 Person</p>
                             </div>
                             <div className="text-right flex flex-col justify-center items-end">
@@ -28,13 +29,14 @@ const VehicleSelect = ()=>{
                     </Button>
                     <Button 
                         prop={{
-                            variant: "input"
+                            variant: "input",
+                            width: "275px",
                         }}
-                        className={`${vehicleType === "Cab-XL" ? "outline-2" : "outline-0"} scale-[1] sm:scale-[1.1] outline-primary focus:outline-2 outline-primary`}
+                        className={`${vehicleType === "Cab-XL" ? "outline-2" : "outline-0"} scale-[1] sm:scale-[1.1] px-4 outline-primary focus:outline-2 outline-primary`}
                     >
                         <div onClick={() => setvehicleType("Cab-XL")} className="flex justify-between items-center w-full ">
-                            <div className="text-left flex flex-col justify-center items-start">
-                                <h3>Cab XL</h3>
+                            <div className="text-left flex flex-col justify-center items-start gap-0.5">
+                                Cab XL
                                 <p className="text-[var(--text-muted)]">6 Person</p>
                             </div>
                             <div className="text-right flex flex-col justify-center items-end">
@@ -44,13 +46,14 @@ const VehicleSelect = ()=>{
                     </Button>
                     <Button 
                         prop={{
-                            variant: "input"
+                            variant: "input",
+                            width: "275px",
                         }}
-                        className={`${vehicleType === "Book-any" ? "outline-2" : "outline-0"} scale-[1] sm:scale-[1.1]  outline-primary focus:outline-2 outline-primary`}
+                        className={`${vehicleType === "Book-any" ? "outline-2" : "outline-0"} scale-[1] sm:scale-[1.1] px-4  outline-primary focus:outline-2 outline-primary`}
                     >
                         <div onClick={() => setvehicleType("Book-any")} className="flex justify-between items-center w-full">
-                            <div className="text-left flex flex-col justify-center items-start">
-                                <h3>Book any</h3>
+                            <div className="text-left flex flex-col justify-center items-start gap-0.5">
+                                Book any
                                 <p className="text-[var(--text-muted)]">4-6 Person</p>
                             </div>
                             <div className="text-right flex flex-col justify-center items-end">

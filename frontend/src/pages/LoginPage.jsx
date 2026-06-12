@@ -1,4 +1,4 @@
-import { useSignIn } from "@clerk/clerk-react"; // needed for signIn.create({ strategy: "ticket" })
+import { useSignIn, useAuth } from "@clerk/clerk-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Input from "../components/ui/Input";
@@ -8,7 +8,8 @@ import Icon from '@mdi/react';
 import { mdiKeyboardBackspace } from '@mdi/js';
 
 const LoginPage = () => {
-  const { signIn } = useSignIn(); // used only for ticket sign-in after OTP verified
+  const { signIn } = useSignIn();
+  const { isSignedIn } = useAuth();
   const navigate = useNavigate();
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
@@ -89,10 +90,12 @@ const LoginPage = () => {
       return;
     }
 
-    const result = await signIn.create({ strategy: "ticket", ticket: data.ticket });
-    if (result.status !== "complete") {
-      setError("Sign in failed. Please try again.");
-      return;
+    if (!isSignedIn) {
+      const result = await signIn.create({ strategy: "ticket", ticket: data.ticket });
+      if (result.status !== "complete") {
+        setError("Sign in failed. Please try again.");
+        return;
+      }
     }
 
     const user = await api.getMe();
@@ -138,7 +141,7 @@ const LoginPage = () => {
         >
           <div className="flex flex-col justify-center items-center gap-2 sm:gap-3">
             <h2 className="text-[var(--text)] ">
-              {isPhone ? <>Let's get you back <br /> on the.</> : "Confirm your code."}
+              {isPhone ? <>Let's get you back <br /> on the road.</> : "Confirm your code."}
             </h2>
             <p className="text-[var(--text-muted)] ">
               {isPhone ? "We'll send a OTP to this number." : "Enter the OTP we sent to your phone."}

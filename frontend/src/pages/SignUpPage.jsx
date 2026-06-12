@@ -1,6 +1,6 @@
 // import { useSignUp } from "@clerk/clerk-react"; // replaced by WhatsApp OTP + Clerk ticket flow
-import { useSignIn } from "@clerk/clerk-react"; // needed for signIn.create({ strategy: "ticket" })
-import { useState } from "react";
+import { useSignIn, useAuth } from "@clerk/clerk-react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Input from "../components/ui/Input";
 import Button from "../components/ui/button";
@@ -9,7 +9,8 @@ import Icon from '@mdi/react';
 import { mdiKeyboardBackspace } from '@mdi/js';
 const SignUpPage = () => {
   // const { signUp, isLoaded } = useSignUp(); // replaced
-  const { signIn } = useSignIn(); // used only for ticket sign-in after OTP verified
+  const { signIn } = useSignIn();
+  const { isSignedIn } = useAuth();
   const navigate = useNavigate();
   const [username, setUsername] = useState("");
   const [phone, setPhone] = useState("");
@@ -20,6 +21,11 @@ const SignUpPage = () => {
   const [showLogin, setShowLogin] = useState(false);
 
   const api = useApi();
+
+  // Redirected here from LoginPage after OTP verified but no DB record yet — skip straight to username
+  useEffect(() => {
+    if (isSignedIn) setStep("username");
+  }, [isSignedIn]);
 
   async function handleNameSubmit(e) {
     e.preventDefault();
@@ -166,16 +172,16 @@ const SignUpPage = () => {
           <div className="flex flex-col justify-center items-center gap-2 sm:gap-3">
             <h2 className="text-[var(--text)] ">
               {isUsername
-                ? "Choose a username."
+                ? <>Make it <br /> yours.</>
                 : isPhone
-                ? <>Let's start with your <br /> phone number.</>
-                : "Confirm your code."}
+                ? <>Looks like you're <br /> new here.</>
+                : <>One code <br /> away.</>}
             </h2>
             <p className="text-[var(--text-muted)] ">
               {isUsername
-                ? <>This is how other riders <br /> will identify you.</>
+                ? <>This is how drivers <br /> will identify you.</>
                 : isPhone
-                ? "We'll send a OTP to this number."
+                ? <>Let's get you set up. <br /> We'll send an OTP to verify.</>
                 : "Enter the OTP we sent to your phone."}
             </p>
           </div>
@@ -192,7 +198,7 @@ const SignUpPage = () => {
                 type: "tel",
                 name: isUsername ? "username" : isPhone ? "phone-number" : "otp-number",
                 id: isUsername ? "username" : isPhone ? "phone-number" : "otp-number",
-                placeholder: isUsername ? "@rahul_travels" : isPhone ? "XXXXX XXXXX" : "XX XX XX XX",
+                placeholder: isUsername ? "Full Name" : isPhone ? "XXXXX XXXXX" : "XX XX XX XX",
                 value: isUsername ? username : isPhone ? phone : otp,
                 onChangeFn: isUsername ? handleUsernameChange : isPhone ? handlePhoneChange : handleOtpChange,
                 error: isUsername

@@ -1,8 +1,9 @@
-import { useAuth } from "@clerk/clerk-react";
+import { useAuth, useClerk } from "@clerk/clerk-react";
 import * as api from "../api/api";
 
 export function useApi() {
   const { getToken } = useAuth();
+  const { signOut } = useClerk();
   
   return {
     getMe:            ()              => api.getMe(getToken),
@@ -13,5 +14,6 @@ export function useApi() {
     getMyBookings:    ()              => api.getMyBookings(getToken),
     sendOtp:          (phone)         => api.sendOtp(phone),
     verifyOtp:        (phone, otp)    => api.verifyOtp(phone, otp),
+    logout:           ()              => signOut(),
   };
 }
