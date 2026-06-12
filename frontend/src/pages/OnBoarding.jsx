@@ -141,7 +141,7 @@ const OnBoarding = () => {
                     width: "50px",
                     error: error === "No Scheduled Time",
                   }}
-                  className={`relative px-4 ${
+                  className={`relative px-3 ${
                     timing === "Schedule" ? "block" : "hidden"
                   }`}
                 >
