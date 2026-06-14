@@ -8,7 +8,7 @@ const usersRouter = Router()
 usersRouter.get('/me', protect, async (req, res) => {
     const user = await prisma.user.findUnique({ where: { clerkId: req.auth.userId } })
     if (!user) return res.status(404).json({ error: 'User has not signed up' })
-
+      
     const { id, phone, name } = user
     return res.json({ id, phone, name })
 })

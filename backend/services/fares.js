@@ -1,10 +1,9 @@
 import { prisma } from '../db/prisma.js'
 
 const RATE_PER_KM = {
-  SEDAN: 14,
-  HATCHBACK: 12,
-  SUV: 18,
-  INNOVA: 20,
+  4: 14,
+  6: 18,
+  1: 14, // ANY — use 4-seater base rate
 }
 
 const GOOGLE_ROUTES_MONTHLY_LIMIT = 10_000

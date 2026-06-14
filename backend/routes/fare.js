@@ -10,7 +10,7 @@ fareRouter.post('/estimate', async (req, res) => {
     return res.status(400).json({ error: 'pickupAddress, dropAddress, and vehicleType are required' })
   }
 
-  const validTypes = ['SEDAN', 'SUV', 'HATCHBACK', 'INNOVA']
+  const validTypes = [4,6,1]
   if (!validTypes.includes(vehicleType)) {
     return res.status(400).json({ error: 'Invalid vehicleType' })
   }

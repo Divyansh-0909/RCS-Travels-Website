@@ -2,17 +2,18 @@ import { Router } from 'express'
 import { protect, protectAdmin } from '../middleware/auth.js'
 import { getDriver } from '../services/driverAssignment.js'
 import { prisma } from '../db/prisma.js'
+import crypto from 'crypto'
 
 const bookingsRouter = Router()
 
-const VALID_VEHICLE_TYPES = ['SEDAN', 'SUV', 'HATCHBACK', 'INNOVA']
+const VALID_VEHICLE_TYPES = [4, 6, 1]
 
 bookingsRouter.post('/', protect, async (req, res) => {
     const {
         pickupAddress, pickupLat, pickupLng,
         dropAddress, dropLat, dropLng,
         vehicleType, fare, distanceKm,
-        scheduledAt, isOutstation, customerPhone,
+        scheduledAt, isOutstation, sharing
     } = req.body
 
     if (!pickupAddress || !dropAddress)
@@ -26,9 +27,6 @@ bookingsRouter.post('/', protect, async (req, res) => {
 
     if (!fare || typeof fare !== 'number' || fare <= 0)
         return res.status(400).json({ error: 'fare must be a positive number' })
-
-    if (!customerPhone || !/^\d{10}$/.test(customerPhone))
-        return res.status(400).json({ error: 'customerPhone must be a 10-digit number' })
 
     if (scheduledAt) {
         const scheduled = new Date(scheduledAt)
@@ -51,7 +49,7 @@ bookingsRouter.post('/', protect, async (req, res) => {
 
     let bookingCode
     for (let attempt = 0; attempt < 5; attempt++) {
-        const candidate = String(Math.floor(100000 + Math.random() * 900000))
+        const candidate = String(crypto.randomInt(100000, 1000000))
         const exists = await prisma.booking.findUnique({ where: { bookingCode: candidate } })
         if (!exists) { bookingCode = candidate; break }
     }
@@ -62,13 +60,13 @@ bookingsRouter.post('/', protect, async (req, res) => {
 
     const bookingData = {
         bookingCode, userId: user.id,
-        customerPhone, vehicleType,
+        customerPhone: user.phone, vehicleType,
         pickupAddress, pickupLat, pickupLng,
         dropAddress, dropLat, dropLng,
         fare, distanceKm: distanceKm ?? null,
         isOutstation: isOutstation ?? false,
         scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
-        commissionPct, commissionAmt,
+        commissionPct, commissionAmt, sharing
     }
 
     if (scheduledAt) {
@@ -120,6 +118,18 @@ bookingsRouter.get('/:id/status', protect, async (req, res) => {
       speedKmh:      booking.driver.location?.speedKmh,
     },
   })
+})
+
+bookingsRouter.get('/my-bookings', protect, async (req, res) => {
+    const user = await prisma.user.findUnique({ where: { clerkId: req.auth.userId } })
+    if (!user) return res.status(401).json({ error: 'User not found' })
+
+    const bookings = await prisma.booking.findMany({
+        where: { userId: user.id },
+        orderBy: { createdAt: 'desc' },
+    })
+
+    return res.json({ bookings })
 })
 
 bookingsRouter.get('/admin/all', protect, protectAdmin, async (req, res) => {

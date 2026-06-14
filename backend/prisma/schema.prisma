@@ -19,13 +19,6 @@ enum BookingStatus {
   cancelled
 }
 
-enum VehicleType {
-  SEDAN
-  SUV
-  HATCHBACK
-  INNOVA
-}
-
 enum BookingSource {
   website
   whatsapp
@@ -51,7 +44,7 @@ model User {
   clerkId        String    @unique @map("clerk_id")
   phone          String    @unique
   name           String?
-whatsappNumber String?   @map("whatsapp_number")
+  whatsappNumber String?   @map("whatsapp_number")
   createdAt      DateTime  @default(now()) @map("created_at")
 
   bookings Booking[]
@@ -64,8 +57,9 @@ model Driver {
   clerkId       String?     @unique @map("clerk_id")
   name          String
   phone         String      @unique
-  vehicleType   VehicleType @map("vehicle_type")
-  vehicleNumber String      @map("vehicle_number")
+  vehicleType   Int         @map("vehicle_type")
+  vehicleCapacity     Int         @map("vehicle_capacity")
+  vehicleNumber String         @map("vehicle_number")
   isActive      Boolean     @default(true) @map("is_active")
   isOnline      Boolean     @default(false) @map("is_online")
   fcmToken            String?            @map("fcm_token")
@@ -107,10 +101,10 @@ model Booking {
   dropAddress        String        @map("drop_address")
   dropLat            Float         @map("drop_lat")
   dropLng            Float         @map("drop_lng")
-  vehicleType        VehicleType   @map("vehicle_type")
+  vehicleType        Int           @map("vehicle_type")
   scheduledAt        DateTime?     @map("scheduled_at")
   isOutstation       Boolean       @default(false) @map("is_outstation")
-  distanceKm         Float?        @map("distance_km")
+  distanceKm         Float?        @map("distance_km")  
   fare               Float         @map("fare")
   commissionPct      Float         @default(0) @map("commission_pct")
   commissionAmt      Float         @default(0) @map("commission_amt")
@@ -121,6 +115,9 @@ model Booking {
   source             BookingSource @default(website)
   createdAt          DateTime      @default(now()) @map("created_at")
   completedAt        DateTime?     @map("completed_at")
+  sharing            Boolean       @default(false)
+  shareGroupId       String?       @map("share_group_id")
+  pickupOrder        Int?          @map("pickup_order")
 
   user   User    @relation(fields: [userId], references: [id])
   driver Driver? @relation(fields: [driverId], references: [id])
@@ -132,7 +129,7 @@ model Booking {
 model FareTable {
   id              String      @id @default(uuid())
   destinationName String      @map("destination_name")
-  vehicleType     VehicleType @map("vehicle_type")
+  vehicleType     Int         @map("vehicle_type")
   fixedFare       Float       @map("fixed_fare")
   isActive        Boolean     @default(true) @map("is_active")
 
