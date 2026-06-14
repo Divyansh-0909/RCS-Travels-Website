@@ -5,6 +5,8 @@ IMPORTANT:
 - Before deploying whole code to github, verify from claude if that can cause security issue
 - For destination which are not in the fixed fare table show "Tolls payable to driver separately" on frontend
 - Add API call count restriction
+- Select users see their ride status.
+- Add rate limiting to maps and all other API's.
 - Enable these API's: Routes API, Places API (New)
 - After you deploy to Render:
 - Come back to the key, add IP address restriction on google console, and paste in your Render server's outbound IP. At that point the key becomes fully locked down.
@@ -15,12 +17,15 @@ IMPORTANT:
 - Store users email (optional)
 - Save users Emergency Contact (optional)
 - Save users DOB (optional) 
+- Make a notification button in NavBar which shows notification about if scheduled ride has been assigned or not
+- notification about if a driver needs to be approved by the admin
+- if a not shared ride is not assgined till the end then notify user about it and ask them to make it shared.
 
 OPTIONAL FEATURES:
 - If Users age is more than or equal to 60 enable simple mode where UI simplifies by default. 
   Also provide a simple mode option in settings for anyone to enable or disable. 
 
-PHASE 1 — Foundation (Day 1-2)
+X PHASE 1 — Foundation (Day 1-2)
 --------------------------------
 Goal: Get a working end-to-end skeleton before writing any real features.
 
@@ -39,7 +44,7 @@ Frontend:
   - Verify Vite dev server runs: npm run dev
 
 
-PHASE 2 — Core Backend APIs (Day 2-4)
+X PHASE 2 — Core Backend APIs (Day 2-4)
 ---------------------------------------
 Goal: Build only what the booking flow needs.
 
@@ -260,7 +265,7 @@ CURRENT STATUS
   [x] Backend dependencies installed (Express, Prisma, Clerk, Firebase, Multer, S3, etc.)
   [x] Prisma schema created with all 6 tables
   [x] Phase 1 — Foundation
-  [ ] Phase 2 — Core Backend APIs
+  [x] Phase 2 — Core Backend APIs
   [ ] Phase 3 — Customer Website
   [ ] Phase 4 — Admin Dashboard
   [ ] Phase 5 — Driver App

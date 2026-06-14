@@ -58,7 +58,7 @@ const OnBoarding = () => {
         navigate("/login");
         return;
       }
-      navigate("/vehicle-select");
+      navigate("/book");
     } catch (err) {
       console.error(err);
       setError("Something went wrong");
@@ -90,7 +90,7 @@ const OnBoarding = () => {
                 </p>
             )}
             <div className="flex flex-col relative">
-              <div className="flex scale-[1] sm:scale-[1.1] justify-start gap-2 sm:gap-3 justify-center items-center w-[73vw] sm:w-[275px]">
+              <div className="flex scale-[1] sm:scale-[1.1] justify-start gap-2 sm:gap-3 justify-center items-center w-[73vw] sm:w-[290px]">
                 <Button
                   prop={{
                     variant: "input",
@@ -189,6 +189,7 @@ const OnBoarding = () => {
                       setExpand(false);
                       setError(null);
                       setExpandCalendar(false);
+                      setScheduledTime(null);
                     }}
                     className={`w-full flex items-center gap-2 py-3 ${
                       timing === "Now"
@@ -209,7 +210,7 @@ const OnBoarding = () => {
                 }}
                 className={`${
                   expandCalendar ? "block" : "hidden"
-                } absolute scale-[1] sm:scale-[1.1] z-20 -top-75 sm:-top-50 left-1/2 -translate-x-1/2 sm:left-110 active:opacity-[1] hover:opacity-[1]`}
+                } absolute scale-[1] sm:scale-[1.1] z-20 -top-75 sm:-top-1/5 left-1/2 -translate-x-1/2 sm:-translate-y-1/2 sm:left-97 active:opacity-[1] hover:opacity-[1]`}
               >
                 <div
                   className="flex flex-col w-full items-start"

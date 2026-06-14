@@ -40,11 +40,12 @@
 @layer base {
     body {
         min-height: 100vh;
-        
+        color: var(--text);
     }
 
     p {
         @apply text-sm;
+        color: var(--text-muted);
     }
 
     h1 {

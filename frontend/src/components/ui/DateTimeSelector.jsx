@@ -96,6 +96,12 @@ function Calendar({ selected, onSelect }) {
     return cell < todayMidnight
   }
 
+  const isTooFar = (d) => {
+    const cell = new Date(year, month, d)
+    const maxDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 7)
+    return cell > maxDate
+  }
+
   return (
     <div className="select-none w-full">
       {/* Month nav */}
@@ -135,15 +141,16 @@ function Calendar({ selected, onSelect }) {
           const sel = isSelected(d)
           const tod = isToday(d)
           const past = isPast(d)
+          const far = isTooFar(d)
           return (
             <button
               type="button"
               key={`${year}-${month}-${d}`}
-              onClick={(e) => { if (past) return; e.stopPropagation(); onSelect(new Date(year, month, d)) }}
-              disabled={past}
+              onClick={(e) => { if (past || far) return; e.stopPropagation(); onSelect(new Date(year, month, d)) }}
+              disabled={past || far}
               className={cn(
                 "flex items-center justify-center h-9 w-full rounded-md text-sm transition-colors",
-                past
+                past || far
                   ? "text-white/20 cursor-not-allowed"
                   : sel
                   ? "bg-white text-black font-semibold"

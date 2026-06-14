@@ -21,7 +21,7 @@ const Button = ({ prop, className, children, onClick }) => {
         }
       `}
       style={{
-        width: prop.width ?? (isInput ? undefined : "275px"),
+        width: prop.width ?? (isInput ? undefined : "290px"),
         borderRadius: prop.rounded ?? "20px",
       }}
     >

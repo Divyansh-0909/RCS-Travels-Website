@@ -10,6 +10,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import OnBoarding from './pages/OnBoarding';
 import VehicleSelect from './pages/VehicleSelect';
 import SignUpPage from './pages/SignUpPage';
+import ProtectedRoute from './components/ProtectedRoute';
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
 
@@ -23,21 +24,21 @@ const router = createBrowserRouter([
     element: <App />,
   },
   {
-    path: "/login", 
-    element: <LoginPage /> 
+    path: "/login",
+    element: <LoginPage />,
   },
   {
-    path: "/signup", 
-    element: <SignUpPage /> 
+    path: "/signup",
+    element: <SignUpPage />,
+  },
+  {
+    path: "/book",
+    element: <ProtectedRoute><VehicleSelect /></ProtectedRoute>,
   },
   // {
-  //   path: "/on-boarding", 
-  //   element: <OnBoarding /> 
+  //   path: "/booking/:id",
+  //   element: <ProtectedRoute><TrackingPage /></ProtectedRoute>,
   // },
-  {
-    path: "/book", 
-    element: <VehicleSelect /> 
-  },
 ]);
 
 createRoot(document.getElementById('root')).render(

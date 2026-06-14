@@ -6,12 +6,14 @@ import Button from "../components/ui/button";
 import { useApi } from "../hooks/useApi";
 import Icon from '@mdi/react';
 import { mdiKeyboardBackspace } from '@mdi/js';
+import { useData } from "../hooks/useData";
 
 const LoginPage = () => {
   const { signIn } = useSignIn();
   const { isSignedIn } = useAuth();
   const navigate = useNavigate();
-  const [phone, setPhone] = useState("");
+  const phone = useData(state=>state.phone);
+  const setPhone = useData(state => state.setPhone);
   const [otp, setOtp] = useState("");
   const [step, setStep] = useState("phone"); // "phone" | "otp"
   const [error, setError] = useState(null);

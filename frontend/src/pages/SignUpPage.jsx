@@ -7,13 +7,16 @@ import Button from "../components/ui/button";
 import { useApi } from "../hooks/useApi";
 import Icon from '@mdi/react';
 import { mdiKeyboardBackspace } from '@mdi/js';
+import { useData } from "../hooks/useData";
+
 const SignUpPage = () => {
   // const { signUp, isLoaded } = useSignUp(); // replaced
   const { signIn } = useSignIn();
   const { isSignedIn } = useAuth();
   const navigate = useNavigate();
   const [username, setUsername] = useState("");
-  const [phone, setPhone] = useState("");
+  const phone = useData(state=>state.phone);
+  const setPhone = useData(state => state.setPhone);
   const [otp, setOtp] = useState("");
   const [step, setStep] = useState("phone"); // "phone" | "otp" | "username"
   const [error, setError] = useState(null);
@@ -22,7 +25,6 @@ const SignUpPage = () => {
 
   const api = useApi();
 
-  // Redirected here from LoginPage after OTP verified but no DB record yet — skip straight to username
   useEffect(() => {
     if (isSignedIn) setStep("username");
   }, [isSignedIn]);
@@ -172,14 +174,14 @@ const SignUpPage = () => {
           <div className="flex flex-col justify-center items-center gap-2 sm:gap-3">
             <h2 className="text-[var(--text)] ">
               {isUsername
-                ? <>Make it <br /> yours.</>
+                ? <>Make it yours.</>
                 : isPhone
                 ? <>Looks like you're <br /> new here.</>
                 : <>One code <br /> away.</>}
             </h2>
             <p className="text-[var(--text-muted)] ">
               {isUsername
-                ? <>This is how drivers <br /> will identify you.</>
+                ? <>This is how drivers will identify you.</>
                 : isPhone
                 ? <>Let's get you set up. <br /> We'll send an OTP to verify.</>
                 : "Enter the OTP we sent to your phone."}
@@ -221,7 +223,7 @@ const SignUpPage = () => {
                 ? (loading ? "Saving..." : "Continue")
                 : isPhone
                 ? (showLogin ? "Login" : (loading ? "Sending OTP..." : "Continue"))
-                : (loading ? "Confirming..." : "Confirm")}
+                : (loading ? "Verifying..." : "Verify")}
             </Button>
 
             {isPhone && (

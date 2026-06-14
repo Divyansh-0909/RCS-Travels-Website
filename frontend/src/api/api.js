@@ -27,6 +27,6 @@ export const createMe          = (name, getToken)        => request("/api/users/
 export const estimateFare      = (pickupAddress, dropAddress, vehicleType, getToken) => request("/api/fare/estimate", { method: "POST", body: { pickupAddress, dropAddress, vehicleType }, getToken });
 export const createBooking     = (data, getToken)        => request("/api/bookings", { method: "POST", body: data, getToken });
 export const getBookingStatus  = (id, getToken)          => request(`/api/bookings/${id}/status`, { getToken });
-export const getMyBookings     = (getToken)              => request("/api/my-bookings", { getToken });
+export const getMyBookings     = (getToken)              => request("/api/bookings/my-bookings", { getToken });
 export const sendOtp           = (phone)                 => request("/api/auth/send-otp", { method: "POST", body: { phone } });
 export const verifyOtp         = (phone, otp)            => request("/api/auth/verify-otp", { method: "POST", body: { phone, otp } });

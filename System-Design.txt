@@ -210,10 +210,9 @@ Why Haversine and not Google Routes for assignment?
            │                              return distanceKm × RATE_PER_KM[vehicleType]
 
   Per-km rates (configurable):
-    SEDAN:    ₹14/km
-    HATCHBACK:₹12/km
-    SUV:      ₹18/km
-    INNOVA:   ₹20/km
+    4-seater: ₹14/km
+    6-seater: ₹18/km
+    ANY (1):  ₹14/km (4-seater base rate)
 
   Tolls: NOT included in fare. Customer pays tolls directly to driver.
   Frontend must show "Tolls payable to driver separately" for per-km routes.
