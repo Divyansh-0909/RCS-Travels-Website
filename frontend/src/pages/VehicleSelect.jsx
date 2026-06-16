@@ -5,6 +5,9 @@ import { useState, useEffect } from "react";
 import noDriverIcon from "../assets/cross.webp";
 import confirmIcon from "../assets/tick.webp";
 import { useNavigate } from "react-router-dom";
+import PriceIllustration from "../components/illustrations/RadarScanIllustration";
+import SafetyIllustration from "../components/illustrations/DriverEnRouteIllustration";
+import WhatsAppIllustration from "../components/illustrations/RouteOverviewIllustration";
 
 const VehicleSelect = ()=>{
     const scheduledTime= useData(state=>state.scheduledTime)
@@ -16,10 +19,43 @@ const VehicleSelect = ()=>{
     const sharing = useData(state=>state.sharing);
     const setSharing = useData(state => state.setSharing);
     const [error, setError] = useState(null);
-    const [loading, setLoading] = useState(false);    
+    const [loading, setLoading] = useState(false);
     const [panelState, setPanelState]= useState("");  // "confirm" | "noDriver"
-    const [step, setStep] = useState("vehicleType"); // "vehicleType" | "searching" 
+    const [step, setStep] = useState("searching"); // "vehicleType" | "searching"
+    const [msgIndex, setMsgIndex] = useState(0);
+    const [illusIndex, setIllusIndex] = useState(0);
     const navigate = useNavigate();
+
+    const searchMessages = [
+        "Finding drivers near you...",
+        "Notifying nearby drivers...",
+        "Connecting you with a driver...",
+        "Checking driver availability...",
+        "Looking a little further...",
+        "Reaching out to more drivers...",
+        "Almost there...",
+        "Hang tight...",
+    ];
+
+    useEffect(() => {
+        if (step !== "searching") return;
+        const interval = setInterval(() => {
+            setMsgIndex(i => {
+                if (i + 1 >= searchMessages.length) {
+                    clearInterval(interval);
+                    return i;
+                }
+                return i + 1;
+            });
+        }, 5000);
+        return () => clearInterval(interval);
+    }, [step]);
+
+    useEffect(() => {
+        if (step !== "searching") return;
+        const t = setInterval(() => setIllusIndex(i => (i + 1) % 3), 5000);
+        return () => clearInterval(t);
+    }, [step]);
 
     const api=useApi()
 
@@ -78,9 +114,8 @@ const VehicleSelect = ()=>{
 
     return (
         <div className="relative bg-transparent text-center flex flex-col justify-center items-center w-[100vw] h-[100vh]">
-            { step === "vehicleType" ?
                 <>
-                    <div className={` ${panelState === "noDriver" || (panelState === "confirmed" && scheduledTime) ? "block" : "hidden" } absolute z-3 sm:z-2 bottom-0 bg-transparent gap-2 sm:gap-4 rounded-t-4xl sm:rounded-none py-6 text-center flex flex-col justify-center items-center sm:h-[100vh] w-[100vw] bg-panel-gradient`}>
+                    <div className={` ${panelState === "noDriver" || (panelState === "confirmed" && scheduledTime) ? "block" : "hidden" } absolute z-4 sm:z-3 bottom-0 bg-transparent gap-2 sm:gap-4 rounded-t-4xl sm:rounded-none py-6 text-center flex flex-col justify-center items-center sm:h-[100vh] w-[100vw] bg-panel-gradient`}>
                         <img className="-my-8 w-[160px]" src={ panelState === "noDriver" ? noDriverIcon :  confirmIcon } alt="icon" />
                         <h2> { panelState === "noDriver" ? "No drivers nearby." :  "You're all set." } </h2>
                         <p> { panelState === "noDriver" ? "Try again in a few minutes." :  <>We'll assign a driver closer to <br /> your pick up time.</> } </p>
@@ -94,8 +129,28 @@ const VehicleSelect = ()=>{
                             {loading? "Loading..." : "Okay"}
                         </Button>
                     </div>
-                    <div className={`${panelState === "noDriver" || (panelState === "confirmed" && scheduledTime) ? "block" : "hidden" } absolute z-2 sm:z-1 bottom-0 bg-black/40 w-[100vw] h-[100vh]`}></div>
-                    <div className="absolute z-1 sm:z-0 bottom-0 bg-transparent  gap-6 sm:gap-12 rounded-t-4xl sm:rounded-none py-6 text-center flex flex-col justify-center items-center sm:h-[100vh] w-[100vw] bg-panel-gradient">
+                    
+                    <div className={`${((panelState !== "noDriver" || (panelState !== "confirmed" && !scheduledTime)) && step === "searching") ? "block" : "hidden" } absolute z-3 sm:z-2 bottom-0 bg-transparent  gap-6 sm:gap-12 rounded-t-4xl sm:rounded-none py-6 text-center flex flex-col justify-center items-center sm:h-[100vh] w-[100vw] bg-panel-gradient`}>
+                        <div className="flex flex-col gap-2 sm:gap-3">
+                            <h2 className="text-[var(--text)]">Requesting a ride</h2>
+                            <p>{searchMessages[msgIndex]}</p>
+                        </div>
+
+                        <div className="relative w-[290px] rounded-full h-[6px] overflow-hidden">
+                            <div className="absolute z-1 inset-0 bg-primary animate-searching-bar h-full"/>
+                            <div className="absolute z-0 inset-0 bg-gray-500 w-full h-full"/>
+                        </div>
+
+                        <div key={illusIndex} className="animate-illus-fade">
+                            {illusIndex === 0 && <PriceIllustration />}
+                            {illusIndex === 1 && <SafetyIllustration />}
+                            {illusIndex === 2 && <WhatsAppIllustration />}
+                        </div>                       
+                    </div>   
+                    
+                    <div className={`${panelState === "noDriver" || (panelState === "confirmed" && scheduledTime) || step === "searching" ? "block" : "hidden" } absolute z-2 sm:z-1 bottom-0 bg-black/40 w-[100vw] h-[100vh]`}></div>
+                    
+                    <div className={`${step === "vehicleType" ? "block" : "hidden"} absolute z-1 sm:z-0 bottom-0 bg-transparent  gap-6 sm:gap-12 rounded-t-4xl sm:rounded-none py-6 text-center flex flex-col justify-center items-center sm:h-[100vh] w-[100vw] bg-panel-gradient`}>
                         <h2 className="text-[var(--text)]">Choose a ride</h2>
                         <form className="flex flex-col justify-center items-center gap-2.5 sm:gap-4" noValidate onSubmit={handleSubmit}>
                             <Button 
@@ -176,10 +231,7 @@ const VehicleSelect = ()=>{
                             </div>
                         </form>
                     </div>
-                </>
-                :
-                <div/>         
-            }
+                </>                   
         </div>
     );
 };

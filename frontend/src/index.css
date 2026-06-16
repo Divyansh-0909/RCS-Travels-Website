@@ -38,6 +38,30 @@
 
 
 @layer base {
+    @keyframes loading-bar {
+        0%   { width: 0px;   animation-timing-function: ease-out; }
+        10%  { width: 100px;  animation-timing-function: ease-out; }  /* fast */
+        20%  { width: 120px; animation-timing-function: ease-in; }   /* slow */
+        32%  { width: 175px; animation-timing-function: ease-out; }  /* fast */
+        42%  { width: 190px; animation-timing-function: ease-in; }   /* slow */
+        50%  { width: 280px; animation-timing-function: ease-out; }  /* fast burst before halfway */
+        62%  { width: 332px; animation-timing-function: ease-out; }  /* fast burst after halfway */
+        100% { width: 350px; }                                        /* slow crawl to end */
+    }
+
+    .animate-searching-bar{
+        animation: loading-bar 600s linear;
+    }
+
+    @keyframes illus-fade {
+        from { opacity: 0; transform: translateY(5px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .animate-illus-fade {
+        animation: illus-fade 0.5s ease forwards;
+    }
+
     body {
         min-height: 100vh;
         color: var(--text);
