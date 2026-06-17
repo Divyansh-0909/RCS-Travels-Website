@@ -190,7 +190,10 @@ export function DateTimeSelector({ onClick, onChange, onConfirm }) {
   function toggleAmPm() {
     const [h, m] = time.split(":").map(Number)
     const newHour = ampm === "AM" ? (h + 12) % 24 : (h - 12 + 24) % 24
-    setTime(`${String(newHour).padStart(2, "0")}:${String(m).padStart(2, "0")}`)
+    const newTime = `${String(newHour).padStart(2, "0")}:${String(m).padStart(2, "0")}`
+    setTime(newTime)
+    const combined = getCombined(date, newTime)
+    if (combined && onChange) onChange(combined)
   }
 
   function getCombined(d, t) {

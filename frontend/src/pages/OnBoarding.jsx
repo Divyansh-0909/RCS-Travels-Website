@@ -10,7 +10,7 @@ import {
 } from "@mdi/js"; 
 import Input from "../components/ui/Input";
 import { useApi } from "../hooks/useApi";
-import { useNavigate } from "react-router-dom";
+import { useViewNavigate } from "../hooks/useViewNavigate";
 import { DateTimeSelector } from "../components/ui/DateTimeSelector";
 import { useData } from "../hooks/useData";
 
@@ -28,7 +28,7 @@ const OnBoarding = () => {
   const setScheduledTime = useData(state => state.setScheduledTime);
 
   const api = useApi();
-  const navigate = useNavigate();
+  const navigate = useViewNavigate();
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -75,8 +75,7 @@ const OnBoarding = () => {
 
           <h4 className="text-[var(--text-muted)] sm:mb-8">
             Website for making your daily travel
-            <br className="sm:hidden block"/>
-            as convenient and smooth as possible
+            <br className="sm:hidden block"/> as convenient and smooth as possible
           </h4>
 
           <form
@@ -103,10 +102,16 @@ const OnBoarding = () => {
                   >
                     <div className="flex justify-center items-center gap-2">
                       {scheduledTime && timing === "Schedule" ? (
-                        <span className="whitespace-nowrap">
+                        
+                        <span className="flex justify-center items-center gap-2 whitespace-nowrap uppercase">
+                          <Icon
+                            path={mdiClockTimeFourOutline}
+                            size={0.9}
+                          />
                           {scheduledTime.toLocaleString("en-GB", {
                             hour: "numeric",
                             minute: "2-digit",
+                            hour12: true,
                             day: "numeric",
                             month: "numeric",
                           })}

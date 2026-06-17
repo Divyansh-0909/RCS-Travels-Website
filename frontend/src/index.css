@@ -37,7 +37,24 @@
 }
 
 
+::view-transition-old(root),
+::view-transition-new(root) {
+    animation-duration: 0.4s;
+    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
 @layer base {
+    @keyframes panel-transition {
+        0%   { transform: translateY(28px) scale(0.97); opacity: 0; }
+        60%  { opacity: 1; }
+        100% { transform: translateY(0) scale(1); opacity: 1; }
+    }
+
+    .animate-panel-transition {
+        animation: panel-transition 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        will-change: transform, opacity;
+    }
+
     @keyframes loading-bar {
         0%   { width: 0px;   animation-timing-function: ease-out; }
         10%  { width: 100px;  animation-timing-function: ease-out; }  /* fast */
@@ -46,7 +63,7 @@
         42%  { width: 190px; animation-timing-function: ease-in; }   /* slow */
         50%  { width: 280px; animation-timing-function: ease-out; }  /* fast burst before halfway */
         62%  { width: 332px; animation-timing-function: ease-out; }  /* fast burst after halfway */
-        100% { width: 350px; }                                        /* slow crawl to end */
+        100% { width: 330px; }                                        /* slow crawl to end */
     }
 
     .animate-searching-bar{
@@ -96,6 +113,15 @@
             var(--color-primary-light) 0%,
             var(--color-primary) 30%,
             var(--color-primary-dark) 100%
+        );
+    }
+
+    .bg-negative-gradient {
+        background: linear-gradient(
+            195deg,
+            #CC3333 0%,
+            #991111 30%,
+            #4A0808 100%
         );
     }
 

@@ -2,14 +2,22 @@ import Button from "../components/ui/button";
 import { useData } from "../hooks/useData";
 import { useApi } from "../hooks/useApi";
 import { useState, useEffect } from "react";
-import noDriverIcon from "../assets/cross.webp";
+import errorIcon from "../assets/cross.webp";
 import confirmIcon from "../assets/tick.webp";
-import { useNavigate } from "react-router-dom";
+import { useViewNavigate } from "../hooks/useViewNavigate";
 import PriceIllustration from "../components/illustrations/RadarScanIllustration";
 import SafetyIllustration from "../components/illustrations/DriverEnRouteIllustration";
-import WhatsAppIllustration from "../components/illustrations/RouteOverviewIllustration";
+import WhatsAppIllustration from "../components/illustrations/WhatsAppIllustration";
+import Icon from '@mdi/react';
+import { mdiKeyboardBackspace } from '@mdi/js';
+import dashedLine from '../assets/dashed-line.svg';
+import arrow from '../assets/arrow.svg';
+import waLogo from '../assets/whatsapp-logo.webp';
+import ErrorPanel from "../components/ui/ErrorPanel";
+import BackgroundPanel from "../components/ui/BackgroundPanel";
 
 const VehicleSelect = ()=>{
+    const phone=useData(state=>state.phone)
     const scheduledTime= useData(state=>state.scheduledTime)
     const dropLocation= useData(state=>state.dropLocation)
     const pickupLocation= useData(state=>state.pickupLocation)
@@ -18,13 +26,16 @@ const VehicleSelect = ()=>{
     const setvehicleType = useData(state => state.setvehicleType);
     const sharing = useData(state=>state.sharing);
     const setSharing = useData(state => state.setSharing);
+    const bookingId = useData(state=>state.bookingId);
+    const setBookingId = useData(state => state.setBookingId);
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(false);
-    const [panelState, setPanelState]= useState("");  // "confirm" | "noDriver"
+    const [panelState, setPanelState]= useState("");  // "confirm" | "error"
     const [step, setStep] = useState("searching"); // "vehicleType" | "searching"
+    const [searchingStep, setSearchingStep] = useState("illustrations") // "illustrations" | "rideDetails"
     const [msgIndex, setMsgIndex] = useState(0);
     const [illusIndex, setIllusIndex] = useState(0);
-    const navigate = useNavigate();
+    const navigate = useViewNavigate();
 
     const searchMessages = [
         "Finding drivers near you...",
@@ -39,25 +50,54 @@ const VehicleSelect = ()=>{
 
     useEffect(() => {
         if (step !== "searching") return;
-        const interval = setInterval(() => {
-            setMsgIndex(i => {
-                if (i + 1 >= searchMessages.length) {
-                    clearInterval(interval);
-                    return i;
-                }
-                return i + 1;
-            });
-        }, 5000);
-        return () => clearInterval(interval);
-    }, [step]);
-
-    useEffect(() => {
-        if (step !== "searching") return;
         const t = setInterval(() => setIllusIndex(i => (i + 1) % 3), 5000);
         return () => clearInterval(t);
     }, [step]);
 
+    useEffect(() => {
+        if (step !== "searching") return;
+        // durations (ms) each message stays before advancing — last 2 stay 3× longer
+        const durations = [30000, 30000, 30000, 30000, 30000, 30000, 210000, 210000];
+        const timeouts = [];
+        let elapsed = 0;
+        durations.slice(0, -1).forEach((dur, i) => {
+            elapsed += dur;
+            timeouts.push(setTimeout(() => setMsgIndex(i + 1), elapsed));
+        });
+        return () => timeouts.forEach(clearTimeout);
+    }, [step]);
+
     const api=useApi()
+
+    async function handleCancel(e){
+        e.preventDefault();
+
+        try{
+            setError(null);
+            setLoading(true);
+
+            if(!bookingId){
+                setError("No active ride to cancel")
+                return
+            }
+
+            const data = await api.cancelBooking(bookingId)
+
+            if(data?.error){
+                setError("Can't cancel ride")
+                return
+            }
+            if(data.ok){
+                setBookingId(null)
+                navigate('/')
+            }
+        } catch (err) {
+            console.error(err);
+            setError("Something went wrong");
+        } finally {
+            setLoading(false);
+        }
+    }
 
     async function handleSubmit(e) {
         e.preventDefault();
@@ -94,7 +134,13 @@ const VehicleSelect = ()=>{
                 setError("Can't create booking, try again");
                 return;
             }
+            if (data.bookingId) setBookingId(data.bookingId)
+
             if(scheduledTime) setPanelState("confirmed")
+            else if (data.status === "assigned") {
+                navigate(`/booking/${data.bookingId}`)
+                return
+            }
             else setStep("searching")
         } catch (err) {
             console.error(err);
@@ -115,8 +161,9 @@ const VehicleSelect = ()=>{
     return (
         <div className="relative bg-transparent text-center flex flex-col justify-center items-center w-[100vw] h-[100vh]">
                 <>
-                    <div className={` ${panelState === "noDriver" || (panelState === "confirmed" && scheduledTime) ? "block" : "hidden" } absolute z-4 sm:z-3 bottom-0 bg-transparent gap-2 sm:gap-4 rounded-t-4xl sm:rounded-none py-6 text-center flex flex-col justify-center items-center sm:h-[100vh] w-[100vw] bg-panel-gradient`}>
-                        <img className="-my-8 w-[160px]" src={ panelState === "noDriver" ? noDriverIcon :  confirmIcon } alt="icon" />
+                    <ErrorPanel prop={{error: error}} />
+                    <BackgroundPanel className={` ${panelState === "noDriver" || (panelState === "confirmed" && scheduledTime) ? "block animate-panel-transition" : "hidden" } absolute z-4 sm:z-3 bottom-0 bg-transparent gap-2 sm:gap-4 rounded-t-4xl sm:rounded-none py-6 text-center flex flex-col justify-center items-center sm:h-[100vh] w-[100vw] bg-panel-gradient`}>
+                        <img className="-my-8 w-[150px]" src={ panelState === "noDriver" ? errorIcon :  confirmIcon } alt="icon" />
                         <h2> { panelState === "noDriver" ? "No drivers nearby." :  "You're all set." } </h2>
                         <p> { panelState === "noDriver" ? "Try again in a few minutes." :  <>We'll assign a driver closer to <br /> your pick up time.</> } </p>
                         <Button 
@@ -128,29 +175,128 @@ const VehicleSelect = ()=>{
                         >
                             {loading? "Loading..." : "Okay"}
                         </Button>
-                    </div>
+                    </BackgroundPanel>
                     
-                    <div className={`${((panelState !== "noDriver" || (panelState !== "confirmed" && !scheduledTime)) && step === "searching") ? "block" : "hidden" } absolute z-3 sm:z-2 bottom-0 bg-transparent  gap-6 sm:gap-12 rounded-t-4xl sm:rounded-none py-6 text-center flex flex-col justify-center items-center sm:h-[100vh] w-[100vw] bg-panel-gradient`}>
-                        <div className="flex flex-col gap-2 sm:gap-3">
-                            <h2 className="text-[var(--text)]">Requesting a ride</h2>
-                            <p>{searchMessages[msgIndex]}</p>
-                        </div>
+                    {/* Searching panel */}
+                    <BackgroundPanel className={`${((panelState !== "noDriver" || (panelState !== "confirmed" && !scheduledTime)) && step === "searching") ? " block animate-panel-transition" : "hidden" } z-3 sm:z-2 gap-6 sm:gap-12 py-6 text-center flex flex-col justify-center items-center`}>
+                        <div key={searchingStep} className="animate-panel-transition w-full flex flex-col justify-center items-center gap-6 sm:gap-12">
+                        {searchingStep === "illustrations" ?
+                            <>
+                                <h2 className="text-[var(--text)]">Requesting a ride</h2>
+                                <div className="flex flex-col items-center justify-center gap-3 sm:gap-4 w-[290px]">
+                                    <div className="flex flex-col gap-3 sm:gap-4 justify-center items-start w-full">
+                                        <p className="text-left">{searchMessages[msgIndex]}</p>
+                                    </div>
+                                    
+                                    <div className="relative w-[290px] rounded-full h-[6px] overflow-hidden">
+                                        <div className="absolute z-1 inset-0 bg-primary animate-searching-bar h-full"/>
+                                        <div className="absolute z-0 inset-0 bg-gray-500 w-full h-full"/>
+                                    </div>
 
-                        <div className="relative w-[290px] rounded-full h-[6px] overflow-hidden">
-                            <div className="absolute z-1 inset-0 bg-primary animate-searching-bar h-full"/>
-                            <div className="absolute z-0 inset-0 bg-gray-500 w-full h-full"/>
-                        </div>
+                                    <div className="flex flex-col gap-3 sm:gap-4 justify-center items-start w-full">
+                                        <Button onClick={()=>setSearchingStep("rideDetails")} prop={{ variant: "input", width: "90px" }} className="cursor-pointer" >
+                                            <p className="text-xs"> Ride details </p>
+                                        </Button>
+                                    </div>
+                                </div>
+                                <div key={illusIndex} className="animate-illus-fade flex flex-col items-center justify-center gap-[14px]">
+                                    {illusIndex === 0 && (
+                                        <>
+                                            <PriceIllustration />
+                                            <div style={{ width: "290px", textAlign: "left" }}>
+                                                <h3 className="text-[var(--text)]">Lowest fares on campus.</h3>
+                                                <p className="text-[var(--text-muted)]">Save up to 40% over cabs on every single ride.</p>
+                                            </div>
+                                        </>
+                                    )}
+                                    {illusIndex === 1 && (
+                                        <>
+                                            <SafetyIllustration />
+                                            <div style={{ width: "290px", textAlign: "left" }}>
+                                                <h3 className="text-[var(--text)]">Every ride, verified safe.</h3>
+                                                <p className="text-[var(--text-muted)]">Background checked drivers. Real-time GPS. Safety, built in.</p>
+                                            </div>
+                                        </>
+                                    )}
+                                    {illusIndex === 2 && (
+                                        <>
+                                            <WhatsAppIllustration />
+                                            <div style={{ width: "290px", textAlign: "left" }}>
+                                                <h3 className="text-[var(--text)]">Same WhatsApp. Zero effort.</h3>
+                                                <p className="text-[var(--text-muted)]">Message to book like you always have. We handle the rest, automatically.</p>
+                                            </div>
+                                        </>
+                                    )}
+                                </div> 
+                            </>
+                            :
+                            <div className="relative flex flex-col justify-center items-center w-full gap-6 sm:gap-12 pt-6">
+                                <div onClick={()=>setSearchingStep('illustrations')} className="flex gap-2 sm:gap-3 items-center justify-center absolute left-5 top-0 text-[var(--text)]">
+                                    <Icon path={mdiKeyboardBackspace} size={1.2} />
+                                </div>
+                                <h2>Ride Details</h2>
+                                <div className="flex flex-col justify-center items-start w-[290px] gap-3 sm:gap-4 ">
+                                    <div className="flex justify-center items-center">
+                                        <div className="flex flex-col justify-center items-center m-0 p-0 h-[2px] scale-[0.35]">
+                                            <img src={dashedLine} alt="dashed-line" />
+                                            <img src={arrow} alt="arrow" />
+                                        </div>
+                                        <div className="flex flex-col justify-center items-center gap-2 sm:gap-3">
+                                            <Button 
+                                                prop={{
+                                                    variant: "input",
+                                                    width: "255px",
+                                                }}
+                                            >
+                                                <h3 className="w-full px-4 flex justify-start items-center">{pickupLocation}</h3>
+                                            </Button>
+                                            <Button 
+                                                prop={{
+                                                    variant: "input",
+                                                    width: "255px",
+                                                }}
+                                            >
+                                                <h3 className="w-full px-4 flex justify-start items-center">{dropLocation}</h3>
+                                            </Button>
+                                        </div>
+                                    </div>
 
-                        <div key={illusIndex} className="animate-illus-fade">
-                            {illusIndex === 0 && <PriceIllustration />}
-                            {illusIndex === 1 && <SafetyIllustration />}
-                            {illusIndex === 2 && <WhatsAppIllustration />}
-                        </div>                       
-                    </div>   
+                                    <div className="flex items-center justify-between w-full">
+                                        <h4 className="text-[var(--text-muted)]">Fare:</h4>
+                                        <h4>₹300</h4>
+                                    </div>
+
+                                    <div className="flex items-center justify-between w-full">
+                                        <h4 className="text-[var(--text-muted)]">Distance:</h4>
+                                        <h4>30 KM</h4>
+                                    </div>
+                                    
+                                    <div className="flex items-center justify-between w-full">
+                                        <h4 className="text-[var(--text-muted)]">Status:</h4>
+                                        <h4>Not assigned</h4>
+                                    </div>
+                                </div>
+                                <div className="flex flex-col justify-center items-center gap-2 sm:gap-3">
+                                    <Button
+                                        onClick={() => window.open("https://wa.me/918586088085?text=Hi%2C%20I%20need%20help%20with%20my%20ride.", "_blank", "noopener,noreferrer")}
+                                        prop={{variant: "input", width: "290px"}}
+                                    >
+                                        <span className="flex items-center justify-center gap-2">
+                                            <img src={waLogo} alt="WhatsApp" className="w-6 h-6" />
+                                            Talk to support
+                                        </span>
+                                    </Button>
+                                    <Button onClick={handleCancel} prop={{ variant: "negative" }}>Cancel ride</Button>
+                                </div>
+                            </div>
+                                
+                        }
+                        </div>
+                    </BackgroundPanel>
                     
-                    <div className={`${panelState === "noDriver" || (panelState === "confirmed" && scheduledTime) || step === "searching" ? "block" : "hidden" } absolute z-2 sm:z-1 bottom-0 bg-black/40 w-[100vw] h-[100vh]`}></div>
+                    <div className={`${panelState === "noDriver" || (panelState === "confirmed" && scheduledTime) || step === "searching" ? "block" : "hidden" } absolute z-2 sm:z-1 bottom-0 bg-black/40 w-[100vw] h-[100vh]`}/>
                     
-                    <div className={`${step === "vehicleType" ? "block" : "hidden"} absolute z-1 sm:z-0 bottom-0 bg-transparent  gap-6 sm:gap-12 rounded-t-4xl sm:rounded-none py-6 text-center flex flex-col justify-center items-center sm:h-[100vh] w-[100vw] bg-panel-gradient`}>
+                    <BackgroundPanel className={`${step === "vehicleType" ? "block animate-panel-transition" : "hidden"} z-1 sm:z-0 gap-6 sm:gap-12 py-6 text-center flex flex-col justify-center items-center`}>
                         <h2 className="text-[var(--text)]">Choose a ride</h2>
                         <form className="flex flex-col justify-center items-center gap-2.5 sm:gap-4" noValidate onSubmit={handleSubmit}>
                             <Button 
@@ -230,7 +376,7 @@ const VehicleSelect = ()=>{
                                 
                             </div>
                         </form>
-                    </div>
+                    </BackgroundPanel>
                 </>                   
         </div>
     );

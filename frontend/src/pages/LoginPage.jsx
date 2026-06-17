@@ -1,6 +1,6 @@
 import { useSignIn, useAuth } from "@clerk/clerk-react";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useViewNavigate } from "../hooks/useViewNavigate";
 import Input from "../components/ui/Input";
 import Button from "../components/ui/button";
 import { useApi } from "../hooks/useApi";
@@ -11,7 +11,7 @@ import { useData } from "../hooks/useData";
 const LoginPage = () => {
   const { signIn } = useSignIn();
   const { isSignedIn } = useAuth();
-  const navigate = useNavigate();
+  const navigate = useViewNavigate();
   const phone = useData(state=>state.phone);
   const setPhone = useData(state => state.setPhone);
   const [otp, setOtp] = useState("");
@@ -135,7 +135,9 @@ const LoginPage = () => {
 
   return (
     <div className="relative bg-transparent text-center flex justify-center items-center w-[100vw] h-[100vh] bg-panel-gradient">
-        <div onClick={back} className="block sm:hidden absolute right-3 top-3 text-[var(--text)]"><Icon path={mdiKeyboardBackspace} size={1.2} /></div>
+        <div onClick={back} className="block sm:hidden flex justify-center items-center gap-2 sm:gap-3 absolute left-3 top-3 text-[var(--text)]">
+          <Icon path={mdiKeyboardBackspace} size={1.2} />
+        </div>
         <form
           className="flex flex-col justify-center items-center gap-12"
           noValidate

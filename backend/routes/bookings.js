@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { protect, protectAdmin } from '../middleware/auth.js'
 import { getDriver } from '../services/driverAssignment.js'
+import { sendWhatsApp } from '../services/notification.js'
 import { prisma } from '../db/prisma.js'
 import crypto from 'crypto'
 
@@ -118,6 +119,65 @@ bookingsRouter.get('/:id/status', protect, async (req, res) => {
       speedKmh:      booking.driver.location?.speedKmh,
     },
   })
+})
+
+bookingsRouter.post('/cancel', protect, async (req, res) => {
+    const { bookingId } = req.body
+    if (!bookingId) return res.status(400).json({ error: 'bookingId is required' })
+
+    const user = await prisma.user.findUnique({ where: { clerkId: req.auth.userId } })
+    if (!user) return res.status(401).json({ error: 'User not found' })
+
+    const booking = await prisma.booking.findUnique({ where: { id: bookingId }, include: {driver: true} })
+    if (!booking) return res.status(404).json({ error: 'Booking not found' })
+    if (booking.userId !== user.id) return res.status(403).json({ error: 'Forbidden' })
+    if (!['pending', 'confirmed', 'assigned'].includes(booking.status))
+        return res.status(409).json({ error: `Cannot cancel a ${booking.status} booking` })
+
+    await prisma.$transaction(async (tx) => {
+        await tx.booking.update({
+            where: { id: booking.id },
+            data: {
+                status: 'cancelled',
+                cancelledBy: 'user',
+            },
+        })
+
+        if (booking.driver) {
+            if (booking.sharing) {
+                // Sharing ride freed a single seat — give it back (capped at full).
+                if (booking.driver.vehicleCapacity < booking.driver.vehicleType) {
+                    await tx.driver.update({
+                        where: { id: booking.driver.id },
+                        data: {
+                            vehicleCapacity: {
+                                increment: 1,
+                            },
+                        },
+                    })
+                }
+            } else {
+                // Solo ride had the whole vehicle — restore it to full capacity.
+                await tx.driver.update({
+                    where: { id: booking.driver.id },
+                    data: {
+                        vehicleCapacity: booking.driver.vehicleType,
+                    },
+                })
+            }
+        }
+    })
+
+    if (booking.driver) {
+        sendWhatsApp(booking.driver.phone,
+            `A ride you were assigned has been cancelled by the customer.
+            \nBooking Code: ${booking.bookingCode}
+            \nPickup Location: ${booking.pickupAddress}
+            \nDrop Location: ${booking.dropAddress}`
+        )
+    }
+
+    return res.json({ ok: true })
 })
 
 bookingsRouter.get('/my-bookings', protect, async (req, res) => {
