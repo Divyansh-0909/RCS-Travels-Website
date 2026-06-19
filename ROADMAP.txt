@@ -25,6 +25,58 @@ OPTIONAL FEATURES:
 - If Users age is more than or equal to 60 enable simple mode where UI simplifies by default. 
   Also provide a simple mode option in settings for anyone to enable or disable. 
 
+WORK PRIORITY — what to do next (decided)
+------------------------------------------
+Order: FINISH PAGES + RIDE LIFECYCLE  →  LINK REAL APIS  →  OPTIMIZE LAST.
+
+1. FINISH REMAINING PAGES + BACKEND RIDE LIFECYCLE  (do first)
+   Reason: only thing on the critical path to a working product. Today it's a
+   booking form, not a cab app — the core loop (book -> match -> TRACK -> complete)
+   is broken. Can be built entirely against the existing stubs (no real APIs needed).
+
+   Missing pages / screens:
+     - Pin-point pickup on a map (OnBoarding currently uses plain text inputs, no map)
+     - TrackingPage.jsx is an EMPTY STUB wired to /booking/:id — it should be ONE
+       status-driven screen (mirror the VehicleSelect panel pattern) that swaps UI by
+       booking.status:
+         assigned / en_route -> "Driver on the way" (driver card, ETA, live map, call/cancel)
+         reached             -> "Driver arrived" (show start-OTP = bookingCode)
+         started             -> "On trip" (route to destination, ETA)
+         completed           -> "Trip complete" (final fare summary)
+     - Rating / feedback screen (no rating field in schema yet)
+     - Ride history / "My Trips" page (backend GET /api/bookings/my-bookings exists,
+       no frontend consumes it)
+     - Profile / Account page
+     - Receipt (can fold into the completed screen)
+   NOT needed (pay-driver-directly model): payment-method screen, in-app toll screen.
+
+   Backend gaps that BLOCK the active-ride flow (must be closed with the pages):
+     - No lifecycle endpoints to set en_route / reached / started / completed
+       (driver.js only has accept/decline). Status enum exists but is unused past
+       assigned/cancelled.
+     - No driver-location write endpoint (design's POST /api/driver/location is not
+       implemented; tracking page has nothing to poll for live position).
+     - No fare finalization on completed (no final-amount logic beyond original fare).
+
+2. LINK GOOGLE / WHATSAPP / FCM  (do second — the "go-live" layer)
+   Reason: needed to test with real people, NOT to build. Develop on stubs until then.
+     - WhatsApp OTP: dev works with console-logged OTP; needed only for real login.
+     - FCM: assignment runs on the random-success stub in dev; needed only when a real
+       driver app exists.
+     - Google Routes: already wired and working.
+
+3. OPTIMIZATIONS  (do last — measure, then fix)
+   - Do NOT make "refactor pages into components" a separate pass. Extract shared
+     components WHILE building step 1 (panel, driver card, map, status badges) — when
+     you can see what actually repeats. Refactoring now = refactoring code about to be
+     rewritten.
+   - DB/query tuning + React profiler ("react doctor") need real volume to be
+     meaningful; at zero traffic there's nothing to measure, correctness > speed.
+   - Watch-later hotspot: the geo bounding-box findMany in driverAssignment.js runs
+     every assignment loop (lat/lng ranges + nested filters). Index/tune only once
+     there are many drivers/bookings.
+
+
 X PHASE 1 — Foundation (Day 1-2)
 --------------------------------
 Goal: Get a working end-to-end skeleton before writing any real features.

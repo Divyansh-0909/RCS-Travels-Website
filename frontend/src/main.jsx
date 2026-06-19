@@ -37,7 +37,8 @@ const router = createBrowserRouter([
     element: <ProtectedRoute><VehicleSelect /></ProtectedRoute>,
   },
   {
-    path: "/booking/:id",
+    // path: "/booking/:id", 
+    path: "/booking/test",
     element: <ProtectedRoute><TrackingPage /></ProtectedRoute>,
   },
 ]);

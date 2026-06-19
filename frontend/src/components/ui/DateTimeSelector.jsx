@@ -180,10 +180,14 @@ function Calendar({ selected, onSelect }) {
 //   onConfirm(Date) — called when user clicks the Confirm button
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function DateTimeSelector({ onClick, onChange, onConfirm }) {
+export function DateTimeSelector({ onClick, onChange, onConfirm, initial }) {
   const today = new Date()
-  const [date, setDate] = React.useState(undefined)
-  const [time, setTime] = React.useState("10:30")
+  const [date, setDate] = React.useState(initial ?? undefined)
+  const [time, setTime] = React.useState(
+    initial
+      ? `${String(initial.getHours()).padStart(2, "0")}:${String(initial.getMinutes()).padStart(2, "0")}`
+      : "10:30"
+  )
 
   const ampm = parseInt(time.split(":")[0], 10) >= 12 ? "PM" : "AM"
 

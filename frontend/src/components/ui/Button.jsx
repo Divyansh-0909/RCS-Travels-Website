@@ -31,9 +31,9 @@ const Button = ({ prop, className, children, onClick }) => {
       <button
         type={prop.type ?? "button"}
         onClick={onClick}
-        className={`
+        className={` ${prop.innerClassName}
           flex items-center py-2 w-[97%] h-[80%] cursor-pointer
-          ${isDropdown ? "justify-start" : "justify-center"}
+          ${prop.innerClassName ?"" : (isDropdown ? "justify-start" : "justify-center")}
           ${
             !prop.variant || isNegative
               ? "bg-[linear-gradient(200deg,rgba(255,255,255,0.30)_5%,transparent_20%),linear-gradient(30deg,rgba(0,0,0,0.20)_5%,transparent_20%)]"

@@ -45,13 +45,71 @@
 
 @layer base {
     @keyframes panel-transition {
-        0%   { transform: translateY(28px) scale(0.97); opacity: 0; }
+        0%   { transform: translateX(60px) scale(0.97); opacity: 0; }
         60%  { opacity: 1; }
-        100% { transform: translateY(0) scale(1); opacity: 1; }
+        100% { transform: translateX(0) scale(1); opacity: 1; }
     }
 
     .animate-panel-transition {
         animation: panel-transition 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        will-change: transform, opacity;
+    }
+
+    @keyframes panel-transition-out {
+        0%   { transform: translateX(0) scale(1); opacity: 1; }
+        100% { transform: translateX(60px) scale(0.97); opacity: 0; }
+    }
+
+    .animate-panel-transition-out {
+        animation: panel-transition-out 0.45s cubic-bezier(0, 0, 0.84, 0) forwards;
+        will-change: transform, opacity;
+    }
+
+    @keyframes dropdown-reveal {
+        0%   { opacity: 0; transform: translateY(-8px) scaleY(0.9); }
+        100% { opacity: 1; transform: translateY(0) scaleY(1); }
+    }
+
+    .animate-dropdown {
+        transform-origin: top;
+        animation: dropdown-reveal 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        will-change: transform, opacity;
+    }
+
+    /* Distinct from a dropdown — a soft "bloom" that scales up and settles */
+    @keyframes datetime-bloom {
+        0%   { opacity: 0; transform: scale(0.94) translateY(12px); }
+        60%  { opacity: 1; }
+        100% { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    .animate-datetime {
+        transform-origin: center;
+        animation: datetime-bloom 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        will-change: transform, opacity;
+    }
+
+    /* Closing — reverse of the dropdown reveal, furls back up */
+    @keyframes dropdown-collapse {
+        0%   { opacity: 1; transform: translateY(0) scaleY(1); }
+        100% { opacity: 0; transform: translateY(-8px) scaleY(0.9); }
+    }
+
+    .animate-dropdown-out {
+        transform-origin: top;
+        animation: dropdown-collapse 0.22s cubic-bezier(0.7, 0, 0.84, 0) forwards;
+        will-change: transform, opacity;
+    }
+
+    /* Closing — reverse of the bloom, scales down and sinks */
+    @keyframes datetime-wilt {
+        0%   { opacity: 1; transform: scale(1) translateY(0); }
+        100% { opacity: 0; transform: scale(0.94) translateY(12px); }
+    }
+
+    .animate-datetime-out {
+        transform-origin: center;
+        animation: datetime-wilt 0.3s cubic-bezier(0.7, 0, 0.84, 0) forwards;
         will-change: transform, opacity;
     }
 
@@ -77,6 +135,17 @@
 
     .animate-illus-fade {
         animation: illus-fade 0.5s ease forwards;
+    }
+
+    /* Solo <-> Sharing price swap — fades the new emphasis in */
+    @keyframes fade-swap {
+        0%   { opacity: 0; transform: translateY(4px); }
+        100% { opacity: 1; transform: translateY(0); }
+    }
+
+    .animate-fade-swap {
+        animation: fade-swap 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        will-change: transform, opacity;
     }
 
     body {

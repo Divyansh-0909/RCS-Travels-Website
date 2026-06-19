@@ -1,7 +1,31 @@
 import mobileBackgroundIllustration from "../assets/Mobile.webp";
 import laptopBackgroundIllustration from "../assets/Laptop.webp";
 import Button from "../components/ui/button";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+
+// Keeps a panel mounted while it plays its closing animation, then unmounts it.
+// `mounted` → render the panel; `closing` → swap to the exit animation.
+function useExitAnim(open, duration) {
+  const [mounted, setMounted] = useState(open);
+  const [closing, setClosing] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setMounted(true);
+      setClosing(false);
+      return;
+    }
+    if (!mounted) return;
+    setClosing(true);
+    const t = setTimeout(() => {
+      setMounted(false);
+      setClosing(false);
+    }, duration);
+    return () => clearTimeout(t);
+  }, [open, mounted, duration]);
+
+  return { mounted, closing };
+}
 import Icon from "@mdi/react";
 import {
   mdiClockTimeFourOutline,
@@ -29,6 +53,9 @@ const OnBoarding = () => {
 
   const api = useApi();
   const navigate = useViewNavigate();
+
+  const timingDropdown = useExitAnim(expand, 220);
+  const calendarDropdown = useExitAnim(expandCalendar, 300);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -164,13 +191,14 @@ const OnBoarding = () => {
               </div>
 
               {/* Timing dropdown */}
+              {timingDropdown.mounted && (
               <Button
                 prop={{
                   variant: "dropdown",
                   width: "195px",
                 }}
-                className={`${
-                  expand ? "block" : "hidden"
+                className={`block ${
+                  timingDropdown.closing ? "animate-dropdown-out" : "animate-dropdown"
                 } absolute z-10 scale-[1] sm:scale-[1.1] top-10 sm:top-12 sm:-left-1 active:opacity-[1] hover:opacity-[1]`}
               >
                 <div className="flex flex-col items-start">
@@ -206,15 +234,17 @@ const OnBoarding = () => {
                   </div>
                 </div>
               </Button>
+              )}
 
               {/* Calendar dropdown */}
+              {calendarDropdown.mounted && (
               <Button
                 prop={{
                   variant: "dropdown",
                   width: "250px",
                 }}
-                className={`${
-                  expandCalendar ? "block" : "hidden"
+                className={`block ${
+                  calendarDropdown.closing ? "animate-datetime-out" : "animate-datetime"
                 } absolute scale-[1] sm:scale-[1.1] z-20 -top-75 sm:-top-1/5 left-1/2 -translate-x-1/2 sm:-translate-y-1/2 sm:left-97 active:opacity-[1] hover:opacity-[1]`}
               >
                 <div
@@ -222,6 +252,7 @@ const OnBoarding = () => {
                   onClick={(e) => e.stopPropagation()}
                 >
                   <DateTimeSelector
+                    initial={scheduledTime}
                     onClick={()=>setExpandCalendar(false)}
                     onChange={(dt) => {
                       setScheduledTime(dt);
@@ -233,6 +264,7 @@ const OnBoarding = () => {
                   />
                 </div>
               </Button>
+              )}
             </div>
 
             <Input

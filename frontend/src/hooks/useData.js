@@ -22,6 +22,9 @@ export const useData = create (set =>({
     bookingId: null,
     setBookingId: (id)=> set(state=> ({bookingId: id})),
 
+    bookingCode: null,
+    setBookingCode: (code)=> set(state=> ({bookingCode: code})),
+
     username: null,
     setUsername: (name)=> set(state=> ({username: name})),
 
