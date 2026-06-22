@@ -15,6 +15,7 @@ import arrow from '../assets/arrow.svg';
 import waLogo from '../assets/whatsapp-logo.webp';
 import ErrorPanel from "../components/ui/ErrorPanel";
 import BackgroundPanel from "../components/ui/BackgroundPanel";
+import RideDetails from "../components/RideDetails";
 
 const VehicleSelect = ()=>{
     const phone=useData(state=>state.phone)
@@ -34,7 +35,7 @@ const VehicleSelect = ()=>{
     const [loading, setLoading] = useState(false);
     const [panelState, setPanelState]= useState("");  // "confirm" | "error"
     const [step, setStep] = useState("vehicleType"); // "vehicleType" | "searching"
-    const [searchingStep, setSearchingStep] = useState("illustrations") // "illustrations" | "rideDetails"
+    const [detialsVisibility, setDetialsVisibility] = useState(false)
     const [msgIndex, setMsgIndex] = useState(0);
     const [illusIndex, setIllusIndex] = useState(0);
     const navigate = useViewNavigate();
@@ -69,37 +70,7 @@ const VehicleSelect = ()=>{
         return () => timeouts.forEach(clearTimeout);
     }, [step]);
 
-    const api=useApi()
-
-    async function handleCancel(e){
-        e.preventDefault();
-
-        try{
-            setError(null);
-            setLoading(true);
-
-            if(!bookingId){
-                setError("No active ride to cancel")
-                return
-            }
-
-            const data = await api.cancelBooking(bookingId)
-
-            if(data?.error){
-                setError("Can't cancel ride")
-                return
-            }
-            if(data.ok){
-                setBookingId(null)
-                navigate('/')
-            }
-        } catch (err) {
-            console.error(err);
-            setError("Something went wrong");
-        } finally {
-            setLoading(false);
-        }
-    }
+    const api=useApi()  
 
     async function handleSubmit(e) {
         e.preventDefault();
@@ -184,7 +155,7 @@ const VehicleSelect = ()=>{
                     </BackgroundPanel>
                     
                     {/* Searching panel — illustrations */}
-                    <BackgroundPanel show={searchingVisible && searchingStep === "illustrations"} className={`z-3 sm:z-2 gap-6 sm:gap-12 py-6 text-center flex flex-col justify-center items-center`}>
+                    <BackgroundPanel show={searchingVisible && detialsVisibility === false} className={`z-3 sm:z-2 gap-6 sm:gap-12 py-6 text-center flex flex-col justify-center items-center`}>
                         <h2 className="text-[var(--text)]">Requesting a ride</h2>
                         <div className="flex flex-col items-center justify-center gap-3 sm:gap-4 w-[290px]">
                             <div className="flex flex-col gap-3 sm:gap-4 justify-center items-start w-full">
@@ -197,7 +168,7 @@ const VehicleSelect = ()=>{
                             </div>
 
                             <div className="flex flex-col gap-3 sm:gap-4 justify-center items-start w-full">
-                                <Button onClick={()=>setSearchingStep("rideDetails")} prop={{ variant: "input", width: "140px" }} className="cursor-pointer" >
+                                <Button onClick={()=>setDetialsVisibility(true)} prop={{ variant: "input", width: "140px" }} className="cursor-pointer" >
                                     <p> View ride details </p>
                                 </Button>
                             </div>
@@ -234,66 +205,8 @@ const VehicleSelect = ()=>{
                     </BackgroundPanel>
 
                     {/* Searching panel — ride details */}
-                    <BackgroundPanel show={searchingVisible && searchingStep === "rideDetails"} className={`z-3 sm:z-2 gap-6 sm:gap-12 py-6 text-center flex flex-col justify-center items-center`}>
-                        <div className="relative flex flex-col justify-center items-center w-full gap-6 sm:gap-12">
-                            <div onClick={()=>setSearchingStep('illustrations')} className="flex gap-2 sm:gap-3 items-center justify-center absolute left-5 top-0 text-[var(--text)]">
-                                <Icon path={mdiKeyboardBackspace} size={1.2} />
-                            </div>
-                            <h2>Ride Details</h2>
-                            <div className="flex flex-col justify-center items-start w-[290px] gap-3 sm:gap-4 ">
-                                <div className="flex justify-center items-center">
-                                    <div className="flex flex-col justify-center items-center m-0 p-0 h-[2px] scale-[0.35]">
-                                        <img src={dashedLine} alt="dashed-line" />
-                                        <img src={arrow} alt="arrow" />
-                                    </div>
-                                    <div className="flex flex-col justify-center items-center gap-2 sm:gap-3">
-                                        <Button
-                                            prop={{
-                                                variant: "input",
-                                                width: "255px",
-                                            }}
-                                        >
-                                            <h3 className="w-full px-4 flex justify-start items-center">{pickupLocation}</h3>
-                                        </Button>
-                                        <Button
-                                            prop={{
-                                                variant: "input",
-                                                width: "255px",
-                                            }}
-                                        >
-                                            <h3 className="w-full px-4 flex justify-start items-center">{dropLocation}</h3>
-                                        </Button>
-                                    </div>
-                                </div>
-
-                                <div className="flex items-center justify-between w-full">
-                                    <h4 className="text-[var(--text-muted)]">Fare:</h4>
-                                    <h4>₹300</h4>
-                                </div>
-
-                                <div className="flex items-center justify-between w-full">
-                                    <h4 className="text-[var(--text-muted)]">Distance:</h4>
-                                    <h4>30 KM</h4>
-                                </div>
-
-                                <div className="flex items-center justify-between w-full">
-                                    <h4 className="text-[var(--text-muted)]">Status:</h4>
-                                    <h4>Not assigned</h4>
-                                </div>
-                            </div>
-                            <div className="flex flex-col justify-center items-center gap-2 sm:gap-3">
-                                <Button
-                                    onClick={() => window.open("https://wa.me/918586088085?text=Hi%2C%20I%20need%20help%20with%20my%20ride.", "_blank", "noopener,noreferrer")}
-                                    prop={{variant: "input", width: "290px"}}
-                                >
-                                    <span className="flex items-center justify-center gap-2">
-                                        <img src={waLogo} alt="WhatsApp" className="w-6 h-6" />
-                                        Talk to support
-                                    </span>
-                                </Button>
-                                <Button onClick={handleCancel} prop={{ variant: "negative" }}>Cancel ride</Button>
-                            </div>
-                        </div>
+                    <BackgroundPanel show={searchingVisible && detialsVisibility === true} className={`z-3 sm:z-2 gap-6 sm:gap-12 py-6 text-center flex flex-col justify-center items-center`}>
+                        <RideDetails prop={{setLoading,setError,setDetialsVisibility}}/>
                     </BackgroundPanel>
                     
                     <div className={`${panelState === "noDriver" || (panelState === "confirmed" && scheduledTime) || step === "searching" ? "block" : "hidden" } absolute z-2 sm:z-1 bottom-0 bg-black/40 w-[100vw] h-[100vh]`}/>

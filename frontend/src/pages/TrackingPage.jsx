@@ -16,6 +16,7 @@ import waLogo from '../assets/whatsapp-logo.webp';
 import ErrorPanel from "../components/ui/ErrorPanel";
 import BackgroundPanel from "../components/ui/BackgroundPanel";
 import pfpPlaceholder from "../assets/pfp-placeholder.webp"
+import RideDetails from "../components/RideDetails";
 
 const TrackingPage = () => {
     const phone = useData(state => state.phone)
@@ -35,7 +36,7 @@ const TrackingPage = () => {
     const [loading, setLoading] = useState(false);
     const [panelState, setPanelState] = useState("");  // "confirm" | "error"
     const [step, setStep] = useState("searching"); // "vehicleType" | "searching"
-    const [searchingStep, setSearchingStep] = useState("illustrations") // "illustrations" | "rideDetails"
+    const [detialsVisibility, setDetialsVisibility] = useState(false)
     const [msgIndex, setMsgIndex] = useState(0);
     const [illusIndex, setIllusIndex] = useState(0);
     const navigate = useViewNavigate();
@@ -65,7 +66,7 @@ const TrackingPage = () => {
                                 <h3 className="text-2xl">{bookingCode} 1 2 3 4 5 6</h3>
                             </div>
                             <div className="flex flex-col gap-3 sm:gap-4 justify-center items-start w-full">
-                                <Button onClick={() => setSearchingStep("rideDetails")} prop={{ variant: "input", width: "140px" }} className="cursor-pointer" >
+                                <Button onClick={() => setDetialsVisibility(true)} prop={{ variant: "input", width: "140px" }} className="cursor-pointer" >
                                     <p> View ride details </p>
                                 </Button>
                             </div>
@@ -107,6 +108,10 @@ const TrackingPage = () => {
                     </div>
 
                 </div>
+            </BackgroundPanel>
+            {/* ride details */}
+            <BackgroundPanel show={detialsVisibility === true} className={`z-3 sm:z-2 gap-6 sm:gap-12 py-6 text-center flex flex-col justify-center items-center`}>
+                <RideDetails prop={{setLoading,setError,setDetialsVisibility}}/>
             </BackgroundPanel>
         </div>
     )
