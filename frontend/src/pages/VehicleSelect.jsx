@@ -31,6 +31,8 @@ const VehicleSelect = ()=>{
     const setBookingId = useData(state => state.setBookingId);
     const bookingCode = useData(state=>state.bookingCode);
     const setBookingCode = useData(state => state.setBookingCode);
+    const status = useData(state=>state.status);
+    const setStatus = useData(state => state.setStatus);
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(false);
     const [panelState, setPanelState]= useState("");  // "confirm" | "error"
@@ -109,6 +111,7 @@ const VehicleSelect = ()=>{
             }
             if (data.bookingId) setBookingId(data.bookingId)
             if (data.bookingCode) setBookingCode(data.bookingCode)
+            if (data.status) setStatus(data.status)
 
             if(scheduledTime) setPanelState("confirmed")
             else if (data.status === "assigned") {

@@ -67,17 +67,17 @@ const RideDetails = ({ prop }) => {
 
                 <div className="flex items-center justify-between w-full">
                     <h4 className="text-[var(--text-muted)]">Fare:</h4>
-                    <h4>₹300</h4>
+                    <h4>{fare}</h4>
                 </div>
 
                 <div className="flex items-center justify-between w-full">
                     <h4 className="text-[var(--text-muted)]">Distance:</h4>
-                    <h4>30 KM</h4>
+                    <h4>{distance}</h4>
                 </div>
 
                 <div className="flex items-center justify-between w-full">
                     <h4 className="text-[var(--text-muted)]">Status:</h4>
-                    <h4>Not assigned</h4>
+                    <h4>{status}</h4>
                 </div>
             </div>
             <div className="flex flex-col justify-center items-center gap-2 sm:gap-3">
