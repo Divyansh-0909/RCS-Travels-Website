@@ -43,8 +43,7 @@ Order: FINISH PAGES + RIDE LIFECYCLE  →  LINK REAL APIS  →  OPTIMIZE LAST.
          reached             -> "Driver arrived" (show start-OTP = bookingCode)
          started             -> "On trip" (route to destination, ETA)
          completed           -> "Trip complete" (final fare summary)
-     - Rating / feedback screen (no rating field in schema yet)
-     - Ride history / "My Trips" page (backend GET /api/bookings/my-bookings exists,
+\     - Ride history / "My Trips" page (backend GET /api/bookings/my-bookings exists,
        no frontend consumes it)
      - Profile / Account page
      - Receipt (can fold into the completed screen)

@@ -52,7 +52,7 @@ const TrackingPage = () => {
     return (
         <div className="relative bg-transparent text-center flex flex-col justify-center items-center w-[100vw] h-[100vh]">
             <ErrorPanel prop={{ error: error, setError: setError }} />
-            { scheduledTime !== null
+            { scheduledTime !== null && (status === "confirmed" || status === "assigned")
             ? <BackgroundPanel className={"py-6 h-[100vh] rounded-t-none justify-center items-center"}>
                         <div className="relative flex flex-col justify-around items-center pt-6 w-full h-full gap-6 sm:gap-12">
                              <div onClick={() => navigate('/')} className="flex gap-2 sm:gap-3 items-center justify-center absolute left-5 top-0 text-[var(--text)]">
@@ -249,8 +249,8 @@ const TrackingPage = () => {
                                 </div>
                             </Button>
                             <div className="flex flex-col justify-center items-center gap-1 sm:gap-2 w-[290px]">
-                                <h2 className="text-center w-[90%]">{status === "en_route" ? `Meet the driver at ${pickupLocation} Inner Gate` : status === "reached" ? `Meet the driver at ${pickupLocation}` : `Driving towards ${dropLocation}`} </h2>
-                                <h3 className="text-[var(--text-muted)] w-[80%]">{status === "en_route" ? `Pick up in ${pickupTime}` : status === "reached" ? `Driver has arrived at the pick up point` : `Reaching destination in ${dropTime}`}</h3>
+                                <h2 className="text-center w-[90%]">{status === "assigned" ? `A driver has been assigned` : status === "en_route" ? `Meet the driver at ${pickupLocation} Inner Gate` : status === "reached" ? `Meet the driver at ${pickupLocation}` : `Driving towards ${dropLocation}`} </h2>
+                                <h3 className="text-[var(--text-muted)] w-[80%]">{status === "assigned" ? `Heading to your pickup point shortly` : status === "en_route" ? `Pick up in ${pickupTime}` : status === "reached" ? `Driver has arrived at the pick up point` : `Reaching destination in ${dropTime}`}</h3>
                             </div>
 
                             <div className="flex flex-col justify-center items-start w-[290px] gap-3 sm:gap-4 ">

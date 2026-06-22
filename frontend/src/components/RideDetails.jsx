@@ -1,7 +1,23 @@
+import Icon from '@mdi/react';
+import { mdiKeyboardBackspace } from '@mdi/js';
+import Button from "./ui/Button";
+import { useData } from "../hooks/useData";
+import { useApi } from "../hooks/useApi";
+import { useViewNavigate } from "../hooks/useViewNavigate";
+import dashedLine from '../assets/dashed-line.svg';
+import arrow from '../assets/arrow.svg';
+import waLogo from '../assets/whatsapp-logo.webp';
+
 const RideDetails = ({ prop }) => {
     const bookingId = useData(state => state.bookingId);
     const setBookingId = useData(state => state.setBookingId);
     const api = useApi()
+    const navigate = useViewNavigate();
+    const pickupLocation = useData(state => state.pickupLocation);
+    const dropLocation = useData(state => state.dropLocation);
+    const fare = useData(state => state.fare);
+    const status = useData(state => state.status);
+    const distance = "30 KM";
 
     async function handleCancel(e) {
         e.preventDefault();
