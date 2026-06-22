@@ -1,5 +1,5 @@
 import errorIcon from "../../assets/cross.webp";
-import Button from "./button";
+import Button from "./Button";
 import { useViewNavigate } from "../../hooks/useViewNavigate";
 import BackgroundPanel from "./BackgroundPanel";
 import { useState, useEffect } from "react";
