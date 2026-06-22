@@ -1,6 +1,6 @@
 import mobileBackgroundIllustration from "../assets/Mobile.webp";
 import laptopBackgroundIllustration from "../assets/Laptop.webp";
-import Button from "../components/ui/button";
+import Button from "../components/ui/Button";
 import { useState, useEffect } from "react";
 
 // Keeps a panel mounted while it plays its closing animation, then unmounts it.

@@ -3,7 +3,7 @@ import { useSignIn, useAuth } from "@clerk/clerk-react";
 import { useState, useEffect } from "react";
 import { useViewNavigate } from "../hooks/useViewNavigate";
 import Input from "../components/ui/Input";
-import Button from "../components/ui/button";
+import Button from "../components/ui/Button";
 import { useApi } from "../hooks/useApi";
 import Icon from '@mdi/react';
 import { mdiKeyboardBackspace } from '@mdi/js';

@@ -1,4 +1,4 @@
-import Button from "../components/ui/button";
+import Button from "../components/ui/Button";
 import { useData } from "../hooks/useData";
 import { useApi } from "../hooks/useApi";
 import { useState, useEffect } from "react";
