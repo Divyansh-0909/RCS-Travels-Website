@@ -12,6 +12,7 @@ import VehicleSelect from './pages/VehicleSelect';
 import SignUpPage from './pages/SignUpPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import TrackingPage from './pages/TrackingPage';
+import RideHistory from './pages/RideHistory';
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
 
@@ -40,6 +41,10 @@ const router = createBrowserRouter([
     // path: "/booking/:id", 
     path: "/booking/test",
     element: <ProtectedRoute><TrackingPage /></ProtectedRoute>,
+  },
+  {
+    path: "/ride-history",
+    element: <ProtectedRoute><RideHistory /></ProtectedRoute>,
   },
 ]);
 

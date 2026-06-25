@@ -7,7 +7,7 @@ function App() {
   return (
     <Suspense fallback={<LoadingScreen />}>
       <div>
-        <div className="fixed z-100 left-1/2 -translate-x-1/2 top-6">
+        <div className="fixed z-100 left-1/2 -translate-x-1/2 top-6 sm:top-10">
           <NavBar/>
         </div> 
         <OnBoarding/>

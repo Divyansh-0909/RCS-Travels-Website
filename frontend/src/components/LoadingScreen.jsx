@@ -1,6 +1,6 @@
 const LoadingScreen = ()=>{
     return (
-        <div className="flex flex-col justify-center items-center bg-gradient">
+        <div className="flex flex-col justify-center items-center h-[100vh] w-[100vw] bg-gradient">
             <h1><span className="font-bold">RCS</span> travels</h1>
         </div>
     );

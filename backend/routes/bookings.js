@@ -187,6 +187,7 @@ bookingsRouter.get('/my-bookings', protect, async (req, res) => {
     const bookings = await prisma.booking.findMany({
         where: { userId: user.id },
         orderBy: { createdAt: 'desc' },
+        include: {driver: true}
     })
 
     return res.json({ bookings })

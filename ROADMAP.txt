@@ -2,6 +2,7 @@ RCS TRAVELS — PROJECT ROADMAP
 ===============================
 
 IMPORTANT:
+- Add a option when a drivers assgined that if the cab driver asks for extra money contact support.
 - Before deploying whole code to github, verify from claude if that can cause security issue
 - For destination which are not in the fixed fare table show "Tolls payable to driver separately" on frontend
 - Add API call count restriction
@@ -43,8 +44,10 @@ Order: FINISH PAGES + RIDE LIFECYCLE  →  LINK REAL APIS  →  OPTIMIZE LAST.
          reached             -> "Driver arrived" (show start-OTP = bookingCode)
          started             -> "On trip" (route to destination, ETA)
          completed           -> "Trip complete" (final fare summary)
-\     - Ride history / "My Trips" page (backend GET /api/bookings/my-bookings exists,
+     - Ride history / "My Trips" page (backend GET /api/bookings/my-bookings exists,
        no frontend consumes it)
+     - A extension of the navbar where the current ride status is showen for example
+        for a scheduled ride if the booking has been assigned a driver or not
      - Profile / Account page
      - Receipt (can fold into the completed screen)
    NOT needed (pay-driver-directly model): payment-method screen, in-app toll screen.

@@ -27,13 +27,21 @@ usersRouter.post('/me', protect, async (req, res) => {
   if (!phone)
     return res.status(400).json({ error: 'Could not resolve phone from account' })
 
-  const user = await prisma.user.upsert({
-    where:  { clerkId: req.auth.userId },
-    update: { name: name.trim(), phone },
-    create: { clerkId: req.auth.userId, name: name.trim(), phone },
-  })
+  try {
+    const user = await prisma.user.upsert({
+      where:  { clerkId: req.auth.userId },
+      update: { name: name.trim(), phone },
+      create: { clerkId: req.auth.userId, name: name.trim(), phone },
+    })
 
-  return res.json({ id: user.id, name: user.name, phone: user.phone })
+    return res.json({ id: user.id, name: user.name, phone: user.phone })
+  } catch (e) {
+    // P2002 = unique constraint violation. Only `phone` and `clerkId` are unique
+    // on User, so this means the derived phone is already tied to another account.
+    if (e.code === 'P2002')
+      return res.status(409).json({ error: 'Username is already taken' })
+    throw e
+  }
 })
 
 export default usersRouter

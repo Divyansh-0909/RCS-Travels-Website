@@ -41,6 +41,7 @@ const VehicleSelect = ()=>{
     const [msgIndex, setMsgIndex] = useState(0);
     const [illusIndex, setIllusIndex] = useState(0);
     const navigate = useViewNavigate();
+    const api=useApi();
 
     const searchMessages = [
         "Finding drivers near you...",
@@ -71,8 +72,6 @@ const VehicleSelect = ()=>{
         });
         return () => timeouts.forEach(clearTimeout);
     }, [step]);
-
-    const api=useApi()  
 
     async function handleSubmit(e) {
         e.preventDefault();
@@ -145,7 +144,7 @@ const VehicleSelect = ()=>{
                     <BackgroundPanel show={panelState === "noDriver" || (panelState === "confirmed" && scheduledTime)} className={`z-4 sm:z-3 bottom-0 gap-2 sm:gap-4 py-6 text-center flex flex-col justify-center items-center`}>
                         <img className="-my-8 w-[150px]" src={ panelState === "noDriver" ? errorIcon :  confirmIcon } alt="icon" />
                         <h2> { panelState === "noDriver" ? "No drivers nearby." :  "You're all set." } </h2>
-                        <p> { panelState === "noDriver" ? "Try again in a few minutes." :  <>You'll get a <b>WhatsApp notification</b> when a <br /> driver is assigned, closer to your pick up time.</> } </p>
+                        <p> { panelState === "noDriver" ? "Try again in a few minutes." :  <>You'll get a <b>WhatsApp notification</b> <br /> when a driver is assigned, closer <br /> to your pick up time.</> } </p>
                         <Button 
                             onClick={() => navigate('/')}
                             prop={{
