@@ -2,6 +2,17 @@ import mobileBackgroundIllustration from "../assets/Mobile.webp";
 import laptopBackgroundIllustration from "../assets/Laptop.webp";
 import Button from "../components/ui/Button";
 import { useState, useEffect } from "react";
+import Icon from "@mdi/react";
+import {
+  mdiClockTimeFourOutline,
+  mdiChevronDown,
+  mdiCalendarMonthOutline,
+} from "@mdi/js"; 
+import Input from "../components/ui/Input";
+import { useApi } from "../hooks/useApi";
+import { useViewNavigate } from "../hooks/useViewNavigate";
+import { DateTimeSelector } from "../components/ui/DateTimeSelector";
+import { useData } from "../hooks/useData";
 
 // Keeps a panel mounted while it plays its closing animation, then unmounts it.
 // `mounted` → render the panel; `closing` → swap to the exit animation.
@@ -26,17 +37,6 @@ function useExitAnim(open, duration) {
 
   return { mounted, closing };
 }
-import Icon from "@mdi/react";
-import {
-  mdiClockTimeFourOutline,
-  mdiChevronDown,
-  mdiCalendarMonthOutline,
-} from "@mdi/js"; 
-import Input from "../components/ui/Input";
-import { useApi } from "../hooks/useApi";
-import { useViewNavigate } from "../hooks/useViewNavigate";
-import { DateTimeSelector } from "../components/ui/DateTimeSelector";
-import { useData } from "../hooks/useData";
 
 const OnBoarding = () => {
   const [timing, setTiming] = useState("Schedule");
