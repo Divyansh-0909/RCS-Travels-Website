@@ -10,6 +10,8 @@ import Icon from "@mdi/react";
 import { mdiChevronDown, mdiPlus, mdiContentCopy, mdiClose } from "@mdi/js";
 import dashedLine from '../assets/dashed-line.svg';
 import arrow from '../assets/arrow.svg';
+import FourSeaterCar from "../assets/4-seater-bottom-left.webp"
+import SixSeaterCar from "../assets/6-seater-bottom-left.webp"
 
 const RideHistory = () => {
     const { getToken } = useAuth();
@@ -155,32 +157,34 @@ const RideHistory = () => {
                         {
                             bookings.map((booking) => {
                                 return (
-                                    <div key={booking.id} className={`${expand ? "sm:blur-xs opacity-[0.9]" : ""} cursor-default bg-[var(--foreground-muted)] bg-var(--background-primary) bg-[linear-gradient(to_bottom,transparent_50%,rgba(146,146,139,0.10)_100%)] shadow-[inset_0_2px_2px_rgba(255,255,255,0.25)] transition-color duration-300 hover:bg-[var(--background)]/10 py-5 px-7 sm:py-6 sm:px-8 rounded-2xl my-4 sm:my-6 flex flex-col justify-center items-start gap-2 sm:gap-3`}>
+                                    <div key={booking.id} className={`${expand ? "sm:blur-xs opacity-[0.9]" : ""} cursor-default bg-[var(--foreground-muted)] bg-var(--background-primary) bg-[linear-gradient(to_bottom,transparent_50%,rgba(146,146,139,0.10)_100%)] shadow-[inset_0_2px_2px_rgba(255,255,255,0.25)] transition-color duration-300 hover:bg-[var(--background)]/10 py-5 px-5 sm:py-6 sm:px-8 rounded-2xl my-4 sm:my-6 flex flex-col justify-center items-start gap-2 sm:gap-3`}>
                                         <div className="flex justify-between items-center gap-1 sm:gap-2 w-full">
                                             <div className="flex flex-col justify-center items-start">
-                                                <h3 className="font-semibold text-primary mb-2">{booking.dropAddress}</h3>
-                                                <div>
-                                                    <h4 className="text-[var(--background-primary)]">
-                                                        {new Date(booking.createdAt).toLocaleDateString("en-GB", {
-                                                            day: "numeric",
-                                                            month: "short",
-                                                        })}
-                                                        {" • "}
-                                                        {new Date(booking.createdAt).toLocaleTimeString("en-GB", {
-                                                            hour: "2-digit",
-                                                            minute: "2-digit",
-                                                            hour12: true,
-                                                        }).toUpperCase()}
-                                                    </h4>
-                                                    <h4 className="text-[var(--background-primary)]">₹{booking.fare} • {booking.status}</h4>
-                                                </div>
-
-                                                <div className="flex flex-col sm:flex-row gap-2 h-fit justify-center items-start sm:items-center">
-                                                    <p className="mt-2">Ride ID: {booking.id}</p>
-                                                    <span className="group relative flex items-center -mb-1">
+                                                <h3 className="font-semibold text-primary mb-1">{booking.dropAddress}</h3>
+                                                <div className="flex flex-col sm:flex-row gap-2 h-fit mb-2 justify-center items-start sm:items-center">
+                                                    <p>Ride ID: {booking.id?.slice(0, 8)}....</p>
+                                                    <span className="group relative flex items-center">
                                                         <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 rounded-md bg-primary text-[var(--foreground)] text-xs font-semibold whitespace-nowrap opacity-0 translate-y-1 transition-[opacity,transform] duration-200 group-hover:opacity-100 group-hover:translate-y-0">copy</span>
-                                                        <Icon onClick={() => copyRideId(booking?.id)} className="cursor-pointer text-[var(--text-muted)] transition-color duration-300 hover:text-[var(--text-foreground)]" path={mdiContentCopy} size={0.7} />
+                                                        <Icon onClick={() => copyRideId(booking?.id)} className="cursor-pointer mb-0.5 text-[var(--text-muted)] transition-color duration-300 hover:text-[var(--text-foreground)]" path={mdiContentCopy} size={0.6} />
                                                     </span>
+                                                </div>
+                                                <div className="flex gap-2 justify-start items-center">
+                                                    <img src={booking.vechileType === 4 ? FourSeaterCar : SixSeaterCar} className="w-20 sm:w-25" alt="car-image" />
+                                                    <div>
+                                                        <h4 className="text-[var(--background-primary)]">
+                                                            {new Date(booking.createdAt).toLocaleDateString("en-GB", {
+                                                                day: "numeric",
+                                                                month: "short",
+                                                            })}
+                                                            {" • "}
+                                                            {new Date(booking.createdAt).toLocaleTimeString("en-GB", {
+                                                                hour: "2-digit",
+                                                                minute: "2-digit",
+                                                                hour12: true,
+                                                            }).toUpperCase()}
+                                                        </h4>
+                                                        <h4 className="text-[var(--background-primary)]">₹{booking.fare} • {booking.status}</h4>
+                                                    </div>
                                                 </div>
                                             </div>
                                             <div onClick={() => setExpand(expand === booking.id ? null : booking.id)} className="cursor-pointer bg-[var(--background-primary)]/80 transition-color duration-300 hover:bg-[var(--background-primary)] p-1 rounded-full">
