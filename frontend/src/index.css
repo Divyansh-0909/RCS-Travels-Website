@@ -159,6 +159,21 @@
         will-change: transform, opacity;
     }
 
+    /* Skeleton shimmer — a highlight sweeps across the placeholder block */
+    @keyframes skeleton-sheen {
+        0%   { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+    }
+
+    .animate-skeleton-sheen {
+        animation: skeleton-sheen 1.6s ease-in-out infinite;
+        will-change: transform;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .animate-skeleton-sheen { animation: none; }
+    }
+
     body {
         min-height: 100vh;
         color: var(--text);
