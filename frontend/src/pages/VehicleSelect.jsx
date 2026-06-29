@@ -87,11 +87,14 @@ const VehicleSelect = ()=>{
 
             const data = await api.createBooking({
                 pickupAddress:  pickupLocation,
-                pickupLat:      12.9716,
-                pickupLng:      77.5946,
+                // TODO: replace with real geocoded coords from Maps API.
+                // Hardcoded to the seed's driver anchor (Connaught Place, Delhi)
+                // so test bookings fall inside getDriver's bounding box.
+                pickupLat:      28.6315,
+                pickupLng:      77.2167,
                 dropAddress:    dropLocation,
-                dropLat:        12.9719,
-                dropLng:        77.6069,
+                dropLat:        28.4951,
+                dropLng:        77.0890,
                 vehicleType:    vehicleType,   // 4 | 6 | 1
                 fare:           300,
                 distanceKm:    5.2,

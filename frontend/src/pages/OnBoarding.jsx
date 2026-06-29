@@ -39,7 +39,8 @@ function useExitAnim(open, duration) {
 }
 
 const OnBoarding = () => {
-  const [timing, setTiming] = useState("Schedule");
+  const timing = useData(state => state.timing);
+  const setTiming = useData(state => state.setTiming);
   const [expand, setExpand] = useState(false);
   const [expandCalendar, setExpandCalendar] = useState(false);
   const pickup = useData(state=>state.pickupLocation);
@@ -95,8 +96,8 @@ const OnBoarding = () => {
   }
 
   return (
-    <div className="relative flex flex-col sm:flex-row h-[100vh] sm:px-60 sm:gap-20 sm:pt-16 sm:justify-center bg-gradient">
-      <div className="relative z-10 py-8 flex flex-col items-center w-full h-[inherit] justify-end sm:justify-center">
+    <div className="relative flex flex-col sm:flex-row h-[100vh] sm:px-60 sm:gap-20 sm:pt-16 sm:justify-center items-center bg-gradient">
+      <div className="relative z-10 py-8 flex flex-col items-center w-full h-[inherit] sm:h-fit justify-end sm:justify-center">
         <div className="flex flex-col text-center sm:text-left text-center justify-center items-center sm:items-start gap-2 sm:gap-4">
           <h2 className="text-[var(--text)] sm:text-6xl">Welcome!</h2>
 
@@ -245,7 +246,7 @@ const OnBoarding = () => {
                 }}
                 className={`block ${
                   calendarDropdown.closing ? "animate-datetime-out" : "animate-datetime"
-                } absolute scale-[1] sm:scale-[1.1] z-20 -top-75 sm:-top-1/5 left-1/2 -translate-x-1/2 sm:-translate-y-1/2 sm:left-97 active:opacity-[1] hover:opacity-[1]`}
+                } absolute scale-[1] sm:scale-[1.1] z-20 -top-75 sm:top-10 left-1/2 -translate-x-1/2 sm:-translate-y-1/2 sm:left-97 active:opacity-[1] hover:opacity-[1]`}
               >
                 <div
                   className="flex flex-col w-full items-start"
@@ -332,7 +333,7 @@ const OnBoarding = () => {
       <img
         src={laptopBackgroundIllustration}
         alt="background-illustration"
-        className="opacity-[0.85] scale-[0.8] sm:block hidden rounded-3xl"
+        className="opacity-[0.9] w-[550px] sm:block hidden rounded-3xl"
       />
     </div>
   );

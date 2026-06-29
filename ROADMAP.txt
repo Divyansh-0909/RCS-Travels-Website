@@ -2,6 +2,8 @@ RCS TRAVELS — PROJECT ROADMAP
 ===============================
 
 IMPORTANT:
+- make the confirm pickup point page
+- Make the share location and share drivers details page
 - Add a option when a drivers assgined that if the cab driver asks for extra money contact support.
 - Before deploying whole code to github, verify from claude if that can cause security issue
 - For destination which are not in the fixed fare table show "Tolls payable to driver separately" on frontend
@@ -18,7 +20,6 @@ IMPORTANT:
 - Store users email (optional)
 - Save users Emergency Contact (optional)
 - Save users DOB (optional) 
-- Make a notification button in NavBar which shows notification about if scheduled ride has been assigned or not
 - notification about if a driver needs to be approved by the admin
 - if a not shared ride is not assgined till the end then notify user about it and ask them to make it shared.
 
@@ -37,19 +38,7 @@ Order: FINISH PAGES + RIDE LIFECYCLE  →  LINK REAL APIS  →  OPTIMIZE LAST.
 
    Missing pages / screens:
      - Pin-point pickup on a map (OnBoarding currently uses plain text inputs, no map)
-     - TrackingPage.jsx is an EMPTY STUB wired to /booking/:id — it should be ONE
-       status-driven screen (mirror the VehicleSelect panel pattern) that swaps UI by
-       booking.status:
-         assigned / en_route -> "Driver on the way" (driver card, ETA, live map, call/cancel)
-         reached             -> "Driver arrived" (show start-OTP = bookingCode)
-         started             -> "On trip" (route to destination, ETA)
-         completed           -> "Trip complete" (final fare summary)
-     - Ride history / "My Trips" page (backend GET /api/bookings/my-bookings exists,
-       no frontend consumes it)
-     - A extension of the navbar where the current ride status is showen for example
-        for a scheduled ride if the booking has been assigned a driver or not
      - Profile / Account page
-     - Receipt (can fold into the completed screen)
    NOT needed (pay-driver-directly model): payment-method screen, in-app toll screen.
 
    Backend gaps that BLOCK the active-ride flow (must be closed with the pages):

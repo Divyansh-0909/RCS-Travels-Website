@@ -4,7 +4,7 @@ export const useData = create (set =>({
     phone: "",
     setPhone: (number)=> set (state => ({phone: number})),
 
-    pickupLocation: "Inner Gate, Shiv Nadar",
+    pickupLocation: "Connaught Place, delhi",
     setPickup: (location)=> set (state => ({pickupLocation: location})),
 
     dropLocation: null,
@@ -13,20 +13,26 @@ export const useData = create (set =>({
     scheduledTime: null,
     setScheduledTime: (time)=> set(state=> ({scheduledTime: time})),
 
+    timing: "Schedule",
+    setTiming: (timing)=> set(state=> ({timing: timing})),
+
     fare: 300,
     setFare: (fare)=> set(state=> ({fare: fare})),
 
     vehicleType: 4,
     setvehicleType: (vehicle)=> set(state=> ({vehicleType: vehicle})),
 
-    bookingId: 12,
+    bookingId: null,
     setBookingId: (id)=> set(state=> ({bookingId: id})),
 
     bookingCode: null,
     setBookingCode: (code)=> set(state=> ({bookingCode: code})),
 
-    status: "confirmed",
+    status: "completed",
     setStatus: (status)=> set(state=> ({status: status})),
+
+    cancelledBy: null,
+    setCancelledBy: (by)=> set(state=> ({cancelledBy: by})),
 
     username: null,
     setUsername: (name)=> set(state=> ({username: name})),
