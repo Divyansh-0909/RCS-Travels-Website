@@ -50,8 +50,8 @@ const RideDetails = ({ prop }) => {
     }
 
     return (
-        <div className="relative flex flex-col justify-center items-center w-full gap-6 sm:gap-12">
-            <div onClick={() => prop.setDetialsVisibility(false)} className="flex gap-2 sm:gap-3 items-center justify-center absolute left-5 top-0 text-[var(--text)]">
+        <div className="relative flex flex-col justify-center items-center  sm:h-[100vh] w-full gap-6 sm:gap-12">
+            <div onClick={() => prop.setDetialsVisibility(false)} className="flex gap-2 sm:gap-3 items-center cursor-pointer opacity-[0.8] transition-opacity duration-300 hover:opacity-[1] justify-center absolute left-5 top-0 text-[var(--text)]">
                 <Icon path={mdiKeyboardBackspace} size={1.2} />
             </div>
             <h2>Ride Details</h2>
@@ -61,23 +61,15 @@ const RideDetails = ({ prop }) => {
                         <img src={dashedLine} alt="dashed-line" />
                         <img src={arrow} alt="arrow" />
                     </div>
-                    <div className="flex flex-col justify-center items-center gap-2 sm:gap-3">
-                        <Button
-                            prop={{
-                                variant: "input",
-                                width: "255px",
-                            }}
-                        >
-                            <h3 className="w-full px-4 flex justify-start items-center">{pickupLocation}</h3>
-                        </Button>
-                        <Button
-                            prop={{
-                                variant: "input",
-                                width: "255px",
-                            }}
-                        >
-                            <h3 className="w-full px-4 flex justify-start items-center">{dropLocation}</h3>
-                        </Button>
+                    <div className="flex flex-col justify-center items-center gap-2 text-left sm:gap-3">
+                        <div className='flex flex-col items-start justify-center text-left'>
+                            <h3 className="w-full px-4 flex justify-start items-center">{pickupLocation?.split(',')[0]}</h3>
+                            <p className='w-full px-4 flex justify-start items-center text-base'>{pickupLocation?.replace(`${pickupLocation?.split(",")[0]}, `, "")}</p>
+                        </div>
+                        <div className='flex flex-col items-start justify-center text-left'>
+                            <h3 className="w-full px-4 flex justify-start items-center">{dropLocation?.split(',')[0]}</h3>
+                            <p className='w-full px-4 flex justify-start items-center text-base'>{dropLocation?.replace(`${dropLocation?.split(",")[0]}, `, "")}</p>
+                        </div>
                     </div>
                 </div>
 
@@ -93,7 +85,7 @@ const RideDetails = ({ prop }) => {
 
                 <div className="flex items-center justify-between w-full">
                     <h4 className="text-[var(--text-muted)]">Status:</h4>
-                    <h4>{status}</h4>
+                    <h4>{status.charAt(0).toUpperCase() + status.slice(1)}</h4>
                 </div>
             </div>
             <div className="flex flex-col justify-center items-center gap-2 sm:gap-3">
