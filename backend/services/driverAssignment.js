@@ -118,7 +118,7 @@ export async function getDriver(bookingId) {
       for (const x of sortedSharing) {
         triedDriverIds.add(x.driverId)
 
-        if(x.vehicleCapacity <= 0) continue; 
+        if(x.driver.vehicleCapacity <= 0) continue;
         
         const response =
           await sendFCM(x.driver.fcmToken, {
@@ -147,7 +147,7 @@ export async function getDriver(bookingId) {
           await prisma.driver.update({
             where: {id: assignedDriver},
             data: {
-              vehicleCapacity: x.vehicleCapacity - 1
+              vehicleCapacity: x.driver.vehicleCapacity - 1
             }
           })
 
@@ -179,7 +179,7 @@ export async function getDriver(bookingId) {
       // Solo rides occupy the whole vehicle, so only assign one to a fully-free
       // vehicle. A sharing ride that fell through here is starting a fresh shared
       // trip, so it just needs a single free seat.
-      if (row.sharing ? x.vehicleCapacity <= 0 : x.vehicleCapacity < x.vehicleType) continue
+      if (row.sharing ? x.driver.vehicleCapacity <= 0 : x.driver.vehicleCapacity < x.driver.vehicleType) continue
 
       const response =
         await sendFCM(x.driver.fcmToken, {
@@ -210,7 +210,7 @@ export async function getDriver(bookingId) {
             data: {
               // Solo ride takes the vehicle out of the pool entirely; a fresh
               // sharing ride only consumes one seat.
-              vehicleCapacity: row.sharing ? x.vehicleCapacity - 1 : 0
+              vehicleCapacity: row.sharing ? x.driver.vehicleCapacity - 1 : 0
             }
           })
 
