@@ -13,7 +13,7 @@ import SignUpPage from './pages/SignUpPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import TrackingPage from './pages/TrackingPage';
 import RideHistory from './pages/RideHistory';
-import ProfilePage from './pages/ProfilePage';
+import ManageAccount from './pages/ManageAccount';
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
 
@@ -49,7 +49,7 @@ const router = createBrowserRouter([
   },
   {
     path: "/profile",
-    element: <ProtectedRoute><ProfilePage /></ProtectedRoute>,
+    element: <ProtectedRoute><ManageAccount /></ProtectedRoute>,
   },
 ]);
 
