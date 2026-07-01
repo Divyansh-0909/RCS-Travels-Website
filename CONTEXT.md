@@ -407,7 +407,7 @@ npm run dev            # nodemon → http://localhost:5000 ; GET /health → { s
 `VITE_API_URL`, defaults to `http://localhost:5000`).
 ```
 npm install
-npm run dev            # vite → http://localhost:5173
+npm run dev            # vite → http://localhost:1574
 ```
 
 Dev login: enter a phone on `/login`, then read the OTP from the **backend terminal** (it's logged,

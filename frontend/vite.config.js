@@ -7,5 +7,8 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
-  
+  server: {
+    port: 1574,
+    strictPort: true,
+  },
 })
