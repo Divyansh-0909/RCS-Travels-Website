@@ -14,7 +14,10 @@ const RideDetails = ({ prop }) => {
     const api = useApi()
     const navigate = useViewNavigate();
     const pickupLocation = useData(state => state.pickupLocation);
+    const setPickup = useData(state => state.setPickup);
     const dropLocation = useData(state => state.dropLocation);
+    const setDrop = useData(state => state.setDrop);
+    const setActiveBooking = useData(state => state.setActiveBooking);
     const fare = useData(state => state.fare);
     const status = useData(state => state.status);
     const distance = "30 KM";
@@ -25,7 +28,6 @@ const RideDetails = ({ prop }) => {
         try {
             prop.setError(null);
             prop.setLoading(true);
-
             if (!prop.bookingId) {
                 prop.setError("No active ride to cancel")
                 return
@@ -39,6 +41,9 @@ const RideDetails = ({ prop }) => {
             }
             if (data.ok) {
                 setBookingId(null)
+                setDrop(null)
+                setPickup(null)
+                setActiveBooking(null)
                 navigate('/')
             }
         } catch (err) {
@@ -61,7 +66,7 @@ const RideDetails = ({ prop }) => {
                         <img src={dashedLine} alt="dashed-line" />
                         <img src={arrow} alt="arrow" />
                     </div>
-                    <div className="flex flex-col justify-center items-center gap-2 text-left sm:gap-3">
+                    <div className="flex flex-col justify-center items-start gap-2 text-left sm:gap-3">
                         <div className='flex flex-col items-start justify-center text-left'>
                             <h3 className="w-full px-4 flex justify-start items-center">{pickupLocation?.split(',')[0]}</h3>
                             <p className='w-full px-4 flex justify-start items-center text-base'>{pickupLocation?.replace(`${pickupLocation?.split(",")[0]}, `, "")}</p>

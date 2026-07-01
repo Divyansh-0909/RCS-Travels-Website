@@ -33,6 +33,7 @@ const VehicleSelect = ()=>{
     const setBookingCode = useData(state => state.setBookingCode);
     const status = useData(state=>state.status);
     const setStatus = useData(state => state.setStatus);
+    const setActiveBooking = useData(state => state.setActiveBooking);
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(false);
     const [panelState, setPanelState]= useState("");  // "confirm" | "error"
@@ -108,12 +109,31 @@ const VehicleSelect = ()=>{
                     setPanelState("noDriver")
                     return
                 }
+                // Surface the server's booking-conflict message as-is (same
+                // rules the OnBoarding form enforces client-side).
+                if (data.error.startsWith("You already have")) {
+                    setError(data.error);
+                    return;
+                }
                 setError("Can't create booking, try again");
                 return;
             }
             if (data.bookingId) setBookingId(data.bookingId)
             if (data.bookingCode) setBookingCode(data.bookingCode)
             if (data.status) setStatus(data.status)
+
+            // Optimistically record the new live booking so OnBoarding's cards
+            // show immediately on return; the next OnBoarding mount re-fetches
+            // and reconciles this with the server's truth.
+            setActiveBooking({
+                id: data.bookingId,
+                code: data.bookingCode,
+                status: data.status,
+                pickupAddress: pickupLocation,
+                dropAddress: dropLocation,
+                fare: fare,
+                scheduledAt: scheduledTime,
+            });
 
             if(scheduledTime) setPanelState("confirmed")
             else if (data.status === "assigned") {
