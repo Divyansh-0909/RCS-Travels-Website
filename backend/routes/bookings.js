@@ -9,6 +9,14 @@ const bookingsRouter = Router()
 
 const VALID_VEHICLE_TYPES = [4, 6, 1]
 
+// Statuses that mean the booking is still live (not finished/cancelled).
+const ACTIVE_STATUSES = ['pending', 'confirmed', 'assigned', 'en_route', 'reached', 'started']
+
+// Two rides within this window are treated as the same time slot.
+const OVERLAP_MS = 15 * 60 * 1000
+
+const normAddress = (s) => s?.trim().toLowerCase()
+
 bookingsRouter.post('/', protect, async (req, res) => {
     const {
         pickupAddress, pickupLat, pickupLng,
@@ -58,6 +66,21 @@ bookingsRouter.post('/', protect, async (req, res) => {
 
     const user = await prisma.user.findUnique({ where: { clerkId: req.auth.userId } })
     if (!user) return res.status(401).json({ error: 'Complete signup before booking' })
+
+    // Reject bookings that collide with one the user already has live: either at
+    // the same time slot, or an exact duplicate of the pickup + drop route.
+    const activeBookings = await prisma.booking.findMany({
+        where: { userId: user.id, status: { in: ACTIVE_STATUSES } },
+    })
+    const newRideAt = scheduledAt ? new Date(scheduledAt).getTime() : Date.now()
+    for (const b of activeBookings) {
+        const activeRideAt = b.scheduledAt ? b.scheduledAt.getTime() : Date.now()
+        if (Math.abs(newRideAt - activeRideAt) < OVERLAP_MS)
+            return res.status(409).json({ error: 'You already have a ride around this time' })
+        if (normAddress(b.pickupAddress) === normAddress(pickupAddress) &&
+            normAddress(b.dropAddress) === normAddress(dropAddress))
+            return res.status(409).json({ error: 'You already have an active booking for this route' })
+    }
 
     const bookingData = {
         bookingCode, userId: user.id,
