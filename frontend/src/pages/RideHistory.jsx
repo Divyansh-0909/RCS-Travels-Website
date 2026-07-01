@@ -80,9 +80,9 @@ const RideHistory = () => {
     const expandedBooking = expand !== null ? bookings.find(b => b.id === expand) : null;
 
     return (
-        <div className="bg-[var(--foreground)]">
+        <div className="bg-[var(--foreground)] w-full h-full">
             <div className="fixed z-100 left-1/2 -translate-x-1/2 top-6 sm:top-10">
-                <NavBar invert hideExpanded />
+                <NavBar invert  />
             </div>
             <div
                 className={`${copied ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"} flex justify-center items-center w-[230px] fixed z-100 left-1/2 -translate-x-1/2 bottom-8 sm:bottom-10 bg-primary text-[var(--foreground)] text-sm font-semibold px-5 py-3 rounded-full shadow-[0_8px_24px_rgba(0,0,0,0.25)] flex items-center gap-2 transition-[opacity,transform] duration-300`}
