@@ -5,7 +5,7 @@ import crypto from 'crypto'
 
 const hybridAuthRouter = Router()
 
-const generateOTP = () => String(crypto.randomInt(100000, 1000000))
+const generateOTP = () => String(crypto.randomInt(1000, 10000))
 
 hybridAuthRouter.post('/send-otp', async (req, res) => {
   const { phone } = req.body

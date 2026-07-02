@@ -69,11 +69,12 @@ async function seedTestData() {
   console.log('Seeding test user...')
   const user = await prisma.user.upsert({
     where:  { clerkId: SEED_CLERK_ID },
-    update: { phone: '9876543210', name: 'Test Rider' },
+    update: { phone: '9876543210', name: 'Test Rider', bookingCode: '4242' },
     create: {
-      clerkId: SEED_CLERK_ID,
-      phone:   '9876543210',
-      name:    'Test Rider',
+      clerkId:     SEED_CLERK_ID,
+      phone:       '9876543210',
+      name:        'Test Rider',
+      bookingCode: '4242',
     },
   })
   console.log(`  User ${user.id} (clerkId: ${user.clerkId})`)
@@ -121,28 +122,29 @@ async function seedTestData() {
   return { user, drivers: createdDrivers }
 }
 
-// A few finished rides so Ride History has content. Idempotent via upsert on the
-// unique bookingCode. Dates are set in the past relative to "now".
+// A few finished rides so Ride History has content. Idempotent via upsert on a
+// fixed id (the booking code now lives on the user, not the booking). Dates are
+// set in the past relative to "now".
 function pastBookings(user, drivers) {
   const daysAgo = (n) => new Date(Date.now() - n * 24 * 60 * 60 * 1000)
 
   return [
     {
-      bookingCode: '900001', userId: user.id, driverId: drivers[0]?.id ?? null,
+      id: '00000000-0000-0000-0000-000000000001', userId: user.id, driverId: drivers[0]?.id ?? null,
       customerPhone: user.phone, vehicleType: 4, fare: 850, distanceKm: 32.4,
       pickupAddress: 'Connaught Place, New Delhi', pickupLat: 28.6315, pickupLng: 77.2167,
       dropAddress: 'Cyber Hub, Gurugram',          dropLat: 28.4951, dropLng: 77.0890,
       status: 'completed', confirmedAt: daysAgo(5), createdAt: daysAgo(5), completedAt: daysAgo(5),
     },
     {
-      bookingCode: '900002', userId: user.id, driverId: drivers[1]?.id ?? null,
+      id: '00000000-0000-0000-0000-000000000002', userId: user.id, driverId: drivers[1]?.id ?? null,
       customerPhone: user.phone, vehicleType: 6, fare: 1200, distanceKm: 41.0, commissionPct: 10, commissionAmt: 120,
       pickupAddress: 'IGI Airport T3, New Delhi', pickupLat: 28.5562, pickupLng: 77.1000,
       dropAddress: 'Noida Sector 18',             dropLat: 28.5708, dropLng: 77.3260,
       status: 'completed', confirmedAt: daysAgo(3), createdAt: daysAgo(3), completedAt: daysAgo(3),
     },
     {
-      bookingCode: '900003', userId: user.id, driverId: null,
+      id: '00000000-0000-0000-0000-000000000003', userId: user.id, driverId: null,
       customerPhone: user.phone, vehicleType: 4, fare: 420, distanceKm: 18.7,
       pickupAddress: 'Karol Bagh, New Delhi', pickupLat: 28.6519, pickupLng: 77.1909,
       dropAddress: 'Saket, New Delhi',        dropLat: 28.5245, dropLng: 77.2066,
@@ -156,11 +158,11 @@ async function seedPastBookings(user, drivers) {
   const rows = pastBookings(user, drivers)
   for (const b of rows) {
     await prisma.booking.upsert({
-      where:  { bookingCode: b.bookingCode },
+      where:  { id: b.id },
       update: b,
       create: b,
     })
-    console.log(`  Booking ${b.bookingCode} (${b.status})`)
+    console.log(`  Booking ${b.id} (${b.status})`)
   }
 }
 

@@ -44,6 +44,9 @@ model User {
   clerkId        String    @unique @map("clerk_id")
   phone          String    @unique
   name           String?
+  // Stable 4-digit code generated once at signup. A user shows this same code to
+  // the driver on every ride, so it lives on the user, not on each booking.
+  bookingCode    String    @unique @map("booking_code")
   whatsappNumber String?   @map("whatsapp_number")
   createdAt      DateTime  @default(now()) @map("created_at")
 
@@ -91,7 +94,6 @@ model DriverLocation {
 
 model Booking {
   id                 String        @id @default(uuid())
-  bookingCode        String        @unique @map("booking_code") // 6 digit otp
   userId             String        @map("user_id")
   driverId           String?       @map("driver_id")
   customerPhone      String        @map("customer_phone")

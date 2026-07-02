@@ -12,6 +12,7 @@ export default function startAssignmentJob() {
           status:      'confirmed',
           scheduledAt: { lte: cutoff },
         },
+        include: { user: true },
       })
 
       for (const booking of unassignedBookings) {
@@ -19,7 +20,7 @@ export default function startAssignmentJob() {
 
         const oneHourFromNow = new Date(Date.now() + 60 * 60 * 1000)
         if (!assignedDriverId && booking.scheduledAt <= oneHourFromNow) {
-          sendWhatsApp(process.env.ADMIN_PHONE, `No driver found for booking ${booking.bookingCode}. Pickup at ${booking.scheduledAt}. Please assign manually.`)
+          sendWhatsApp(process.env.ADMIN_PHONE, `No driver found for booking ${booking.user.bookingCode}. Pickup at ${booking.scheduledAt}. Please assign manually.`)
         }
       }
     } catch (err) {

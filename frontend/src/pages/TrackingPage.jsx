@@ -246,7 +246,7 @@ const TrackingPage = () => {
                                     <div className="w-full flex flex-col gap-1 sm:gap-2">
                                         <div className={`${status === "en_route" || status === "reached" ? "block" : "hidden"} flex items-center justify-between w-full`}>
                                             <h3 className="text-[var(--text-muted)] text-xl">OTP:</h3>
-                                            <h3 className="text-2xl">{bookingCode} 1 2 3 4 5 6</h3>
+                                            <h3 className="text-2xl">{bookingCode}</h3>
                                         </div>
                                         <div className={`flex flex-col gap-1 sm:gap-2 justify-center items-start w-full ${status === "en_route" || status === "reached" ? "mt-5" : ""}`}>
                                             <Button prop={{ variant: "input" }} className={`px-3 sm:block hidden`}>

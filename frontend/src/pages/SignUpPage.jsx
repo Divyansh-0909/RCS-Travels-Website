@@ -39,6 +39,12 @@ const SignUpPage = () => {
     return () => clearInterval(timer);
   }, [resendIn]);
 
+  // Signing up is for a fresh number — start the phone field blank rather than
+  // pre-filling the remembered (persisted) login number.
+  useEffect(() => {
+    setPhone("");
+  }, []);
+
   function handleUsernameSubmit(e) {
     e.preventDefault();
 
@@ -94,8 +100,8 @@ const SignUpPage = () => {
         return;
       }
 
-      if(!(otp.length === 6) ){
-        setError("OTP should be exactly 6 digit");
+      if(!(otp.length === 4) ){
+        setError("OTP should be exactly 4 digit");
         return;
       }
 
@@ -187,7 +193,7 @@ const SignUpPage = () => {
   };
 
   const handleOtpChange = (value) => {
-    const digits = value.replace(/\D/g, "").slice(0, 6);
+    const digits = value.replace(/\D/g, "").slice(0, 4);
 
     setOtp(digits);
 
@@ -201,7 +207,7 @@ const SignUpPage = () => {
 
   return (
     <div className="relative bg-transparent text-center flex justify-center items-center w-[100vw] h-[100vh] bg-panel-gradient">
-        <div onClick={back} className="block sm:hidden flex justify-center items-center gap-2 sm:gap-3 absolute left-3 top-3 text-[var(--text)]">
+        <div onClick={back} className="flex cursor-pointer justify-center items-center gap-2 sm:gap-3 absolute left-3 top-3 text-[var(--text)] sm:opacity-80 hover:opacity-100 transition-opacity duration-300">
             <Icon path={mdiKeyboardBackspace} size={1.2} />
         </div>
         {/* While finalizing (loading) the session may already be active; keep showing
@@ -234,7 +240,7 @@ const SignUpPage = () => {
                   ? <>Make it yours.</>
                   : isPhone
                   ? <>Looks like you're <br /> new here.</>
-                  : <>One code <br /> away.</>}
+                  : <>One code away.</>}
               </h2>
               <p className="text-[var(--text-muted)] ">
                 {isUsername
@@ -257,7 +263,7 @@ const SignUpPage = () => {
                   type: isUsername ? "text" : "tel",
                   name: isUsername ? "username" : isPhone ? "phone-number" : "otp-number",
                   id: isUsername ? "username" : isPhone ? "phone-number" : "otp-number",
-                  placeholder: isUsername ? "Full Name" : isPhone ? "XXXXX XXXXX" : "XX XX XX XX",
+                  placeholder: isUsername ? "Full Name" : isPhone ? "XXXXX XXXXX" : "XX XX",
                   value: isUsername ? username : isPhone ? phone : otp,
                   onChangeFn: isUsername ? handleUsernameChange : isPhone ? handlePhoneChange : handleOtpChange,
                   error: isUsername
@@ -273,6 +279,13 @@ const SignUpPage = () => {
                 onClick={isPhone && showLogin ? () => navigate('/login') : undefined}
                 prop={{
                   type: isPhone && showLogin ? "button" : "submit",
+                  disabled: (isPhone && showLogin)
+                    ? false
+                    : isUsername
+                    ? username.trim().length < 2
+                    : isPhone
+                    ? phone.length !== 10
+                    : otp.length !== 4,
                 }}
                 className="scale-[1] sm:scale-[1.1]"
               >

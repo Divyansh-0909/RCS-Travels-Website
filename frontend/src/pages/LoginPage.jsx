@@ -1,5 +1,5 @@
 import { useSignIn, useAuth } from "@clerk/clerk-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useViewNavigate } from "../hooks/useViewNavigate";
 import Input from "../components/ui/Input";
 import Button from "../components/ui/Button";
@@ -15,6 +15,8 @@ const LoginPage = () => {
   const phone = useData(state => state.phone);
   const setPhone = useData(state => state.setPhone);
   const [otp, setOtp] = useState("");
+  const otpRefs = useRef([]);
+  const OTP_LENGTH = 4;
   const [step, setStep] = useState("phone"); // "phone" | "otp"
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -70,8 +72,8 @@ const LoginPage = () => {
       return;
     }
 
-    if (!(otp.length === 6)) {
-      setError("OTP should be exactly 6 digit");
+    if (!(otp.length === OTP_LENGTH)) {
+      setError("OTP should be exactly 4 digit");
       return;
     }
 
@@ -156,26 +158,65 @@ const LoginPage = () => {
     }
   };
 
-  const handleOtpChange = (value) => {
-    const digits = value.replace(/\D/g, "").slice(0, 6);
-
-    setOtp(digits);
-
-    if (
-      error === "Enter OTP" ||
-      error === "Incorrect OTP"
-    ) {
+  const clearOtpError = () => {
+    if (error === "Enter OTP" || error === "Incorrect OTP") {
       setError(null);
     }
   };
 
+  const focusBox = (i) => {
+    otpRefs.current[i]?.focus();
+  };
+
+  // Set a single box's digit, then advance focus. OTP is a left-to-right
+  // sequence, so empty slots collapse rather than leaving gaps.
+  const handleOtpDigit = (i, value) => {
+    const char = value.replace(/\D/g, "").slice(-1);
+    if (!char) return;
+
+    const chars = Array.from({ length: OTP_LENGTH }, (_, idx) => otp[idx] ?? "");
+    chars[i] = char;
+    setOtp(chars.join(""));
+    clearOtpError();
+
+    if (i < OTP_LENGTH - 1) focusBox(i + 1);
+  };
+
+  const handleOtpKeyDown = (i, e) => {
+    if (e.key === "Backspace") {
+      e.preventDefault();
+      const chars = Array.from({ length: OTP_LENGTH }, (_, idx) => otp[idx] ?? "");
+      if (chars[i]) {
+        chars[i] = "";
+      } else if (i > 0) {
+        chars[i - 1] = "";
+        focusBox(i - 1);
+      }
+      setOtp(chars.join(""));
+      clearOtpError();
+    } else if (e.key === "ArrowLeft" && i > 0) {
+      focusBox(i - 1);
+    } else if (e.key === "ArrowRight" && i < OTP_LENGTH - 1) {
+      focusBox(i + 1);
+    }
+  };
+
+  const handleOtpPaste = (e) => {
+    e.preventDefault();
+    const digits = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, OTP_LENGTH);
+    if (!digits) return;
+    setOtp(digits);
+    clearOtpError();
+    focusBox(Math.min(digits.length, OTP_LENGTH - 1));
+  };
+
   return (
     <div className="relative bg-transparent text-center flex justify-center items-center w-[100vw] h-[100vh] bg-panel-gradient">
-      <div onClick={back} className="block sm:hidden flex justify-center items-center gap-2 sm:gap-3 absolute left-3 top-3 text-[var(--text)]">
+      <div onClick={back} className="flex cursor-pointer justify-center items-center gap-2 sm:gap-3 absolute left-3 top-3 text-[var(--text)] sm:opacity-80 hover:opacity-100 transition-opacity duration-300">
         <Icon path={mdiKeyboardBackspace} size={1.2} />
       </div>
       {isSignedIn
-      ? <div className="flex flex-col justify-center items-center gap-6">
+        ? <div className="flex flex-col justify-center items-center gap-6">
           <h2 className="text-[var(--text)] ">
             You are already <br /> logged in.
           </h2>
@@ -190,7 +231,7 @@ const LoginPage = () => {
           </Button>
         </div>
 
-      : <form
+        : <form
           className="flex flex-col justify-center items-center gap-12"
           noValidate
           onSubmit={isPhone ? handleSubmit : handleOTPSubmit}
@@ -211,27 +252,73 @@ const LoginPage = () => {
               </p>
             )}
 
-            <Input
-              prop={{
-                type: "tel",
-                name: isPhone ? "phone-number" : "otp-number",
-                id: isPhone ? "phone-number" : "otp-number",
-                placeholder: isPhone ? "XXXXX XXXXX" : "XX XX XX XX",
-                value: isPhone ? phone : otp,
-                onChangeFn: isPhone ? handlePhoneChange : handleOtpChange,
-                error: isPhone
-                  ? error === "Enter a Phone Number" ||
-                  error === "Number should be exactly 10 digits"
-                  : error === "Enter OTP" ||
-                  error === "Incorrect OTP",
-              }}
-              className="scale-[1] sm:scale-[1.1] mb-5"
-            />
-
+            {!isPhone
+            ? <div className="flex justify-center items-center gap-2 sm:gap-3 mb-5">
+                {Array.from({ length: OTP_LENGTH }).map((_, i) => (
+                  <input
+                    key={i}
+                    ref={(el) => (otpRefs.current[i] = el)}
+                    type="tel"
+                    inputMode="numeric"
+                    autoComplete={i === 0 ? "one-time-code" : "off"}
+                    name={`otp-number-${i + 1}`}
+                    id={`otp-number-${i + 1}`}
+                    placeholder="X"
+                    maxLength={1}
+                    value={otp[i] ?? ""}
+                    onChange={(e) => handleOtpDigit(i, e.target.value)}
+                    onKeyDown={(e) => handleOtpKeyDown(i, e)}
+                    onPaste={handleOtpPaste}
+                    className={`
+                      flex justify-center text-center items-center font-medium text-2xl text-white my-1
+                      py-2 w-[50px] h-[60px] rounded-2xl opacity-[1] hover:opacity-[0.8] transition-opacity duration-300
+                      ${(error === "Enter OTP" ||
+                        error === "Incorrect OTP")
+                        ? `
+                            border-b-2 border-[rgba(239,68,68,0.3)]
+                            bg-[linear-gradient(to_bottom,transparent_50%,rgba(239,68,68,0.25)_100%)]
+                            shadow-[inset_0_2px_2px_rgba(239,68,68,0.35)]
+                            focus:border-[rgba(239,68,68,0.5)]
+                            focus:shadow-[inset_0_2px_2px_rgba(255,255,255,0.35)]
+                          `
+                        : `
+                          border-b-2 border-[rgba(255,255,255,0.05)]
+                          bg-[linear-gradient(to_bottom,transparent_50%,rgba(146,146,139,0.10)_100%)]
+                          shadow-[inset_0_2px_2px_rgba(255,255,255,0.25)]
+                          focus:border-[rgba(255,255,255,0.15)]
+                          focus:shadow-[inset_0_2px_2px_rgba(255,255,255,0.35)]
+                          `
+                      }
+                      focus:outline-none
+                      focus:opacity-[0.8]
+                      active:opacity-[0.8]
+                      transition-all duration-200
+                    `}
+                  />
+                ))}
+              </div>
+              :
+              <Input
+                prop={{
+                  type: "tel",
+                  name: "phone-number",
+                  id: "phone-number",
+                  placeholder: "XXXXX XXXXX",
+                  value: phone,
+                  onChangeFn: handlePhoneChange,
+                  error: error === "Enter a Phone Number" ||
+                    error === "Number should be exactly 10 digits",
+                }}
+                className="scale-[1] sm:scale-[1.1] mb-5"
+              />
+            }
             <Button
               onClick={isPhone && showSignUp ? () => navigate('/signup') : undefined}
               prop={{
                 type: isPhone && showSignUp ? "button" : "submit",
+                disabled: (isPhone && showSignUp)
+                  ? false
+                  : (isPhone ? phone.length !== 10 : otp.length !== OTP_LENGTH),
               }}
               className="scale-[1] sm:scale-[1.1]"
             >

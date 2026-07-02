@@ -3,7 +3,6 @@ import { protect, protectAdmin } from '../middleware/auth.js'
 import { getDriver } from '../services/driverAssignment.js'
 import { sendWhatsApp } from '../services/notification.js'
 import { prisma } from '../db/prisma.js'
-import crypto from 'crypto'
 
 const bookingsRouter = Router()
 
@@ -56,16 +55,11 @@ bookingsRouter.post('/', protect, async (req, res) => {
     const commissionPct = fare >= 1000 ? 10 : 0
     const commissionAmt = (fare * commissionPct) / 100
 
-    let bookingCode
-    for (let attempt = 0; attempt < 5; attempt++) {
-        const candidate = String(crypto.randomInt(100000, 1000000))
-        const exists = await prisma.booking.findUnique({ where: { bookingCode: candidate } })
-        if (!exists) { bookingCode = candidate; break }
-    }
-    if (!bookingCode) return res.status(500).json({ error: 'Failed to generate booking code' })
-
     const user = await prisma.user.findUnique({ where: { clerkId: req.auth.userId } })
     if (!user) return res.status(401).json({ error: 'Complete signup before booking' })
+
+    // The booking code is the user's stable code — the same on every ride.
+    const bookingCode = user.bookingCode
 
     // Reject bookings that collide with one the user already has live: either at
     // the same time slot, or an exact duplicate of the pickup + drop route.
@@ -83,7 +77,7 @@ bookingsRouter.post('/', protect, async (req, res) => {
     }
 
     const bookingData = {
-        bookingCode, userId: user.id,
+        userId: user.id,
         customerPhone: user.phone, vehicleType,
         pickupAddress, pickupLat, pickupLng,
         dropAddress, dropLat, dropLng,
@@ -126,11 +120,11 @@ bookingsRouter.get('/:id/status', protect, async (req, res) => {
   if (!booking) return res.status(404).json({ error: 'Booking not found' })
   if (booking.userId !== user.id) return res.status(403).json({ error: 'Forbidden' })
 
-  if (!booking.driverId) return res.json({ bookingId: booking.id, bookingCode: booking.bookingCode, status: booking.status, driver: null })
+  if (!booking.driverId) return res.json({ bookingId: booking.id, bookingCode: user.bookingCode, status: booking.status, driver: null })
 
   return res.json({
     bookingId:   booking.id,
-    bookingCode: booking.bookingCode,
+    bookingCode: user.bookingCode,
     status:      booking.status,
     driver: {
       name:          booking.driver.name,
@@ -194,7 +188,7 @@ bookingsRouter.post('/cancel', protect, async (req, res) => {
     if (booking.driver) {
         sendWhatsApp(booking.driver.phone,
             `A ride you were assigned has been cancelled by the customer.
-            \nBooking Code: ${booking.bookingCode}
+            \nBooking Code: ${user.bookingCode}
             \nPickup Location: ${booking.pickupAddress}
             \nDrop Location: ${booking.dropAddress}`
         )
@@ -213,7 +207,11 @@ bookingsRouter.get('/my-bookings', protect, async (req, res) => {
         include: {driver: true}
     })
 
-    return res.json({ bookings })
+    // The code lives on the user now; surface it on each booking so callers that
+    // read booking.bookingCode keep working.
+    const withCode = bookings.map(b => ({ ...b, bookingCode: user.bookingCode }))
+
+    return res.json({ bookings: withCode })
 })
 
 bookingsRouter.get('/admin/all', protect, protectAdmin, async (req, res) => {
@@ -239,7 +237,9 @@ bookingsRouter.get('/admin/all', protect, protectAdmin, async (req, res) => {
     prisma.booking.count({ where }),
   ])
 
-  res.json({ total, page: Number(page), limit: Number(limit), bookings })
+  const withCode = bookings.map(b => ({ ...b, bookingCode: b.user?.bookingCode ?? null }))
+
+  res.json({ total, page: Number(page), limit: Number(limit), bookings: withCode })
 })
 
 
