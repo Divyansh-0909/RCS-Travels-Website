@@ -77,9 +77,7 @@ const OnBoarding = () => {
   const navigate = useViewNavigate();
 
   // Copy the active booking into the shared tracking fields, then open the
-  // tracking page. TrackingPage reads those fields, so we hand them over only
-  // when the user actually navigates there — the form fields stay untouched
-  // until then.
+  // tracking page. 
   function openActiveBooking() {
     if (!activeBooking) return;
     setBookingId(activeBooking.id);
@@ -146,9 +144,7 @@ const OnBoarding = () => {
       const sameRoute =
         norm(pickupLocation) === norm(activeBooking.pickupAddress) &&
         norm(dropLocation) === norm(activeBooking.dropAddress);
-
-      // When each ride actually happens: the chosen schedule time, or "now" for
-      // an immediate ride. Rides within this window are treated as the same slot.
+        
       const OVERLAP_MS = 15 * 60 * 1000;
       const newRideAt = (timing === "Schedule" ? scheduledTime : new Date()).getTime();
       const activeRideAt = (activeBooking.scheduledAt ? new Date(activeBooking.scheduledAt) : new Date()).getTime();
@@ -445,6 +441,10 @@ const OnBoarding = () => {
                 <Button
                   prop={{
                     type: "submit",
+                    disabled:
+                      (timing === "Schedule" && !scheduledTime) ||
+                      !pickupLocation?.trim() ||
+                      !dropLocation?.trim(),
                   }}
                   className="scale-[1] sm:scale-[1.1]"
                 >

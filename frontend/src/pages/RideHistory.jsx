@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { useViewNavigate } from "../hooks/useViewNavigate";
 import { useAuth } from "@clerk/clerk-react";
 import NavBar from "../components/ui/NavBar";
-import errorIcon from "../assets/cross.webp";
+import ErrorMark from "../components/illustrations/ErrorMark";
 import Icon from "@mdi/react";
 import { mdiChevronDown, mdiPlus, mdiContentCopy, mdiClose } from "@mdi/js";
 import dashedLine from '../assets/dashed-line.svg';
@@ -48,8 +48,11 @@ const RideHistory = () => {
             }
             if (data.ok) {
                 if (bookingId === id) setBookingId(null);
-                setBookings(prev => prev.map(b => b.id === id ? { ...b, status: "cancelled" } : b));
-                setExpand(null);
+                // Hard-reload the whole site so all in-memory state is reset
+                // after cancelling a scheduled ride. The flag lets the global
+                // toast confirm the cancel once the page reloads.
+                sessionStorage.setItem("rideCancelled", "1");
+                window.location.reload();
             }
         } catch (err) {
             console.error(err);
@@ -97,7 +100,7 @@ const RideHistory = () => {
                     : (bookings?.length ?? 0) === 0
                     ?
                     <div className="flex flex-col justify-center items-center w-full h-[100vh] gap-1 sm:gap-2">
-                        <img className="-my-8 w-[150px] " src={errorIcon} alt="icon" />
+                        <ErrorMark className="-my-8" size={140} />
                         <h2 className="text-[var(--background-primary)]">No rides found</h2>
                         <h3 className="w-fit text-[var(--background-primary)]">Try <u className="cursor-pointer text-primary/80 transition-color duration-300 hover:text-primary" onClick={() => navigate('/')} >booking a ride</u></h3>
                     </div>

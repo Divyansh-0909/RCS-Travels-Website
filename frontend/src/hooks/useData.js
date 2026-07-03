@@ -1,6 +1,7 @@
 import {create} from 'zustand'
+import {persist, createJSONStorage} from 'zustand/middleware'
 
-export const useData = create (set =>({
+export const useData = create (persist (set =>({
     phone: "",
     setPhone: (number)=> set (state => ({phone: number})),
 
@@ -43,4 +44,11 @@ export const useData = create (set =>({
 
     sharing: true,
     setSharing: (share) => set(state=>({sharing: share})),
+}),
+{
+    name: 'rcs-data',
+    storage: createJSONStorage(() => localStorage),
+    // Only the phone number is remembered across reloads/return visits so a
+    // returning user's login form is pre-filled; everything else stays in-memory.
+    partialize: (state) => ({ phone: state.phone }),
 }))

@@ -8,7 +8,6 @@ const bookingsRouter = Router()
 
 const VALID_VEHICLE_TYPES = [4, 6, 1]
 
-// Statuses that mean the booking is still live (not finished/cancelled).
 const ACTIVE_STATUSES = ['pending', 'confirmed', 'assigned', 'en_route', 'reached', 'started']
 
 // Two rides within this window are treated as the same time slot.
@@ -58,7 +57,6 @@ bookingsRouter.post('/', protect, async (req, res) => {
     const user = await prisma.user.findUnique({ where: { clerkId: req.auth.userId } })
     if (!user) return res.status(401).json({ error: 'Complete signup before booking' })
 
-    // The booking code is the user's stable code — the same on every ride.
     const bookingCode = user.bookingCode
 
     // Reject bookings that collide with one the user already has live: either at

@@ -20,7 +20,7 @@ export default function startAssignmentJob() {
 
         const oneHourFromNow = new Date(Date.now() + 60 * 60 * 1000)
         if (!assignedDriverId && booking.scheduledAt <= oneHourFromNow) {
-          sendWhatsApp(process.env.ADMIN_PHONE, `No driver found for booking ${booking.user.bookingCode}. Pickup at ${booking.scheduledAt}. Please assign manually.`)
+          sendWhatsApp(process.env.ADMIN_PHONE, `No driver found for booking ${booking.id}. Pickup at ${booking.scheduledAt}. Please assign manually.`)
         }
       }
     } catch (err) {

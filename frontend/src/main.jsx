@@ -14,6 +14,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import TrackingPage from './pages/TrackingPage';
 import RideHistory from './pages/RideHistory';
 import ManageAccount from './pages/ManageAccount';
+import RideCancelledToast from './components/ui/RideCancelledToast';
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
 
@@ -59,6 +60,7 @@ createRoot(document.getElementById('root')).render(
       <ThemeProvider>
         {/* <ErrorBoundary> */}
           <RouterProvider router={router} />
+          <RideCancelledToast />
         {/* </ErrorBoundary> */}
       </ThemeProvider>
     </ClerkProvider>

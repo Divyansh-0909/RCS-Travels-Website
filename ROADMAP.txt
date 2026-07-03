@@ -2,7 +2,7 @@ RCS TRAVELS — PROJECT ROADMAP
 ===============================
 
 IMPORTANT:
-- can book duplicate ride now
+- Clear the hard coded data in the schema models
 - make the confirm pickup point page
 - Make the share location and share drivers details page
 - Add a option when a drivers assgined that if the cab driver asks for extra money contact support.

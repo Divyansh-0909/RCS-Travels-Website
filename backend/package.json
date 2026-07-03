@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
+    "predev": "node scripts/free-port.js",
     "dev": "nodemon",
+    "prestart": "node scripts/free-port.js",
     "start": "node index.js",
     "db:generate": "prisma generate --config ./prisma.config.js",
     "db:migrate": "prisma migrate dev --config ./prisma.config.js",

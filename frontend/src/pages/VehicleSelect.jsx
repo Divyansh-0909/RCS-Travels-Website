@@ -2,8 +2,8 @@ import Button from "../components/ui/Button";
 import { useData } from "../hooks/useData";
 import { useApi } from "../hooks/useApi";
 import { useState, useEffect } from "react";
-import errorIcon from "../assets/cross.webp";
-import confirmIcon from "../assets/tick.webp";
+import ErrorMark from "../components/illustrations/ErrorMark";
+import SuccessCheck from "../components/illustrations/SuccessCheck";
 import { useViewNavigate } from "../hooks/useViewNavigate";
 import PriceIllustration from "../components/illustrations/RadarScanIllustration";
 import SafetyIllustration from "../components/illustrations/DriverEnRouteIllustration";
@@ -165,7 +165,9 @@ const VehicleSelect = ()=>{
                 <>
                     <ErrorPanel prop={{error: error, setError: setError}} />
                     <BackgroundPanel show={panelState === "noDriver" || (panelState === "confirmed" && scheduledTime)} className={`z-4 sm:z-3 bottom-0 gap-2 sm:gap-4 py-6 text-center flex flex-col justify-center items-center`}>
-                        <img className="-my-8 w-[150px]" src={ panelState === "noDriver" ? errorIcon :  confirmIcon } alt="icon" />
+                        { panelState === "noDriver"
+                            ? <ErrorMark className="-mt-2" size={140} />
+                            : <SuccessCheck className="-mt-2" size={140} /> }
                         <h2> { panelState === "noDriver" ? "No drivers nearby." :  "You're all set." } </h2>
                         <p> { panelState === "noDriver" ? "Try again in a few minutes." :  <>You'll get a <b>WhatsApp notification</b> <br /> when a driver is assigned, closer <br /> to your pick up time.</> } </p>
                         <Button 
@@ -309,6 +311,7 @@ const VehicleSelect = ()=>{
                                 <Button
                                     prop={{
                                         type: "submit",
+                                        disabled: !vehicleType,
                                     }}
                                     className="scale-[1] sm:scale-[1.1] "
                                     >

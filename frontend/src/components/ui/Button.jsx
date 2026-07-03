@@ -3,6 +3,7 @@ const Button = ({ prop, className, children, onClick }) => {
   const isInput = prop.variant === "input";
   const isNegative = prop.variant === "negative";
   const hasError = prop.error === true && !isDropdown;
+  const isDisabled = prop.disabled === true;
 
   return (
     <div
@@ -10,7 +11,8 @@ const Button = ({ prop, className, children, onClick }) => {
         ${className}
         ${isInput ? "w-fit" : ""}
         flex items-center justify-center
-        font-medium text-default text-[var(--text)] my-1 cursor-pointer opacity-[1] hover:opacity-[0.8] transition-opacity duration-300
+        font-medium text-default text-[var(--text)] my-1 transition-opacity duration-300
+        ${isDisabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer opacity-[1] hover:opacity-[0.8]"}
         ${
           isNegative
             ? "bg-negative-gradient shadow-[inset_0_0px_6px_rgba(255,255,255,0.2)]"
@@ -31,8 +33,9 @@ const Button = ({ prop, className, children, onClick }) => {
       <button
         type={prop.type ?? "button"}
         onClick={onClick}
+        disabled={isDisabled}
         className={` ${prop.innerClassName}
-          flex items-center py-2 w-[97%] h-[80%] cursor-pointer
+          flex items-center py-2 w-[97%] h-[80%] ${isDisabled ? "cursor-not-allowed" : "cursor-pointer"}
           ${prop.innerClassName ?"" : (isDropdown ? "justify-start" : "justify-center")}
           ${
             !prop.variant || isNegative

@@ -4,11 +4,11 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme {
-  --font-sans: "Poppins", sans-serif;
-  --color-white-muted: #AEAEAE;
-  --color-primary: #243AFB;
-  --color-primary-dark: #0B0B99;
-  --color-primary-light: #7A94FF;
+    --font-sans: "Poppins", sans-serif;
+    --color-white-muted: #AEAEAE;
+    --color-primary: #243AFB;
+    --color-primary-dark: #0B0B99;
+    --color-primary-light: #7A94FF;
 }
 
 /* Update the light mode color */
@@ -25,7 +25,7 @@
     --text-muted-foreground: #AEAEAE;
 }
 
-.dark{
+.dark {
     --background-muted: #211F3C;
     --background-primary: #121220;
     --background: #0B0B14;
@@ -45,10 +45,35 @@
 }
 
 @layer base {
+    .animate-otp-box-in {
+        transform: translateX(calc((1.5 - var(--i)) * 67px));
+        z-index: calc(10 - var(--i));
+    }
+
+    @keyframes otp-badge-in {
+        from { opacity: 0; transform: scale(0.6); }
+        to   { opacity: 1; transform: scale(1); }
+    }
+
+    .animate-otp-badge {
+        /* delay so the box finishes sliding to the centre before the mark appears */
+        animation: otp-badge-in 0.3s ease-out 0.45s both;
+    }
+
     @keyframes panel-transition {
-        0%   { transform: translateX(60px) scale(0.97); opacity: 0; }
-        60%  { opacity: 1; }
-        100% { transform: translateX(0) scale(1); opacity: 1; }
+        0% {
+            transform: translateX(60px) scale(0.97);
+            opacity: 0;
+        }
+
+        60% {
+            opacity: 1;
+        }
+
+        100% {
+            transform: translateX(0) scale(1);
+            opacity: 1;
+        }
     }
 
     .animate-panel-transition {
@@ -57,8 +82,15 @@
     }
 
     @keyframes panel-transition-out {
-        0%   { transform: translateX(0) scale(1); opacity: 1; }
-        100% { transform: translateX(60px) scale(0.97); opacity: 0; }
+        0% {
+            transform: translateX(0) scale(1);
+            opacity: 1;
+        }
+
+        100% {
+            transform: translateX(60px) scale(0.97);
+            opacity: 0;
+        }
     }
 
     .animate-panel-transition-out {
@@ -67,8 +99,13 @@
     }
 
     @keyframes panel-fade-out {
-        0%   { opacity: 1; }
-        100% { opacity: 0; }
+        0% {
+            opacity: 1;
+        }
+
+        100% {
+            opacity: 0;
+        }
     }
 
     .animate-panel-fade-out {
@@ -77,8 +114,15 @@
     }
 
     @keyframes dropdown-reveal {
-        0%   { opacity: 0; transform: translateY(-8px) scaleY(0.9); }
-        100% { opacity: 1; transform: translateY(0) scaleY(1); }
+        0% {
+            opacity: 0;
+            transform: translateY(-8px) scaleY(0.9);
+        }
+
+        100% {
+            opacity: 1;
+            transform: translateY(0) scaleY(1);
+        }
     }
 
     .animate-dropdown {
@@ -89,9 +133,19 @@
 
     /* Distinct from a dropdown — a soft "bloom" that scales up and settles */
     @keyframes datetime-bloom {
-        0%   { opacity: 0; transform: scale(0.94) translateY(12px); }
-        60%  { opacity: 1; }
-        100% { opacity: 1; transform: scale(1) translateY(0); }
+        0% {
+            opacity: 0;
+            transform: scale(0.94) translateY(12px);
+        }
+
+        60% {
+            opacity: 1;
+        }
+
+        100% {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+        }
     }
 
     .animate-datetime {
@@ -102,8 +156,15 @@
 
     /* Closing — reverse of the dropdown reveal, furls back up */
     @keyframes dropdown-collapse {
-        0%   { opacity: 1; transform: translateY(0) scaleY(1); }
-        100% { opacity: 0; transform: translateY(-8px) scaleY(0.9); }
+        0% {
+            opacity: 1;
+            transform: translateY(0) scaleY(1);
+        }
+
+        100% {
+            opacity: 0;
+            transform: translateY(-8px) scaleY(0.9);
+        }
     }
 
     .animate-dropdown-out {
@@ -114,8 +175,15 @@
 
     /* Closing — reverse of the bloom, scales down and sinks */
     @keyframes datetime-wilt {
-        0%   { opacity: 1; transform: scale(1) translateY(0); }
-        100% { opacity: 0; transform: scale(0.94) translateY(12px); }
+        0% {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+        }
+
+        100% {
+            opacity: 0;
+            transform: scale(0.94) translateY(12px);
+        }
     }
 
     .animate-datetime-out {
@@ -125,23 +193,68 @@
     }
 
     @keyframes loading-bar {
-        0%   { width: 0px;   animation-timing-function: ease-out; }
-        10%  { width: 100px;  animation-timing-function: ease-out; }  /* fast */
-        20%  { width: 120px; animation-timing-function: ease-in; }   /* slow */
-        32%  { width: 175px; animation-timing-function: ease-out; }  /* fast */
-        42%  { width: 190px; animation-timing-function: ease-in; }   /* slow */
-        50%  { width: 280px; animation-timing-function: ease-out; }  /* fast burst before halfway */
-        62%  { width: 332px; animation-timing-function: ease-out; }  /* fast burst after halfway */
-        100% { width: 330px; }                                        /* slow crawl to end */
+        0% {
+            width: 0px;
+            animation-timing-function: ease-out;
+        }
+
+        10% {
+            width: 100px;
+            animation-timing-function: ease-out;
+        }
+
+        /* fast */
+        20% {
+            width: 120px;
+            animation-timing-function: ease-in;
+        }
+
+        /* slow */
+        32% {
+            width: 175px;
+            animation-timing-function: ease-out;
+        }
+
+        /* fast */
+        42% {
+            width: 190px;
+            animation-timing-function: ease-in;
+        }
+
+        /* slow */
+        50% {
+            width: 280px;
+            animation-timing-function: ease-out;
+        }
+
+        /* fast burst before halfway */
+        62% {
+            width: 332px;
+            animation-timing-function: ease-out;
+        }
+
+        /* fast burst after halfway */
+        100% {
+            width: 330px;
+        }
+
+        /* slow crawl to end */
     }
 
-    .animate-searching-bar{
+    .animate-searching-bar {
         animation: loading-bar 600s linear;
     }
 
     @keyframes illus-fade {
-        from { opacity: 0; transform: translateY(5px); }
-        to   { opacity: 1; transform: translateY(0); }
+        from {
+            opacity: 0;
+            transform: translateY(5px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
     }
 
     .animate-illus-fade {
@@ -150,8 +263,15 @@
 
     /* Solo <-> Sharing price swap — fades the new emphasis in */
     @keyframes fade-swap {
-        0%   { opacity: 0; transform: translateY(4px); }
-        100% { opacity: 1; transform: translateY(0); }
+        0% {
+            opacity: 0;
+            transform: translateY(4px);
+        }
+
+        100% {
+            opacity: 1;
+            transform: translateY(0);
+        }
     }
 
     .animate-fade-swap {
@@ -161,8 +281,13 @@
 
     /* Skeleton shimmer — a highlight sweeps across the placeholder block */
     @keyframes skeleton-sheen {
-        0%   { transform: translateX(-100%); }
-        100% { transform: translateX(100%); }
+        0% {
+            transform: translateX(-100%);
+        }
+
+        100% {
+            transform: translateX(100%);
+        }
     }
 
     .animate-skeleton-sheen {
@@ -171,7 +296,9 @@
     }
 
     @media (prefers-reduced-motion: reduce) {
-        .animate-skeleton-sheen { animation: none; }
+        .animate-skeleton-sheen {
+            animation: none;
+        }
     }
 
     html {
@@ -209,37 +336,29 @@
 
 @layer utilities {
     .bg-primary-gradient {
-        background: linear-gradient(
-            195deg,
-            var(--color-primary-light) 0%,
-            var(--color-primary) 30%,
-            var(--color-primary-dark) 100%
-        );
+        background: linear-gradient(195deg,
+                var(--color-primary-light) 0%,
+                var(--color-primary) 30%,
+                var(--color-primary-dark) 100%);
     }
 
     .bg-negative-gradient {
-        background: linear-gradient(
-            195deg,
-            #CC3333 0%,
-            #991111 30%,
-            #4A0808 100%
-        );
+        background: linear-gradient(195deg,
+                #CC3333 0%,
+                #991111 30%,
+                #4A0808 100%);
     }
 
     .bg-panel-gradient {
-        background: radial-gradient(
-            circle at top,
-            var(--background-muted) 0%,
-            var(--background-primary) 40%,
-            var(--background) 100%
-        );
+        background: radial-gradient(circle at top,
+                var(--background-muted) 0%,
+                var(--background-primary) 40%,
+                var(--background) 100%);
     }
 
     .bg-gradient {
-        background: radial-gradient(
-            circle at top,
-            var(--background-primary) 20%,
-            var(--background) 100%
-        );
-  }
+        background: radial-gradient(circle at top,
+                var(--background-primary) 20%,
+                var(--background) 100%);
+    }
 }

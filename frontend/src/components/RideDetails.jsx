@@ -40,11 +40,11 @@ const RideDetails = ({ prop }) => {
                 return
             }
             if (data.ok) {
-                setBookingId(null)
-                setDrop(null)
-                setPickup(null)
-                setActiveBooking(null)
-                navigate('/')
+                // Hard-reload the whole site (landing on home) so all in-memory
+                // state is reset after cancelling the active ride. The flag lets
+                // the global toast confirm the cancel once the page reloads.
+                sessionStorage.setItem("rideCancelled", "1")
+                window.location.href = '/'
             }
         } catch (err) {
             console.error(err);

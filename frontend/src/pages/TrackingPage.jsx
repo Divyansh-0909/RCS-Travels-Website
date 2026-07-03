@@ -2,8 +2,8 @@ import Button from "../components/ui/Button";
 import { useData } from "../hooks/useData";
 import { useApi } from "../hooks/useApi";
 import { useState, useEffect } from "react";
-import errorIcon from "../assets/cross.webp";
-import confirmIcon from "../assets/tick.webp";
+import ErrorMark from "../components/illustrations/ErrorMark";
+import SuccessCheck from "../components/illustrations/SuccessCheck";
 import { useViewNavigate } from "../hooks/useViewNavigate";
 import PriceIllustration from "../components/illustrations/RadarScanIllustration";
 import SafetyIllustration from "../components/illustrations/DriverEnRouteIllustration";
@@ -81,7 +81,7 @@ const TrackingPage = () => {
             {bookingLoading
                 ? <TrackingSkeleton />
                 : scheduledTime !== null && (status === "confirmed" || status === "assigned")
-                    ? <BackgroundPanel className={"relative py-6 rounded-t-none justify-center items-center"}>
+                    ? <BackgroundPanel className={"relative py-6 h-[100vh] rounded-t-none justify-center items-center"}>
                         <div className="relative flex flex-col justify-around items-center pt-6 w-full h-full gap-6 sm:gap-12">
                             {backArrow}
                             <div className="flex flex-col justify-center items-center gap-1 sm:gap-2 w-[290px]">
@@ -176,7 +176,9 @@ const TrackingPage = () => {
                             <div className="relative flex flex-col justify-around items-center w-full h-full sm:h-[70%] gap-6 sm:gap-12">
                                 {backArrow}
                                 <div className="flex flex-col justify-center items-center gap-1 sm:gap-2 w-[290px]">
-                                    <img className="-my-8 w-[150px]" src={panelState === "noDriver" ? errorIcon : confirmIcon} alt="icon" />
+                                    { panelState === "noDriver"
+                                        ? <ErrorMark className="-mt-2" size={140} />
+                                        : <SuccessCheck className="-mt-2" size={140} /> }
                                     <h3 className="text-[var(--text-muted)]">Ride has been completed</h3>
                                     <h2 className="text-center text-2xl">Fare: {fare}</h2>
                                 </div>

@@ -7,6 +7,8 @@ import { useApi } from "../hooks/useApi";
 import Icon from '@mdi/react';
 import { mdiKeyboardBackspace } from '@mdi/js';
 import { useData } from "../hooks/useData";
+import CheckMarkOutline from "../components/illustrations/CheckMarkOutline";
+import CrossOutline from "../components/illustrations/CrossOutline";
 
 const LoginPage = () => {
   const { signIn, setActive } = useSignIn();
@@ -17,12 +19,18 @@ const LoginPage = () => {
   const [otp, setOtp] = useState("");
   const otpRefs = useRef([]);
   const OTP_LENGTH = 4;
+  const OTP_TTL = 300; // seconds until the OTP expires — matches the backend's 5-minute window
+  const [expiresIn, setExpiresIn] = useState(0);
   const [step, setStep] = useState("phone"); // "phone" | "otp"
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
   const [resendIn, setResendIn] = useState(0);
   const [showSignUp, setShowSignUp] = useState(false);
+  // Latches once the OTP is verified so we hold the success state through the
+  // async getMe + view-transition redirect, instead of flashing the
+  // "already logged in" screen while isSignedIn flips true mid-flow.
+  const [redirecting, setRedirecting] = useState(false);
   const pickupLocation = useData(state => state.pickupLocation);
 
   const api = useApi();
@@ -34,6 +42,14 @@ const LoginPage = () => {
     }, 1000);
     return () => clearInterval(timer);
   }, [resendIn]);
+
+  useEffect(() => {
+    if (expiresIn <= 0) return;
+    const timer = setInterval(() => {
+      setExpiresIn((s) => (s <= 1 ? 0 : s - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [expiresIn]);
 
   const back = () => {
     navigate("/")
@@ -58,7 +74,7 @@ const LoginPage = () => {
       await sendOtp()
     } catch (err) {
       console.error(err);
-      setError("Something went wrong");
+      setError(err?.message || "Something went wrong");
     } finally {
       setLoading(false);
     }
@@ -83,7 +99,7 @@ const LoginPage = () => {
       await verifyOtp()
     } catch (err) {
       console.error(err);
-      setError("Something went wrong");
+      setError(err?.message || "Something went wrong");
     } finally {
       setLoading(false);
     }
@@ -97,6 +113,7 @@ const LoginPage = () => {
     }
     setStep("otp");
     setResendIn(30);
+    setExpiresIn(OTP_TTL);
   };
 
   async function handleResend() {
@@ -112,6 +129,7 @@ const LoginPage = () => {
       }
       setOtp("");
       setResendIn(30);
+      setExpiresIn(OTP_TTL);
     } catch (err) {
       console.error(err);
       setError("Something went wrong");
@@ -124,8 +142,14 @@ const LoginPage = () => {
     const data = await api.verifyOtp(phone, otp);
     if (data.error) {
       setError(data.error);
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      setOtp("")
       return;
     }
+
+    // OTP is correct — we're leaving this page. Hold the success state so the
+    // "already logged in" branch never renders during the redirect.
+    setRedirecting(true);
 
     if (!isSignedIn) {
       const result = await signIn.create({ strategy: "ticket", ticket: data.ticket });
@@ -143,6 +167,10 @@ const LoginPage = () => {
   };
 
   const isPhone = step === "phone";
+ 
+  const busy = loading || redirecting;
+
+  const formatMMSS = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 
   const handlePhoneChange = (value) => {
     const digits = value.replace(/\D/g, "").slice(0, 10);
@@ -159,7 +187,7 @@ const LoginPage = () => {
   };
 
   const clearOtpError = () => {
-    if (error === "Enter OTP" || error === "Incorrect OTP") {
+    if (error) {
       setError(null);
     }
   };
@@ -168,8 +196,6 @@ const LoginPage = () => {
     otpRefs.current[i]?.focus();
   };
 
-  // Set a single box's digit, then advance focus. OTP is a left-to-right
-  // sequence, so empty slots collapse rather than leaving gaps.
   const handleOtpDigit = (i, value) => {
     const char = value.replace(/\D/g, "").slice(-1);
     if (!char) return;
@@ -215,7 +241,7 @@ const LoginPage = () => {
       <div onClick={back} className="flex cursor-pointer justify-center items-center gap-2 sm:gap-3 absolute left-3 top-3 text-[var(--text)] sm:opacity-80 hover:opacity-100 transition-opacity duration-300">
         <Icon path={mdiKeyboardBackspace} size={1.2} />
       </div>
-      {isSignedIn
+      {isSignedIn && !redirecting
         ? <div className="flex flex-col justify-center items-center gap-6">
           <h2 className="text-[var(--text)] ">
             You are already <br /> logged in.
@@ -253,49 +279,62 @@ const LoginPage = () => {
             )}
 
             {!isPhone
-            ? <div className="flex justify-center items-center gap-2 sm:gap-3 mb-5">
-                {Array.from({ length: OTP_LENGTH }).map((_, i) => (
-                  <input
-                    key={i}
-                    ref={(el) => (otpRefs.current[i] = el)}
-                    type="tel"
-                    inputMode="numeric"
-                    autoComplete={i === 0 ? "one-time-code" : "off"}
-                    name={`otp-number-${i + 1}`}
-                    id={`otp-number-${i + 1}`}
-                    placeholder="X"
-                    maxLength={1}
-                    value={otp[i] ?? ""}
-                    onChange={(e) => handleOtpDigit(i, e.target.value)}
-                    onKeyDown={(e) => handleOtpKeyDown(i, e)}
-                    onPaste={handleOtpPaste}
-                    className={`
-                      flex justify-center text-center items-center font-medium text-2xl text-white my-1
-                      py-2 w-[50px] h-[60px] rounded-2xl opacity-[1] hover:opacity-[0.8] transition-opacity duration-300
-                      ${(error === "Enter OTP" ||
-                        error === "Incorrect OTP")
-                        ? `
+              ? <div className="relative flex justify-center items-center gap-3 mb-5">
+                {Array.from({ length: OTP_LENGTH }).map((_, i) => {
+                  const otpError = Boolean(error);
+                  return (
+                    <input
+                      key={i}
+                      ref={(el) => (otpRefs.current[i] = el)}
+                      type="tel"
+                      inputMode="numeric"
+                      autoComplete={i === 0 ? "one-time-code" : "off"}
+                      name={`otp-number-${i + 1}`}
+                      id={`otp-number-${i + 1}`}
+                      placeholder="X"
+                      maxLength={1}
+                      value={otp[i] ?? ""}
+                      onChange={(e) => handleOtpDigit(i, e.target.value)}
+                      onKeyDown={(e) => handleOtpKeyDown(i, e)}
+                      onPaste={handleOtpPaste}
+                      style={{ "--i": i }}
+                      className={`
+                      relavtive flex justify-center text-center items-center font-medium text-3xl my-1
+                      ${busy ? "text-transparent placeholder-transparent" : "text-white"}
+                      py-2 w-[55px] h-[65px] rounded-2xl transition-all duration-600 ease-in-out
+                      ${busy && `animate-otp-box-in ${i === 0 && `${otpError ? "bg-red-600 " : "bg-green-600"}`}`}
+                      ${otpError
+                          ? `
                             border-b-2 border-[rgba(239,68,68,0.3)]
                             bg-[linear-gradient(to_bottom,transparent_50%,rgba(239,68,68,0.25)_100%)]
                             shadow-[inset_0_2px_2px_rgba(239,68,68,0.35)]
                             focus:border-[rgba(239,68,68,0.5)]
                             focus:shadow-[inset_0_2px_2px_rgba(255,255,255,0.35)]
                           `
-                        : `
-                          border-b-2 border-[rgba(255,255,255,0.05)]
-                          bg-[linear-gradient(to_bottom,transparent_50%,rgba(146,146,139,0.10)_100%)]
-                          shadow-[inset_0_2px_2px_rgba(255,255,255,0.25)]
-                          focus:border-[rgba(255,255,255,0.15)]
-                          focus:shadow-[inset_0_2px_2px_rgba(255,255,255,0.35)]
+                          : `
+                            border-b-2 border-[rgba(255,255,255,0.05)]
+                            bg-[linear-gradient(to_bottom,transparent_50%,rgba(146,146,139,0.10)_100%)]
+                            shadow-[inset_0_2px_2px_rgba(255,255,255,0.25)]
+                            focus:border-[rgba(255,255,255,0.15)]
+                            focus:shadow-[inset_0_2px_2px_rgba(255,255,255,0.35)]
                           `
-                      }
+                        }
+                      
                       focus:outline-none
                       focus:opacity-[0.8]
                       active:opacity-[0.8]
                       transition-all duration-200
                     `}
-                  />
-                ))}
+                    />
+                  );
+                })}
+                {busy && (
+                  <span className="animate-otp-badge absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
+                    {error
+                      ? <CrossOutline size={38} />
+                      : <CheckMarkOutline size={38} />}
+                  </span>
+                )}
               </div>
               :
               <Input
@@ -326,6 +365,13 @@ const LoginPage = () => {
                 ? (showSignUp ? "Sign Up" : (loading ? "Sending OTP..." : "Continue"))
                 : (loading ? "Confirming..." : "Confirm")}
             </Button>
+            {!isPhone && !busy && (
+              <p className="text-[var(--text-muted)] text-sm -mt-1">
+                {expiresIn > 0
+                  ? <>Code expires in <span className="tabular-nums text-[var(--text)]">{formatMMSS(expiresIn)}</span></>
+                  : "Your code has expired. Resend to get a new one."}
+              </p>
+            )}
             {!isPhone && (
               <Button
                 onClick={handleResend}

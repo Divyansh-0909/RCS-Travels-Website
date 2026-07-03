@@ -27,8 +27,28 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok' })
 })
 
-app.listen(PORT, async () => {
+const server = app.listen(PORT, async () => {
   await prisma.$connect()
   startAssignmentJob()
   console.log(`Server running on port ${PORT}`)
 })
+
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`Port ${PORT} is already in use. Run "npm run dev" (it frees the port first) or kill the process holding it.`)
+    process.exit(1)
+  }
+  throw err
+})
+
+// Release the port on clean exits (Ctrl+C, nodemon restart) so it isn't orphaned.
+let shuttingDown = false
+async function shutdown() {
+  if (shuttingDown) return
+  shuttingDown = true
+  server.close()
+  await prisma.$disconnect().catch(() => {})
+  process.exit(0)
+}
+process.on('SIGINT', shutdown)
+process.on('SIGTERM', shutdown)

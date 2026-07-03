@@ -1,4 +1,4 @@
-import errorIcon from "../../assets/cross.webp";
+import ErrorMark from "../illustrations/ErrorMark";
 import Button from "./Button";
 import { useViewNavigate } from "../../hooks/useViewNavigate";
 import BackgroundPanel from "./BackgroundPanel";
@@ -16,11 +16,18 @@ const ErrorPanel = ({ prop }) => {
     return (
         <>
             <BackgroundPanel show={!!prop.error} className={` z-4 sm:z-3 gap-2 sm:gap-3 py-6 text-center flex flex-col justify-center items-center`}>
-                <img className="-my-8 w-[150px]" src={errorIcon} alt="icon" />
+                <ErrorMark className="-my-8" size={140} />
                 <h2 className="w-[70%]"> {lastError} </h2>
                 <p> Please try again or reach out to<br /> us if this keeps happening. </p>
                 <Button
-                    onClick={() => navigate(prop.setError(null))}
+                    onClick={() => {
+                        if (prop.onOkay) {
+                            prop.setError(null)
+                            prop.onOkay()
+                        } else {
+                            navigate(prop.setError(null))
+                        }
+                    }}
                     prop={{
                         type: "submit",
                     }}
