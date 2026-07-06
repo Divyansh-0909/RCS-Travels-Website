@@ -16,5 +16,8 @@ export function useApi() {
     sendOtp:          (phone)         => api.sendOtp(phone),
     verifyOtp:        (phone, otp)    => api.verifyOtp(phone, otp),
     logout:           ()              => signOut(),
+    updateGender:     (gender)        => api.updateGender(gender, getToken),
+    updateEmergencyContact: (contact) => api.updateEmergencyContact(contact, getToken),
+    updateDOB:        (dob)           => api.updateDOB(dob, getToken),
   };
 }

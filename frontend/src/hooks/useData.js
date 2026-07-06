@@ -5,6 +5,18 @@ export const useData = create (persist (set =>({
     phone: "",
     setPhone: (number)=> set (state => ({phone: number})),
 
+    username: null,
+    setUsername: (name)=> set(state=> ({username: name})),
+
+    gender: null,
+    setGender: (sex)=>set(state=>({gender: sex})),
+
+    emergencyContact: null,
+    setEmergencyContact: (number)=>set(state=>({emergencyContact: number})),
+
+    dob: null,
+    setDOB: (date)=>set(state=>({dob: date})),
+
     pickupLocation: "",
     setPickup: (location)=> set (state => ({pickupLocation: location})),
 
@@ -38,9 +50,6 @@ export const useData = create (persist (set =>({
 
     cancelledBy: null,
     setCancelledBy: (by)=> set(state=> ({cancelledBy: by})),
-
-    username: null,
-    setUsername: (name)=> set(state=> ({username: name})),
 
     sharing: true,
     setSharing: (share) => set(state=>({sharing: share})),

@@ -44,6 +44,9 @@ model User {
   clerkId        String    @unique @map("clerk_id")
   phone          String    @unique
   name           String?
+  gender         String?
+  dob            String?
+  emergencyContact  String?
   // Stable 4-digit code generated once at signup.
   bookingCode    String    @unique @map("booking_code")
   whatsappNumber String?   @map("whatsapp_number")

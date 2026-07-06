@@ -26,8 +26,11 @@ export const getMe             = (getToken)              => request("/api/users/
 export const createMe          = (name, getToken)        => request("/api/users/me", { method: "POST", body: { name }, getToken });
 export const estimateFare      = (pickupAddress, dropAddress, vehicleType, getToken) => request("/api/fare/estimate", { method: "POST", body: { pickupAddress, dropAddress, vehicleType }, getToken });
 export const createBooking     = (data, getToken)        => request("/api/bookings", { method: "POST", body: data, getToken });
-export const cancelBooking     = (bookingId, getToken) => request("/api/bookings/cancel", { method: "POST", body: { bookingId }, getToken});
+export const cancelBooking     = (bookingId, getToken)   => request("/api/bookings/cancel", { method: "POST", body: { bookingId }, getToken});
 export const getBookingStatus  = (id, getToken)          => request(`/api/bookings/${id}/status`, { getToken });
 export const getMyBookings     = (getToken)              => request("/api/bookings/my-bookings", { getToken });
 export const sendOtp           = (phone)                 => request("/api/auth/send-otp", { method: "POST", body: { phone } });
 export const verifyOtp         = (phone, otp)            => request("/api/auth/verify-otp", { method: "POST", body: { phone, otp } });
+export const updateGender      = (gender, getToken)      => request("/api/users/me/updateGender", { method: "POST", body: { gender }, getToken });
+export const updateEmergencyContact = (emergencyContact, getToken) => request("/api/users/me/updateEmergencyContact", { method: "POST", body: { emergencyContact }, getToken });
+export const updateDOB         = (dob, getToken)         => request("/api/users/me/updateDOB", { method: "POST", body: { dob }, getToken });

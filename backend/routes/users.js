@@ -6,17 +6,71 @@ import crypto from 'crypto'
 
 const usersRouter = Router()
 
-// 4-digit code (0000–9999). Padded so the full range is usable — this is the
-// user's stable ride-verification code, generated once at signup.
 const generateBookingCode = () => String(crypto.randomInt(0, 10000)).padStart(4, '0')
 
 usersRouter.get('/me', protect, async (req, res) => {
-    const user = await prisma.user.findUnique({ where: { clerkId: req.auth.userId } })
-    if (!user) return res.status(404).json({ error: 'User has not signed up' })
+  const user = await prisma.user.findUnique({ where: { clerkId: req.auth.userId } })
+  if (!user) return res.status(404).json({ error: 'User has not signed up' })
 
-    const { id, phone, name, bookingCode } = user
-    return res.json({ id, phone, name, bookingCode })
+  const { id, phone, name, bookingCode, gender, dob, emergencyContact } = user
+  return res.json({ id, phone, name, bookingCode, gender, dob, emergencyContact })
 })
+
+usersRouter.post('/me/updateGender', protect, async (req, res) => {
+  const { gender } = req.body;
+
+  try {
+    await prisma.user.update({
+      where: {
+        clerkId: req.auth.userId,
+      },
+      data: {
+        gender,
+      },
+    });
+
+    return res.json({ ok: true });
+  } catch (e) {
+    return res.status(404).json({ error: "User not found" });
+  }
+});
+
+usersRouter.post('/me/updateEmergencyContact', protect, async (req, res) => {
+  const { emergencyContact } = req.body;
+
+  // Stored as a string (10-digit numbers overflow a 4-byte int), matching `phone`.
+  if (!/^\d{10}$/.test(String(emergencyContact ?? '')))
+    return res.status(400).json({ error: "Emergency contact must be a 10-digit number" });
+
+  try {
+    await prisma.user.update({
+      where: { clerkId: req.auth.userId },
+      data: { emergencyContact: String(emergencyContact) },
+    });
+
+    return res.json({ ok: true });
+  } catch (e) {
+    return res.status(404).json({ error: "User not found" });
+  }
+});
+
+usersRouter.post('/me/updateDOB', protect, async (req, res) => {
+  const { dob } = req.body;
+
+  if (!/^\d{2}\/\d{2}\/\d{4}$/.test(String(dob ?? '')))
+    return res.status(400).json({ error: "DOB must be in DD/MM/YYYY format" });
+
+  try {
+    await prisma.user.update({
+      where: { clerkId: req.auth.userId },
+      data: { dob },
+    });
+
+    return res.json({ ok: true });
+  } catch (e) {
+    return res.status(404).json({ error: "User not found" });
+  }
+});
 
 usersRouter.post('/me', protect, async (req, res) => {
   const { name } = req.body
@@ -38,7 +92,7 @@ usersRouter.post('/me', protect, async (req, res) => {
   for (let attempt = 0; attempt < 5; attempt++) {
     try {
       const user = await prisma.user.upsert({
-        where:  { clerkId: req.auth.userId },
+        where: { clerkId: req.auth.userId },
         update: { name: name.trim(), phone },
         create: { clerkId: req.auth.userId, name: name.trim(), phone, bookingCode: generateBookingCode() },
       })
