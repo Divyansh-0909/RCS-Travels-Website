@@ -12,6 +12,7 @@ const SuccessCheck = ({
     size = 150,
     loop = false,
     autoplay = true,
+    speed = 1.4,
     className = "",
     style,
 }) => {
@@ -26,6 +27,7 @@ const SuccessCheck = ({
                 data={SUCCESS_DATA}
                 loop={loop}
                 autoplay={autoplay}
+                speed={speed}
                 style={{ width: "100%", height: "100%" }}
             />
         </div>

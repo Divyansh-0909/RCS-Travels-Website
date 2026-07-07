@@ -19,5 +19,7 @@ export function useApi() {
     updateGender:     (gender)        => api.updateGender(gender, getToken),
     updateEmergencyContact: (contact) => api.updateEmergencyContact(contact, getToken),
     updateDOB:        (dob)           => api.updateDOB(dob, getToken),
+    deleteMe:         ()              => api.deleteMe(getToken),
+    downloadMyData:   ()              => api.downloadMyData(getToken),
   };
 }

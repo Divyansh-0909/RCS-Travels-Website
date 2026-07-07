@@ -8,7 +8,7 @@ const bookingsRouter = Router()
 
 const VALID_VEHICLE_TYPES = [4, 6, 1]
 
-const ACTIVE_STATUSES = ['pending', 'confirmed', 'assigned', 'en_route', 'reached', 'started']
+export const ACTIVE_STATUSES = ['pending', 'confirmed', 'assigned', 'en_route', 'reached', 'started']
 
 // Two rides within this window are treated as the same time slot.
 const OVERLAP_MS = 15 * 60 * 1000

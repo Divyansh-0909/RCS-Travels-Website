@@ -316,8 +316,10 @@ const OnBoarding = () => {
                         }`}
                     >
                       <div
-                        onClick={() =>
+                        onClick={() =>{
+                          setExpand(false)
                           setExpandCalendar(!expandCalendar)
+                        }
                         }
                         className="w-full flex justify-center gap-2 items-center"
                       >
@@ -334,15 +336,16 @@ const OnBoarding = () => {
                     <Button
                       prop={{
                         variant: "dropdown",
-                        width: "195px",
+                        width: "170px",
                       }}
                       className={`block ${timingDropdown.closing ? "animate-dropdown-out" : "animate-dropdown"
-                        } absolute z-10 scale-[1] sm:scale-[1.1] top-10 sm:top-12 sm:-left-1 active:opacity-[1] hover:opacity-[1]`}
+                        } absolute z-10 scale-[1] sm:scale-[1.1] top-12 sm:-left-1 active:opacity-[1] hover:opacity-[1]`}
                     >
                       <div className="flex flex-col items-start">
                         <div
                           onClick={() => {
                             setTiming("Schedule");
+                            setExpandCalendar(false)
                             setExpand(false);
                           }}
                           className={`w-full flex items-center gap-2 py-3 ${timing === "Schedule"

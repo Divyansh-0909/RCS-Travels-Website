@@ -2,6 +2,44 @@ RCS TRAVELS — PROJECT ROADMAP
 ===============================
 
 IMPORTANT:
+- Build legal page
+- Women get a safer road route for rides.
+  WHY: uni is in a remote area; the shortest route passes through shady areas that
+  girls avoid. A slightly longer highway route is safer. Goal: female users (or anyone
+  who opts in) are routed via the highway automatically.
+
+  KEY INSIGHT: Google Routes API has NO concept of a "shady"/"safe" route. That
+  knowledge is local. So we do NOT ask Google for a safer route — we FORCE the route
+  through a highway waypoint we pick once (a lat/lng on the safe highway stretch).
+  Passing it as an `intermediates` waypoint makes Google compute pickup -> waypoint ->
+  drop, which excludes the shady shortcut.
+
+  WHERE: backend/services/fares.js — the computeRoutes request body (around L50-54).
+    const SAFE_WAYPOINT = { location: { latLng: { latitude: __, longitude: __ } } }
+    const useSafeRoute = preferSafeRoute && isUniCorridor(pickupAddress, dropAddress)
+    body: { origin, destination,
+            ...(useSafeRoute ? { intermediates: [SAFE_WAYPOINT] } : {}),
+            travelMode: 'DRIVE' }
+
+  DECISIONS BEFORE BUILDING:
+  1. Gender is NOT in the DB yet — it only lives in frontend Zustand (useData.js:11).
+     User/Booking Prisma models have no gender/route field. Fares run server-side, so
+     persist a flag (add `preferSafeRoute` column) and send it with the fare/booking req.
+  2. Store it as a PREFERENCE, not a hardcoded gender rule. `preferSafeRoute` boolean,
+     defaults TRUE for female users, but shown as an editable toggle in ManageAccount
+     ("Prefer safer, well-lit route"). More inclusive; a guy at 11pm may want it too,
+     a girl in daytime may want the faster route. Keeps auto-on-for-female behaviour.
+  3. THE ROUTE ONLY MATTERS IF THE DRIVER FOLLOWS IT. Backend fare calc alone does not
+     force the human driver onto the highway (TrackingPage has no live map). Hand the
+     driver a Google Maps nav deep link with the SAME waypoint:
+       https://www.google.com/maps/dir/?api=1&origin=PICKUP&destination=DROP
+         &waypoints=WAYPOINT_LATLNG&travelmode=driving
+     Otherwise the fare reflects the safe route but she still gets driven the shortcut.
+
+  TRADEOFF: highway is longer -> higher distanceKm -> higher fare at per-km rate
+  (fares.js:60). Do NOT add a visible "safety surcharge" (reads badly) — cap or absorb
+  the difference.
+- While entrying name on sign up mention that name can't be changed. "We recoomend putting your legal name"
 - Clear the hard coded data in the schema models
 - make the confirm pickup point page
 - Make the share location and share drivers details page
@@ -17,10 +55,6 @@ IMPORTANT:
 - Try changing the ride request notification duration from 30s -> 20s.
 - Assign admin role to raju from clerk dashboard.
 - Complete ThemeToggle.jsx and add Appearance option in profile
-- Store users gender (optional)
-- Store users email (optional)
-- Save users Emergency Contact (optional)
-- Save users DOB (optional) 
 - notification about if a driver needs to be approved by the admin
 - if a not shared ride is not assgined till the end then notify user about it and ask them to make it shared.
 
@@ -39,16 +73,6 @@ Order: FINISH PAGES + RIDE LIFECYCLE  →  LINK REAL APIS  →  OPTIMIZE LAST.
 
    Missing pages / screens:
      - Pin-point pickup on a map (OnBoarding currently uses plain text inputs, no map)
-     - Profile / Account page
-   NOT needed (pay-driver-directly model): payment-method screen, in-app toll screen.
-
-   Backend gaps that BLOCK the active-ride flow (must be closed with the pages):
-     - No lifecycle endpoints to set en_route / reached / started / completed
-       (driver.js only has accept/decline). Status enum exists but is unused past
-       assigned/cancelled.
-     - No driver-location write endpoint (design's POST /api/driver/location is not
-       implemented; tracking page has nothing to poll for live position).
-     - No fare finalization on completed (no final-amount logic beyond original fare).
 
 2. LINK GOOGLE / WHATSAPP / FCM  (do second — the "go-live" layer)
    Reason: needed to test with real people, NOT to build. Develop on stubs until then.
@@ -315,3 +339,34 @@ CURRENT STATUS
   [ ] Phase 5 — Driver App
   [ ] Phase 6 — Notifications
   [ ] Phase 7 — Tracking + Polish
+
+
+IMP — LOCAL-ONLY UI (NOT YET WIRED TO BACKEND)
+-----------------------------------------------
+These controls exist in the UI but hold LOCAL React state only. They reset on
+reload and change nothing server-side. Each needs an API endpoint + persistence
+(and store hydration) before it's real.
+
+  Settings page (pages/SettingsPage.jsx)
+    [ ] Notifications toggles — whatsapp / push / promotions. Local `notifs`
+        state. Needs a notification-preferences column(s) + GET/PUT endpoint.
+    [ ] Saved places — Home / Work / custom addresses. Local `places` state.
+        Needs a saved_places table (or JSON column) + CRUD endpoints.
+    [~] Language — persists to the zustand store (partialize) and survives
+        reload, BUT is not actually connected to i18next, so switching it does
+        not change the app language yet. Wire it into the i18n provider.
+
+  Safety page (pages/SafetyPage.jsx)
+    [ ] Live location — "Share my live location" toggle. Local `autoShare` state.
+        Needs a preference field + endpoint, and the actual share-on-ride-start
+        behaviour on the tracking side.
+    [ ] Helpline — "RCS Support" number is a PLACEHOLDER (+911800000000).
+        Replace with the real support number.
+    [x] Emergency contact — already wired to the real updateEmergencyContact
+        endpoint (this one persists; listed only for contrast).
+
+  Manage Account page (pages/ManageAccount.jsx)
+    [ ] "What drivers see" panel (Privacy & Data) — the shared / never-shared
+        lists are a PLACEHOLDER. The driver-facing ride route isn't finalised, so
+        reconcile this panel with whatever the real driver payload exposes once
+        that route exists (currently only customerPhone + trip locations are sent).

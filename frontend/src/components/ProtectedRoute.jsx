@@ -3,6 +3,7 @@ import { Navigate, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import LoadingScreen from "./LoadingScreen";
 import { useApi } from "../hooks/useApi";
+import { useData } from "../hooks/useData";
 
 // A Clerk session exists the moment OTP is verified (ticket sign-in), but the DB
 // user isn't created until the username step. So "signed in" alone is not enough
@@ -12,6 +13,9 @@ import { useApi } from "../hooks/useApi";
 export default function ProtectedRoute({ children }) {
   const { isSignedIn, isLoaded } = useAuth();
   const { getMe, logout } = useApi();
+  const setUsername = useData(state => state.setUsername);
+  const setPhone = useData(state => state.setPhone);
+  const setBookingCode = useData(state => state.setBookingCode);
   const location = useLocation();
   const [status, setStatus] = useState("checking"); // "checking" | "ok" | "incomplete"
 
@@ -27,6 +31,11 @@ export default function ProtectedRoute({ children }) {
         await logout();            // tear down the half-finished session
         if (!cancelled) setStatus("incomplete");
       } else {
+        // The gate already has the profile in hand — hydrate the shared store so
+        // protected pages read user details from useData without re-fetching.
+        setUsername(me.name);
+        setPhone(me.phone);
+        setBookingCode(me.bookingCode);
         setStatus("ok");
       }
     })();

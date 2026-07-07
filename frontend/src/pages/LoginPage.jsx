@@ -147,8 +147,6 @@ const LoginPage = () => {
       return;
     }
 
-    // OTP is correct — we're leaving this page. Hold the success state so the
-    // "already logged in" branch never renders during the redirect.
     setRedirecting(true);
 
     if (!isSignedIn) {
@@ -157,8 +155,6 @@ const LoginPage = () => {
         setError("Sign in failed. Please try again.");
         return;
       }
-      // Activate the session so the getMe request below is authenticated, instead
-      // of relying on the session happening to be active by the time it fires.
       await setActive({ session: result.createdSessionId });
     }
 

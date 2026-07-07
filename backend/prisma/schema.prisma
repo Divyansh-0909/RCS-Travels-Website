@@ -51,6 +51,7 @@ model User {
   bookingCode    String    @unique @map("booking_code")
   whatsappNumber String?   @map("whatsapp_number")
   createdAt      DateTime  @default(now()) @map("created_at")
+  deletedAt      DateTime? @map("deleted_at")
 
   bookings Booking[]
 

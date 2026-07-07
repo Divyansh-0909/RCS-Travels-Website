@@ -34,3 +34,18 @@ export const verifyOtp         = (phone, otp)            => request("/api/auth/v
 export const updateGender      = (gender, getToken)      => request("/api/users/me/updateGender", { method: "POST", body: { gender }, getToken });
 export const updateEmergencyContact = (emergencyContact, getToken) => request("/api/users/me/updateEmergencyContact", { method: "POST", body: { emergencyContact }, getToken });
 export const updateDOB         = (dob, getToken)         => request("/api/users/me/updateDOB", { method: "POST", body: { dob }, getToken });
+export const deleteMe          = (getToken)              => request("/api/users/me", { method: "DELETE", getToken });
+
+// The download endpoint streams a binary PDF, so it can't go through `request`
+// (which parses JSON). Fetch it as a Blob; on failure the body is JSON.
+export const downloadMyData = async (getToken) => {
+    const token = await getToken();
+    const res = await fetch(`${BASE_URL}/api/users/me/download`, {
+        headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        return { error: data.error || `Server error (${res.status})` };
+    }
+    return { blob: await res.blob() };
+};

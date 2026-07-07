@@ -1,10 +1,13 @@
 import { useState, useEffect } from "react"
 import Icon from '@mdi/react';
-import { mdiKeyboardBackspace, mdiPlus, mdiClose, mdiLock, mdiChevronDown } from '@mdi/js';
+import { mdiPlus, mdiClose, mdiLock, mdiChevronDown, mdiTrayArrowDown, mdiCheck } from '@mdi/js';
 import { useViewNavigate } from "../hooks/useViewNavigate";
 import { useData } from "../hooks/useData";
 import { useApi } from "../hooks/useApi";
 import Button from "../components/ui/Button";
+import AccountLayout from "../components/ui/AccountLayout";
+import SettingRow from "../components/ui/SettingRow";
+import CircleIconButton from "../components/ui/CircleIconButton";
 import ErrorMark from "../components/illustrations/ErrorMark";
 
 // Keeps a dropdown mounted through its closing animation, then unmounts it.
@@ -32,12 +35,18 @@ function useExitAnim(open, duration) {
 
 const genderOptions = ["Male", "Female", "Others", "Rather not say"]
 
+const fieldDescriptions = {
+    "Gender": "Helps us tailor your ride experience. Only shared when it's relevant to your safety.",
+    "Emergency Contact": "We'll reach this number if something goes wrong during a ride. Add a 10-digit mobile number.",
+    "DOB": "Used to verify your identity and keep your account secure. Enter it as DD/MM/YYYY.",
+}
+
 const ManageAccount = () => {
     const username = useData(state => state.username)
     const setUsername = useData(state => state.setUsername)
     const phone = useData(state => state.phone)
     const gender = useData(state => state.gender)
-    const setGender = useData(state=>state.setGender)
+    const setGender = useData(state => state.setGender)
     const emergencyContact = useData(state => state.emergencyContact)
     const setEmergencyContact = useData(state => state.setEmergencyContact)
     const dob = useData(state => state.dob)
@@ -47,11 +56,14 @@ const ManageAccount = () => {
     const [expanded, setExpanded] = useState(null)
     const [genderSelected, setGenderSelected] = useState("Not Selected")
     const [fieldValue, setFieldValue] = useState("")
+    const [confirmText, setConfirmText] = useState("")
     const [dropdownExpand, setDropdownExpand] = useState(false)
-    const [saving, setSaving] = useState(false)
-    const [apiError, setApiError] = useState(null)
+    const [loading, setLoading] = useState(false)
+    const [error, setError] = useState(null)
+    const [downloading, setDownloading] = useState(false)
+    const [downloadError, setDownloadError] = useState(null)
     const genderDropdown = useExitAnim(dropdownExpand, 220)
-    const { getMe, updateGender: updateGenderApi, updateEmergencyContact: updateEmergencyContactApi, updateDOB: updateDOBApi } = useApi()
+    const { getMe, updateGender: updateGenderApi, updateEmergencyContact: updateEmergencyContactApi, updateDOB: updateDOBApi, deleteMe, logout, downloadMyData } = useApi()
 
 
     useEffect(() => {
@@ -62,7 +74,7 @@ const ManageAccount = () => {
             if (me.gender) setGender(me.gender)
             if (me.dob) setDOB(me.dob)
             if (me.emergencyContact) setEmergencyContact(me.emergencyContact)
-        }).catch(() => {})
+        }).catch(() => { })
         return () => { active = false }
     }, [])
 
@@ -81,11 +93,15 @@ const ManageAccount = () => {
     const isLocked = lockedFields.includes(field)
 
     useEffect(() => {
-        setApiError(null)
+        setError(null)
+        setConfirmText("")
         if (field === "Gender") setGenderSelected(gender || "Not Selected")
         else if (field === "Emergency Contact") setFieldValue(emergencyContact || "")
         else if (field === "DOB") setFieldValue(dob || "")
     }, [field, gender, emergencyContact, dob])
+
+    // The account-deletion panel only unlocks once the person types the exact word.
+    const deactivateReady = confirmText.trim().toLowerCase() === "deactivate"
 
     const isValidDOB = (value) => {
         const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(value)
@@ -118,8 +134,8 @@ const ManageAccount = () => {
     const handleUpdate = async () => {
         if (field === "Gender" && genderSelected === "Not Selected") return
 
-        setSaving(true)
-        setApiError(null)
+        setLoading(true)
+        setError(null)
         try {
             let res
             if (field === "Gender") res = await updateGenderApi(genderSelected)
@@ -127,7 +143,7 @@ const ManageAccount = () => {
             else if (field === "DOB") res = await updateDOBApi(fieldValue)
 
             if (res?.error) {
-                setApiError(res.error)
+                setError(res.error)
                 return
             }
 
@@ -136,31 +152,63 @@ const ManageAccount = () => {
             else if (field === "DOB") setDOB(fieldValue)
             setExpanded(null)
         } catch {
-            setApiError("Something went wrong. Please try again.")
+            setError("Something went wrong. Please try again.")
         } finally {
-            setSaving(false)
+            setLoading(false)
+        }
+    }
+
+    const handleDownload = async () => {
+        if (downloading) return
+        setDownloading(true)
+        setDownloadError(null)
+        try {
+            const res = await downloadMyData()
+            if (res?.error) {
+                setDownloadError(res.error)
+                return
+            }
+            const url = URL.createObjectURL(res.blob)
+            const a = document.createElement("a")
+            a.href = url
+            a.download = "Account-Information.pdf"
+            document.body.appendChild(a)
+            a.click()
+            a.remove()
+            URL.revokeObjectURL(url)
+        } catch (e) {
+            console.error(e)
+            setDownloadError("Couldn't download your data. Please try again.")
+        } finally {
+            setDownloading(false)
+        }
+    }
+
+    const handleDeactivate = async () => {
+        if (!deactivateReady) return
+
+        setLoading(true)
+        setError(null)
+        try {
+            const data = await deleteMe()
+            if (data?.error) {
+                setError(data.error)   
+                return
+            }
+            await logout()                
+            navigate('/')
+        }
+        catch (e) {
+            console.error(e)
+            setError("Something went wrong. Please try again.")
+        }
+        finally {
+            setLoading(false)
         }
     }
 
     return (
-        <div className="w-[100vw] h-[100vh] flex flex-col justify-center items-center px-5 pb-10 sm:px-10">
-            <div className="flex w-full justify-start items-center py-8 [&>*]:cursor-pointer [&>*]:opacity-[0.85] [&>*]:transition-opacity [&>*]:duration-300 [&>*]:hover:opacity-[1]">
-                <h3 onClick={() => navigate('/')} className={`sm:block hidden text-[var(--background-primary)] text-2xl  pl-1 opacity-[0.85] transition-opacity duration-300 hover:opacity-[1]`}><span className='font-semibold'>RCS</span> travels</h3>
-                <Icon onClick={() => navigate('/')} className="sm:hidden block text-[var(--background-primary)]" path={mdiKeyboardBackspace} size={1.2} />
-            </div>
-            <div className="w-full h-full flex gap-5 justify-center items-center">
-                <div className="w-[20%] flex justify-center items-start h-full">
-                    <ul className="flex flex-col items-start justify-center w-full">
-                        {items.map((item, i) => {
-                            return (
-                                <li key={i} onClick={() => setSelected(i)} className={`font-normal text-3xl w-full cursor-pointer select-none py-3 px-4 rounded-2xl flex justify-start gap-2 transition-color duration-300 items-center ${selected === i ? "bg-[var(--background-primary)] hover:bg-[var(--background-primary)] text-[var(--text)]" : "hover:bg-[var(--background-primary)]/5 text-[var(--text-foreground)]"} `}>
-                                    <h4 >{item}</h4>
-                                </li>
-                            )
-                        })}
-                    </ul>
-                </div>
-                <div className="w-[80%] flex flex-col rounded-3xl justify-start items-start h-full">
+        <AccountLayout items={items} selected={selected} onSelect={setSelected}>
                     <Button
                         className={`${expanded ? "block animate-datetime" : "hidden animate-datetime-out"} z-200 py-6 flex flex-col justify-center items-center fixed left-1/2 top-1/2 -translate-x-1/2 mt-10 -translate-y-1/2 hover:opacity-[1]`}
                         prop={{ variant: "dropdown", width: "310px" }}
@@ -173,7 +221,47 @@ const ManageAccount = () => {
                                 <h2 className="text-2xl">{expanded[2]}</h2>
                             </div>
                             : <div className="flex flex-col gap-3 w-full justify-center px-3 pt-3 items-center text-center">
-                                <h2 className="text-2xl">{field}</h2>
+                                <h2 className="text-2xl">{expanded === "deactivate" ? "Before you deactivate" : expanded === "drivers" ? "What your driver sees" : `${field}`}</h2>
+                                <p className="-mt-2 mb-5 text-sm text-[var(--foreground-muted)]/70">{expanded === "deactivate" ? "This can't be undone." : expanded === "drivers" ? "The details shared with a driver when they accept your ride." : `${fieldDescriptions[field]}`}</p>
+
+                                {/* PLACEHOLDER — reconcile with the real driver route once it exists (see ROADMAP IMP) */}
+                                {expanded === "drivers" && (
+                                    <div className="w-full flex flex-col gap-4 mb-1 text-left">
+                                        <div className="flex flex-col gap-2">
+                                            <p className="text-xs uppercase tracking-wide text-[var(--foreground-muted)]/50">Shared with your driver</p>
+                                            <ul className="flex flex-col gap-2 text-sm text-[var(--text)]">
+                                                {["Your phone number", "Your pickup & drop location"].map(t => (
+                                                    <li key={t} className="flex items-center gap-2"><Icon path={mdiCheck} size={0.7} /> {t}</li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                        <div className="flex flex-col gap-2">
+                                            <p className="text-xs uppercase tracking-wide text-[var(--foreground-muted)]/50">Never shared</p>
+                                            <ul className="flex flex-col gap-2 text-sm text-[var(--foreground-muted)]/70">
+                                                {["Your name", "Gender", "Date of birth", "Emergency contact"].map(t => (
+                                                    <li key={t} className="flex items-center gap-2"><Icon path={mdiClose} size={0.7} /> {t}</li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    </div>
+                                )}
+                                {expanded === "deactivate" && (
+                                    <div className="w-full flex flex-col gap-4 mb-1">
+                                        <ul className="list-disc pl-5 flex flex-col gap-2 text-left text-sm text-[var(--foreground-muted)]/70 marker:text-[var(--foreground-muted)]/40">
+                                            <li>Your personal details are erased — name, gender, DOB, and emergency contact.</li>
+                                            <li>Your past rides are kept anonymously for our records.</li>
+                                            <li>You're signed out on all your devices.</li>
+                                            <li>You can sign up again with this number, but your history won't return.</li>
+                                        </ul>
+                                        <input
+                                            type="text"
+                                            value={confirmText}
+                                            onChange={(e) => setConfirmText(e.target.value)}
+                                            placeholder={`Type "Deactivate"`}
+                                            className="w-full rounded-full py-2 px-3 text-base text-center text-[var(--text)] bg-transparent outline-none placeholder:text-[var(--foreground-muted)]/50 border border-[var(--foreground)]/30"
+                                        />
+                                    </div>
+                                )}
 
                                 {/* Gender — dropdown selector */}
                                 <div onClick={() => setDropdownExpand(!dropdownExpand)} className={`${field === "Gender" ? "block" : "hidden"} relative w-full flex items-center rounded-full py-2 justify-between px-3 border border-[var(--foreground)]/30`}>
@@ -234,44 +322,55 @@ const ManageAccount = () => {
                                 )}
 
                                 {/* Save error from the backend */}
-                                {apiError && (
-                                    <p className="-mt-1 text-sm text-[rgba(239,68,68,0.9)]">{apiError}</p>
+                                {error && (
+                                    <p className="-mt-1 text-sm text-[rgba(239,68,68,0.9)]">{error}</p>
                                 )}
 
-                                <Button onClick={handleUpdate}
+                                <Button className={`${expanded === 'deactivate' || expanded === 'drivers' ? "hidden" : "block"}`} onClick={handleUpdate}
                                     prop={{
                                         variant: "",
                                         width: "240px",
-                                        disabled: updateDisabled || saving,
+                                        disabled: updateDisabled || loading,
                                     }}
                                 >
-                                    {saving ? "Saving…" : "Update"}
+                                    {loading ? "Saving…" : "Update"}
+                                </Button>
+                                <Button className={`${expanded === 'deactivate' ? "block" : "hidden"}`} onClick={handleDeactivate}
+                                    prop={{
+                                        variant: "negative",
+                                        width: "240px",
+                                        disabled: !deactivateReady || loading,
+                                    }}
+                                >
+                                    {loading ? "Deactivating…" : "Deactivate"}
                                 </Button>
                             </div>}
                     </Button>
-                    <h3 className="text-4xl text-[var(--text-foreground)] font-semibold pb-4 sm:pb-6 px-4">{selected === 0 ? "Account information" : "Privacy & Data"}</h3>
-                    <ul className="flex flex-col items-start gap-4 justify-center w-full">
-                        {selected === 0
-                            ? AccountInfo_items.map((item, i) => {
-                                return (
-                                    <li key={i} className={`font-normal text-3xl w-full cursor-pointer select-none py-4 px-6 rounded-2xl flex justify-between items-center gap-1 items-center bg-[var(--background-primary)]/5 text-[var(--text-foreground)]`}>
-                                        <div>
-                                            <p className="flex items-center justify-start gap-1 text-base text-[var(--background-primary)]/50">{item[0]} <Icon className={`${lockedFields.includes(item[0]) ? "block" : "hidden"} -mt-0.5 opacity-[0.9]`} path={mdiLock} size={0.6} /> </p>
-                                            <h4 className="text-lg font-medium">{item[1] ? `${item[1]}` : "Not added yet"}</h4>
-                                        </div>
-
-                                        <div onClick={() => setExpanded(item)} className="cursor-pointer bg-[var(--background-primary)]/80 text-[var(--foreground)] transition-color duration-300 hover:bg-[var(--background-primary)] p-1 rounded-full">
-                                            <Icon path={mdiPlus} size={1} />
-                                        </div>
-                                    </li>
-                                )
-                            })
-                            : <></>
-                        }
-                    </ul>
-                </div>
-            </div>
-        </div>
+            <ul className="flex flex-col items-start gap-4 justify-center w-full">
+                {selected === 0
+                    ? AccountInfo_items.map((item, i) => (
+                        <SettingRow key={i} trailing={<CircleIconButton icon={mdiPlus} onClick={() => setExpanded(item)} />}>
+                            <p className="flex items-center justify-start gap-1 text-base text-[var(--background-primary)]/50">{item[0]} <Icon className={`${lockedFields.includes(item[0]) ? "block" : "hidden"} -mt-0.5 opacity-[0.9]`} path={mdiLock} size={0.6} /> </p>
+                            <h4 className="text-lg font-medium">{item[1] ? `${item[1]}` : "Not added yet"}</h4>
+                        </SettingRow>
+                    ))
+                    : <>
+                        <SettingRow trailing={<CircleIconButton icon={mdiPlus} onClick={() => setExpanded('drivers')} />}>
+                            <h4 className="text-lg font-medium">What drivers see</h4>
+                            <p className="flex items-center justify-start gap-1 text-base text-[var(--background-primary)]/50">The details a driver can see about you.</p>
+                        </SettingRow>
+                        <SettingRow trailing={<CircleIconButton icon={mdiTrayArrowDown} size={0.85} disabled={downloading} onClick={handleDownload} />}>
+                            <h4 className="text-lg font-medium">Download my data</h4>
+                            <p className={`flex items-center justify-start gap-1 text-base ${downloadError ? "text-[rgba(239,68,68,0.9)]" : "text-[var(--background-primary)]/50"}`}>{downloadError || (downloading ? "Preparing your download…" : "Get a copy of your profile and ride history.")}</p>
+                        </SettingRow>
+                        <SettingRow trailing={<CircleIconButton icon={mdiPlus} onClick={() => setExpanded('deactivate')} />}>
+                            <h4 className="text-lg font-medium">Deactivate your account</h4>
+                            <p className="flex items-center justify-start gap-1 text-base text-[var(--background-primary)]/50">Find out how to deactivate your account</p>
+                        </SettingRow>
+                    </>
+                }
+            </ul>
+        </AccountLayout>
     )
 }
 

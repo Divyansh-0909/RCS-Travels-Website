@@ -13,7 +13,6 @@ import ManageAccount from '../../pages/ManageAccount';
 import Skeleton from './Skeleton';
 import ErrorPanel from './ErrorPanel';
 
-//hideExpanded is for the vertically expanded navbar which shows up when a booking is done which has been removed now
 
 const NavBar = ({ invert = false, hideExpanded = false }) => {
     const navigate = useViewNavigate();
@@ -87,7 +86,7 @@ const NavBar = ({ invert = false, hideExpanded = false }) => {
         }
     }
 
-    const userDropDownList = [[<Icon path={mdiAccountCircle} size={1.2} />,"Manage Account"], [<Icon path={mdiCog} size={1.1} />,"Setting"], [<Icon path={mdiShieldCheck} size={1.1} />,"Safety"], [<Icon path={mdiInformation} size={1.1} />,"Legal"]]
+    const userDropDownList = [[<Icon path={mdiAccountCircle} size={1.2} />,"Manage Account","/manage-account"], [<Icon path={mdiCog} size={1.1} />,"Settings","/settings"], [<Icon path={mdiShieldCheck} size={1.1} />,"Safety","/safety"], [<Icon path={mdiInformation} size={1.1} />,"Legal","/"]]
 
     return (
         <div className={`flex flex-col justify-center items-center ${invert ? "bg-[var(--background-primary)]" : "bg-[var(--foreground)]"} w-[300px] sm:w-fit ${bookingId && isSignedIn ? "h-fit" : "h-[40px] sm:h-[50px]"} gap-1 px-2 py-2 rounded-full`}>
@@ -145,7 +144,7 @@ const NavBar = ({ invert = false, hideExpanded = false }) => {
                                     </div>
                                 </>
                                 : <>
-                                    <div className={`${invert ? "text-[var(--text)]" : "text-[var(--text-foreground)]"} flex items-center w-full justify-between py-2`}>
+                                    <div className={`${invert ? "text-[var(--text)]" : "text-[var(--text-foreground)]"} flex items-center w-full justify-between`}>
                                         <h3 className='text-3xl font-semibold'>
                                             {
                                                 user?.name?.length > 15
@@ -160,16 +159,16 @@ const NavBar = ({ invert = false, hideExpanded = false }) => {
                                         </div>
                                     </div>
                                     <div className='w-full'>
-                                        <ul className='flex flex-col items-start justify-center gap-2 sm:gap-3 w-full'>
+                                        <ul className='flex flex-col items-start justify-center gap-1 w-full'>
                                             {userDropDownList.map((item, i) => {
                                                 return (
-                                                    <li key={i} className={`font-normal text-3xl w-full rounded-full py-2 px-3 flex justify-start gap-2 transition-color duration-300 items-center ${!invert ? " text-[var(--text-foreground)] bg-[var(--background-primary)]/10 hover:bg-[var(--background-primary)]/15" : "text-[var(--text)] bg-[var(--foreground)]/10 hover:bg-[var(--foreground)]/5"}`}>
+                                                    <li key={i} onClick={()=>navigate(`${item[2]}`)} className={`font-normal text-3xl w-full rounded-2xl py-3 px-3 flex justify-start gap-2 transition-color duration-300 items-center ${!invert ? " text-[var(--text-foreground)] hover:bg-[var(--foreground-muted)]" : "text-[var(--text)] hover:bg-[var(--foreground)]/8"}`}>
                                                         {item[0]}
-                                                        <h4>{item[1]}</h4>
+                                                        <h4 >{item[1]}</h4>
                                                     </li>
                                                 )
                                             })}
-                                            <Button onClick={handleSignOut} prop={{variant: "negative", width: "345px" }}>Sign out</Button>
+                                            <Button onClick={handleSignOut} className="mt-5" prop={{variant: "negative", width: "345px" }}>Sign out</Button>
                                         </ul>
                                     </div>
                                 </>

@@ -8,6 +8,9 @@ export const useData = create (persist (set =>({
     username: null,
     setUsername: (name)=> set(state=> ({username: name})),
 
+    language: "English",
+    setLanguage: (lang)=> set(state=> ({language: lang})),
+
     gender: null,
     setGender: (sex)=>set(state=>({gender: sex})),
 
@@ -59,5 +62,5 @@ export const useData = create (persist (set =>({
     storage: createJSONStorage(() => localStorage),
     // Only the phone number is remembered across reloads/return visits so a
     // returning user's login form is pre-filled; everything else stays in-memory.
-    partialize: (state) => ({ phone: state.phone }),
+    partialize: (state) => ({ phone: state.phone, language: state.language }),
 }))

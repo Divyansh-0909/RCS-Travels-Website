@@ -1,6 +1,6 @@
 // import { useSignUp } from "@clerk/clerk-react"; // replaced by WhatsApp OTP + Clerk ticket flow
 import { useSignIn, useAuth } from "@clerk/clerk-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useViewNavigate } from "../hooks/useViewNavigate";
 import Input from "../components/ui/Input";
 import Button from "../components/ui/Button";
@@ -8,6 +8,8 @@ import { useApi } from "../hooks/useApi";
 import Icon from '@mdi/react';
 import { mdiKeyboardBackspace } from '@mdi/js';
 import { useData } from "../hooks/useData";
+import CheckMarkOutline from "../components/illustrations/CheckMarkOutline";
+import CrossOutline from "../components/illustrations/CrossOutline";
 
 const SignUpPage = () => {
   // const { signUp, isLoaded } = useSignUp(); // replaced
@@ -18,6 +20,8 @@ const SignUpPage = () => {
   const phone = useData(state=>state.phone);
   const setPhone = useData(state => state.setPhone);
   const [otp, setOtp] = useState("");
+  const otpRefs = useRef([]);
+  const OTP_LENGTH = 4;
   // Username is collected FIRST and held in state, so the DB user is created in the
   // same step as OTP verification — there is no post-OTP "enter your name" screen to
   // abandon, which is what previously left a signed-in session without a profile.
@@ -147,7 +151,13 @@ const SignUpPage = () => {
 
   const verifyOtp = async () => {
     const data = await api.verifyOtp(phone, otp);
-    if (data.error) { setError(data.error); return; }
+    if (data.error) {
+      // Hold the red-cross animation before clearing, matching LoginPage.
+      setError(data.error);
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      setOtp("");
+      return;
+    }
 
     const result = await signIn.create({ strategy: "ticket", ticket: data.ticket });
     if (result.status !== "complete") { setError("Verification failed. Please try again."); return; }
@@ -172,6 +182,8 @@ const SignUpPage = () => {
 
   const isUsername = step === "username";
   const isPhone = step === "phone";
+  const isOtp = step === "otp";
+  const busy = loading;
 
   const handleUsernameChange = (value) => {
     setUsername(value);
@@ -192,17 +204,52 @@ const SignUpPage = () => {
     }
   };
 
-  const handleOtpChange = (value) => {
-    const digits = value.replace(/\D/g, "").slice(0, 4);
+  const clearOtpError = () => {
+    if (error) setError(null);
+  };
 
-    setOtp(digits);
+  const focusBox = (i) => {
+    otpRefs.current[i]?.focus();
+  };
 
-    if (
-      error === "Enter OTP" ||
-      error === "Incorrect OTP"
-    ) {
-      setError(null);
+  const handleOtpDigit = (i, value) => {
+    const char = value.replace(/\D/g, "").slice(-1);
+    if (!char) return;
+
+    const chars = Array.from({ length: OTP_LENGTH }, (_, idx) => otp[idx] ?? "");
+    chars[i] = char;
+    setOtp(chars.join(""));
+    clearOtpError();
+
+    if (i < OTP_LENGTH - 1) focusBox(i + 1);
+  };
+
+  const handleOtpKeyDown = (i, e) => {
+    if (e.key === "Backspace") {
+      e.preventDefault();
+      const chars = Array.from({ length: OTP_LENGTH }, (_, idx) => otp[idx] ?? "");
+      if (chars[i]) {
+        chars[i] = "";
+      } else if (i > 0) {
+        chars[i - 1] = "";
+        focusBox(i - 1);
+      }
+      setOtp(chars.join(""));
+      clearOtpError();
+    } else if (e.key === "ArrowLeft" && i > 0) {
+      focusBox(i - 1);
+    } else if (e.key === "ArrowRight" && i < OTP_LENGTH - 1) {
+      focusBox(i + 1);
     }
+  };
+
+  const handleOtpPaste = (e) => {
+    e.preventDefault();
+    const digits = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, OTP_LENGTH);
+    if (!digits) return;
+    setOtp(digits);
+    clearOtpError();
+    focusBox(Math.min(digits.length, OTP_LENGTH - 1));
   };
 
   return (
@@ -258,22 +305,77 @@ const SignUpPage = () => {
                 </p>
               )}
 
-              <Input
-                prop={{
-                  type: isUsername ? "text" : "tel",
-                  name: isUsername ? "username" : isPhone ? "phone-number" : "otp-number",
-                  id: isUsername ? "username" : isPhone ? "phone-number" : "otp-number",
-                  placeholder: isUsername ? "Full Name" : isPhone ? "XXXXX XXXXX" : "XX XX",
-                  value: isUsername ? username : isPhone ? phone : otp,
-                  onChangeFn: isUsername ? handleUsernameChange : isPhone ? handlePhoneChange : handleOtpChange,
-                  error: isUsername
-                    ? error === "Enter your name" || error === "Name must be at least 2 characters" || error === "Username is already taken"
-                    : isPhone
-                    ? error === "Enter a Phone Number" || error === "Number should be exactly 10 digits"
-                    : error === "Enter OTP" || error === "Incorrect OTP",
-                }}
-                className="scale-[1] sm:scale-[1.1]"
-              />
+              {isOtp
+                ? <div className="relative flex justify-center items-center gap-3 mb-5">
+                  {Array.from({ length: OTP_LENGTH }).map((_, i) => {
+                    const otpError = Boolean(error);
+                    return (
+                      <input
+                        key={i}
+                        ref={(el) => (otpRefs.current[i] = el)}
+                        type="tel"
+                        inputMode="numeric"
+                        autoComplete={i === 0 ? "one-time-code" : "off"}
+                        name={`otp-number-${i + 1}`}
+                        id={`otp-number-${i + 1}`}
+                        placeholder="X"
+                        maxLength={1}
+                        value={otp[i] ?? ""}
+                        onChange={(e) => handleOtpDigit(i, e.target.value)}
+                        onKeyDown={(e) => handleOtpKeyDown(i, e)}
+                        onPaste={handleOtpPaste}
+                        style={{ "--i": i }}
+                        className={`
+                        relative flex justify-center text-center items-center font-medium text-3xl my-1
+                        ${busy ? "text-transparent placeholder-transparent" : "text-white"}
+                        py-2 w-[55px] h-[65px] rounded-2xl transition-all duration-600 ease-in-out
+                        ${busy && `animate-otp-box-in ${i === 0 && `${otpError ? "bg-red-600 " : "bg-green-600"}`}`}
+                        ${otpError
+                            ? `
+                              border-b-2 border-[rgba(239,68,68,0.3)]
+                              bg-[linear-gradient(to_bottom,transparent_50%,rgba(239,68,68,0.25)_100%)]
+                              shadow-[inset_0_2px_2px_rgba(239,68,68,0.35)]
+                              focus:border-[rgba(239,68,68,0.5)]
+                              focus:shadow-[inset_0_2px_2px_rgba(255,255,255,0.35)]
+                            `
+                            : `
+                              border-b-2 border-[rgba(255,255,255,0.05)]
+                              bg-[linear-gradient(to_bottom,transparent_50%,rgba(146,146,139,0.10)_100%)]
+                              shadow-[inset_0_2px_2px_rgba(255,255,255,0.25)]
+                              focus:border-[rgba(255,255,255,0.15)]
+                              focus:shadow-[inset_0_2px_2px_rgba(255,255,255,0.35)]
+                            `
+                          }
+                        focus:outline-none
+                        focus:opacity-[0.8]
+                        active:opacity-[0.8]
+                        transition-all duration-200
+                      `}
+                      />
+                    );
+                  })}
+                  {busy && (
+                    <span className="animate-otp-badge absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
+                      {error
+                        ? <CrossOutline size={38} />
+                        : <CheckMarkOutline size={38} />}
+                    </span>
+                  )}
+                </div>
+                : <Input
+                  prop={{
+                    type: isUsername ? "text" : "tel",
+                    name: isUsername ? "username" : "phone-number",
+                    id: isUsername ? "username" : "phone-number",
+                    placeholder: isUsername ? "Full Name" : "XXXXX XXXXX",
+                    value: isUsername ? username : phone,
+                    onChangeFn: isUsername ? handleUsernameChange : handlePhoneChange,
+                    error: isUsername
+                      ? error === "Enter your name" || error === "Name must be at least 2 characters" || error === "Username is already taken"
+                      : error === "Enter a Phone Number" || error === "Number should be exactly 10 digits",
+                  }}
+                  className="scale-[1] sm:scale-[1.1]"
+                />}
 
               <Button
                 onClick={isPhone && showLogin ? () => navigate('/login') : undefined}

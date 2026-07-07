@@ -3,6 +3,8 @@ import { protect } from '../middleware/auth.js'
 import { prisma } from '../db/prisma.js'
 import { clerkClient } from '@clerk/express'
 import crypto from 'crypto'
+import { ACTIVE_STATUSES } from './bookings.js'
+import PDFDocument from "pdfkit";
 
 const usersRouter = Router()
 
@@ -14,6 +16,113 @@ usersRouter.get('/me', protect, async (req, res) => {
 
   const { id, phone, name, bookingCode, gender, dob, emergencyContact } = user
   return res.json({ id, phone, name, bookingCode, gender, dob, emergencyContact })
+})
+
+usersRouter.get('/me/download', protect, async (req, res) => {
+  const user = await prisma.user.findUnique({ where: { clerkId: req.auth.userId } })
+  if (!user) return res.status(404).json({ error: 'User has not signed up' })
+
+
+  const doc = new PDFDocument({
+    margin: 50,
+    size: "A4",
+  });
+
+  res.setHeader(
+    "Content-Disposition",
+    'attachment; filename="Account-Information.pdf"'
+  );
+
+  res.setHeader("Content-Type", "application/pdf");
+
+  doc.pipe(res);
+
+  doc
+    .fontSize(24)
+    .text("Account Information", {
+      align: "center",
+    });
+
+  doc.moveDown(2);
+
+  doc.fontSize(18).text("Profile");
+  doc.moveDown();
+
+  doc.fontSize(12);
+  doc.text(`Name: ${user.name ?? "—"}`);
+  doc.text(`Phone Number: ${user.phone ?? "—"}`);
+  doc.text(`DOB: ${user.dob ?? "—"}`);
+  doc.text(`Gender: ${user.gender ?? "—"}`);
+  doc.text(`Emergency Contact: ${user.emergencyContact ?? "—"}`);
+  doc.text(`Joined: ${user.createdAt.toDateString()}`);
+
+  const bookings = await prisma.booking.findMany({
+    where: { userId: user.id },
+    orderBy: { createdAt: "desc" },
+  })
+
+  doc.moveDown(2)
+  doc.fontSize(18).text("Ride History")
+  doc.moveDown()
+  doc.fontSize(12)
+
+  if (bookings.length === 0) {
+    doc.fillColor("#666").text("No rides yet.").fillColor("black")
+  } else {
+    bookings.forEach((b, i) => {
+      const when = new Date(b.scheduledAt ?? b.createdAt).toLocaleString("en-IN", {
+        day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
+      })
+      const vehicle = b.vehicleType === 4 ? "Cab Economy" : "Cab XL"
+
+      doc.font("Helvetica-Bold").text(`${when}   ·   ${b.status}`)
+      doc.font("Helvetica")
+      doc.text(`From:  ${b.pickupAddress}`)
+      doc.text(`To:    ${b.dropAddress}`)
+      doc.text(`${vehicle}    Fare: INR ${b.fare}`)
+      if (b.cancellationCharge) doc.text(`Cancellation charge: INR ${b.cancellationCharge}`)
+      if (i < bookings.length - 1) doc.moveDown()
+    })
+  }
+
+  doc.end()   // required; without it the response never finishes
+})
+
+usersRouter.delete('/me', protect, async (req, res) => {
+  const user = await prisma.user.findUnique({ where: { clerkId: req.auth.userId } })
+  if (!user) return res.status(404).json({ error: 'User has not signed up' })
+
+  // Don't let someone delete their account while a ride is still live
+  const liveBooking = await prisma.booking.findFirst({
+    where: { userId: user.id, status: { in: ACTIVE_STATUSES } },
+    select: { id: true },
+  })
+  if (liveBooking)
+    return res.status(409).json({ error: 'You have an active ride. Cancel or complete it before deleting your account.' })
+
+  const sentinel = `deleted:${user.id}`
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      deletedAt: new Date(),
+      name: null,
+      gender: null,
+      dob: null,
+      emergencyContact: null,
+      whatsappNumber: null,
+      phone: sentinel,
+      clerkId: sentinel,
+      bookingCode: sentinel,
+    },
+  })
+
+  try {
+    await clerkClient.users.deleteUser(req.auth.userId)
+  } catch (e) {
+    console.error('Clerk user cleanup failed after account deletion:', e)
+  }
+
+  return res.json({ ok: true })
 })
 
 usersRouter.post('/me/updateGender', protect, async (req, res) => {

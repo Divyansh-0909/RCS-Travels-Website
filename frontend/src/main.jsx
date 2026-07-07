@@ -14,6 +14,8 @@ import ProtectedRoute from './components/ProtectedRoute';
 import TrackingPage from './pages/TrackingPage';
 import RideHistory from './pages/RideHistory';
 import ManageAccount from './pages/ManageAccount';
+import SettingsPage from './pages/SettingsPage';
+import SafetyPage from './pages/SafetyPage';
 import RideCancelledToast from './components/ui/RideCancelledToast';
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
@@ -49,8 +51,16 @@ const router = createBrowserRouter([
     element: <ProtectedRoute><RideHistory /></ProtectedRoute>,
   },
   {
-    path: "/profile",
+    path: "/manage-account",
     element: <ProtectedRoute><ManageAccount /></ProtectedRoute>,
+  },
+  {
+    path: "/settings",
+    element: <ProtectedRoute><SettingsPage /></ProtectedRoute>,
+  },
+  {
+    path: "/safety",
+    element: <ProtectedRoute><SafetyPage /></ProtectedRoute>,
   },
 ]);
 
