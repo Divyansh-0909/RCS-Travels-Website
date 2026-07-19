@@ -2,6 +2,7 @@ RCS TRAVELS — PROJECT ROADMAP
 ===============================
 
 IMPORTANT:
+- use select where driver and user are including in where command in backend
 - Build legal page
 - Women get a safer road route for rides.
   WHY: uni is in a remote area; the shortest route passes through shady areas that
@@ -235,8 +236,10 @@ Goal: Visibility and driver management — assignment is automatic.
 
   /admin/bookings → table of all bookings with live status, manual re-assign
                     only as a fallback (e.g. when no driver auto-accepted)
+                    Allow filters for fare range, driver name, user name, phone number, vechile type,comission,
   /admin/drivers  → view all drivers, approve/reject pending verifications,
                     remove (deactivate) any driver
+                    allow filtering by name, phone number, vechiletype, Verified or not
 
 This lets you monitor the full loop:
   Customer books → System auto-assigns driver → Customer sees driver assigned.

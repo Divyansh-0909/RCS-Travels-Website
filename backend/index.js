@@ -3,12 +3,14 @@ import express from 'express'
 import cors from 'cors'
 import { prisma } from './db/prisma.js'
 import { clerkAuth } from './middleware/auth.js'
+import { errorHandler } from './middleware/errorHandler.js'
 import fareRouter from './routes/fare.js'
 import bookingsRouter from './routes/bookings.js'
 import driverRouter from './routes/driver.js'
 import startAssignmentJob from './services/assignScheduledRides.js'
 import usersRouter from './routes/users.js'
 import hybridAuthRouter from './routes/hybridAuth.js'
+import adminRouter from './routes/admin.js'
 
 const app = express()
 const PORT = process.env.PORT || 5000
@@ -22,10 +24,14 @@ app.use('/api/bookings', bookingsRouter)
 app.use('/api/driver', driverRouter)
 app.use('/api/users', usersRouter)
 app.use('/api/auth', hybridAuthRouter)
+app.use('/api/admin', adminRouter)
 
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok' })
 })
+
+// Must be registered after all routes — Express runs error middleware in order.
+app.use(errorHandler)
 
 const server = app.listen(PORT, async () => {
   await prisma.$connect()
