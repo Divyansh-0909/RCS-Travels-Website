@@ -7,12 +7,11 @@ import { useAuth } from "@clerk/clerk-react";
 import NavBar from "../components/ui/NavBar";
 import ErrorMark from "../components/illustrations/ErrorMark";
 import Icon from "@mdi/react";
-import { mdiChevronDown, mdiPlus, mdiContentCopy, mdiClose } from "@mdi/js";
-import dashedLine from '../assets/dashed-line.svg';
-import arrow from '../assets/arrow.svg';
+import { mdiChevronDown, mdiContentCopy } from "@mdi/js";
 import FourSeaterCar from "../assets/4-seater-bottom-left.webp"
 import SixSeaterCar from "../assets/6-seater-bottom-left.webp"
 import RideHistorySkeleton from "../components/RideHistorySkeleton";
+import { vehicleLabel, statusChip, splitAddress, displayPhone, formatDateTime, CopyBtn } from "../components/ui/bookingDisplay";
 
 const RideHistory = () => {
     const { getToken } = useAuth();
@@ -74,9 +73,6 @@ const RideHistory = () => {
         return () => { cancelled = true }
     }, [getToken])
 
-    const expandedBooking = expand !== null ? bookings.find(b => b.id === expand) : null;
-
-
     return (
         <div className="bg-[var(--foreground)] w-full h-full">
             <div className="fixed z-100 left-1/2 -translate-x-1/2 top-6 sm:top-10">
@@ -101,135 +97,91 @@ const RideHistory = () => {
                     </div>
                     :
                     <div className="pt-30 sm:pt-40">
-                        <Button
-                            className={`${expandedBooking ? "block animate-datetime" : "hidden animate-datetime-out"} z-200 py-6 flex flex-col justify-center items-center fixed left-1/2 top-1/2 -translate-x-1/2 mt-10 -translate-y-1/2 hover:opacity-[1]`}
-                            prop={{ variant: "dropdown", width: "290px" }}
-                        >
-                            <Icon onClick={() => setExpand(null)} className="text-[var(--foreground)] w-full right-4 top-4 absolute opacity-[0.8] transition-opacity duration-300 hover:opacity-[1]" path={mdiClose} size={1} />
-                            <div className="flex flex-col justify-center items-center gap-6 px-4 pt-2">
-                                <div className="flex flex-col justify-center items-center gap-1">
-                                    <h3 className="text-[var(--text)] font-semibold">{expandedBooking?.status === "cancelled" ? "Ride cancelled" : !expandedBooking?.driver ? (new Date(expandedBooking?.scheduledAt) > new Date() ? "Driver yet to be assigned" : "Driver couldn't be assigned") : `Your driver was ${expandedBooking.driver.name}`}</h3>
-                                    <h4 className="text-[var(--text-muted)]">{(expandedBooking?.driver ? (expandedBooking?.vechileType === 4 ? `Cab Economy ${(expandedBooking?.sharing ? "• Sharing" : "")}` : `Cab XL ${(expandedBooking?.sharing ? "• Sharing" : "")}`) : (expandedBooking?.vechileType === 1 ? `Booked Any ${(expandedBooking?.sharing ? "• Sharing" : "")}` : (expandedBooking?.vechileType === 4 ? `Booked Cab Economy ${(expandedBooking?.sharing ? "• Sharing" : "")}` : `Booked Cab XL ${(expandedBooking?.sharing ? "• Sharing" : "")}`)))}</h4>
-                                </div>
-                                <div className="flex w-full gap-1 justify-center items-center -my-3">
-                                    <div>-----</div>
-                                    <h4>RIDE DETAILS</h4>
-                                    <div>-----</div>
-                                </div>
-                                <div>
-                                    <h4 className="text-[var(--text-muted)] flex justify-center items-center">
-                                        {new Date(expandedBooking?.createdAt).toLocaleDateString("en-GB", {
-                                            day: "numeric",
-                                            month: "short",
-                                        })}
-                                        {" • "}
-                                        {new Date(expandedBooking?.createdAt).toLocaleTimeString("en-GB", {
-                                            hour: "2-digit",
-                                            minute: "2-digit",
-                                            hour12: true,
-                                        }).toUpperCase()}
-                                    </h4>
-                                    <h4 className="text-[var(--text-muted)] flex justify-center items-center uppercase">{expandedBooking?.status}</h4>
-                                    <h4 className="text-[var(--text-muted)] flex justify-center items-center">
-                                        {expandedBooking?.distanceKm} KM
-                                        {expandedBooking?.status === "completed"
-                                            ? ` • ${Math.floor(
-                                                (Date.parse(expandedBooking.completedAt) -
-                                                    Date.parse(expandedBooking.confirmedAt)) /
-                                                60000
-                                            )} min`
-                                            : ""}
-                                    </h4>                                </div>
-
-                                <div className="flex justify-center items-center -ml-2 sm:ml-0 -mt-2">
-                                    {/* <div className="flex flex-col justify-center items-start m-0 -mr-4 sm:-mr-2 p-0 h-[2px] scale-[0.26] sm:scale-[0.4]">
-                                        <img src={dashedLine} alt="dashed-line" />
-                                        <img src={arrow} alt="arrow" />
-                                    </div> */}
-                                    <div className="flex flex-col justify-between font-semibold w-full items-start gap-2 sm:gap-3">
-                                        <div className="flex items-center justify-center gap-1 h-fit">
-                                            <div className="bg-[var(--foreground)] w-3 h-3 rounded-full relative"></div>
-                                            <div className="w-full px-4 flex flex-col justify-center items-start">
-                                                <h4 className="text-[var(--text)] text-left">
-                                                    {expandedBooking?.pickupAddress?.split(",")[0]}
-                                                </h4>
-                                                <p className="text-sm text-[var(--text-muted)] text-left">
-                                                    {expandedBooking?.pickupAddress?.split(",").slice(1).join(",").trim()}
-                                                </p>
-                                            </div>
-                                        </div>
-
-                                        <div className="flex items-center justify-center gap-1 h-fit"> 
-                                            <div className="bg-primary w-3 h-3 rounded-full relative"><div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-[var(--foreground)] w-1.5 h-1.5 rounded-full"/></div>
-                                            <div className="w-full px-4 flex flex-col justify-center items-start">
-                                                <h4 className="text-left">
-                                                    {expandedBooking?.dropAddress?.split(",")[0]}
-                                                </h4>
-                                                <p className="text-sm text-[var(--text-muted)] text-left">
-                                                    {expandedBooking?.dropAddress?.split(",").slice(1).join(",").trim()}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="flex flex-col w-full gap-1 justify-center items-center -my-3">
-                                    <div>----------------------</div>
-                                    <h4 className="text-[var(--text)]">Total Fare: ₹{expandedBooking?.fare} </h4>
-                                    <div>----------------------</div>
-                                </div>
-                                <div className="flex flex-col justify-center items-center gap-1 sm:gap-2">
-                                    <div className="flex gap-3 h-fit justify-center items-center">
-                                        <p>
-                                            Ride ID: {expandedBooking?.id?.slice(0, 8)}....
-                                        </p>
-                                        <span className="group relative flex items-center">
-                                            <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 rounded-md bg-primary text-[var(--foreground)] text-xs font-semibold whitespace-nowrap opacity-0 translate-y-1 transition-[opacity,transform] duration-200 group-hover:opacity-100 group-hover:translate-y-0">copy</span>
-                                            <Icon onClick={() => copyRideId(expandedBooking?.id)} className="cursor-pointer text-[var(--text-muted)] transition-color duration-300 hover:text-[var(--text)]" path={mdiContentCopy} size={0.65} />
-                                        </span>
-                                    </div>
-                                    <Button onClick={() => handleCancel(expandedBooking?.id)} prop={{variant: "negative", width: "200px"}} className={`${new Date(expandedBooking?.scheduledAt) > new Date() && expandedBooking?.status !== "cancelled" ? "block" : "hidden" }`}>Cancel ride</Button>
-                                    <p>Need help? <u className="text-[var(--text)] cursor-pointer transition-color duration-300 hover:text-[var(--text)]/80">Talk to us</u></p>
-                                    
-                                </div>
-                            </div>
-                        </Button>
-
-                        <h1 className={`font-semibold text-[var(--background-primary)] pb-4 ${expand ? "sm:blur-xs opacity-[0.9]" : ""}`}>Ride History</h1>
+                        <h1 className="font-semibold text-[var(--background-primary)] pb-4">Ride History</h1>
                         {
                             bookings.map((booking) => {
+                                const [pickupMain, pickupRest] = splitAddress(booking.pickupAddress)
+                                const [dropMain, dropRest] = splitAddress(booking.dropAddress)
+                                const isOpen = expand === booking.id
+                                const upcoming = new Date(booking.scheduledAt) > new Date()
                                 return (
-                                    <div key={booking.id} className={`${expand ? "sm:blur-xs opacity-[0.9]" : booking.status === "cancelled" ? "opacity-60" : ""} cursor-default bg-[var(--foreground-muted)] py-5 px-5 sm:py-6 sm:px-8 rounded-2xl my-4 sm:my-6 flex flex-col justify-center items-start gap-2 sm:gap-3`}>
-                                        <div className="flex justify-between font-medium items-center gap-1 sm:gap-2 w-full">
-                                            <div className="flex flex-col justify-center items-start">
-                                                <h3 className="font-semibold text-primary mb-1">{booking.dropAddress}</h3>
-                                                <div className="flex flex-row gap-2 h-fit mb-2 justify-center items-start sm:items-center">
-                                                    <p className="text-gray-500">Ride ID: {booking.id?.slice(0, 8)}....</p>
-                                                    <span className="group relative flex items-center">
-                                                        <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 rounded-md bg-primary text-[var(--foreground)] text-xs font-semibold whitespace-nowrap opacity-0 translate-y-1 transition-[opacity,transform] duration-200 group-hover:opacity-100 group-hover:translate-y-0">copy</span>
-                                                        <Icon onClick={() => copyRideId(booking?.id)} className="cursor-pointer mb-0.5 text-gray-500 transition-color duration-300 hover:text-[var(--text-foreground)]" path={mdiContentCopy} size={0.6} />
-                                                    </span>
-                                                </div>
-                                                <div className="flex gap-2 justify-start items-center">
-                                                    <img src={booking.vechileType === 4 ? FourSeaterCar : SixSeaterCar} className={`w-20 sm:w-30 -ml-1 ${booking.status === "cancelled" ? "grayscale" : ""}`} alt="car-image" />
-                                                    <div>
-                                                        <h4 className="text-[var(--background-primary)]">
-                                                            {new Date(booking.createdAt).toLocaleDateString("en-GB", {
-                                                                day: "numeric",
-                                                                month: "short",
-                                                            })}
-                                                            {" • "}
-                                                            {new Date(booking.createdAt).toLocaleTimeString("en-GB", {
-                                                                hour: "2-digit",
-                                                                minute: "2-digit",
-                                                                hour12: true,
-                                                            }).toUpperCase()}
-                                                        </h4>
-                                                        <h4 className="text-[var(--background-primary)]">₹{booking.fare} • {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}</h4>
+                                    <div key={booking.id} className={`${booking.status === "cancelled" ? "opacity-60" : ""} cursor-default bg-[var(--foreground-muted)] py-5 px-5 sm:py-6 sm:px-8 rounded-2xl my-4 sm:my-6 flex flex-col justify-center items-start gap-4`}>
+                                        <div className="flex justify-between items-start gap-4 w-full">
+                                            {/* Route: pickup → drop, with the car on its left on sm+ */}
+                                            <div className="flex items-center gap-4 min-w-0">
+                                                <img src={booking.vehicleType === 6 ? SixSeaterCar : FourSeaterCar} className={`hidden sm:block w-44 -ml-4 shrink-0 ${booking.status === "cancelled" ? "grayscale" : ""}`} alt="car-image" />
+                                                <div className="flex flex-col gap-3 min-w-0">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-3 h-3 rounded-full bg-[var(--background-primary)] shrink-0"></div>
+                                                        <div className="min-w-0">
+                                                            <h4 className="font-semibold text-[var(--background-primary)] truncate">{pickupMain}</h4>
+                                                            {pickupRest && <p className="text-sm text-gray-500 truncate">{pickupRest}</p>}
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-3 h-3 rounded-full bg-primary relative shrink-0"><div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-[var(--foreground-muted)]" /></div>
+                                                        <div className="min-w-0">
+                                                            <h4 className="font-semibold text-[var(--background-primary)] truncate">{dropMain}</h4>
+                                                            {dropRest && <p className="text-sm text-gray-500 truncate">{dropRest}</p>}
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div onClick={() => setExpand(expand === booking.id ? null : booking.id)} className="cursor-pointer bg-[var(--background-primary)]/80 transition-color duration-300 hover:bg-[var(--background-primary)] p-1 rounded-full">
-                                                <Icon path={mdiPlus} size={1} />
+                                            {/* Fare + status + expand toggle */}
+                                            <div className="flex flex-col items-end gap-1.5 shrink-0">
+                                                <h3 className="font-semibold text-[var(--background-primary)]">₹{booking.fare}</h3>
+                                                <span className={`${statusChip(booking.status)} text-xs font-semibold px-2.5 py-1 rounded-full capitalize`}>{booking.status.replace("_", " ")}</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="w-full border-t border-[var(--background-primary)]/10"></div>
+
+                                        {/* Trip meta + toggle, with the expandable details attached so the
+                                            collapsed grid doesn't add an extra flex-gap at the card bottom */}
+                                        <div className="flex flex-col w-full">
+                                            <div className="flex justify-between items-center w-full gap-4">
+                                                <p className="text-base text-gray-500">
+                                                    {formatDateTime(booking.scheduledAt ?? booking.createdAt)}  •  {vehicleLabel(booking.vehicleType)}{booking.sharing ? " • Sharing" : ""}
+                                                </p>
+                                                <div onClick={() => setExpand(isOpen ? null : booking.id)} className="cursor-pointer text-[var(--foreground-muted)] bg-[var(--background-primary)]/80 transition-color duration-300 hover:bg-[var(--background-primary)] p-1 rounded-full shrink-0">
+                                                    <Icon path={mdiChevronDown} size={1} className={`transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`} />
+                                                </div>
+                                            </div>
+
+                                            {/* Extra details — hidden until the toggle pops them down */}
+                                            <div className={`grid w-full transition-[grid-template-rows] duration-300 ${isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
+                                                <div className="overflow-hidden min-h-0 w-full">
+                                                    <div className={`${isOpen ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2"} transition-[opacity,transform] duration-300 flex flex-col gap-4 w-full pt-4`}>
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
+                                                        <div>
+                                                            <p className="text-xs uppercase tracking-wide text-gray-500 mb-0.5">Driver</p>
+                                                            {booking.driver
+                                                                ? <h4 className="text-[var(--background-primary)]">{booking.driver.name} <span className="text-gray-500">• {displayPhone(booking.driver.phone)}</span> <CopyBtn value={displayPhone(booking.driver.phone)} onCopy={copyRideId} /></h4>
+                                                                : <h4 className="text-gray-500">{booking.status === "cancelled" ? "—" : upcoming ? "Yet to be assigned" : "Couldn't be assigned"}</h4>}
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-xs uppercase tracking-wide text-gray-500 mb-0.5">Trip</p>
+                                                            <h4 className="text-[var(--background-primary)]">
+                                                                {booking.distanceKm ?? "—"} KM
+                                                                {booking.status === "completed" && booking.completedAt && booking.confirmedAt
+                                                                    ? ` • ${Math.floor((Date.parse(booking.completedAt) - Date.parse(booking.confirmedAt)) / 60000)} min`
+                                                                    : ""}
+                                                            </h4>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex flex-row gap-2 h-fit justify-start items-start sm:items-center">
+                                                        <p className="text-gray-500 text-sm">Ride ID: {booking.id?.slice(0, 8)}....</p>
+                                                        <CopyBtn value={booking?.id} onCopy={copyRideId} />
+                                                    </div>
+
+                                                    <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+                                                        {upcoming && booking.status !== "cancelled" &&
+                                                            <Button onClick={() => handleCancel(booking.id)} prop={{ variant: "negative", width: "200px" }}>Cancel ride</Button>}
+                                                        <p>Need help? <u className="text-[var(--background-primary)] cursor-pointer transition-color duration-300 hover:text-[var(--background-primary)]/80">Talk to us</u></p>
+                                                    </div>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>

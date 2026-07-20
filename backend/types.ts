@@ -3,9 +3,11 @@ import {BookingStatus, BookingSource, CancelledBy, VerificationStatus } from '@p
 import type { Booking, Driver, User } from '@prisma/client';
 
 const bookingListQuerySchema = z.object({
+  search: z.string().trim().min(2).optional(),
   status: z.enum(BookingStatus).optional(),
-  date: z.iso.date().optional(),
-  phone: z.string().trim().optional(),
+  startDate: z.iso.date().optional(),
+  endDate: z.iso.date().optional(),
+  customerPhone: z.string().trim().optional(),
   customerName: z.string().trim().optional(),
   driverName: z.string().trim().optional(),
   vehicleType: z.coerce
@@ -23,8 +25,9 @@ const bookingListQuerySchema = z.object({
 });
 
 const driverListQuerySchema = z.object({
-  name: z.string().trim().optional(),
-  phone: z.string().trim().optional(),
+  search: z.string().trim().min(2).optional(),
+  driverName: z.string().trim().optional(),
+  driverPhone: z.string().trim().optional(),
   vehicleType: z.coerce
     .number()
     .pipe(z.union([z.literal(4), z.literal(6)]))
@@ -35,7 +38,8 @@ const driverListQuerySchema = z.object({
     .enum(["true", "false"])
     .transform(value => value === "true")
     .optional(),
-  date: z.iso.date().optional(),
+  startDate: z.iso.date().optional(),
+  endDate: z.iso.date().optional(),
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().positive().max(100).default(20),
 });

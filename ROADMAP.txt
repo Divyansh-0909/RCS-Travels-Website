@@ -2,6 +2,7 @@ RCS TRAVELS — PROJECT ROADMAP
 ===============================
 
 IMPORTANT:
+- add the ability to remove a driver or verify a driver in the dashboard
 - use select where driver and user are including in where command in backend
 - Build legal page
 - Women get a safer road route for rides.

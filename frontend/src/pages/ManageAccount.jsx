@@ -208,7 +208,7 @@ const ManageAccount = () => {
     }
 
     return (
-        <AccountLayout items={items} selected={selected} onSelect={setSelected}>
+        <AccountLayout items={items} selected={selected} onSelect={setSelected} title="Manage Account">
                     <Button
                         className={`${expanded ? "block animate-datetime" : "hidden animate-datetime-out"} z-200 py-6 flex flex-col justify-center items-center fixed left-1/2 top-1/2 -translate-x-1/2 mt-10 -translate-y-1/2 hover:opacity-[1]`}
                         prop={{ variant: "dropdown", width: "310px" }}

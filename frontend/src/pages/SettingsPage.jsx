@@ -50,7 +50,7 @@ const SettingsPage = () => {
     }
 
     return (
-        <AccountLayout items={items} selected={selected} onSelect={setSelected}>
+        <AccountLayout items={items} selected={selected} onSelect={setSelected} title="Settings">
             <ul className="flex flex-col items-start gap-4 justify-center w-full">
                 {selected === 0 && languages.map(({ code, label, sub }) => (
                     <SettingRow

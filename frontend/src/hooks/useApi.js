@@ -21,5 +21,7 @@ export function useApi() {
     updateDOB:        (dob)           => api.updateDOB(dob, getToken),
     deleteMe:         ()              => api.deleteMe(getToken),
     downloadMyData:   ()              => api.downloadMyData(getToken),
+    getBookings:      (filters)       => api.getBookings(filters, getToken),
+    getDrivers:       (filters)       => api.getDrivers(filters, getToken),
   };
 }

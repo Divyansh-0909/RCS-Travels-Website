@@ -16,6 +16,7 @@ import RideHistory from './pages/RideHistory';
 import ManageAccount from './pages/ManageAccount';
 import SettingsPage from './pages/SettingsPage';
 import SafetyPage from './pages/SafetyPage';
+import AdminDashboard from './pages/AdminDashboard';
 import RideCancelledToast from './components/ui/RideCancelledToast';
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
@@ -61,6 +62,10 @@ const router = createBrowserRouter([
   {
     path: "/safety",
     element: <ProtectedRoute><SafetyPage /></ProtectedRoute>,
+  },
+  {
+    path: "/dashboard",
+    element: <ProtectedRoute requireAdmin><AdminDashboard/></ProtectedRoute>
   },
 ]);
 

@@ -1,4 +1,4 @@
-import { useAuth } from "@clerk/clerk-react";
+import { useAuth, useUser } from "@clerk/clerk-react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import LoadingScreen from "./LoadingScreen";
@@ -10,8 +10,12 @@ import { useData } from "../hooks/useData";
 // to enter a protected route — we also require a completed profile (getMe). An
 // incomplete session (signed in, no DB user) is signed out so backing out of
 // signup before choosing a username does NOT leave the person logged in.
-export default function ProtectedRoute({ children }) {
+// `requireAdmin` additionally gates on the Clerk role (publicMetadata.role) the
+// backend's protectAdmin checks. This is UX only — non-admins are redirected home
+// without revealing the admin area exists; the API still enforces 403 server-side.
+export default function ProtectedRoute({ children, requireAdmin = false }) {
   const { isSignedIn, isLoaded } = useAuth();
+  const { user, isLoaded: userLoaded } = useUser();
   const { getMe, logout } = useApi();
   const setUsername = useData(state => state.setUsername);
   const setPhone = useData(state => state.setPhone);
@@ -47,6 +51,11 @@ export default function ProtectedRoute({ children }) {
 
   if (!isSignedIn || status === "incomplete")
     return <Navigate to={`/login?redirect=${encodeURIComponent(location.pathname)}`} replace />;
+
+  if (requireAdmin) {
+    if (!userLoaded) return <LoadingScreen />;
+    if (user?.publicMetadata?.role !== "admin") return <Navigate to="/" replace />;
+  }
 
   return children;
 }

@@ -3,7 +3,7 @@ import { mdiMenu, mdiAccountCircle, mdiChevronDown, mdiCog, mdiInformation, mdiS
 import { useViewNavigate } from "../../hooks/useViewNavigate";
 import { useEffect, useState } from 'react';
 import { useApi } from '../../hooks/useApi';
-import { useSignIn, useAuth } from "@clerk/clerk-react";
+import { useSignIn, useAuth, useUser } from "@clerk/clerk-react";
 import Button from './Button';
 import { useData } from '../../hooks/useData';
 import pfpPlaceholder from "../../assets/pfp-placeholder.webp"
@@ -15,6 +15,7 @@ import ErrorPanel from './ErrorPanel';
 
 
 const NavBar = ({ invert = false, hideExpanded = false }) => {
+    const { user: clerkUser } = useUser();
     const navigate = useViewNavigate();
     const { signIn } = useSignIn();
     const { isSignedIn } = useAuth();
@@ -86,7 +87,7 @@ const NavBar = ({ invert = false, hideExpanded = false }) => {
         }
     }
 
-    const userDropDownList = [[<Icon path={mdiAccountCircle} size={1.2} />,"Manage Account","/manage-account"], [<Icon path={mdiCog} size={1.1} />,"Settings","/settings"], [<Icon path={mdiShieldCheck} size={1.1} />,"Safety","/safety"], [<Icon path={mdiInformation} size={1.1} />,"Legal","/"]]
+    const userDropDownList = [[<Icon path={mdiAccountCircle} size={1.2} />, "Manage Account", "/manage-account"], [<Icon path={mdiCog} size={1.1} />, "Settings", "/settings"], [<Icon path={mdiShieldCheck} size={1.1} />, "Safety", "/safety"], [<Icon path={mdiInformation} size={1.1} />, "Legal", "/"]]
 
     return (
         <div className={`flex flex-col justify-center items-center ${invert ? "bg-[var(--background-primary)]" : "bg-[var(--foreground)]"} w-[300px] sm:w-fit ${bookingId && isSignedIn ? "h-fit" : "h-[40px] sm:h-[50px]"} gap-1 px-2 py-2 rounded-full`}>
@@ -100,6 +101,10 @@ const NavBar = ({ invert = false, hideExpanded = false }) => {
                         {isSignedIn &&
                             <li onClick={() => navigate('/ride-history')}>Ride History</li>
                         }
+                        {(clerkUser?.publicMetadata?.role === "admin") &&
+                            <li onClick={() => navigate('/dashboard')}>Dashboard</li>
+                        }
+
                     </ul>
                 </div>
 
@@ -162,13 +167,13 @@ const NavBar = ({ invert = false, hideExpanded = false }) => {
                                         <ul className='flex flex-col items-start justify-center gap-1 w-full'>
                                             {userDropDownList.map((item, i) => {
                                                 return (
-                                                    <li key={i} onClick={()=>navigate(`${item[2]}`)} className={`font-normal text-3xl w-full rounded-2xl py-3 px-3 flex justify-start gap-2 transition-color duration-300 items-center ${!invert ? " text-[var(--text-foreground)] hover:bg-[var(--foreground-muted)]" : "text-[var(--text)] hover:bg-[var(--foreground)]/8"}`}>
+                                                    <li key={i} onClick={() => navigate(`${item[2]}`)} className={`font-normal text-3xl w-full rounded-2xl py-3 px-3 flex justify-start gap-2 transition-color duration-300 items-center ${!invert ? " text-[var(--text-foreground)] hover:bg-[var(--foreground-muted)]" : "text-[var(--text)] hover:bg-[var(--foreground)]/8"}`}>
                                                         {item[0]}
                                                         <h4 >{item[1]}</h4>
                                                     </li>
                                                 )
                                             })}
-                                            <Button onClick={handleSignOut} className="mt-5" prop={{variant: "negative", width: "345px" }}>Sign out</Button>
+                                            <Button onClick={handleSignOut} className="mt-5" prop={{ variant: "negative", width: "345px" }}>Sign out</Button>
                                         </ul>
                                     </div>
                                 </>

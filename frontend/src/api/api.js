@@ -36,6 +36,19 @@ export const updateEmergencyContact = (emergencyContact, getToken) => request("/
 export const updateDOB         = (dob, getToken)         => request("/api/users/me/updateDOB", { method: "POST", body: { dob }, getToken });
 export const deleteMe          = (getToken)              => request("/api/users/me", { method: "DELETE", getToken });
 
+// Admin endpoints — filters is an object of query params (status, date, phone,
+// page, limit, ...); undefined/empty values are dropped before serializing.
+const toQuery = (filters = {}) => {
+    const params = new URLSearchParams();
+    for (const [key, value] of Object.entries(filters)) {
+        if (value !== undefined && value !== null && value !== "") params.set(key, value);
+    }
+    const qs = params.toString();
+    return qs ? `?${qs}` : "";
+};
+export const getBookings       = (filters, getToken)     => request(`/api/admin/booking${toQuery(filters)}`, { getToken });
+export const getDrivers        = (filters, getToken)     => request(`/api/admin/driver${toQuery(filters)}`, { getToken });
+
 // The download endpoint streams a binary PDF, so it can't go through `request`
 // (which parses JSON). Fetch it as a Blob; on failure the body is JSON.
 export const downloadMyData = async (getToken) => {

@@ -60,7 +60,7 @@ const SafetyPage = () => {
     const [autoShare, setAutoShare] = useState(true)
 
     return (
-        <AccountLayout items={items} selected={selected} onSelect={setSelected}>
+        <AccountLayout items={items} selected={selected} onSelect={setSelected} title="Safety">
             <ul className="flex flex-col items-start gap-4 justify-center w-full">
                 {selected === 0 && (
                     editingContact ? (
