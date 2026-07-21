@@ -1,3 +1,19 @@
+/**
+ * @param {object} props
+ * @param {{
+ *   variant?: string,
+ *   width?: string,
+ *   rounded?: string,
+ *   paddingX?: string,
+ *   type?: string,
+ *   error?: boolean,
+ *   disabled?: boolean,
+ *   innerClassName?: string,
+ * }} props.prop - variant/style configuration bag
+ * @param {string} [props.className]
+ * @param {import("react").ReactNode} [props.children]
+ * @param {() => void} [props.onClick]
+ */
 const Button = ({ prop, className, children, onClick }) => {
   const isDropdown = prop.variant === "dropdown";
   const isInput = prop.variant === "input";

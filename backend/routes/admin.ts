@@ -56,10 +56,30 @@ adminRouter.get('/booking', protect, protectAdmin, async (req, res) => {
         where.scheduledAt = scheduledAt
     }
 
+    // Only the fields the admin dashboard actually renders. `shareGroupId` is
+    // kept for the co-rider grouping below even though the client never reads it.
+    const bookingSelect = {
+        id: true,
+        customerPhone: true,
+        pickupAddress: true,
+        dropAddress: true,
+        vehicleType: true,
+        scheduledAt: true,
+        createdAt: true,
+        isOutstation: true,
+        fare: true,
+        status: true,
+        source: true,
+        sharing: true,
+        shareGroupId: true,
+        user: { select: { name: true } },
+        driver: { select: { name: true, phone: true } },
+    } satisfies Prisma.BookingSelect
+
     const [bookings, total] = await Promise.all([
         prisma.booking.findMany({
             where,
-            include: { driver: true, user: true },
+            select: bookingSelect,
             skip: (page - 1) * limit,
             take: limit,
             orderBy: { createdAt: 'desc' },
@@ -69,7 +89,7 @@ adminRouter.get('/booking', protect, protectAdmin, async (req, res) => {
 
     // For sharing rides, attach the other riders in the same share group
     // (each co-rider is a separate booking row with the same shareGroupId).
-    type AdminBooking = Prisma.BookingGetPayload<{ include: { driver: true, user: true } }>
+    type AdminBooking = Prisma.BookingGetPayload<{ select: typeof bookingSelect }>
     type GroupMember = { id: string; shareGroupId: string | null; customerPhone: string; user: { name: string | null } }
     const shareGroupIds = [...new Set(
         bookings.filter((b: AdminBooking) => b.sharing && b.shareGroupId).map((b: AdminBooking) => b.shareGroupId as string)
@@ -141,6 +161,16 @@ adminRouter.get('/driver', protect, protectAdmin, async (req, res) => {
     const [drivers, total] = await Promise.all([
         prisma.driver.findMany({
             where,
+            select: {
+                id: true,
+                name: true,
+                phone: true,
+                vehicleType: true,
+                vehicleNumber: true,
+                isOnline: true,
+                verificationStatus: true,
+                createdAt: true,
+            },
             skip: (page - 1) * limit,
             take: limit,
             orderBy: { createdAt: 'desc' },

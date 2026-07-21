@@ -6,16 +6,18 @@ import { useApi } from "../hooks/useApi";
 import AdminDashboardSkeleton from "../components/AdminDashboardSkeleton";
 import { vehicleLabel, statusChip, splitAddress, displayPhone, formatDateTime, CopyBtn } from "../components/ui/bookingDisplay";
 import Button from "../components/ui/Button";
+import { VerificationStatus, BookingStatus, CancelledBy, BookingSource } from "../types/enums";
+
 
 const items = ['Bookings', 'Drivers']
 
-const verificationChip = (status) => {
+const verificationChip = (status: VerificationStatus) => {
     if (status === "approved") return "text-green-700 bg-green-600/10"
     if (status === "rejected") return "text-red-600 bg-red-500/10"
     return "text-amber-600 bg-amber-500/10"
 }
 
-function useExitAnim(open, duration) {
+function useExitAnim(open: boolean, duration: number) {
     const [mounted, setMounted] = useState(open);
     const [closing, setClosing] = useState(false);
 
@@ -37,17 +39,58 @@ function useExitAnim(open, duration) {
     return { mounted, closing };
 }
 
-const bookingStatuses = ["pending", "confirmed", "assigned", "en_route", "reached", "started", "completed", "cancelled"]
+const bookingStatuses: BookingStatus[] = ["pending", "confirmed", "assigned", "en_route", "reached", "started", "completed", "cancelled"]
 
 const filterLabel = "text-xs uppercase tracking-wide text-[var(--foreground-muted)]/50 pl-1"
 const filterField = "w-full rounded-full py-2 px-3 text-sm bg-transparent outline-none border border-[var(--foreground)]/30 placeholder:text-[var(--foreground-muted)]/50"
 
-// Amazon-style pill options: tap to select, tap the active pill again to clear (= all)
-const Chips = ({ options, value, onChange }) => (
+// Shapes returned by the admin API (backend/routes/admin.ts selects exactly
+// these fields). DateTime columns arrive as ISO strings over JSON.
+type Booking = {
+    id: string
+    fare: number
+    status: BookingStatus
+    scheduledAt: string | null
+    createdAt: string
+    vehicleType: number
+    sharing: boolean
+    isOutstation: boolean
+    source: BookingSource
+    customerPhone: string
+    pickupAddress: string
+    dropAddress: string
+    user: { name: string | null } | null
+    driver: { name: string; phone: string } | null
+    coRiders: { name: string | null; phone: string }[]
+}
+
+type Driver = {
+    id: string
+    name: string
+    phone: string
+    isOnline: boolean
+    verificationStatus: VerificationStatus
+    vehicleType: number
+    vehicleNumber: string
+    createdAt: string
+}
+
+type ChipOption<T> = {
+    label: string
+    value: T
+}
+
+type ChipsProps<T> = {
+    options: ChipOption<T>[]
+    value: T | null
+    onChange: (value: T | null) => void
+}
+
+const Chips = <T,>({ options, value, onChange }: ChipsProps<T>) => (
     <div className="flex flex-wrap gap-2">
         {options.map((o) => (
             <div
-                key={o.value}
+                key={String(o.value)}
                 onClick={() => onChange(value === o.value ? null : o.value)}
                 className={`px-3 py-1.5 rounded-full border text-sm capitalize cursor-pointer select-none transition-colors duration-300 ${value === o.value
                     ? "bg-primary text-[var(--foreground)] border-transparent font-semibold"
@@ -67,36 +110,36 @@ const AdminDashboard = () => {
     const [selected, setSelected] = useState(0)
     const [active, setActive] = useState(false)
     const [loading, setLoading] = useState(false)
-    const [error, setError] = useState(null)
-    const [status, setStatus] = useState(null)
-    const [startDate, setStartDate] = useState(null)
-    const [endDate, setEndDate] = useState(null)
-    const [customerPhone, setCustomerPhone] = useState(null)
-    const [driverPhone, setDriverPhone] = useState(null)
-    const [customerName, setCustomerName] = useState(null)
-    const [driverName, setDriverName] = useState(null)
-    const [vehicleType, setVehicleType] = useState(null)
-    const [vehicleNumber, setVehicleNumber] = useState(null)
-    const [verificationStatus, setVerificationStatus] = useState(null)
-    const [isOnline, setIsOnline] = useState(null)
-    const [isOutstation, setIsOutstation] = useState(null)
-    const [source, setSource] = useState(null)
-    const [cancelledBy, setCancelledBy] = useState(null)
+    const [error, setError] = useState<string | null>(null)
+    const [status, setStatus] = useState<BookingStatus | null>(null)
+    const [startDate, setStartDate] = useState<string | null>(null)
+    const [endDate, setEndDate] = useState<string | null>(null)
+    const [customerPhone, setCustomerPhone] = useState<string | null>(null)
+    const [driverPhone, setDriverPhone] = useState<string | null>(null)
+    const [customerName, setCustomerName] = useState<string | null>(null)
+    const [driverName, setDriverName] = useState<string | null>(null)
+    const [vehicleType, setVehicleType] = useState<number | null>(null)
+    const [vehicleNumber, setVehicleNumber] = useState<string | null>(null)
+    const [verificationStatus, setVerificationStatus] = useState<VerificationStatus | null>(null)
+    const [isOnline, setIsOnline] = useState<boolean | null>(null)
+    const [isOutstation, setIsOutstation] = useState<boolean | null>(null)
+    const [source, setSource] = useState<BookingSource | null>(null)
+    const [cancelledBy, setCancelledBy] = useState<CancelledBy | null>(null)
     const [page, setPage] = useState(1) // (page - 1) * limit. If you send page=0, that's skip: -20,
     const [pageInput, setPageInput] = useState("1")
     const [limit, setLimit] = useState(10)
-    const [totalBookings, setTotalBookings] = useState(null)
-    const [totalDrivers, setTotalDrivers] = useState(null)
-    const [bookings, setBookings] = useState([])
-    const [drivers, setDrivers] = useState([])
+    const [totalBookings, setTotalBookings] = useState<number | null>(null)
+    const [totalDrivers, setTotalDrivers] = useState<number | null>(null)
+    const [bookings, setBookings] = useState<Booking[]>([])
+    const [drivers, setDrivers] = useState<Driver[]>([])
     const [copied, setCopied] = useState(false)
     const [order, setOrder] = useState(true)
     const [expanded, setExpanded] = useState(false)
     const [filterSection, setFilterSection] = useState(0)
     const [search, setSearch] = useState("")
     const searchInit = useRef(true)
-    const debounceRef = useRef(null)
-    const reqRef = useRef(0) // increments per request so stale responses can be dropped
+    const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+    const reqRef = useRef(0)
     const filterDropdown = useExitAnim(expanded, 300)
 
     const sections = selected === 0 ? bookingSections : driverSections
@@ -104,16 +147,16 @@ const AdminDashboard = () => {
 
     const api = useApi()
 
-    const copyId = (id) => {
+    const copyId = (id: string) => {
         if (!id) return
         navigator.clipboard.writeText(id)
         setCopied(true)
         setTimeout(() => setCopied(false), 2000)
     }
 
-    const totalBookingsPages = Math.ceil(totalBookings / limit)
-    const totalDriversPages = Math.ceil(totalDrivers / limit)
-    const totalPages = Math.max(1, selected === 0 ? totalBookingsPages : totalDriversPages)
+    const totalBookingsPages : number = Math.ceil((totalBookings ?? 0) / limit)
+    const totalDriversPages : number = Math.ceil((totalDrivers ?? 0) / limit)
+    const totalPages : number = Math.max(1, selected === 0 ? totalBookingsPages : totalDriversPages)
 
     useEffect(() => {
         selected === 0 ? searchBooking() : searchDrivers()
@@ -137,7 +180,7 @@ const AdminDashboard = () => {
     // Backend rejects 1-char searches (min 2), so send null below that
     const searchParam = search.trim().length >= 2 ? search.trim() : null
 
-    async function searchBooking(e, overrides = {}) {
+    async function searchBooking(e?: { preventDefault: () => void } | null, overrides: Record<string, unknown> = {}) {
         e?.preventDefault();
         const id = ++reqRef.current
         setError(null)
@@ -152,13 +195,13 @@ const AdminDashboard = () => {
             setTotalBookings(data.total)
             setBookings(data.bookings)
         } catch (e) {
-            if (id === reqRef.current) setError(e)
+            if (id === reqRef.current) setError(e instanceof Error ? e.message : "Something went wrong")
         } finally {
             if (id === reqRef.current) setLoading(false)
         }
     }
 
-    async function searchDrivers(e, overrides = {}) {
+    async function searchDrivers(e?: { preventDefault: () => void } | null, overrides: Record<string, unknown> = {}) {
         e?.preventDefault();
         const id = ++reqRef.current
         setError(null)
@@ -173,7 +216,7 @@ const AdminDashboard = () => {
             setTotalDrivers(data.total)
             setDrivers(data.drivers)
         } catch (e) {
-            if (id === reqRef.current) setError(e)
+            if (id === reqRef.current) setError(e instanceof Error ? e.message : "Something went wrong")
         } finally {
             if (id === reqRef.current) setLoading(false)
         }
@@ -203,7 +246,7 @@ const AdminDashboard = () => {
     function applyFilters() {
         setExpanded(false)
         if (page !== 1) {
-            setPage(1) 
+            setPage(1)
             return
         }
         selected === 0 ? searchBooking() : searchDrivers()
@@ -222,7 +265,7 @@ const AdminDashboard = () => {
     }
 
     return (
-        <AccountLayout items={items} selected={selected} onSelect={(i) => { setSelected(i); setPage(1); setFilterSection(0) }} title="Admin Dashboard">
+        <AccountLayout items={items} selected={selected} onSelect={(i : number) => { setSelected(i); setPage(1); setFilterSection(0) }} title="Admin Dashboard">
             {filterDropdown.mounted && (
                 <Button
                     prop={{
@@ -274,7 +317,7 @@ const AdminDashboard = () => {
                                     <>
                                         {sectionIndex === 0 && <Chips options={vehicleOptions} value={vehicleType} onChange={setVehicleType} />}
                                         {sectionIndex === 1 && <Chips options={[{ value: "pending", label: "Pending" }, { value: "approved", label: "Approved" }, { value: "rejected", label: "Rejected" }]} value={verificationStatus} onChange={setVerificationStatus} />}
-                                        {sectionIndex === 2 && <Chips options={[{ value: "true", label: "Online" }, { value: "false", label: "Offline" }]} value={isOnline} onChange={setIsOnline} />}
+                                        {sectionIndex === 2 && <Chips options={[{ value: true, label: "Online" }, { value: false, label: "Offline" }]} value={isOnline} onChange={setIsOnline} />}
                                         {sectionIndex === 3 && <input type="text" value={vehicleNumber ?? ""} onChange={(e) => setVehicleNumber(e.target.value || null)} placeholder="e.g. UP32 AB 1234" className={filterField} />}
                                         {sectionIndex === 4 && <input type="tel" value={driverPhone ?? ""} onChange={(e) => setDriverPhone(e.target.value || null)} placeholder="XXXXX XXXXX" className={filterField} />}
                                         {sectionIndex === 5 && (
@@ -351,7 +394,7 @@ const AdminDashboard = () => {
                 {loading ? (
                     <AdminDashboardSkeleton variant={selected === 0 ? "bookings" : "drivers"} />
                 ) : error ? (
-                    <h4 className="text-gray-500 py-6">{typeof error === "string" ? error : "Something went wrong"}</h4>
+                    <h4 className="text-gray-500 py-6">{error}</h4>
                 ) : selected === 0 ? (
                     bookings.length === 0 ? (
                         <h4 className="text-gray-500 py-6">No bookings found</h4>
@@ -416,7 +459,7 @@ const AdminDashboard = () => {
                                             <p className="text-xs uppercase tracking-wide text-gray-500 mb-0.5">Driver</p>
                                             {booking.driver
                                                 ? <h4 className="text-[var(--background-primary)]">{booking.driver.name} <span className="text-gray-500">• {displayPhone(booking.driver.phone)}</span> <CopyBtn value={displayPhone(booking.driver.phone)} onCopy={copyId} /></h4>
-                                                : <h4 className="text-gray-500">{booking.status === "cancelled" ? "—" : new Date(booking.scheduledAt) > new Date() ? "Yet to be assigned" : "Couldn't be assigned"}</h4>}
+                                                : <h4 className="text-gray-500">{booking.status === "cancelled" ? "—" : new Date(booking.scheduledAt ?? booking.createdAt) > new Date() ? "Yet to be assigned" : "Couldn't be assigned"}</h4>}
                                         </div>
                                     </div>
 
