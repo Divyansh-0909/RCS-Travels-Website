@@ -28,7 +28,7 @@ export const estimateFare      = (pickupAddress, dropAddress, vehicleType, getTo
 export const createBooking     = (data, getToken)        => request("/api/bookings", { method: "POST", body: data, getToken });
 export const cancelBooking     = (bookingId, getToken)   => request("/api/bookings/cancel", { method: "POST", body: { bookingId }, getToken});
 export const getBookingStatus  = (id, getToken)          => request(`/api/bookings/${id}/status`, { getToken });
-export const getMyBookings     = (getToken)              => request("/api/bookings/my-bookings", { getToken });
+export const getMyBookings     = (filters, getToken)     => request(`/api/bookings/my-bookings${toQuery(filters)}`, { getToken });
 export const sendOtp           = (phone)                 => request("/api/auth/send-otp", { method: "POST", body: { phone } });
 export const verifyOtp         = (phone, otp)            => request("/api/auth/verify-otp", { method: "POST", body: { phone, otp } });
 export const updateGender      = (gender, getToken)      => request("/api/users/me/updateGender", { method: "POST", body: { gender }, getToken });
@@ -48,6 +48,7 @@ const toQuery = (filters = {}) => {
 };
 export const getBookings       = (filters, getToken)     => request(`/api/admin/booking${toQuery(filters)}`, { getToken });
 export const getDrivers        = (filters, getToken)     => request(`/api/admin/driver${toQuery(filters)}`, { getToken });
+export const getUsers          = (filters, getToken)     => request(`/api/admin/user${toQuery(filters)}`, { getToken });
 
 // The download endpoint streams a binary PDF, so it can't go through `request`
 // (which parses JSON). Fetch it as a Blob; on failure the body is JSON.

@@ -12,7 +12,7 @@ export function useApi() {
     createBooking:    (data)          => api.createBooking(data, getToken),
     cancelBooking:    (bookingId)     => api.cancelBooking(bookingId, getToken),
     getBookingStatus: (id)            => api.getBookingStatus(id, getToken),
-    getMyBookings:    ()              => api.getMyBookings(getToken),
+    getMyBookings:    (filters)       => api.getMyBookings(filters, getToken),
     sendOtp:          (phone)         => api.sendOtp(phone),
     verifyOtp:        (phone, otp)    => api.verifyOtp(phone, otp),
     logout:           ()              => signOut(),
@@ -23,5 +23,6 @@ export function useApi() {
     downloadMyData:   ()              => api.downloadMyData(getToken),
     getBookings:      (filters)       => api.getBookings(filters, getToken),
     getDrivers:       (filters)       => api.getDrivers(filters, getToken),
+    getUsers:         (filters)       => api.getUsers(filters, getToken),
   };
 }

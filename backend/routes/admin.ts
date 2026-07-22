@@ -2,7 +2,7 @@ import { Router } from 'express'
 import type { Prisma } from '@prisma/client'
 import { protect, protectAdmin } from '../middleware/auth.js'
 import { prisma } from '../db/prisma.js'
-import { bookingListQuerySchema, driverListQuerySchema } from '../types.ts'
+import { bookingListQuerySchema, driverListQuerySchema, userListQuerySchema } from '../types.ts'
 
 const adminRouter = Router()
 
@@ -179,6 +179,68 @@ adminRouter.get('/driver', protect, protectAdmin, async (req, res) => {
     ])
 
     res.json({ total, page, limit, drivers })
+})
+
+adminRouter.get('/user', protect, protectAdmin, async (req, res) => {
+    const parsed = userListQuerySchema.safeParse(req.query)
+    if (!parsed.success) {
+        return res.status(400).json({ error: 'Invalid query parameters', issues: parsed.error.issues })
+    }
+    const { search, userName, userPhone, gender, startDate, endDate, page, limit } = parsed.data
+
+    const where: Prisma.UserWhereInput = {}
+    if (search) {
+        const compact = search.replace(/[\s+\-()]/g, '')
+        if (/^\d+$/.test(compact)) {
+            where.OR = [
+                { phone: { contains: compact } },
+                { bookingCode: { contains: compact } },
+            ]
+        } else {
+            where.OR = [
+                { id: { startsWith: search } },
+                { name: { contains: search, mode: 'insensitive' } },
+            ]
+        }
+    }
+    if (userName) where.name = {
+        contains: userName,
+        mode: "insensitive",
+    }
+    if (userPhone) where.phone = { contains: userPhone }
+    if (gender) where.gender = { equals: gender, mode: "insensitive" }
+    if (startDate || endDate) {
+        const createdAt: Prisma.DateTimeFilter = {}
+        if (startDate) createdAt.gte = new Date(`${startDate}T00:00:00+05:30`)
+        if (endDate) {
+            const end = new Date(`${endDate}T00:00:00+05:30`)
+            end.setDate(end.getDate() + 1)
+            createdAt.lt = end
+        }
+        where.createdAt = createdAt
+    }
+
+    const [users, total] = await Promise.all([
+        prisma.user.findMany({
+            where,
+            select: {
+                id: true,
+                name: true,
+                phone: true,
+                gender: true,
+                bookingCode: true,
+                createdAt: true,
+                deletedAt: true,
+                _count: { select: { bookings: true } },
+            },
+            skip: (page - 1) * limit,
+            take: limit,
+            orderBy: { createdAt: 'desc' },
+        }),
+        prisma.user.count({ where }),
+    ])
+
+    res.json({ total, page, limit, users })
 })
 
 export default adminRouter

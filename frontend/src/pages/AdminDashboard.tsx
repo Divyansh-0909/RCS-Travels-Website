@@ -6,10 +6,11 @@ import { useApi } from "../hooks/useApi";
 import AdminDashboardSkeleton from "../components/AdminDashboardSkeleton";
 import { vehicleLabel, statusChip, splitAddress, displayPhone, formatDateTime, CopyBtn } from "../components/ui/bookingDisplay";
 import Button from "../components/ui/Button";
+import Chips, { filterLabel, filterField } from "../components/ui/Chips";
 import { VerificationStatus, BookingStatus, CancelledBy, BookingSource } from "../types/enums";
 
 
-const items = ['Bookings', 'Drivers']
+const items = ['Bookings', 'Drivers', 'Users']
 
 const verificationChip = (status: VerificationStatus) => {
     if (status === "approved") return "text-green-700 bg-green-600/10"
@@ -40,9 +41,6 @@ function useExitAnim(open: boolean, duration: number) {
 }
 
 const bookingStatuses: BookingStatus[] = ["pending", "confirmed", "assigned", "en_route", "reached", "started", "completed", "cancelled"]
-
-const filterLabel = "text-xs uppercase tracking-wide text-[var(--foreground-muted)]/50 pl-1"
-const filterField = "w-full rounded-full py-2 px-3 text-sm bg-transparent outline-none border border-[var(--foreground)]/30 placeholder:text-[var(--foreground-muted)]/50"
 
 // Shapes returned by the admin API (backend/routes/admin.ts selects exactly
 // these fields). DateTime columns arrive as ISO strings over JSON.
@@ -75,36 +73,23 @@ type Driver = {
     createdAt: string
 }
 
-type ChipOption<T> = {
-    label: string
-    value: T
+type User = {
+    id: string
+    name: string | null
+    phone: string
+    gender: string | null
+    bookingCode: string
+    createdAt: string
+    deletedAt: string | null
+    _count: { bookings: number }
 }
-
-type ChipsProps<T> = {
-    options: ChipOption<T>[]
-    value: T | null
-    onChange: (value: T | null) => void
-}
-
-const Chips = <T,>({ options, value, onChange }: ChipsProps<T>) => (
-    <div className="flex flex-wrap gap-2">
-        {options.map((o) => (
-            <div
-                key={String(o.value)}
-                onClick={() => onChange(value === o.value ? null : o.value)}
-                className={`px-3 py-1.5 rounded-full border text-sm capitalize cursor-pointer select-none transition-colors duration-300 ${value === o.value
-                    ? "bg-primary text-[var(--foreground)] border-transparent font-semibold"
-                    : "border-[var(--foreground)]/30 hover:bg-[var(--foreground)]/10"}`}
-            >
-                {o.label}
-            </div>
-        ))}
-    </div>
-)
 
 const vehicleOptions = [{ value: 4, label: vehicleLabel(4) }, { value: 6, label: vehicleLabel(6) }]
 const bookingSections = ["Status", "Vehicle type", "Dates", "Source", "Cancelled by"]
 const driverSections = ["Vehicle type", "Verification", "Availability", "Vehicle number", "Driver phone", "Joined"]
+const userSections = ["Gender", "User phone", "Joined"]
+// Same values ManageAccount writes, so the filter matches what's stored
+const genderOptions = ["Male", "Female", "Others", "Rather not say"].map(g => ({ value: g, label: g }))
 
 const AdminDashboard = () => {
     const [selected, setSelected] = useState(0)
@@ -122,6 +107,8 @@ const AdminDashboard = () => {
     const [vehicleNumber, setVehicleNumber] = useState<string | null>(null)
     const [verificationStatus, setVerificationStatus] = useState<VerificationStatus | null>(null)
     const [isOnline, setIsOnline] = useState<boolean | null>(null)
+    const [gender, setGender] = useState<string | null>(null)
+    const [userPhone, setUserPhone] = useState<string | null>(null)
     const [isOutstation, setIsOutstation] = useState<boolean | null>(null)
     const [source, setSource] = useState<BookingSource | null>(null)
     const [cancelledBy, setCancelledBy] = useState<CancelledBy | null>(null)
@@ -130,8 +117,10 @@ const AdminDashboard = () => {
     const [limit, setLimit] = useState(10)
     const [totalBookings, setTotalBookings] = useState<number | null>(null)
     const [totalDrivers, setTotalDrivers] = useState<number | null>(null)
+    const [totalUsers, setTotalUsers] = useState<number | null>(null)
     const [bookings, setBookings] = useState<Booking[]>([])
     const [drivers, setDrivers] = useState<Driver[]>([])
+    const [users, setUsers] = useState<User[]>([])
     const [copied, setCopied] = useState(false)
     const [order, setOrder] = useState(true)
     const [expanded, setExpanded] = useState(false)
@@ -142,7 +131,7 @@ const AdminDashboard = () => {
     const reqRef = useRef(0)
     const filterDropdown = useExitAnim(expanded, 300)
 
-    const sections = selected === 0 ? bookingSections : driverSections
+    const sections = selected === 0 ? bookingSections : selected === 1 ? driverSections : userSections
     const sectionIndex = Math.min(filterSection, sections.length - 1)
 
     const api = useApi()
@@ -156,10 +145,11 @@ const AdminDashboard = () => {
 
     const totalBookingsPages : number = Math.ceil((totalBookings ?? 0) / limit)
     const totalDriversPages : number = Math.ceil((totalDrivers ?? 0) / limit)
-    const totalPages : number = Math.max(1, selected === 0 ? totalBookingsPages : totalDriversPages)
+    const totalUsersPages : number = Math.ceil((totalUsers ?? 0) / limit)
+    const totalPages : number = Math.max(1, selected === 0 ? totalBookingsPages : selected === 1 ? totalDriversPages : totalUsersPages)
 
     useEffect(() => {
-        selected === 0 ? searchBooking() : searchDrivers()
+        selected === 0 ? searchBooking() : selected === 1 ? searchDrivers() : searchUsers()
     }, [page, selected])
 
     useEffect(() => {
@@ -222,12 +212,33 @@ const AdminDashboard = () => {
         }
     }
 
+    async function searchUsers(e?: { preventDefault: () => void } | null, overrides: Record<string, unknown> = {}) {
+        e?.preventDefault();
+        const id = ++reqRef.current
+        setError(null)
+        setLoading(true)
+        try {
+            const data = await api.getUsers({ search: searchParam, userName: customerName, userPhone, gender, startDate, endDate, page, limit, ...overrides })
+            if (id !== reqRef.current) return
+            if (data?.error) {
+                setError(data.error)
+                return
+            }
+            setTotalUsers(data.total)
+            setUsers(data.users)
+        } catch (e) {
+            if (id === reqRef.current) setError(e instanceof Error ? e.message : "Something went wrong")
+        } finally {
+            if (id === reqRef.current) setLoading(false)
+        }
+    }
+
     function runSearch() {
         if (page !== 1) {
             setPage(1) // page effect refetches with the current search state
             return
         }
-        selected === 0 ? searchBooking() : searchDrivers()
+        selected === 0 ? searchBooking() : selected === 1 ? searchDrivers() : searchUsers()
     }
 
     // Debounced search: fire 400ms after the user stops typing. 1-char input is
@@ -249,19 +260,20 @@ const AdminDashboard = () => {
             setPage(1)
             return
         }
-        selected === 0 ? searchBooking() : searchDrivers()
+        selected === 0 ? searchBooking() : selected === 1 ? searchDrivers() : searchUsers()
     }
 
     function clearFilters() {
         setStatus(null); setVehicleType(null); setStartDate(null); setEndDate(null); setSource(null); setCancelledBy(null)
         setVerificationStatus(null); setIsOnline(null); setVehicleNumber(null); setDriverPhone(null)
+        setGender(null); setUserPhone(null)
         setExpanded(false)
         if (page !== 1) {
             setPage(1)
             return
         }
-        const cleared = { status: null, vehicleType: null, startDate: null, endDate: null, source: null, cancelledBy: null, verificationStatus: null, isOnline: null, vehicleNumber: null, driverPhone: null }
-        selected === 0 ? searchBooking(null, cleared) : searchDrivers(null, cleared)
+        const cleared = { status: null, vehicleType: null, startDate: null, endDate: null, source: null, cancelledBy: null, verificationStatus: null, isOnline: null, vehicleNumber: null, driverPhone: null, gender: null, userPhone: null }
+        selected === 0 ? searchBooking(null, cleared) : selected === 1 ? searchDrivers(null, cleared) : searchUsers(null, cleared)
     }
 
     return (
@@ -313,7 +325,7 @@ const AdminDashboard = () => {
                                         {sectionIndex === 3 && <Chips options={[{ value: "website", label: "Website" }, { value: "whatsapp", label: "WhatsApp" }, { value: "admin", label: "Admin" }]} value={source} onChange={setSource} />}
                                         {sectionIndex === 4 && <Chips options={[{ value: "user", label: "User" }, { value: "driver", label: "Driver" }, { value: "admin", label: "Admin" }]} value={cancelledBy} onChange={setCancelledBy} />}
                                     </>
-                                ) : (
+                                ) : selected === 1 ? (
                                     <>
                                         {sectionIndex === 0 && <Chips options={vehicleOptions} value={vehicleType} onChange={setVehicleType} />}
                                         {sectionIndex === 1 && <Chips options={[{ value: "pending", label: "Pending" }, { value: "approved", label: "Approved" }, { value: "rejected", label: "Rejected" }]} value={verificationStatus} onChange={setVerificationStatus} />}
@@ -321,6 +333,19 @@ const AdminDashboard = () => {
                                         {sectionIndex === 3 && <input type="text" value={vehicleNumber ?? ""} onChange={(e) => setVehicleNumber(e.target.value || null)} placeholder="e.g. UP32 AB 1234" className={filterField} />}
                                         {sectionIndex === 4 && <input type="tel" value={driverPhone ?? ""} onChange={(e) => setDriverPhone(e.target.value || null)} placeholder="XXXXX XXXXX" className={filterField} />}
                                         {sectionIndex === 5 && (
+                                            <>
+                                                <label className={filterLabel}>From</label>
+                                                <input type="text" value={startDate ?? ""} onChange={(e) => setStartDate(e.target.value || null)} placeholder="YYYY-MM-DD" className={filterField} />
+                                                <label className={filterLabel}>To</label>
+                                                <input type="text" value={endDate ?? ""} onChange={(e) => setEndDate(e.target.value || null)} placeholder="YYYY-MM-DD" className={filterField} />
+                                            </>
+                                        )}
+                                    </>
+                                ) : (
+                                    <>
+                                        {sectionIndex === 0 && <Chips options={genderOptions} value={gender} onChange={setGender} />}
+                                        {sectionIndex === 1 && <input type="tel" value={userPhone ?? ""} onChange={(e) => setUserPhone(e.target.value || null)} placeholder="XXXXX XXXXX" className={filterField} />}
+                                        {sectionIndex === 2 && (
                                             <>
                                                 <label className={filterLabel}>From</label>
                                                 <input type="text" value={startDate ?? ""} onChange={(e) => setStartDate(e.target.value || null)} placeholder="YYYY-MM-DD" className={filterField} />
@@ -355,11 +380,11 @@ const AdminDashboard = () => {
                             onFocus={() => setActive(true)}
                             onBlur={() => setActive(false)}
                             type="text"
-                            name={`${selected === 0 ? "booking" : "driver"}`}
-                            id={`${selected === 0 ? "booking" : "driver"}`}
+                            name={`${selected === 0 ? "booking" : selected === 1 ? "driver" : "user"}`}
+                            id={`${selected === 0 ? "booking" : selected === 1 ? "driver" : "user"}`}
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            placeholder={selected === 0 ? "Name, phone, location, ID" : "Name, phone, vehicle no."}
+                            placeholder={selected === 0 ? "Name, phone, location, ID" : selected === 1 ? "Name, phone, vehicle no." : "Name, phone, booking code"}
                             className={`w-[95%] h-[5vh] text-[var(--text-foreground)]  outline-none border-none`}
                         />
                     </div>
@@ -392,7 +417,7 @@ const AdminDashboard = () => {
 
             <div className="w-full flex-1 min-h-0 overflow-y-auto mt-4 px-5 [mask-image:linear-gradient(to_bottom,black_calc(100%-56px),transparent)]">
                 {loading ? (
-                    <AdminDashboardSkeleton variant={selected === 0 ? "bookings" : "drivers"} />
+                    <AdminDashboardSkeleton variant={selected === 0 ? "bookings" : selected === 1 ? "drivers" : "users"} />
                 ) : error ? (
                     <h4 className="text-gray-500 py-6">{error}</h4>
                 ) : selected === 0 ? (
@@ -472,7 +497,7 @@ const AdminDashboard = () => {
                             )
                         })
                     )
-                ) : (
+                ) : selected === 1 ? (
                     drivers.length === 0 ? (
                         <h4 className="text-gray-500 py-6">No drivers found</h4>
                     ) : (
@@ -494,6 +519,35 @@ const AdminDashboard = () => {
 
                                 <p className="text-base text-gray-500">
                                     {vehicleLabel(driver.vehicleType)}  •  {driver.vehicleNumber}  •  Joined {new Date(driver.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                                </p>
+                            </div>
+                        ))
+                    )
+                ) : (
+                    users.length === 0 ? (
+                        <h4 className="text-gray-500 py-6">No users found</h4>
+                    ) : (
+                        users.map((user) => (
+                            <div key={user.id} className={`${user.deletedAt ? "opacity-60" : ""} cursor-default bg-[var(--foreground-muted)] py-5 px-5 sm:py-6 sm:px-8 rounded-2xl my-4 sm:my-6 flex flex-col justify-center items-start gap-4`}>
+                                <div className="flex justify-between items-start gap-4 w-full">
+                                    <div className="min-w-0">
+                                        <div className="flex items-center gap-2">
+                                            <h3 className="font-semibold text-[var(--background-primary)] truncate">{user.name ?? "—"}</h3>
+                                            {user.deletedAt && <span className="text-red-600 bg-red-500/10 text-xs font-semibold px-2.5 py-1 rounded-full shrink-0">Deleted</span>}
+                                        </div>
+                                        <p className="text-gray-500">{displayPhone(user.phone)} <CopyBtn value={displayPhone(user.phone)} onCopy={copyId} /></p>
+                                    </div>
+                                    <span className="text-primary bg-primary/10 text-xs font-semibold px-2.5 py-1 rounded-full shrink-0">Code {user.bookingCode}</span>
+                                </div>
+
+                                <div className="w-full border-t border-[var(--background-primary)]/10"></div>
+
+                                <p className="text-base text-gray-500">
+                                    {[
+                                        user.gender,
+                                        `${user._count.bookings} ${user._count.bookings === 1 ? "ride" : "rides"}`,
+                                        `Joined ${new Date(user.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}`,
+                                    ].filter(Boolean).join("  •  ")}
                                 </p>
                             </div>
                         ))

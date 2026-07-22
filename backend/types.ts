@@ -24,6 +24,21 @@ const bookingListQuerySchema = z.object({
   limit: z.coerce.number().int().positive().max(100).default(20),
 });
 
+// A user's own ride history — same shape as the admin booking list, minus the
+// customer/source/cancelledBy filters that make no sense for your own rides.
+const myBookingsQuerySchema = z.object({
+  search: z.string().trim().min(2).optional(),
+  status: z.enum(BookingStatus).optional(),
+  vehicleType: z.coerce
+    .number()
+    .pipe(z.union([z.literal(4), z.literal(6)]))
+    .optional(),
+  startDate: z.iso.date().optional(),
+  endDate: z.iso.date().optional(),
+  page: z.coerce.number().int().positive().default(1),
+  limit: z.coerce.number().int().positive().max(100).default(10),
+});
+
 const driverListQuerySchema = z.object({
   search: z.string().trim().min(2).optional(),
   driverName: z.string().trim().optional(),
@@ -44,4 +59,15 @@ const driverListQuerySchema = z.object({
   limit: z.coerce.number().int().positive().max(100).default(20),
 });
 
-export {bookingListQuerySchema,driverListQuerySchema}
+const userListQuerySchema = z.object({
+  search: z.string().trim().min(2).optional(),
+  userName: z.string().trim().optional(),
+  userPhone: z.string().trim().optional(),
+  gender: z.string().trim().optional(),
+  startDate: z.iso.date().optional(),
+  endDate: z.iso.date().optional(),
+  page: z.coerce.number().int().positive().default(1),
+  limit: z.coerce.number().int().positive().max(100).default(20),
+});
+
+export {bookingListQuerySchema,driverListQuerySchema,myBookingsQuerySchema,userListQuerySchema}
