@@ -12,7 +12,6 @@ import VehicleSelect from './pages/VehicleSelect';
 import SignUpPage from './pages/SignUpPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import TrackingPage from './pages/TrackingPage';
-import RideHistory from './pages/RideHistory';
 import ManageAccount from './pages/ManageAccount';
 import SettingsPage from './pages/SettingsPage';
 import SafetyPage from './pages/SafetyPage';
@@ -46,10 +45,6 @@ const router = createBrowserRouter([
     // path: "/booking/:id", 
     path: "/booking/test",
     element: <ProtectedRoute><TrackingPage /></ProtectedRoute>,
-  },
-  {
-    path: "/ride-history",
-    element: <ProtectedRoute><RideHistory /></ProtectedRoute>,
   },
   {
     path: "/manage-account",

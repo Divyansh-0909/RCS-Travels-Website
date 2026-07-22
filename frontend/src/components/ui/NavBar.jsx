@@ -9,7 +9,6 @@ import { useData } from '../../hooks/useData';
 import pfpPlaceholder from "../../assets/pfp-placeholder.webp"
 import FourSeaterSide from "../../assets/4-seater-bottom-left.webp"
 import SixSeaterSide from "../../assets/6-seater-bottom-left.webp"
-import ManageAccount from '../../pages/ManageAccount';
 import Skeleton from './Skeleton';
 import ErrorPanel from './ErrorPanel';
 
@@ -90,16 +89,16 @@ const NavBar = ({ invert = false, hideExpanded = false }) => {
     const userDropDownList = [[<Icon path={mdiAccountCircle} size={1.2} />, "Manage Account", "/manage-account"], [<Icon path={mdiCog} size={1.1} />, "Settings", "/settings"], [<Icon path={mdiShieldCheck} size={1.1} />, "Safety", "/safety"], [<Icon path={mdiInformation} size={1.1} />, "Legal", "/"]]
 
     return (
-        <div className={`flex flex-col justify-center items-center ${invert ? "bg-[var(--background-primary)]" : "bg-[var(--foreground)]"} w-[300px] sm:w-fit ${bookingId && isSignedIn ? "h-fit" : "h-[40px] sm:h-[50px]"} gap-1 px-2 py-2 rounded-full`}>
+        <div className={`flex flex-col justify-center items-center ${invert ? "bg-[var(--background-primary)]" : "bg-[var(--foreground)]"} w-[300px] sm:w-fit ${bookingId && isSignedIn ? "h-fit" : "h-[40px] sm:h-[50px]"} gap-1 px-2 py-6 rounded-xl shadow-[8px_10px_0_rgba(0,0,0,0.25)] outline-1 outline-gray-400`}>
             <div className={`flex justify-between items-center ${invert ? "text-[var(--text)]" : "text-[var(--text-foreground)]"} [&>*]:select-none w-full sm:gap-24 px-1`}>
                 <h3 onClick={() => navigate('/')} className={`cursor-pointer pl-1 sm:opacity-[0.85] transition-opacity duration-300 opacity-[1] hover:opacity-[1]`}><span className='font-semibold'>RCS</span> travels</h3>
 
                 <div className='sm:block hidden'>
-                    <ul className={`flex gap-2 [&>li]:cursor-pointer [&>li]:text-sm [&>li]:transition-all [&>li]:duration-300 [&>*]:px-2 [&>*]:py-1.5 [&>*]:rounded-full ${invert ? "[&>*]:text-[var(--text)]/80 [&>*]:hover:text-[var(--text)] [&>*]:bg-[var(--background-primary)] [&>*]:hover:bg-[var(--foreground)]/10" : "[&>*]:text-[var(--text-foreground)]/80 [&>*]:hover:text-[var(--text-foreground)] [&>*]:bg-[var(--foreground)] [&>*]:hover:bg-[var(--background-primary)]/10"}`}>
+                    <ul className={`flex gap-2 [&>li]:cursor-pointer [&>li]:text-sm [&>li]:transition-all [&>li]:duration-300 [&>*]:px-2 [&>*]:py-1.5 [&>*]:rounded-lg ${invert ? "[&>*]:text-[var(--text)]/80 [&>*]:hover:text-[var(--text)] [&>*]:bg-[var(--background-primary)] [&>*]:hover:bg-[var(--foreground)]/10" : "[&>*]:text-[var(--text-foreground)]/80 [&>*]:hover:text-[var(--text-foreground)] [&>*]:bg-[var(--foreground)] [&>*]:hover:bg-[var(--background-primary)]/10"}`}>
                         <li onClick={() => navigate('/about')}>About</li>
                         <li onClick={() => navigate('/help')}>Help</li>
                         {isSignedIn &&
-                            <li onClick={() => navigate('/ride-history')}>Ride History</li>
+                            <li onClick={() => navigate('/manage-account', { state: { tab: "Ride History" } })}>Ride History</li>
                         }
                         {(clerkUser?.publicMetadata?.role === "admin") &&
                             <li onClick={() => navigate('/dashboard')}>Dashboard</li>

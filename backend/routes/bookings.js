@@ -3,6 +3,7 @@ import { protect, protectAdmin } from '../middleware/auth.js'
 import { getDriver } from '../services/driverAssignment.js'
 import { sendWhatsApp } from '../services/notification.js'
 import { prisma } from '../db/prisma.js'
+import { myBookingsQuerySchema } from '../types.ts'
 
 const bookingsRouter = Router()
 
@@ -196,20 +197,58 @@ bookingsRouter.post('/cancel', protect, async (req, res) => {
 })
 
 bookingsRouter.get('/my-bookings', protect, async (req, res) => {
+    const parsed = myBookingsQuerySchema.safeParse(req.query)
+    if (!parsed.success) {
+        return res.status(400).json({ error: 'Invalid query parameters', issues: parsed.error.issues })
+    }
+    const { search, status, vehicleType, startDate, endDate, page, limit } = parsed.data
+
     const user = await prisma.user.findUnique({ where: { clerkId: req.auth.userId } })
     if (!user) return res.status(401).json({ error: 'User not found' })
 
-    const bookings = await prisma.booking.findMany({
-        where: { userId: user.id },
-        orderBy: { createdAt: 'desc' },
-        include: {driver: true}
-    })
+    const where = { userId: user.id }
+    if (search) {
+        const compact = search.replace(/[\s+\-()]/g, '')
+        if (/^\d+$/.test(compact)) {
+            where.driver = { phone: { contains: compact } }
+        } else {
+            where.OR = [
+                { id: { startsWith: search } },
+                { driver: { name: { contains: search, mode: 'insensitive' } } },
+                { pickupAddress: { contains: search, mode: 'insensitive' } },
+                { dropAddress: { contains: search, mode: 'insensitive' } },
+            ]
+        }
+    }
+    if (status) where.status = status
+    if (vehicleType) where.vehicleType = vehicleType
+    if (startDate || endDate) {
+        const scheduledAt = {}
+        if (startDate) scheduledAt.gte = new Date(`${startDate}T00:00:00+05:30`)
+        if (endDate) {
+            const end = new Date(`${endDate}T00:00:00+05:30`)
+            end.setDate(end.getDate() + 1)
+            scheduledAt.lt = end
+        }
+        where.scheduledAt = scheduledAt
+    }
+
+    const [bookings, total] = await Promise.all([
+        prisma.booking.findMany({
+            where,
+            orderBy: { createdAt: 'desc' },
+            include: { driver: true },
+            skip: (page - 1) * limit,
+            take: limit,
+        }),
+        prisma.booking.count({ where }),
+    ])
 
     // The code lives on the user now; surface it on each booking so callers that
     // read booking.bookingCode keep working.
     const withCode = bookings.map(b => ({ ...b, bookingCode: user.bookingCode }))
 
-    return res.json({ bookings: withCode })
+    return res.json({ total, page, limit, bookings: withCode })
 })
 
 bookingsRouter.get('/admin/all', protect, protectAdmin, async (req, res) => {

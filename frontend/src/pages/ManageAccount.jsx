@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
+import { useLocation } from "react-router-dom";
 import Icon from '@mdi/react';
-import { mdiPlus, mdiClose, mdiLock, mdiChevronDown, mdiTrayArrowDown, mdiCheck } from '@mdi/js';
+import { mdiPlus, mdiClose, mdiLock, mdiChevronDown, mdiTrayArrowDown, mdiCheck, mdiContentCopy, mdiMagnify, mdiTuneVertical, mdiSortCalendarDescending, mdiSortCalendarAscending } from '@mdi/js';
 import { useViewNavigate } from "../hooks/useViewNavigate";
 import { useData } from "../hooks/useData";
 import { useApi } from "../hooks/useApi";
@@ -9,6 +10,11 @@ import AccountLayout from "../components/ui/AccountLayout";
 import SettingRow from "../components/ui/SettingRow";
 import CircleIconButton from "../components/ui/CircleIconButton";
 import ErrorMark from "../components/illustrations/ErrorMark";
+import RideHistorySkeleton from "../components/RideHistorySkeleton";
+import FourSeaterCar from "../assets/4-seater-bottom-left.webp"
+import SixSeaterCar from "../assets/6-seater-bottom-left.webp"
+import { vehicleLabel, statusChip, splitAddress, displayPhone, formatDateTime, CopyBtn } from "../components/ui/bookingDisplay";
+import Chips, { filterLabel, filterField } from "../components/ui/Chips";
 
 // Keeps a dropdown mounted through its closing animation, then unmounts it.
 function useExitAnim(open, duration) {
@@ -35,6 +41,13 @@ function useExitAnim(open, duration) {
 
 const genderOptions = ["Male", "Female", "Others", "Rather not say"]
 
+const RIDE_TAB = "Ride History"
+const items = ["Account information", RIDE_TAB, "Privacy & Data"]
+
+const rideStatuses = ["pending", "confirmed", "assigned", "en_route", "reached", "started", "completed", "cancelled"]
+const vehicleOptions = [{ value: 4, label: vehicleLabel(4) }, { value: 6, label: vehicleLabel(6) }]
+const rideFilterSections = ["Status", "Vehicle type", "Dates"]
+
 const fieldDescriptions = {
     "Gender": "Helps us tailor your ride experience. Only shared when it's relevant to your safety.",
     "Emergency Contact": "We'll reach this number if something goes wrong during a ride. Add a 10-digit mobile number.",
@@ -51,7 +64,13 @@ const ManageAccount = () => {
     const setEmergencyContact = useData(state => state.setEmergencyContact)
     const dob = useData(state => state.dob)
     const setDOB = useData(state => state.setDOB)
-    const [selected, setSelected] = useState(0)
+    const location = useLocation();
+    // A tab can be requested via router state (NavBar's "Ride History" link) or
+    // via sessionStorage (restoring the tab across the post-cancel reload).
+    const [selected, setSelected] = useState(() => {
+        const requested = sessionStorage.getItem("manageAccountTab") ?? location.state?.tab
+        return Math.max(0, items.indexOf(requested))
+    })
     const navigate = useViewNavigate();
     const [expanded, setExpanded] = useState(null)
     const [genderSelected, setGenderSelected] = useState("Not Selected")
@@ -63,8 +82,33 @@ const ManageAccount = () => {
     const [downloading, setDownloading] = useState(false)
     const [downloadError, setDownloadError] = useState(null)
     const genderDropdown = useExitAnim(dropdownExpand, 220)
-    const { getMe, updateGender: updateGenderApi, updateEmergencyContact: updateEmergencyContactApi, updateDOB: updateDOBApi, deleteMe, logout, downloadMyData } = useApi()
+    const [bookings, setBookings] = useState(null)
+    const [rideError, setRideError] = useState(null)
+    const [expandedRide, setExpandedRide] = useState(null)
+    const [copied, setCopied] = useState(false)
+    const [rideSearch, setRideSearch] = useState("")
+    const [rideSearchActive, setRideSearchActive] = useState(false)
+    const [rideOrder, setRideOrder] = useState(true) // true = as returned (newest first)
+    const [rideStatus, setRideStatus] = useState(null)
+    const [rideVehicleType, setRideVehicleType] = useState(null)
+    const [rideStartDate, setRideStartDate] = useState(null)
+    const [rideEndDate, setRideEndDate] = useState(null)
+    const [rideFilterExpand, setRideFilterExpand] = useState(false)
+    const [rideFilterSection, setRideFilterSection] = useState(0)
+    const [rideLoading, setRideLoading] = useState(false)
+    const [ridePage, setRidePage] = useState(1)
+    const [ridePageInput, setRidePageInput] = useState("1")
+    const [rideTotal, setRideTotal] = useState(null)
+    const rideSearchInit = useRef(true)
+    const rideDebounceRef = useRef(undefined)
+    const rideReqRef = useRef(0)
+    const rideFilterDropdown = useExitAnim(rideFilterExpand, 300)
+    const bookingId = useData(state => state.bookingId)
+    const setBookingId = useData(state => state.setBookingId)
+    const { getMe, updateGender: updateGenderApi, updateEmergencyContact: updateEmergencyContactApi, updateDOB: updateDOBApi, deleteMe, logout, downloadMyData, getMyBookings, cancelBooking } = useApi()
 
+    // Clear any tab restore left over from the post-cancel reload.
+    useEffect(() => { sessionStorage.removeItem("manageAccountTab") }, [])
 
     useEffect(() => {
         let active = true
@@ -78,7 +122,132 @@ const ManageAccount = () => {
         return () => { active = false }
     }, [])
 
-    const items = ["Account information", "Privacy & Data"]
+    const rideLimit = 10
+    const totalRidePages = Math.max(1, Math.ceil((rideTotal ?? 0) / rideLimit))
+
+    // Backend rejects 1-char searches (min 2), so send null below that
+    const rideSearchParam = rideSearch.trim().length >= 2 ? rideSearch.trim() : null
+    const rideFiltersActive = !!(rideSearchParam || rideStatus || rideVehicleType || rideStartDate || rideEndDate)
+
+    async function searchRides(e, overrides = {}) {
+        e?.preventDefault()
+        const id = ++rideReqRef.current
+        setRideError(null)
+        setRideLoading(true)
+        try {
+            const data = await getMyBookings({ search: rideSearchParam, status: rideStatus, vehicleType: rideVehicleType, startDate: rideStartDate, endDate: rideEndDate, page: ridePage, limit: rideLimit, ...overrides })
+            if (id !== rideReqRef.current) return // a newer request superseded this one
+            if (data?.error) {
+                setRideError(data.error)
+                return
+            }
+            setRideTotal(data.total)
+            setBookings(data.bookings)
+        } catch (err) {
+            if (id === rideReqRef.current) {
+                console.error(err)
+                setRideError("Something went wrong")
+            }
+        } finally {
+            if (id === rideReqRef.current) setRideLoading(false)
+        }
+    }
+
+    // Fetch whenever the ride tab is open and the page changes (covers first open too).
+    useEffect(() => {
+        if (items[selected] !== RIDE_TAB) return
+        searchRides()
+    }, [ridePage, selected])
+
+    useEffect(() => {
+        setRidePageInput(String(ridePage))
+    }, [ridePage])
+
+    function commitRidePage() {
+        const n = parseInt(ridePageInput, 10)
+        if (Number.isNaN(n)) {
+            setRidePageInput(String(ridePage))
+            return
+        }
+        const clamped = Math.min(Math.max(1, n), totalRidePages)
+        setRidePageInput(String(clamped))
+        setRidePage(clamped)
+    }
+
+    function runRideSearch() {
+        if (ridePage !== 1) {
+            setRidePage(1) // page effect refetches with the current search state
+            return
+        }
+        searchRides()
+    }
+
+    // Debounced search: fire 400ms after the user stops typing. 1-char input is
+    // skipped (rideSearchParam is null there anyway); emptying the box resets the list.
+    useEffect(() => {
+        if (rideSearchInit.current) {
+            rideSearchInit.current = false
+            return
+        }
+        if (rideSearch.trim().length === 1) return
+        clearTimeout(rideDebounceRef.current)
+        rideDebounceRef.current = setTimeout(runRideSearch, 400)
+        return () => clearTimeout(rideDebounceRef.current)
+    }, [rideSearch])
+
+    function applyRideFilters() {
+        setRideFilterExpand(false)
+        if (ridePage !== 1) {
+            setRidePage(1)
+            return
+        }
+        searchRides()
+    }
+
+    const copyRideId = (id) => {
+        if (!id) return;
+        navigator.clipboard.writeText(id);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
+
+    async function handleCancel(id) {
+        if (!id) return;
+
+        try {
+            setRideError(null);
+
+            const data = await cancelBooking(id);
+
+            if (data?.error) {
+                setRideError("Can't cancel ride");
+                return;
+            }
+            if (data.ok) {
+                if (bookingId === id) setBookingId(null);
+                sessionStorage.setItem("rideCancelled", "1");
+                // Come back to this tab after the reload the toast relies on.
+                sessionStorage.setItem("manageAccountTab", RIDE_TAB);
+                window.location.reload();
+            }
+        } catch (err) {
+            console.error(err);
+            setRideError("Something went wrong");
+        }
+    }
+
+    // Sort still flips the current page client-side, same as the admin dashboard.
+    const orderedBookings = rideOrder ? (bookings ?? []) : [...(bookings ?? [])].reverse()
+
+    function clearRideFilters() {
+        setRideStatus(null); setRideVehicleType(null); setRideStartDate(null); setRideEndDate(null)
+        setRideFilterExpand(false)
+        if (ridePage !== 1) {
+            setRidePage(1)
+            return
+        }
+        searchRides(null, { status: null, vehicleType: null, startDate: null, endDate: null })
+    }
 
     const lockedFields = ["Name", "Phone number"]
     const AccountInfo_items = [
@@ -346,7 +515,222 @@ const ManageAccount = () => {
                                 </Button>
                             </div>}
                     </Button>
-            <ul className="flex flex-col items-start gap-4 justify-center w-full">
+            {/* "Copied to clipboard" pill for the ride history tab */}
+            <div
+                className={`${copied ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"} flex justify-center items-center w-[230px] fixed z-100 left-1/2 -translate-x-1/2 bottom-8 sm:bottom-10 bg-primary text-[var(--foreground)] text-sm font-semibold px-5 py-3 rounded-full shadow-[0_8px_24px_rgba(0,0,0,0.25)] gap-2 transition-[opacity,transform] duration-300`}
+            >
+                <Icon path={mdiContentCopy} size={0.7} />
+                Copied to clipboard
+            </div>
+            {items[selected] === RIDE_TAB
+                ? <>
+                    {/* Sectioned filter panel — same shell as the admin dashboard's;
+                        Apply refetches page 1 with the selected filters */}
+                    {rideFilterDropdown.mounted && (
+                        <Button
+                            prop={{
+                                variant: "dropdown",
+                                width: "380px",
+                                paddingX: "0px",
+                                innerClassName: "justify-start max-sm:w-full! max-sm:h-full!",
+                            }}
+                            className={`block ${rideFilterDropdown.closing ? "animate-datetime-out" : "animate-datetime"} z-20 max-sm:fixed max-sm:inset-0 max-sm:my-0 max-sm:w-screen! max-sm:h-dvh! max-sm:rounded-none! sm:absolute sm:scale-[1.1] sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 active:opacity-[1] hover:opacity-[1]`}
+                        >
+                            <div
+                                className="flex flex-col w-full py-3 text-left max-sm:h-full"
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                <div className="flex w-full items-stretch h-[360px] max-h-[70vh] max-sm:h-auto max-sm:max-h-none max-sm:flex-1 max-sm:min-h-0">
+                                    {/* Section list */}
+                                    <div className="w-[38%] shrink-0 flex flex-col border-r border-[var(--foreground)]/15 overflow-y-auto">
+                                        {rideFilterSections.map((s, i) => (
+                                            <div
+                                                key={s}
+                                                onClick={() => setRideFilterSection(i)}
+                                                className={`py-3 pl-5 pr-3 text-sm cursor-pointer select-none border-b border-[var(--foreground)]/10 border-l-[3px] transition-colors duration-300 ${i === rideFilterSection
+                                                    ? "text-[var(--text)] font-semibold bg-[var(--foreground)]/15 border-l-primary"
+                                                    : "text-[var(--text-muted)] border-l-transparent hover:bg-[var(--foreground)]/5"}`}
+                                            >
+                                                {s}
+                                            </div>
+                                        ))}
+                                    </div>
+                                    {/* Active section's options */}
+                                    <div className="flex-1 min-w-0 flex flex-col gap-3 px-4 py-1 overflow-y-auto">
+                                        <h4 className="font-semibold text-base">{rideFilterSections[rideFilterSection]}</h4>
+                                        {rideFilterSection === 0 && <Chips options={rideStatuses.map(s => ({ value: s, label: s.replace("_", " ") }))} value={rideStatus} onChange={setRideStatus} />}
+                                        {rideFilterSection === 1 && <Chips options={vehicleOptions} value={rideVehicleType} onChange={setRideVehicleType} />}
+                                        {rideFilterSection === 2 && (
+                                            <>
+                                                <label className={filterLabel}>Start date</label>
+                                                <input type="text" value={rideStartDate ?? ""} onChange={(e) => setRideStartDate(e.target.value || null)} placeholder="YYYY-MM-DD" className={filterField} />
+                                                <label className={filterLabel}>End date</label>
+                                                <input type="text" value={rideEndDate ?? ""} onChange={(e) => setRideEndDate(e.target.value || null)} placeholder="YYYY-MM-DD" className={filterField} />
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="w-full flex gap-2 px-3 pt-3 mt-3 border-t border-[var(--foreground)]/10">
+                                    <div onClick={clearRideFilters} className="flex-1 flex justify-center items-center py-2 rounded-full border border-[var(--foreground)]/30 text-sm cursor-pointer hover:bg-[var(--foreground)]/10 transition-colors duration-300">Clear</div>
+                                    <div onClick={applyRideFilters} className="flex-1 flex justify-center items-center py-2 rounded-full bg-primary text-[var(--foreground)] text-sm font-semibold cursor-pointer hover:opacity-[0.9] transition-opacity duration-300">Apply</div>
+                                </div>
+                            </div>
+                        </Button>
+                    )}
+                    {/* Toolbar: sort order, filter panel toggle, debounced search, pagination */}
+                    <form onSubmit={(e) => { e.preventDefault(); clearTimeout(rideDebounceRef.current); runRideSearch() }} className="flex w-full justify-between px-4 gap-2 items-center">
+                        <div className="flex w-fit justify-start gap-2 items-center">
+                        <button type="button" onClick={() => setRideOrder(!rideOrder)} className="py-2 px-3 flex items-center justify-center gap-1 cursor-pointer bg-[var(--background)]/90 hover:bg-[var(--background)] transition-color duration-300 rounded-xl">
+                            <Icon path={rideOrder ? mdiSortCalendarDescending : mdiSortCalendarAscending} size={1.1} />
+                            <h4>Sort</h4>
+                        </button>
+                        <button type="button" onClick={() => setRideFilterExpand(!rideFilterExpand)} className="py-2 px-3 flex items-center justify-center gap-1 cursor-pointer bg-[var(--background)]/90 hover:bg-[var(--background)] transition-color duration-300 rounded-xl">
+                            <Icon path={mdiTuneVertical} size={1} className="rotate-[90deg]" />
+                            <h4>Filter</h4>
+                        </button>
+                        <div className={`flex justify-start gap-1 items-center rounded-xl py-5 px-3 w-[20vw] ${rideSearchActive ? "border-[var(--background-muted)]" : "border-[var(--background-muted)]/40"} h-[5vh] text-[var(--text-foreground)] transition-all duration-300 border-2`}>
+                            <Icon path={mdiMagnify} size={0.9} className="cursor-pointer text-sm sm:text-lg hover:text-[var(--text-foreground)] transition-color duration-300 text-[var(--text-foreground)]/40" />
+                            <input
+                                onFocus={() => setRideSearchActive(true)}
+                                onBlur={() => setRideSearchActive(false)}
+                                type="text"
+                                name="ride-search"
+                                id="ride-search"
+                                value={rideSearch}
+                                onChange={(e) => setRideSearch(e.target.value)}
+                                placeholder="Location, driver, ID"
+                                className={`w-[95%] h-[5vh] text-[var(--text-foreground)]  outline-none border-none`}
+                            />
+                        </div>
+                        </div>
+                        <div className="flex gap-3 sm:gap-4 items-center justify-center">
+                            <button type="button" disabled={ridePage <= 1} onClick={() => setRidePage(p => p - 1)} className="disabled:opacity-[0.8] disabled:cursor-not-allowed disabled:hover:bg-[var(--background)]/90 py-2 px-3 flex items-center justify-center gap-1 cursor-pointer bg-[var(--background)]/90 hover:bg-[var(--background)] transition-color duration-300 rounded-xl"><h4>Prev</h4></button>
+                            <span className="text-[var(--text-foreground)] flex w-fit items-center justify-center gap-2">
+                                <input
+                                    type="text"
+                                    inputMode="numeric"
+                                    value={ridePageInput}
+                                    onChange={(e) => setRidePageInput(e.target.value.replace(/\D/g, ""))}
+                                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); commitRidePage() } }}
+                                    onBlur={commitRidePage}
+                                    className="flex text-center justify-center items-center border box-border rounded-lg h-10 w-10 p-0 m-0 bg-transparent leading-none outline-none text-sm sm:text-lg"
+                                />
+                                <h4>of</h4>
+                                <h4 className="flex text-center justify-center items-center border box-border rounded-lg h-10 w-10 p-0 m-0 bg-transparent leading-none text-sm sm:text-lg">{totalRidePages}</h4>
+                            </span>
+                            <button type="button" disabled={ridePage >= totalRidePages} onClick={() => setRidePage(p => p + 1)} className="disabled:opacity-[0.8] disabled:cursor-not-allowed disabled:hover:bg-[var(--background)]/90 py-2 px-3 flex items-center justify-center gap-1 cursor-pointer bg-[var(--background)]/90 hover:bg-[var(--background)] transition-color duration-300 rounded-xl"><h4>Next</h4></button>
+                        </div>
+                    </form>
+                    <div className="w-full flex-1 min-h-0 overflow-y-auto mt-4 px-4 [mask-image:linear-gradient(to_bottom,black_calc(100%-56px),transparent)]">
+                    {rideError
+                        ?
+                        <h4 className="text-gray-500 py-6">{rideError}</h4>
+                        : rideLoading || bookings === null
+                        ?
+                        <RideHistorySkeleton />
+                        : (bookings?.length ?? 0) === 0
+                        ? (rideFiltersActive
+                            ?
+                            <h4 className="text-gray-500 py-6">No rides match your search or filters</h4>
+                            :
+                            <div className="flex flex-col justify-center items-center w-full h-full gap-1 sm:gap-2">
+                                <ErrorMark className="-my-8" size={140} />
+                                <h2 className="text-[var(--background-primary)]">No rides found</h2>
+                                <h3 className="w-fit text-[var(--background-primary)]">Try <u className="cursor-pointer text-primary/80 transition-color duration-300 hover:text-primary" onClick={() => navigate('/')} >booking a ride</u></h3>
+                            </div>)
+                        :
+                        orderedBookings.map((booking) => {
+                            const [pickupMain, pickupRest] = splitAddress(booking.pickupAddress)
+                            const [dropMain, dropRest] = splitAddress(booking.dropAddress)
+                            const isOpen = expandedRide === booking.id
+                            const upcoming = new Date(booking.scheduledAt) > new Date()
+                            return (
+                                <div key={booking.id} className={`${booking.status === "cancelled" ? "opacity-60" : ""} cursor-default bg-[var(--foreground-muted)] py-5 px-5 sm:py-6 sm:px-8 rounded-2xl my-4 sm:my-6 flex flex-col justify-center items-start gap-4`}>
+                                    <div className="flex justify-between items-start gap-4 w-full">
+                                        {/* Route: pickup → drop, with the car on its left on sm+ */}
+                                        <div className="flex items-center gap-4 min-w-0">
+                                            <img src={booking.vehicleType === 6 ? SixSeaterCar : FourSeaterCar} className={`hidden sm:block w-44 -ml-4 shrink-0 ${booking.status === "cancelled" ? "grayscale" : ""}`} alt="car-image" />
+                                            <div className="flex flex-col gap-3 min-w-0">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-3 h-3 rounded-full bg-[var(--background-primary)] shrink-0"></div>
+                                                    <div className="min-w-0">
+                                                        <h4 className="font-semibold text-[var(--background-primary)] truncate">{pickupMain}</h4>
+                                                        {pickupRest && <p className="text-sm text-gray-500 truncate">{pickupRest}</p>}
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-3 h-3 rounded-full bg-primary relative shrink-0"><div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-[var(--foreground-muted)]" /></div>
+                                                    <div className="min-w-0">
+                                                        <h4 className="font-semibold text-[var(--background-primary)] truncate">{dropMain}</h4>
+                                                        {dropRest && <p className="text-sm text-gray-500 truncate">{dropRest}</p>}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {/* Fare + status + expand toggle */}
+                                        <div className="flex flex-col items-end gap-1.5 shrink-0">
+                                            <h3 className="font-semibold text-[var(--background-primary)]">₹{booking.fare}</h3>
+                                            <span className={`${statusChip(booking.status)} text-xs font-semibold px-2.5 py-1 rounded-full capitalize`}>{booking.status.replace("_", " ")}</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="w-full border-t border-[var(--background-primary)]/10"></div>
+
+                                    {/* Trip meta + toggle, with the expandable details attached so the
+                                        collapsed grid doesn't add an extra flex-gap at the card bottom */}
+                                    <div className="flex flex-col w-full">
+                                        <div className="flex justify-between items-center w-full gap-4">
+                                            <p className="text-base text-gray-500">
+                                                {formatDateTime(booking.scheduledAt ?? booking.createdAt)}  •  {vehicleLabel(booking.vehicleType)}{booking.sharing ? " • Sharing" : ""}
+                                            </p>
+                                            <div onClick={() => setExpandedRide(isOpen ? null : booking.id)} className="cursor-pointer text-[var(--foreground-muted)] bg-[var(--background-primary)]/80 transition-color duration-300 hover:bg-[var(--background-primary)] p-1 rounded-full shrink-0">
+                                                <Icon path={mdiChevronDown} size={1} className={`transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`} />
+                                            </div>
+                                        </div>
+
+                                        {/* Extra details — hidden until the toggle pops them down */}
+                                        <div className={`grid w-full transition-[grid-template-rows] duration-300 ${isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
+                                            <div className="overflow-hidden min-h-0 w-full">
+                                                <div className={`${isOpen ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2"} transition-[opacity,transform] duration-300 flex flex-col gap-4 w-full pt-4`}>
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
+                                                    <div>
+                                                        <p className="text-xs uppercase tracking-wide text-gray-500 mb-0.5">Driver</p>
+                                                        {booking.driver
+                                                            ? <h4 className="text-[var(--background-primary)]">{booking.driver.name} <span className="text-gray-500">• {displayPhone(booking.driver.phone)}</span> <CopyBtn value={displayPhone(booking.driver.phone)} onCopy={copyRideId} /></h4>
+                                                            : <h4 className="text-gray-500">{booking.status === "cancelled" ? "—" : upcoming ? "Yet to be assigned" : "Couldn't be assigned"}</h4>}
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-xs uppercase tracking-wide text-gray-500 mb-0.5">Trip</p>
+                                                        <h4 className="text-[var(--background-primary)]">
+                                                            {booking.distanceKm ?? "—"} KM
+                                                            {booking.status === "completed" && booking.completedAt && booking.confirmedAt
+                                                                ? ` • ${Math.floor((Date.parse(booking.completedAt) - Date.parse(booking.confirmedAt)) / 60000)} min`
+                                                                : ""}
+                                                        </h4>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex flex-row gap-2 h-fit justify-start items-start sm:items-center">
+                                                    <p className="text-gray-500 text-sm">Ride ID: {booking.id?.slice(0, 8)}....</p>
+                                                    <CopyBtn value={booking?.id} onCopy={copyRideId} />
+                                                </div>
+
+                                                <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+                                                    {upcoming && booking.status !== "cancelled" &&
+                                                        <Button onClick={() => handleCancel(booking.id)} prop={{ variant: "negative", width: "200px" }}>Cancel ride</Button>}
+                                                    <p>Need help? <u className="text-[var(--background-primary)] cursor-pointer transition-color duration-300 hover:text-[var(--background-primary)]/80">Talk to us</u></p>
+                                                </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )
+                        })
+                    }
+                    </div>
+                </>
+                : <ul className="flex flex-col items-start gap-4 justify-center w-full">
                 {selected === 0
                     ? AccountInfo_items.map((item, i) => (
                         <SettingRow key={i} trailing={<CircleIconButton icon={mdiPlus} onClick={() => setExpanded(item)} />}>
@@ -369,7 +753,8 @@ const ManageAccount = () => {
                         </SettingRow>
                     </>
                 }
-            </ul>
+                </ul>
+            }
         </AccountLayout>
     )
 }

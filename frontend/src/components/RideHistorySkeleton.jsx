@@ -50,15 +50,14 @@ const CardSkeleton = () => (
     </div>
 );
 
-// First-load placeholder for the ride history list — heading + exactly 3 cards.
+// First-load placeholder for the ride history list — exactly 3 cards.
 const RideHistorySkeleton = () => {
     return (
-        <div className="pt-30 sm:pt-40">
-            <Skeleton tone="light" className="h-11 md:h-13 lg:h-16 w-46 sm:w-80 mb-8" />
+        <>
             {[0, 1, 2].map((i) => (
                 <CardSkeleton key={i} />
             ))}
-        </div>
+        </>
     );
 };
 

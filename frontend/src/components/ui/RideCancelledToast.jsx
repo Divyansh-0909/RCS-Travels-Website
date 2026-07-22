@@ -6,7 +6,7 @@ import { mdiCheck } from "@mdi/js";
 // handler's component — it would unmount before showing. Instead the handler
 // sets a sessionStorage flag before reloading; this global toast reads the flag
 // once on load, shows the pill briefly, then clears it. Mounted in main.jsx so
-// it appears on whichever page the reload lands on (home or ride history).
+// it appears on whichever page the reload lands on (home or manage account).
 const CANCELLED =
     typeof sessionStorage !== "undefined" &&
     sessionStorage.getItem("rideCancelled") === "1";
