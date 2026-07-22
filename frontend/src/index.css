@@ -1,10 +1,79 @@
 @import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
 @import "tailwindcss";
 
+/* PP Mori — Pangram Pangram (Free for Personal Use v1.0).
+   Weights available: Extralight (200), Regular (400), SemiBold (600), each with italic.
+   700 (bold) is mapped to SemiBold so `font-bold` renders real glyphs, not faux-bold.
+
+   Metric overrides: PP Mori's raw usWinAscent/Descent (1040/360) give line-height:normal
+   = 1.4 but a different baseline position than Poppins, shifting text upward everywhere.
+   These overrides copy Poppins' exact metrics (ascent 1.05 / descent 0.35 / gap 0, cap-height
+   is already identical) so PP Mori lays out pixel-for-pixel like the font it replaced. */
+@font-face {
+    font-family: "PP Mori";
+    src: url("./assets/fonts/PPMori-Extralight.woff2") format("woff2");
+    font-weight: 200;
+    font-style: normal;
+    font-display: swap;
+    ascent-override: 105%;
+    descent-override: 35%;
+    line-gap-override: 0%;
+}
+@font-face {
+    font-family: "PP Mori";
+    src: url("./assets/fonts/PPMori-ExtralightItalic.woff2") format("woff2");
+    font-weight: 200;
+    font-style: italic;
+    font-display: swap;
+    ascent-override: 105%;
+    descent-override: 35%;
+    line-gap-override: 0%;
+}
+@font-face {
+    font-family: "PP Mori";
+    src: url("./assets/fonts/PPMori-Regular.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+    ascent-override: 105%;
+    descent-override: 35%;
+    line-gap-override: 0%;
+}
+@font-face {
+    font-family: "PP Mori";
+    src: url("./assets/fonts/PPMori-RegularItalic.woff2") format("woff2");
+    font-weight: 400;
+    font-style: italic;
+    font-display: swap;
+    ascent-override: 105%;
+    descent-override: 35%;
+    line-gap-override: 0%;
+}
+@font-face {
+    font-family: "PP Mori";
+    src: url("./assets/fonts/PPMori-SemiBold.woff2") format("woff2");
+    font-weight: 600 700;
+    font-style: normal;
+    font-display: swap;
+    ascent-override: 105%;
+    descent-override: 35%;
+    line-gap-override: 0%;
+}
+@font-face {
+    font-family: "PP Mori";
+    src: url("./assets/fonts/PPMori-SemiBoldItalic.woff2") format("woff2");
+    font-weight: 600 700;
+    font-style: italic;
+    font-display: swap;
+    ascent-override: 105%;
+    descent-override: 35%;
+    line-gap-override: 0%;
+}
+
 @custom-variant dark (&:is(.dark *));
 
 @theme {
-    --font-sans: "Poppins", sans-serif;
+    --font-sans: "PP Mori", "Poppins", sans-serif;
     --color-white-muted: #AEAEAE;
     --color-primary: #243AFB;
     --color-primary-dark: #0B0B99;

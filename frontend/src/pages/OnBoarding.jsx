@@ -13,7 +13,7 @@ import { useApi } from "../hooks/useApi";
 import { useViewNavigate } from "../hooks/useViewNavigate";
 import { DateTimeSelector } from "../components/ui/DateTimeSelector";
 import { useData } from "../hooks/useData";
-import { useSignIn, useAuth } from "@clerk/clerk-react";
+import { useSignIn, useAuth, useUser } from "@clerk/clerk-react";
 import dashedLine from '../assets/dashed-line.svg';
 import arrow from '../assets/arrow.svg';
 
@@ -72,6 +72,8 @@ const OnBoarding = () => {
   const activeBooking = useData(state => state.activeBooking);
   const setActiveBooking = useData(state => state.setActiveBooking);
   const { isSignedIn } = useAuth();
+  const { user } = useUser();
+  const username = useData(state => state.username);
   const [showForm, setShowForm] = useState(false);
   const api = useApi();
   const navigate = useViewNavigate();
@@ -122,7 +124,7 @@ const OnBoarding = () => {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    
+
     if (timing === "Schedule" && !scheduledTime) {
       setError("No Scheduled Time");
       return;
@@ -144,7 +146,7 @@ const OnBoarding = () => {
       const sameRoute =
         norm(pickupLocation) === norm(activeBooking.pickupAddress) &&
         norm(dropLocation) === norm(activeBooking.dropAddress);
-        
+
       const OVERLAP_MS = 15 * 60 * 1000;
       const newRideAt = (timing === "Schedule" ? scheduledTime : new Date()).getTime();
       const activeRideAt = (activeBooking.scheduledAt ? new Date(activeBooking.scheduledAt) : new Date()).getTime();
@@ -187,11 +189,11 @@ const OnBoarding = () => {
   }
 
   return (
-    <div className="relative flex flex-col sm:flex-row h-[100vh] sm:px-60 sm:gap-20 sm:pt-16 sm:justify-center items-center bg-gradient">
+    <div className="relative flex flex-col sm:flex-row h-[100vh] sm:px-40 sm:gap-20 sm:pt-16 sm:justify-center items-center bg-[var(--background)]">
       <div className="relative z-10 py-8 flex flex-col items-center w-full max-w-[500px] h-[inherit] sm:h-fit justify-end sm:justify-center">
         {(activeBooking && isSignedIn && !activeBooking.scheduledAt)
           ? <div className="flex flex-col text-center sm:text-left text-center justify-center items-center w-full sm:items-start gap-6 sm:gap-12">
-            <h2 className="text-[var(--text)] sm:text-5xl">Current Trip</h2>
+            <h1 className="font-bold text-3xl sm:text-6xl">Current Trip</h1>
 
             <div className="flex flex-col justify-center items-start text-left gap-3 sm:gap-4 w-[75vw] sm:w-[315px]">
               <div className="flex flex-col gap-2 w-full">
@@ -226,13 +228,13 @@ const OnBoarding = () => {
               </div>
             </div>
           </div>
-          : <div className="flex flex-col text-center sm:text-left text-center justify-center items-center sm:items-start gap-2 sm:gap-4">
-            <h2 className="text-[var(--text)] sm:text-6xl">Welcome!</h2>
-
-            <h4 className="text-[var(--text-muted)] sm:mb-8">
-              Website for making your daily travel
-              <br/> as convenient and smooth as possible
-            </h4>
+          : <div className="flex flex-col text-center sm:text-left text-center justify-center items-center sm:items-start gap-2 sm:gap-5">
+            <div className="flex flex-col items-center sm:items-start gap-0.5 sm:gap-1">
+              <h2 className="sm:text-3xl text-xl font-normal text-[var(--text-muted)]">
+                Hello {username?.split(" ")[0] || user?.firstName || "there"}!
+              </h2>
+              <h1 className="font-bold text-3xl sm:text-6xl">Where you off to?</h1>
+            </div>
 
             {activeBooking && isSignedIn && activeBooking.scheduledAt && !showForm
               ? <div className="flex flex-col justify-center items-start text-center gap-2 sm:gap-3">
@@ -246,7 +248,7 @@ const OnBoarding = () => {
 
             {(!(activeBooking && isSignedIn && activeBooking.scheduledAt) || showForm) && (<>
               <form
-                className="flex flex-col sm:pl-3 justify-center items-start gap-2 sm:gap-3 mt-3"
+                className="flex flex-col sm:pl-3 justify-center items-start gap-2 sm:gap-5  mt-3"
                 noValidate
                 onSubmit={handleSubmit}
               >
@@ -256,12 +258,12 @@ const OnBoarding = () => {
                   </p>
                 )}
                 <div className="flex flex-col relative">
-                  <div className="flex scale-[1] sm:scale-[1.1] justify-start gap-2 sm:gap-3 justify-center items-center w-[73vw] sm:w-[290px]">
+                  <div className="flex scale-[1] sm:scale-[1.3] sm:ml-7 justify-start gap-2 sm:gap-3 justify-center items-center w-[73vw] sm:w-[290px]">
                     <Button
                       prop={{
                         variant: "input",
                       }}
-                      className="relative px-4"
+                      className="relative px-3"
                     >
                       <div
                         onClick={() => setExpand(!expand)}
@@ -307,20 +309,21 @@ const OnBoarding = () => {
                     </Button>
 
                     <Button
+                      onClick={() => {
+                        setExpand(false)
+                        setExpandCalendar(!expandCalendar)
+                      }
+                      }
                       prop={{
                         variant: "input",
-                        width: "50px",
+                        width: "47px",
                         error: error === "No Scheduled Time",
                       }}
                       className={`relative px-3 ${timing === "Schedule" ? "block" : "hidden"
                         }`}
                     >
                       <div
-                        onClick={() =>{
-                          setExpand(false)
-                          setExpandCalendar(!expandCalendar)
-                        }
-                        }
+
                         className="w-full flex justify-center gap-2 items-center"
                       >
                         <Icon
@@ -339,7 +342,7 @@ const OnBoarding = () => {
                         width: "170px",
                       }}
                       className={`block ${timingDropdown.closing ? "animate-dropdown-out" : "animate-dropdown"
-                        } absolute z-10 scale-[1] sm:scale-[1.1] top-12 sm:-left-1 active:opacity-[1] hover:opacity-[1]`}
+                        } absolute z-10 scale-[1] sm:scale-[1.2] top-12 active:opacity-[1] hover:opacity-[1]`}
                     >
                       <div className="flex flex-col items-start">
                         <div
@@ -383,7 +386,7 @@ const OnBoarding = () => {
                         width: "250px",
                       }}
                       className={`block ${calendarDropdown.closing ? "animate-datetime-out" : "animate-datetime"
-                        } absolute scale-[1] sm:scale-[1.1] z-20 -top-75 sm:top-10 left-1/2 -translate-x-1/2 sm:-translate-y-1/2 sm:left-97 active:opacity-[1] hover:opacity-[1]`}
+                        } absolute scale-[1] sm:scale-[1.2] z-20 -top-75 sm:top-15 left-1/2 -translate-x-1/2 sm:-translate-y-1/2 sm:left-107 active:opacity-[1] hover:opacity-[1]`}
                     >
                       <div
                         className="flex flex-col w-full items-start"
@@ -420,7 +423,7 @@ const OnBoarding = () => {
                     },
                     error: error === "No Pickup Location",
                   }}
-                  className="scale-[1] sm:scale-[1.1]"
+                  className="scale-[1] sm:scale-[1.3] sm:ml-7"
                 />
 
                 <Input
@@ -438,7 +441,7 @@ const OnBoarding = () => {
                     },
                     error: error === "No Drop Location",
                   }}
-                  className="scale-[1] sm:scale-[1.1]"
+                  className="scale-[1] sm:scale-[1.3] sm:ml-7"
                 />
 
                 <Button
@@ -449,13 +452,13 @@ const OnBoarding = () => {
                       !pickupLocation?.trim() ||
                       !dropLocation?.trim(),
                   }}
-                  className="scale-[1] sm:scale-[1.1]"
+                  className="scale-[1] sm:scale-[1.3] sm:ml-7"
                 >
                   {loading ? "Loading..." : "See prices"}
                 </Button>
               </form>
 
-              <p className="relative text-[var(--text-muted)] ">
+              <p className="relative sm:text-xl text-[var(--text-muted)] ">
                 {timing === "Now"
                   ? "* Subject to availability"
                   : "* 99% guaranteed cab allocation"}
@@ -476,7 +479,7 @@ const OnBoarding = () => {
       <img
         src={laptopBackgroundIllustration}
         alt="background-illustration"
-        className="opacity-[0.9] w-[550px] sm:block hidden rounded-3xl"
+        className="w-[550px] h-[450px] object-cover sm:block hidden rounded-lg"
       />
     </div>
   );
