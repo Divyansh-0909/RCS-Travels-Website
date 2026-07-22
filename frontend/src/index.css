@@ -76,8 +76,11 @@
     --font-sans: "PP Mori", "Poppins", sans-serif;
     --color-white-muted: #AEAEAE;
     --color-primary: #243AFB;
-    --color-primary-dark: #0B0B99;
+    --color-primary-dark: #1212B4;
     --color-primary-light: #7A94FF;
+    --color-negative: #B91C1C;
+    --color-negative-dark: #7A0F0F;
+    --color-negative-light: #E86A6A;
 }
 
 /* Update the light mode color */
@@ -413,9 +416,9 @@
 
     .bg-negative-gradient {
         background: linear-gradient(195deg,
-                #CC3333 0%,
-                #991111 30%,
-                #4A0808 100%);
+                var(--color-negative-light) 0%,
+                var(--color-negative) 30%,
+                var(--color-negative-dark) 100%);
     }
 
     .bg-panel-gradient {

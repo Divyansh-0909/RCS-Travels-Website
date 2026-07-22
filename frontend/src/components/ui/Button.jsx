@@ -5,6 +5,7 @@
  *   width?: string,
  *   rounded?: string,
  *   paddingX?: string,
+ *   bg?: string,
  *   type?: string,
  *   error?: boolean,
  *   disabled?: boolean,
@@ -32,15 +33,16 @@ const Button = ({ prop, className, children, onClick }) => {
         ${isDisabled ? "opacity-40 cursor-not-allowed" : isDropdown ? "" : "cursor-pointer"}
         ${
           isSolid
-            ? `${isNegative ? "bg-[#CC3333]" : "bg-primary"} transition-opacity duration-300 ${isDisabled ? "" : "hover:opacity-[0.9] active:opacity-[0.8]"}`
+            ? `${isNegative ? "bg-negative" : "bg-primary"} transition-opacity duration-300 ${isDisabled ? "" : "hover:opacity-[0.9] active:opacity-[0.8]"}`
             : isDropdown
             ? "border border-[var(--foreground)]/15 bg-[var(--background)] shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)] px-4"
             : hasError
-            ? "border border-red-500/50 bg-red-500/10 transition-colors duration-300"
-            : `border border-[var(--foreground)]/30 bg-transparent transition-colors duration-300 ${isDisabled ? "" : "hover:bg-[var(--foreground)]/10 active:bg-[var(--foreground)]/15"}`
+            ? "border border-negative/50 bg-negative/10 transition-colors duration-300"
+            : `border border-[var(--foreground)]/30 bg-[var(--btn-bg,transparent)] transition-colors duration-300 ${isDisabled ? "" : "hover:bg-[var(--foreground)]/10 active:bg-[var(--foreground)]/15"}`
         }
       `}
       style={{
+        "--btn-bg": prop.bg,
         width: prop.width ?? (isInput ? undefined : "290px"),
         borderRadius: prop.rounded ?? (isDropdown ? "16px" : "12px"),
         paddingLeft: prop.paddingX,
