@@ -85,7 +85,7 @@
 
 /* Update the light mode color */
 :root {
-    --background-muted: #211F3C;
+    --background-muted: #1d1d27;
     --background-primary: #121220;
     --background: #0B0B14;
     --foreground: #ffffff;
@@ -97,7 +97,7 @@
     --text-muted-foreground: #AEAEAE;
 }
 
-.dark {
+/* .dark {
     --background-muted: #211F3C;
     --background-primary: #121220;
     --background: #0B0B14;
@@ -107,7 +107,7 @@
     --text-muted: #AEAEAE;
     --text-foreground: #000000;
     --text-muted-foreground: #AEAEAE;
-}
+} */
 
 
 ::view-transition-old(root),
@@ -118,8 +118,15 @@
 
 @layer base {
     .animate-otp-box-in {
-        transform: translateX(calc((1.5 - var(--i)) * 67px));
+        /* 2.5 = centre index of 6 boxes; step = box width + gap (42+8 mobile, 55+10 at sm) */
+        transform: translateX(calc((2.5 - var(--i)) * 50px));
         z-index: calc(10 - var(--i));
+    }
+
+    @media (min-width: 640px) {
+        .animate-otp-box-in {
+            transform: translateX(calc((2.5 - var(--i)) * 65px));
+        }
     }
 
     @keyframes otp-badge-in {

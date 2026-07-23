@@ -18,6 +18,7 @@ const Input = ({ prop, className }) => {
         border outline-none
         placeholder:text-[var(--foreground-muted)]/50
         transition-colors duration-300
+        sm:scale-y-[1.3]
         ${
           hasError
             ? "border-negative/50 bg-negative/10 focus:border-negative/80"

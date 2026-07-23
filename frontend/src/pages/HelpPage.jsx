@@ -1,0 +1,113 @@
+import { useState } from "react"
+import Icon from '@mdi/react';
+import { mdiPhone, mdiWhatsapp, mdiEmailOutline, mdiChevronDown } from '@mdi/js';
+import AccountLayout from "../components/ui/AccountLayout";
+import SettingRow from "../components/ui/SettingRow";
+import CircleIconButton from "../components/ui/CircleIconButton";
+
+const items = ["FAQ", "Contact Us", "Cancellation"]
+
+// Same placeholder contact details as Footer.jsx; swap both together when the
+// real support number goes live (see ROADMAP: helpline is a placeholder).
+const SUPPORT_PHONE = "+911234567890"
+const SUPPORT_WHATSAPP = "https://wa.me/911234567890"
+const SUPPORT_EMAIL = "support@rcstravels.in"
+
+const faqs = [
+    {
+        q: "How do I book a ride?",
+        a: "Book right from the home page: choose your pickup and drop, a date, time, and vehicle. You'll see the full fare before you confirm. You can also book by messaging us on WhatsApp.",
+    },
+    {
+        q: "How far in advance can I book?",
+        a: "Anywhere from 30 minutes up to 7 days before pickup. Need a cab right now? On-spot bookings work too, subject to driver availability nearby.",
+    },
+    {
+        q: "When will I get my driver's details?",
+        a: "About an hour before your pickup time. Your driver's name, phone number, and vehicle number will appear on your ride's tracking page, and you can call them directly from there.",
+    },
+    {
+        q: "Which vehicles can I choose from?",
+        a: "A 4-seater for everyday trips or a 6-seater when you're travelling with family or luggage. Fares for both are shown before you confirm.",
+    },
+    {
+        q: "Do you offer outstation or shared rides?",
+        a: "Yes, both. Book an outstation trip when you're travelling out of the city, or choose sharing to split the fare with co-riders on the same route. Both options are available while booking.",
+    },
+    {
+        q: "How do I track my ride?",
+        a: "Once your booking is confirmed you'll land on the tracking page, where you can watch your driver arrive live and follow the trip in real time.",
+    },
+    {
+        q: "How do I pay?",
+        a: "Pay the driver directly at the end of your ride, in cash or by UPI, whichever you prefer. The amount is exactly the fare you saw when booking.",
+    },
+    {
+        q: "Can I cancel a booking?",
+        a: "Yes, from your ride's tracking page or by calling us. Cancellation is free until your driver reaches the pickup point. See the Cancellation tab for the full policy.",
+    },
+]
+
+const contacts = [
+    ["Call us", "Talk to us about a booking or an ongoing ride.", "+91 12345 67890", mdiPhone, () => { window.location.href = `tel:${SUPPORT_PHONE}` }],
+    ["WhatsApp us", "Chat with us. You can even book your ride right from WhatsApp.", "+91 12345 67890", mdiWhatsapp, () => { window.open(SUPPORT_WHATSAPP, "_blank", "noreferrer") }],
+    ["Email us", "For feedback, complaints, or anything that can wait a little.", SUPPORT_EMAIL, mdiEmailOutline, () => { window.location.href = `mailto:${SUPPORT_EMAIL}` }],
+]
+
+const cancellationPolicy = [
+    ["Before your driver arrives", "Cancel any time while your ride is pending, confirmed, or the driver is on the way. It's completely free, no questions asked."],
+    ["After your driver arrives", "Once your driver has reached the pickup point, cancelling costs 35% of the fare. This covers the driver's time and fuel for the trip to you."],
+    ["How to cancel", "Use the cancel option on your ride's tracking page, or call us and we'll do it for you."],
+]
+
+const HelpPage = () => {
+    const [selected, setSelected] = useState(0)
+    const [openFaq, setOpenFaq] = useState(null)
+
+    return (
+        <AccountLayout items={items} selected={selected} onSelect={(i) => { setSelected(i); setOpenFaq(null) }} title="Help">
+            <ul className="flex flex-col items-start gap-4 justify-start w-full overflow-y-auto min-h-0 pb-6">
+                {selected === 0 && faqs.map(({ q, a }, i) => (
+                    <li
+                        key={q}
+                        onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                        className="font-normal w-full select-none cursor-pointer py-4 px-6 rounded-2xl flex flex-col bg-[var(--background-primary)]/5 text-[var(--text-foreground)] transition-color duration-300 hover:bg-[var(--background-primary)]/10"
+                    >
+                        <div className="w-full flex justify-between items-center gap-3">
+                            <h4 className="text-lg font-medium">{q}</h4>
+                            <Icon path={mdiChevronDown} size={1} className={`shrink-0 text-[var(--background-primary)]/60 transition-transform duration-300 ${openFaq === i ? "rotate-180" : ""}`} />
+                        </div>
+                        <div className={`grid transition-[grid-template-rows] duration-300 ${openFaq === i ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
+                            <div className="overflow-hidden">
+                                <p className={`text-base text-[var(--background-primary)]/60 pt-2 pr-8 transition-opacity duration-300 ${openFaq === i ? "opacity-100" : "opacity-0"}`}>{a}</p>
+                            </div>
+                        </div>
+                    </li>
+                ))}
+                {selected === 0 && (
+                    <p className="text-sm text-[var(--background-primary)]/50 px-2">Didn't find your answer? <span onClick={() => setSelected(1)} className="cursor-pointer underline underline-offset-2 hover:text-[var(--background-primary)] transition-color duration-300">Contact us</span>, we're happy to help.</p>
+                )}
+
+                {selected === 1 && contacts.map(([title, desc, value, icon, onClick]) => (
+                    <SettingRow key={title} trailing={<CircleIconButton icon={icon} size={0.85} onClick={onClick} />}>
+                        <h4 className="text-lg font-medium">{title}</h4>
+                        <p className="text-base text-[var(--background-primary)]/50">{desc}</p>
+                        <p className="text-sm text-[var(--background-primary)]/70 pt-1">{value}</p>
+                    </SettingRow>
+                ))}
+
+                {selected === 2 && cancellationPolicy.map(([title, desc]) => (
+                    <SettingRow key={title}>
+                        <h4 className="text-lg font-medium">{title}</h4>
+                        <p className="text-base text-[var(--background-primary)]/50">{desc}</p>
+                    </SettingRow>
+                ))}
+                {selected === 2 && (
+                    <p className="text-sm text-[var(--background-primary)]/50 px-2">If your driver cancels or doesn't show up, you're never charged, and we'll help you rebook right away.</p>
+                )}
+            </ul>
+        </AccountLayout>
+    )
+}
+
+export default HelpPage

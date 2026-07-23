@@ -2,6 +2,18 @@ import { useViewNavigate } from "../hooks/useViewNavigate";
 
 const linkClass = "text-left text-[var(--text)]/90 hover:text-[var(--text)] active:opacity-70 cursor-pointer transition-colors duration-300 rounded focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-current";
 
+// Contact details kept split so the raw number/email never appear in the DOM or hrefs
+const PHONE_PARTS = ["91", "8586", "088", "085"];
+const EMAIL_PARTS = ["rcstravels", ".", "support"];
+const EMAIL_DOMAIN = ["gmail", "com"];
+
+const contact = (type) => {
+    const phone = PHONE_PARTS.join("");
+    if (type === "call") window.location.href = `tel:+${phone}`;
+    else if (type === "whatsapp") window.open(`https://wa.me/${phone}`, "_blank", "noopener,noreferrer");
+    else if (type === "email") window.location.href = `mailto:${EMAIL_PARTS.join("")}@${EMAIL_DOMAIN.join(".")}`;
+};
+
 const Footer = () => {
     const navigate = useViewNavigate();
 
@@ -21,10 +33,10 @@ const Footer = () => {
         {
             heading: "Support",
             links: [
-                { label: "Contact Us", href: "tel:+911234567890" },
-                { label: "WhatsApp Us", href: "https://wa.me/911234567890" },
-                { label: "Email", href: "mailto:support@rcstravels.in" },
-                { label: "Help & FAQ", onClick: () => navigate("/help") },
+                { label: "Call Us", onClick: () => contact("call") },
+                { label: "WhatsApp Us", onClick: () => contact("whatsapp") },
+                { label: "Email Us", onClick: () => contact("email") },
+                { label: "Help", onClick: () => navigate("/help") },
             ],
         },
         {
@@ -47,8 +59,8 @@ const Footer = () => {
     ];
 
     return (
-        <footer className="bg-[var(--background-primary)] text-[var(--text)] pt-16 sm:pt-20 pb-6 sm:pb-8 flex justify-center">
-            <div className="w-[82%] md:w-[90%] xl:w-[74%] flex flex-col items-center gap-6 sm:gap-8">
+        <footer className="bg-[var(--background-primary)] text-[var(--text)] pt-16 pb-6 sm:pb-4 flex justify-center">
+            <div className="w-[82%] md:w-[90%] xl:w-[74%] flex flex-col items-center gap-6 ">
 
                 {/* Brand */}
                 <div
@@ -63,7 +75,7 @@ const Footer = () => {
                     {columns.map((col) => (
                         <div key={col.heading} className="flex flex-col gap-8">
                             <h4 className="font-semibold">{col.heading}</h4>
-                            <ul className="flex flex-col gap-8">
+                            <ul className="flex flex-col gap-5">
                                 {col.links.map((link) => (
                                     <li key={link.label}>
                                         {link.href
@@ -82,7 +94,7 @@ const Footer = () => {
                 </div>
 
                 {/* Copyright */}
-                <p className="text-[var(--text-muted)] leading-relaxed text-center">
+                <p className="text-[var(--text-muted)]/50 leading-relaxed text-center">
                     © copyright RCS Travels {new Date().getFullYear()}. All rights reserved.
                 </p>
             </div>

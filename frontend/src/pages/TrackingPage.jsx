@@ -10,14 +10,13 @@ import SafetyIllustration from "../components/illustrations/DriverEnRouteIllustr
 import WhatsAppIllustration from "../components/illustrations/WhatsAppIllustration";
 import Icon from '@mdi/react';
 import { mdiKeyboardBackspace, mdiPhone, mdiShareVariant } from '@mdi/js';
-import dashedLine from '../assets/dashed-line.svg';
-import arrow from '../assets/arrow.svg';
 import waLogo from '../assets/whatsapp-logo.webp';
 import ErrorPanel from "../components/ui/ErrorPanel";
 import BackgroundPanel from "../components/ui/BackgroundPanel";
 import pfpPlaceholder from "../assets/pfp-placeholder.webp"
 import RideDetails from "../components/RideDetails";
 import TrackingSkeleton from "../components/TrackingSkeleton";
+import RoutePanel from "../components/ui/RoutePanel";
 
 const TrackingPage = () => {
     const phone = useData(state => state.phone)
@@ -75,67 +74,54 @@ const TrackingPage = () => {
         </div>
     );
 
+    const extraFareNotice = (
+        <p className="text-xs text-[var(--text-muted)] text-center sm:text-left w-full leading-relaxed">
+            Driver asking for extra money? Your fare is fixed at ₹{fare}.{" "}
+            <a
+                href={`https://wa.me/918586088085?text=${encodeURIComponent(`Hi, the driver assigned to my booking${bookingId ? ` (ID: ${bookingId})` : ""} is asking for extra money over the fixed fare.`)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline underline-offset-2 text-[var(--text)] opacity-80 transition-opacity duration-300 hover:opacity-100 focus-visible:opacity-100"
+            >
+                Contact support
+            </a>
+        </p>
+    );
+
     return (
         <div className="relative bg-transparent text-center flex flex-col justify-center items-center w-[100vw] h-[100vh]">
             <ErrorPanel prop={{ error: error, setError: setError }} />
             {bookingLoading
                 ? <TrackingSkeleton />
                 : scheduledTime !== null && (status === "confirmed" || status === "assigned")
-                    ? <BackgroundPanel className={"relative py-6 h-[100vh] rounded-t-none justify-center items-center"}>
-                        <div className="relative flex flex-col justify-around items-center pt-6 w-full h-full gap-6 sm:gap-12">
+                    ? <BackgroundPanel className={"relative py-6 h-[100vh] rounded-t-none justify-center items-center sm:text-left sm:px-[9%] md:px-[5%] xl:px-[13%]"}>
+                        <div className="relative flex flex-col justify-around items-center sm:items-start pt-6 w-full h-full gap-6 sm:gap-12">
                             {backArrow}
-                            <div className="flex flex-col justify-center items-center gap-1 sm:gap-2 w-[290px]">
-                                <h2 className="text-center w-full">{status === "assigned" ? "Driver has been assigned" : "Driver has not been assigned"}</h2>
+                            <div className="flex flex-col justify-center items-center sm:items-start gap-1 sm:gap-2 w-[290px]">
+                                <h2 className="text-center sm:text-left w-full font-bold">{status === "assigned" ? "Driver has been assigned" : "Driver has not been assigned"}</h2>
                                 <h3 className="text-[var(--text-muted)]">{status === "assigned" ? "We suggest contacting the driver" : "Drivers are assigned closer to your pickup time. Check back shortly."}</h3>
                             </div>
 
                             <div className="flex flex-col justify-center items-start w-[290px] gap-3 sm:gap-4 ">
-                                <div className="w-full flex flex-col gap-1 sm:gap-2">
+                                <div className="flex flex-col gap-3 sm:gap-4 justify-center items-start w-full">
+                                    <h2 className="font-bold">Ride Details</h2>
+                                    <RoutePanel pickup={pickupLocation} drop={dropLocation} />
 
-                                    <div className="flex flex-col gap-3 sm:gap-4 justify-center items-start w-full">
-                                        <h2>Ride Details</h2>
-                                        <div className="flex flex-col justify-center items-start w-[290px] gap-3 sm:gap-4 ">
-                                            <div className="flex justify-center items-center">
-                                                <div className="flex flex-col justify-center items-center m-0 p-0 h-[2px] scale-[0.35]">
-                                                    <img src={dashedLine} alt="dashed-line" />
-                                                    <img src={arrow} alt="arrow" />
-                                                </div>
-                                                <div className="flex flex-col justify-center items-center gap-2 sm:gap-3">
-                                                    <Button
-                                                        prop={{
-                                                            variant: "input",
-                                                            width: "255px",
-                                                        }}
-                                                    >
-                                                        <h3 className="w-full px-4 flex justify-start items-center">{pickupLocation?.split(',')[0]}</h3>
-                                                    </Button>
-                                                    <Button
-                                                        prop={{
-                                                            variant: "input",
-                                                            width: "255px",
-                                                        }}
-                                                    >
-                                                        <h3 className="w-full px-4 flex justify-start items-center">{dropLocation?.split(',')[0]}</h3>
-                                                    </Button>
-                                                </div>
-                                            </div>
-
-                                            <div className="flex items-center justify-between w-full">
-                                                <h4 className="text-[var(--text-muted)]">Fare:</h4>
-                                                <h4>{fare}</h4>
-                                            </div>
-
-                                            <div className="flex items-center justify-between w-full">
-                                                <h4 className="text-[var(--text-muted)]">Distance:</h4>
-                                                <h4>30 KM</h4>
-                                            </div>
+                                    <div className="w-full flex flex-col gap-1 sm:gap-2 mt-3">
+                                        <div className="flex items-center justify-between w-full">
+                                            <h3 className="text-[var(--text-muted)]">Fare</h3>
+                                            <h3>₹{fare}</h3>
+                                        </div>
+                                        <div className="flex items-center justify-between w-full">
+                                            <h3 className="text-[var(--text-muted)]">Distance</h3>
+                                            <h3>30 KM</h3>
                                         </div>
                                     </div>
                                 </div>
 
                                 <Button
                                     className={`${status === "assigned" ? "block" : "hidden"} flex justify-between items-center w-full`}
-                                    prop={{ variant: "input", innerClassName: "flex justify-between items-center w-full px-4 py-3" }}
+                                    prop={{ variant: "input", bg: "var(--background-muted)", border: false, innerClassName: "flex justify-between items-center w-full px-4 py-3" }}
                                 >
                                     <div className="flex flex-col text-left items-left gap-2 sm:gap-3">
                                         <div className="w-17 h-17 rounded-full overflow-hidden">
@@ -148,12 +134,13 @@ const TrackingPage = () => {
                                         <h4 className="text-[var(--text-muted)]">Car name</h4>
                                     </div>
                                 </Button>
+                                {status === "assigned" && extraFareNotice}
                             </div>
 
                             <div className="flex flex-col justify-center gap-1 sm:gap-2 w-[290px] items-center">
                                 <Button
                                     onClick={() => window.open("https://wa.me/918586088085?text=Hi%2C%20I%20need%20help%20with%20my%20ride.", "_blank", "noopener,noreferrer")}
-                                    prop={{ variant: "input", width: "290px" }}
+                                    prop={{ variant: "input", width: "290px", bg: "var(--background-muted)", border: false }}
                                 >
                                     <span className="flex items-center justify-center gap-2">
                                         <img src={waLogo} alt="WhatsApp" className="w-6 h-6" />
@@ -180,20 +167,20 @@ const TrackingPage = () => {
                                         ? <ErrorMark className="-mt-2" size={140} />
                                         : <SuccessCheck className="-mt-2" size={140} /> }
                                     <h3 className="text-[var(--text-muted)]">Ride has been completed</h3>
-                                    <h2 className="text-center text-2xl">Fare: {fare}</h2>
+                                    <h2 className="text-center text-2xl font-bold">Fare: ₹{fare}</h2>
                                 </div>
 
                                 <div className="flex flex-col justify-center items-start w-[290px] gap-3 sm:gap-4 ">
                                     <div className="w-full flex flex-col gap-3 sm:gap-4">
                                         <div className="flex w-full justify-between items-center">
-                                            <p className="text-left text-xs">Drop to: <br /> <span className="text-sm text-[var(--text)]">{pickupLocation?.slice(0, 20) + '...'}</span></p>
-                                            <Button onClick={() => setDetialsVisibility(true)} prop={{ variant: "input", width: "110px" }} className="cursor-pointer" >
+                                            <p className="text-left text-xs">Drop to: <br /> <span className="text-sm text-[var(--text)]">{dropLocation?.slice(0, 20) + '...'}</span></p>
+                                            <Button onClick={() => setDetialsVisibility(true)} prop={{ variant: "input", width: "110px", bg: "var(--background-muted)", border: false }} className="cursor-pointer" >
                                                 <p>Ride details </p>
                                             </Button>
                                         </div>
                                         <Button
                                             className="flex justify-between items-center w-full"
-                                            prop={{ variant: "input", innerClassName: "flex justify-between items-center w-full px-4 py-3" }}
+                                            prop={{ variant: "input", bg: "var(--background-muted)", border: false, innerClassName: "flex justify-between items-center w-full px-4 py-3" }}
                                         >
                                             <div className="flex flex-col text-left items-left gap-2 sm:gap-3">
                                                 <div className="w-17 h-17 rounded-full overflow-hidden">
@@ -219,7 +206,7 @@ const TrackingPage = () => {
                                     </Button>
                                     <Button
                                         onClick={() => window.open("https://wa.me/918586088085?text=Hi%2C%20I%20need%20help%20with%20my%20ride.", "_blank", "noopener,noreferrer")}
-                                        prop={{ variant: "input", width: "290px" }}
+                                        prop={{ variant: "input", width: "290px", bg: "var(--background-muted)", border: false }}
                                     >
                                         <span className="flex items-center justify-center gap-2">
                                             <img src={waLogo} alt="WhatsApp" className="w-6 h-6" />
@@ -230,36 +217,36 @@ const TrackingPage = () => {
                             </div>
                         </BackgroundPanel>
 
-                        : <BackgroundPanel className={"py-6 justify-center items-center flex"}>
-                            <div className="relative flex flex-col justify-center items-center w-full gap-6 sm:gap-12">
+                        : <BackgroundPanel className={"py-6 justify-center items-center flex sm:text-left sm:px-[9%] md:px-[5%] xl:px-[13%]"}>
+                            <div className="relative flex flex-col justify-center items-center sm:items-start w-full gap-6 sm:gap-12">
                                 {backArrow}
-                                <Button prop={{ variant: "input" }} className='absolute -top-18 right-3 px-3 sm:hidden block'>
+                                <Button prop={{ variant: "input", bg: "var(--background-muted)", border: false }} className='absolute -top-18 right-3 px-3 sm:hidden block'>
                                     <div className="flex gap-1 flex gap-1 items-center justify-center">
                                         <Icon path={mdiShareVariant} size={0.7} />
                                         <h4>Share</h4>
                                     </div>
                                 </Button>
-                                <div className="flex flex-col justify-center items-center gap-1 sm:gap-2 w-[290px]">
-                                    <h2 className="text-center w-[90%] sm:w-[110%]">{status === "assigned" ? `Driver has been assigned` : status === "en_route" ? `Driver arriving at ${pickupLocation?.split(",")[0]}` : status === "reached" ? `Meet driver at ${pickupLocation?.split(',')[0]}` : `Driving towards ${dropLocation?.split(',')[0]}`} </h2>
-                                    <h3 className="text-[var(--text-muted)] w-[80%] sm:w-[90%]">{status === "assigned" ? `Heading your way` : status === "en_route" ? `Pick up in ${pickupTime}` : status === "reached" ? `Driver has arrived` : `Reaching destination in ${dropTime}`}</h3>
+                                <div className="flex flex-col justify-center items-center sm:items-start gap-1 sm:gap-2 w-[290px]">
+                                    <h2 className="text-center sm:text-left w-[90%] sm:w-full font-bold">{status === "assigned" ? `Driver has been assigned` : status === "en_route" ? `Driver arriving at ${pickupLocation?.split(",")[0]}` : status === "reached" ? `Meet driver at ${pickupLocation?.split(',')[0]}` : `Driving towards ${dropLocation?.split(',')[0]}`} </h2>
+                                    <h3 className="text-[var(--text-muted)] w-[80%] sm:w-full">{status === "assigned" ? `Heading your way` : status === "en_route" ? `Pick up in ${pickupTime}` : status === "reached" ? `Driver has arrived` : `Reaching destination in ${dropTime}`}</h3>
                                 </div>
 
                                 <div className="flex flex-col justify-center items-start w-[290px] gap-3 sm:gap-4 ">
                                     <div className="w-full flex flex-col gap-1 sm:gap-2">
                                         <div className={`${status === "en_route" || status === "reached" ? "block" : "hidden"} flex items-center justify-between w-full`}>
                                             <h3 className="text-[var(--text-muted)] text-xl">OTP:</h3>
-                                            <h3 className="text-2xl">{bookingCode}</h3>
+                                            <h3 className="text-2xl tracking-[0.25em] -mr-[0.25em]">{bookingCode}</h3>
                                         </div>
                                         <div className={`flex flex-col gap-1 sm:gap-2 justify-center items-start w-full ${status === "en_route" || status === "reached" ? "mt-5" : ""}`}>
-                                            <Button prop={{ variant: "input" }} className={`px-3 sm:block hidden`}>
+                                            <Button prop={{ variant: "input", bg: "var(--background-muted)", border: false }} className={`px-3 sm:block hidden`}>
                                                 <div className="flex gap-1 items-center justify-center">
                                                     <Icon path={mdiShareVariant} className="text-[var(--text-muted)]" size={0.6} />
                                                     <p>Share</p>
                                                 </div>
                                             </Button>
                                             <div className="flex w-full justify-between items-center">
-                                                <p className="text-left text-xs">Drop to: <br /> <span className="text-sm text-[var(--text)]">{pickupLocation?.slice(0, 20) + '...'}</span></p>
-                                                <Button onClick={() => setDetialsVisibility(true)} prop={{ variant: "input", width: "110px" }} className="cursor-pointer" >
+                                                <p className="text-left text-xs">Drop to: <br /> <span className="text-sm text-[var(--text)]">{dropLocation?.slice(0, 20) + '...'}</span></p>
+                                                <Button onClick={() => setDetialsVisibility(true)} prop={{ variant: "input", width: "110px", bg: "var(--background-muted)", border: false }} className="cursor-pointer" >
                                                     <p>Ride details </p>
                                                 </Button>
                                             </div>
@@ -270,7 +257,7 @@ const TrackingPage = () => {
 
                                     <Button
                                         className="flex justify-between items-center w-full"
-                                        prop={{ variant: "input", innerClassName: "flex justify-between items-center w-full px-4 py-3" }}
+                                        prop={{ variant: "input", bg: "var(--background-muted)", border: false, innerClassName: "flex justify-between items-center w-full px-4 py-3" }}
                                     >
                                         <div className="flex flex-col text-left items-left gap-2 sm:gap-3">
                                             <div className="w-17 h-17 rounded-full overflow-hidden">
@@ -283,10 +270,11 @@ const TrackingPage = () => {
                                             <h4 className="text-[var(--text-muted)]">Car name</h4>
                                         </div>
                                     </Button>
+                                    {extraFareNotice}
                                     <div className="flex justify-between w-[290px] items-center">
                                         <Button
                                             onClick={() => window.open("https://wa.me/918586088085?text=Hi%2C%20I%20need%20help%20with%20my%20ride.", "_blank", "noopener,noreferrer")}
-                                            prop={{ variant: "input", width: "140px" }}
+                                            prop={{ variant: "input", width: "140px", bg: "var(--background-muted)", border: false }}
                                         >
                                             <span className="flex items-center justify-center gap-2">
                                                 <img src={waLogo} alt="WhatsApp" className="w-6 h-6" />
@@ -307,7 +295,7 @@ const TrackingPage = () => {
                         </BackgroundPanel>
             }
             {/* ride details */}
-            <BackgroundPanel show={detialsVisibility === true} className={`z-3 sm:z-2 gap-6 sm:gap-12 py-6 text-center flex flex-col justify-center items-center`}>
+            <BackgroundPanel show={detialsVisibility === true} className={`z-3 sm:z-2 gap-6 sm:gap-12 py-6 text-center sm:text-left flex flex-col justify-center items-center`}>
                 <RideDetails prop={{bookingId, setLoading, setError, setDetialsVisibility }} />
             </BackgroundPanel>
         </div>

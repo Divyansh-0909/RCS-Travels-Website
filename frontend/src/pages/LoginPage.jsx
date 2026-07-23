@@ -18,7 +18,7 @@ const LoginPage = () => {
   const setPhone = useData(state => state.setPhone);
   const [otp, setOtp] = useState("");
   const otpRefs = useRef([]);
-  const OTP_LENGTH = 4;
+  const OTP_LENGTH = 6;
   const OTP_TTL = 300; // seconds until the OTP expires — matches the backend's 5-minute window
   const [expiresIn, setExpiresIn] = useState(0);
   const [step, setStep] = useState("phone"); // "phone" | "otp"
@@ -89,7 +89,7 @@ const LoginPage = () => {
     }
 
     if (!(otp.length === OTP_LENGTH)) {
-      setError("OTP should be exactly 4 digit");
+      setError("OTP should be exactly 6 digit");
       return;
     }
 
@@ -168,6 +168,8 @@ const LoginPage = () => {
 
   const formatMMSS = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 
+  const phoneDisplay = phone ? `+91 ${phone.slice(0, 5)} ${phone.slice(5)}` : "+91 XXXXX XXXXX";
+
   const handlePhoneChange = (value) => {
     const digits = value.replace(/\D/g, "").slice(0, 10);
 
@@ -238,8 +240,8 @@ const LoginPage = () => {
         <Icon path={mdiKeyboardBackspace} size={1.2} />
       </div>
       {isSignedIn && !redirecting
-        ? <div className="flex flex-col justify-center items-center gap-6">
-          <h2 className="text-[var(--text)] ">
+        ? <div className="flex flex-col justify-center items-center">
+          <h2 className="font-bold text-[var(--text)]">
             You are already <br /> logged in.
           </h2>
           <Button
@@ -247,35 +249,41 @@ const LoginPage = () => {
             prop={{
               type: "button",
             }}
-            className="scale-[1] sm:scale-[1.1]"
+            className="scale-[1] sm:scale-[1.3] mt-6 sm:mt-9"
           >
             Back
           </Button>
         </div>
 
         : <form
-          className="flex flex-col justify-center items-center gap-12"
+          className="flex flex-col justify-center items-center"
           noValidate
           onSubmit={isPhone ? handleSubmit : handleOTPSubmit}
         >
           <div className="flex flex-col justify-center items-center gap-2 sm:gap-3">
-            <h2 className="text-[var(--text)] ">
+            <h2 className="font-bold text-[var(--text)]">
               {isPhone ? <>Let's get you back <br /> on the road.</> : "Confirm your code."}
             </h2>
-            <p className="text-[var(--text-muted)] ">
-              {isPhone ? "We'll send a OTP to this number." : "Enter the OTP we sent to your phone."}
+            <p className="text-base sm:text-lg text-[var(--text-muted)]">
+              {isPhone
+                ? "We'll send a OTP to this number."
+                : <>Enter the 6-digit code <br className="sm:hidden block" /> we sent to <span className="font-semibold text-[var(--text)]">{phoneDisplay}</span></>}
             </p>
           </div>
-          <div className="flex flex-col justify-center items-center gap-2 sm:gap-4">
+          <div className="flex flex-col justify-center items-center">
 
-            {error && (
-              <p className="text-red-400 text-sm">
-                {error}
-              </p>
-            )}
+            {/* Fixed-height slot so an error appearing doesn't shift the form */}
+            <div className="mt-2 sm:mt-4 mb-1 sm:mb-2 min-h-5 flex items-center justify-center">
+              {error && (
+                <p className="text-red-400 text-sm">
+                  {error}
+                </p>
+              )}
+            </div>
 
             {!isPhone
-              ? <div className="relative flex justify-center items-center gap-3 mb-5">
+              ? <div className="flex flex-col justify-center items-center">
+                <div className="relative flex justify-center items-center gap-2 sm:gap-2.5">
                 {Array.from({ length: OTP_LENGTH }).map((_, i) => {
                   const otpError = Boolean(error);
                   return (
@@ -287,7 +295,6 @@ const LoginPage = () => {
                       autoComplete={i === 0 ? "one-time-code" : "off"}
                       name={`otp-number-${i + 1}`}
                       id={`otp-number-${i + 1}`}
-                      placeholder="X"
                       maxLength={1}
                       value={otp[i] ?? ""}
                       onChange={(e) => handleOtpDigit(i, e.target.value)}
@@ -295,42 +302,33 @@ const LoginPage = () => {
                       onPaste={handleOtpPaste}
                       style={{ "--i": i }}
                       className={`
-                      relavtive flex justify-center text-center items-center font-medium text-3xl my-1
+                      relative flex justify-center text-center items-center font-medium text-2xl sm:text-3xl my-1
                       ${busy ? "text-transparent placeholder-transparent" : "text-white"}
-                      py-2 w-[55px] h-[65px] rounded-2xl transition-all duration-600 ease-in-out
-                      ${busy && `animate-otp-box-in ${i === 0 && `${otpError ? "bg-red-600 " : "bg-green-600"}`}`}
+                      py-2 w-[42px] h-[42px] sm:w-[55px] sm:h-[55px] rounded-xl transition-all duration-600 ease-in-out
+                      ${busy && `animate-otp-box-in ${i === 0 && `${otpError ? "bg-red-600!" : "bg-green-600!"}`}`}
                       ${otpError
-                          ? `
-                            border-b-2 border-[rgba(239,68,68,0.3)]
-                            bg-[linear-gradient(to_bottom,transparent_50%,rgba(239,68,68,0.25)_100%)]
-                            shadow-[inset_0_2px_2px_rgba(239,68,68,0.35)]
-                            focus:border-[rgba(239,68,68,0.5)]
-                            focus:shadow-[inset_0_2px_2px_rgba(255,255,255,0.35)]
-                          `
-                          : `
-                            border-b-2 border-[rgba(255,255,255,0.05)]
-                            bg-[linear-gradient(to_bottom,transparent_50%,rgba(146,146,139,0.10)_100%)]
-                            shadow-[inset_0_2px_2px_rgba(255,255,255,0.25)]
-                            focus:border-[rgba(255,255,255,0.15)]
-                            focus:shadow-[inset_0_2px_2px_rgba(255,255,255,0.35)]
-                          `
+                          ? "border border-negative/50 bg-negative/10 focus:border-negative/80"
+                          : "border border-[var(--foreground)]/30 bg-[var(--background-muted)] hover:border-[var(--foreground)]/50 focus:border-[var(--foreground)]/60 focus:bg-[var(--foreground)]/5"
                         }
-                      
                       focus:outline-none
-                      focus:opacity-[0.8]
-                      active:opacity-[0.8]
                       transition-all duration-200
                     `}
                     />
                   );
                 })}
-                {busy && (
-                  <span className="animate-otp-badge absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
-                    {error
-                      ? <CrossOutline size={38} />
-                      : <CheckMarkOutline size={38} />}
-                  </span>
-                )}
+                  {busy && (
+                    <span className="animate-otp-badge absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
+                      {error
+                        ? <CrossOutline size={38} />
+                        : <CheckMarkOutline size={38} />}
+                    </span>
+                  )}
+                </div>
+                <p className={`text-[var(--text-muted)] text-sm mt-1 sm:mt-2 mb-3 sm:mb-5 ${busy ? "invisible" : ""}`}>
+                  {expiresIn > 0
+                    ? <>Code expires in <span className="tabular-nums text-[var(--text)]">{formatMMSS(expiresIn)}</span></>
+                    : "Your code has expired."}
+                </p>
               </div>
               :
               <Input
@@ -343,8 +341,9 @@ const LoginPage = () => {
                   onChangeFn: handlePhoneChange,
                   error: error === "Enter a Phone Number" ||
                     error === "Number should be exactly 10 digits",
+                  bg: "var(--background-muted)",
                 }}
-                className="scale-[1] sm:scale-[1.1] mb-5"
+                className="scale-[1] sm:scale-[1.3]"
               />
             }
             <Button
@@ -355,40 +354,28 @@ const LoginPage = () => {
                   ? false
                   : (isPhone ? phone.length !== 10 : otp.length !== OTP_LENGTH),
               }}
-              className="scale-[1] sm:scale-[1.1]"
+              className="scale-[1] sm:scale-[1.3] mt-1 sm:mt-5"
             >
               {isPhone
                 ? (showSignUp ? "Sign Up" : (loading ? "Sending OTP..." : "Continue"))
-                : (loading ? "Confirming..." : "Confirm")}
+                : (loading ? "Redirecting..." : "Confirm")}
             </Button>
-            {!isPhone && !busy && (
-              <p className="text-[var(--text-muted)] text-sm -mt-1">
-                {expiresIn > 0
-                  ? <>Code expires in <span className="tabular-nums text-[var(--text)]">{formatMMSS(expiresIn)}</span></>
-                  : "Your code has expired. Resend to get a new one."}
-              </p>
-            )}
             {!isPhone && (
-              <Button
-                onClick={handleResend}
-                prop={{
-                  width: "290px",
-                  type: "button",
-                  variant: "input",
-                }}
-                className={`scale-[1] sm:scale-[1.1] -mt-1 ${resendIn > 0 || resending ? "pointer-events-none opacity-60" : ""}`}
-              >
+              <p className={`mt-3 sm:mt-6 text-sm text-[var(--text-muted)] ${busy ? "invisible" : ""}`}>
+                <span className="text-[var(--text)]">Didn't get it?</span>{" "}
                 {resending
                   ? "Sending..."
                   : resendIn > 0
-                    ? `Resend OTP in ${resendIn}s`
-                    : "Resend OTP"}
-              </Button>
+                    ? <span className="tabular-nums">Resend in {resendIn}s</span>
+                    : <button
+                      type="button"
+                      onClick={handleResend}
+                      className="cursor-pointer text-[var(--text)] underline underline-offset-4 decoration-[var(--foreground)]/40 hover:decoration-[var(--foreground)] transition-colors duration-300 rounded-sm outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]/70"
+                    >Resend</button>}
+              </p>
             )}
 
-            {isPhone && (
-              <p className="text-[var(--text-muted)] text-sm">You consent to receive a OTP <br /> by text or WhatsApp.</p>
-            )}
+            <p className="text-[var(--text-muted)] text-sm mt-3 sm:mt-5">You consent to receive a OTP <br /> by text or WhatsApp.</p>
           </div>
         </form>}
     </div>

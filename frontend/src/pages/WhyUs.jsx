@@ -36,24 +36,24 @@ const WhyUs = () => {
                 <ul className="w-full flex flex-col items-start justify-center gap-10">
                     {data.map((item, index) => {
                         return (
-                            <li key={index} className="w-full border-b-2 pb-10 flex flex-col items-start justify-center gap-0 sm:gap-2 border-dashed">
+                            <li key={index} className="w-full border-b-2 pb-10 flex flex-col items-start justify-center gap-0 border-dashed">
                                 <button
                                     type="button"
                                     aria-expanded={openIndex === index}
                                     onClick={() => setOpenIndex(openIndex === index ? null : index)}
-                                    className="w-full flex items-center justify-between gap-4 text-left cursor-pointer sm:cursor-default rounded focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-current active:opacity-70 sm:active:opacity-100"
+                                    className="w-full flex items-center justify-between gap-4 text-left cursor-pointer rounded focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-current active:opacity-70"
                                 >
                                     <h2 className="text-[25px] sm:text-2xl lg:text-3xl font-semibold">0{index + 1}. {item.title}</h2>
                                     <svg
-                                        className={`w-6 h-6 shrink-0 sm:hidden transition-transform duration-300 ${openIndex === index ? "rotate-180" : ""}`}
+                                        className={`w-6 h-6 shrink-0 transition-transform duration-300 ${openIndex === index ? "rotate-180" : ""}`}
                                         viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"
                                     >
                                         <path d="m6 9 6 6 6-6" />
                                     </svg>
                                 </button>
-                                <div className={`grid w-full transition-[grid-template-rows] duration-300 ease-out sm:block ${openIndex === index ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
-                                    <div className="min-h-0 overflow-hidden sm:overflow-visible">
-                                        <h3 className={`pt-2 sm:pt-0 sm:text-xl lg:text-2xl transition-opacity duration-300 ${openIndex === index ? "opacity-100" : "opacity-0"} sm:opacity-100`}>{item.description}</h3>
+                                <div className={`grid w-full transition-[grid-template-rows] duration-300 ease-out ${openIndex === index ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
+                                    <div className="min-h-0 overflow-hidden">
+                                        <h3 className={`pt-2 sm:text-xl lg:text-2xl transition-opacity duration-300 ${openIndex === index ? "opacity-100" : "opacity-0"}`}>{item.description}</h3>
                                     </div>
                                 </div>
                             </li>

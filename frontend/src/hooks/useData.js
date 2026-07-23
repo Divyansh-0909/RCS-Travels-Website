@@ -56,6 +56,11 @@ export const useData = create (persist (set =>({
 
     sharing: true,
     setSharing: (share) => set(state=>({sharing: share})),
+
+    // Dev-only: lets the /dev/* preview routes render auth-gated UI without a
+    // Clerk session. Only ever set by DevPreview, which exists in dev builds.
+    devAuthBypass: false,
+    setDevAuthBypass: (on) => set(() => ({devAuthBypass: on})),
 }),
 {
     name: 'rcs-data',

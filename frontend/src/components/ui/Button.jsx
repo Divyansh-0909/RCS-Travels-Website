@@ -7,6 +7,7 @@
  *   paddingX?: string,
  *   bg?: string,
  *   type?: string,
+ *   border?: boolean,
  *   error?: boolean,
  *   disabled?: boolean,
  *   innerClassName?: string,
@@ -38,7 +39,7 @@ const Button = ({ prop, className, children, onClick }) => {
             ? "border border-[var(--foreground)]/15 bg-[var(--background)] shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)] px-4"
             : hasError
             ? "border border-negative/50 bg-negative/10 transition-colors duration-300"
-            : `border border-[var(--foreground)]/30 bg-[var(--btn-bg,transparent)] transition-colors duration-300 ${isDisabled ? "" : "hover:bg-[var(--foreground)]/10 active:bg-[var(--foreground)]/15"}`
+            : `border ${prop.border === false ? "border-transparent" : "border-[var(--foreground)]/30"} bg-[var(--btn-bg,transparent)] transition-colors duration-300 ${isDisabled ? "" : "hover:bg-[var(--foreground)]/10 active:bg-[var(--foreground)]/15"}`
         }
       `}
       style={{

@@ -14,6 +14,8 @@ import { useViewNavigate } from "../hooks/useViewNavigate";
 import { DateTimeSelector } from "../components/ui/DateTimeSelector";
 import { useData } from "../hooks/useData";
 import { useSignIn, useAuth, useUser } from "@clerk/clerk-react";
+import RoutePanel from "../components/ui/RoutePanel";
+import { statusLabels } from "../constants/statusLabels";
 
 function useExitAnim(open, duration) {
   const [mounted, setMounted] = useState(open);
@@ -37,17 +39,6 @@ function useExitAnim(open, duration) {
   return { mounted, closing };
 }
 
-const statusLabels = {
-  pending: "Finding your driver",
-  confirmed: "Confirmed",
-  assigned: "Driver assigned",
-  en_route: "Driver on the way",
-  reached: "Driver arrived",
-  started: "On trip",
-  completed: "Completed",
-  cancelled: "Cancelled",
-};
-
 const ACTIVE_STATUSES = ["pending", "confirmed", "assigned", "en_route", "reached", "started"];
 
 const OnBoarding = () => {
@@ -70,6 +61,10 @@ const OnBoarding = () => {
   const activeBooking = useData(state => state.activeBooking);
   const setActiveBooking = useData(state => state.setActiveBooking);
   const { isSignedIn } = useAuth();
+  const devAuthBypass = useData(state => state.devAuthBypass);
+  // Render gates only — the booking-hydration effect below stays on the real
+  // isSignedIn so the dev preview never hits the API.
+  const authed = isSignedIn || devAuthBypass;
   const { user } = useUser();
   const username = useData(state => state.username);
   const [showForm, setShowForm] = useState(false);
@@ -189,41 +184,27 @@ const OnBoarding = () => {
   return (
     <div className="relative flex flex-col sm:flex-row h-[100vh] sm:px-[9%] md:px-[5%] xl:px-[13%] sm:pt-16 sm:justify-center lg:justify-between items-center bg-[var(--background-primary)]">
       <div className="relative z-10 py-8 flex flex-col items-center lg:items-start w-full max-w-[500px] h-[inherit] sm:h-fit justify-end sm:justify-center">
-        {(activeBooking && isSignedIn && !activeBooking.scheduledAt)
-          ? <div className="flex flex-col text-center lg:text-left justify-center items-center w-full lg:items-start gap-6 sm:gap-12">
-            <h1 className="font-bold text-4xl sm:text-5xl">Current Trip</h1>
+        {(activeBooking && authed && !activeBooking.scheduledAt)
+          ? <div className="flex flex-col text-center lg:text-left justify-center items-center w-full lg:items-start gap-6 sm:gap-16">
+            <div className="flex flex-col items-center lg:items-start gap-0">
+              <h1 className="font-bold text-3xl sm:text-5xl leading-tight">Current Trip</h1>
+              <h2 className="sm:text-2xl text-xl font-normal leading-tight text-[var(--text-muted)]">{statusLabels[activeBooking.status] || "On trip"}</h2>
+            </div>
 
-            <div className="flex flex-col justify-center items-start text-left gap-3 sm:gap-4 w-[75vw] sm:w-[315px]">
-              <div className="flex flex-col gap-2 w-full">
-                <div className="flex flex-col justify-center items-start gap-2 text-left sm:gap-3">
-                  <div className='flex items-center gap-3 min-w-0'>
-                    <div className="w-3 h-3 rounded-full bg-[var(--foreground)] shrink-0"></div>
-                    <div className='flex flex-col items-start justify-center text-left min-w-0'>
-                      <h3 className="w-full flex justify-start items-center text-xl sm:text-2xl">{activeBooking.pickupAddress?.split(',')[0]}</h3>
-                      <p className='w-full flex justify-start items-center text-base sm:text-lg'>{activeBooking.pickupAddress?.replace(`${activeBooking.pickupAddress?.split(",")[0]}, `, "")}</p>
-                    </div>
-                  </div>
-                  <div className='flex items-center gap-3 min-w-0'>
-                    <div className="w-3 h-3 rounded-full bg-primary relative shrink-0"><div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-[var(--background)]" /></div>
-                    <div className='flex flex-col items-start justify-center text-left min-w-0'>
-                      <h3 className="w-full flex justify-start items-center text-xl sm:text-2xl">{activeBooking.dropAddress?.split(',')[0]}</h3>
-                      <p className='w-full flex justify-start items-center text-base sm:text-lg'>{activeBooking.dropAddress?.replace(`${activeBooking.dropAddress?.split(",")[0]}, `, "")}</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between w-full mt-5">
-                  <h3 className="text-[var(--text-muted)] sm:text-xl">Status</h3>
-                  <h3 className="sm:text-xl">{statusLabels[activeBooking.status] || "On trip"}</h3>
-                </div>
+            <div className="flex flex-col items-stretch text-left gap-5 sm:gap-14 w-[75vw] sm:w-[290px]">
+              <RoutePanel size="xs" className="scale-[1] sm:scale-[1.3] lg:ml-7" pickup={activeBooking.pickupAddress} drop={activeBooking.dropAddress}>
                 <div className="flex items-center justify-between w-full">
-                  <h3 className="text-[var(--text-muted)] sm:text-xl">Fare</h3>
-                  <h3 className="sm:text-xl">₹{activeBooking.fare}</h3>
+                  <h4 className="text-sm sm:text-base text-[var(--text-muted)]">Fare</h4>
+                  <h4 className="text-sm sm:text-base">₹{activeBooking.fare}</h4>
                 </div>
-              </div>
-
-              <div className="lg:pl-3 self-center lg:self-start">
-                <Button onClick={openActiveBooking} className="sm:scale-[1.1]" prop={{ variant: "", width: "290px" }}>Track Ride</Button>
-              </div>
+                {activeBooking.code && (
+                  <div className="flex items-center justify-between w-full">
+                    <h4 className="text-sm sm:text-base text-[var(--text-muted)]">Booking code</h4>
+                    <h4 className="text-sm sm:text-base tracking-[0.25em] -mr-[0.25em]">{activeBooking.code}</h4>
+                  </div>
+                )}
+              </RoutePanel>
+              <Button onClick={openActiveBooking} className="scale-[1] sm:scale-[1.3] lg:ml-7" prop={{ variant: "", width: "100%" }}>Track Ride</Button>
             </div>
           </div>
           : <div className="flex flex-col text-center lg:text-left justify-center items-center lg:items-start gap-1 sm:gap-5">
@@ -234,7 +215,7 @@ const OnBoarding = () => {
               <h1 className="font-bold text-3xl sm:text-5xl leading-tight">Where you off to?</h1>
             </div>
 
-            {activeBooking && isSignedIn && activeBooking.scheduledAt && !showForm
+            {activeBooking && authed && activeBooking.scheduledAt && !showForm
               ? <div className="flex flex-col justify-center items-center lg:items-start text-center lg:text-left gap-2 sm:gap-3">
                 <h4 className="w-full m-0 p-0 mb-2 sm:mt-0 mt-5 text-xl sm:text-2xl">You have a scheduled ride</h4>
                 <div className="lg:pl-3 flex flex-col gap-2 sm:gap-3">
@@ -244,7 +225,7 @@ const OnBoarding = () => {
               </div>
               : ""}
 
-            {(!(activeBooking && isSignedIn && activeBooking.scheduledAt) || showForm) && (<>
+            {(!(activeBooking && authed && activeBooking.scheduledAt) || showForm) && (<>
               <form
                 className="flex flex-col sm:pl-3 justify-center items-start gap-0.5 sm:gap-5 mt-1 sm:mt-3"
                 noValidate
@@ -422,7 +403,7 @@ const OnBoarding = () => {
                       }
                     },
                     error: error === "No Pickup Location",
-                    bg: "var(--background-primary)",
+                    bg: "var(--background-muted)",
                   }}
                   className="scale-[1] sm:scale-[1.3] lg:ml-7"
                 />
@@ -441,7 +422,7 @@ const OnBoarding = () => {
                       }
                     },
                     error: error === "No Drop Location",
-                    bg: "var(--background-primary)",
+                    bg: "var(--background-muted)",
                   }}
                   className="scale-[1] sm:scale-[1.3] lg:ml-7"
                 />
@@ -481,7 +462,7 @@ const OnBoarding = () => {
       <img
         src={laptopBackgroundIllustration}
         alt="background-illustration"
-        className="lg:w-[500px] lg:h-[430px] xl:w-[550px] xl:h-[450px] object-cover lg:block hidden rounded-lg"
+        className="lg:w-[500px] lg:h-[430px] xl:w-[600px] xl:h-[450px] object-cover lg:block hidden rounded-lg"
       />
     </div>
   );

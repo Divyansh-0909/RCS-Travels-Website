@@ -130,8 +130,8 @@ const NavBar = ({ invert = false, hideExpanded = false }) => {
                         </div>
                         :
                         <div className='flex gap-1 justify-center items-center [&>*]:opacity-[1] [&>*]:hover:opacity-[0.8] [&>*]:cursor-pointer [&>*]:transition-all [&>*]:duration-300'>
-                            <h4 onClick={() => navigate('/login')} className='text-base font-medium hover:bg-[var(--background-primary)]/10 px-3 py-2 rounded-3xl'>Log in</h4>
-                            <h4 onClick={() => navigate('/signup')} className='text-base font-medium text-[var(--text)] bg-[var(--background-primary)] px-3 py-2 rounded-3xl'>Sign up</h4>
+                            <h4 onClick={() => navigate('/login')} className='text-base font-medium hover:bg-[var(--background-primary)]/10 px-3 py-2 rounded-lg'>Log in</h4>
+                            <h4 onClick={() => navigate('/signup')} className='text-base font-medium text-[var(--text)] bg-[var(--background-primary)] px-3 py-2 rounded-lg'>Sign up</h4>
                         </div>
                     }
                     {menuMounted &&

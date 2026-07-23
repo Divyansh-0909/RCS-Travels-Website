@@ -8,6 +8,7 @@ import WhyUs from "./pages/WhyUs";
 import Services from "./pages/Services";
 import AboutUs from "./pages/AboutUs";
 import Footer from "./components/Footer";
+import FinalCTA from "./components/FinalCTA";
 
 function App() {
   const location = useLocation();
@@ -29,6 +30,7 @@ function App() {
         <div id="services"><Services/></div>
         <div id="about"><AboutUs/></div>
         <div id="why-us"><WhyUs/></div>
+        <FinalCTA/>
         <Footer/>
       </div>
     </Suspense>
