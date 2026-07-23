@@ -45,14 +45,14 @@ website and its backend exist today.
 ### Backend (`backend/`)
 - **Node + Express 4.21** (ES Modules, `type: "module"`).
 - **Prisma 7.8** ORM with the **`@prisma/adapter-pg`** driver adapter over **`pg`**.
-- **PostgreSQL** (Neon, serverless).
+- **PostgreSQL** (Supabase, free tier).
 - **Clerk** (`@clerk/express`) — `clerkMiddleware()` globally, `requireAuth()` on protected routes.
 - **firebase-admin** (for FCM push to drivers) and **multer** + **@aws-sdk/client-s3** (for driver
   document uploads) are installed but **not yet used** — placeholders for later phases.
 
 ### Deployment (planned — see [project_deployment](.) memory)
 - Frontend → **Vercel**. Backend → **Render** (free tier, kept alive via a cron pinging `/health`).
-  Database → **Neon PostgreSQL**. Driver app → **Expo EAS** (later).
+  Database → **Supabase PostgreSQL** (free tier; kept from pausing via a daily cron ping). Driver app → **Expo EAS** (later).
 
 ---
 
@@ -235,7 +235,7 @@ so the browser's native **View Transitions API** animates page changes (CSS in `
 ## 9. Status — what's DONE / IN PROGRESS / LEFT
 
 ### ✅ Done (built and wired)
-- **Backend foundation:** Express app, Clerk middleware, Prisma + Neon, schema with all 8 models,
+- **Backend foundation:** Express app, Clerk middleware, Prisma + Supabase Postgres, schema with all 8 models,
   `/health`.
 - **Auth backend:** WhatsApp-OTP → Clerk-ticket flow (`hybridAuth.js`), `users.js` me/create.
 - **Fare backend:** fixed-table + Google Routes fallback, monthly usage cap. **Google Routes is the
@@ -393,7 +393,7 @@ so the browser's native **View Transitions API** animates page changes (CSS in `
 
 ## 10. Running locally
 
-**Backend** (`backend/`): needs `.env` with `DATABASE_URL` (Neon), `CLERK_SECRET_KEY`,
+**Backend** (`backend/`): needs `.env` with `DATABASE_URL` (Supabase Postgres), `CLERK_SECRET_KEY`,
 `GOOGLE_MAPS_API_KEY`, `ADMIN_PHONE`.
 ```
 npm install

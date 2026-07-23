@@ -59,7 +59,7 @@ Non-Functional
                       └──────┬──────────┬──────────┘
                              │          │
                  ┌───────────▼──┐  ┌────▼─────────────┐
-                 │  Neon         │  │  External APIs    │
+                 │  Supabase     │  │  External APIs    │
                  │  PostgreSQL   │  │  Google Routes    │
                  │  (Primary DB) │  │  Firebase FCM     │
                  └──────────────┘  │  Meta WhatsApp    │
@@ -328,7 +328,8 @@ phone numbers are the primary identity.
   Vercel          → Customer website + Admin dashboard (static, free)
   Render          → Express backend (free tier)
     └─ cron-job.org pings /health every 10 min to prevent cold starts
-  Neon PostgreSQL → Database (serverless, scales to zero, free tier)
+  Supabase PostgreSQL → Database (free tier, always-on instance; pauses after
+                        7 days of zero activity — daily cron ping prevents this)
   Cloudflare R2   → Driver document storage (DL + Aadhar photos)
   Expo EAS        → Driver app Android APK distribution
 

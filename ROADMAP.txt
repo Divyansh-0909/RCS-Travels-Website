@@ -40,7 +40,6 @@ IMPORTANT:
   TRADEOFF: highway is longer -> higher distanceKm -> higher fare at per-km rate
   (fares.js:60). Do NOT add a visible "safety surcharge" (reads badly) — cap or absorb
   the difference.
-- While entrying name on sign up mention that name can't be changed. "We recoomend putting your legal name"
 - Clear the hard coded data in the schema models
 - make the confirm pickup point page
 - Make the share location and share drivers details page
@@ -48,7 +47,6 @@ IMPORTANT:
 - Before deploying whole code to github, verify from claude if that can cause security issue
 - For destination which are not in the fixed fare table show "Tolls payable to driver separately" on frontend
 - Add API call count restriction
-- Select users see their ride status.
 - Add rate limiting to maps and all other API's.
 - Enable these API's: Routes API, Places API (New)
 - After you deploy to Render:
@@ -99,7 +97,7 @@ X PHASE 1 — Foundation (Day 1-2)
 Goal: Get a working end-to-end skeleton before writing any real features.
 
 Backend:
-  - Create a Neon PostgreSQL database, copy DATABASE_URL into backend/.env
+  - Create a Supabase PostgreSQL database, copy DATABASE_URL into backend/.env
   - Run: npm run db:generate  (generates Prisma client)
   - Run: npm run db:migrate   (creates all 6 tables in the DB)
   - Set up Clerk at clerk.com, add CLERK_SECRET_KEY to backend/.env 
@@ -319,7 +317,7 @@ DEPLOYMENT STACK
 -----------------
   Frontend  → Vercel
   Backend   → Render (free tier, kept alive via cron-job.org pinging /health every 10 mins)
-  Database  → Neon PostgreSQL
+  Database  → Supabase PostgreSQL (free tier — pauses after 7 days idle; daily cron ping keeps it active)
   Driver app → Expo EAS (later)
 
 

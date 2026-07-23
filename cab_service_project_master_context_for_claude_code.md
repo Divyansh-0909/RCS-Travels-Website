@@ -54,7 +54,7 @@ Polling + FCM push notifications are sufficient for the initial scale.
 
 ## Database / Storage
 
-- Neon PostgreSQL
+- Supabase PostgreSQL
 - Cloudflare R2 (documents/files)
 - Upstash Redis (optional)
 
