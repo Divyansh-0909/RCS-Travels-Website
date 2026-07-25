@@ -11,6 +11,25 @@ const VALID_VEHICLE_TYPES = [4, 6, 1]
 
 export const ACTIVE_STATUSES = ['pending', 'confirmed', 'assigned', 'en_route', 'reached', 'started']
 
+// Cancelling once the driver is waiting at the pickup point costs the rider 35%
+// of the fare — that driver turned down other rides and has already spent the
+// fuel. Anything earlier is free, including en_route: the driver is moving but
+// hasn't committed the wait. A ride already underway can't be self-cancelled;
+// that's a support conversation.
+//
+// `reached` and `en_route` were previously not cancellable at all, so the
+// cancellation_charge column could never be written.
+const CANCELLABLE_STATUSES = ['pending', 'confirmed', 'assigned', 'en_route', 'reached']
+const CHARGEABLE_STATUSES = ['reached']
+export const CANCELLATION_CHARGE_PCT = 35
+
+// What cancelling would cost right now. Exported so the status endpoint can warn
+// the rider with the same number the cancel endpoint will actually charge.
+export const cancellationChargeFor = (booking) =>
+  CHARGEABLE_STATUSES.includes(booking.status)
+    ? Math.round((booking.fare * CANCELLATION_CHARGE_PCT) / 100)
+    : 0
+
 // Two rides within this window are treated as the same time slot.
 const OVERLAP_MS = 15 * 60 * 1000
 
@@ -127,12 +146,17 @@ bookingsRouter.get('/:id/status', protect, async (req, res) => {
     if (await markNoDriver(booking.id)) status = 'no_driver'
   }
 
-  if (!booking.driverId) return res.json({ bookingId: booking.id, bookingCode: user.bookingCode, status, driver: null })
+  // What cancelling right now would cost, from the same helper the cancel
+  // endpoint uses — so the warning the rider sees is the number they get charged.
+  const cancellationCharge = cancellationChargeFor({ ...booking, status })
+
+  if (!booking.driverId) return res.json({ bookingId: booking.id, bookingCode: user.bookingCode, status, cancellationCharge, driver: null })
 
   return res.json({
     bookingId:   booking.id,
     bookingCode: user.bookingCode,
     status,
+    cancellationCharge,
     driver: {
       name:          booking.driver.name,
       phone:         booking.driver.phone,
@@ -155,8 +179,10 @@ bookingsRouter.post('/cancel', protect, async (req, res) => {
     const booking = await prisma.booking.findUnique({ where: { id: bookingId }, include: {driver: true} })
     if (!booking) return res.status(404).json({ error: 'Booking not found' })
     if (booking.userId !== user.id) return res.status(403).json({ error: 'Forbidden' })
-    if (!['pending', 'confirmed', 'assigned'].includes(booking.status))
+    if (!CANCELLABLE_STATUSES.includes(booking.status))
         return res.status(409).json({ error: `Cannot cancel a ${booking.status} booking` })
+
+    const cancellationCharge = cancellationChargeFor(booking)
 
     await prisma.$transaction(async (tx) => {
         await tx.booking.update({
@@ -164,6 +190,7 @@ bookingsRouter.post('/cancel', protect, async (req, res) => {
             data: {
                 status: 'cancelled',
                 cancelledBy: 'user',
+                cancellationCharge,
             },
         })
 
@@ -201,7 +228,7 @@ bookingsRouter.post('/cancel', protect, async (req, res) => {
         )
     }
 
-    return res.json({ ok: true })
+    return res.json({ ok: true, cancellationCharge })
 })
 
 bookingsRouter.get('/my-bookings', protect, async (req, res) => {

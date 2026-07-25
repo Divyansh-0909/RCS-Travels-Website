@@ -126,6 +126,12 @@ export const useData = create (persist (set =>({
     cancelledBy: null,
     setCancelledBy: (by)=> set(state=> ({cancelledBy: by})),
 
+    // What cancelling right now would cost, computed server-side and refreshed by
+    // the tracking poll. Kept off the client so the warning the rider reads and
+    // the amount the cancel endpoint charges can never drift apart.
+    cancellationCharge: 0,
+    setCancellationCharge: (amount)=> set(state=> ({cancellationCharge: amount ?? 0})),
+
     sharing: true,
     setSharing: (share) => set(state=>({sharing: share})),
 

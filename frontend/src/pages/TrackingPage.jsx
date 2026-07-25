@@ -26,6 +26,29 @@ import RoutePanel from "../components/ui/RoutePanel";
 // Statuses where a driver exists and may be moving — the only ones that poll.
 const LIVE_STATUSES = ["assigned", "en_route", "reached", "started"];
 
+// ETAs are derived from the driver's last known position rather than a Routes
+// call: at one request per 5-second poll that would be both expensive and
+// pointless, since the answer changes by seconds. Straight-line distance over a
+// city average is honest enough for "how far away is my cab" and costs nothing.
+// Swap in a real duration if the driver app ever reports one.
+const AVG_SPEED_KMH = 25;
+
+function haversineKm(from, to) {
+    const toRad = (d) => (d * Math.PI) / 180;
+    const dLat = toRad(to.lat - from.lat);
+    const dLng = toRad(to.lng - from.lng);
+    const a = Math.sin(dLat / 2) ** 2 +
+        Math.cos(toRad(from.lat)) * Math.cos(toRad(to.lat)) * Math.sin(dLng / 2) ** 2;
+    return 2 * 6371 * Math.asin(Math.sqrt(a));
+}
+
+// null whenever either end is unknown, so callers render a dash instead of a
+// confident lie. Never rounds below 1 — "0 mins away" reads as broken.
+const etaMinutes = (from, to) =>
+    from && to ? Math.max(1, Math.round((haversineKm(from, to) / AVG_SPEED_KMH) * 60)) : null;
+
+const minsLabel = (n) => (n == null ? "—" : `${n} min${n === 1 ? "" : "s"}`);
+
 // ---- Shared layout + type scale -------------------------------------------
 // The desktop content column is 377px — OnBoarding's effective control width
 // (290px base × its 1.3 scale) — reached with a real width instead of a
@@ -48,6 +71,10 @@ const TrackingPage = () => {
     const pickupCoords = useData(state => state.pickupCoords)
     const dropCoords = useData(state => state.dropCoords)
     const routePolyline = useData(state => state.routePolyline)
+    // Booked-route metrics, persisted with the rest of the ride form.
+    const distanceKm = useData(state => state.distanceKm)
+    const durationMin = useData(state => state.durationMin)
+    const setCancellationCharge = useData(state => state.setCancellationCharge)
     const fareSource = useData(state => state.fareSource)
     const fare = useData(state => state.fare)
     const vehicleType = useData(state => state.vehicleType);
@@ -82,8 +109,6 @@ const TrackingPage = () => {
         ? { name: "Dev Driver", latitude: 28.6042, longitude: 77.2712 }
         : null);
     const [mapApi, setMapApi] = useState(null);
-    const pickupTime = "5 mins"
-    const dropTime = "30 mins"
 
     useEffect(() => {
         if (status === "cancelled" && cancelledBy === "driver") setError("Driver canceled the ride");
@@ -104,6 +129,9 @@ const TrackingPage = () => {
             if (!data?.error) {
                 if (data.status) setStatus(data.status);
                 setDriver(data.driver ?? null);
+                // Server-computed, so the cancel warning and the actual charge
+                // are always the same number.
+                setCancellationCharge(data.cancellationCharge);
             }
             if (isFirst) setBookingLoading(false);
             // schedule the next tick from the response, not an interval, so a
@@ -143,6 +171,14 @@ const TrackingPage = () => {
         setDriverPosition(mapApi, driverPoint);
         return clearDriverMarker;
     }, [mapApi, mapVisible, driverPoint?.lat, driverPoint?.lng]);
+
+    // Driver -> pickup while they're coming to you; driver -> drop once the ride
+    // is underway, so the number counts down instead of restating the trip length.
+    // Before a driver exists, fall back to the booked route's duration.
+    const pickupTime = minsLabel(etaMinutes(driverPoint, pickupPoint));
+    const dropTime = status === "started"
+        ? minsLabel(etaMinutes(driverPoint, dropPoint) ?? durationMin)
+        : minsLabel(durationMin);
 
     // The time is what a waiting rider actually wants, so the ETA takes the
     // headline and the status/place drops to the line beneath it.
@@ -247,7 +283,7 @@ const TrackingPage = () => {
                                     </div>
                                     <div className="flex items-center justify-between w-full">
                                         <h3 className={`${META} text-[var(--text-muted)]`}>Distance</h3>
-                                        <h3 className={META}>30 KM</h3>
+                                        <h3 className={META}>{distanceKm != null ? `${Math.round(distanceKm * 10) / 10} km` : "—"}</h3>
                                     </div>
                                 </RoutePanel>
 
@@ -310,7 +346,7 @@ const TrackingPage = () => {
                                         </div>
                                         <div className="flex items-center justify-between w-full">
                                             <h3 className={`${META} text-[var(--text-muted)]`}>Distance</h3>
-                                            <h3 className={META}>30 KM</h3>
+                                            <h3 className={META}>{distanceKm != null ? `${Math.round(distanceKm * 10) / 10} km` : "—"}</h3>
                                         </div>
                                     </RoutePanel>
 

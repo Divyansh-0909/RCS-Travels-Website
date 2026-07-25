@@ -1,4 +1,5 @@
 import Icon from '@mdi/react';
+import { useState } from "react";
 import { mdiKeyboardBackspace } from '@mdi/js';
 import Button from "./ui/Button";
 import { useData } from "../hooks/useData";
@@ -39,6 +40,8 @@ const RideDetails = ({ prop }) => {
     const distanceKm = useData(state => state.distanceKm);
     const durationMin = useData(state => state.durationMin);
     const safeRoute = useData(state => state.safeRoute);
+    const cancellationCharge = useData(state => state.cancellationCharge);
+    const [confirmCancel, setConfirmCancel] = useState(false);
     const surcharge = safeRoute ? SAFE_ROUTE_SURCHARGE : 0;
     const baseFare = fare != null ? fare - surcharge : null;
 
@@ -126,8 +129,26 @@ const RideDetails = ({ prop }) => {
                         Talk to support
                     </span>
                 </Button>
-                <Button onClick={handleCancel} prop={{ variant: "negative", width: "100%" }}>
-                    <span className="text-base sm:text-lg">Cancel ride</span>
+                {/* The charge is computed server-side and refreshed by the
+                    tracking poll, so this number is exactly what gets billed.
+                    Two taps required: cancelling costs money at this point, and
+                    a single mis-tap shouldn't. */}
+                {cancellationCharge > 0 && (
+                    <p className="text-xs sm:text-sm text-left text-[var(--text-muted)] leading-snug">
+                        Your driver is already waiting at the pickup point. Cancelling
+                        now charges <span className="text-[var(--text)]">₹{cancellationCharge}</span>
+                        {fare ? ` of the ₹${fare} fare` : ""}.
+                    </p>
+                )}
+                <Button
+                    onClick={cancellationCharge > 0 && !confirmCancel
+                        ? (e) => { e.preventDefault(); setConfirmCancel(true); }
+                        : handleCancel}
+                    prop={{ variant: "negative", width: "100%" }}
+                >
+                    <span className="text-base sm:text-lg">
+                        {confirmCancel ? `Yes, cancel and pay ₹${cancellationCharge}` : "Cancel ride"}
+                    </span>
                 </Button>
             </div>
         </div>
