@@ -56,6 +56,9 @@ model User {
 
   bookings Booking[]
 
+  // Admin user list sorts by createdAt desc; its filters (name/phone/gender)
+  // are all `contains`, which no btree can serve anyway.
+  @@index([createdAt])
   @@map("users")
 }
 
@@ -78,6 +81,10 @@ model Driver {
   location DriverLocation?
   bookings Booking[]
 
+  // The eligibility filter driverAssignment applies to every candidate.
+  @@index([isOnline, isActive, verificationStatus, vehicleType])
+  // Admin driver list sort.
+  @@index([createdAt])
   @@map("drivers")
 }
 
@@ -93,6 +100,11 @@ model DriverLocation {
 
   driver Driver @relation(fields: [driverId], references: [id], onDelete: Cascade)
 
+  // driverAssignment scans this by lat/lng bounding box on every ring of every
+  // assignment — the hotspot flagged in ROADMAP. A btree can only range-scan the
+  // leading column, so this narrows by latitude then filters longitude; still far
+  // better than a seq scan. Proper fix is PostGIS + GiST, which is a bigger change.
+  @@index([latitude, longitude])
   @@map("driver_locations")
 }
 
@@ -129,6 +141,25 @@ model Booking {
   user   User    @relation(fields: [userId], references: [id])
   driver Driver? @relation(fields: [driverId], references: [id])
 
+  // Postgres does not index foreign keys automatically, and every index below is
+  // driven by a real call site rather than by guesswork.
+  //
+  // my-bookings, recent-places and the account-download PDF all read one user's
+  // rides newest-first; this serves the filter and the sort together, and covers
+  // the user FK for parent deletes.
+  @@index([userId, createdAt])
+  // The two guards that run before any write: the "already have an active ride"
+  // check on every create, and the live-ride check before account deletion.
+  @@index([userId, status])
+  // getDriver loads each candidate's live bookings to test the sharing corridor —
+  // once per candidate, per radius ring. Also covers the driver FK.
+  @@index([driverId, status])
+  // assignScheduledRides polls this exact shape every 5 minutes, forever.
+  @@index([status, scheduledAt])
+  // Admin booking list: arbitrary filters, always sorted newest-first.
+  @@index([createdAt])
+  // Admin co-rider grouping fetches every booking sharing a group id.
+  @@index([shareGroupId])
   @@map("bookings")
 }
 
