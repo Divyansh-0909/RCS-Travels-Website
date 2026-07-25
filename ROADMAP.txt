@@ -60,6 +60,57 @@ IMPORTANT:
 - Complete ThemeToggle.jsx and add Appearance option in profile
 - notification about if a driver needs to be approved by the admin
 - if a not shared ride is not assgined till the end then notify user about it and ask them to make it shared.
+- OPTIMIZE SCHEDULED DRIVER ASSIGNMENT (services/assignScheduledRides.js).
+  Today: setInterval every 5 min -> findMany(status=confirmed, scheduledAt <= now+12h)
+  -> sequential `await getDriver(booking.id)` per booking, one booking at a time.
+
+  WHAT IS ACTUALLY WRONG, ordered by how much it costs:
+
+  1. THE 12-HOUR WINDOW IS THE SINGLE BIGGEST WASTE. A ride booked 12 h ahead enters
+     the candidate set immediately and gets a FULL getDriver sweep (20->80 km rings,
+     one sequential FCM per candidate) every 5 minutes until it is assigned — about
+     144 complete sweeps for one ride, nearly all of them pointless because no
+     driver commits to a pickup half a day out. PHASE 2 below already specifies the
+     right window: scheduledAt <= now + 60 min, and 3 h ahead for outstation. The
+     code never matched its own spec. Fixing only this cuts the work ~12x and is
+     a one-line change. Do this first.
+
+  2. getDriver NOTIFIES DRIVERS ONE AT A TIME AND WAITS FOR EACH. With a 30 s accept
+     window and 10 candidates that is 5 minutes to fill a single booking. Real
+     ride-hailing broadcasts to the nearest K drivers simultaneously and takes the
+     first accept. That is the structural fix; the "30s -> 20s" item already on this
+     list only shrinks the constant, it does not change the shape.
+
+  3. setInterval WITH AN ASYNC CALLBACK OVERLAPS ITSELF. It does not wait for the
+     previous run to finish, and a tick can easily exceed 5 min (see #2). Two runs
+     then sweep the same booking concurrently and double-notify the same drivers.
+     claimBooking (added with the async-assignment work) keeps the DB coherent, but
+     the duplicate FCM is real and a driver sees the same ride twice. Fix: a
+     self-scheduling setTimeout that queues the next tick only when the previous one
+     finishes — the exact shape TrackingPage's status poll already uses.
+
+  4. NO ATTEMPT TRACKING, SO NO BACKOFF AND NO ALERT LIMIT. Every tick retries every
+     eligible booking identically, and getDriver's `triedDriverIds` set is per-call,
+     so the same unreachable drivers get pinged again next tick. Worse, the "no
+     driver found" admin WhatsApp fires EVERY 5 MIN in the final hour — 12 messages
+     for one failing booking. Add to Booking: lastAssignmentAttemptAt,
+     assignmentAttempts, adminAlertedAt. Then skip anything attempted in the last
+     N minutes, alert the admin once, and the sweep becomes idempotent across
+     restarts instead of restarting its memory every time Render wakes.
+
+  5. IT ONLY RUNS WHILE RENDER IS AWAKE. Free tier sleeps; the keep-alive cron
+     mitigates that but does not guarantee it. A 06:00 pickup can be missed
+     entirely if nothing pinged the service overnight.
+
+  ORDER: 1 (one line, biggest win) -> 3 (correctness) -> 4 (schema + backoff)
+  -> 2 (restructures getDriver) -> 5.
+
+  LATER, NOT NOW: polling is a stand-in for a scheduler. The real design enqueues a
+  job at (scheduledAt - leadTime) when the booking is created, so nothing scans for
+  work at all. Supabase ships pg_cron and pg_net, so this is reachable without new
+  infrastructure — but it is not worth the complexity until volume justifies it,
+  and items 1-4 remove most of the pain for a fraction of the effort. Do NOT start
+  here.
 - !! FILL IN SAFE_WAYPOINT in backend/services/rideEstimate.js — a real lat/lng on the lit
   highway stretch. It is currently null, which means the "Safer route?" toggle on
   VehicleSelect CHARGES ₹150 AND CHANGES NOTHING about the road path. Do not ship the
