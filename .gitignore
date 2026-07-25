@@ -46,6 +46,9 @@ prisma/*.db-journal
 # =========================
 *.sql
 *.dump
+# ...but Prisma migrations ARE source. Without them `prisma migrate deploy`
+# has nothing to apply and a deployed DB silently never gets schema changes.
+!backend/prisma/migrations/**/*.sql
 
 # =========================
 # Sessions / Temp Files
