@@ -62,7 +62,7 @@ function useExitAnim(open, duration) {
 // typed chars, recent places when (near-)empty. select() resolves coords
 // (recents carry their own; Google picks cost one Details call); manual
 // edits clear them.
-function useAddressSuggestions(value, setValue, setCoords, api, exclusiveRef) {
+function useAddressSuggestions(value, setValue, setCoords, api, exclusiveRef, closeOthers) {
   const recentPlaces = useData(state => state.recentPlaces);
   const addRecentPlace = useData(state => state.addRecentPlace);
   const [googleSuggestions, setGoogleSuggestions] = useState([]);
@@ -72,10 +72,12 @@ function useAddressSuggestions(value, setValue, setCoords, api, exclusiveRef) {
   const cacheRef = useRef(new Map());
   const dropdown = useExitAnim(expanded, 220);
 
-  // Only one field's panel may be open at a time: opening this one closes
-  // whichever field registered itself in the shared exclusiveRef before.
+  // Only one panel may be open on the form at a time: opening this one closes
+  // whichever field registered itself in the shared exclusiveRef before, and
+  // closeOthers dismisses the non-address panels (timing, calendar).
   function close() { setExpanded(false); }
   function open() {
+    closeOthers?.();
     if (exclusiveRef && exclusiveRef.current !== close) {
       exclusiveRef.current?.();
       exclusiveRef.current = close;
@@ -308,10 +310,14 @@ const OnBoarding = () => {
   }, [isSignedIn]);
 
   // One autocomplete instance per address field; the shared ref keeps at most
-  // one panel open at a time.
+  // one panel open at a time. The two closers below extend that guarantee
+  // across all four panels — address suggestions, timing and calendar — so
+  // opening any one of them dismisses the rest.
   const suggestionCloserRef = useRef(null);
-  const pickupAutocomplete = useAddressSuggestions(pickupLocation, setPickup, setPickupCoords, api, suggestionCloserRef)
-  const dropAutocomplete = useAddressSuggestions(dropLocation, setDrop, setDropCoords, api, suggestionCloserRef)
+  const closeSuggestions = () => { suggestionCloserRef.current?.(); };
+  const closeTimingPanels = () => { setExpand(false); setExpandCalendar(false); };
+  const pickupAutocomplete = useAddressSuggestions(pickupLocation, setPickup, setPickupCoords, api, suggestionCloserRef, closeTimingPanels)
+  const dropAutocomplete = useAddressSuggestions(dropLocation, setDrop, setDropCoords, api, suggestionCloserRef, closeTimingPanels)
   const isMobile = useIsMobile();
 
   async function handleSubmit(e) {
@@ -412,7 +418,9 @@ const OnBoarding = () => {
             </div>
           </div>
           : <div className="flex flex-col text-center lg:text-left justify-center items-center lg:items-start gap-1 sm:gap-5">
-            <div className="flex flex-col items-center lg:items-start gap-0 mb-2 sm:mb-4">
+            {/* no sm:mb — the container's gap-5 already separates the heading
+                from the form; the extra margin stacked on top of it */}
+            <div className="flex flex-col items-center lg:items-start gap-0 mb-2 sm:mb-0">
               <h2 className="sm:text-2xl text-xl font-normal leading-tight text-[var(--text-muted)]">
                 Hello {username?.split(" ")[0] || user?.firstName || "there"}!
               </h2>
@@ -435,7 +443,7 @@ const OnBoarding = () => {
 
             {(!(activeBooking && authed && activeBooking.scheduledAt) || showForm) && (<>
               <form
-                className="flex flex-col sm:pl-3 justify-center items-start gap-0.5 sm:gap-5 mt-1 sm:mt-3"
+                className="flex flex-col sm:pl-3 justify-center items-start gap-0.5 sm:gap-5 mt-1 sm:mt-1"
                 noValidate
                 onSubmit={handleSubmit}
               >
@@ -454,7 +462,11 @@ const OnBoarding = () => {
                       className="relative px-3"
                     >
                       <div
-                        onClick={() => setExpand(!expand)}
+                        onClick={() => {
+                          closeSuggestions();
+                          setExpandCalendar(false);
+                          setExpand(!expand);
+                        }}
                         className="w-full flex justify-between items-center gap-2"
                       >
                         <div className="flex justify-center items-center gap-2">
@@ -498,6 +510,7 @@ const OnBoarding = () => {
 
                     <Button
                       onClick={() => {
+                        closeSuggestions();
                         setExpand(false)
                         setExpandCalendar(!expandCalendar)
                       }

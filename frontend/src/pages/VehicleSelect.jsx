@@ -52,6 +52,16 @@ const STACK = "gap-6 sm:gap-8";
 const GROUP = "gap-2 sm:gap-3";
 const PAIR = "gap-0.5 sm:gap-1";
 
+// The three searching illustrations are a fixed 290×200 canvas whose internals
+// are positioned in px, so they can't reflow — on phones they're scaled as
+// artwork instead. 290px is the full COL width, which would otherwise overflow
+// the card's p-3 padding. The box reserves the scaled size so layout stays honest.
+const Illustration = ({ children }) => (
+    <div className="w-[261px] h-[180px] sm:w-[290px] sm:h-[200px]">
+        <div className="w-[290px] origin-top-left scale-90 sm:scale-100">{children}</div>
+    </div>
+);
+
 const VehicleSelect = ()=>{
     const phone=useData(state=>state.phone)
     const scheduledTime= useData(state=>state.scheduledTime)
@@ -460,12 +470,20 @@ const VehicleSelect = ()=>{
             }}
             className={`${vehicleType === type ? "outline-2" : "outline-0"} px-3 sm:px-4 outline-primary focus:outline-2`}
         >
-            {/* tighter inset at 290px so "Book any" keeps its name, seats and
-                price range on one line each, like the other two cards */}
+            {/* tighter inset at 290px so "Book any" keeps its name and price
+                range on one line each, like the other two cards */}
             <div className="flex justify-between items-center w-full gap-2 sm:gap-3">
                 <div className="text-left flex flex-col justify-center items-start gap-0.5">
-                    <h4 className="text-lg sm:text-xl font-medium text-[var(--text)] leading-tight">{name}</h4>
-                    <p className="text-sm sm:text-base text-[var(--text-muted)] leading-tight">{seats} · {ETA_MIN[type]} min away</p>
+                    {/* Seat count sits with the name as a qualifier — lighter and
+                        muted so it reads as part of the label, not a second title.
+                        "Book any" passes none: its whole point is that the seat
+                        count isn't decided yet, and "4-6 Seater" only restates
+                        the name. */}
+                    <h4 className="text-lg sm:text-xl font-medium text-[var(--text)] leading-tight">
+                        {name}
+                        {seats && <span className="ml-1.5 text-sm sm:text-base font-normal text-[var(--text-muted)]">{seats}</span>}
+                    </h4>
+                    <p className="text-sm sm:text-base text-[var(--text-muted)] leading-tight">{ETA_MIN[type]} min away</p>
                 </div>
                 <div key={sharing ? "share" : "solo"} className="animate-fade-swap text-right flex flex-col justify-center items-end gap-0.5">
                     <span className={`flex gap-1 leading-tight ${solo}`}> <span className={`${soloVisiblity}`}>Solo: </span>{priceSolo}</span>
@@ -549,11 +567,13 @@ const VehicleSelect = ()=>{
 
                             {/* no w-full — it beats COL's w-[290px] at the base
                                 breakpoint and the card goes full-bleed on mobile */}
-                            <div key={illusIndex} className={`animate-illus-fade rounded-xl border border-[var(--foreground)]/30 bg-[var(--background-muted)] p-3 flex flex-col items-center sm:items-start justify-center gap-3 ${COL}`}>
+                            {/* artwork and its caption stay centred at both
+                                breakpoints — this card is a promo, not a control */}
+                            <div key={illusIndex} className={`animate-illus-fade rounded-xl border border-[var(--foreground)]/30 bg-[var(--background-muted)] p-3 flex flex-col items-center justify-center gap-3 ${COL}`}>
                                 {illusIndex === 0 && (
                                     <>
-                                        <PriceIllustration />
-                                        <div className="w-full text-left flex flex-col gap-1 px-1 pb-1">
+                                        <Illustration><PriceIllustration /></Illustration>
+                                        <div className="w-full text-center flex flex-col gap-1 px-1 pb-1">
                                             <h3 className="text-lg sm:text-xl font-medium text-[var(--text)] leading-tight">Lowest fares on campus.</h3>
                                             <p className="text-sm sm:text-base leading-relaxed text-[var(--text-muted)]">Save up to 40% over cabs, every ride.</p>
                                         </div>
@@ -561,8 +581,8 @@ const VehicleSelect = ()=>{
                                 )}
                                 {illusIndex === 1 && (
                                     <>
-                                        <SafetyIllustration />
-                                        <div className="w-full text-left flex flex-col gap-1 px-1 pb-1">
+                                        <Illustration><SafetyIllustration /></Illustration>
+                                        <div className="w-full text-center flex flex-col gap-1 px-1 pb-1">
                                             <h3 className="text-lg sm:text-xl font-medium text-[var(--text)] leading-tight">Every ride, verified safe.</h3>
                                             <p className="text-sm sm:text-base leading-relaxed text-[var(--text-muted)]">Background-checked drivers. Real-time GPS.</p>
                                         </div>
@@ -570,8 +590,8 @@ const VehicleSelect = ()=>{
                                 )}
                                 {illusIndex === 2 && (
                                     <>
-                                        <WhatsAppIllustration />
-                                        <div className="w-full text-left flex flex-col gap-1 px-1 pb-1">
+                                        <Illustration><WhatsAppIllustration /></Illustration>
+                                        <div className="w-full text-center flex flex-col gap-1 px-1 pb-1">
                                             <h3 className="text-lg sm:text-xl font-medium text-[var(--text)] leading-tight">Same WhatsApp. Zero effort.</h3>
                                             <p className="text-sm sm:text-base leading-relaxed text-[var(--text-muted)]">Book like you always have. We handle the rest.</p>
                                         </div>
@@ -671,7 +691,7 @@ const VehicleSelect = ()=>{
                             <form className={`flex flex-col justify-center items-stretch gap-2 ${COL}`} noValidate onSubmit={handleSubmit}>
                                 {vehicleCard(4, "Cab Economy", "4 Seater", label(4, "solo"), label(4, "sharing"))}
                                 {vehicleCard(6, "Cab XL", "6 Seater", label(6, "solo"), label(6, "sharing"))}
-                                {vehicleCard(1, "Book any", "4-6 Seater", rangeLabel("solo"), rangeLabel("sharing"))}
+                                {vehicleCard(1, "Book any", null, rangeLabel("solo"), rangeLabel("sharing"))}
 
                                 {/* Both ride preferences live in one card with a
                                     hairline between them, so they read as a

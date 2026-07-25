@@ -416,22 +416,26 @@ const TrackingPage = () => {
                                         screen, so it leads the body */}
                                     {driverCard}
 
-                                    {/* trip card: OTP above the hairline, where
-                                        you're going below it */}
-                                    <div className="w-full rounded-xl border border-[var(--foreground)]/30 bg-[var(--background-muted)] px-3.5 sm:px-4 text-left">
-                                        <div className={`${status === "en_route" || status === "reached" ? "block" : "hidden"}`}>
+                                    {/* Only the OTP earns a card — it's the one
+                                        thing the rider reads out loud. Rendered
+                                        conditionally so the border never shows
+                                        around an empty box. */}
+                                    {(status === "en_route" || status === "reached") && (
+                                        <div className="w-full rounded-xl border border-[var(--foreground)]/30 bg-[var(--background-muted)] px-3.5 sm:px-4 text-left">
                                             <div className="flex items-center justify-between w-full py-3">
                                                 <h3 className={`${META} text-[var(--text-muted)]`}>OTP</h3>
                                                 <h3 className="text-xl sm:text-3xl font-semibold tracking-[0.25em] -mr-[0.25em]">{bookingCode}</h3>
                                             </div>
-                                            <div className="w-full h-px bg-[var(--foreground)]/10" />
                                         </div>
-                                        <div className="py-3">
-                                            {dropSummary}
-                                        </div>
-                                    </div>
+                                    )}
 
-                                    <div className="w-full flex flex-col gap-2">
+                                    {/* where you're going sits straight on the sheet */}
+                                    {dropSummary}
+
+                                    {/* extra top margin: with the drop row now on
+                                        the bare sheet, the container gap alone
+                                        let the notices crowd it */}
+                                    <div className="w-full flex flex-col gap-2 mt-4">
                                         {tollNotice}
                                         {extraFareNotice}
                                     </div>
