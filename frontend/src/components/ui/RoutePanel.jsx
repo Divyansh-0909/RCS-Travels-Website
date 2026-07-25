@@ -1,12 +1,6 @@
-// Pickup → drop route summary inside a filled panel, shared by every screen
-// that shows a booking's route. The first comma segment is the stop's title;
-// the rest becomes a muted subtitle (omitted when the address has no comma).
-// Optional children render below a hairline divider inside the same card —
-// use for meta rows (fare, distance, status) that belong to the trip.
-//
-// Layout: a 12px rail column holds the markers; each dot lines up with its
-// address title line (h3 line-height 28px → dot top offset 8px), not the
-// center of the whole address block.
+// Shared pickup → drop route summary. First comma segment is the stop title,
+// the rest a muted subtitle. Children render below a divider (meta rows).
+// The 12px rail aligns each marker with its title line, not the block center.
 const splitAddress = (address) => {
     const [title, ...rest] = (address ?? "").split(",");
     return { title, subtitle: rest.join(",").trim() };

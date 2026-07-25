@@ -4,14 +4,9 @@ import { mdiPhone, mdiWhatsapp, mdiEmailOutline, mdiChevronDown } from '@mdi/js'
 import AccountLayout from "../components/ui/AccountLayout";
 import SettingRow from "../components/ui/SettingRow";
 import CircleIconButton from "../components/ui/CircleIconButton";
+import { supportPhoneDisplay, supportEmail, callSupport, emailSupport, openSupportWhatsApp } from "../constants/support";
 
 const items = ["FAQ", "Contact Us", "Cancellation"]
-
-// Same placeholder contact details as Footer.jsx; swap both together when the
-// real support number goes live (see ROADMAP: helpline is a placeholder).
-const SUPPORT_PHONE = "+911234567890"
-const SUPPORT_WHATSAPP = "https://wa.me/911234567890"
-const SUPPORT_EMAIL = "support@rcstravels.in"
 
 const faqs = [
     {
@@ -49,9 +44,9 @@ const faqs = [
 ]
 
 const contacts = [
-    ["Call us", "Talk to us about a booking or an ongoing ride.", "+91 12345 67890", mdiPhone, () => { window.location.href = `tel:${SUPPORT_PHONE}` }],
-    ["WhatsApp us", "Chat with us. You can even book your ride right from WhatsApp.", "+91 12345 67890", mdiWhatsapp, () => { window.open(SUPPORT_WHATSAPP, "_blank", "noreferrer") }],
-    ["Email us", "For feedback, complaints, or anything that can wait a little.", SUPPORT_EMAIL, mdiEmailOutline, () => { window.location.href = `mailto:${SUPPORT_EMAIL}` }],
+    ["Call us", "Talk to us about a booking or an ongoing ride.", supportPhoneDisplay(), mdiPhone, callSupport],
+    ["WhatsApp us", "Chat with us. You can even book your ride right from WhatsApp.", supportPhoneDisplay(), mdiWhatsapp, () => openSupportWhatsApp()],
+    ["Email us", "For feedback, complaints, or anything that can wait a little.", supportEmail(), mdiEmailOutline, emailSupport],
 ]
 
 const cancellationPolicy = [

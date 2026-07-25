@@ -4,8 +4,7 @@
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 import errorAnimation from "../../assets/Error.json";
 
-// Stringify once at module load — passing the data inline avoids a runtime
-// fetch of the JSON, so the animation starts without a load delay.
+// Stringify once at module load — inline data avoids a runtime JSON fetch delay.
 const ERROR_DATA = JSON.stringify(errorAnimation);
 
 const ErrorMark = ({

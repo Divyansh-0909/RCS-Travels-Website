@@ -5,6 +5,7 @@ import { useData } from "../hooks/useData";
 import { useApi } from "../hooks/useApi";
 import { useViewNavigate } from "../hooks/useViewNavigate";
 import waLogo from '../assets/whatsapp-logo.webp';
+import { openSupportWhatsApp } from "../constants/support";
 import RoutePanel from "./ui/RoutePanel";
 import { statusLabels } from "../constants/statusLabels";
 
@@ -20,7 +21,8 @@ const RideDetails = ({ prop }) => {
     const setActiveBooking = useData(state => state.setActiveBooking);
     const fare = useData(state => state.fare);
     const status = useData(state => state.status);
-    const distance = "30 KM";
+    const distanceKm = useData(state => state.distanceKm);
+    const durationMin = useData(state => state.durationMin);
 
     async function handleCancel(e) {
         e.preventDefault();
@@ -66,15 +68,23 @@ const RideDetails = ({ prop }) => {
                         <h4 className="text-base sm:text-lg text-[var(--text-muted)]">Fare</h4>
                         <h4 className="text-base sm:text-lg">₹{fare}</h4>
                     </div>
-                    <div className="flex items-center justify-between w-full">
-                        <h4 className="text-base sm:text-lg text-[var(--text-muted)]">Distance</h4>
-                        <h4 className="text-base sm:text-lg">{distance}</h4>
-                    </div>
+                    {distanceKm != null && (
+                        <div className="flex items-center justify-between w-full">
+                            <h4 className="text-base sm:text-lg text-[var(--text-muted)]">Distance</h4>
+                            <h4 className="text-base sm:text-lg">{Math.round(distanceKm * 10) / 10} km</h4>
+                        </div>
+                    )}
+                    {durationMin != null && (
+                        <div className="flex items-center justify-between w-full">
+                            <h4 className="text-base sm:text-lg text-[var(--text-muted)]">Ride time</h4>
+                            <h4 className="text-base sm:text-lg">{durationMin} min</h4>
+                        </div>
+                    )}
                 </RoutePanel>
             </div>
             <div className="flex flex-col justify-center items-center sm:items-start gap-2 sm:gap-3">
                 <Button
-                    onClick={() => window.open("https://wa.me/918586088085?text=Hi%2C%20I%20need%20help%20with%20my%20ride.", "_blank", "noopener,noreferrer")}
+                    onClick={() => openSupportWhatsApp("Hi, I need help with my ride.")}
                     prop={{ variant: "input", width: "290px", bg: "var(--background-muted)", border: false }}
                 >
                     <span className="flex items-center justify-center gap-2">

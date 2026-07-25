@@ -11,6 +11,7 @@ import startAssignmentJob from './services/assignScheduledRides.js'
 import usersRouter from './routes/users.js'
 import hybridAuthRouter from './routes/hybridAuth.js'
 import adminRouter from './routes/admin.js'
+import googleRouter from './routes/googleAPI.js'
 
 const app = express()
 const PORT = process.env.PORT || 5000
@@ -25,6 +26,7 @@ app.use('/api/driver', driverRouter)
 app.use('/api/users', usersRouter)
 app.use('/api/auth', hybridAuthRouter)
 app.use('/api/admin', adminRouter)
+app.use('/api/googleAPI', googleRouter)
 
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok' })

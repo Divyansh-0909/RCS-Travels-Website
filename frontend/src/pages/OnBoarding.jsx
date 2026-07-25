@@ -1,18 +1,20 @@
 import mobileBackgroundIllustration from "../assets/Mobile.webp";
 import laptopBackgroundIllustration from "../assets/Laptop.webp";
 import Button from "../components/ui/Button";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Icon from "@mdi/react";
 import {
   mdiClockTimeFourOutline,
   mdiChevronDown,
   mdiCalendarMonthOutline,
+  mdiClose,
 } from "@mdi/js";
 import Input from "../components/ui/Input";
 import { useApi } from "../hooks/useApi";
 import { useViewNavigate } from "../hooks/useViewNavigate";
 import { DateTimeSelector } from "../components/ui/DateTimeSelector";
 import { useData } from "../hooks/useData";
+import { useIsMobile } from "../hooks/useIsMobile";
 import { useSignIn, useAuth, useUser } from "@clerk/clerk-react";
 import RoutePanel from "../components/ui/RoutePanel";
 import { statusLabels } from "../constants/statusLabels";
@@ -39,6 +41,168 @@ function useExitAnim(open, duration) {
   return { mounted, closing };
 }
 
+// Autocomplete state for one address field: debounced Google matches at 3+
+// typed chars, recent places when (near-)empty. select() resolves coords
+// (recents carry their own; Google picks cost one Details call); manual
+// edits clear them.
+function useAddressSuggestions(value, setValue, setCoords, api, exclusiveRef) {
+  const recentPlaces = useData(state => state.recentPlaces);
+  const addRecentPlace = useData(state => state.addRecentPlace);
+  const [googleSuggestions, setGoogleSuggestions] = useState([]);
+  const [expanded, setExpanded] = useState(false);
+  const justSelectedRef = useRef(false);
+  // input -> fetched suggestions; repeat queries skip the API and the debounce
+  const cacheRef = useRef(new Map());
+  const dropdown = useExitAnim(expanded, 220);
+
+  // Only one field's panel may be open at a time: opening this one closes
+  // whichever field registered itself in the shared exclusiveRef before.
+  function close() { setExpanded(false); }
+  function open() {
+    if (exclusiveRef && exclusiveRef.current !== close) {
+      exclusiveRef.current?.();
+      exclusiveRef.current = close;
+    }
+    setExpanded(true);
+  }
+
+  const typed = (value ?? "").trim().length >= 3;
+
+  let recents = [];
+  if (recentPlaces.length) {
+    const [latest, ...rest] = [...recentPlaces].sort((a, b) => b.lastUsedAt - a.lastUsedAt);
+    recents = [latest, ...rest.sort((a, b) => b.count - a.count)];
+  }
+
+  const items = typed
+    ? googleSuggestions.map(s => ({ id: s.placePrediction?.placeId, label: s.placePrediction?.text?.text }))
+    : recents.map(p => ({ id: p.label, label: p.label, lat: p.lat, lng: p.lng }));
+
+  // Only react to actual value CHANGES: a store-prefilled value on mount (and
+  // StrictMode's double effect run) must not auto-open the panel or wipe
+  // coords. A one-shot "first run" flag isn't enough — StrictMode consumes it
+  // on the throwaway run and the real run would fetch anyway.
+  const prevValueRef = useRef(value);
+
+  useEffect(() => {
+    if (value === prevValueRef.current) return;
+    prevValueRef.current = value;
+    if (justSelectedRef.current) {
+      justSelectedRef.current = false;
+      return;
+    }
+    setCoords(null);
+    if (!value || value.trim().length < 3) {
+      // keep the panel open — while focused it now shows recents instead
+      setGoogleSuggestions([]);
+      return;
+    }
+    const cacheKey = value.trim().toLowerCase();
+    const cached = cacheRef.current.get(cacheKey);
+    if (cached) {
+      setGoogleSuggestions(cached);
+      if (cached.length > 0) open(); else setExpanded(false);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      const data = await api.placesAutoComplete(value);
+      if (data.error) {
+        // errors are not cached — the next keystroke should retry
+        setGoogleSuggestions([]);
+        setExpanded(false);
+        return;
+      }
+      const suggestions = data.suggestions ?? [];
+      cacheRef.current.set(cacheKey, suggestions);
+      setGoogleSuggestions(suggestions);
+      if (suggestions.length > 0) open(); else setExpanded(false);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [value]);
+
+  async function select(item) {
+    justSelectedRef.current = true;
+    setValue(item.label);
+    setExpanded(false);
+
+    let coords = item.lat != null ? { lat: item.lat, lng: item.lng } : null;
+    if (!coords && item.id) {
+      const data = await api.placeDetails(item.id);
+      if (!data.error && data.lat != null) coords = { lat: data.lat, lng: data.lng };
+    }
+    setCoords(coords);
+    addRecentPlace(item.label, coords);
+  }
+
+  function onFocus() {
+    if (items.length) open();
+  }
+
+  function onBlur() {
+    setExpanded(false);
+  }
+
+  return { items, dropdown, select, onFocus, onBlur };
+}
+
+// Suggestion panel for an address input. `above` opens it over the input and
+// reverses rows so the best match stays nearest the input. onMouseDown is
+// prevented panel-wide: blur fires before click and would close the panel
+// before a row's onClick could run.
+const SuggestionDropdown = ({ anim, items, onSelect, above = false }) => {
+  const panelRef = useRef(null);
+  const itemsKey = items.map(i => i.id).join("|");
+
+  // Opening upward: start scrolled to the bottom, where the best matches sit.
+  useEffect(() => {
+    if (above && panelRef.current)
+      panelRef.current.scrollTop = panelRef.current.scrollHeight;
+  }, [above, itemsKey, anim.mounted]);
+
+  if (!anim.mounted || items.length === 0) return null;
+  const rows = above ? [...items].reverse() : items;
+  return (
+    <div
+      ref={panelRef}
+      onMouseDown={(e) => e.preventDefault()}
+      className={`${anim.closing ? "animate-dropdown-out" : "animate-dropdown"
+        } absolute z-10 ${above ? "bottom-13 sm:bottom-15 origin-bottom" : "top-13 sm:top-15"} sm:ml-7 scale-[1] sm:scale-[1.3]
+        w-[290px] max-h-[200px] overflow-y-auto scrollbar-inset
+        border border-[var(--foreground)]/15 bg-[var(--background-muted)]
+        rounded-[16px] shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)]`}
+    >
+      <ul className="w-full flex flex-col justify-center items-center py-2">
+        {rows.map((item, index) => {
+          const commaIndex = item.label.indexOf(",");
+
+          const mainLocation =
+            commaIndex === -1 ? item.label : item.label.slice(0, commaIndex);
+
+          const remainingLocation =
+            commaIndex === -1 ? "" : item.label.slice(commaIndex + 1).trim();
+
+          return (
+            <li
+              className="w-[97%] px-3 cursor-pointer rounded-xl transition-colors duration-250 hover:bg-[var(--background-primary)] active:bg-[var(--background-primary)]"
+              onClick={() => onSelect(item)}
+              key={item.id}>
+              <div
+                className={`py-3 ${index !== rows.length - 1
+                  ? "border-b border-[var(--foreground)]/20"
+                  : ""
+                  }`}
+              >
+                <h4 className="text-left text-base">{mainLocation}</h4>
+                <p className="text-left text-xs text-[var(--text-muted)]">{remainingLocation}</p>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+};
+
 const ACTIVE_STATUSES = ["pending", "confirmed", "assigned", "en_route", "reached", "started"];
 
 const OnBoarding = () => {
@@ -50,6 +214,8 @@ const OnBoarding = () => {
   const setPickup = useData(state => state.setPickup);
   const dropLocation = useData(state => state.dropLocation);
   const setDrop = useData(state => state.setDrop)
+  const setPickupCoords = useData(state => state.setPickupCoords);
+  const setDropCoords = useData(state => state.setDropCoords);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const scheduledTime = useData(state => state.scheduledTime);
@@ -60,10 +226,11 @@ const OnBoarding = () => {
   const setBookingCode = useData(state => state.setBookingCode);
   const activeBooking = useData(state => state.activeBooking);
   const setActiveBooking = useData(state => state.setActiveBooking);
+  const mergeRecentPlaces = useData(state => state.mergeRecentPlaces);
   const { isSignedIn } = useAuth();
   const devAuthBypass = useData(state => state.devAuthBypass);
-  // Render gates only — the booking-hydration effect below stays on the real
-  // isSignedIn so the dev preview never hits the API.
+  // Render gate only; the hydration effect stays on real isSignedIn so the
+  // dev preview never hits the API.
   const authed = isSignedIn || devAuthBypass;
   const { user } = useUser();
   const username = useData(state => state.username);
@@ -71,8 +238,7 @@ const OnBoarding = () => {
   const api = useApi();
   const navigate = useViewNavigate();
 
-  // Copy the active booking into the shared tracking fields, then open the
-  // tracking page. 
+  // Copy the active booking into the shared tracking fields and open tracking.
   function openActiveBooking() {
     if (!activeBooking) return;
     setBookingId(activeBooking.id);
@@ -80,6 +246,10 @@ const OnBoarding = () => {
     setStatus(activeBooking.status);
     setPickup(activeBooking.pickupAddress);
     setDrop(activeBooking.dropAddress);
+    // the booking's own coords, so tracking maps the ride that was booked
+    // (the form's coords may since have moved on to another route)
+    if (activeBooking.pickupLat != null) setPickupCoords({ lat: activeBooking.pickupLat, lng: activeBooking.pickupLng });
+    if (activeBooking.dropLat != null) setDropCoords({ lat: activeBooking.dropLat, lng: activeBooking.dropLng });
     setFare(activeBooking.fare);
     setScheduledTime(activeBooking.scheduledAt);
     navigate("/booking/test");
@@ -88,15 +258,16 @@ const OnBoarding = () => {
   const timingDropdown = useExitAnim(expand, 220);
   const calendarDropdown = useExitAnim(expandCalendar, 300);
 
-  // Hydrate `activeBooking` from the user's active/upcoming booking so the
-  // current-trip and scheduled-ride cards survive a fresh page load.
-  // Without this the store resets on every reload and the cards vanish.
-  // This intentionally does NOT touch the form fields (pickup/drop/scheduled
-  // time) — those belong to the new-booking form and are handed to the
-  // tracking page only via openActiveBooking().
+  // Hydrate activeBooking so the trip cards survive reloads. Deliberately
+  // leaves the form fields alone — they belong to the new-booking form.
   useEffect(() => {
     if (!isSignedIn) return;
     let cancelled = false;
+    (async () => {
+      const data = await api.getRecentPlaces();
+      if (cancelled || data?.error || !data?.places) return;
+      mergeRecentPlaces(data.places);
+    })();
     (async () => {
       const data = await api.getMyBookings();
       if (cancelled || data?.error || !data?.bookings) return;
@@ -108,12 +279,23 @@ const OnBoarding = () => {
         status: active.status,
         pickupAddress: active.pickupAddress,
         dropAddress: active.dropAddress,
+        pickupLat: active.pickupLat,
+        pickupLng: active.pickupLng,
+        dropLat: active.dropLat,
+        dropLng: active.dropLng,
         fare: active.fare,
         scheduledAt: active.scheduledAt ? new Date(active.scheduledAt) : null,
       });
     })();
     return () => { cancelled = true; };
   }, [isSignedIn]);
+
+  // One autocomplete instance per address field; the shared ref keeps at most
+  // one panel open at a time.
+  const suggestionCloserRef = useRef(null);
+  const pickupAutocomplete = useAddressSuggestions(pickupLocation, setPickup, setPickupCoords, api, suggestionCloserRef)
+  const dropAutocomplete = useAddressSuggestions(dropLocation, setDrop, setDropCoords, api, suggestionCloserRef)
+  const isMobile = useIsMobile();
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -154,8 +336,7 @@ const OnBoarding = () => {
         return;
       }
 
-      // Different time, but an identical pickup + drop is almost certainly a
-      // duplicate of the ride they already have.
+      // Same route at a different time is almost certainly a duplicate.
       if (sameRoute) {
         setError("You already have an active booking for this route");
         return;
@@ -389,43 +570,104 @@ const OnBoarding = () => {
                   )}
                 </div>
 
-                <Input
-                  prop={{
-                    type: "text",
-                    id: "pickup-location",
-                    name: "pickup-location",
-                    placeholder: "Pickup Location",
-                    value: pickupLocation,
-                    onChangeFn: (value) => {
-                      setPickup(value);
-                      if (error === "No Pickup Location") {
-                        setError(null);
-                      }
-                    },
-                    error: error === "No Pickup Location",
-                    bg: "var(--background-muted)",
-                  }}
-                  className="scale-[1] sm:scale-[1.3] lg:ml-7"
-                />
+                <div className="relative">
+                  <Input
+                    prop={{
+                      type: "text",
+                      id: "pickup-location",
+                      name: "pickup-location",
+                      placeholder: "Pickup Location",
+                      value: pickupLocation,
+                      onChangeFn: (value) => {
+                        setPickup(value);
+                        if (error === "No Pickup Location") {
+                          setError(null);
+                        }
+                      },
+                      error: error === "No Pickup Location",
+                      bg: "var(--background-muted)",
+                      autoComplete: "off",
+                      onFocusFn: pickupAutocomplete.onFocus,
+                      onBlurFn: pickupAutocomplete.onBlur,
+                    }}
+                    className="scale-[1] sm:scale-[1.3] lg:ml-7"
+                    leading={
+                      <div className="w-3 h-3 rounded-full bg-[var(--foreground)]" />
+                    }
+                    trailing={
+                      pickupLocation?.trim() ? (
+                        <button
+                          type="button"
+                          aria-label="Clear pickup location"
+                          onClick={() => setPickup("")}
+                          className="flex items-center justify-center cursor-pointer rounded-full
+                            text-[var(--text-muted)] hover:text-[var(--text)] active:opacity-70
+                            outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]/70"
+                        >
+                          <Icon path={mdiClose} size={0.7} />
+                        </button>
+                      ) : undefined
+                    }
+                  />
 
-                <Input
-                  prop={{
-                    type: "text",
-                    id: "drop-location",
-                    name: "drop-location",
-                    placeholder: "Drop Location",
-                    value: dropLocation,
-                    onChangeFn: (value) => {
-                      setDrop(value);
-                      if (error === "No Drop Location") {
-                        setError(null);
-                      }
-                    },
-                    error: error === "No Drop Location",
-                    bg: "var(--background-muted)",
-                  }}
-                  className="scale-[1] sm:scale-[1.3] lg:ml-7"
-                />
+                  <SuggestionDropdown
+                    anim={pickupAutocomplete.dropdown}
+                    items={pickupAutocomplete.items}
+                    onSelect={pickupAutocomplete.select}
+                    above={isMobile}
+                  />
+                </div>
+
+
+                <div className="relative">
+                  <Input
+                    prop={{
+                      type: "text",
+                      id: "drop-location",
+                      name: "drop-location",
+                      placeholder: "Drop Location",
+                      value: dropLocation,
+                      onChangeFn: (value) => {
+                        setDrop(value);
+                        if (error === "No Drop Location") {
+                          setError(null);
+                        }
+                      },
+                      error: error === "No Drop Location",
+                      bg: "var(--background-muted)",
+                      autoComplete: "off",
+                      onFocusFn: dropAutocomplete.onFocus,
+                      onBlurFn: dropAutocomplete.onBlur,
+                    }}
+                    className="scale-[1] sm:scale-[1.3] lg:ml-7"
+                    leading={
+                      <div className="w-3 h-3 rounded-full bg-primary relative">
+                        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-[var(--background)]" />
+                      </div>
+                    }
+                    trailing={
+                      dropLocation?.trim() ? (
+                        <button
+                          type="button"
+                          aria-label="Clear drop location"
+                          onClick={() => setDrop("")}
+                          className="flex items-center justify-center cursor-pointer rounded-full
+                            text-[var(--text-muted)] hover:text-[var(--text)] active:opacity-70
+                            outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]/70"
+                        >
+                          <Icon path={mdiClose} size={0.7} />
+                        </button>
+                      ) : undefined
+                    }
+                  />
+
+                  <SuggestionDropdown
+                    anim={dropAutocomplete.dropdown}
+                    items={dropAutocomplete.items}
+                    onSelect={dropAutocomplete.select}
+                    above
+                  />
+                </div>
 
                 <Button
                   prop={{

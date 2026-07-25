@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { protect, protectAdmin } from '../middleware/auth.js'
-import { getDriver } from '../services/driverAssignment.js'
+import { startAssignment, markNoDriver, ASSIGNMENT_DEADLINE_MS } from '../services/driverAssignment.js'
 import { sendWhatsApp } from '../services/notification.js'
 import { prisma } from '../db/prisma.js'
 import { myBookingsQuerySchema } from '../types.ts'
@@ -21,7 +21,7 @@ bookingsRouter.post('/', protect, async (req, res) => {
         pickupAddress, pickupLat, pickupLng,
         dropAddress, dropLat, dropLng,
         vehicleType, fare, distanceKm,
-        scheduledAt, isOutstation, sharing
+        scheduledAt, isOutstation, sharing, preferSafeRoute
     } = req.body
 
     if (!pickupAddress || !dropAddress)
@@ -60,8 +60,7 @@ bookingsRouter.post('/', protect, async (req, res) => {
 
     const bookingCode = user.bookingCode
 
-    // Reject bookings that collide with one the user already has live: either at
-    // the same time slot, or an exact duplicate of the pickup + drop route.
+    // Reject bookings colliding with a live one: same time slot or same pickup + drop route.
     const activeBookings = await prisma.booking.findMany({
         where: { userId: user.id, status: { in: ACTIVE_STATUSES } },
     })
@@ -82,6 +81,7 @@ bookingsRouter.post('/', protect, async (req, res) => {
         dropAddress, dropLat, dropLng,
         fare, distanceKm: distanceKm ?? null,
         isOutstation: isOutstation ?? false,
+        preferSafeRoute: preferSafeRoute === true,
         scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
         commissionPct, commissionAmt, sharing
     }
@@ -97,14 +97,13 @@ bookingsRouter.post('/', protect, async (req, res) => {
         data: { ...bookingData, status: 'pending', confirmedAt: null },
     })
 
-    const driverId = await getDriver(booking.id)
+    // Assignment runs detached — it can take minutes, and the client needs a
+    // booking id now so it can show "Requesting a ride" and poll for the
+    // outcome. A search that reaches nobody lands on `no_driver`, which is not
+    // an ACTIVE_STATUS, so the rider can immediately try again.
+    startAssignment(booking.id)
 
-    if (driverId) {
-        return res.json({ bookingId: booking.id, bookingCode, status: 'assigned' })
-    }
-
-    await prisma.booking.delete({ where: { id: booking.id } })
-    return res.status(503).json({ error: 'No drivers available. Please try again shortly.' })
+    return res.json({ bookingId: booking.id, bookingCode, status: 'pending' })
 })
 
 bookingsRouter.get('/:id/status', protect, async (req, res) => {
@@ -119,12 +118,21 @@ bookingsRouter.get('/:id/status', protect, async (req, res) => {
   if (!booking) return res.status(404).json({ error: 'Booking not found' })
   if (booking.userId !== user.id) return res.status(403).json({ error: 'Forbidden' })
 
-  if (!booking.driverId) return res.json({ bookingId: booking.id, bookingCode: user.bookingCode, status: booking.status, driver: null })
+  // Crash guard: startAssignment normally writes the terminal status itself,
+  // but a restart mid-search would leave the row pending forever and the client
+  // polling it forever. Expiring lazily here needs no scheduler — the only
+  // thing waiting on the answer is the poll that just arrived.
+  let status = booking.status
+  if (status === 'pending' && Date.now() - booking.createdAt.getTime() > ASSIGNMENT_DEADLINE_MS) {
+    if (await markNoDriver(booking.id)) status = 'no_driver'
+  }
+
+  if (!booking.driverId) return res.json({ bookingId: booking.id, bookingCode: user.bookingCode, status, driver: null })
 
   return res.json({
     bookingId:   booking.id,
     bookingCode: user.bookingCode,
-    status:      booking.status,
+    status,
     driver: {
       name:          booking.driver.name,
       phone:         booking.driver.phone,
@@ -244,8 +252,7 @@ bookingsRouter.get('/my-bookings', protect, async (req, res) => {
         prisma.booking.count({ where }),
     ])
 
-    // The code lives on the user now; surface it on each booking so callers that
-    // read booking.bookingCode keep working.
+    // The code lives on the user now; surface it so callers reading booking.bookingCode keep working.
     const withCode = bookings.map(b => ({ ...b, bookingCode: user.bookingCode }))
 
     return res.json({ total, page, limit, bookings: withCode })

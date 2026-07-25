@@ -1,18 +1,7 @@
 import { useViewNavigate } from "../hooks/useViewNavigate";
+import { callSupport, emailSupport, openSupportWhatsApp } from "../constants/support";
 
 const linkClass = "text-left text-[var(--text)]/90 hover:text-[var(--text)] active:opacity-70 cursor-pointer transition-colors duration-300 rounded focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-current";
-
-// Contact details kept split so the raw number/email never appear in the DOM or hrefs
-const PHONE_PARTS = ["91", "8586", "088", "085"];
-const EMAIL_PARTS = ["rcstravels", ".", "support"];
-const EMAIL_DOMAIN = ["gmail", "com"];
-
-const contact = (type) => {
-    const phone = PHONE_PARTS.join("");
-    if (type === "call") window.location.href = `tel:+${phone}`;
-    else if (type === "whatsapp") window.open(`https://wa.me/${phone}`, "_blank", "noopener,noreferrer");
-    else if (type === "email") window.location.href = `mailto:${EMAIL_PARTS.join("")}@${EMAIL_DOMAIN.join(".")}`;
-};
 
 const Footer = () => {
     const navigate = useViewNavigate();
@@ -33,9 +22,9 @@ const Footer = () => {
         {
             heading: "Support",
             links: [
-                { label: "Call Us", onClick: () => contact("call") },
-                { label: "WhatsApp Us", onClick: () => contact("whatsapp") },
-                { label: "Email Us", onClick: () => contact("email") },
+                { label: "Call Us", onClick: callSupport },
+                { label: "WhatsApp Us", onClick: () => openSupportWhatsApp() },
+                { label: "Email Us", onClick: emailSupport },
                 { label: "Help", onClick: () => navigate("/help") },
             ],
         },

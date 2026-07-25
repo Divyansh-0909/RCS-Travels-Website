@@ -109,3 +109,13 @@ pids
 # Dev screenshots
 # =========================
 screenshots/
+
+# design-sync (claude.ai/design import)
+# The repo-wide '.*' rule above would swallow .design-sync/, whose config,
+# notes, conventions and authored previews are meant to be committed.
+!.design-sync/
+.design-sync/.cache/
+.design-sync/learnings/
+.design-sync/node_modules
+.ds-sync/
+ds-bundle/

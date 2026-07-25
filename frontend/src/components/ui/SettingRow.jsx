@@ -1,5 +1,4 @@
-// A row card used across the settings pages: left-hand content (label/value or
-// title/description) and an optional `trailing` control (button, toggle, check).
+// Settings-page row card: left-hand content plus an optional `trailing` control.
 const SettingRow = ({ children, trailing, onClick, className = "" }) => (
     <li
         onClick={onClick}

@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>RCS Travels — Fare Zone Editor</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.17.0/dist/leaflet-geoman.css" />
+<style>
+  :root {
+    --bg: #0B0B14;
+    --bg-raised: #14141f;
+    --bg-field: #1d1d2b;
+    --line: #26263a;
+    --text: #ffffff;
+    --text-muted: #AEAEAE;
+    --primary: #243AFB;
+    --primary-light: #7A94FF;
+    --negative: #E86A6A;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    overflow: hidden;
+  }
+
+  /* ---------- sidebar ---------- */
+  aside {
+    width: 320px;
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--line);
+  }
+  .brand {
+    padding: 18px 20px 14px;
+    border-bottom: 1px solid var(--line);
+  }
+  .brand h1 { font-size: 15px; font-weight: 700; letter-spacing: -0.01em; }
+  .brand h1 span { color: var(--primary-light); }
+  .brand p { font-size: 12px; color: var(--text-muted); margin-top: 3px; }
+
+  .toolbar { display: flex; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+  button {
+    font: inherit; font-size: 13px; font-weight: 600;
+    border: 1px solid var(--line);
+    background: var(--bg-field);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 8px 12px;
+    cursor: pointer;
+  }
+  button:hover { border-color: var(--primary-light); }
+  button:focus-visible { outline: 2px solid var(--primary-light); outline-offset: 2px; }
+  button:active { transform: translateY(1px); }
+  button.primary { background: var(--primary); border-color: var(--primary); }
+  button.primary:hover { background: #3a4ffc; }
+  button.danger { color: var(--negative); }
+  button.danger:hover { border-color: var(--negative); }
+
+  .list { flex: 1; overflow-y: auto; }
+  .zone-row {
+    display: flex; align-items: center; gap: 10px;
+    width: 100%; text-align: left;
+    padding: 10px 16px;
+    background: none; border: none; border-radius: 0;
+    border-bottom: 1px solid var(--line);
+    cursor: pointer;
+  }
+  .zone-row:hover { background: var(--bg-raised); }
+  .zone-row.active { background: var(--bg-raised); box-shadow: inset 3px 0 0 var(--primary); }
+  .zone-row .dot { width: 12px; height: 12px; border-radius: 4px; flex: none; }
+  .zone-row .nm { flex: 1; font-size: 13px; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .zone-row .fare { font-size: 13px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+
+  /* ---------- edit form ---------- */
+  .editor { flex: 1; overflow-y: auto; padding: 16px; display: none; }
+  .editor.open { display: block; }
+  .list.hidden { display: none; }
+  .editor label { display: block; font-size: 12px; color: var(--text-muted); margin: 12px 0 4px; }
+  .editor input, .editor textarea {
+    width: 100%;
+    font: inherit; font-size: 14px;
+    background: var(--bg-field);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    color: var(--text);
+    padding: 8px 10px;
+  }
+  .editor input:focus-visible, .editor textarea:focus-visible {
+    outline: none; border-color: var(--primary-light);
+  }
+  .fare-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .fare-grid label { margin-top: 0; }
+  .hint { font-size: 11.5px; color: var(--text-muted); margin-top: 6px; line-height: 1.5; }
+  .editor .actions { display: flex; gap: 8px; margin-top: 18px; }
+  .editor .actions .grow { flex: 1; }
+
+  .footer {
+    padding: 12px 16px;
+    border-top: 1px solid var(--line);
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .footer .status { font-size: 11.5px; color: var(--text-muted); line-height: 1.5; }
+
+  /* ---------- map ---------- */
+  main { flex: 1; position: relative; }
+  #map { position: absolute; inset: 0; background: #e8e8e8; }
+
+  .zone-label {
+    background: rgba(11, 11, 20, 0.85);
+    border: none;
+    border-radius: 6px;
+    color: #fff;
+    font-weight: 600;
+    font-size: 11.5px;
+    padding: 3px 7px;
+    box-shadow: 0 1px 4px rgba(11, 11, 20, 0.4);
+    white-space: nowrap;
+  }
+  .zone-label::before { display: none; }
+  .zone-label .rs { color: var(--primary-light); }
+
+  .legend {
+    position: absolute; left: 12px; bottom: 24px; z-index: 800;
+    background: rgba(11, 11, 20, 0.88);
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 11px;
+    color: #fff;
+  }
+  .legend h2 { font-size: 11px; font-weight: 700; margin-bottom: 6px; }
+  .legend .step { display: flex; align-items: center; gap: 7px; margin-top: 3px; }
+  .legend .sw { width: 14px; height: 10px; border-radius: 3px; }
+
+  /* empty state */
+  .empty {
+    position: absolute; inset: 0; z-index: 900;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+    background: rgba(11, 11, 20, 0.72);
+    text-align: center; padding: 24px;
+  }
+  .empty h2 { font-size: 18px; }
+  .empty p { font-size: 13px; color: var(--text-muted); max-width: 380px; line-height: 1.6; }
+
+  @media (max-width: 720px) {
+    body { flex-direction: column; }
+    aside { width: 100%; height: 45%; border-right: none; border-top: 1px solid var(--line); order: 2; }
+    main { height: 55%; order: 1; }
+  }
+</style>
+</head>
+<body>
+
+<aside>
+  <div class="brand">
+    <h1>RCS Travels <span>· Fare zone editor</span></h1>
+    <p>Click a zone to edit its prices. Drag the white dots to reshape it.</p>
+  </div>
+
+  <div class="toolbar">
+    <button id="btn-open">Open file</button>
+    <button id="btn-draw">Draw new zone</button>
+    <button id="btn-download" class="primary">Download</button>
+  </div>
+
+  <div class="list" id="zone-list"></div>
+
+  <div class="editor" id="editor">
+    <label for="f-name">Zone name</label>
+    <input id="f-name" type="text" autocomplete="off" />
+
+    <label>Prices (₹, one-way from Shiv Nadar)</label>
+    <div class="fare-grid">
+      <div><label for="f-hatchback">Wagon R</label><input id="f-hatchback" type="number" min="0" step="50" inputmode="numeric" /></div>
+      <div><label for="f-sedan">Sedan</label><input id="f-sedan" type="number" min="0" step="50" inputmode="numeric" /></div>
+      <div><label for="f-suv">Ertiga</label><input id="f-suv" type="number" min="0" step="50" inputmode="numeric" /></div>
+    </div>
+    <p class="hint">Leave a box empty if that car is not offered — the website then quotes by distance instead.</p>
+
+    <label for="f-priority">Wins overlaps</label>
+    <input id="f-priority" type="number" min="0" step="1" inputmode="numeric" />
+    <p class="hint">When two zones overlap, the higher number wins. Small special areas (like Pari Chowk inside Greater Noida) should have the higher number.</p>
+
+    <label for="f-notes">Notes</label>
+    <textarea id="f-notes" rows="3"></textarea>
+
+    <div class="actions">
+      <button id="btn-done" class="primary grow">Done</button>
+      <button id="btn-delete" class="danger">Delete zone</button>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="status" id="status">No file loaded yet.</div>
+  </div>
+</aside>
+
+<main>
+  <div id="map"></div>
+  <div class="legend" id="legend"></div>
+  <div class="empty" id="empty">
+    <h2>Open the zones file to start</h2>
+    <p>Click <strong>Open file</strong> and choose <strong>zones.geojson</strong>, or drag the file anywhere onto this page. When you finish editing, click <strong>Download</strong> and send the file back on WhatsApp.</p>
+    <button class="primary" id="btn-open-2">Open file</button>
+  </div>
+</main>
+
+<input type="file" id="file-input" accept=".geojson,.json,application/geo+json,application/json" hidden />
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.17.0/dist/leaflet-geoman.min.js"></script>
+<script>
+  const map = L.map('map', { zoomControl: true }).setView([28.52, 77.35], 10);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; OpenStreetMap &copy; CARTO', maxZoom: 19,
+  }).addTo(map);
+  map.pm.setGlobalOptions({ allowSelfIntersection: false });
+
+  // Fare bands drive zone colors so the pricing geography is visible at a glance.
+  const BANDS = [
+    { max: 500,      color: '#8FA5FF', label: 'up to ₹500' },
+    { max: 800,      color: '#647FFF', label: '₹501 – 800' },
+    { max: 1100,     color: '#3D55FC', label: '₹801 – 1100' },
+    { max: 1400,     color: '#2036D6', label: '₹1101 – 1400' },
+    { max: 1700,     color: '#161FA0', label: '₹1401 – 1700' },
+    { max: Infinity, color: '#0D0F6B', label: 'above ₹1700' },
+  ];
+  const bandColor = (fare) =>
+    fare == null ? '#8b8b9d' : BANDS.find((b) => fare <= b.max).color;
+
+  document.getElementById('legend').innerHTML =
+    '<h2>Wagon R price</h2>' +
+    BANDS.map((b) => `<div class="step"><span class="sw" style="background:${b.color}"></span>${b.label}</div>`).join('');
+
+  /** zones: [{ props, layer }] — props is the feature's properties object, kept verbatim. */
+  let zones = [];
+  let selected = null;
+  let fileName = 'zones.geojson';
+
+  const $ = (id) => document.getElementById(id);
+  const listEl = $('zone-list');
+  const editorEl = $('editor');
+
+  const fmt = (n) => (n == null ? '—' : '₹' + Number(n).toLocaleString('en-IN'));
+
+  function zoneStyle(z, active) {
+    const c = bandColor(z.props.fares?.hatchback);
+    return { color: active ? '#ffffff' : c, weight: active ? 3 : 2, fillColor: c, fillOpacity: active ? 0.45 : 0.28 };
+  }
+
+  function labelHtml(z) {
+    return `${z.props.name} <span class="rs">${fmt(z.props.fares?.hatchback)}</span>`;
+  }
+
+  function refreshZone(z) {
+    z.layer.setStyle(zoneStyle(z, z === selected));
+    z.layer.setTooltipContent(labelHtml(z));
+  }
+
+  function renderList() {
+    listEl.innerHTML = '';
+    [...zones]
+      .sort((a, b) => (a.props.fares?.hatchback ?? 1e9) - (b.props.fares?.hatchback ?? 1e9))
+      .forEach((z) => {
+        const row = document.createElement('button');
+        row.className = 'zone-row' + (z === selected ? ' active' : '');
+        row.innerHTML =
+          `<span class="dot" style="background:${bandColor(z.props.fares?.hatchback)}"></span>` +
+          `<span class="nm"></span><span class="fare">${fmt(z.props.fares?.hatchback)}</span>`;
+        row.querySelector('.nm').textContent = z.props.name;
+        row.addEventListener('click', () => { select(z); map.fitBounds(z.layer.getBounds(), { maxZoom: 14 }); });
+        listEl.appendChild(row);
+      });
+  }
+
+  function select(z) {
+    if (selected && selected !== z) { selected.layer.pm.disable(); }
+    selected = z;
+    zones.forEach((x) => refreshZone(x));
+    if (!z) {
+      editorEl.classList.remove('open');
+      listEl.classList.remove('hidden');
+      renderList();
+      return;
+    }
+    z.layer.pm.enable();
+    $('f-name').value = z.props.name ?? '';
+    $('f-priority').value = z.props.priority ?? 0;
+    $('f-hatchback').value = z.props.fares?.hatchback ?? '';
+    $('f-sedan').value = z.props.fares?.sedan ?? '';
+    $('f-suv').value = z.props.fares?.suv ?? '';
+    $('f-notes').value = z.props.notes ?? '';
+    editorEl.classList.add('open');
+    listEl.classList.add('hidden');
+  }
+
+  function addZone(feature, layer) {
+    const z = { props: feature.properties ?? {}, layer };
+    layer.addTo(map);
+    layer.setStyle(zoneStyle(z, false));
+    layer.bindTooltip(labelHtml(z), { permanent: true, direction: 'center', className: 'zone-label' });
+    layer.on('click', () => select(z));
+    zones.push(z);
+    return z;
+  }
+
+  function loadGeoJSON(text, name) {
+    let data;
+    try { data = JSON.parse(text); } catch { alert('That file is not valid JSON.'); return; }
+    if (data.type !== 'FeatureCollection' || !Array.isArray(data.features)) {
+      alert('That file is not a zones file (expected a GeoJSON FeatureCollection).');
+      return;
+    }
+    zones.forEach((z) => z.layer.remove());
+    zones = []; selected = null;
+    data.features.forEach((f) => {
+      if (f.geometry?.type !== 'Polygon') return;
+      const latlngs = f.geometry.coordinates[0].map(([lng, lat]) => [lat, lng]);
+      addZone(f, L.polygon(latlngs));
+    });
+    fileName = name || fileName;
+    select(null);
+    if (zones.length) map.fitBounds(L.featureGroup(zones.map((z) => z.layer)).getBounds().pad(0.05));
+    $('empty').style.display = 'none';
+    setStatus(`${zones.length} zones loaded from ${fileName}. Edits stay on this page until you download.`);
+  }
+
+  function setStatus(msg) { $('status').textContent = msg; }
+
+  // ---------- form bindings ----------
+  $('f-name').addEventListener('input', (e) => { selected.props.name = e.target.value; refreshZone(selected); });
+  $('f-priority').addEventListener('input', (e) => { selected.props.priority = e.target.value === '' ? 0 : +e.target.value; });
+  $('f-notes').addEventListener('input', (e) => {
+    if (e.target.value) selected.props.notes = e.target.value; else delete selected.props.notes;
+  });
+  for (const cls of ['hatchback', 'sedan', 'suv']) {
+    $('f-' + cls).addEventListener('input', (e) => {
+      selected.props.fares = selected.props.fares ?? {};
+      if (e.target.value === '') delete selected.props.fares[cls];
+      else selected.props.fares[cls] = +e.target.value;
+      // a hand-entered price is provider-confirmed, no longer derived
+      if (Array.isArray(selected.props.derived)) {
+        selected.props.derived = selected.props.derived.filter((d) => d !== cls);
+        if (!selected.props.derived.length) delete selected.props.derived;
+      }
+      refreshZone(selected);
+    });
+  }
+  $('btn-done').addEventListener('click', () => select(null));
+  $('btn-delete').addEventListener('click', () => {
+    if (!selected) return;
+    if (!confirm(`Delete the zone "${selected.props.name}"?`)) return;
+    selected.layer.remove();
+    zones = zones.filter((z) => z !== selected);
+    selected = null;
+    select(null);
+  });
+
+  // ---------- drawing new zones ----------
+  $('btn-draw').addEventListener('click', () => {
+    select(null);
+    map.pm.enableDraw('Polygon', { snappable: true, finishOn: 'dblclick' });
+    setStatus('Click on the map to place corners. Double-click the last corner to finish the zone.');
+  });
+  map.on('pm:create', (e) => {
+    map.pm.disableDraw();
+    const z = addZone({ properties: { name: 'New zone', priority: 5, fares: {} } }, e.layer);
+    select(z);
+    setStatus('New zone added — give it a name and prices.');
+  });
+
+  // ---------- file open / drop / download ----------
+  const fileInput = $('file-input');
+  $('btn-open').addEventListener('click', () => fileInput.click());
+  $('btn-open-2').addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', () => {
+    const f = fileInput.files[0];
+    if (f) f.text().then((t) => loadGeoJSON(t, f.name));
+    fileInput.value = '';
+  });
+  window.addEventListener('dragover', (e) => e.preventDefault());
+  window.addEventListener('drop', (e) => {
+    e.preventDefault();
+    const f = e.dataTransfer.files[0];
+    if (f) f.text().then((t) => loadGeoJSON(t, f.name));
+  });
+
+  $('btn-download').addEventListener('click', () => {
+    if (!zones.length) { alert('Nothing to download — open the zones file first.'); return; }
+    const missing = zones.filter((z) => !z.props.name || z.props.fares?.hatchback == null);
+    if (missing.length &&
+        !confirm(`${missing.length} zone(s) have no name or no Wagon R price and will quote by distance. Download anyway?`)) return;
+    const fc = {
+      type: 'FeatureCollection',
+      features: zones.map((z) => {
+        const geo = z.layer.toGeoJSON().geometry;
+        geo.coordinates = geo.coordinates.map((ring) =>
+          ring.map(([lng, lat]) => [+lng.toFixed(5), +lat.toFixed(5)]));
+        return { type: 'Feature', properties: z.props, geometry: geo };
+      }),
+    };
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(fc, null, 2)], { type: 'application/geo+json' }));
+    a.download = 'zones.geojson';
+    a.click();
+    URL.revokeObjectURL(a.href);
+    setStatus('Downloaded zones.geojson — send it back on WhatsApp to update the website.');
+  });
+
+  // If the page is served alongside the file (e.g. from the repo), load it automatically.
+  fetch('../backend/data/zones.geojson')
+    .then((r) => (r.ok ? r.text() : Promise.reject()))
+    .then((t) => loadGeoJSON(t, 'backend/data/zones.geojson'))
+    .catch(() => {}); // file:// or hosted standalone — the Open button handles it
+</script>
+</body>
+</html>

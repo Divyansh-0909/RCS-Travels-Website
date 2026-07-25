@@ -1,0 +1,47 @@
+/* Design-system stylesheet entry for the claude.ai/design sync.
+ *
+ * Wraps the app's real index.css (tokens, @font-face, base layer, keyframes) and
+ * widens utility generation beyond what the app itself happens to use, so layout
+ * classes the design agent writes for its own glue still resolve. Compiled by
+ * .design-sync/prepare.mjs to frontend/.ds-cache/ds.css, which cfg.cssEntry points at.
+ */
+@import "../frontend/src/index.css";
+
+/* Deliberately NOT setting a body background. This design system has two
+ * surfaces — the dark booking flow (.bg-gradient / .bg-panel-gradient, white
+ * --text) and the light account/marketing pages (bg-[var(--foreground)],
+ * black --text-foreground) — and picking either one here would silently break
+ * the other half of the kit. Surface selection belongs to the screen; the
+ * README conventions header tells the design agent to always make that choice. */
+
+/* Everything the app already uses. */
+@source "../frontend/src";
+
+/* Utility families the design agent is likely to reach for that the app's own
+ * markup may never instantiate. Kept to layout/spacing/type primitives plus the
+ * brand palette — not a blanket safelist, which would balloon the sheet. */
+@source inline("{sm:,md:,lg:,}{flex,inline-flex,grid,inline-grid,block,inline-block,hidden}");
+@source inline("{sm:,md:,lg:,}flex-{row,col,row-reverse,col-reverse,wrap,nowrap,1,auto,initial,none}");
+@source inline("{sm:,md:,lg:,}{items,justify,self,content}-{start,end,center,between,around,evenly,stretch,baseline}");
+@source inline("{sm:,md:,lg:,}grid-cols-{1,2,3,4,5,6,12}");
+@source inline("{sm:,md:,lg:,}col-span-{1,2,3,4,5,6,full}");
+@source inline("{sm:,md:,lg:,}{gap,gap-x,gap-y}-{0,0.5,1,1.5,2,2.5,3,3.5,4,5,6,7,8,10,12,16,20,24}");
+@source inline("{sm:,md:,lg:,}{p,px,py,pt,pr,pb,pl}-{0,0.5,1,1.5,2,2.5,3,3.5,4,5,6,7,8,10,12,16,20,24}");
+@source inline("{sm:,md:,lg:,}{m,mx,my,mt,mr,mb,ml}-{0,0.5,1,1.5,2,2.5,3,3.5,4,5,6,8,10,12,16,auto}");
+@source inline("{sm:,md:,lg:,}{w,h}-{0,1,2,3,4,5,6,8,10,12,14,16,20,24,32,40,48,56,64,auto,full,screen,fit,min,max}");
+@source inline("{sm:,md:,lg:,}{min-w,max-w,min-h,max-h}-{0,full,screen,fit,min,max,xs,sm,md,lg,xl,2xl,3xl,4xl}");
+@source inline("{sm:,md:,lg:,}text-{xs,sm,base,lg,xl,2xl,3xl,4xl,5xl,6xl}");
+@source inline("{sm:,md:,lg:,}text-{left,center,right}");
+@source inline("font-{extralight,light,normal,medium,semibold,bold}");
+@source inline("{leading,tracking}-{tight,tighter,snug,normal,relaxed,loose,wide,wider}");
+@source inline("rounded{-none,-sm,,-md,-lg,-xl,-2xl,-3xl,-full}");
+@source inline("{relative,absolute,fixed,sticky,static}");
+@source inline("{inset,top,right,bottom,left}-{0,1,2,3,4,6,8,auto}");
+@source inline("z-{0,10,20,30,40,50}");
+@source inline("{opacity,w,h}-{0,5,10,20,25,30,40,50,60,70,75,80,90,95,100}");
+@source inline("overflow-{auto,hidden,visible,scroll,x-auto,y-auto}");
+@source inline("{hover:,focus-visible:,active:,disabled:,}{bg,text,border}-{primary,primary-dark,primary-light,negative,negative-dark,negative-light,white,white-muted,black,transparent}");
+@source inline("border{-0,,-2,-4}");
+@source inline("{transition,transition-colors,transition-transform,transition-opacity}");
+@source inline("duration-{75,100,150,200,300,500,700,1000}");
+@source inline("ease-{linear,in,out,in-out}");

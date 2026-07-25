@@ -9,6 +9,8 @@ export const vehicleLabel = (t) => (t === 4 ? "Cab Economy" : t === 6 ? "Cab XL"
 export const statusChip = (status) => {
     if (status === "completed") return "text-green-700 bg-green-600/10";
     if (status === "cancelled") return "text-red-600 bg-red-500/10";
+    // no_driver is a failed request, not a cancellation — muted rather than red
+    if (status === "no_driver") return "text-[var(--text-muted)] bg-[var(--background-primary)]/10";
     if (status === "pending") return "text-amber-600 bg-amber-500/10";
     return "text-primary bg-primary/10";
 };

@@ -34,17 +34,15 @@ const fareData = [
   { destinationName: 'Jaipur',           vehicleType: 6, fixedFare: 8500 },
 ]
 
-// Test pickup anchor — Connaught Place, New Delhi. All test drivers are parked
-// right here so they fall inside the 20km assignment bounding box.
+// Test pickup anchor (Connaught Place) — all test drivers sit here, inside the
+// 20km assignment bounding box.
 const PICKUP = { lat: 28.6315, lng: 77.2167 }
 
-// The booking endpoint matches the logged-in Clerk session via clerkId, so this
 // MUST equal your real Clerk user id or POST /bookings returns 401.
 // Set it before seeding:  SEED_CLERK_ID=user_xxx npm run db:seed
 const SEED_CLERK_ID = process.env.SEED_CLERK_ID || 'user_3FdlhBI7SlbMclO523ek4cXH1pl'
 
-// Three eligible drivers. vehicleCapacity === vehicleType so solo rides pass the
-// `capacity < vehicleType` skip check. Booking vehicleType 1 matches types 4 & 6.
+// vehicleCapacity === vehicleType so solo rides pass the `capacity < vehicleType` skip check.
 const drivers = [
   { name: 'Ramesh Kumar', phone: '+919810000001', vehicleType: 4, vehicleNumber: 'DL01AB1234' },
   { name: 'Suresh Yadav', phone: '+919810000002', vehicleType: 6, vehicleNumber: 'DL02CD5678' },
@@ -122,9 +120,7 @@ async function seedTestData() {
   return { user, drivers: createdDrivers }
 }
 
-// A few finished rides so Ride History has content. Idempotent via upsert on a
-// fixed id (the booking code now lives on the user, not the booking). Dates are
-// set in the past relative to "now".
+// Finished rides so Ride History has content. Idempotent via upsert on fixed ids.
 function pastBookings(user, drivers) {
   const daysAgo = (n) => new Date(Date.now() - n * 24 * 60 * 60 * 1000)
 

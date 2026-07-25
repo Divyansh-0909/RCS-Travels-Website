@@ -1,14 +1,9 @@
 @import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
 @import "tailwindcss";
 
-/* PP Mori — Pangram Pangram (Free for Personal Use v1.0).
-   Weights available: Extralight (200), Regular (400), SemiBold (600), each with italic.
-   700 (bold) is mapped to SemiBold so `font-bold` renders real glyphs, not faux-bold.
-
-   Metric overrides: PP Mori's raw usWinAscent/Descent (1040/360) give line-height:normal
-   = 1.4 but a different baseline position than Poppins, shifting text upward everywhere.
-   These overrides copy Poppins' exact metrics (ascent 1.05 / descent 0.35 / gap 0, cap-height
-   is already identical) so PP Mori lays out pixel-for-pixel like the font it replaced. */
+/* PP Mori (Pangram Pangram, free personal v1.0). 700 maps to SemiBold so
+   font-bold renders real glyphs. Metric overrides copy Poppins' ascent/descent
+   so PP Mori lays out pixel-for-pixel like the font it replaced. */
 @font-face {
     font-family: "PP Mori";
     src: url("./assets/fonts/PPMori-Extralight.woff2") format("woff2");
@@ -83,8 +78,12 @@
     --color-negative-light: #E86A6A;
 }
 
-/* Update the light mode color */
+/* Theme colors (dark is the default) */
 :root {
+    /* Tells the UA to paint scrollbars and form controls dark, so transparent
+       scrollbar surfaces reveal dark chrome instead of the light-mode default. */
+    color-scheme: dark;
+
     --background-muted: #1d1d27;
     --background-primary: #121220;
     --background: #0B0B14;
@@ -380,15 +379,70 @@
         }
     }
 
+    /* The root scrollbar is hidden. Its gutter paints the canvas, not the
+       section behind it, so any track color is wrong against either the dark
+       pages or the light ones. With no gutter there is also nothing to reserve,
+       so centered fixed elements no longer shift between pages either. Inner
+       scroll containers keep the styled scrollbars below. */
     html {
-        /* Always reserve space for the scrollbar so centered fixed elements
-           (e.g. the NavBar) don't shift when a page overflows vertically. */
-        scrollbar-gutter: stable;
+        scrollbar-width: none;
+    }
+
+    html::-webkit-scrollbar {
+        display: none;
+    }
+
+    /* Themed scrollbars: thumb painted in --color-primary-light; transparent
+       border + padding-box clip gaps it from the window edge. */
+    ::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+        background: transparent;
+    }
+
+    ::-webkit-scrollbar-track,
+    ::-webkit-scrollbar-track-piece {
+        background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background-color: var(--color-primary-light);
+        border-radius: 999px;
+        border: 3px solid transparent;
+        background-clip: padding-box;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        background-color: color-mix(in srgb, var(--color-primary-light) 85%, var(--foreground));
+    }
+
+    ::-webkit-scrollbar-corner {
+        background: transparent;
+    }
+
+    /* Firefox fallback; @supports keeps Chromium on the webkit styling above. */
+    @supports not selector(::-webkit-scrollbar) {
+        * {
+            scrollbar-width: thin;
+            scrollbar-color: var(--color-primary-light) transparent;
+        }
     }
 
     body {
         min-height: 100vh;
         color: var(--text);
+    }
+
+    /* Autofilled inputs ignore `background`/`color`: the inset shadow paints
+       the themed surface back, text-fill restores the color, and the huge
+       transition stops the forced style from ever flashing in. */
+    input:-webkit-autofill,
+    input:-webkit-autofill:hover,
+    input:-webkit-autofill:focus {
+        -webkit-box-shadow: 0 0 0 1000px var(--background-muted) inset;
+        -webkit-text-fill-color: var(--text);
+        caret-color: var(--text);
+        transition: background-color 9999999s ease-in-out 0s;
     }
 
     p {
@@ -414,6 +468,11 @@
 }
 
 @layer utilities {
+    /* Insets the thumb's travel from rounded corners. WebKit-only. */
+    .scrollbar-inset::-webkit-scrollbar-track {
+        margin-block: 10px;
+    }
+
     .bg-primary-gradient {
         background: linear-gradient(195deg,
                 var(--color-primary-light) 0%,

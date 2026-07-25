@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react"
 
-// Plays the panel enter animation when `show` becomes true. When it becomes
-// false, the panel quietly fades out — staying mounted until the fade finishes,
-// then unmounting. `duration` must match the fade-out animation length.
+// Enter animation when `show` turns true; on false, fades out and stays mounted
+// until the fade finishes. `duration` must match the fade-out animation length.
 const BackgroundPanel = ({ show = true, duration = 250, className, children }) => {
     const [mounted, setMounted] = useState(show)
     const [closing, setClosing] = useState(false)

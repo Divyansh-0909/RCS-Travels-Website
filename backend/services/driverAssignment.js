@@ -18,7 +18,6 @@ export function inSameDirectionCorridor(pickupLat, pickupLng, drop1Lat, drop1Lng
   return (diff > 180 ? 360 - diff : diff) <= thresholdDeg
 }
 
-// to get the distance of drivers from the pickup point
 function haversineDistance(lat1, lng1, lat2, lng2) {
   const toRad = (deg) => (deg * Math.PI) / 180
 
@@ -45,15 +44,42 @@ function getBoundingBox(lat, lng, radiusKm) {
   }
 }
 
+// Assignment is only legal from these. A booking expired to `no_driver`,
+// cancelled, or already assigned must never be claimed by a search still in
+// flight — see claimBooking.
+const ASSIGNABLE_STATUSES = ['pending', 'confirmed']
+
+// Atomically take the booking for this driver. Returns false if it moved on
+// while we were notifying, in which case the caller abandons the search. Done
+// before the capacity decrement so a lost claim can't strand a seat.
+async function claimBooking(bookingId, driverId, confirmedAt) {
+  const { count } = await prisma.booking.updateMany({
+    where: { id: bookingId, status: { in: ASSIGNABLE_STATUSES } },
+    data: { status: 'assigned', driverId, confirmedAt },
+  })
+  return count > 0
+}
+
 export async function getDriver(bookingId) {
   let assignedDriver = null
 
   const row = await prisma.booking.findFirst({ where: { id: bookingId } })
+  if (!row) return null
 
   const triedDriverIds = new Set()
-  
+
   for(let i=0; i<70; i+=10){
-    const box = getBoundingBox(row.pickupLat, row.pickupLng, 20+i) 
+    // A ring of FCM sends can take a while; re-check before starting the next
+    // one so an expired or cancelled booking stops pinging drivers.
+    if (i > 0) {
+      const current = await prisma.booking.findUnique({
+        where: { id: bookingId },
+        select: { status: true },
+      })
+      if (!current || !ASSIGNABLE_STATUSES.includes(current.status)) return null
+    }
+
+    const box = getBoundingBox(row.pickupLat, row.pickupLng, 20+i)
 
     const locations = await prisma.driverLocation.findMany({
       where: {
@@ -142,6 +168,9 @@ export async function getDriver(bookingId) {
           })
 
         if (response === true ) {
+          // on-spot rides have no confirmedAt yet
+          if (!await claimBooking(bookingId, x.driverId, row.confirmedAt ?? new Date())) return null
+
           assignedDriver = x.driverId
 
           await prisma.driver.update({
@@ -149,15 +178,6 @@ export async function getDriver(bookingId) {
             data: {
               vehicleCapacity: x.driver.vehicleCapacity - 1
             }
-          })
-
-          await prisma.booking.update({
-            where: { id: bookingId },
-            data: {
-              status:      'assigned',
-              driverId:    x.driverId,
-              confirmedAt: row.confirmedAt ?? new Date(),  // on-spot rides have no confirmedAt yet
-            },
           })
 
           sendWhatsApp(x.driver.phone,
@@ -176,9 +196,8 @@ export async function getDriver(bookingId) {
     for (const x of sorted) {
       triedDriverIds.add(x.driverId)
 
-      // Solo rides occupy the whole vehicle, so only assign one to a fully-free
-      // vehicle. A sharing ride that fell through here is starting a fresh shared
-      // trip, so it just needs a single free seat.
+      // Solo rides need a fully-free vehicle; a sharing ride falling through here
+      // starts a fresh shared trip and needs just one free seat.
       if (row.sharing ? x.driver.vehicleCapacity <= 0 : x.driver.vehicleCapacity < x.driver.vehicleType) continue
 
       const response =
@@ -203,25 +222,18 @@ export async function getDriver(bookingId) {
         })
 
       if (response === true ) {
+        // on-spot rides have no confirmedAt yet
+        if (!await claimBooking(bookingId, x.driverId, row.confirmedAt ?? new Date())) return null
+
         assignedDriver = x.driverId
 
           await prisma.driver.update({
             where: {id: assignedDriver},
             data: {
-              // Solo ride takes the vehicle out of the pool entirely; a fresh
-              // sharing ride only consumes one seat.
+              // Solo ride takes the whole vehicle; a fresh sharing ride consumes one seat.
               vehicleCapacity: row.sharing ? x.driver.vehicleCapacity - 1 : 0
             }
           })
-
-        await prisma.booking.update({
-          where: { id: bookingId },
-          data: {
-            status:      'assigned',
-            driverId:    x.driverId,
-            confirmedAt: row.confirmedAt ?? new Date(),  // on-spot rides have no confirmedAt yet
-          },
-        })
 
         sendWhatsApp(x.driver.phone,
           `You have been assigned a ride.
@@ -236,4 +248,33 @@ export async function getDriver(bookingId) {
   }
 
   return null
+}
+
+// How long a booking may sit in `pending` before it's written off. Only a crash
+// guard — a process that dies mid-search would otherwise strand the booking
+// forever and the client would poll it indefinitely.
+export const ASSIGNMENT_DEADLINE_MS = 5 * 60 * 1000
+
+// Guarded on `pending` so a booking that already moved on — driver found, user
+// cancelled, or the lazy expiry got here first — is never overwritten.
+export async function markNoDriver(bookingId) {
+  const { count } = await prisma.booking.updateMany({
+    where: { id: bookingId, status: 'pending' },
+    data: { status: 'no_driver' },
+  })
+  return count > 0
+}
+
+// The search outlives an HTTP request: getDriver walks 20→80 km rings with a
+// sequential FCM call per candidate. Bookings are created as `pending` and this
+// runs detached, so the response returns immediately and the client polls
+// /bookings/:id/status until the status moves. getDriver writes `assigned`
+// itself, so this only has to record the failure case.
+export function startAssignment(bookingId) {
+  getDriver(bookingId)
+    .then(driverId => (driverId ? null : markNoDriver(bookingId)))
+    .catch(async err => {
+      console.error(`driver assignment failed for booking ${bookingId}:`, err)
+      await markNoDriver(bookingId).catch(() => {})
+    })
 }

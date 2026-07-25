@@ -27,9 +27,8 @@ const LoginPage = () => {
   const [resending, setResending] = useState(false);
   const [resendIn, setResendIn] = useState(0);
   const [showSignUp, setShowSignUp] = useState(false);
-  // Latches once the OTP is verified so we hold the success state through the
-  // async getMe + view-transition redirect, instead of flashing the
-  // "already logged in" screen while isSignedIn flips true mid-flow.
+  // Latches on OTP verification so the success state holds through getMe + redirect,
+  // instead of flashing "already logged in" while isSignedIn flips true mid-flow.
   const [redirecting, setRedirecting] = useState(false);
   const pickupLocation = useData(state => state.pickupLocation);
 

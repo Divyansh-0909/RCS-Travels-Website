@@ -1,5 +1,6 @@
 import chatBg from "../../assets/chat-bg.webp"
 import waLogo from "../../assets/whatsapp-logo.webp"
+import { supportPhoneDisplay } from "../../constants/support"
 
 /* Illustration 3 — Book via WhatsApp */
 const WhatsAppIllustration = () => (
@@ -41,7 +42,7 @@ const WhatsAppIllustration = () => (
         <div style={{ position: "absolute", bottom: "14px", left: 0, right: 0, display: "flex", alignItems: "center", justifyContent: "center", gap: "15px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
                 <img src={waLogo} alt="WhatsApp" style={{ width: "20px", height: "20px", borderRadius: "50%" }}/>
-                <span style={{ color: "#8696A0", fontSize: "11px", fontWeight: "600", fontFamily: "Poppins, sans-serif" }}>Book via WhatsApp · +91 85860 88085</span>
+                <span style={{ color: "#8696A0", fontSize: "11px", fontWeight: "600", fontFamily: "Poppins, sans-serif" }}>Book via WhatsApp · {supportPhoneDisplay()}</span>
             </div>
             {/* <div className="flex justify-center items-center" style={{ background: "white", height: "20px", borderRadius: "20px", padding: "4px 10px" }}>
                 <span style={{ color: "#243AFB", fontSize: "9.5px", fontWeight: "700", fontFamily: "Poppins, sans-serif" }}>30 sec to book</span>

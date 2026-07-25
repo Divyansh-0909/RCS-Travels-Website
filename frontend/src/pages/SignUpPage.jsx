@@ -24,9 +24,8 @@ const SignUpPage = () => {
   const OTP_LENGTH = 6;
   const OTP_TTL = 300; // seconds until the OTP expires — matches the backend's 5-minute window
   const [expiresIn, setExpiresIn] = useState(0);
-  // Username is collected FIRST and held in state, so the DB user is created in the
-  // same step as OTP verification — there is no post-OTP "enter your name" screen to
-  // abandon, which is what previously left a signed-in session without a profile.
+  // Username is collected FIRST so the DB user is created in the same step as OTP
+  // verification — no post-OTP name screen to abandon into a profile-less session.
   const [step, setStep] = useState("username"); // "username" | "phone" | "otp"
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -53,8 +52,7 @@ const SignUpPage = () => {
     return () => clearInterval(timer);
   }, [expiresIn]);
 
-  // Signing up is for a fresh number — start the phone field blank rather than
-  // pre-filling the remembered (persisted) login number.
+  // Signing up is for a fresh number — don't pre-fill the persisted login number.
   useEffect(() => {
     setPhone("");
   }, []);
@@ -176,12 +174,10 @@ const SignUpPage = () => {
     // Activate the session so the createMe request below is authenticated.
     await setActive({ session: result.createdSessionId });
 
-    // Create the DB user immediately, using the name collected up front. No
-    // interactive step in between means no abandonable, profile-less session.
+    // Create the DB user immediately, using the name collected up front.
     const created = await api.createMe(username);
     if (created?.error) {
-      // Don't leave a session without a profile — sign out and send them back to
-      // the name step to retry (e.g. number already registered to another account).
+      // Don't leave a session without a profile — sign out and retry from the name step.
       await api.logout();
       setError(created.error);
       setStep("username");
@@ -272,8 +268,8 @@ const SignUpPage = () => {
         <div onClick={back} className="flex cursor-pointer justify-center items-center gap-2 sm:gap-3 absolute left-3 top-3 text-[var(--text)] sm:opacity-80 hover:opacity-100 transition-opacity duration-300">
             <Icon path={mdiKeyboardBackspace} size={1.2} />
         </div>
-        {/* While finalizing (loading) the session may already be active; keep showing
-            the form so the "already logged in" screen doesn't flash mid-signup. */}
+        {/* The session may be active while finalizing — keep the form so the
+            "already logged in" screen doesn't flash mid-signup. */}
         { isSignedIn && !loading
         ?
         <div className="flex flex-col justify-center items-center">

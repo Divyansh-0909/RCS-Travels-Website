@@ -17,6 +17,7 @@ enum BookingStatus {
   started
   completed
   cancelled
+  no_driver   // search finished (or timed out) without reaching a driver — terminal, not active
 }
 
 enum BookingSource {
@@ -109,6 +110,7 @@ model Booking {
   vehicleType        Int           @map("vehicle_type")
   scheduledAt        DateTime?     @map("scheduled_at")
   isOutstation       Boolean       @default(false) @map("is_outstation")
+  preferSafeRoute    Boolean       @default(false) @map("prefer_safe_route")
   distanceKm         Float?        @map("distance_km")  
   fare               Float         @map("fare")
   commissionPct      Float         @default(0) @map("commission_pct")

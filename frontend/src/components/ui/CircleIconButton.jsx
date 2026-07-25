@@ -1,8 +1,7 @@
 import Icon from '@mdi/react';
 
-// The round action button that sits at the end of a settings row (the "+" opener,
-// the download tray, etc.). Full opacity at rest, easing to 80% on hover. Dims and
-// blocks clicks while `disabled`.
+// Round action button at the end of a settings row (the "+" opener, the download
+// tray, etc.). Dims and blocks clicks while `disabled`.
 const CircleIconButton = ({ icon, onClick, size = 1, disabled = false, className = "" }) => (
     <div
         onClick={disabled ? undefined : onClick}

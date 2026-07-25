@@ -5,14 +5,10 @@ import LoadingScreen from "./LoadingScreen";
 import { useApi } from "../hooks/useApi";
 import { useData } from "../hooks/useData";
 
-// A Clerk session exists the moment OTP is verified (ticket sign-in), but the DB
-// user isn't created until the username step. So "signed in" alone is not enough
-// to enter a protected route — we also require a completed profile (getMe). An
-// incomplete session (signed in, no DB user) is signed out so backing out of
-// signup before choosing a username does NOT leave the person logged in.
-// `requireAdmin` additionally gates on the Clerk role (publicMetadata.role) the
-// backend's protectAdmin checks. This is UX only — non-admins are redirected home
-// without revealing the admin area exists; the API still enforces 403 server-side.
+// A Clerk session exists from OTP verification, but the DB user isn't created until
+// the username step — so entry also requires a completed profile (getMe), and an
+// incomplete session is signed out rather than left logged in. `requireAdmin` gates
+// on the Clerk role as UX only; the API still enforces 403 server-side.
 export default function ProtectedRoute({ children, requireAdmin = false }) {
   const { isSignedIn, isLoaded } = useAuth();
   const { user, isLoaded: userLoaded } = useUser();
@@ -35,8 +31,7 @@ export default function ProtectedRoute({ children, requireAdmin = false }) {
         await logout();            // tear down the half-finished session
         if (!cancelled) setStatus("incomplete");
       } else {
-        // The gate already has the profile in hand — hydrate the shared store so
-        // protected pages read user details from useData without re-fetching.
+        // Hydrate the shared store so protected pages don't re-fetch the profile.
         setUsername(me.name);
         setPhone(me.phone);
         setBookingCode(me.bookingCode);

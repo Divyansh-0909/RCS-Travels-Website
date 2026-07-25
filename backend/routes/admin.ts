@@ -15,8 +15,7 @@ adminRouter.get('/booking', protect, protectAdmin, async (req, res) => {
 
     const where: Prisma.BookingWhereInput = {}
     if (search) {
-        // Digits (with optional +, spaces, dashes) → phone search; anything else →
-        // names, addresses, and ride-id prefix. ORed so one box covers all fields.
+        // Digits → phone search; anything else → names, addresses, and ride-id prefix.
         const compact = search.replace(/[\s+\-()]/g, '')
         if (/^\d+$/.test(compact)) {
             where.OR = [
@@ -56,8 +55,7 @@ adminRouter.get('/booking', protect, protectAdmin, async (req, res) => {
         where.scheduledAt = scheduledAt
     }
 
-    // Only the fields the admin dashboard actually renders. `shareGroupId` is
-    // kept for the co-rider grouping below even though the client never reads it.
+    // Only the fields the dashboard renders; `shareGroupId` is kept for the co-rider grouping below.
     const bookingSelect = {
         id: true,
         customerPhone: true,
@@ -87,8 +85,7 @@ adminRouter.get('/booking', protect, protectAdmin, async (req, res) => {
         prisma.booking.count({ where }),
     ])
 
-    // For sharing rides, attach the other riders in the same share group
-    // (each co-rider is a separate booking row with the same shareGroupId).
+    // Attach co-riders: each is a separate booking row with the same shareGroupId.
     type AdminBooking = Prisma.BookingGetPayload<{ select: typeof bookingSelect }>
     type GroupMember = { id: string; shareGroupId: string | null; customerPhone: string; user: { name: string | null } }
     const shareGroupIds = [...new Set(

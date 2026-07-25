@@ -1,17 +1,14 @@
 import Skeleton from "./ui/Skeleton";
 
-// Each text stand-in wraps its shimmer bar in a container with the exact
-// line-box height of the real text (h4 = text-sm/text-lg → 20/28px, p =
-// text-sm → 20px, etc.) so skeleton cards match the real cards' height
-// exactly and nothing shifts when data arrives.
+// Bar wrapped in a container with the exact line-box height of the text it
+// stands in for, so skeleton cards match the real cards' height exactly.
 const Line = ({ h, bar, w }) => (
     <div className={`${h} flex items-center`}>
         <Skeleton tone="light" className={`${bar} ${w}`} />
     </div>
 );
 
-// One placeholder booking card — clones the admin booking card's structure
-// (route dots, fare + status chip, divider, meta line, people columns, ride id).
+// One placeholder booking card — clones the admin booking card's structure.
 const BookingCardSkeleton = () => (
     <div className="bg-[var(--foreground-muted)] bg-[linear-gradient(to_bottom,transparent_50%,rgba(146,146,139,0.10)_100%)] shadow-[inset_0_2px_2px_rgba(255,255,255,0.25)] py-5 px-5 sm:py-6 sm:px-8 rounded-2xl my-4 sm:my-6 flex flex-col justify-center items-start gap-4">
         <div className="flex justify-between items-start gap-4 w-full">

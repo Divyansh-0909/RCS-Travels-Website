@@ -169,16 +169,8 @@ function Calendar({ selected, onSelect }) {
 }
 
 // ─── DateTimeSelector ─────────────────────────────────────────────────────────
-// This component is CONTENT ONLY — no trigger button, no outer shell.
-// Drop it directly inside your expandCalendar dropdown Button.
-//
-// Usage in OnBoarding.jsx:
-//   <DateTimeSelector onChange={(datetime) => console.log(datetime)} />
-//
-// Props:
-//   onChange(Date)  — called whenever date or time changes (both must be set)
-//   onConfirm(Date) — called when user clicks the Confirm button
-// ─────────────────────────────────────────────────────────────────────────────
+// Content only — no trigger button or outer shell; drop inside the dropdown Button.
+// onChange(Date) fires when date or time changes (both set); onConfirm(Date) on Confirm.
 
 export function DateTimeSelector({ onClick, onChange, onConfirm, initial }) {
   const today = new Date()

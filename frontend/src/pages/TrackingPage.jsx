@@ -1,4 +1,7 @@
 import Button from "../components/ui/Button";
+import GoogleMap, { MAP_LAND_COLOR } from "../components/ui/GoogleMap";
+import { MAP_CLASSES, showRouteView, clearRouteView, setDriverPosition, clearDriverMarker } from "../components/ui/mapOverlays";
+import { useIsMobile } from "../hooks/useIsMobile";
 import { useData } from "../hooks/useData";
 import { useApi } from "../hooks/useApi";
 import { useState, useEffect } from "react";
@@ -11,18 +14,27 @@ import WhatsAppIllustration from "../components/illustrations/WhatsAppIllustrati
 import Icon from '@mdi/react';
 import { mdiKeyboardBackspace, mdiPhone, mdiShareVariant } from '@mdi/js';
 import waLogo from '../assets/whatsapp-logo.webp';
+import { openSupportWhatsApp } from "../constants/support";
 import ErrorPanel from "../components/ui/ErrorPanel";
 import BackgroundPanel from "../components/ui/BackgroundPanel";
+import NoticePill from "../components/ui/NoticePill";
 import pfpPlaceholder from "../assets/pfp-placeholder.webp"
 import RideDetails from "../components/RideDetails";
 import TrackingSkeleton from "../components/TrackingSkeleton";
 import RoutePanel from "../components/ui/RoutePanel";
+
+// Statuses where a driver exists and may be moving — the only ones that poll.
+const LIVE_STATUSES = ["assigned", "en_route", "reached", "started"];
 
 const TrackingPage = () => {
     const phone = useData(state => state.phone)
     const scheduledTime = useData(state => state.scheduledTime)
     const dropLocation = useData(state => state.dropLocation)
     const pickupLocation = useData(state => state.pickupLocation)
+    const pickupCoords = useData(state => state.pickupCoords)
+    const dropCoords = useData(state => state.dropCoords)
+    const routePolyline = useData(state => state.routePolyline)
+    const fareSource = useData(state => state.fareSource)
     const fare = useData(state => state.fare)
     const vehicleType = useData(state => state.vehicleType);
     const setvehicleType = useData(state => state.setvehicleType);
@@ -44,7 +56,18 @@ const TrackingPage = () => {
     const [illusIndex, setIllusIndex] = useState(0);
     const navigate = useViewNavigate();
     const api = useApi();
-    const [bookingLoading, setBookingLoading] = useState(false);
+    // Start on the skeleton whenever a status fetch is coming — the fetch
+    // effect runs after first paint, so starting false flashes a stale panel.
+    const [bookingLoading, setBookingLoading] = useState(!!bookingId);
+    const isMobile = useIsMobile();
+    // { name, phone, vehicleNumber, latitude, longitude, bearing } from the
+    // status endpoint; its coords drive the driver marker. Dev-only:
+    // /dev/tracking?driver=1 seeds a mock puck (no backend, no driver app).
+    const devParams = import.meta.env.DEV ? new URLSearchParams(window.location.search) : null;
+    const [driver, setDriver] = useState(() => devParams?.get("driver")
+        ? { name: "Dev Driver", latitude: 28.6042, longitude: 77.2712 }
+        : null);
+    const [mapApi, setMapApi] = useState(null);
     const pickupTime = "5 mins"
     const dropTime = "30 mins"
 
@@ -52,21 +75,60 @@ const TrackingPage = () => {
         if (status === "cancelled" && cancelledBy === "driver") setError("Driver canceled the ride");
     }, [status, cancelledBy]);
 
-    // Fetch the live booking status on mount. Skeleton shows until it resolves.
-    // No bookingId (e.g. the /booking/test demo route) → keep the store status,
-    // no fetch, no skeleton. Swap this single fetch for polling when needed.
+    // Fetch live status on mount (skeleton until it resolves), then keep
+    // polling while the ride is live so the driver marker moves and status
+    // transitions land. No bookingId (demo route) → keep the store status.
     useEffect(() => {
         if (!bookingId) return;
         let cancelled = false;
-        (async () => {
-            setBookingLoading(true);
+        let timer = null;
+
+        async function poll(isFirst) {
+            if (isFirst) setBookingLoading(true);
             const data = await api.getBookingStatus(bookingId);
             if (cancelled) return;
-            if (!data?.error && data?.status) setStatus(data.status);
-            setBookingLoading(false);
-        })();
-        return () => { cancelled = true; };
+            if (!data?.error) {
+                if (data.status) setStatus(data.status);
+                setDriver(data.driver ?? null);
+            }
+            if (isFirst) setBookingLoading(false);
+            // schedule the next tick from the response, not an interval, so a
+            // slow request can never stack up overlapping polls
+            if (!cancelled && (!data?.status || LIVE_STATUSES.includes(data.status))) {
+                timer = setTimeout(() => poll(false), 5000);
+            }
+        }
+        poll(true);
+
+        return () => { cancelled = true; clearTimeout(timer); };
     }, [bookingId]);
+
+    const pickupPoint = pickupCoords;
+    const dropPoint = dropCoords;
+    const driverPoint = driver?.latitude != null && driver?.longitude != null
+        ? { lat: driver.latitude, lng: driver.longitude }
+        : null;
+
+    // No map on the completed/cancelled screens (the ride is over) or while
+    // the skeleton shows; everything else maps the booked route.
+    const mapVisible = !bookingLoading && status !== "completed" && status !== "cancelled"
+        && !!pickupPoint && !!dropPoint;
+
+    // Route overlays live on the shared singleton map, so this owns drawing
+    // AND clearing them for this page.
+    useEffect(() => {
+        if (!mapApi || !mapVisible) return;
+        showRouteView(mapApi, { pickupPoint, dropPoint, routePolyline });
+        return clearRouteView;
+    }, [mapApi, mapVisible, isMobile, routePolyline, pickupPoint?.lat, pickupPoint?.lng, dropPoint?.lat, dropPoint?.lng]);
+
+    // Driver puck follows each poll; separate from the route overlays so
+    // position updates don't redraw (or get cleared with) the route.
+    useEffect(() => {
+        if (!mapApi || !mapVisible || !driverPoint) return;
+        setDriverPosition(mapApi, driverPoint);
+        return clearDriverMarker;
+    }, [mapApi, mapVisible, driverPoint?.lat, driverPoint?.lng]);
 
     const backArrow = (
         <div onClick={() => navigate('/')} className="flex gap-2 sm:gap-3 items-center justify-center cursor-pointer opacity-[0.8] transition-opacity duration-300 hover:opacity-[1] absolute left-5 top-0 sm:fixed sm:left-6 sm:top-6 text-[var(--text)]">
@@ -74,28 +136,49 @@ const TrackingPage = () => {
         </div>
     );
 
+    // Only shown once a driver exists — before that there's nobody to dispute
+    // a fare with.
     const extraFareNotice = (
-        <p className="text-xs text-[var(--text-muted)] text-center sm:text-left w-full leading-relaxed">
-            Driver asking for extra money? Your fare is fixed at ₹{fare}.{" "}
-            <a
-                href={`https://wa.me/918586088085?text=${encodeURIComponent(`Hi, the driver assigned to my booking${bookingId ? ` (ID: ${bookingId})` : ""} is asking for extra money over the fixed fare.`)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline underline-offset-2 text-[var(--text)] opacity-80 transition-opacity duration-300 hover:opacity-100 focus-visible:opacity-100"
+        <NoticePill>
+            Driver asking extra?{" "}
+            <button
+                type="button"
+                onClick={() => openSupportWhatsApp(`Hi, the driver assigned to my booking${bookingId ? ` (ID: ${bookingId})` : ""} is asking for extra money over the fixed fare of ₹${fare}.`)}
+                className="rounded-sm underline underline-offset-2 text-[var(--text)] cursor-pointer transition-opacity duration-300 hover:opacity-70 active:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
             >
                 Contact support
-            </a>
-        </p>
+            </button>
+        </NoticePill>
+    );
+
+    // Per-km (formula) pricing covers the drive only; zone and fixed-table
+    // destinations are quoted all-in.
+    const tollNotice = fareSource === "formula" && (
+        <NoticePill>Tolls payable to driver separately</NoticePill>
     );
 
     return (
         <div className="relative bg-transparent text-center flex flex-col justify-center items-center w-[100vw] h-[100vh]">
             <ErrorPanel prop={{ error: error, setError: setError }} />
+
+            {/* Mobile: land-coloured backdrop + persistent page-background map,
+                with the opaque bottom-sheet panels riding over it. */}
+            {isMobile && mapVisible && (
+                <>
+                    <div className="absolute inset-0 z-0" style={{ background: MAP_LAND_COLOR }} />
+                    <GoogleMap center={pickupPoint} zoom={12} onMapReady={setMapApi} className="absolute inset-0 z-0" />
+                </>
+            )}
+
             {bookingLoading
                 ? <TrackingSkeleton />
                 : scheduledTime !== null && (status === "confirmed" || status === "assigned")
-                    ? <BackgroundPanel className={"relative py-6 h-[100vh] rounded-t-none justify-center items-center sm:text-left sm:px-[9%] md:px-[5%] xl:px-[13%]"}>
-                        <div className="relative flex flex-col justify-around items-center sm:items-start pt-6 w-full h-full gap-6 sm:gap-12">
+                    ? <BackgroundPanel className={"py-6 sm:overflow-hidden justify-center items-center sm:text-left sm:px-[9%] md:px-[5%] xl:px-[13%] flex flex-col sm:flex-row sm:justify-center lg:justify-between"}>
+                        {/* Scheduled ride: zoomed-out full route, no driver yet */}
+                        {!isMobile && mapVisible && (
+                            <GoogleMap center={pickupPoint} zoom={12} onMapReady={setMapApi} className={MAP_CLASSES} />
+                        )}
+                        <div className="relative z-10 sm:order-1 flex flex-col justify-around items-center sm:items-start pt-6 w-full sm:w-auto sm:h-full gap-6 sm:gap-12">
                             {backArrow}
                             <div className="flex flex-col justify-center items-center sm:items-start gap-1 sm:gap-2 w-[290px]">
                                 <h2 className="text-center sm:text-left w-full font-bold">{status === "assigned" ? "Driver has been assigned" : "Driver has not been assigned"}</h2>
@@ -116,6 +199,7 @@ const TrackingPage = () => {
                                             <h3 className="text-[var(--text-muted)]">Distance</h3>
                                             <h3>30 KM</h3>
                                         </div>
+                                        {tollNotice && <div className="mt-2">{tollNotice}</div>}
                                     </div>
                                 </div>
 
@@ -139,7 +223,7 @@ const TrackingPage = () => {
 
                             <div className="flex flex-col justify-center gap-1 sm:gap-2 w-[290px] items-center">
                                 <Button
-                                    onClick={() => window.open("https://wa.me/918586088085?text=Hi%2C%20I%20need%20help%20with%20my%20ride.", "_blank", "noopener,noreferrer")}
+                                    onClick={() => openSupportWhatsApp("Hi, I need help with my ride.")}
                                     prop={{ variant: "input", width: "290px", bg: "var(--background-muted)", border: false }}
                                 >
                                     <span className="flex items-center justify-center gap-2">
@@ -168,6 +252,7 @@ const TrackingPage = () => {
                                         : <SuccessCheck className="-mt-2" size={140} /> }
                                     <h3 className="text-[var(--text-muted)]">Ride has been completed</h3>
                                     <h2 className="text-center text-2xl font-bold">Fare: ₹{fare}</h2>
+                                    {tollNotice && <div className="mt-2 w-full">{tollNotice}</div>}
                                 </div>
 
                                 <div className="flex flex-col justify-center items-start w-[290px] gap-3 sm:gap-4 ">
@@ -198,6 +283,9 @@ const TrackingPage = () => {
                                 </div>
 
                                 <div className="flex flex-col justify-center gap-1 sm:gap-2 w-[290px] items-center">
+                                    {/* payment happens here, so the dispute
+                                        route sits right above the button */}
+                                    <div className="mb-2 w-full">{extraFareNotice}</div>
                                     <Button onClick={() => navigate("/")}
                                         className="flex gap-1 sm:gap-2 items-center justify-center"
                                         prop={{ variant: "", width: "290px", innerClassName: "flex gap-2 items-center justify-center" }}
@@ -205,7 +293,7 @@ const TrackingPage = () => {
                                         Paid to driver
                                     </Button>
                                     <Button
-                                        onClick={() => window.open("https://wa.me/918586088085?text=Hi%2C%20I%20need%20help%20with%20my%20ride.", "_blank", "noopener,noreferrer")}
+                                        onClick={() => openSupportWhatsApp("Hi, I need help with my ride.")}
                                         prop={{ variant: "input", width: "290px", bg: "var(--background-muted)", border: false }}
                                     >
                                         <span className="flex items-center justify-center gap-2">
@@ -217,8 +305,12 @@ const TrackingPage = () => {
                             </div>
                         </BackgroundPanel>
 
-                        : <BackgroundPanel className={"py-6 justify-center items-center flex sm:text-left sm:px-[9%] md:px-[5%] xl:px-[13%]"}>
-                            <div className="relative flex flex-col justify-center items-center sm:items-start w-full gap-6 sm:gap-12">
+                        : <BackgroundPanel className={"py-6 sm:overflow-hidden justify-center items-center flex flex-col sm:flex-row sm:justify-center lg:justify-between sm:text-left sm:px-[9%] md:px-[5%] xl:px-[13%]"}>
+                            {/* Live ride: route + the driver's current position */}
+                            {!isMobile && mapVisible && (
+                                <GoogleMap center={pickupPoint} zoom={12} onMapReady={setMapApi} className={MAP_CLASSES} />
+                            )}
+                            <div className="relative z-10 sm:order-1 flex flex-col justify-center items-center sm:items-start w-full sm:w-auto gap-6 sm:gap-12">
                                 {backArrow}
                                 <Button prop={{ variant: "input", bg: "var(--background-muted)", border: false }} className='absolute -top-18 right-3 px-3 sm:hidden block'>
                                     <div className="flex gap-1 flex gap-1 items-center justify-center">
@@ -270,10 +362,13 @@ const TrackingPage = () => {
                                             <h4 className="text-[var(--text-muted)]">Car name</h4>
                                         </div>
                                     </Button>
-                                    {extraFareNotice}
+                                    <div className="w-full flex flex-col gap-2">
+                                        {tollNotice}
+                                        {extraFareNotice}
+                                    </div>
                                     <div className="flex justify-between w-[290px] items-center">
                                         <Button
-                                            onClick={() => window.open("https://wa.me/918586088085?text=Hi%2C%20I%20need%20help%20with%20my%20ride.", "_blank", "noopener,noreferrer")}
+                                            onClick={() => openSupportWhatsApp("Hi, I need help with my ride.")}
                                             prop={{ variant: "input", width: "140px", bg: "var(--background-muted)", border: false }}
                                         >
                                             <span className="flex items-center justify-center gap-2">

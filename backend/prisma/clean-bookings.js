@@ -1,8 +1,7 @@
 import { prisma } from '../db/prisma.js'
 
-// Booking ids created by the seed (prisma/seed.js → pastBookings). Anything else
-// is a stray booking made through the app — this script removes those so the DB
-// matches the seed. Keep this list in sync with the seed's booking ids.
+// Seeded booking ids (prisma/seed.js → pastBookings); this script removes everything
+// else so the DB matches the seed. Keep in sync with the seed's booking ids.
 const SEED_BOOKING_IDS = [
   '00000000-0000-0000-0000-000000000001',
   '00000000-0000-0000-0000-000000000002',

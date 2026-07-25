@@ -68,8 +68,7 @@ const router = createBrowserRouter([
     path: "/dashboard",
     element: <ProtectedRoute requireAdmin><AdminDashboard/></ProtectedRoute>
   },
-  // Dev-only preview routes for auth-gated UI (see DevPreview.jsx).
-  // /dev lists every preview; /dev/:view renders one booking-flow screen.
+  // Dev-only preview routes for auth-gated UI (see DevPreview.jsx); /dev lists them all.
   ...(import.meta.env.DEV
     ? [
         { path: "/dev", element: <DevPreview /> },

@@ -1,38 +1,69 @@
 import Button from "../components/ui/Button";
+import GoogleMap, { MAP_LAND_COLOR } from "../components/ui/GoogleMap";
+import { MAP_CLASSES, CenterPin, showRouteView, clearRouteView } from "../components/ui/mapOverlays";
+import { useIsMobile } from "../hooks/useIsMobile";
 import { useData } from "../hooks/useData";
 import { useApi } from "../hooks/useApi";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import ErrorMark from "../components/illustrations/ErrorMark";
 import SuccessCheck from "../components/illustrations/SuccessCheck";
 import { useViewNavigate } from "../hooks/useViewNavigate";
 import PriceIllustration from "../components/illustrations/RadarScanIllustration";
 import SafetyIllustration from "../components/illustrations/DriverEnRouteIllustration";
 import WhatsAppIllustration from "../components/illustrations/WhatsAppIllustration";
+import { openSupportWhatsApp } from "../constants/support";
 import Icon from '@mdi/react';
 import { mdiKeyboardBackspace } from '@mdi/js';
 import ErrorPanel from "../components/ui/ErrorPanel";
 import BackgroundPanel from "../components/ui/BackgroundPanel";
+import NoticePill from "../components/ui/NoticePill";
 import RideDetails from "../components/RideDetails";
 
-// Placeholder fares until real fare calculation lands. Keyed by vehicleType;
-// these are also the prices rendered on the vehicle cards, so booking always
-// charges exactly what the card showed. "Book any" (1) bills the lower bound.
+// Placeholder fares, also the card prices — booking charges what the card
+// showed. "Book any" (1) bills the lower bound.
 const FARES = {
     4: { solo: 400, sharing: 300 },
     6: { solo: 600, sharing: 500 },
     1: { solo: 400, sharing: 300 },
 };
 
+// Flat add-on for routing via the highway; the detour is longer, and the
+// backend applies the same number to its own estimate.
+const SAFE_ROUTE_SURCHARGE = 150;
+
+// A driver exists from here on — the searching panel's exit condition.
+const LIVE_STATUSES = ["assigned", "en_route", "reached", "started"];
+
+// Dev fallbacks (seed anchors) for hand-typed addresses with no Places coords.
+const PICKUP_FALLBACK = { lat: 28.6315, lng: 77.2167 };
+const DROP_FALLBACK = { lat: 28.4951, lng: 77.0890 };
+
 const VehicleSelect = ()=>{
     const phone=useData(state=>state.phone)
     const scheduledTime= useData(state=>state.scheduledTime)
     const dropLocation= useData(state=>state.dropLocation)
+    const setDrop= useData(state=>state.setDrop)
     const pickupLocation= useData(state=>state.pickupLocation)
+    const setPickup= useData(state=>state.setPickup)
+    const pickupCoords= useData(state=>state.pickupCoords)
+    const setPickupCoords= useData(state=>state.setPickupCoords)
+    const dropCoords= useData(state=>state.dropCoords)
+    const setDropCoords= useData(state=>state.setDropCoords)
+    const distanceKm = useData(state => state.distanceKm);
+    const setDistanceKm = useData(state => state.setDistanceKm);
+    const durationMin = useData(state => state.durationMin);
+    const setDurationMin = useData(state => state.setDurationMin);
+    const routePolyline = useData(state => state.routePolyline);
+    const setRoutePolyline = useData(state => state.setRoutePolyline);
+    const fareSource = useData(state => state.fareSource);
+    const setFareSource = useData(state => state.setFareSource);
     const setFare = useData(state => state.setFare);
     const vehicleType = useData(state=>state.vehicleType);
     const setvehicleType = useData(state => state.setvehicleType);
     const sharing = useData(state=>state.sharing);
     const setSharing = useData(state => state.setSharing);
+    const safeRoute = useData(state=>state.safeRoute);
+    const setSafeRoute = useData(state => state.setSafeRoute);
     const bookingId = useData(state=>state.bookingId);
     const setBookingId = useData(state => state.setBookingId);
     const bookingCode = useData(state=>state.bookingCode);
@@ -42,16 +73,27 @@ const VehicleSelect = ()=>{
     const setActiveBooking = useData(state => state.setActiveBooking);
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(false);
-    // Dev-only (dead code in prod builds): /dev/vehicle?step=searching or
-    // ?panel=noDriver|confirmed force internal states for preview/screenshots.
+    // Dev-only: /dev/vehicle?step=|?panel= force internal states for previews.
     const devParams = import.meta.env.DEV ? new URLSearchParams(window.location.search) : null;
     const [panelState, setPanelState]= useState(devParams?.get("panel") ?? "");  // "confirm" | "error"
-    const [step, setStep] = useState(devParams?.get("step") === "searching" ? "searching" : "vehicleType"); // "vehicleType" | "searching"
+    const [step, setStep] = useState(() => {
+        const devStep = devParams?.get("step");
+        return devStep === "searching" || devStep === "confirmLocation" ? devStep : "vehicleType";
+    }); // "vehicleType" | "confirmLocation" | "searching"
+    // Which endpoint the confirm-location screen is adjusting, and whether
+    // confirming should create the booking (Book ride path) or just return
+    // to vehicle select (marker-click adjust path).
+    const [confirmTarget, setConfirmTarget] = useState("pickup"); // "pickup" | "drop"
+    const [bookAfterConfirm, setBookAfterConfirm] = useState(false);
     const [detialsVisibility, setDetialsVisibility] = useState(false)
     const [msgIndex, setMsgIndex] = useState(0);
     const [illusIndex, setIllusIndex] = useState(0);
     const navigate = useViewNavigate();
     const api=useApi();
+    const isMobile = useIsMobile();
+    // The raw Map instance of the mobile page-background map, for reframing on
+    // step changes (desktop mounts a fresh <GoogleMap> per panel instead).
+    const [mapApi, setMapApi] = useState(null);
 
     const searchMessages = [
         "Finding drivers near you...",
@@ -63,6 +105,47 @@ const VehicleSelect = ()=>{
         "Almost there...",
         "Hang tight...",
     ];
+
+    // Route metrics (distance/time/polyline) for display + booking payload,
+    // preferring pin-adjusted coords over the typed addresses. Vehicle type
+    // only affects the fare, so any valid type works. Returns the fresh data
+    // so callers that can't wait for a re-render (confirmBooking) can use it.
+    async function fetchEstimate() {
+        if (!pickupLocation?.trim() || !dropLocation?.trim()) return null;
+        const data = await api.estimateFare(pickupLocation, dropLocation, vehicleType ?? 4, pickupCoords, dropCoords, safeRoute);
+        if (data?.error) return null;
+        setDistanceKm(data.distanceKm ?? null);
+        setDurationMin(data.durationMin ?? null);
+        setRoutePolyline(data.polyline ?? null);
+        // ?fare= wins over the server's answer — previews force a pricing
+        // source the real route wouldn't produce. null in prod.
+        setFareSource(devParams?.get("fare") ?? data.fareSource ?? null);
+        return data;
+    }
+
+    useEffect(() => {
+        // wipe the previous route's metrics first — the map draws from the
+        // store immediately, and a stale polyline would show the old booking's
+        // path until the new estimate lands
+        setDistanceKm(null);
+        setDurationMin(null);
+        setRoutePolyline(null);
+        // ?fare= survives the wipe so previews can force a pricing source
+        // without the backend; null in prod, where devParams is null.
+        setFareSource(devParams?.get("fare") ?? null);
+        fetchEstimate();
+    }, []);
+
+    // The safer route runs through a forced waypoint, so the road path, distance
+    // and duration all change with it — the map would otherwise keep drawing the
+    // shortcut. Compares values rather than using a one-shot flag, so StrictMode's
+    // throwaway run can't consume it (same pattern as OnBoarding's address hook).
+    const safeRouteRef = useRef(safeRoute);
+    useEffect(() => {
+        if (safeRouteRef.current === safeRoute) return;
+        safeRouteRef.current = safeRoute;
+        fetchEstimate();
+    }, [safeRoute]);
 
     useEffect(() => {
         if (step !== "searching") return;
@@ -83,7 +166,112 @@ const VehicleSelect = ()=>{
         return () => timeouts.forEach(clearTimeout);
     }, [step]);
 
-    async function handleSubmit(e) {
+    // Driver assignment runs detached on the server, so this panel is driven by
+    // polling: a driver landing moves us to tracking, an exhausted search to the
+    // no-drivers panel. Same self-scheduling shape as TrackingPage — the next
+    // tick is set from the response, so a slow request can't stack polls.
+    useEffect(() => {
+        if (step !== "searching" || !bookingId) return;
+        let cancelled = false;
+        let timer = null;
+
+        async function poll() {
+            const data = await api.getBookingStatus(bookingId);
+            if (cancelled) return;
+            if (!data?.error && data.status) {
+                setStatus(data.status);
+                if (data.status === "no_driver") {
+                    // the ride never happened — drop the optimistic trip card so
+                    // OnBoarding doesn't offer a dead booking
+                    setActiveBooking(null);
+                    setBookingId(null);
+                    setPanelState("noDriver");
+                    return;
+                }
+                if (LIVE_STATUSES.includes(data.status)) {
+                    navigate(`/booking/test`);
+                    return;
+                }
+            }
+            timer = setTimeout(poll, 5000);
+        }
+
+        // the create response is fresh, so wait a tick before the first check
+        timer = setTimeout(poll, 5000);
+        return () => { cancelled = true; clearTimeout(timer); };
+    }, [step, bookingId]);
+
+    const pickupPoint = pickupCoords ?? PICKUP_FALLBACK;
+    const dropPoint = dropCoords ?? DROP_FALLBACK;
+
+    // Marker click on the full-route view → zoom into that endpoint and let
+    // the user drag the map under the fixed pin to move it.
+    function openLocationAdjust(target) {
+        setConfirmTarget(target);
+        setBookAfterConfirm(false);
+        setStep("confirmLocation");
+    }
+
+    // Map settled on the confirm screen → its center IS the adjusted point,
+    // and the address text follows it via reverse geocode. The mount/re-center
+    // settle (center ≈ stored coords, or no stored coords yet) keeps the
+    // user's own address text — only a real pan rewrites it. The seq counter
+    // drops responses that arrive after a newer settle.
+    const geocodeSeqRef = useRef(0);
+    async function handleMapSettled(center) {
+        const target = confirmTarget;
+        const prev = target === "pickup" ? pickupCoords : dropCoords;
+        if (target === "pickup") setPickupCoords(center);
+        else setDropCoords(center);
+
+        const moved = prev && (Math.abs(prev.lat - center.lat) > 1e-4 || Math.abs(prev.lng - center.lng) > 1e-4);
+        if (!moved) return;
+
+        const seq = ++geocodeSeqRef.current;
+        const data = await api.reverseGeocode(center.lat, center.lng);
+        if (seq !== geocodeSeqRef.current || data?.error || !data?.formattedAddress) return;
+        if (target === "pickup") setPickup(data.formattedAddress);
+        else setDrop(data.formattedAddress);
+    }
+
+    async function handleConfirmLocation() {
+        if (bookAfterConfirm) {
+            // fresh route metrics for the adjusted pin go straight into the
+            // booking payload — store updates can't reach this closure in time
+            setLoading(true);
+            const fresh = await fetchEstimate();
+            await confirmBooking(fresh);
+        } else {
+            setStep("vehicleType");
+            fetchEstimate(); // background refresh; the map redraws when it lands
+        }
+    }
+
+    // Single owner of the map's framing + overlays, re-run on step change,
+    // breakpoint hand-off, and — crucially — when the road polyline arrives
+    // from the fare estimate (it resolves after the first draw, which would
+    // otherwise leave the straight-line fallback on screen).
+    useEffect(() => {
+        if (!mapApi) return;
+        if (step === "confirmLocation") {
+            clearRouteView();
+            mapApi.setCenter(confirmTarget === "pickup" ? pickupPoint : dropPoint);
+            mapApi.setZoom(17);
+        } else {
+            showRouteView(mapApi, {
+                pickupPoint, dropPoint, routePolyline,
+                onPickupClick: () => openLocationAdjust("pickup"),
+                onDropClick: () => openLocationAdjust("drop"),
+            });
+        }
+        // leaving /book (or a StrictMode remount) must not strand overlays on
+        // the shared map
+        return clearRouteView;
+    }, [mapApi, isMobile, step, confirmTarget, routePolyline]);
+
+    // "Book ride" leads to the pickup pin-confirm; the booking is only
+    // created from there (confirmBooking).
+    function handleSubmit(e) {
         e.preventDefault();
 
         if (!vehicleType) {
@@ -91,27 +279,38 @@ const VehicleSelect = ()=>{
             return;
         }
 
-        const rideFare = FARES[vehicleType][sharing ? "sharing" : "solo"];
+        setConfirmTarget("pickup");
+        setBookAfterConfirm(true);
+        setStep("confirmLocation");
+    }
+
+    // The cards quote the base fare; the safer route is an add-on called out
+    // under its toggle, so it lands here rather than in the card prices.
+    const fareFor = (type) =>
+        FARES[type][sharing ? "sharing" : "solo"] + (safeRoute ? SAFE_ROUTE_SURCHARGE : 0);
+
+    async function confirmBooking(freshMetrics) {
+        const rideFare = fareFor(vehicleType);
 
         try {
             setError(null);
             setLoading(true);
             setFare(rideFare);
 
+            // Coords come from the Places selection; seed anchors remain as a
+            // dev fallback so hand-typed bookings still find seeded drivers.
             const data = await api.createBooking({
                 pickupAddress:  pickupLocation,
-                // TODO: replace with real geocoded coords from Maps API.
-                // Hardcoded to the seed's driver anchor (Connaught Place, Delhi)
-                // so test bookings fall inside getDriver's bounding box.
-                pickupLat:      28.6315,
-                pickupLng:      77.2167,
+                pickupLat:      pickupCoords?.lat ?? PICKUP_FALLBACK.lat,
+                pickupLng:      pickupCoords?.lng ?? PICKUP_FALLBACK.lng,
                 dropAddress:    dropLocation,
-                dropLat:        28.4951,
-                dropLng:        77.0890,
+                dropLat:        dropCoords?.lat ?? DROP_FALLBACK.lat,
+                dropLng:        dropCoords?.lng ?? DROP_FALLBACK.lng,
                 vehicleType:    vehicleType,   // 4 | 6 | 1
                 fare:           rideFare,
-                distanceKm:    5.2,
+                distanceKm:     freshMetrics?.distanceKm ?? distanceKm,
                 sharing:       sharing,
+                preferSafeRoute: safeRoute,
                 scheduledAt: scheduledTime,
                 isOutstation:  false,
             });
@@ -121,8 +320,7 @@ const VehicleSelect = ()=>{
                     setPanelState("noDriver")
                     return
                 }
-                // Surface the server's booking-conflict message as-is (same
-                // rules the OnBoarding form enforces client-side).
+                // Surface the server's conflict message as-is.
                 if (data.error.startsWith("You already have")) {
                     setError(data.error);
                     return;
@@ -134,9 +332,8 @@ const VehicleSelect = ()=>{
             if (data.bookingCode) setBookingCode(data.bookingCode)
             if (data.status) setStatus(data.status)
 
-            // Optimistically record the new live booking so OnBoarding's cards
-            // show immediately on return; the next OnBoarding mount re-fetches
-            // and reconciles this with the server's truth.
+            // Optimistic: OnBoarding's cards show immediately; its next mount
+            // reconciles with the server.
             setActiveBooking({
                 id: data.bookingId,
                 code: data.bookingCode,
@@ -169,13 +366,46 @@ const VehicleSelect = ()=>{
     let share = sharing ? "text-lg sm:text-xl text-[var(--text)] font-medium" : "text-xs text-[var(--text-muted)]" 
     let soloVisiblity = sharing? "block" : "hidden"
     let shareVisiblity = sharing? "hidden" : "block"
+    let safeSliderColor = safeRoute ? "bg-green-500" : "bg-gray-500"
+    let safeSliderPosition = safeRoute ? "-left-2" : "left-5"
 
-    const searchingVisible = (panelState !== "noDriver" || (panelState !== "confirmed" && !scheduledTime)) && step === "searching"
+    // Any panel state (noDriver / confirmed) supersedes the search.
+    const searchingVisible = step === "searching" && !panelState
+
+    // Zone and fixed-table destinations are quoted all-in; only the per-km
+    // formula prices the drive alone, leaving tolls to settle with the driver.
+    const tollNotice = fareSource === "formula" && (
+        <NoticePill>Tolls payable to driver separately</NoticePill>
+    );
 
     return (
         <div className="relative bg-transparent text-center flex flex-col justify-center items-center w-[100vw] h-[100vh]">
                 <>
                     <ErrorPanel prop={{error: error, setError: setError}} />
+
+                    {/* Mobile: land-colored backdrop behind the map so seams
+                        (e.g. the confirm step's shortened map) and tile-load
+                        flashes read as more map instead of page background */}
+                    {isMobile && (
+                        <div className="absolute inset-0 z-0" style={{ background: MAP_LAND_COLOR }} />
+                    )}
+
+                    {/* Mobile: persistent page-background map — the opaque
+                        bottom-sheet panels sit over it (OnBoarding layering) */}
+                    {isMobile && (
+                        <GoogleMap
+                            center={pickupPoint}
+                            zoom={12}
+                            onMapReady={setMapApi}
+                            onIdle={step === "confirmLocation" ? handleMapSettled : undefined}
+                            // on the confirm step the map ends above the bottom
+                            // sheet, so its center (pin + getCenter) is the
+                            // center of the VISIBLE area, not the viewport
+                            className={`absolute inset-x-0 top-0 z-0 ${step === "confirmLocation" ? "bottom-[270px]" : "bottom-0"}`}
+                        >
+                            {step === "confirmLocation" && <CenterPin target={confirmTarget} />}
+                        </GoogleMap>
+                    )}
                     <BackgroundPanel show={panelState === "noDriver" || (panelState === "confirmed" && scheduledTime)} className={`z-4 sm:z-3 bottom-0 gap-2 sm:gap-4 py-6 text-center flex flex-col justify-center items-center`}>
                         { panelState === "noDriver"
                             ? <ErrorMark className="-mt-2" size={140} />
@@ -194,7 +424,13 @@ const VehicleSelect = ()=>{
                     </BackgroundPanel>
                     
                     {/* Searching panel — illustrations */}
-                    <BackgroundPanel show={searchingVisible && detialsVisibility === false} className={`z-3 sm:z-2 gap-6 sm:gap-12 py-6 text-center sm:text-left sm:px-[9%] md:px-[5%] xl:px-[13%] flex flex-col justify-center items-center sm:items-start`}>
+                    <BackgroundPanel show={searchingVisible && detialsVisibility === false} className={`z-3 sm:z-2 sm:overflow-hidden py-6 text-center sm:text-left sm:px-[9%] md:px-[5%] xl:px-[13%] flex flex-col sm:flex-row sm:justify-center lg:justify-between items-center`}>
+                        {/* Back to the zoomed-out full-route view while searching */}
+                        {!isMobile && searchingVisible && detialsVisibility === false && (
+                            <GoogleMap center={pickupPoint} zoom={12} onMapReady={setMapApi} className={MAP_CLASSES} />
+                        )}
+
+                        <div className="relative z-10 sm:order-1 flex flex-col justify-end sm:justify-center items-center sm:items-start gap-6 sm:gap-12 w-full sm:w-auto h-full sm:h-auto">
                         <h2 className="text-[var(--text)] font-bold">Requesting a ride</h2>
                         <div className="flex flex-col items-center sm:items-start justify-center gap-3 sm:gap-4 w-[290px]">
                             <div className="flex flex-col gap-3 sm:gap-4 justify-center items-start w-full">
@@ -241,6 +477,7 @@ const VehicleSelect = ()=>{
                                 </>
                             )}
                         </div>
+                        </div>
                     </BackgroundPanel>
 
                     {/* Searching panel — ride details */}
@@ -250,11 +487,72 @@ const VehicleSelect = ()=>{
                     
                     <div className={`${panelState === "noDriver" || (panelState === "confirmed" && scheduledTime) || step === "searching" ? "block" : "hidden" } absolute z-2 sm:z-1 bottom-0 bg-black/40 w-[100vw] h-[100vh]`}/>
                     
-                    <BackgroundPanel show={step === "vehicleType"} className={`z-1 sm:z-0 gap-6 sm:gap-12 py-6 text-center sm:text-left sm:px-[9%] md:px-[5%] xl:px-[13%] flex flex-col justify-center items-center sm:items-start`}>
-                        <div onClick={()=>navigate('/')} className="flex gap-2 sm:gap-3 items-center justify-center absolute left-5 top-6 text-[var(--text)]">
+                    {/* Confirm-location panel — zoomed into the target endpoint;
+                        the map drags under a fixed pin, and each settle
+                        reverse-geocodes the center into the address card. */}
+                    <BackgroundPanel show={step === "confirmLocation"} className={`z-1 sm:z-0 sm:overflow-hidden py-6 text-center sm:text-left flex flex-col sm:flex-row sm:px-[9%] md:px-[5%] xl:px-[13%] sm:justify-center lg:justify-between items-center`}>
+                        {!isMobile && step === "confirmLocation" && (
+                            <GoogleMap
+                                center={confirmTarget === "pickup" ? pickupPoint : dropPoint}
+                                zoom={17}
+                                onMapReady={setMapApi}
+                                onIdle={handleMapSettled}
+                                className={MAP_CLASSES}
+                            >
+                                <CenterPin target={confirmTarget} />
+                            </GoogleMap>
+                        )}
+
+                        <div onClick={() => setStep("vehicleType")} className="flex gap-2 sm:gap-3 items-center justify-center cursor-pointer opacity-[0.8] transition-opacity duration-300 hover:opacity-[1] absolute z-10 left-5 top-6 text-[var(--text)]">
                             <Icon path={mdiKeyboardBackspace} size={1.2} />
                         </div>
-                        <h2 className="text-[var(--text)] font-bold">Choose a ride</h2>
+
+                        <div className="relative z-10 sm:order-1 flex flex-col justify-end sm:justify-center items-center sm:items-start gap-5 sm:gap-8 w-full sm:w-auto h-full sm:h-auto py-2 sm:py-0">
+                            <div className="flex flex-col justify-center items-center sm:items-start gap-1 sm:gap-2">
+                                <h2 className="text-[var(--text)] font-bold">Confirm {confirmTarget} point</h2>
+                                <h3 className="hidden sm:block text-[var(--text-muted)]">{confirmTarget === "pickup" ? "Place the pin exactly where you'll wait" : "Place the pin exactly where you're headed"}</h3>
+                            </div>
+
+                            <div className="flex flex-col justify-center items-center sm:items-start gap-2 sm:gap-3 w-[290px] sm:w-[350px]">
+                                <div className="w-full rounded-xl bg-[var(--background-muted)] px-4 py-3 text-left">
+                                    <p className="text-sm">{confirmTarget === "pickup" ? "Pickup" : "Drop"}</p>
+                                    <h4 className="truncate w-full text-base sm:text-xl">{confirmTarget === "pickup" ? pickupLocation : dropLocation}</h4>
+                                </div>
+                                <div className="flex items-center justify-between w-full px-1">
+                                    <h4 className="text-[var(--text-muted)]">{vehicleType === 6 ? "Cab XL" : vehicleType === 1 ? "Book any" : "Cab Economy"}{sharing ? " · Sharing" : " · Solo"}{safeRoute ? " · Safer route" : ""}</h4>
+                                    <h4>₹{vehicleType ? fareFor(vehicleType) : ""}</h4>
+                                </div>
+                                <Button
+                                    onClick={handleConfirmLocation}
+                                    prop={{ type: "button", disabled: loading }}
+                                    className="mt-2 scale-[1] sm:scale-[1.2] sm:origin-left"
+                                >
+                                    {loading ? "Booking..." : bookAfterConfirm ? "Confirm pickup" : `Confirm ${confirmTarget} location`}
+                                </Button>
+                            </div>
+                        </div>
+                    </BackgroundPanel>
+
+                    <BackgroundPanel show={step === "vehicleType"} className={`z-1 sm:z-0 sm:overflow-hidden py-6 text-center sm:text-left sm:px-[9%] md:px-[5%] xl:px-[13%] flex flex-col sm:flex-row sm:justify-center lg:justify-between items-center`}>
+                        {/* Zoomed-out full-route view; markers are clickable to
+                            adjust either endpoint. Guarded on `step` so the
+                            singleton map moves out promptly on step change. */}
+                        {!isMobile && step === "vehicleType" && (
+                            <GoogleMap center={pickupPoint} zoom={12} onMapReady={setMapApi} className={MAP_CLASSES} />
+                        )}
+
+                        <div onClick={()=>navigate('/')} className="flex gap-2 sm:gap-3 items-center justify-center cursor-pointer opacity-[0.8] transition-opacity duration-300 hover:opacity-[1] absolute z-10 left-5 top-6 text-[var(--text)]">
+                            <Icon path={mdiKeyboardBackspace} size={1.2} />
+                        </div>
+                        <div className="relative z-10 sm:order-1 flex flex-col justify-end sm:justify-center items-center sm:items-start gap-6 sm:gap-12 w-full sm:w-auto h-full sm:h-auto">
+                        <div className="flex flex-col justify-center items-center sm:items-start gap-1 sm:gap-2">
+                            <h2 className="text-[var(--text)] font-bold">Choose a ride</h2>
+                            {distanceKm != null && (
+                                <h3 className="text-[var(--text-muted)]">
+                                    {Math.round(distanceKm * 10) / 10} km{durationMin != null ? ` · ${durationMin} min` : ""}
+                                </h3>
+                            )}
+                        </div>
                         <form className="flex flex-col justify-center items-center sm:items-start gap-2.5 sm:gap-4" noValidate onSubmit={handleSubmit}>
                             <Button
                                 onClick={() => setvehicleType(4)}
@@ -317,13 +615,37 @@ const VehicleSelect = ()=>{
                                 </div>
                             </Button>
                             
-                            <div className="flex justify-between items-center w-[110%]">
+                            <div className="flex justify-between items-center w-[96%] sm:w-[110%]">
                                 <h4>Share a ride?</h4>
                                 <div onClick={()=>setSharing(!sharing)} className="relative w-[50px] h-[22px] scale-[0.9] sm:scale-[1] flex items-center justify-center ">
                                     <div className={`absolute inset-0 ${sliderPosition} border-b-2 border-[rgba(255,255,255,0.05)] bg-white scale-[1] hover:scale-[1.1] cursor-pointer [transition:all_300ms,transform_300ms_150ms] bg-[linear-gradient(to_top,transparent_50%,rgba(146,146,139,0.25)_100%)] shadow-[inset_0px_2px_2px_1px_rgba(255,255,255,0.4),0px_0px_10px_rgba(0,0,0,0.6)]  w-[40px] rounded-full h-[inherit]`}/>
                                     <div className={`${sliderColor} rounded-full w-[inherit] h-[14px]`}/>
                                 </div>
                             </div>
+
+                            {/* Neutral label on purpose — the roadmap decision is
+                                that this is a preference anyone can want at night,
+                                not a gender rule. */}
+                            <div className="flex flex-col gap-1 w-[96%] sm:w-[110%]">
+                                <div className="flex justify-between items-center w-full">
+                                    <h4>Safer route?</h4>
+                                    <div onClick={()=>setSafeRoute(!safeRoute)} className="relative w-[50px] h-[22px] scale-[0.9] sm:scale-[1] flex items-center justify-center ">
+                                        <div className={`absolute inset-0 ${safeSliderPosition} border-b-2 border-[rgba(255,255,255,0.05)] bg-white scale-[1] hover:scale-[1.1] cursor-pointer [transition:all_300ms,transform_300ms_150ms] bg-[linear-gradient(to_top,transparent_50%,rgba(146,146,139,0.25)_100%)] shadow-[inset_0px_2px_2px_1px_rgba(255,255,255,0.4),0px_0px_10px_rgba(0,0,0,0.6)]  w-[40px] rounded-full h-[inherit]`}/>
+                                        <div className={`${safeSliderColor} rounded-full w-[inherit] h-[14px]`}/>
+                                    </div>
+                                </div>
+                                <p className="text-left text-xs text-[var(--text-muted)]">
+                                    Takes the lit highway instead of the shortcut. Adds ₹{SAFE_ROUTE_SURCHARGE}.
+                                </p>
+                            </div>
+
+                            {/* scaled like the fare cards so it lines up with
+                                them on sm+, where they render at 1.1× */}
+                            {tollNotice && (
+                                <div className="w-[290px] scale-[1] sm:scale-[1.1] sm:origin-left">
+                                    {tollNotice}
+                                </div>
+                            )}
                             <div className="mt-4 flex flex-col gap-2 sm:gap-4">
                                 <Button
                                     prop={{
@@ -334,12 +656,13 @@ const VehicleSelect = ()=>{
                                     >
                                     {loading? "Booking..." : "Book ride"}
                                 </Button>
-                                <p className="text-xs sm:text-sm">Special requirements? Like a round trip  <br /> or an extended stay. <a href="https://wa.me/918586088085?text=Hi%2C%20I%20have%20a%20special%20requirement%20for%20my%20trip." target="_blank" rel="noopener noreferrer" className="underline font-bold text-primary-light">Talk to us.</a></p>
+                                <p className="text-xs sm:text-sm">Special requirements? Like a round trip  <br /> or an extended stay. <button type="button" onClick={() => openSupportWhatsApp("Hi, I have a special requirement for my trip.")} className="underline font-bold text-primary-light cursor-pointer">Talk to us.</button></p>
                                 
                             </div>
                         </form>
+                        </div>
                     </BackgroundPanel>
-                </>                   
+                </>
         </div>
     );
 };

@@ -18,6 +18,46 @@ usersRouter.get('/me', protect, async (req, res) => {
   return res.json({ id, phone, name, bookingCode, gender, dob, emergencyContact })
 })
 
+// Recents derived from booking history, in the frontend's local shape so the
+// client can merge the lists.
+usersRouter.get('/me/recent-places', protect, async (req, res) => {
+  const user = await prisma.user.findUnique({ where: { clerkId: req.auth.userId } })
+  if (!user) return res.status(404).json({ error: 'User has not signed up' })
+
+  const bookings = await prisma.booking.findMany({
+    where: { userId: user.id, status: { not: 'cancelled' } },
+    select: {
+      pickupAddress: true, pickupLat: true, pickupLng: true,
+      dropAddress: true, dropLat: true, dropLng: true,
+      createdAt: true,
+    },
+    orderBy: { createdAt: 'desc' },
+    take: 100,
+  })
+
+  const places = new Map()
+  for (const b of bookings) {
+    const stops = [
+      { label: b.pickupAddress, lat: b.pickupLat, lng: b.pickupLng },
+      { label: b.dropAddress, lat: b.dropLat, lng: b.dropLng },
+    ]
+    for (const stop of stops) {
+      if (!stop.label) continue
+      const at = b.createdAt.getTime()
+      const existing = places.get(stop.label)
+      if (existing) {
+        existing.count += 1
+        existing.lastUsedAt = Math.max(existing.lastUsedAt, at)
+        // bookings iterate newest-first, so the first coords seen stay (latest)
+      } else {
+        places.set(stop.label, { label: stop.label, count: 1, lastUsedAt: at, lat: stop.lat ?? null, lng: stop.lng ?? null })
+      }
+    }
+  }
+
+  return res.json({ places: [...places.values()] })
+})
+
 usersRouter.get('/me/download', protect, async (req, res) => {
   const user = await prisma.user.findUnique({ where: { clerkId: req.auth.userId } })
   if (!user) return res.status(404).json({ error: 'User has not signed up' })

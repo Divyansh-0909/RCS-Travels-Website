@@ -65,8 +65,7 @@ const ManageAccount = () => {
     const dob = useData(state => state.dob)
     const setDOB = useData(state => state.setDOB)
     const location = useLocation();
-    // A tab can be requested via router state (NavBar's "Ride History" link) or
-    // via sessionStorage (restoring the tab across the post-cancel reload).
+    // A tab can be requested via router state (NavBar) or sessionStorage (post-cancel reload).
     const [selected, setSelected] = useState(() => {
         const requested = sessionStorage.getItem("manageAccountTab") ?? location.state?.tab
         return Math.max(0, items.indexOf(requested))
@@ -182,8 +181,7 @@ const ManageAccount = () => {
         searchRides()
     }
 
-    // Debounced search: fire 400ms after the user stops typing. 1-char input is
-    // skipped (rideSearchParam is null there anyway); emptying the box resets the list.
+    // Debounced search: fire 400ms after typing stops; 1-char input is skipped.
     useEffect(() => {
         if (rideSearchInit.current) {
             rideSearchInit.current = false
@@ -524,8 +522,7 @@ const ManageAccount = () => {
             </div>
             {items[selected] === RIDE_TAB
                 ? <>
-                    {/* Sectioned filter panel — same shell as the admin dashboard's;
-                        Apply refetches page 1 with the selected filters */}
+                    {/* Sectioned filter panel — same shell as the admin dashboard's; Apply refetches page 1 */}
                     {rideFilterDropdown.mounted && (
                         <Button
                             prop={{
@@ -676,8 +673,7 @@ const ManageAccount = () => {
 
                                     <div className="w-full border-t border-[var(--background-primary)]/10"></div>
 
-                                    {/* Trip meta + toggle, with the expandable details attached so the
-                                        collapsed grid doesn't add an extra flex-gap at the card bottom */}
+                                    {/* Trip meta + toggle; details attached so the collapsed grid adds no flex-gap */}
                                     <div className="flex flex-col w-full">
                                         <div className="flex justify-between items-center w-full gap-4">
                                             <p className="text-base text-gray-500">

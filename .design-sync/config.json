@@ -1,0 +1,36 @@
+{
+  "shape": "package",
+  "pkg": "rcs-travels-frontend",
+  "globalName": "RCSTravels",
+  "srcDir": "src/components/ui",
+  "tsconfig": ".ds-tsconfig.json",
+  "buildCmd": "node .design-sync/prepare.mjs",
+  "entry": "./frontend/.ds-entry.jsx",
+  "cssEntry": "./.ds-cache/ds.css",
+  "readmeHeader": ".design-sync/conventions.md",
+  "provider": {
+    "component": "MemoryRouter"
+  },
+  "componentSrcMap": {
+    "AccountLayout": "src/components/ui/AccountLayout.jsx",
+    "BackgroundPanel": "src/components/ui/BackgroundPanel.jsx",
+    "Button": "src/components/ui/Button.jsx",
+    "Chips": "src/components/ui/Chips.tsx",
+    "CircleIconButton": "src/components/ui/CircleIconButton.jsx",
+    "CopyBtn": "src/components/ui/bookingDisplay.jsx",
+    "DateTimeSelector": "src/components/ui/DateTimeSelector.jsx",
+    "ErrorPanel": "src/components/ui/ErrorPanel.jsx",
+    "Input": "src/components/ui/Input.jsx",
+    "NoticePill": "src/components/ui/NoticePill.jsx",
+    "RideCancelledToast": "src/components/ui/RideCancelledToast.jsx",
+    "RoutePanel": "src/components/ui/RoutePanel.jsx",
+    "SettingRow": "src/components/ui/SettingRow.jsx",
+    "Skeleton": "src/components/ui/Skeleton.jsx",
+    "Toggle": "src/components/ui/Toggle.jsx",
+    "MemoryRouter": null,
+    "GoogleMap": null,
+    "NavBar": null,
+    "MAP": null,
+    "CenterPin": null
+  }
+}

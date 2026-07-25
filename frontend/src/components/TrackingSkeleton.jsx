@@ -2,9 +2,8 @@ import Button from "./ui/Button";
 import BackgroundPanel from "./ui/BackgroundPanel";
 import Skeleton from "./ui/Skeleton";
 
-// First-load placeholder for the tracking page. Clones the active-ride panel
-// structure 1:1 — same wrappers, widths, gaps, and the real Button component —
-// so the real content drops into the exact same footprint with no layout shift.
+// First-load placeholder for the tracking page — clones the active-ride panel 1:1
+// (same wrappers and real Button) so the real content lands with no layout shift.
 const TrackingSkeleton = () => {
     return (
         <BackgroundPanel className={"py-6 justify-center items-center flex sm:text-left sm:px-[9%] md:px-[5%] xl:px-[13%]"}>

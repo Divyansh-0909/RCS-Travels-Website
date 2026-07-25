@@ -24,8 +24,7 @@ const bookingListQuerySchema = z.object({
   limit: z.coerce.number().int().positive().max(100).default(20),
 });
 
-// A user's own ride history — same shape as the admin booking list, minus the
-// customer/source/cancelledBy filters that make no sense for your own rides.
+// A user's own ride history — the admin booking list minus the customer/source/cancelledBy filters.
 const myBookingsQuerySchema = z.object({
   search: z.string().trim().min(2).optional(),
   status: z.enum(BookingStatus).optional(),

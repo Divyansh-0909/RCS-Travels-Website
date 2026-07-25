@@ -2,6 +2,7 @@ RCS TRAVELS — PROJECT ROADMAP
 ===============================
 
 IMPORTANT:
+- add the ability to scroll background panel on mobile
 - add the ability to remove a driver or verify a driver in the dashboard
 - Build legal page
 - Women get a safer road route for rides.
@@ -15,37 +16,40 @@ IMPORTANT:
   Passing it as an `intermediates` waypoint makes Google compute pickup -> waypoint ->
   drop, which excludes the shady shortcut.
 
-  WHERE: backend/services/fares.js — the computeRoutes request body (around L50-54).
-    const SAFE_WAYPOINT = { location: { latLng: { latitude: __, longitude: __ } } }
-    const useSafeRoute = preferSafeRoute && isUniCorridor(pickupAddress, dropAddress)
-    body: { origin, destination,
-            ...(useSafeRoute ? { intermediates: [SAFE_WAYPOINT] } : {}),
-            travelMode: 'DRIVE' }
+  BUILT: "Safer route?" toggle on VehicleSelect under "Share a ride?", default OFF, with
+  "Adds ₹150" under it. Flows through as `preferSafeRoute` to /api/fare/estimate and
+  /api/bookings, and is stored on the Booking row. Toggling re-fetches the estimate so
+  the map polyline redraws along the new path. Label is deliberately neutral, not
+  gendered — anyone can want it at night. Waypoint only applies when one endpoint is
+  within 3 km of campus (isNearCampus), so it can't detour a Delhi→Delhi trip.
 
-  DECISIONS BEFORE BUILDING:
-  1. Gender is NOT in the DB yet — it only lives in frontend Zustand (useData.js:11).
-     User/Booking Prisma models have no gender/route field. Fares run server-side, so
-     persist a flag (add `preferSafeRoute` column) and send it with the fare/booking req.
-  2. Store it as a PREFERENCE, not a hardcoded gender rule. `preferSafeRoute` boolean,
-     defaults TRUE for female users, but shown as an editable toggle in ManageAccount
-     ("Prefer safer, well-lit route"). More inclusive; a guy at 11pm may want it too,
-     a girl in daytime may want the faster route. Keeps auto-on-for-female behaviour.
-  3. THE ROUTE ONLY MATTERS IF THE DRIVER FOLLOWS IT. Backend fare calc alone does not
-     force the human driver onto the highway (TrackingPage has no live map). Hand the
-     driver a Google Maps nav deep link with the SAME waypoint:
-       https://www.google.com/maps/dir/?api=1&origin=PICKUP&destination=DROP
-         &waypoints=WAYPOINT_LATLNG&travelmode=driving
-     Otherwise the fare reflects the safe route but she still gets driven the shortcut.
+  !! 1. SAFE_WAYPOINT IS STILL null in backend/services/rideEstimate.js. Until a real
+        lat/lng on the safe highway stretch is filled in, the toggle charges ₹150 and
+        changes NOTHING about the road path. Do not ship without it.
+     2. THE ROUTE ONLY MATTERS IF THE DRIVER FOLLOWS IT. Backend routing alone does not
+        put the human driver on the highway. Hand the driver a Google Maps nav deep link
+        with the SAME waypoint (driver app, Phase 5):
+          https://www.google.com/maps/dir/?api=1&origin=PICKUP&destination=DROP
+            &waypoints=WAYPOINT_LATLNG&travelmode=driving
+        Otherwise the fare reflects the safe route but she still gets driven the shortcut.
 
-  TRADEOFF: highway is longer -> higher distanceKm -> higher fare at per-km rate
-  (fares.js:60). Do NOT add a visible "safety surcharge" (reads badly) — cap or absorb
-  the difference.
+  TWO DECISIONS WERE REVERSED WHEN BUILDING — noted so this file doesn't contradict code:
+    - Was "defaults TRUE for female users"; built default OFF for everyone. Gender is
+      still not in the DB (it lives only in frontend Zustand), so there was nothing to
+      default from anyway.
+    - Was "do NOT add a visible safety surcharge (reads badly) — cap or absorb the
+      difference"; built as a visible flat +₹150. Worth revisiting: charging a woman
+      extra to avoid an unlit road reads differently from absorbing it silently.
+      Changing it later means editing SAFE_ROUTE_SURCHARGE in BOTH rideEstimate.js and
+      VehicleSelect.jsx — they are mirrored constants, not a shared source.
+
+  TRADEOFF: highway is longer -> higher distanceKm -> higher fare at the per-km rate,
+  and the ₹150 lands ON TOP of that for formula-priced routes. Zone and fixed-table
+  fares only take the flat ₹150.
 - Clear the hard coded data in the schema models
 - make the confirm pickup point page
 - Make the share location and share drivers details page
-- Add a option when a drivers assgined that if the cab driver asks for extra money contact support.
 - Before deploying whole code to github, verify from claude if that can cause security issue
-- For destination which are not in the fixed fare table show "Tolls payable to driver separately" on frontend
 - Add API call count restriction
 - Add rate limiting to maps and all other API's.
 - Enable these API's: Routes API, Places API (New)
@@ -56,6 +60,40 @@ IMPORTANT:
 - Complete ThemeToggle.jsx and add Appearance option in profile
 - notification about if a driver needs to be approved by the admin
 - if a not shared ride is not assgined till the end then notify user about it and ask them to make it shared.
+- !! FILL IN SAFE_WAYPOINT in backend/services/rideEstimate.js — a real lat/lng on the lit
+  highway stretch. It is currently null, which means the "Safer route?" toggle on
+  VehicleSelect CHARGES ₹150 AND CHANGES NOTHING about the road path. Do not ship the
+  toggle until this is set. An unset waypoint is a deliberate no-op, not a broken route,
+  so nothing crashes — it just silently isn't the feature. See the women-safety entry above.
+- !! RUN THE MIGRATION for the new `prefer_safe_route` column: cd backend && npm run db:migrate
+- Round-trip toggle on VehicleSelect — a SECOND SLIDER under "Share a ride?", not a button.
+  It is a state that re-prices the three fare cards, exactly like `sharing`, so it should
+  reuse that row pattern. Once it ships, drop "round trip" from the "Special requirements?"
+  escalation copy right below it (that line exists only because there's no toggle).
+  BLOCKED ON BACKEND — none of this exists yet:
+    - getRideEstimate takes no round-trip param; the 15% rule isn't implemented anywhere
+    - FareTable has no round-trip column, so the three explicit overrides have nowhere to
+      live (Shivaji Stadium 1970, US Embassy 2150, DU South Campus 2100; everything else
+      is 15% off the doubled one-way fare)
+    - Booking has no isRoundTrip; not in types.ts or the create payload either
+    - AdminDashboard has no chip/filter for it, unlike isOutstation
+  Store it as a NULLABLE roundTripFare column: null means "compute oneWay * 2 * 0.85", so
+  the overrides stay data instead of a special case inside the pricing code.
+  DECIDE FIRST: does a round trip need a RETURN TIME? If yes, the toggle has to reveal a
+  second DateTimeSelector, and the whole control moves to OnBoarding where scheduling
+  already lives — do NOT end up with two different date pickers on two pages. If v1 is
+  "driver waits, you settle waiting time with him", no return time is needed and it stays
+  on VehicleSelect. Also decide whether sharing + round trip can combine (probably force
+  sharing off when round trip is on).
+- TrackingPage renders a HARDCODED driver card (name / UP 16 AB 1234 / photo) that is NOT
+  gated on the driver object, and Call driver next to it. A `pending` booking reached from
+  OnBoarding's trip card falls through to the live panel and shows a driver that does not
+  exist — including the extra-fare pill, which assumes one. Gate the driver card, Call
+  driver and that pill on `driver` being non-null, and give `pending` its own state.
+- fetchEstimate (VehicleSelect) has no try/catch, and api.js `request` only converts HTTP
+  errors into { error } — a NETWORK failure rejects instead. Both fetchEstimate call sites
+  (mount effect, handleConfirmLocation) throw unhandled. confirmBooking already wraps its
+  call. Harden if this starts showing up.
 
 OPTIONAL FEATURES:
 - If Users age is more than or equal to 60 enable simple mode where UI simplifies by default. 
@@ -71,7 +109,19 @@ Order: FINISH PAGES + RIDE LIFECYCLE  →  LINK REAL APIS  →  OPTIMIZE LAST.
    is broken. Can be built entirely against the existing stubs (no real APIs needed).
 
    Missing pages / screens:
-     - Pin-point pickup on a map (OnBoarding currently uses plain text inputs, no map)
+     - Pin-point pickup on a map (autocomplete + coords done; confirm screen
+       pending — needs Maps JS + reverse-geocode endpoint). DECIDED: happens
+       AFTER vehicle select, as a new "confirmPickup" step inside VehicleSelect
+       ("Book ride" -> pin confirm -> createBooking -> searching). Fixed center
+       pin, map drags underneath; confirm coords become the booking's
+       pickupLat/Lng.
+     - Route map on /book (VehicleSelect) — pickup→drop route polyline with
+       markers shown alongside the vehicle cards (Maps JS; polyline comes from
+       the existing Routes call by adding routes.polyline.encodedPolyline to
+       the field mask in rideEstimate.js)
+     - Map on TrackingPage — phase 1 now: static route map with pickup/drop
+       markers (same polyline). Phase 2 after driver app: live driver marker
+       fed by the 5s status poll + dead reckoning.
 
 2. LINK GOOGLE / WHATSAPP / FCM  (do second — the "go-live" layer)
    Reason: needed to test with real people, NOT to build. Develop on stubs until then.
@@ -145,9 +195,36 @@ Booking Modes:
 
   On-Spot (secondary — subject to availability):
     - scheduledAt is null (no time given, ride wanted now)
-    - Attempt immediate driver assignment on booking creation
-    - If no driver available → reject with HTTP 503, do not create the booking
+    - REVISED: assignment no longer runs inside the request. POST /api/bookings creates
+      the row as `pending`, fires startAssignment(bookingId) detached, and responds
+      immediately with { status: 'pending' }. The client then shows the "Requesting a
+      ride" panel and polls GET /api/bookings/:id/status every 5s.
+      WHY: getDriver walks 20→80 km rings with a sequential FCM call per candidate. It
+      can run for minutes. Awaiting it inside the request meant the searching panel was
+      UNREACHABLE — the user just watched the Confirm button say "Booking..." until a
+      driver was found or the whole search gave up.
+    - If no driver is reached → status becomes `no_driver` (NOT deleted, NOT a 503).
+      `no_driver` is deliberately absent from ACTIVE_STATUSES, which is what lets the
+      rider retry immediately — that's the job the old delete-on-failure was doing.
+      Side effect: failed bookings now persist in ride history. That's intended (the
+      rider can see it, and you can measure the failure rate).
     - Status flow: pending → assigned → en_route → reached → started → completed
+                   pending → no_driver (terminal)
+    - Crash guard: GET /:id/status lazily expires any `pending` row older than
+      ASSIGNMENT_DEADLINE_MS (5 min). No scheduler needed — the only thing waiting on the
+      answer is the poll that just arrived. Covers a Render restart mid-search, which
+      would otherwise strand the booking and make the client poll forever.
+    - Race, and how it's closed: the lazy expiry and a still-running getDriver could both
+      write. getDriver now claims the booking with a guarded updateMany
+      (status IN pending|confirmed) BEFORE decrementing driver capacity, and abandons the
+      search if the claim fails. Claim-before-capacity matters — the old order took the
+      seat first, so guarding the booking write alone would leak a seat on every lost
+      claim. It also re-checks the status between radius rings so an expired booking
+      stops pinging drivers. `confirmed` must stay in the claimable set: the scheduled
+      job (assignScheduledRides.js) calls the same getDriver on confirmed bookings.
+      STILL OPEN: a driver can receive one FCM for a booking that expires during that
+      exact send — sendFCM returning true means DELIVERED, not accepted. Real fix is a
+      two-phase notify → accept → claim, which is a driver-app change (Phase 5).
 
 Auto-Assignment Flow (shared logic, used by both modes):
   1. Query nearest online + active driver (verificationStatus = approved) using Haversine distance
@@ -157,7 +234,8 @@ Auto-Assignment Flow (shared logic, used by both modes):
   4. Driver accepts  → status becomes assigned, customer sees driver info
   5. Driver declines or 30s passes → try next nearest driver
   6. No drivers available:
-       On-spot    → HTTP 503 returned, booking not saved
+       On-spot    → booking status becomes no_driver (terminal); the client's poll
+                    surfaces the "No drivers nearby" panel
        Scheduled  → booking stays confirmed, admin alerted via WhatsApp
 
 Files to create:

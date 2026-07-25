@@ -7,12 +7,13 @@ import AccountLayout from "../components/ui/AccountLayout";
 import SettingRow from "../components/ui/SettingRow";
 import CircleIconButton from "../components/ui/CircleIconButton";
 import Toggle from "../components/ui/Toggle";
+import { supportTel } from "../constants/support";
 
 const items = ["Emergency contact", "Live location", "Helpline"]
 
-// tel: numbers reachable from the Helpline section. Support is a placeholder.
+// tel: numbers reachable from the Helpline section.
 const helplines = [
-    ["RCS Support", "Questions or issues with your ride.", "+911800000000"],
+    ["RCS Support", "Questions or issues with your ride.", supportTel()],
     ["Police", "National emergency number.", "112"],
     ["Ambulance", "Medical emergencies.", "108"],
 ]

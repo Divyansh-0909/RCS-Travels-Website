@@ -2,11 +2,9 @@ import { useEffect, useState } from "react";
 import Icon from "@mdi/react";
 import { mdiCheck } from "@mdi/js";
 
-// A cancel triggers a full page reload, so the toast can't live in the cancel
-// handler's component — it would unmount before showing. Instead the handler
-// sets a sessionStorage flag before reloading; this global toast reads the flag
-// once on load, shows the pill briefly, then clears it. Mounted in main.jsx so
-// it appears on whichever page the reload lands on (home or manage account).
+// A cancel triggers a full page reload, so the handler sets a sessionStorage flag
+// instead of toasting itself; this global toast (mounted in main.jsx) reads the
+// flag once on load, shows the pill briefly, then clears it.
 const CANCELLED =
     typeof sessionStorage !== "undefined" &&
     sessionStorage.getItem("rideCancelled") === "1";

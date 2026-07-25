@@ -40,10 +40,9 @@ function useExitAnim(open: boolean, duration: number) {
     return { mounted, closing };
 }
 
-const bookingStatuses: BookingStatus[] = ["pending", "confirmed", "assigned", "en_route", "reached", "started", "completed", "cancelled"]
+const bookingStatuses: BookingStatus[] = ["pending", "confirmed", "assigned", "en_route", "reached", "started", "completed", "cancelled", "no_driver"]
 
-// Shapes returned by the admin API (backend/routes/admin.ts selects exactly
-// these fields). DateTime columns arrive as ISO strings over JSON.
+// Shapes returned by the admin API (backend/routes/admin.ts); DateTimes arrive as ISO strings.
 type Booking = {
     id: string
     fare: number
@@ -241,8 +240,7 @@ const AdminDashboard = () => {
         selected === 0 ? searchBooking() : selected === 1 ? searchDrivers() : searchUsers()
     }
 
-    // Debounced search: fire 400ms after the user stops typing. 1-char input is
-    // skipped (searchParam is null there anyway); emptying the box resets the list.
+    // Debounced search: fire 400ms after typing stops; 1-char input is skipped.
     useEffect(() => {
         if (searchInit.current) {
             searchInit.current = false
