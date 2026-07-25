@@ -1,8 +1,8 @@
-// Fine print that must not be missed — muted surface with a foreground
-// hairline so it reads as a deliberate notice, not leftover caption text.
-// Sized for one line at the 290px column; longer copy belongs in a card.
+// Fine print that must not be missed. Styled like the onboarding page's
+// inputs — muted fill, foreground hairline, 12px radius — so it reads as part
+// of the same control family instead of a stray pill.
 const NoticePill = ({ className = "", children }) => (
-    <div className={`${className} w-full rounded-full bg-[var(--background-muted)] border border-[var(--foreground)]/30 px-4 py-2 text-center sm:text-left text-xs text-[var(--text-muted)]`}>
+    <div className={`${className} w-fit max-w-full rounded-xl bg-[var(--background-muted)] border border-[var(--foreground)]/30 px-3 py-2 text-left text-xs sm:text-sm whitespace-nowrap leading-snug text-[var(--text-muted)]`}>
         {children}
     </div>
 );

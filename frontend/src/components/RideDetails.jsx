@@ -9,6 +9,21 @@ import { openSupportWhatsApp } from "../constants/support";
 import RoutePanel from "./ui/RoutePanel";
 import { statusLabels } from "../constants/statusLabels";
 
+// Must match VehicleSelect's SAFE_ROUTE_SURCHARGE — the breakdown backs the
+// safer-route add-on out of the stored total.
+const SAFE_ROUTE_SURCHARGE = 150;
+
+// Same layout + type scale as VehicleSelect / TrackingPage: a real 377px
+// desktop column (OnBoarding's effective control width) instead of a scale
+// transform, with one rhythm for pairs, groups and stacks.
+const COL = "w-[290px] sm:w-[377px]";
+const TITLE = "font-bold text-3xl sm:text-5xl leading-tight";
+const SUBTITLE = "text-lg sm:text-2xl font-normal leading-snug text-[var(--text-muted)]";
+const META = "text-base sm:text-xl";
+const STACK = "gap-6 sm:gap-8";
+const GROUP = "gap-2 sm:gap-3";
+const PAIR = "gap-0.5 sm:gap-1";
+
 const RideDetails = ({ prop }) => {
     const bookingId = useData(state => state.bookingId);
     const setBookingId = useData(state => state.setBookingId);
@@ -23,6 +38,9 @@ const RideDetails = ({ prop }) => {
     const status = useData(state => state.status);
     const distanceKm = useData(state => state.distanceKm);
     const durationMin = useData(state => state.durationMin);
+    const safeRoute = useData(state => state.safeRoute);
+    const surcharge = safeRoute ? SAFE_ROUTE_SURCHARGE : 0;
+    const baseFare = fare != null ? fare - surcharge : null;
 
     async function handleCancel(e) {
         e.preventDefault();
@@ -54,45 +72,60 @@ const RideDetails = ({ prop }) => {
     }
 
     return (
-        <div className="relative flex flex-col justify-center items-center sm:items-start sm:text-left sm:px-[9%] md:px-[5%] xl:px-[13%] sm:h-[100vh] w-full gap-6 sm:gap-12">
-            <div onClick={() => prop.setDetialsVisibility(false)} className="flex gap-2 sm:gap-3 items-center cursor-pointer opacity-[0.8] transition-opacity duration-300 hover:opacity-[1] justify-center absolute left-5 top-0 text-[var(--text)]">
+        <div className={`relative z-10 sm:order-1 flex flex-col justify-center items-center sm:items-start text-left w-full sm:w-auto sm:h-[100vh] ${STACK}`}>
+            <div onClick={() => prop.setDetialsVisibility(false)} className="flex gap-2 sm:gap-2 items-center cursor-pointer opacity-[0.8] transition-opacity duration-300 hover:opacity-[1] justify-center absolute left-5 top-0 text-[var(--text)]">
                 <Icon path={mdiKeyboardBackspace} size={1.2} />
             </div>
-            <div className="flex flex-col justify-center items-center sm:items-start gap-1 sm:gap-2 w-[290px]">
-                <h2 className="font-bold">Ride Details</h2>
-                <h3 className="text-[var(--text-muted)]">{statusLabels[status] || status}</h3>
+            <div className={`flex flex-col justify-center items-center sm:items-start ${PAIR} ${COL}`}>
+                <h2 className={`w-full text-center sm:text-left ${TITLE}`}>Ride Details</h2>
+                <h3 className={`w-full text-center sm:text-left ${SUBTITLE}`}>{statusLabels[status] || status}</h3>
             </div>
-            <div className="flex flex-col justify-center items-start w-[290px] gap-3 sm:gap-4 ">
+            <div className={`flex flex-col justify-center items-start ${GROUP} ${COL}`}>
                 <RoutePanel size="sm" pickup={pickupLocation} drop={dropLocation}>
-                    <div className="flex items-center justify-between w-full">
-                        <h4 className="text-base sm:text-lg text-[var(--text-muted)]">Fare</h4>
-                        <h4 className="text-base sm:text-lg">₹{fare}</h4>
-                    </div>
                     {distanceKm != null && (
                         <div className="flex items-center justify-between w-full">
-                            <h4 className="text-base sm:text-lg text-[var(--text-muted)]">Distance</h4>
-                            <h4 className="text-base sm:text-lg">{Math.round(distanceKm * 10) / 10} km</h4>
+                            <h4 className={`${META} text-[var(--text-muted)]`}>Distance</h4>
+                            <h4 className={META}>{Math.round(distanceKm * 10) / 10} km</h4>
                         </div>
                     )}
                     {durationMin != null && (
                         <div className="flex items-center justify-between w-full">
-                            <h4 className="text-base sm:text-lg text-[var(--text-muted)]">Ride time</h4>
-                            <h4 className="text-base sm:text-lg">{durationMin} min</h4>
+                            <h4 className={`${META} text-[var(--text-muted)]`}>Ride time</h4>
+                            <h4 className={META}>{durationMin} min</h4>
                         </div>
                     )}
+
+                    <div className="w-full h-px bg-[var(--foreground)]/10 my-1" />
+
+                    <div className="flex items-center justify-between w-full">
+                        <h4 className={`${META} text-[var(--text-muted)]`}>Base fare</h4>
+                        <h4 className={META}>₹{baseFare}</h4>
+                    </div>
+                    {safeRoute && (
+                        <div className="flex items-center justify-between w-full">
+                            <h4 className={`${META} text-[var(--text-muted)]`}>Safer route</h4>
+                            <h4 className={META}>₹{surcharge}</h4>
+                        </div>
+                    )}
+                    <div className="flex items-center justify-between w-full">
+                        <h4 className={`${META} font-semibold`}>Total</h4>
+                        <h4 className={`${META} font-semibold`}>₹{fare}</h4>
+                    </div>
                 </RoutePanel>
             </div>
-            <div className="flex flex-col justify-center items-center sm:items-start gap-2 sm:gap-3">
+            <div className={`flex flex-col justify-center items-center sm:items-start gap-3 ${COL}`}>
                 <Button
                     onClick={() => openSupportWhatsApp("Hi, I need help with my ride.")}
-                    prop={{ variant: "input", width: "290px", bg: "var(--background-muted)", border: false }}
+                    prop={{ variant: "input", width: "100%", bg: "var(--background-muted)" }}
                 >
-                    <span className="flex items-center justify-center gap-2">
+                    <span className="flex items-center justify-center gap-2 text-base sm:text-lg">
                         <img src={waLogo} alt="WhatsApp" className="w-6 h-6" />
                         Talk to support
                     </span>
                 </Button>
-                <Button onClick={handleCancel} prop={{ variant: "negative" }}>Cancel ride</Button>
+                <Button onClick={handleCancel} prop={{ variant: "negative", width: "100%" }}>
+                    <span className="text-base sm:text-lg">Cancel ride</span>
+                </Button>
             </div>
         </div>
     )

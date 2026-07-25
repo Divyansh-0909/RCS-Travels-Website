@@ -11,7 +11,6 @@ import { useViewNavigate } from "../hooks/useViewNavigate";
 import PriceIllustration from "../components/illustrations/RadarScanIllustration";
 import SafetyIllustration from "../components/illustrations/DriverEnRouteIllustration";
 import WhatsAppIllustration from "../components/illustrations/WhatsAppIllustration";
-import { openSupportWhatsApp } from "../constants/support";
 import Icon from '@mdi/react';
 import { mdiKeyboardBackspace } from '@mdi/js';
 import ErrorPanel from "../components/ui/ErrorPanel";
@@ -31,12 +30,29 @@ const FARES = {
 // backend applies the same number to its own estimate.
 const SAFE_ROUTE_SURCHARGE = 150;
 
+// Pickup ETA per vehicle type. Placeholder until the driver-availability
+// endpoint returns a real nearest-driver time — same shape, so swapping the
+// source is a one-line change.
+const ETA_MIN = { 4: 3, 6: 5, 1: 3 };
+
 // A driver exists from here on — the searching panel's exit condition.
 const LIVE_STATUSES = ["assigned", "en_route", "reached", "started"];
 
 // Dev fallbacks (seed anchors) for hand-typed addresses with no Places coords.
 const PICKUP_FALLBACK = { lat: 28.6315, lng: 77.2167 };
 const DROP_FALLBACK = { lat: 28.4951, lng: 77.0890 };
+
+// ---- Shared layout + type scale -------------------------------------------
+// The desktop content column is 377px — OnBoarding's effective control width
+// (290px base × its 1.3 scale) — reached with a real width instead of a
+// transform, so spacing and type sizes stay honest at both breakpoints.
+const COL = "w-[290px] sm:w-[377px]";
+const TITLE = "font-bold text-3xl sm:text-5xl leading-tight";
+const SUBTITLE = "text-lg sm:text-2xl font-normal leading-snug text-[var(--text-muted)]";
+// Vertical rhythm: 8px inside a pair, 12–16px within a group, 32/48 between.
+const STACK = "gap-6 sm:gap-8";
+const GROUP = "gap-2 sm:gap-3";
+const PAIR = "gap-0.5 sm:gap-1";
 
 const VehicleSelect = ()=>{
     const phone=useData(state=>state.phone)
@@ -362,8 +378,9 @@ const VehicleSelect = ()=>{
 
     let sliderColor = sharing ? "bg-green-500" : "bg-gray-500"
     let sliderPosition = sharing ? "-left-2" : "left-5"
-    let solo = sharing ? "text-xs text-[var(--text-muted)]" : "font-medium text-lg sm:text-xl text-[var(--text)]"
-    let share = sharing ? "text-lg sm:text-xl text-[var(--text)] font-medium" : "text-xs text-[var(--text-muted)]" 
+    // Selected pricing mode carries the emphasis; the other drops to fine print.
+    let solo = sharing ? "text-xs sm:text-sm text-[var(--text-muted)]" : "font-semibold text-lg sm:text-2xl text-[var(--text)]"
+    let share = sharing ? "font-semibold text-lg sm:text-2xl text-[var(--text)]" : "text-xs sm:text-sm text-[var(--text-muted)]"
     let soloVisiblity = sharing? "block" : "hidden"
     let shareVisiblity = sharing? "hidden" : "block"
     let safeSliderColor = safeRoute ? "bg-green-500" : "bg-gray-500"
@@ -376,6 +393,33 @@ const VehicleSelect = ()=>{
     // formula prices the drive alone, leaving tolls to settle with the driver.
     const tollNotice = fareSource === "formula" && (
         <NoticePill>Tolls payable to driver separately</NoticePill>
+    );
+
+    // One card per vehicle type — same block for all three, so the type scale
+    // and internal spacing can't drift between them.
+    const vehicleCard = (type, name, seats, priceSolo, priceSharing) => (
+        <Button
+            onClick={() => setvehicleType(type)}
+            prop={{
+                variant: "input",
+                width: "100%",
+                bg: "var(--background-muted)",
+            }}
+            className={`${vehicleType === type ? "outline-2" : "outline-0"} px-3 sm:px-4 outline-primary focus:outline-2`}
+        >
+            {/* tighter inset at 290px so "Book any" keeps its name, seats and
+                price range on one line each, like the other two cards */}
+            <div className="flex justify-between items-center w-full gap-2 sm:gap-3">
+                <div className="text-left flex flex-col justify-center items-start gap-0.5">
+                    <h4 className="text-lg sm:text-xl font-medium text-[var(--text)] leading-tight">{name}</h4>
+                    <p className="text-sm sm:text-base text-[var(--text-muted)] leading-tight">{seats} · {ETA_MIN[type]} min away</p>
+                </div>
+                <div key={sharing ? "share" : "solo"} className="animate-fade-swap text-right flex flex-col justify-center items-end gap-0.5">
+                    <span className={`flex gap-1 leading-tight ${solo}`}> <span className={`${soloVisiblity}`}>Solo: </span>{priceSolo}</span>
+                    <span className={`flex gap-1 leading-tight ${share}`}> <span className={`${shareVisiblity}`}>Sharing: </span>{priceSharing}</span>
+                </div>
+            </div>
+        </Button>
     );
 
     return (
@@ -406,82 +450,89 @@ const VehicleSelect = ()=>{
                             {step === "confirmLocation" && <CenterPin target={confirmTarget} />}
                         </GoogleMap>
                     )}
-                    <BackgroundPanel show={panelState === "noDriver" || (panelState === "confirmed" && scheduledTime)} className={`z-4 sm:z-3 bottom-0 gap-2 sm:gap-4 py-6 text-center flex flex-col justify-center items-center`}>
+                    <BackgroundPanel show={panelState === "noDriver" || (panelState === "confirmed" && scheduledTime)} className={`z-4 sm:z-3 bottom-0 gap-3 sm:gap-5 py-6 text-center flex flex-col justify-center items-center`}>
                         { panelState === "noDriver"
                             ? <ErrorMark className="-mt-2" size={140} />
                             : <SuccessCheck className="-mt-2" size={140} /> }
-                        <h2 className="font-bold"> { panelState === "noDriver" ? "No drivers nearby." :  "You're all set." } </h2>
-                        <p className="text-base sm:text-lg"> { panelState === "noDriver" ? "Try again in a few minutes." :  <>You'll get a <b>WhatsApp notification</b> <br /> when a driver is assigned, closer <br /> to your pick up time.</> } </p>
+                        <h2 className={TITLE}> { panelState === "noDriver" ? "No drivers nearby." :  "You're all set." } </h2>
+                        <p className="text-base sm:text-lg leading-relaxed"> { panelState === "noDriver" ? "Try again in a few minutes." :  <>We'll WhatsApp you <br /> when a driver is assigned.</> } </p>
                         <Button 
                             onClick={() => navigate('/')}
                             prop={{
                                 type: "submit",
+                                width: "100%",
                             }}
-                            className="mt-4 scale-[1] sm:scale-[1.1]"
+                            className={`mt-4 ${COL}`}
                         >
-                            {loading? "Loading..." : "Go back"}
+                            <span className="text-base sm:text-lg">{loading? "Loading..." : "Go back"}</span>
                         </Button>
                     </BackgroundPanel>
                     
                     {/* Searching panel — illustrations */}
-                    <BackgroundPanel show={searchingVisible && detialsVisibility === false} className={`z-3 sm:z-2 sm:overflow-hidden py-6 text-center sm:text-left sm:px-[9%] md:px-[5%] xl:px-[13%] flex flex-col sm:flex-row sm:justify-center lg:justify-between items-center`}>
+                    <BackgroundPanel show={searchingVisible && detialsVisibility === false} className={`z-3 sm:z-2 sm:overflow-hidden py-6 text-left sm:px-[9%] md:px-[5%] xl:px-[13%] flex flex-col sm:flex-row sm:justify-center lg:justify-between items-center`}>
                         {/* Back to the zoomed-out full-route view while searching */}
                         {!isMobile && searchingVisible && detialsVisibility === false && (
                             <GoogleMap center={pickupPoint} zoom={12} onMapReady={setMapApi} className={MAP_CLASSES} />
                         )}
 
-                        <div className="relative z-10 sm:order-1 flex flex-col justify-end sm:justify-center items-center sm:items-start gap-6 sm:gap-12 w-full sm:w-auto h-full sm:h-auto">
-                        <h2 className="text-[var(--text)] font-bold">Requesting a ride</h2>
-                        <div className="flex flex-col items-center sm:items-start justify-center gap-3 sm:gap-4 w-[290px]">
-                            <div className="flex flex-col gap-3 sm:gap-4 justify-center items-start w-full">
-                                <p className="text-left">{searchMessages[msgIndex]}</p>
+                        <div className={`relative z-10 sm:order-1 flex flex-col justify-end sm:justify-center items-center sm:items-start ${STACK} w-full sm:w-auto h-full sm:h-auto`}>
+                            <h2 className={`w-full text-center sm:text-left ${TITLE}`}>Requesting a ride</h2>
+
+                            <div className={`flex flex-col items-center sm:items-start justify-center gap-4 ${COL}`}>
+                                {/* progress reads as one status block: bar, then
+                                    the rotating message, then the way out */}
+                                <div className="relative w-full rounded-full h-[6px] overflow-hidden">
+                                    <div className="absolute z-1 inset-0 bg-primary animate-searching-bar h-full"/>
+                                    <div className="absolute z-0 inset-0 bg-gray-500 w-full h-full"/>
+                                </div>
+
+                                <div className="w-full flex justify-between items-center gap-3">
+                                    <p className="text-left text-base sm:text-lg text-[var(--text-muted)]">{searchMessages[msgIndex]}</p>
+                                    <Button onClick={()=>setDetialsVisibility(true)} prop={{ variant: "input", width: "110px", bg: "var(--background-muted)" }} className="cursor-pointer shrink-0" >
+                                        <p className="text-sm sm:text-base text-[var(--text)]">Ride details</p>
+                                    </Button>
+                                </div>
                             </div>
 
-                            <div className="relative w-[290px] rounded-full h-[6px] overflow-hidden">
-                                <div className="absolute z-1 inset-0 bg-primary animate-searching-bar h-full"/>
-                                <div className="absolute z-0 inset-0 bg-gray-500 w-full h-full"/>
+                            <div key={illusIndex} className={`animate-illus-fade w-full rounded-xl border border-[var(--foreground)]/30 bg-[var(--background-muted)] p-3 flex flex-col items-center sm:items-start justify-center gap-3 ${COL}`}>
+                                {illusIndex === 0 && (
+                                    <>
+                                        <PriceIllustration />
+                                        <div className="w-full text-left flex flex-col gap-1 px-1 pb-1">
+                                            <h3 className="text-lg sm:text-xl font-medium text-[var(--text)] leading-tight">Lowest fares on campus.</h3>
+                                            <p className="text-sm sm:text-base leading-relaxed text-[var(--text-muted)]">Save up to 40% over cabs, every ride.</p>
+                                        </div>
+                                    </>
+                                )}
+                                {illusIndex === 1 && (
+                                    <>
+                                        <SafetyIllustration />
+                                        <div className="w-full text-left flex flex-col gap-1 px-1 pb-1">
+                                            <h3 className="text-lg sm:text-xl font-medium text-[var(--text)] leading-tight">Every ride, verified safe.</h3>
+                                            <p className="text-sm sm:text-base leading-relaxed text-[var(--text-muted)]">Background-checked drivers. Real-time GPS.</p>
+                                        </div>
+                                    </>
+                                )}
+                                {illusIndex === 2 && (
+                                    <>
+                                        <WhatsAppIllustration />
+                                        <div className="w-full text-left flex flex-col gap-1 px-1 pb-1">
+                                            <h3 className="text-lg sm:text-xl font-medium text-[var(--text)] leading-tight">Same WhatsApp. Zero effort.</h3>
+                                            <p className="text-sm sm:text-base leading-relaxed text-[var(--text-muted)]">Book like you always have. We handle the rest.</p>
+                                        </div>
+                                    </>
+                                )}
                             </div>
-
-                            <div className="flex flex-col gap-3 sm:gap-4 justify-center items-start w-full">
-                                <Button onClick={()=>setDetialsVisibility(true)} prop={{ variant: "input", width: "140px", bg: "var(--background-muted)", border: false }} className="cursor-pointer" >
-                                    <p> View ride details </p>
-                                </Button>
-                            </div>
-                        </div>
-                        <div key={illusIndex} className="animate-illus-fade flex flex-col items-center sm:items-start justify-center gap-[14px]">
-                            {illusIndex === 0 && (
-                                <>
-                                    <PriceIllustration />
-                                    <div style={{ width: "290px", textAlign: "left" }}>
-                                        <h3 className="text-[var(--text)]">Lowest fares on campus.</h3>
-                                        <p className="text-[var(--text-muted)]">Save up to 40% over cabs on every single ride.</p>
-                                    </div>
-                                </>
-                            )}
-                            {illusIndex === 1 && (
-                                <>
-                                    <SafetyIllustration />
-                                    <div style={{ width: "290px", textAlign: "left" }}>
-                                        <h3 className="text-[var(--text)]">Every ride, verified safe.</h3>
-                                        <p className="text-[var(--text-muted)]">Background checked drivers. Real-time GPS. Safety, built in.</p>
-                                    </div>
-                                </>
-                            )}
-                            {illusIndex === 2 && (
-                                <>
-                                    <WhatsAppIllustration />
-                                    <div style={{ width: "290px", textAlign: "left" }}>
-                                        <h3 className="text-[var(--text)]">Same WhatsApp. Zero effort.</h3>
-                                        <p className="text-[var(--text-muted)]">Message to book like you always have. We handle the rest, automatically.</p>
-                                    </div>
-                                </>
-                            )}
-                        </div>
                         </div>
                     </BackgroundPanel>
 
                     {/* Searching panel — ride details */}
-                    <BackgroundPanel show={searchingVisible && detialsVisibility === true} className={`z-3 sm:z-2 gap-6 sm:gap-12 py-6 text-center sm:text-left flex flex-col justify-center items-center`}>
+                    <BackgroundPanel show={searchingVisible && detialsVisibility === true} className={`z-3 sm:z-2 py-6 sm:overflow-hidden text-left flex flex-col sm:flex-row justify-center items-center sm:justify-center lg:justify-between sm:px-[9%] md:px-[5%] xl:px-[13%]`}>
+                        {/* same split as every other desktop panel: content
+                            left, the booked route on the right */}
+                        {!isMobile && detialsVisibility && (
+                            <GoogleMap center={pickupPoint} zoom={12} onMapReady={setMapApi} className={MAP_CLASSES} />
+                        )}
                         <RideDetails prop={{setLoading,setError,setDetialsVisibility}}/>
                     </BackgroundPanel>
                     
@@ -490,7 +541,7 @@ const VehicleSelect = ()=>{
                     {/* Confirm-location panel — zoomed into the target endpoint;
                         the map drags under a fixed pin, and each settle
                         reverse-geocodes the center into the address card. */}
-                    <BackgroundPanel show={step === "confirmLocation"} className={`z-1 sm:z-0 sm:overflow-hidden py-6 text-center sm:text-left flex flex-col sm:flex-row sm:px-[9%] md:px-[5%] xl:px-[13%] sm:justify-center lg:justify-between items-center`}>
+                    <BackgroundPanel show={step === "confirmLocation"} className={`z-1 sm:z-0 sm:overflow-hidden py-6 text-left flex flex-col sm:flex-row sm:px-[9%] md:px-[5%] xl:px-[13%] sm:justify-center lg:justify-between items-center`}>
                         {!isMobile && step === "confirmLocation" && (
                             <GoogleMap
                                 center={confirmTarget === "pickup" ? pickupPoint : dropPoint}
@@ -503,37 +554,43 @@ const VehicleSelect = ()=>{
                             </GoogleMap>
                         )}
 
-                        <div onClick={() => setStep("vehicleType")} className="flex gap-2 sm:gap-3 items-center justify-center cursor-pointer opacity-[0.8] transition-opacity duration-300 hover:opacity-[1] absolute z-10 left-5 top-6 text-[var(--text)]">
+                        <div onClick={() => setStep("vehicleType")} className="flex gap-2 sm:gap-2 items-center justify-center cursor-pointer opacity-[0.8] transition-opacity duration-300 hover:opacity-[1] absolute z-10 left-5 top-6 text-[var(--text)]">
                             <Icon path={mdiKeyboardBackspace} size={1.2} />
                         </div>
 
-                        <div className="relative z-10 sm:order-1 flex flex-col justify-end sm:justify-center items-center sm:items-start gap-5 sm:gap-8 w-full sm:w-auto h-full sm:h-auto py-2 sm:py-0">
-                            <div className="flex flex-col justify-center items-center sm:items-start gap-1 sm:gap-2">
-                                <h2 className="text-[var(--text)] font-bold">Confirm {confirmTarget} point</h2>
-                                <h3 className="hidden sm:block text-[var(--text-muted)]">{confirmTarget === "pickup" ? "Place the pin exactly where you'll wait" : "Place the pin exactly where you're headed"}</h3>
+                        <div className={`relative z-10 sm:order-1 flex flex-col justify-end sm:justify-center items-center sm:items-start ${STACK} w-full sm:w-auto h-full sm:h-auto py-2 sm:py-0`}>
+                            <div className={`flex flex-col justify-center items-center sm:items-start ${PAIR} ${COL}`}>
+                                <h2 className={`w-full text-center sm:text-left ${TITLE}`}>Confirm {confirmTarget} point</h2>
+                                <h3 className={`hidden sm:block w-full text-center sm:text-left ${SUBTITLE}`}>{confirmTarget === "pickup" ? "Place the pin where you'll wait" : "Place the pin where you're headed"}</h3>
                             </div>
 
-                            <div className="flex flex-col justify-center items-center sm:items-start gap-2 sm:gap-3 w-[290px] sm:w-[350px]">
-                                <div className="w-full rounded-xl bg-[var(--background-muted)] px-4 py-3 text-left">
-                                    <p className="text-sm">{confirmTarget === "pickup" ? "Pickup" : "Drop"}</p>
-                                    <h4 className="truncate w-full text-base sm:text-xl">{confirmTarget === "pickup" ? pickupLocation : dropLocation}</h4>
-                                </div>
-                                <div className="flex items-center justify-between w-full px-1">
-                                    <h4 className="text-[var(--text-muted)]">{vehicleType === 6 ? "Cab XL" : vehicleType === 1 ? "Book any" : "Cab Economy"}{sharing ? " · Sharing" : " · Solo"}{safeRoute ? " · Safer route" : ""}</h4>
-                                    <h4>₹{vehicleType ? fareFor(vehicleType) : ""}</h4>
+                            <div className={`flex flex-col justify-center items-center sm:items-start gap-3 ${COL}`}>
+                                {/* address + the ride it belongs to sit in one
+                                    card, split by a hairline */}
+                                <div className="w-full rounded-xl border border-[var(--foreground)]/30 bg-[var(--background-muted)] px-4 text-left">
+                                    <div className="flex flex-col gap-0.5 py-3">
+                                        <p className="text-xs sm:text-sm text-[var(--text-muted)]">{confirmTarget === "pickup" ? "Pickup" : "Drop"}</p>
+                                        <h4 className="truncate w-full text-base sm:text-xl font-medium text-[var(--text)]">{confirmTarget === "pickup" ? pickupLocation : dropLocation}</h4>
+                                    </div>
+                                    <div className="w-full h-px bg-[var(--foreground)]/10" />
+                                    <div className="flex items-center justify-between w-full py-3 gap-3">
+                                        <h4 className="text-sm sm:text-base text-[var(--text-muted)]">{vehicleType === 6 ? "Cab XL" : vehicleType === 1 ? "Book any" : "Cab Economy"}{sharing ? " · Sharing" : " · Solo"}{safeRoute ? " · Safer route" : ""}</h4>
+                                        <h4 className="text-base sm:text-xl font-semibold">₹{vehicleType ? fareFor(vehicleType) : ""}</h4>
+                                    </div>
                                 </div>
                                 <Button
                                     onClick={handleConfirmLocation}
-                                    prop={{ type: "button", disabled: loading }}
-                                    className="mt-2 scale-[1] sm:scale-[1.2] sm:origin-left"
+                                    prop={{ type: "button", width: "100%", disabled: loading }}
+                                    className="w-full"
                                 >
-                                    {loading ? "Booking..." : bookAfterConfirm ? "Confirm pickup" : `Confirm ${confirmTarget} location`}
+                                    <span className="text-base sm:text-lg">{loading ? "Booking..." : bookAfterConfirm ? "Confirm pickup" : `Confirm ${confirmTarget} location`}</span>
                                 </Button>
+                                <p className="text-xs sm:text-sm leading-snug text-[var(--text-muted)]">Free cancellation until the driver arrives.</p>
                             </div>
                         </div>
                     </BackgroundPanel>
 
-                    <BackgroundPanel show={step === "vehicleType"} className={`z-1 sm:z-0 sm:overflow-hidden py-6 text-center sm:text-left sm:px-[9%] md:px-[5%] xl:px-[13%] flex flex-col sm:flex-row sm:justify-center lg:justify-between items-center`}>
+                    <BackgroundPanel show={step === "vehicleType"} className={`z-1 sm:z-0 sm:overflow-hidden py-6 text-left sm:px-[9%] md:px-[5%] xl:px-[13%] flex flex-col sm:flex-row sm:justify-center lg:justify-between items-center`}>
                         {/* Zoomed-out full-route view; markers are clickable to
                             adjust either endpoint. Guarded on `step` so the
                             singleton map moves out promptly on step change. */}
@@ -541,125 +598,74 @@ const VehicleSelect = ()=>{
                             <GoogleMap center={pickupPoint} zoom={12} onMapReady={setMapApi} className={MAP_CLASSES} />
                         )}
 
-                        <div onClick={()=>navigate('/')} className="flex gap-2 sm:gap-3 items-center justify-center cursor-pointer opacity-[0.8] transition-opacity duration-300 hover:opacity-[1] absolute z-10 left-5 top-6 text-[var(--text)]">
+                        <div onClick={()=>navigate('/')} className="flex gap-2 sm:gap-2 items-center justify-center cursor-pointer opacity-[0.8] transition-opacity duration-300 hover:opacity-[1] absolute z-10 left-5 top-6 text-[var(--text)]">
                             <Icon path={mdiKeyboardBackspace} size={1.2} />
                         </div>
-                        <div className="relative z-10 sm:order-1 flex flex-col justify-end sm:justify-center items-center sm:items-start gap-6 sm:gap-12 w-full sm:w-auto h-full sm:h-auto">
-                        <div className="flex flex-col justify-center items-center sm:items-start gap-1 sm:gap-2">
-                            <h2 className="text-[var(--text)] font-bold">Choose a ride</h2>
-                            {distanceKm != null && (
-                                <h3 className="text-[var(--text-muted)]">
-                                    {Math.round(distanceKm * 10) / 10} km{durationMin != null ? ` · ${durationMin} min` : ""}
-                                </h3>
-                            )}
-                        </div>
-                        <form className="flex flex-col justify-center items-center sm:items-start gap-2.5 sm:gap-4" noValidate onSubmit={handleSubmit}>
-                            <Button
-                                onClick={() => setvehicleType(4)}
-                                prop={{
-                                    variant: "input",
-                                    width: "290px",
-                                    bg: "var(--background-muted)",
-                                }}
-                                className={`${vehicleType === 4 ? "outline-2" : "outline-0"} scale-[1] sm:scale-[1.1] sm:origin-left px-4 outline-primary focus:outline-2 outline-primary`}
-                            >
-                                <div className="flex justify-between items-center w-full">
-                                    <div className="text-left flex flex-col justify-center items-start gap-0.5">
-                                        <h4>Cab Economy</h4>
-                                        <p>4 Seater</p>
+                        <div className={`relative z-10 sm:order-1 flex flex-col justify-end sm:justify-center items-center sm:items-start ${STACK} w-full sm:w-auto h-full sm:h-auto`}>
+                            <div className={`flex flex-col justify-center items-center sm:items-start gap-2 ${COL}`}>
+                                <h2 className={`w-full text-center sm:text-left ${TITLE}`}>Choose a ride</h2>
+                                {distanceKm != null && (
+                                    <div className="w-full flex justify-center sm:justify-start">
+                                        <div className="rounded-full border border-[var(--foreground)]/20 px-3 py-1 text-sm sm:text-base whitespace-nowrap text-[var(--text-muted)]">
+                                            {Math.round(distanceKm * 10) / 10} km{durationMin != null ? ` · ${durationMin} min` : ""}
+                                        </div>
                                     </div>
-                                    <div key={sharing ? "share" : "solo"} className="animate-fade-swap text-right flex flex-col justify-center items-end gap-0.5">
-                                        <span className={`flex gap-1 ${solo}`}> <span className={`${soloVisiblity}`}>Solo: </span>₹{FARES[4].solo}</span>
-                                        <span className={`flex gap-1 ${share}`}> <span className={`${shareVisiblity}`}>Sharing: </span>₹{FARES[4].sharing}</span>
-                                    </div>
-                                </div>
-                            </Button>
-                            <Button
-                                onClick={() => setvehicleType(6)}
-                                prop={{
-                                    variant: "input",
-                                    width: "290px",
-                                    bg: "var(--background-muted)",
-                                }}
-                                className={`${vehicleType === 6 ? "outline-2" : "outline-0"} scale-[1] sm:scale-[1.1] sm:origin-left px-4 outline-primary focus:outline-2 outline-primary`}
-                            >
-                                <div className="flex justify-between items-center w-full ">
-                                    <div className="text-left flex flex-col justify-center items-start gap-0.5">
-                                        <h4>Cab XL</h4>
-                                        <p>6 Seater</p>
-                                    </div>
-                                    <div key={sharing ? "share" : "solo"} className="animate-fade-swap text-right flex flex-col justify-center items-end gap-0.5">
-                                        <span className={`flex gap-1 ${solo}`}> <span className={`${soloVisiblity}`}>Solo: </span>₹{FARES[6].solo}</span>
-                                        <span className={`flex gap-1 ${share}`}> <span className={`${shareVisiblity}`}>Sharing: </span>₹{FARES[6].sharing}</span>
-                                    </div>
-                                </div>
-                            </Button>
-                            <Button
-                                onClick={() => setvehicleType(1)}
-                                prop={{
-                                    variant: "input",
-                                    width: "290px",
-                                    bg: "var(--background-muted)",
-                                }}
-                                className={`${vehicleType === 1 ? "outline-2" : "outline-0"} scale-[1] sm:scale-[1.1] sm:origin-left px-4  outline-primary focus:outline-2 outline-primary`}
-                            >
-                                <div className="flex justify-between items-center w-full">
-                                    <div className="text-left flex flex-col justify-center items-start gap-0.5">
-                                        <h4>Book any</h4>
-                                        <p>4-6 Seater</p>
-                                    </div>
-                                    <div key={sharing ? "share" : "solo"} className="animate-fade-swap text-right flex flex-col justify-center items-end gap-0.5">
-                                        <span className={`flex gap-1 ${solo}`}> <span className={`${soloVisiblity}`}>Solo: </span>₹{FARES[4].solo}-{FARES[6].solo}</span>
-                                        <span className={`flex gap-1 ${share}`}> <span className={`${shareVisiblity}`}>Sharing: </span>₹{FARES[4].sharing}-{FARES[6].sharing}</span>
-                                    </div>
-                                </div>
-                            </Button>
-                            
-                            <div className="flex justify-between items-center w-[96%] sm:w-[110%]">
-                                <h4>Share a ride?</h4>
-                                <div onClick={()=>setSharing(!sharing)} className="relative w-[50px] h-[22px] scale-[0.9] sm:scale-[1] flex items-center justify-center ">
-                                    <div className={`absolute inset-0 ${sliderPosition} border-b-2 border-[rgba(255,255,255,0.05)] bg-white scale-[1] hover:scale-[1.1] cursor-pointer [transition:all_300ms,transform_300ms_150ms] bg-[linear-gradient(to_top,transparent_50%,rgba(146,146,139,0.25)_100%)] shadow-[inset_0px_2px_2px_1px_rgba(255,255,255,0.4),0px_0px_10px_rgba(0,0,0,0.6)]  w-[40px] rounded-full h-[inherit]`}/>
-                                    <div className={`${sliderColor} rounded-full w-[inherit] h-[14px]`}/>
-                                </div>
+                                )}
                             </div>
 
-                            {/* Neutral label on purpose — the roadmap decision is
-                                that this is a preference anyone can want at night,
-                                not a gender rule. */}
-                            <div className="flex flex-col gap-1 w-[96%] sm:w-[110%]">
-                                <div className="flex justify-between items-center w-full">
-                                    <h4>Safer route?</h4>
-                                    <div onClick={()=>setSafeRoute(!safeRoute)} className="relative w-[50px] h-[22px] scale-[0.9] sm:scale-[1] flex items-center justify-center ">
-                                        <div className={`absolute inset-0 ${safeSliderPosition} border-b-2 border-[rgba(255,255,255,0.05)] bg-white scale-[1] hover:scale-[1.1] cursor-pointer [transition:all_300ms,transform_300ms_150ms] bg-[linear-gradient(to_top,transparent_50%,rgba(146,146,139,0.25)_100%)] shadow-[inset_0px_2px_2px_1px_rgba(255,255,255,0.4),0px_0px_10px_rgba(0,0,0,0.6)]  w-[40px] rounded-full h-[inherit]`}/>
-                                        <div className={`${safeSliderColor} rounded-full w-[inherit] h-[14px]`}/>
+                            <form className={`flex flex-col justify-center items-stretch gap-2 ${COL}`} noValidate onSubmit={handleSubmit}>
+                                {vehicleCard(4, "Cab Economy", "4 Seater", `₹${FARES[4].solo}`, `₹${FARES[4].sharing}`)}
+                                {vehicleCard(6, "Cab XL", "6 Seater", `₹${FARES[6].solo}`, `₹${FARES[6].sharing}`)}
+                                {vehicleCard(1, "Book any", "4-6 Seater", `₹${FARES[4].solo}-${FARES[6].solo}`, `₹${FARES[4].sharing}-${FARES[6].sharing}`)}
+
+                                {/* Both ride preferences live in one card with a
+                                    hairline between them, so they read as a
+                                    settings group rather than two loose rows. */}
+                                <div className="mt-2 w-full rounded-xl border border-[var(--foreground)]/30 bg-[var(--background-muted)] px-4">
+                                    <div className="flex justify-between items-center w-full py-3">
+                                        <h4 className="text-base sm:text-lg font-medium text-[var(--text)]">Share a ride?</h4>
+                                        <div onClick={()=>setSharing(!sharing)} className="relative w-[50px] h-[22px] scale-[0.9] sm:scale-[1] flex items-center justify-center ">
+                                            <div className={`absolute inset-0 ${sliderPosition} border-b-2 border-[rgba(255,255,255,0.05)] bg-white scale-[1] hover:scale-[1.1] cursor-pointer [transition:all_300ms,transform_300ms_150ms] bg-[linear-gradient(to_top,transparent_50%,rgba(146,146,139,0.25)_100%)] shadow-[inset_0px_2px_2px_1px_rgba(255,255,255,0.4),0px_0px_10px_rgba(0,0,0,0.6)]  w-[40px] rounded-full h-[inherit]`}/>
+                                            <div className={`${sliderColor} rounded-full w-[inherit] h-[14px]`}/>
+                                        </div>
+                                    </div>
+
+                                    <div className="w-full h-px bg-[var(--foreground)]/10" />
+
+                                    {/* Neutral label on purpose — the roadmap decision is
+                                        that this is a preference anyone can want at night,
+                                        not a gender rule. */}
+                                    <div className="flex justify-between items-start w-full py-3 gap-3">
+                                        <div className="flex flex-col gap-0.5 text-left">
+                                            <h4 className="text-base sm:text-lg font-medium text-[var(--text)]">Safer route?</h4>
+                                            <p className="text-xs sm:text-sm leading-snug text-[var(--text-muted)]">
+                                                Lit highway instead of the shortcut. Adds ₹{SAFE_ROUTE_SURCHARGE}.
+                                            </p>
+                                        </div>
+                                        <div onClick={()=>setSafeRoute(!safeRoute)} className="relative w-[50px] h-[22px] mt-1 shrink-0 scale-[0.9] sm:scale-[1] flex items-center justify-center ">
+                                            <div className={`absolute inset-0 ${safeSliderPosition} border-b-2 border-[rgba(255,255,255,0.05)] bg-white scale-[1] hover:scale-[1.1] cursor-pointer [transition:all_300ms,transform_300ms_150ms] bg-[linear-gradient(to_top,transparent_50%,rgba(146,146,139,0.25)_100%)] shadow-[inset_0px_2px_2px_1px_rgba(255,255,255,0.4),0px_0px_10px_rgba(0,0,0,0.6)]  w-[40px] rounded-full h-[inherit]`}/>
+                                            <div className={`${safeSliderColor} rounded-full w-[inherit] h-[14px]`}/>
+                                        </div>
                                     </div>
                                 </div>
-                                <p className="text-left text-xs text-[var(--text-muted)]">
-                                    Takes the lit highway instead of the shortcut. Adds ₹{SAFE_ROUTE_SURCHARGE}.
-                                </p>
-                            </div>
 
-                            {/* scaled like the fare cards so it lines up with
-                                them on sm+, where they render at 1.1× */}
-                            {tollNotice && (
-                                <div className="w-[290px] scale-[1] sm:scale-[1.1] sm:origin-left">
-                                    {tollNotice}
+                                {tollNotice && <div className="w-full mt-2">{tollNotice}</div>}
+
+                                <div className="mt-3 w-full flex flex-col gap-2">
+                                    <Button
+                                        prop={{
+                                            type: "submit",
+                                            width: "100%",
+                                            disabled: !vehicleType,
+                                        }}
+                                        >
+                                        <span className="text-base sm:text-lg">{loading? "Booking..." : "Book ride"}</span>
+                                    </Button>
+                                    <p className="text-xs sm:text-sm leading-snug text-[var(--text-muted)]">Free cancellation until the driver arrives.</p>
+                                    
+                                    
                                 </div>
-                            )}
-                            <div className="mt-4 flex flex-col gap-2 sm:gap-4">
-                                <Button
-                                    prop={{
-                                        type: "submit",
-                                        disabled: !vehicleType,
-                                    }}
-                                    className="scale-[1] sm:scale-[1.1] sm:origin-left"
-                                    >
-                                    {loading? "Booking..." : "Book ride"}
-                                </Button>
-                                <p className="text-xs sm:text-sm">Special requirements? Like a round trip  <br /> or an extended stay. <button type="button" onClick={() => openSupportWhatsApp("Hi, I have a special requirement for my trip.")} className="underline font-bold text-primary-light cursor-pointer">Talk to us.</button></p>
-                                
-                            </div>
-                        </form>
+                            </form>
                         </div>
                     </BackgroundPanel>
                 </>
