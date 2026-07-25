@@ -2,6 +2,12 @@ import { Router } from 'express'
 
 const googleRouter = Router()
 
+// Every route here proxies a *billed* Google API on our key and none can require
+// auth (addresses are typed before login). The spend ceiling is a quota set on
+// the key in Google Cloud Console, not an app-level counter — a console quota
+// can't be bypassed and applies no matter who calls. Per-IP throttling lives in
+// middleware/rateLimit.js; the in-process caches below cut repeat calls.
+
 // Per-prefix autocomplete cache shared across all users. TTL keeps answers
 // fresh; the cap bounds memory with LRU eviction (hits re-insert to the
 // back). In-process, so it empties on restart.
