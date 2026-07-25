@@ -25,7 +25,7 @@ const RoutePanel = ({ pickup, drop, className = "", size = "md", children }) => 
     const to = splitAddress(drop);
     const dotOffset = SIZES[size].dot;
     return (
-        <div className={`${className} w-full rounded-xl bg-[var(--background-muted)] px-4 py-4 text-left`}>
+        <div className={`${className} w-full rounded-xl border border-[var(--foreground)]/30 bg-[var(--background-muted)] px-4 py-4 text-left`}>
             <div className="grid grid-cols-[12px_1fr] gap-x-3 w-full">
                 <div className={`${dotOffset} w-3 h-3 rounded-full bg-[var(--foreground)] shrink-0`} />
                 <div className="pb-3">

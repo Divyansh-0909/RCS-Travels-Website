@@ -19,6 +19,23 @@ import { useSignIn, useAuth, useUser } from "@clerk/clerk-react";
 import RoutePanel from "../components/ui/RoutePanel";
 import { statusLabels } from "../constants/statusLabels";
 
+// ---- Shared layout + type scale -------------------------------------------
+// Same tokens as VehicleSelect / TrackingPage / RideDetails. 377px is the width
+// this page's scaled controls already render at (290 × 1.3), reached here as a
+// real width so the trip screens carry no transform and their type is honest.
+const COL = "w-[290px] sm:w-[377px]";
+const TITLE = "font-bold text-3xl sm:text-5xl leading-tight";
+const SUBTITLE = "text-lg sm:text-2xl font-normal leading-snug text-[var(--text-muted)]";
+const SECTION = "font-bold text-2xl sm:text-3xl leading-tight";
+const META = "text-base sm:text-xl";
+const STACK = "gap-6 sm:gap-8";
+const GROUP = "gap-2 sm:gap-3";
+const PAIR = "gap-0.5 sm:gap-1";
+// Current Trip sets its own step between the heading block, the route panel and
+// the CTA. One token for all three so they stay equal — a STACK reads too loose
+// here, a GROUP too tight.
+const TRIP_STEP = "gap-4 sm:gap-5";
+
 function useExitAnim(open, duration) {
   const [mounted, setMounted] = useState(open);
   const [closing, setClosing] = useState(false);
@@ -366,26 +383,32 @@ const OnBoarding = () => {
     <div className="relative flex flex-col sm:flex-row h-[100vh] sm:px-[9%] md:px-[5%] xl:px-[13%] sm:pt-16 sm:justify-center lg:justify-between items-center bg-[var(--background-primary)]">
       <div className="relative z-10 py-8 flex flex-col items-center lg:items-start w-full max-w-[500px] h-[inherit] sm:h-fit justify-end sm:justify-center">
         {(activeBooking && authed && !activeBooking.scheduledAt)
-          ? <div className="flex flex-col text-center lg:text-left justify-center items-center w-full lg:items-start gap-6 sm:gap-16">
-            <div className="flex flex-col items-center lg:items-start gap-0">
-              <h1 className="font-bold text-3xl sm:text-5xl leading-tight">Current Trip</h1>
-              <h2 className="sm:text-2xl text-xl font-normal leading-tight text-[var(--text-muted)]">{statusLabels[activeBooking.status] || "On trip"}</h2>
+          // one rhythm down the whole card: heading block → route panel → CTA
+          // all sit one TRIP_STEP apart
+          ? <div className={`flex flex-col justify-center items-center w-full lg:items-start ${TRIP_STEP}`}>
+            <div className={`flex flex-col items-center lg:items-start ${PAIR} ${COL}`}>
+              <h1 className={`w-full text-center lg:text-left ${TITLE}`}>Current Trip</h1>
+              <h2 className={`w-full text-center lg:text-left ${SUBTITLE}`}>{statusLabels[activeBooking.status] || "On trip"}</h2>
             </div>
 
-            <div className="flex flex-col items-stretch text-left gap-5 sm:gap-14 w-[75vw] sm:w-[290px]">
-              <RoutePanel size="xs" className="scale-[1] sm:scale-[1.3] lg:ml-7" pickup={activeBooking.pickupAddress} drop={activeBooking.dropAddress}>
+            <div className={`flex flex-col items-stretch text-left ${TRIP_STEP} ${COL}`}>
+              <RoutePanel size="sm" pickup={activeBooking.pickupAddress} drop={activeBooking.dropAddress}>
                 <div className="flex items-center justify-between w-full">
-                  <h4 className="text-sm sm:text-base text-[var(--text-muted)]">Fare</h4>
-                  <h4 className="text-sm sm:text-base">₹{activeBooking.fare}</h4>
+                  <h4 className={`${META} text-[var(--text-muted)]`}>Fare</h4>
+                  <h4 className={META}>₹{activeBooking.fare}</h4>
                 </div>
                 {activeBooking.code && (
                   <div className="flex items-center justify-between w-full">
-                    <h4 className="text-sm sm:text-base text-[var(--text-muted)]">Booking code</h4>
-                    <h4 className="text-sm sm:text-base tracking-[0.25em] -mr-[0.25em]">{activeBooking.code}</h4>
+                    <h4 className={`${META} text-[var(--text-muted)]`}>Booking code</h4>
+                    <h4 className={`${META} tracking-[0.25em] -mr-[0.25em]`}>{activeBooking.code}</h4>
                   </div>
                 )}
               </RoutePanel>
-              <Button onClick={openActiveBooking} className="scale-[1] sm:scale-[1.3] lg:ml-7" prop={{ variant: "", width: "100%" }}>Track Ride</Button>
+              {/* my-0! cancels Button's own my-1 so the gap under the panel is
+                  the container's GROUP, same as the gap above it */}
+              <Button onClick={openActiveBooking} className="my-0!" prop={{ variant: "", width: "100%" }}>
+                <span className="text-base sm:text-lg">Track Ride</span>
+              </Button>
             </div>
           </div>
           : <div className="flex flex-col text-center lg:text-left justify-center items-center lg:items-start gap-1 sm:gap-5">
@@ -397,11 +420,15 @@ const OnBoarding = () => {
             </div>
 
             {activeBooking && authed && activeBooking.scheduledAt && !showForm
-              ? <div className="flex flex-col justify-center items-center lg:items-start text-center lg:text-left gap-2 sm:gap-3">
-                <h4 className="w-full m-0 p-0 mb-2 sm:mt-0 mt-5 text-xl sm:text-2xl">You have a scheduled ride</h4>
-                <div className="lg:pl-3 flex flex-col gap-2 sm:gap-3">
-                  <Button onClick={openActiveBooking} className="sm:scale-[1.1]" prop={{ variant: "", width: "290px", }}>See Ride Details</Button>
-                  <Button onClick={() => setShowForm(true)} className="sm:scale-[1.1]" prop={{ variant: "input", width: "290px", bg: "var(--background-primary)", }}>Book another ride</Button>
+              ? <div className={`flex flex-col justify-center items-center lg:items-start mt-3 sm:mt-0 ${GROUP}`}>
+                <h4 className={`w-full text-center lg:text-left ${SECTION} ${COL}`}>You have a scheduled ride</h4>
+                <div className={`flex flex-col ${GROUP} ${COL}`}>
+                  <Button onClick={openActiveBooking} prop={{ variant: "", width: "100%" }}>
+                    <span className="text-base sm:text-lg">See Ride Details</span>
+                  </Button>
+                  <Button onClick={() => setShowForm(true)} prop={{ variant: "input", width: "100%", bg: "var(--background-primary)" }}>
+                    <span className="text-base sm:text-lg">Book another ride</span>
+                  </Button>
                 </div>
               </div>
               : ""}

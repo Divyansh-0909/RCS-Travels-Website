@@ -73,7 +73,10 @@ const RideDetails = ({ prop }) => {
 
     return (
         <div className={`relative z-10 sm:order-1 flex flex-col justify-center items-center sm:items-start text-left w-full sm:w-auto sm:h-[100vh] ${STACK}`}>
-            <div onClick={() => prop.setDetialsVisibility(false)} className="flex gap-2 sm:gap-2 items-center cursor-pointer opacity-[0.8] transition-opacity duration-300 hover:opacity-[1] justify-center absolute left-5 top-0 text-[var(--text)]">
+            {/* same anchor as TrackingPage's arrow: in the sheet on mobile,
+                the panel's top-left corner on desktop — the column is w-auto
+                here, so an absolute left-5 would track the content instead */}
+            <div onClick={() => prop.setDetialsVisibility(false)} className="flex gap-2 sm:gap-2 items-center cursor-pointer opacity-[0.8] transition-opacity duration-300 hover:opacity-[1] justify-center absolute left-5 top-0 sm:fixed sm:left-6 sm:top-6 text-[var(--text)]">
                 <Icon path={mdiKeyboardBackspace} size={1.2} />
             </div>
             <div className={`flex flex-col justify-center items-center sm:items-start ${PAIR} ${COL}`}>

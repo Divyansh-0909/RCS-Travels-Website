@@ -2031,14 +2031,15 @@
       "type": "Feature",
       "properties": {
         "name": "Dwarka",
-        "priority": 0,
+        "priority": 1,
         "fares": {
           "hatchback": 1500,
           "sedan": 1600
         },
         "derived": [
           "sedan"
-        ]
+        ],
+        "notes": "Priority 1 so the West Delhi border blends to the midpoint instead of West Delhi winning outright."
       },
       "geometry": {
         "type": "Polygon",
@@ -2334,7 +2335,7 @@
       "type": "Feature",
       "properties": {
         "name": "GN institutional",
-        "priority": 4,
+        "priority": 5,
         "fares": {
           "hatchback": 500,
           "sedan": 600

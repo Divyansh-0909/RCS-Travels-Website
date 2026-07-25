@@ -18,16 +18,14 @@ import BackgroundPanel from "../components/ui/BackgroundPanel";
 import NoticePill from "../components/ui/NoticePill";
 import RideDetails from "../components/RideDetails";
 
-// Placeholder fares, also the card prices — booking charges what the card
-// showed. "Book any" (1) bills the lower bound.
-const FARES = {
-    4: { solo: 400, sharing: 300 },
-    6: { solo: 600, sharing: 500 },
-    1: { solo: 400, sharing: 300 },
-};
+// Every price on this screen comes from /api/fare/estimate, which resolves each
+// seat type through zones -> the fixed fare table -> the per-km formula. There is
+// deliberately no local fallback table: a placeholder here would silently charge
+// the wrong fare for any destination the rate card actually prices.
+const NO_PRICE = "₹—";
 
-// Flat add-on for routing via the highway; the detour is longer, and the
-// backend applies the same number to its own estimate.
+// Display only. The server adds this to the fares it returns, so adding it again
+// here would double-charge it.
 const SAFE_ROUTE_SURCHARGE = 150;
 
 // Pickup ETA per vehicle type. Placeholder until the driver-availability
@@ -89,6 +87,10 @@ const VehicleSelect = ()=>{
     const setActiveBooking = useData(state => state.setActiveBooking);
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(false);
+    // { 4:{solo,sharing,source}, 6:{...}, 1:{...} } from /api/fare/estimate.
+    // Route-scoped and transient, so it stays local rather than going in the
+    // store; the booked fare is what gets persisted.
+    const [serverFares, setServerFares] = useState(null);
     // Dev-only: /dev/vehicle?step=|?panel= force internal states for previews.
     const devParams = import.meta.env.DEV ? new URLSearchParams(window.location.search) : null;
     const [panelState, setPanelState]= useState(devParams?.get("panel") ?? "");  // "confirm" | "error"
@@ -129,7 +131,14 @@ const VehicleSelect = ()=>{
     async function fetchEstimate() {
         if (!pickupLocation?.trim() || !dropLocation?.trim()) return null;
         const data = await api.estimateFare(pickupLocation, dropLocation, vehicleType ?? 4, pickupCoords, dropCoords, safeRoute);
-        if (data?.error) return null;
+        if (data?.error) {
+            // Prices drive the booking now, so a failed estimate is no longer a
+            // silent degradation — say so and leave the cards unpriced.
+            setServerFares(null);
+            setError("Couldn't price this route. Check the addresses and try again.");
+            return null;
+        }
+        setServerFares(data.fares ?? null);
         setDistanceKm(data.distanceKm ?? null);
         setDurationMin(data.durationMin ?? null);
         setRoutePolyline(data.polyline ?? null);
@@ -146,6 +155,7 @@ const VehicleSelect = ()=>{
         setDistanceKm(null);
         setDurationMin(null);
         setRoutePolyline(null);
+        setServerFares(null);
         // ?fare= survives the wipe so previews can force a pricing source
         // without the backend; null in prod, where devParams is null.
         setFareSource(devParams?.get("fare") ?? null);
@@ -295,6 +305,11 @@ const VehicleSelect = ()=>{
             return;
         }
 
+        if (fareFor(vehicleType) == null) {
+            setError("Still pricing this route — one moment.");
+            return;
+        }
+
         setConfirmTarget("pickup");
         setBookAfterConfirm(true);
         setStep("confirmLocation");
@@ -302,16 +317,48 @@ const VehicleSelect = ()=>{
 
     // The cards quote the base fare; the safer route is an add-on called out
     // under its toggle, so it lands here rather than in the card prices.
-    const fareFor = (type) =>
-        FARES[type][sharing ? "sharing" : "solo"] + (safeRoute ? SAFE_ROUTE_SURCHARGE : 0);
+    // Server fares already include the safer-route surcharge, so nothing is added
+    // on top here. null means the estimate hasn't landed or the route can't be
+    // priced for that seat type — every caller must treat that as "cannot book".
+    const fareOf = (type, mode) => serverFares?.[type]?.[mode] ?? null;
+    const fareFor = (type) => fareOf(type, sharing ? "sharing" : "solo");
+
+    // Cards show both modes at once, so labels take the mode explicitly rather
+    // than following the toggle. "Book any" quotes the range it could bill within.
+    const label = (type, mode) => {
+        const v = fareOf(type, mode);
+        return v == null ? NO_PRICE : `₹${v}`;
+    };
+    const rangeLabel = (mode) => {
+        const low = fareOf(4, mode), high = fareOf(6, mode);
+        if (low == null || high == null) return NO_PRICE;
+        return low === high ? `₹${low}` : `₹${low}-${high}`;
+    };
 
     async function confirmBooking(freshMetrics) {
-        const rideFare = fareFor(vehicleType);
+        // freshMetrics carries the estimate that was just re-fetched for the
+        // adjusted pin — its fares are newer than serverFares, which can't have
+        // re-rendered yet. Falling back to state covers the unchanged-pin path.
+        const fares = freshMetrics?.fares ?? serverFares;
+        const rideFare = fares?.[vehicleType]?.[sharing ? "sharing" : "solo"] ?? null;
+
+        // Refuse rather than invent a number. Before the server priced this
+        // screen a hardcoded table stood in here, which quietly charged ₹400 for
+        // destinations the rate card prices at ₹1800.
+        if (rideFare == null) {
+            setError("Couldn't price this route. Check the addresses and try again.");
+            setLoading(false);
+            return;
+        }
 
         try {
             setError(null);
             setLoading(true);
             setFare(rideFare);
+            // Persist the source of the type actually booked, so tracking shows
+            // the tolls notice for the right ride rather than for whichever type
+            // the last estimate happened to ask about.
+            setFareSource(devParams?.get("fare") ?? fares[vehicleType].source ?? null);
 
             // Coords come from the Places selection; seed anchors remain as a
             // dev fallback so hand-typed bookings still find seeded drivers.
@@ -391,7 +438,13 @@ const VehicleSelect = ()=>{
 
     // Zone and fixed-table destinations are quoted all-in; only the per-km
     // formula prices the drive alone, leaving tolls to settle with the driver.
-    const tollNotice = fareSource === "formula" && (
+    // Per seat type, not per request: a destination the rate card prices for
+    // hatchbacks but not SUVs is 'zone' for Cab Economy and 'formula' for Cab XL,
+    // so the tolls warning has to follow the card you actually selected. The
+    // store's fareSource is only a fallback for the ?fare= dev override, which
+    // has no serverFares behind it.
+    const selectedSource = serverFares?.[vehicleType]?.source ?? fareSource;
+    const tollNotice = selectedSource === "formula" && (
         <NoticePill>Tolls payable to driver separately</NoticePill>
     );
 
@@ -494,7 +547,9 @@ const VehicleSelect = ()=>{
                                 </div>
                             </div>
 
-                            <div key={illusIndex} className={`animate-illus-fade w-full rounded-xl border border-[var(--foreground)]/30 bg-[var(--background-muted)] p-3 flex flex-col items-center sm:items-start justify-center gap-3 ${COL}`}>
+                            {/* no w-full — it beats COL's w-[290px] at the base
+                                breakpoint and the card goes full-bleed on mobile */}
+                            <div key={illusIndex} className={`animate-illus-fade rounded-xl border border-[var(--foreground)]/30 bg-[var(--background-muted)] p-3 flex flex-col items-center sm:items-start justify-center gap-3 ${COL}`}>
                                 {illusIndex === 0 && (
                                     <>
                                         <PriceIllustration />
@@ -575,7 +630,7 @@ const VehicleSelect = ()=>{
                                     <div className="w-full h-px bg-[var(--foreground)]/10" />
                                     <div className="flex items-center justify-between w-full py-3 gap-3">
                                         <h4 className="text-sm sm:text-base text-[var(--text-muted)]">{vehicleType === 6 ? "Cab XL" : vehicleType === 1 ? "Book any" : "Cab Economy"}{sharing ? " · Sharing" : " · Solo"}{safeRoute ? " · Safer route" : ""}</h4>
-                                        <h4 className="text-base sm:text-xl font-semibold">₹{vehicleType ? fareFor(vehicleType) : ""}</h4>
+                                        <h4 className="text-base sm:text-xl font-semibold">{vehicleType ? label(vehicleType, sharing ? "sharing" : "solo") : ""}</h4>
                                     </div>
                                 </div>
                                 <Button
@@ -614,9 +669,9 @@ const VehicleSelect = ()=>{
                             </div>
 
                             <form className={`flex flex-col justify-center items-stretch gap-2 ${COL}`} noValidate onSubmit={handleSubmit}>
-                                {vehicleCard(4, "Cab Economy", "4 Seater", `₹${FARES[4].solo}`, `₹${FARES[4].sharing}`)}
-                                {vehicleCard(6, "Cab XL", "6 Seater", `₹${FARES[6].solo}`, `₹${FARES[6].sharing}`)}
-                                {vehicleCard(1, "Book any", "4-6 Seater", `₹${FARES[4].solo}-${FARES[6].solo}`, `₹${FARES[4].sharing}-${FARES[6].sharing}`)}
+                                {vehicleCard(4, "Cab Economy", "4 Seater", label(4, "solo"), label(4, "sharing"))}
+                                {vehicleCard(6, "Cab XL", "6 Seater", label(6, "solo"), label(6, "sharing"))}
+                                {vehicleCard(1, "Book any", "4-6 Seater", rangeLabel("solo"), rangeLabel("sharing"))}
 
                                 {/* Both ride preferences live in one card with a
                                     hairline between them, so they read as a
@@ -656,7 +711,8 @@ const VehicleSelect = ()=>{
                                         prop={{
                                             type: "submit",
                                             width: "100%",
-                                            disabled: !vehicleType,
+                                            // no price yet = nothing legitimate to charge
+                                            disabled: !vehicleType || fareFor(vehicleType) == null,
                                         }}
                                         >
                                         <span className="text-base sm:text-lg">{loading? "Booking..." : "Book ride"}</span>

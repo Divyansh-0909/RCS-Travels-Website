@@ -53,6 +53,12 @@ const SAFE_WAYPOINT = null // { latitude: __, longitude: __ }
 // Flat add-on, mirrored in frontend VehicleSelect (SAFE_ROUTE_SURCHARGE).
 export const SAFE_ROUTE_SURCHARGE = 150
 
+// !! NEEDS PROVIDER CONFIRMATION. The rate card quotes solo fares only, so this
+// number is ours, not theirs. It was reverse-engineered from the placeholder the
+// UI used to hardcode (400 solo / 300 sharing). Change this one constant to
+// reprice every sharing fare in the app.
+const SHARING_DISCOUNT_PCT = 25
+
 const GOOGLE_ROUTES_MONTHLY_LIMIT = 10_000
 
 const currentMonth = () => new Date().toISOString().slice(0, 7) // "YYYY-MM"
@@ -109,19 +115,19 @@ async function fetchRouteMetrics(pickupAddress, dropAddress, pickupCoords, dropC
   }
 }
 
-// Metrics are display-only when the fare is fixed, so Google failures must
-// not break the estimate.
+// Metrics are display-only for zone and fixed-table fares, so a Google failure
+// must not break those. Types that fall through to the per-km formula have no
+// price without a distance and are simply omitted from the response.
 async function bestEffortMetrics(pickupAddress, dropAddress, pickupCoords, dropCoords, safeRoute) {
   try {
     return await fetchRouteMetrics(pickupAddress, dropAddress, pickupCoords, dropCoords, safeRoute)
   } catch (err) {
-    console.error('route metrics unavailable for fixed fare:', err.message)
+    console.error('route metrics unavailable:', err.message)
     return { distanceKm: null, durationMin: null, polyline: null }
   }
 }
 
 export async function getRideEstimate({ pickupAddress, dropAddress, vehicleType, pickupCoords, dropCoords, preferSafeRoute }) {
-  const vehicleClass = VEHICLE_CLASS[vehicleType]
 
   // The waypoint only makes sense on the campus corridor — forcing it on a
   // Delhi→Delhi trip would be a detour, not a safer route. Without coords there's
@@ -142,26 +148,63 @@ export async function getRideEstimate({ pickupAddress, dropAddress, vehicleType,
     pickupCoords && !isNearCampus(pickupCoords) ? pickupCoords :
     null
   const zone = matchZone(zoneCoords)
-  const zoneFare = zone?.fares?.[vehicleClass]
 
-  if (zoneFare) {
-    const metrics = await bestEffortMetrics(pickupAddress, dropAddress, pickupCoords, dropCoords, safeRoute)
-    return { fare: zoneFare + surcharge, ...metrics, fareSource: 'zone', zoneName: zone.name }
-  }
-
-  const row = await prisma.fareTable.findFirst({
-    where: { destinationName: dropAddress, vehicleType, isActive: true },
+  // One lookup covering every seat type at this destination, instead of one
+  // query per type — the caller prices all three cards from a single request.
+  const rows = await prisma.fareTable.findMany({
+    where: { destinationName: dropAddress, isActive: true },
   })
 
-  if (row) {
-    const metrics = await bestEffortMetrics(pickupAddress, dropAddress, pickupCoords, dropCoords, safeRoute)
-    return { fare: row.fixedFare + surcharge, ...metrics, fareSource: 'fixed_table' }
+  // Best-effort on purpose. Metrics are display-only for zone and fixed-table
+  // fares but mandatory for the formula, so a Routes failure should drop the
+  // types that need it rather than fail the whole estimate. If nothing can be
+  // priced we throw below, which is what the pure-formula path used to do.
+  const metrics = await bestEffortMetrics(pickupAddress, dropAddress, pickupCoords, dropCoords, safeRoute)
+
+  // Resolve one seat type: zone fare, then the fixed table, then per-km. Each
+  // source is checked per CLASS, so a zone that prices hatchbacks but not SUVs
+  // still yields a formula price for Cab XL instead of no price at all — the
+  // old code fell through to the formula for the whole request in that case.
+  function priceFor(type) {
+    const cls = VEHICLE_CLASS[type]
+    const zoneFare = zone?.fares?.[cls]
+    if (zoneFare != null) return { base: zoneFare, source: 'zone' }
+
+    const row = rows.find(r => r.vehicleType === type)
+    if (row) return { base: row.fixedFare, source: 'fixed_table' }
+
+    if (metrics.distanceKm == null) return null
+    return { base: formulaFare(metrics.distanceKm, cls), source: 'formula' }
   }
 
-  const metrics = await fetchRouteMetrics(pickupAddress, dropAddress, pickupCoords, dropCoords, safeRoute)
-  // Per-km already prices the longer detour through distanceKm, so the flat
-  // surcharge is charged on top of a fare that has itself gone up.
-  const fare = formulaFare(metrics.distanceKm, vehicleClass) + surcharge
+  // Sharing splits the car. The safer-route surcharge is a flat road cost, so it
+  // is added AFTER the discount rather than being discounted along with the fare.
+  const priced = ({ base, source }) => ({
+    solo: base + surcharge,
+    sharing: Math.round((base * (100 - SHARING_DISCOUNT_PCT)) / 100 / 10) * 10 + surcharge,
+    source,
+  })
 
-  return { fare, ...metrics, fareSource: 'formula' }
+  const hatchback = priceFor(4)
+  const suv = priceFor(6)
+  if (!hatchback && !suv) throw new Error('No route found between the given addresses')
+
+  const fares = {}
+  if (hatchback) {
+    fares[4] = priced(hatchback)
+    fares[1] = priced(hatchback) // "Book any" bills the cheaper class
+  }
+  if (suv) fares[6] = priced(suv)
+
+  // Single-fare fields answer for the vehicleType that was asked about, so
+  // existing callers keep working unchanged.
+  const selected = fares[vehicleType] ?? fares[4] ?? fares[6]
+
+  return {
+    fares,
+    fare: selected?.solo ?? null,
+    fareSource: selected?.source ?? null,
+    zoneName: zone?.name ?? null,
+    ...metrics,
+  }
 }

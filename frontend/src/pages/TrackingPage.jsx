@@ -352,15 +352,18 @@ const TrackingPage = () => {
                             {!isMobile && mapVisible && (
                                 <GoogleMap center={pickupPoint} zoom={12} onMapReady={setMapApi} className={MAP_CLASSES} />
                             )}
+                            {/* Floats over the map, a fixed gap above the sheet's
+                                top edge. Anchored to the panel, not the content
+                                column — the column is vertically centred on
+                                mobile, so its top moves with the content. */}
+                            <Button prop={{ variant: "input", bg: "var(--background-muted)", rounded: "999px" }} className='absolute z-20 -top-14 right-4 px-3 sm:hidden block shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)]'>
+                                <div className="flex gap-1.5 items-center justify-center">
+                                    <Icon path={mdiShareVariant} size={0.7} />
+                                    <h4 className="text-sm">Share</h4>
+                                </div>
+                            </Button>
                             <div className={`relative z-10 sm:order-1 flex flex-col justify-center items-center sm:items-start w-full sm:w-auto ${STACK}`}>
                                 {backArrow}
-                                {/* floats over the map, just above the sheet's top edge */}
-                                <Button prop={{ variant: "input", bg: "var(--background-muted)", rounded: "999px" }} className='absolute z-20 -top-16 right-4 px-3 sm:hidden block shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)]'>
-                                    <div className="flex gap-1.5 items-center justify-center">
-                                        <Icon path={mdiShareVariant} size={0.7} />
-                                        <h4 className="text-sm">Share</h4>
-                                    </div>
-                                </Button>
                                 <div className={`flex flex-col justify-center items-center sm:items-start ${PAIR} ${COL}`}>
                                     <h2 className={`text-center sm:text-left w-full ${TITLE}`}>{liveHeadline.title}</h2>
                                     <h3 className={`text-center sm:text-left w-full ${SUBTITLE}`}>{liveHeadline.detail}</h3>
