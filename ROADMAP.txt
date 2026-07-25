@@ -51,6 +51,32 @@ IMPORTANT:
 - Make the share location and share drivers details page
 - Before deploying whole code to github, verify from claude if that can cause security issue
 - Enable these API's: Routes API, Places API (New)
+- GOOGLE CLOUD CONSOLE — THERE ARE TWO KEYS AND THEY NEED OPPOSITE RESTRICTIONS.
+  This is why they must stay separate: a key can only carry ONE application
+  restriction type, so a single shared key could never be locked down for both.
+    BACKEND  GOOGLE_MAPS_API_KEY      (backend/.env)  server-side only:
+             Routes, Places Autocomplete, Place Details, Geocoding
+    FRONTEND VITE_GOOGLE_MAPS_API_KEY (frontend/.env) Maps JavaScript API, loaded
+             in GoogleMap.jsx
+
+  DO NOW (neither needs the Render deploy):
+  - FRONTEND KEY -> Application restrictions -> HTTP referrers. Add
+    http://localhost:1574/* now and the Vercel domain when it exists. This key
+    SHIPS INSIDE THE JS BUNDLE and is readable by anyone who opens devtools —
+    that is normal and unavoidable for Maps JS, but it makes this the more
+    exposed of the two keys, and referrer restriction is the only thing stopping
+    someone lifting it off the site and billing their map loads to us.
+  - BOTH KEYS -> API restrictions -> only the APIs each one actually calls
+    (frontend: Maps JavaScript API alone; backend: the four above). If either is
+    left on "Don't restrict key", a leak hands over every API enabled on the
+    project rather than just the ones we use.
+  - Billing -> Budgets & alerts. Separate from quotas: a quota caps REQUESTS, a
+    budget alerts on SPEND. Quotas alone can still surprise you if pricing moves.
+
+  CAVEAT: referrer restrictions are checked against the Referer header, which a
+  non-browser client can forge. They stop casual key theft off the site, not a
+  determined attacker. The per-API quota is the actual ceiling — which is why the
+  quotas already set in the console are the load-bearing control here.
 - AFTER YOU DEPLOY TO RENDER — none of these are optional:
   - SET CORS_ORIGINS to the Vercel URL (e.g. https://rcstravels.vercel.app).
     It is UNSET by default, which allows only the local Vite ports, so leaving it
@@ -63,8 +89,12 @@ IMPORTANT:
     database pause.
   - SET FCM_ALWAYS_ACCEPT=0. It is 1 locally. Left at 1 in production the first
     eligible driver is auto-assigned with no notification round-trip at all.
-  - Come back to the key, add IP address restriction on google console, and paste in
-    your Render server's outbound IP. At that point the key becomes fully locked down.
+  - BACKEND KEY -> Application restrictions -> IP addresses, set to Render's
+    outbound IPs. (The frontend key must NOT get this — it is called from browsers,
+    so IP restriction would break every map. See the two-keys entry above.)
+    At that point the backend key is fully locked down.
+  - ADD THE VERCEL DOMAIN to the frontend key's HTTP referrer list, alongside the
+    localhost entry added earlier.
   NOTE: the per-IP rate limiters keep their counters in process memory, so Render's
   free tier resets them on every cold start. Fine against casual abuse; the Google
   Console quota is the real ceiling.
