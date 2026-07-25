@@ -28,8 +28,24 @@ app.use('/api/auth', hybridAuthRouter)
 app.use('/api/admin', adminRouter)
 app.use('/api/googleAPI', googleRouter)
 
-app.get('/health', (_req, res) => {
-  res.json({ status: 'ok' })
+// The database round trip is load-bearing, not decorative. Supabase's free tier
+// pauses a project after 7 days without database activity, and the keep-alive
+// cron that stops Render sleeping only ever hit this endpoint — so one ping now
+// keeps both awake. Until now the only thing touching Postgres on a timer was
+// assignScheduledRides, which is a side effect we shouldn't depend on.
+//
+// Always 200, even when the query fails: this is the liveness URL an uptime
+// monitor polls, and if Render is configured to health-check it, a transient
+// pooler blip returning 503 would trigger a restart loop at the worst moment.
+// The `db` field carries the real status for anyone watching the body.
+app.get('/health', async (_req, res) => {
+  try {
+    await prisma.$queryRaw`select 1`
+    res.json({ status: 'ok', db: 'ok' })
+  } catch (err) {
+    console.error('health: database unreachable:', err.message)
+    res.json({ status: 'ok', db: 'error' })
+  }
 })
 
 // Must be registered after all routes — Express runs error middleware in order.
