@@ -4,7 +4,8 @@ import { MAP_CLASSES, showRouteView, clearRouteView, setDriverPosition, clearDri
 import { useIsMobile } from "../hooks/useIsMobile";
 import { useData } from "../hooks/useData";
 import { useApi } from "../hooks/useApi";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useLocation } from "react-router-dom";
 import ErrorMark from "../components/illustrations/ErrorMark";
 import SuccessCheck from "../components/illustrations/SuccessCheck";
 import { useViewNavigate } from "../hooks/useViewNavigate";
@@ -20,7 +21,7 @@ import BackgroundPanel from "../components/ui/BackgroundPanel";
 import NoticePill from "../components/ui/NoticePill";
 import pfpPlaceholder from "../assets/pfp-placeholder.webp"
 import RideDetails from "../components/RideDetails";
-import TrackingSkeleton from "../components/TrackingSkeleton";
+import Skeleton from "../components/ui/Skeleton";
 import { SAFE_ROUTE_SURCHARGE } from "../constants/fares";
 
 // Statuses where a driver exists and may be moving — the only ones that poll.
@@ -97,9 +98,22 @@ const TrackingPage = () => {
     const [illusIndex, setIllusIndex] = useState(0);
     const navigate = useViewNavigate();
     const api = useApi();
-    // Start on the skeleton whenever a status fetch is coming — the fetch
-    // effect runs after first paint, so starting false flashes a stale panel.
-    const [bookingLoading, setBookingLoading] = useState(!!bookingId);
+    const location = useLocation();
+    // Start on the skeleton whenever a status fetch is coming — the fetch effect
+    // runs after first paint, so starting false flashes a stale panel.
+    //
+    // Arriving straight from the booking flow is the exception: VehicleSelect
+    // stores the status from the same response it navigates on, so there is
+    // nothing stale to guard against and the skeleton only flashes a panel past
+    // on the way to the real one. Held in a ref and cleared from history below —
+    // the browser keeps history state across a reload, and a reload has no such
+    // freshness guarantee.
+    const arrivedFresh = useRef(!!location.state?.freshStatus);
+    const [bookingLoading, setBookingLoading] = useState(!!bookingId && !arrivedFresh.current);
+
+    useEffect(() => {
+        if (arrivedFresh.current) window.history.replaceState({}, "");
+    }, []);
     const isMobile = useIsMobile();
     // { name, phone, vehicleNumber, latitude, longitude, bearing } from the
     // status endpoint; its coords drive the driver marker. Dev-only:
@@ -123,7 +137,7 @@ const TrackingPage = () => {
         let timer = null;
 
         async function poll(isFirst) {
-            if (isFirst) setBookingLoading(true);
+            if (isFirst && !arrivedFresh.current) setBookingLoading(true);
             const data = await api.getBookingStatus(bookingId);
             if (cancelled) return;
             if (!data?.error) {
@@ -134,6 +148,9 @@ const TrackingPage = () => {
                 setCancellationCharge(data.cancellationCharge);
             }
             if (isFirst) setBookingLoading(false);
+            // The freshness only covers the status we arrived with; if bookingId
+            // ever changes while mounted, that fetch gets the skeleton.
+            arrivedFresh.current = false;
             // schedule the next tick from the response, not an interval, so a
             // slow request can never stack up overlapping polls
             if (!cancelled && (!data?.status || LIVE_STATUSES.includes(data.status))) {
@@ -151,9 +168,11 @@ const TrackingPage = () => {
         ? { lat: driver.latitude, lng: driver.longitude }
         : null;
 
-    // No map on the completed/cancelled screens (the ride is over) or while
-    // the skeleton shows; everything else maps the booked route.
-    const mapVisible = !bookingLoading && status !== "completed" && status !== "cancelled"
+    // No map on the completed/cancelled screens (the ride is over); everything
+    // else maps the booked route. The coords are persisted, so this no longer
+    // waits on the status fetch — the map is one more thing that can be on
+    // screen while the driver fields are still resolving.
+    const mapVisible = status !== "completed" && status !== "cancelled"
         && !!pickupPoint && !!dropPoint;
 
     // Route overlays live on the shared singleton map, so this owns drawing
@@ -198,13 +217,15 @@ const TrackingPage = () => {
                 : { title: <>Reaching in <br />{dropTime}</>, detail: `Driving towards ${dropLocation?.split(",")[0]}` };
 
     // Mobile: floats over the map just above the sheet, mirroring the Share pill
-    // on the opposite edge — same -top-14, same muted fill and shadow, so the
-    // two read as a pair. Must be a direct child of BackgroundPanel: the panel
+    // on the opposite edge — same -top-14, same muted fill and shadow, and a
+    // matching pill shape: h-9 is the height Button's py-2 gives Share around its
+    // text-sm row, and my-1 copies the 4px offset Button adds, so the two line up
+    // exactly. Must be a direct child of BackgroundPanel: the panel
     // is the positioned ancestor, and anchoring to the content column instead
     // would drift with the content. Desktop is unchanged, a bare glyph fixed to
     // the top-left corner.
     const backArrow = (
-        <div onClick={() => navigate('/')} className="max-sm:absolute max-sm:z-20 max-sm:-top-14 max-sm:left-4 max-sm:w-11 max-sm:h-11 max-sm:rounded-full max-sm:border max-sm:border-[var(--foreground)]/30 max-sm:bg-[var(--background-muted)] max-sm:shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)] flex items-center justify-center cursor-pointer sm:opacity-[0.8] transition-opacity duration-300 hover:opacity-[1] text-[var(--text)] sm:fixed sm:left-6 sm:top-6">
+        <div onClick={() => navigate('/')} className="max-sm:absolute max-sm:z-20 max-sm:-top-14 max-sm:left-4 max-sm:h-9 max-sm:my-1 max-sm:px-3 max-sm:rounded-full max-sm:border max-sm:border-[var(--foreground)]/30 max-sm:bg-[var(--background-muted)] max-sm:shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)] flex items-center justify-center cursor-pointer sm:opacity-[0.8] transition-opacity duration-300 hover:opacity-[1] text-[var(--text)] sm:fixed sm:left-6 sm:top-6">
             <Icon path={mdiKeyboardBackspace} size={1.2} />
         </div>
     );
@@ -245,19 +266,35 @@ const TrackingPage = () => {
     // the `driver` object the status poll fills in is only read for the map puck.
     // Wire these up and gate the card on driver !== null; a booking that reaches
     // this screen unassigned currently shows a driver who doesn't exist.
+    // The driver is the one thing here that only the status fetch can supply, so
+    // the card keeps its border, fill and size throughout and swaps just the
+    // photo and the three text lines for placeholders. Sized to the live lines
+    // so nothing reflows when they land.
     const driverCard = (
         <Button
-            className="w-full"
+            className={`w-full ${bookingLoading ? "pointer-events-none" : ""}`}
             prop={{ variant: "input", width: "100%", bg: "var(--background-muted)", innerClassName: "flex justify-between items-center w-full px-4 py-3 gap-3" }}
         >
-            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden shrink-0">
-                <img src={pfpPlaceholder} alt="placeholder" className="w-full h-full object-cover" />
-            </div>
-            <div className="flex flex-col text-right justify-center gap-0.5">
-                <h4 className="text-sm sm:text-base text-[var(--text-muted)] leading-tight">Driver name</h4>
-                <h3 className="text-lg sm:text-2xl font-medium leading-tight">UP 16 AB 1234</h3>
-                <h4 className="text-sm sm:text-base text-[var(--text-muted)] leading-tight">Car name</h4>
-            </div>
+            {bookingLoading ? (
+                <Skeleton rounded="rounded-full" className="w-16 h-16 sm:w-20 sm:h-20 shrink-0" />
+            ) : (
+                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden shrink-0">
+                    <img src={pfpPlaceholder} alt="placeholder" className="w-full h-full object-cover" />
+                </div>
+            )}
+            {bookingLoading ? (
+                <div className="flex flex-col items-end justify-center gap-1">
+                    <Skeleton className="h-[17px] sm:h-[20px] w-24" />
+                    <Skeleton className="h-[22px] sm:h-[30px] w-32" />
+                    <Skeleton className="h-[17px] sm:h-[20px] w-20" />
+                </div>
+            ) : (
+                <div className="flex flex-col text-right justify-center gap-0.5">
+                    <h4 className="text-sm sm:text-base text-[var(--text-muted)] leading-tight">Driver name</h4>
+                    <h3 className="text-lg sm:text-2xl font-medium leading-tight">UP 16 AB 1234</h3>
+                    <h4 className="text-sm sm:text-base text-[var(--text-muted)] leading-tight">Car name</h4>
+                </div>
+            )}
         </Button>
     );
 
@@ -304,15 +341,24 @@ const TrackingPage = () => {
         </Button>
     );
 
+    // "Drop to:" is a fixed label and stays put — only the address can be
+    // missing, and only on a cold load before the store has hydrated.
     const dropSummary = (
         <div className="flex w-full justify-between items-center gap-2.5 sm:gap-3">
-            <p className="text-left text-xs sm:text-sm text-[var(--text-muted)] leading-relaxed">Drop to: <br /> <span className="text-sm sm:text-lg text-[var(--text)]">{dropLocation?.slice(0, 20) + '...'}</span></p>
+            <p className="text-left text-xs sm:text-sm text-[var(--text-muted)] leading-relaxed">Drop to: <br />
+                {dropLocation
+                    ? <span className="text-sm sm:text-lg text-[var(--text)]">{dropLocation.slice(0, 20) + '...'}</span>
+                    : <Skeleton className="mt-1 h-[21px] sm:h-[27px] w-28" />}
+            </p>
             {rideDetailsPill}
         </div>
     );
 
+    // overflow-hidden clips the panels while they sit off-screen at
+    // translateX(100%) — without it a viewport-wide panel parked to the right
+    // would double the page width and let the whole screen scroll sideways.
     return (
-        <div className="relative bg-transparent text-center flex flex-col justify-center items-center w-[100vw] h-[100vh]">
+        <div className="relative overflow-hidden bg-transparent text-center flex flex-col justify-center items-center w-[100vw] h-[100vh]">
             <ErrorPanel prop={{ error: error, setError: setError }} />
 
             {/* Mobile: land-coloured backdrop + persistent page-background map,
@@ -324,9 +370,12 @@ const TrackingPage = () => {
                 </>
             )}
 
-            {bookingLoading
-                ? <TrackingSkeleton />
-                : scheduledTime !== null && (status === "confirmed" || status === "assigned")
+            {/* No whole-page skeleton: the panel chrome, the actions and every
+                value the store already holds render immediately, and only the
+                fields still waiting on the status fetch shimmer in place. With
+                no status at all this falls through to the live panel, which is
+                the shell those per-field skeletons hang on. */}
+            {scheduledTime !== null && (status === "confirmed" || status === "assigned")
                     ? <BackgroundPanel className={"py-6 sm:overflow-hidden justify-center items-center text-left sm:px-[9%] md:px-[5%] xl:px-[13%] flex flex-col sm:flex-row sm:justify-center lg:justify-between"}>
                         {backArrow}
                         {/* Scheduled ride: zoomed-out full route, no driver yet */}
@@ -482,8 +531,22 @@ const TrackingPage = () => {
                             </Button>
                             <div className={`relative z-10 sm:order-1 flex flex-col justify-center items-center sm:items-start w-full sm:w-auto ${STACK}`}>
                                 <div className={`flex flex-col justify-center items-center sm:items-start ${PAIR} ${COL}`}>
-                                    <h2 className={`text-center sm:text-left w-full ${TITLE}`}>{liveHeadline.title}</h2>
-                                    <h3 className={`text-center sm:text-left w-full ${SUBTITLE}`}>{liveHeadline.detail}</h3>
+                                    {/* The headline reads off status and the driver's
+                                        ETA, so it is the one block here that can't be
+                                        drawn from the store alone. Two bars for TITLE's
+                                        two lines, one for SUBTITLE. */}
+                                    {bookingLoading ? (
+                                        <>
+                                            <Skeleton className="h-[30px] sm:h-[48px] w-[75%]" />
+                                            <Skeleton className="h-[30px] sm:h-[48px] w-[45%]" />
+                                            <Skeleton className="mt-2 h-[22px] sm:h-[30px] w-[65%]" />
+                                        </>
+                                    ) : (
+                                        <>
+                                            <h2 className={`text-center sm:text-left w-full ${TITLE}`}>{liveHeadline.title}</h2>
+                                            <h3 className={`text-center sm:text-left w-full ${SUBTITLE}`}>{liveHeadline.detail}</h3>
+                                        </>
+                                    )}
                                     <Button prop={{ variant: "input", bg: "var(--background-muted)", rounded: "999px" }} className="mt-2 px-3 hidden sm:block">
                                         <div className="flex gap-1.5 items-center justify-center">
                                             <Icon path={mdiShareVariant} className="text-[var(--text-muted)]" size={0.6} />
@@ -504,7 +567,9 @@ const TrackingPage = () => {
                                         <div className="w-full rounded-xl border border-[var(--foreground)]/30 bg-[var(--background-muted)] px-3.5 sm:px-4 text-left">
                                             <div className="flex items-center justify-between w-full py-3">
                                                 <h3 className={`${META} text-[var(--text-muted)]`}>OTP</h3>
-                                                <h3 className="text-xl sm:text-3xl font-semibold tracking-[0.25em] -mr-[0.25em]">{bookingCode}</h3>
+                                                {bookingCode
+                                                    ? <h3 className="text-xl sm:text-3xl font-semibold tracking-[0.25em] -mr-[0.25em]">{bookingCode}</h3>
+                                                    : <Skeleton className="h-[26px] sm:h-[38px] w-24" />}
                                             </div>
                                         </div>
                                     )}

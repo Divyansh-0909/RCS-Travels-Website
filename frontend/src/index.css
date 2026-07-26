@@ -191,6 +191,51 @@
         will-change: opacity;
     }
 
+    /* Booking-flow panels (BackgroundPanel). On phones the panel travels in from
+       the right edge and leaves the same way — a full-width surface crossing the
+       screen, not a card nudged into place. Opacity stays at 1 the whole way: an
+       opaque panel moving over the map is what makes it feel like a physical
+       surface instead of a fading layer.
+
+       No overshoot on the curve. The panel is exactly viewport-wide, so any
+       overshoot past 0 would pull its right edge off the screen and expose the
+       map behind it. */
+    @keyframes panel-slide-in {
+        from { transform: translateX(100%); }
+        to   { transform: translateX(0); }
+    }
+
+    .animate-panel-enter {
+        animation: panel-slide-in 0.42s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        will-change: transform;
+    }
+
+    @keyframes panel-slide-out {
+        from { transform: translateX(0); }
+        to   { transform: translateX(100%); }
+    }
+
+    /* 0.25s to match BackgroundPanel's default unmount delay — a longer exit
+       would be cut off mid-animation. */
+    .animate-panel-exit {
+        animation: panel-slide-out 0.25s cubic-bezier(0.7, 0, 0.84, 0) forwards;
+        will-change: transform;
+    }
+
+    /* From sm up the panel is a full-height side panel and a full-width wipe
+       would be far too heavy — the original short slide-and-fade takes over. */
+    @media (width >= 40rem) {
+        .animate-panel-enter {
+            animation: panel-transition 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            will-change: transform, opacity;
+        }
+
+        .animate-panel-exit {
+            animation: panel-fade-out 0.25s ease-out forwards;
+            will-change: opacity;
+        }
+    }
+
     @keyframes dropdown-reveal {
         0% {
             opacity: 0;

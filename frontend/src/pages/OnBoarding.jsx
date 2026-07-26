@@ -250,7 +250,11 @@ const OnBoarding = () => {
     if (activeBooking.dropLat != null) setDropCoords({ lat: activeBooking.dropLat, lng: activeBooking.dropLng });
     setFare(activeBooking.fare);
     setScheduledTime(activeBooking.scheduledAt);
-    navigate("/booking/test");
+    // freshStatus: the status set above is the one the card the user just tapped
+    // was displaying, so tracking opens on it directly. A skeleton here would
+    // hide a status they had already read and flash a panel past on the way to
+    // the same answer; the poll on the other side refreshes it either way.
+    navigate("/booking/test", { state: { freshStatus: true } });
   }
 
   const timingDropdown = useExitAnim(expand, 220);

@@ -80,7 +80,7 @@ const RideDetails = ({ prop }) => {
             {/* same treatment as TrackingPage's backArrow: a pill over the map
                 just above the sheet on mobile, a bare glyph fixed to the
                 panel's top-left corner on desktop */}
-            <div onClick={() => prop.setDetialsVisibility(false)} className="max-sm:absolute max-sm:z-20 max-sm:-top-14 max-sm:left-4 max-sm:w-11 max-sm:h-11 max-sm:rounded-full max-sm:border max-sm:border-[var(--foreground)]/30 max-sm:bg-[var(--background-muted)] max-sm:shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)] flex items-center justify-center cursor-pointer sm:opacity-[0.8] transition-opacity duration-300 hover:opacity-[1] text-[var(--text)] sm:fixed sm:left-6 sm:top-6">
+            <div onClick={() => prop.setDetialsVisibility(false)} className="max-sm:absolute max-sm:z-20 max-sm:-top-14 max-sm:left-4 max-sm:h-9 max-sm:my-1 max-sm:px-3 max-sm:rounded-full max-sm:border max-sm:border-[var(--foreground)]/30 max-sm:bg-[var(--background-muted)] max-sm:shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)] flex items-center justify-center cursor-pointer sm:opacity-[0.8] transition-opacity duration-300 hover:opacity-[1] text-[var(--text)] sm:fixed sm:left-6 sm:top-6">
                 <Icon path={mdiKeyboardBackspace} size={1.2} />
             </div>
             <div className={`flex flex-col justify-center items-center sm:items-start ${PAIR} ${COL}`}>

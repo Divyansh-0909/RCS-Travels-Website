@@ -236,7 +236,9 @@ const VehicleSelect = ()=>{
                     return;
                 }
                 if (LIVE_STATUSES.includes(data.status)) {
-                    navigate(`/booking/test`);
+                    // freshStatus: the store status was set a line ago from this same
+                    // response, so TrackingPage can render it without a skeleton.
+                    navigate(`/booking/test`, { state: { freshStatus: true } });
                     return;
                 }
             }
@@ -431,7 +433,9 @@ const VehicleSelect = ()=>{
             if(scheduledTime) setPanelState("confirmed")
             else if (data.status === "assigned") {
                 // navigate(`/booking/${data.bookingId}`)
-                navigate(`/booking/test`)
+                // freshStatus: the store status was set a line ago from this same
+                // response, so TrackingPage can render it without a skeleton.
+                navigate(`/booking/test`, { state: { freshStatus: true } })
                 return
             }
             else setStep("searching")
@@ -515,8 +519,11 @@ const VehicleSelect = ()=>{
         </Button>
     );
 
+    // overflow-hidden clips the panels while they sit off-screen at
+    // translateX(100%) — without it a viewport-wide panel parked to the right
+    // would double the page width and let the whole screen scroll sideways.
     return (
-        <div className="relative bg-transparent text-center flex flex-col justify-center items-center w-[100vw] h-[100vh]">
+        <div className="relative overflow-hidden bg-transparent text-center flex flex-col justify-center items-center w-[100vw] h-[100vh]">
                 <>
                     <ErrorPanel prop={{error: error, setError: setError}} />
 
@@ -660,7 +667,7 @@ const VehicleSelect = ()=>{
                             </GoogleMap>
                         )}
 
-                        <div onClick={() => setStep("vehicleType")} className="max-sm:-top-14 max-sm:left-4 max-sm:w-11 max-sm:h-11 max-sm:rounded-full max-sm:border max-sm:border-[var(--foreground)]/30 max-sm:bg-[var(--background-muted)] max-sm:shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)] flex items-center justify-center cursor-pointer sm:opacity-[0.8] transition-opacity duration-300 hover:opacity-[1] absolute z-20 sm:left-5 sm:top-6 text-[var(--text)]">
+                        <div onClick={() => setStep("vehicleType")} className="max-sm:-top-14 max-sm:left-4 max-sm:h-9 max-sm:my-1 max-sm:px-3 max-sm:rounded-full max-sm:border max-sm:border-[var(--foreground)]/30 max-sm:bg-[var(--background-muted)] max-sm:shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)] flex items-center justify-center cursor-pointer sm:opacity-[0.8] transition-opacity duration-300 hover:opacity-[1] absolute z-20 sm:left-5 sm:top-6 text-[var(--text)]">
                             <Icon path={mdiKeyboardBackspace} size={1.2} />
                         </div>
 
@@ -719,7 +726,7 @@ const VehicleSelect = ()=>{
                             <GoogleMap center={pickupPoint} zoom={12} onMapReady={setMapApi} className={MAP_CLASSES} />
                         )}
 
-                        <div onClick={()=>navigate('/')} className="max-sm:-top-14 max-sm:left-4 max-sm:w-11 max-sm:h-11 max-sm:rounded-full max-sm:border max-sm:border-[var(--foreground)]/30 max-sm:bg-[var(--background-muted)] max-sm:shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)] flex items-center justify-center cursor-pointer sm:opacity-[0.8] transition-opacity duration-300 hover:opacity-[1] absolute z-20 sm:left-5 sm:top-6 text-[var(--text)]">
+                        <div onClick={()=>navigate('/')} className="max-sm:-top-14 max-sm:left-4 max-sm:h-9 max-sm:my-1 max-sm:px-3 max-sm:rounded-full max-sm:border max-sm:border-[var(--foreground)]/30 max-sm:bg-[var(--background-muted)] max-sm:shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)] flex items-center justify-center cursor-pointer sm:opacity-[0.8] transition-opacity duration-300 hover:opacity-[1] absolute z-20 sm:left-5 sm:top-6 text-[var(--text)]">
                             <Icon path={mdiKeyboardBackspace} size={1.2} />
                         </div>
                         <div className={`relative z-10 sm:order-1 flex flex-col justify-end sm:justify-center items-center sm:items-start ${STACK} w-full sm:w-auto h-full sm:h-auto`}>
