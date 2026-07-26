@@ -343,11 +343,11 @@ const AdminDashboard = () => {
             )}
             <form onSubmit={(e) => { e.preventDefault(); clearTimeout(debounceRef.current); runSearch() }} className="flex w-full justify-between px-5 gap-2 items-center">
                 <div className="flex w-fit justify-start gap-2 items-center">
-                    <button onClick={(e) => { e.preventDefault(); setOrder(!order); }} className="py-2 px-3 flex items-center justify-center gap-1 cursor-pointer bg-[var(--background)]/90 hover:bg-[var(--background)] transition-color duration-300 rounded-xl">
+                    <button onClick={(e) => { e.preventDefault(); setOrder(!order); }} className="py-2 px-3 flex items-center justify-center gap-1 cursor-pointer text-[var(--text)] bg-[var(--background)]/90 hover:bg-[var(--background)] transition-color duration-300 rounded-xl">
                         <Icon path={order ? mdiSortCalendarDescending : mdiSortCalendarAscending} size={1.1} />
                         <h4>Sort</h4>
                     </button>
-                    <button onClick={(e) => { e.preventDefault(); setExpanded(!expanded); }} className="py-2 px-3 flex items-center justify-center gap-1 cursor-pointer bg-[var(--background)]/90 hover:bg-[var(--background)] transition-color duration-300 rounded-xl">
+                    <button onClick={(e) => { e.preventDefault(); setExpanded(!expanded); }} className="py-2 px-3 flex items-center justify-center gap-1 cursor-pointer text-[var(--text)] bg-[var(--background)]/90 hover:bg-[var(--background)] transition-color duration-300 rounded-xl">
                         <Icon path={mdiTuneVertical} size={1} className="rotate-[90deg]" />
                         <h4>Filter</h4>
                     </button>
@@ -367,7 +367,7 @@ const AdminDashboard = () => {
                     </div>
                 </div>
                 <div className="flex gap-3 sm:gap-4 items-center justify-center">
-                    <button type="button" disabled={page <= 1} onClick={() => setPage(p => p - 1)} className="disabled:opacity-[0.8] disabled:cursor-not-allowed disabled:hover:bg-[var(--background)]/90 py-2 px-3 flex items-center justify-center gap-1 cursor-pointer bg-[var(--background)]/90 hover:bg-[var(--background)] transition-color duration-300 rounded-xl"><h4>Prev</h4></button>
+                    <button type="button" disabled={page <= 1} onClick={() => setPage(p => p - 1)} className="disabled:opacity-[0.8] disabled:cursor-not-allowed disabled:hover:bg-[var(--background)]/90 py-2 px-3 flex items-center justify-center gap-1 cursor-pointer text-[var(--text)] bg-[var(--background)]/90 hover:bg-[var(--background)] transition-color duration-300 rounded-xl"><h4>Prev</h4></button>
                     <span className="text-[var(--text-foreground)] flex w-fit items-center justify-center gap-2">
                         <input
                             type="text"
@@ -381,7 +381,7 @@ const AdminDashboard = () => {
                         <h4>of</h4>
                         <h4 className="flex text-center justify-center items-center border box-border rounded-lg h-10 w-10 p-0 m-0 bg-transparent leading-none text-sm sm:text-lg">{totalPages}</h4>
                     </span>
-                    <button type="button" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} className="disabled:opacity-[0.8] disabled:cursor-not-allowed disabled:hover:bg-[var(--background)]/90 py-2 px-3 flex items-center justify-center gap-1 cursor-pointer bg-[var(--background)]/90 hover:bg-[var(--background)] transition-color duration-300 rounded-xl"><h4>Next</h4></button>
+                    <button type="button" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} className="disabled:opacity-[0.8] disabled:cursor-not-allowed disabled:hover:bg-[var(--background)]/90 py-2 px-3 flex items-center justify-center gap-1 cursor-pointer text-[var(--text)] bg-[var(--background)]/90 hover:bg-[var(--background)] transition-color duration-300 rounded-xl"><h4>Next</h4></button>
                 </div>
             </form>
 

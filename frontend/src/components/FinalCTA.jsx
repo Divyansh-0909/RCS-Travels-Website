@@ -16,7 +16,7 @@ const FinalCTA = () => {
     ]
 
     return (
-        <div className="flex flex-col items-center gap-6 py-5 pb-20">
+        <div className="flex flex-col items-center gap-6 py-5 pb-20 bg-[var(--foreground)] text-[var(--text-foreground)]">
             <ul className="flex gap-3 justify-between items-center w-[82%] md:w-[90%] xl:w-[74%]">
                 {data.map((item, index) => {
                     return (
