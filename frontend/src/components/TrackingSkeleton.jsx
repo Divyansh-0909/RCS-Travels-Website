@@ -27,7 +27,8 @@ const TrackingSkeleton = () => {
                                     <Skeleton className="h-3 w-12" />
                                     <Skeleton className="h-3.5 w-28" />
                                 </div>
-                                <Button prop={{ variant: "input", width: "110px", bg: "var(--background-muted)" }} className="pointer-events-none">
+                                {/* mirrors TrackingPage's rideDetailsPill */}
+                                <Button prop={{ variant: "input", bg: "var(--background-muted)", rounded: "999px" }} className="pointer-events-none px-3 shrink-0">
                                     <Skeleton className="h-4 w-16" />
                                 </Button>
                             </div>

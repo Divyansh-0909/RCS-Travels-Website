@@ -17,16 +17,14 @@ import ErrorPanel from "../components/ui/ErrorPanel";
 import BackgroundPanel from "../components/ui/BackgroundPanel";
 import NoticePill from "../components/ui/NoticePill";
 import RideDetails from "../components/RideDetails";
+import { SAFE_ROUTE_SURCHARGE } from "../constants/fares";
+import Skeleton from "../components/ui/Skeleton";
 
 // Every price on this screen comes from /api/fare/estimate, which resolves each
 // seat type through zones -> the fixed fare table -> the per-km formula. There is
 // deliberately no local fallback table: a placeholder here would silently charge
 // the wrong fare for any destination the rate card actually prices.
 const NO_PRICE = "₹—";
-
-// Display only. The server adds this to the fares it returns, so adding it again
-// here would double-charge it.
-const SAFE_ROUTE_SURCHARGE = 150;
 
 // Pickup ETA per vehicle type. Placeholder until the driver-availability
 // endpoint returns a real nearest-driver time — same shape, so swapping the
@@ -101,6 +99,11 @@ const VehicleSelect = ()=>{
     // Route-scoped and transient, so it stays local rather than going in the
     // store; the booked fare is what gets persisted.
     const [serverFares, setServerFares] = useState(null);
+    // serverFares === null covers three different situations — estimate in
+    // flight, estimate failed, and route not priceable — and only the first
+    // should show skeletons. Seeded from the same guard fetchEstimate uses, so
+    // the cards don't paint a "₹—" frame before the mount fetch starts.
+    const [pricing, setPricing] = useState(() => Boolean(pickupLocation?.trim() && dropLocation?.trim()));
     // Dev-only: /dev/vehicle?step=|?panel= force internal states for previews.
     const devParams = import.meta.env.DEV ? new URLSearchParams(window.location.search) : null;
     const [panelState, setPanelState]= useState(devParams?.get("panel") ?? "");  // "confirm" | "error"
@@ -140,22 +143,30 @@ const VehicleSelect = ()=>{
     // so callers that can't wait for a re-render (confirmBooking) can use it.
     async function fetchEstimate() {
         if (!pickupLocation?.trim() || !dropLocation?.trim()) return null;
-        const data = await api.estimateFare(pickupLocation, dropLocation, vehicleType ?? 4, pickupCoords, dropCoords, safeRoute);
-        if (data?.error) {
-            // Prices drive the booking now, so a failed estimate is no longer a
-            // silent degradation — say so and leave the cards unpriced.
-            setServerFares(null);
-            setError("Couldn't price this route. Check the addresses and try again.");
-            return null;
+        setPricing(true);
+        // finally, not a clear on each exit: the error path returns early and
+        // estimateFare can throw, and either leaving `pricing` stuck true would
+        // strand the cards on skeletons forever.
+        try {
+            const data = await api.estimateFare(pickupLocation, dropLocation, vehicleType ?? 4, pickupCoords, dropCoords, safeRoute);
+            if (data?.error) {
+                // Prices drive the booking now, so a failed estimate is no longer a
+                // silent degradation — say so and leave the cards unpriced.
+                setServerFares(null);
+                setError("Couldn't price this route. Check the addresses and try again.");
+                return null;
+            }
+            setServerFares(data.fares ?? null);
+            setDistanceKm(data.distanceKm ?? null);
+            setDurationMin(data.durationMin ?? null);
+            setRoutePolyline(data.polyline ?? null);
+            // ?fare= wins over the server's answer — previews force a pricing
+            // source the real route wouldn't produce. null in prod.
+            setFareSource(devParams?.get("fare") ?? data.fareSource ?? null);
+            return data;
+        } finally {
+            setPricing(false);
         }
-        setServerFares(data.fares ?? null);
-        setDistanceKm(data.distanceKm ?? null);
-        setDurationMin(data.durationMin ?? null);
-        setRoutePolyline(data.polyline ?? null);
-        // ?fare= wins over the server's answer — previews force a pricing
-        // source the real route wouldn't produce. null in prod.
-        setFareSource(devParams?.get("fare") ?? data.fareSource ?? null);
-        return data;
     }
 
     useEffect(() => {
@@ -474,21 +485,32 @@ const VehicleSelect = ()=>{
                 range on one line each, like the other two cards */}
             <div className="flex justify-between items-center w-full gap-2 sm:gap-3">
                 <div className="text-left flex flex-col justify-center items-start gap-0.5">
-                    {/* Seat count sits with the name as a qualifier — lighter and
-                        muted so it reads as part of the label, not a second title.
-                        "Book any" passes none: its whole point is that the seat
-                        count isn't decided yet, and "4-6 Seater" only restates
-                        the name. */}
-                    <h4 className="text-lg sm:text-xl font-medium text-[var(--text)] leading-tight">
-                        {name}
-                        {seats && <span className="ml-1.5 text-sm sm:text-base font-normal text-[var(--text-muted)]">{seats}</span>}
-                    </h4>
-                    <p className="text-sm sm:text-base text-[var(--text-muted)] leading-tight">{ETA_MIN[type]} min away</p>
+                    {/* Name alone on the first line; seats and ETA share the
+                        muted second line. "Book any" passes no seat count — its
+                        whole point is that it isn't decided yet, and "4-6 Seater"
+                        only restates the name — so that line is just the ETA. */}
+                    <h4 className="text-lg sm:text-xl font-medium text-[var(--text)] leading-tight">{name}</h4>
+                    <p className="text-sm sm:text-base text-[var(--text-muted)] leading-tight">
+                        {seats ? `${seats} · ` : ""}{ETA_MIN[type]} min away
+                    </p>
                 </div>
-                <div key={sharing ? "share" : "solo"} className="animate-fade-swap text-right flex flex-col justify-center items-end gap-0.5">
-                    <span className={`flex gap-1 leading-tight ${solo}`}> <span className={`${soloVisiblity}`}>Solo: </span>{priceSolo}</span>
-                    <span className={`flex gap-1 leading-tight ${share}`}> <span className={`${shareVisiblity}`}>Sharing: </span>{priceSharing}</span>
-                </div>
+                {/* Only the price is pending — the name, seats and ETA are known
+                    up front, so the skeleton stands in for the two price lines
+                    rather than blanking the whole card. Gated on !serverFares so
+                    a background re-price doesn't flash over prices already on
+                    screen; the bar heights mirror the two type sizes, and which
+                    line is emphasised follows the sharing toggle. */}
+                {pricing && !serverFares ? (
+                    <div className="flex flex-col justify-center items-end gap-0.5 shrink-0">
+                        <Skeleton className={sharing ? "h-[15px] sm:h-[17.5px] w-14 sm:w-16" : "h-[22.5px] sm:h-[30px] w-16 sm:w-20"} />
+                        <Skeleton className={sharing ? "h-[22.5px] sm:h-[30px] w-16 sm:w-20" : "h-[15px] sm:h-[17.5px] w-14 sm:w-16"} />
+                    </div>
+                ) : (
+                    <div key={sharing ? "share" : "solo"} className="animate-fade-swap text-right flex flex-col justify-center items-end gap-0.5">
+                        <span className={`flex gap-1 leading-tight ${solo}`}> <span className={`${soloVisiblity}`}>Solo: </span>{priceSolo}</span>
+                        <span className={`flex gap-1 leading-tight ${share}`}> <span className={`${shareVisiblity}`}>Sharing: </span>{priceSharing}</span>
+                    </div>
+                )}
             </div>
         </Button>
     );
@@ -521,22 +543,29 @@ const VehicleSelect = ()=>{
                             {step === "confirmLocation" && <CenterPin target={confirmTarget} />}
                         </GoogleMap>
                     )}
-                    <BackgroundPanel show={panelState === "noDriver" || (panelState === "confirmed" && scheduledTime)} className={`z-4 sm:z-3 bottom-0 gap-3 sm:gap-5 py-6 text-center flex flex-col justify-center items-center`}>
+                    <BackgroundPanel show={panelState === "noDriver" || (panelState === "confirmed" && scheduledTime)} className={`z-4 sm:z-3 bottom-0 gap-1.5 sm:gap-2 py-6 text-center flex flex-col justify-center items-center`}>
                         { panelState === "noDriver"
-                            ? <ErrorMark className="-mt-2" size={140} />
-                            : <SuccessCheck className="-mt-2" size={140} /> }
+                            ? <ErrorMark className="-mt-2" size={isMobile ? 120 : 140} />
+                            : <SuccessCheck className="-mt-2" size={isMobile ? 120 : 140} /> }
                         <h2 className={TITLE}> { panelState === "noDriver" ? "No drivers nearby." :  "You're all set." } </h2>
-                        <p className="text-base sm:text-lg leading-relaxed"> { panelState === "noDriver" ? "Try again in a few minutes." :  <>We'll WhatsApp you <br /> when a driver is assigned.</> } </p>
-                        <Button 
-                            onClick={() => navigate('/')}
-                            prop={{
-                                type: "submit",
-                                width: "100%",
-                            }}
-                            className={`mt-4 ${COL}`}
-                        >
-                            <span className="text-base sm:text-lg">{loading? "Loading..." : "Go back"}</span>
-                        </Button>
+                        {/* leading-snug, not -relaxed: at 1.625 the line box added
+                            5.6px of dead space above and below, which read as
+                            gap and swamped the container's own spacing */}
+                        <p className="text-base sm:text-lg leading-snug"> { panelState === "noDriver" ? "Try again in a few minutes." :  <>We'll WhatsApp you <br /> when a driver is assigned.</> } </p>
+                        {/* COL goes on a wrapper, not on the Button: prop.width
+                            is an inline style and would beat the class at every
+                            breakpoint, stretching the button to the full sheet */}
+                        <div className={`mt-1 ${COL}`}>
+                            <Button
+                                onClick={() => navigate('/')}
+                                prop={{
+                                    type: "submit",
+                                    width: "100%",
+                                }}
+                            >
+                                <span className="text-base sm:text-lg">{loading? "Loading..." : "Go back"}</span>
+                            </Button>
+                        </div>
                     </BackgroundPanel>
                     
                     {/* Searching panel — illustrations */}
@@ -559,8 +588,10 @@ const VehicleSelect = ()=>{
 
                                 <div className="w-full flex justify-between items-center gap-3">
                                     <p className="text-left text-base sm:text-lg text-[var(--text-muted)]">{searchMessages[msgIndex]}</p>
-                                    <Button onClick={()=>setDetialsVisibility(true)} prop={{ variant: "input", width: "110px", bg: "var(--background-muted)" }} className="cursor-pointer shrink-0" >
-                                        <p className="text-sm sm:text-base text-[var(--text)]">Ride details</p>
+                                    {/* same pill as TrackingPage's — content-sized
+                                        and fully rounded, not a fixed 110px box */}
+                                    <Button onClick={()=>setDetialsVisibility(true)} prop={{ variant: "input", bg: "var(--background-muted)", rounded: "999px" }} className="cursor-pointer px-3 shrink-0" >
+                                        <p className="text-sm sm:text-base text-[var(--text)] whitespace-nowrap">Ride details</p>
                                     </Button>
                                 </div>
                             </div>
@@ -647,11 +678,26 @@ const VehicleSelect = ()=>{
                                         <p className="text-xs sm:text-sm text-[var(--text-muted)]">{confirmTarget === "pickup" ? "Pickup" : "Drop"}</p>
                                         <h4 className="truncate w-full text-base sm:text-xl font-medium text-[var(--text)]">{confirmTarget === "pickup" ? pickupLocation : dropLocation}</h4>
                                     </div>
-                                    <div className="w-full h-px bg-[var(--foreground)]/10" />
-                                    <div className="flex items-center justify-between w-full py-3 gap-3">
-                                        <h4 className="text-sm sm:text-base text-[var(--text-muted)]">{vehicleType === 6 ? "Cab XL" : vehicleType === 1 ? "Book any" : "Cab Economy"}{sharing ? " · Sharing" : " · Solo"}{safeRoute ? " · Safer route" : ""}</h4>
-                                        <h4 className="text-base sm:text-xl font-semibold">{vehicleType ? label(vehicleType, sharing ? "sharing" : "solo") : ""}</h4>
-                                    </div>
+                                    {/* Only when a ride is actually selected. This
+                                        screen is also reached by clicking a map
+                                        marker from "Choose a ride" (see
+                                        openLocationAdjust), where nothing has been
+                                        picked yet — the row then had no fare to
+                                        show and its "Cab Economy" fallback named a
+                                        vehicle the rider had not chosen. */}
+                                    {vehicleType && (
+                                        <>
+                                            <div className="w-full h-px bg-[var(--foreground)]/10" />
+                                            <div className="flex items-center justify-between w-full py-3 gap-3">
+                                                <h4 className="text-sm sm:text-base text-[var(--text-muted)]">{vehicleType === 6 ? "Cab XL" : vehicleType === 1 ? "Book any" : "Cab Economy"}{sharing ? " · Sharing" : " · Solo"}{safeRoute ? " · Safer route" : ""}</h4>
+                                                {/* re-priced on every pin adjust, so it
+                                                    skeletons rather than flashing ₹— */}
+                                                {pricing && fareFor(vehicleType) == null
+                                                    ? <Skeleton className="h-5 sm:h-6 w-16 sm:w-20" />
+                                                    : <h4 className="text-base sm:text-xl font-semibold">{label(vehicleType, sharing ? "sharing" : "solo")}</h4>}
+                                            </div>
+                                        </>
+                                    )}
                                 </div>
                                 <Button
                                     onClick={handleConfirmLocation}
@@ -679,7 +725,19 @@ const VehicleSelect = ()=>{
                         <div className={`relative z-10 sm:order-1 flex flex-col justify-end sm:justify-center items-center sm:items-start ${STACK} w-full sm:w-auto h-full sm:h-auto`}>
                             <div className={`flex flex-col justify-center items-center sm:items-start gap-2 ${COL}`}>
                                 <h2 className={`w-full text-center sm:text-left ${TITLE}`}>Choose a ride</h2>
-                                {distanceKm != null && (
+                                {/* Route metrics land with the estimate, so the chip
+                                    holds its place while that is in flight rather
+                                    than popping in and pushing the cards down.
+                                    Only while pricing — a route that resolves
+                                    without metrics shows nothing, as before. */}
+                                {(pricing && distanceKm == null) ? (
+                                    <div className="w-full flex justify-center sm:justify-start">
+                                        {/* sized to the real chip (py-1 + hairline
+                                            + line box) so nothing shifts when the
+                                            metrics land */}
+                                        <Skeleton rounded="rounded-full" className="h-[30px] sm:h-[34px] w-[130px] sm:w-[145px]" />
+                                    </div>
+                                ) : distanceKm != null && (
                                     <div className="w-full flex justify-center sm:justify-start">
                                         <div className="rounded-full border border-[var(--foreground)]/20 px-3 py-1 text-sm sm:text-base whitespace-nowrap text-[var(--text-muted)]">
                                             {Math.round(distanceKm * 10) / 10} km{durationMin != null ? ` · ${durationMin} min` : ""}

@@ -21,7 +21,7 @@ import NoticePill from "../components/ui/NoticePill";
 import pfpPlaceholder from "../assets/pfp-placeholder.webp"
 import RideDetails from "../components/RideDetails";
 import TrackingSkeleton from "../components/TrackingSkeleton";
-import RoutePanel from "../components/ui/RoutePanel";
+import { SAFE_ROUTE_SURCHARGE } from "../constants/fares";
 
 // Statuses where a driver exists and may be moving — the only ones that poll.
 const LIVE_STATUSES = ["assigned", "en_route", "reached", "started"];
@@ -56,7 +56,6 @@ const minsLabel = (n) => (n == null ? "—" : `${n} min${n === 1 ? "" : "s"}`);
 const COL = "w-[290px] sm:w-[377px]";
 const TITLE = "font-bold text-3xl sm:text-5xl leading-tight";
 const SUBTITLE = "text-lg sm:text-2xl font-normal leading-snug text-[var(--text-muted)]";
-const SECTION = "font-bold text-2xl sm:text-3xl leading-tight";
 const META = "text-base sm:text-xl";
 // Vertical rhythm: 8px inside a pair, 12–16px within a group, 32/48 between.
 const STACK = "gap-6 sm:gap-8";
@@ -77,6 +76,7 @@ const TrackingPage = () => {
     const setCancellationCharge = useData(state => state.setCancellationCharge)
     const fareSource = useData(state => state.fareSource)
     const fare = useData(state => state.fare)
+    const safeRoute = useData(state => state.safeRoute)
     const vehicleType = useData(state => state.vehicleType);
     const setvehicleType = useData(state => state.setvehicleType);
     const sharing = useData(state => state.sharing);
@@ -176,6 +176,10 @@ const TrackingPage = () => {
     // is underway, so the number counts down instead of restating the trip length.
     // Before a driver exists, fall back to the booked route's duration.
     const pickupTime = minsLabel(etaMinutes(driverPoint, pickupPoint));
+    // Same split as Ride details: the stored fare is the total, so the safer-route
+    // add-on is backed out of it rather than added to it.
+    const baseFare = fare != null ? fare - (safeRoute ? SAFE_ROUTE_SURCHARGE : 0) : null;
+
     const dropTime = status === "started"
         ? minsLabel(etaMinutes(driverPoint, dropPoint) ?? durationMin)
         : minsLabel(durationMin);
@@ -188,7 +192,10 @@ const TrackingPage = () => {
             ? { title: "Driver has arrived", detail: `Waiting at ${pickupLocation?.split(",")[0]}` }
             : status === "assigned"
                 ? { title: "Driver has been assigned", detail: "Heading your way" }
-                : { title: <>Arriving in <br />{dropTime}</>, detail: `Driving towards ${dropLocation?.split(",")[0]}` };
+                // "Reaching in", not "Driver arriving in": on the pickup leg the
+                // headline is about the driver reaching you, here it is about
+                // reaching the destination — which the detail line below names.
+                : { title: <>Reaching in <br />{dropTime}</>, detail: `Driving towards ${dropLocation?.split(",")[0]}` };
 
     const backArrow = (
         <div onClick={() => navigate('/')} className="flex gap-2 sm:gap-2 items-center justify-center cursor-pointer opacity-[0.8] transition-opacity duration-300 hover:opacity-[1] absolute left-5 top-0 sm:fixed sm:left-6 sm:top-6 text-[var(--text)]">
@@ -235,12 +242,53 @@ const TrackingPage = () => {
         </Button>
     );
 
+    // Rendered in two slots on the completed screen — left column on desktop,
+    // after the receipt on mobile — so it is defined once here rather than
+    // duplicated in both branches. Confirming payment is the only action here;
+    // the extra-fare notice below already carries the route to support, so a
+    // second support button would compete with the primary one.
+    const completedActions = (
+        <Button onClick={() => navigate("/")}
+            className="w-full"
+            prop={{ variant: "", width: "100%", innerClassName: "flex gap-2 items-center justify-center text-base sm:text-lg" }}
+        >
+            Paid to driver
+        </Button>
+    );
+
+    // Compact variant for the completed receipt, where the driver sits inside
+    // the card rather than beside it: the ride is over, so the plate is a record
+    // of who drove rather than something to identify at the kerb. No border of
+    // its own — the receipt card already provides one.
+    const driverRow = (
+        <div className="flex items-center gap-3 w-full">
+            <div className="w-10 h-10 rounded-full overflow-hidden shrink-0">
+                <img src={pfpPlaceholder} alt="" className="w-full h-full object-cover" />
+            </div>
+            <div className="flex flex-col min-w-0 text-left">
+                <h4 className="text-base sm:text-lg font-medium leading-tight">UP 16 AB 1234</h4>
+                <p className="text-xs sm:text-sm text-[var(--text-muted)] leading-tight truncate">Driver name · Car name</p>
+            </div>
+        </div>
+    );
+
+    // One pill for every "Ride details" affordance on this page, so the live,
+    // scheduled and completed screens can't drift apart. Content-sized with a
+    // nowrap label — the old fixed 110px wrapped it at the desktop type size.
+    const rideDetailsPill = (
+        <Button
+            onClick={() => setDetialsVisibility(true)}
+            prop={{ variant: "input", bg: "var(--background-muted)", rounded: "999px" }}
+            className="cursor-pointer px-3 shrink-0"
+        >
+            <p className="text-sm sm:text-base text-[var(--text)] whitespace-nowrap">Ride details</p>
+        </Button>
+    );
+
     const dropSummary = (
         <div className="flex w-full justify-between items-center gap-2.5 sm:gap-3">
             <p className="text-left text-xs sm:text-sm text-[var(--text-muted)] leading-relaxed">Drop to: <br /> <span className="text-sm sm:text-lg text-[var(--text)]">{dropLocation?.slice(0, 20) + '...'}</span></p>
-            <Button onClick={() => setDetialsVisibility(true)} prop={{ variant: "input", width: "110px", bg: "var(--background-muted)" }} className="cursor-pointer" >
-                <p className="text-sm sm:text-base text-[var(--text)]">Ride details </p>
-            </Button>
+            {rideDetailsPill}
         </div>
     );
 
@@ -273,23 +321,17 @@ const TrackingPage = () => {
                             </div>
 
                             <div className={`flex flex-col justify-center items-start gap-3 ${COL}`}>
-                                <h2 className={SECTION}>Ride Details</h2>
-                                {/* route and money in one card — RoutePanel's
-                                    children slot puts them under a hairline */}
-                                <RoutePanel size="sm" pickup={pickupLocation} drop={dropLocation}>
-                                    <div className="flex items-center justify-between w-full">
-                                        <h3 className={`${META} text-[var(--text-muted)]`}>Fare</h3>
-                                        <h3 className={`${META} font-semibold`}>₹{fare}</h3>
-                                    </div>
-                                    <div className="flex items-center justify-between w-full">
-                                        <h3 className={`${META} text-[var(--text-muted)]`}>Distance</h3>
-                                        <h3 className={META}>{distanceKm != null ? `${Math.round(distanceKm * 10) / 10} km` : "—"}</h3>
-                                    </div>
-                                </RoutePanel>
+                                {status === "assigned" && driverCard}
+
+                                {/* Same row as the live screen: where you're going,
+                                    with the details behind the pill. Route, fare
+                                    and distance live in that panel — the ride
+                                    hasn't started, so none of it is time-critical
+                                    enough to sit on the surface. */}
+                                {dropSummary}
 
                                 {(tollNotice || status === "assigned") && (
                                     <div className="w-full flex flex-col gap-2">
-                                        {status === "assigned" && driverCard}
                                         {tollNotice}
                                         {status === "assigned" && extraFareNotice}
                                     </div>
@@ -327,57 +369,75 @@ const TrackingPage = () => {
                                 {backArrow}
                                 <div className={`w-full flex flex-col items-center ${STACK} sm:w-[820px] sm:flex-row sm:items-stretch sm:gap-0`}>
                                 <div className="flex flex-col justify-center items-center sm:items-start gap-3 w-[290px] sm:w-1/2 sm:px-8 sm:py-10">
+                                    {/* -mb-2 pulls the outcome copy up under the
+                                        badge: the container gap alone left more
+                                        air here than between any other pair in
+                                        the column. */}
                                     { panelState === "noDriver"
-                                        ? <ErrorMark className="-mt-2" size={140} />
-                                        : <SuccessCheck className="-mt-2" size={140} /> }
+                                        ? <ErrorMark className="-mt-2 -mb-2" size={isMobile ? 120 : 140} />
+                                        : <SuccessCheck className="-mt-2 -mb-2" size={isMobile ? 120 : 140} /> }
                                     <div className="flex flex-col items-center sm:items-start gap-1">
                                         <h3 className={SUBTITLE}>Ride has been completed</h3>
                                         <h2 className={`text-center sm:text-left ${TITLE}`}>₹{fare}</h2>
                                     </div>
                                     {tollNotice}
+                                    {/* Desktop keeps the actions with the outcome
+                                        they settle; mobile has no left column, so
+                                        the copy below renders them after the
+                                        receipt instead. */}
+                                    <div className="hidden sm:flex w-full flex-col gap-2 mt-2">{completedActions}</div>
                                 </div>
 
                                 <div className="flex flex-col justify-center items-start gap-3 w-[290px] sm:w-1/2 sm:px-8 sm:py-10 sm:border-l sm:border-[var(--foreground)]/10">
-                                    {/* receipt: where you went, then what it cost */}
-                                    <RoutePanel size="sm" pickup={pickupLocation} drop={dropLocation}>
+                                    {/* One receipt card: what it cost, broken down
+                                        the same way Ride details breaks it down,
+                                        and who drove. No route — the ride is over,
+                                        and the addresses are still a tap away. */}
+                                    <div className="w-full rounded-xl border border-[var(--foreground)]/30 bg-[var(--background-muted)] px-4 py-4 text-left flex flex-col gap-2">
+                                        {distanceKm != null && (
+                                            <div className="flex items-center justify-between w-full">
+                                                <h3 className={`${META} text-[var(--text-muted)]`}>Distance</h3>
+                                                <h3 className={META}>{Math.round(distanceKm * 10) / 10} km</h3>
+                                            </div>
+                                        )}
+                                        {durationMin != null && (
+                                            <div className="flex items-center justify-between w-full">
+                                                <h3 className={`${META} text-[var(--text-muted)]`}>Ride time</h3>
+                                                <h3 className={META}>{durationMin} min</h3>
+                                            </div>
+                                        )}
+
+                                        <div className="w-full h-px bg-[var(--foreground)]/10 my-1" />
+
                                         <div className="flex items-center justify-between w-full">
-                                            <h3 className={`${META} text-[var(--text-muted)]`}>Fare</h3>
+                                            <h3 className={`${META} text-[var(--text-muted)]`}>Base fare</h3>
+                                            <h3 className={META}>₹{baseFare}</h3>
+                                        </div>
+                                        {safeRoute && (
+                                            <div className="flex items-center justify-between w-full">
+                                                <h3 className={`${META} text-[var(--text-muted)]`}>Safer route</h3>
+                                                <h3 className={META}>₹{SAFE_ROUTE_SURCHARGE}</h3>
+                                            </div>
+                                        )}
+                                        <div className="flex items-center justify-between w-full">
+                                            <h3 className={`${META} font-semibold`}>Total</h3>
                                             <h3 className={`${META} font-semibold`}>₹{fare}</h3>
                                         </div>
-                                        <div className="flex items-center justify-between w-full">
-                                            <h3 className={`${META} text-[var(--text-muted)]`}>Distance</h3>
-                                            <h3 className={META}>{distanceKm != null ? `${Math.round(distanceKm * 10) / 10} km` : "—"}</h3>
-                                        </div>
-                                    </RoutePanel>
 
-                                    {driverCard}
-
-                                    {/* pill hugs its label like the Share pill — a
-                                        fixed 110px wraps "Ride details" at 16px */}
-                                    <Button onClick={() => setDetialsVisibility(true)} prop={{ variant: "input", bg: "var(--background-muted)", rounded: "999px" }} className="cursor-pointer px-3">
-                                        <p className="text-sm sm:text-base text-[var(--text)] whitespace-nowrap">Ride details</p>
-                                    </Button>
-
-                                    <div className="w-full flex flex-col gap-2 mt-2">
-                                        {/* payment happens here, so the dispute
-                                            route sits right above the button */}
-                                        {extraFareNotice}
-                                        <Button onClick={() => navigate("/")}
-                                            className="w-full"
-                                            prop={{ variant: "", width: "100%", innerClassName: "flex gap-2 items-center justify-center text-base sm:text-lg" }}
-                                        >
-                                            Paid to driver
-                                        </Button>
-                                        <Button
-                                            onClick={() => openSupportWhatsApp("Hi, I need help with my ride.")}
-                                            prop={{ variant: "input", width: "100%", bg: "var(--background-muted)" }}
-                                        >
-                                            <span className="flex items-center justify-center gap-2 text-base sm:text-lg">
-                                                <img src={waLogo} alt="WhatsApp" className="w-6 h-6" />
-                                                Talk to Support
-                                            </span>
-                                        </Button>
+                                        <div className="w-full h-px bg-[var(--foreground)]/10 my-1" />
+                                        {driverRow}
                                     </div>
+
+                                    {/* flex-wrap, not a plain row: the notice pill
+                                        is whitespace-nowrap, so at 290px the two
+                                        drop onto separate lines rather than
+                                        overflowing the column. */}
+                                    <div className="w-full flex flex-wrap items-center gap-2">
+                                        {rideDetailsPill}
+                                        {extraFareNotice}
+                                    </div>
+
+                                    <div className="flex sm:hidden w-full flex-col gap-2 mt-2">{completedActions}</div>
                                 </div>
                                 </div>
                             </div>
@@ -412,14 +472,13 @@ const TrackingPage = () => {
                                 </div>
 
                                 <div className={`flex flex-col justify-center items-start gap-3 ${COL}`}>
-                                    {/* the driver is the most useful thing on this
-                                        screen, so it leads the body */}
-                                    {driverCard}
-
-                                    {/* Only the OTP earns a card — it's the one
-                                        thing the rider reads out loud. Rendered
+                                    {/* OTP leads once there is one: from en_route on
+                                        it is the thing the rider has to act on, and
+                                        it reads out before the plate is checked. It
+                                        earns the only card here, rendered
                                         conditionally so the border never shows
-                                        around an empty box. */}
+                                        around an empty box. Before that (assigned)
+                                        the driver card leads instead. */}
                                     {(status === "en_route" || status === "reached") && (
                                         <div className="w-full rounded-xl border border-[var(--foreground)]/30 bg-[var(--background-muted)] px-3.5 sm:px-4 text-left">
                                             <div className="flex items-center justify-between w-full py-3">
@@ -428,6 +487,8 @@ const TrackingPage = () => {
                                             </div>
                                         </div>
                                     )}
+
+                                    {driverCard}
 
                                     {/* where you're going sits straight on the sheet */}
                                     {dropSummary}

@@ -6,6 +6,9 @@ import VehicleSelect from "./VehicleSelect";
 import TrackingPage from "./TrackingPage";
 import RideDetails from "../components/RideDetails";
 import BackgroundPanel from "../components/ui/BackgroundPanel";
+import GoogleMap, { MAP_LAND_COLOR } from "../components/ui/GoogleMap";
+import { MAP_CLASSES } from "../components/ui/mapOverlays";
+import { useIsMobile } from "../hooks/useIsMobile";
 
 // Dev-only preview harness — registered in main.jsx behind import.meta.env.DEV.
 // Seeds the store with a mock booking and renders any booking-flow screen without
@@ -52,6 +55,8 @@ const PREVIEWS = [
 const DevPreview = () => {
     const { view } = useParams();
     const { search } = useLocation();
+    // top level, not inside the ride-details branch — hooks can't be conditional
+    const isMobile = useIsMobile();
     // URL the store was last seeded for — a page only mounts after its own seed ran.
     const [seeded, setSeeded] = useState(null);
 
@@ -95,10 +100,23 @@ const DevPreview = () => {
     if (view === "vehicle") return <VehicleSelect key={search} />;
     if (view === "tracking") return <TrackingPage key={search} />;
 
+    // Mirrors how TrackingPage and VehicleSelect actually mount this panel —
+    // desktop map beside the column, land-coloured background map under the
+    // sheet on mobile. Without it the preview showed a bare panel and misread
+    // as the real screen missing its map.
     if (view === "ride-details")
         return (
             <div className="relative w-[100vw] h-[100vh]">
-                <BackgroundPanel className="z-3 gap-6 sm:gap-12 py-6 text-center sm:text-left flex flex-col justify-center items-center">
+                {isMobile && (
+                    <>
+                        <div className="absolute inset-0 z-0" style={{ background: MAP_LAND_COLOR }} />
+                        <GoogleMap center={MOCK.pickupCoords} zoom={12} className="absolute inset-0 z-0" />
+                    </>
+                )}
+                <BackgroundPanel className="z-3 sm:z-2 py-6 sm:overflow-hidden text-left flex flex-col sm:flex-row justify-center items-center sm:justify-center lg:justify-between sm:px-[9%] md:px-[5%] xl:px-[13%]">
+                    {!isMobile && (
+                        <GoogleMap center={MOCK.pickupCoords} zoom={12} className={MAP_CLASSES} />
+                    )}
                     <RideDetails
                         prop={{
                             bookingId: MOCK.id,

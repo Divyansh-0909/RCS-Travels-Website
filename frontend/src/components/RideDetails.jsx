@@ -9,10 +9,7 @@ import waLogo from '../assets/whatsapp-logo.webp';
 import { openSupportWhatsApp } from "../constants/support";
 import RoutePanel from "./ui/RoutePanel";
 import { statusLabels } from "../constants/statusLabels";
-
-// Must match VehicleSelect's SAFE_ROUTE_SURCHARGE — the breakdown backs the
-// safer-route add-on out of the stored total.
-const SAFE_ROUTE_SURCHARGE = 150;
+import { SAFE_ROUTE_SURCHARGE } from "../constants/fares";
 
 // Same layout + type scale as VehicleSelect / TrackingPage: a real 377px
 // desktop column (OnBoarding's effective control width) instead of a scale
