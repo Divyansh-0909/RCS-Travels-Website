@@ -150,8 +150,8 @@ const VehicleSelect = ()=>{
         try {
             const data = await api.estimateFare(pickupLocation, dropLocation, vehicleType ?? 4, pickupCoords, dropCoords, safeRoute);
             if (data?.error) {
-                // Prices drive the booking now, so a failed estimate is no longer a
-                // silent degradation — say so and leave the cards unpriced.
+                // These prices are what the booking is created with, so a failed
+                // estimate has to surface — say so and leave the cards unpriced.
                 setServerFares(null);
                 setError("Couldn't price this route. Check the addresses and try again.");
                 return null;

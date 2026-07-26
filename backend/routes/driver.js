@@ -2,6 +2,18 @@ import { Router } from 'express'
 import { protect } from '../middleware/auth.js'
 import { prisma } from '../db/prisma.js'
 
+// The entire driver-facing API today: accept and decline. No client calls either
+// yet — the driver app is Phase 5, and until it exists the assignment loop takes a
+// driver's answer from sendFCM's return value instead (services/notification.js).
+//
+// Two gaps to close when that app arrives, both flagged in ROADMAP:
+//   - accept writes `assigned` with a plain update, guarded only against a booking
+//     that is already assigned. getDriver uses a status-guarded updateMany for the
+//     same write (claimBooking), so a booking cancelled or expired mid-offer is safe
+//     there and clobberable here.
+//   - accept doesn't touch vehicleCapacity. getDriver decrements it on the same
+//     transition, so a driver accepting through this route stays at full capacity
+//     and can be offered more rides than the vehicle holds.
 const driverRouter = Router()
 
 const formatPickupTime = (scheduledAt) =>

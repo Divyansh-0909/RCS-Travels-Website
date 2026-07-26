@@ -407,10 +407,9 @@ const OnBoarding = () => {
             </div>
 
             {activeBooking && authed && activeBooking.scheduledAt && !showForm
-              // Same card pattern as Current Trip above: the ride states itself,
-              // so the old "You have a scheduled ride" sentence is gone. Every
-              // value here comes from activeBooking, which the existing
-              // getMyBookings effect already hydrates — no new fetch.
+              // Same card pattern as Current Trip above — the ride states itself, so
+              // it needs no sentence introducing it. Every value comes from
+              // activeBooking, which the getMyBookings effect already hydrates.
               ? <div className={`flex flex-col justify-center items-center lg:items-start mt-3 sm:mt-0 ${TRIP_STEP}`}>
                 <div className={`flex flex-col items-stretch text-left ${GROUP} ${COL}`}>
                   <RoutePanel size="sm" pickup={activeBooking.pickupAddress} drop={activeBooking.dropAddress}>

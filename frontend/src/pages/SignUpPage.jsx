@@ -1,4 +1,3 @@
-// import { useSignUp } from "@clerk/clerk-react"; // replaced by WhatsApp OTP + Clerk ticket flow
 import { useSignIn, useAuth } from "@clerk/clerk-react";
 import { useState, useEffect, useRef } from "react";
 import { useViewNavigate } from "../hooks/useViewNavigate";
@@ -11,8 +10,10 @@ import { useData } from "../hooks/useData";
 import CheckMarkOutline from "../components/illustrations/CheckMarkOutline";
 import CrossOutline from "../components/illustrations/CrossOutline";
 
+// Signing up never touches Clerk's signUp — the account already exists by the time
+// we get here, created backend-side against the fake phone email during verify-otp.
+// This page only redeems the ticket and attaches a name.
 const SignUpPage = () => {
-  // const { signUp, isLoaded } = useSignUp(); // replaced
   const { signIn, setActive } = useSignIn();
   const { isSignedIn } = useAuth();
   const navigate = useViewNavigate();

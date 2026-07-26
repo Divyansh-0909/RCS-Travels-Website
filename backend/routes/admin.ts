@@ -4,6 +4,12 @@ import { protect, protectAdmin } from '../middleware/auth.js'
 import { prisma } from '../db/prisma.js'
 import { bookingListQuerySchema, driverListQuerySchema, userListQuerySchema } from '../types.ts'
 
+// Read-only, by omission rather than design: three list endpoints and no mutations.
+// The dashboard can therefore show a driver's pending verification but not act on
+// it, and approve/reject/deactivate plus manual booking re-assignment all still need
+// building — they gate the driver app, since only `approved` drivers can go online.
+//
+// Every route is behind protectAdmin (metadata.role === 'admin' on the Clerk session).
 const adminRouter = Router()
 
 adminRouter.get('/booking', protect, protectAdmin, async (req, res) => {

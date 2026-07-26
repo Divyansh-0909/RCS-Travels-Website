@@ -3,6 +3,14 @@ import { prisma } from '../db/prisma.js'
 import { clerkClient } from '@clerk/express'
 import crypto from 'crypto'
 
+// Phone-OTP login without Clerk's hosted UI and without passwords. We own the OTP
+// (stored hashed, 5-minute expiry) and Clerk owns the session; the two are bridged
+// by a fake email, 91{phone}@rcs-travels.com, which gives every phone a stable Clerk
+// identity. Verifying returns a one-time sign-in ticket the frontend redeems via
+// signIn.create({ strategy: 'ticket' }).
+//
+// Because the phone is encoded in that email, the backend can always derive it from
+// a verified session and never has to trust a phone sent from the client.
 const hybridAuthRouter = Router()
 
 const generateOTP = () => String(crypto.randomInt(100000, 1000000))
@@ -47,7 +55,7 @@ hybridAuthRouter.post('/verify-otp', async (req, res) => {
   const userHash = crypto.createHash('sha256').update(String(otp)).digest('hex')
   if (userHash !== record.otpHash)    return res.status(400).json({ error: 'Invalid OTP' })
 
-  // invalidate the OTP
+  // Burn it before minting the ticket, so a replayed request can't get a second one.
   await prisma.otpVerification.update({ where: { phone }, data: { used: true } })
 
   const userEmail = `91${phone}@rcs-travels.com`
@@ -61,7 +69,7 @@ hybridAuthRouter.post('/verify-otp', async (req, res) => {
         skipPasswordChecks: true,
       })
 
-  //issue a one-time sign-in ticket for the frontend 
+  // 60s is deliberate — the frontend redeems this immediately on the same screen.
   const tokenResource = await clerkClient.signInTokens.createSignInToken({
     userId: clerkUser.id,
     expiresInSeconds: 60,

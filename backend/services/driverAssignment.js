@@ -11,6 +11,8 @@ function bearingDeg(lat1, lng1, lat2, lng2) {
   return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360
 }
 
+// Whether two drops sit in the same direction from a shared pickup, within a
+// tolerance. Cheap stand-in for "is this detour acceptable" when pooling rides.
 export function inSameDirectionCorridor(pickupLat, pickupLng, drop1Lat, drop1Lng, drop2Lat, drop2Lng, thresholdDeg = 45) {
   const b1 = bearingDeg(pickupLat, pickupLng, drop1Lat, drop1Lng)
   const b2 = bearingDeg(pickupLat, pickupLng, drop2Lat, drop2Lng)
@@ -60,6 +62,16 @@ async function claimBooking(bookingId, driverId, confirmedAt) {
   return count > 0
 }
 
+// Finds a driver and assigns the booking, or returns null if nobody takes it.
+//
+// Widens a bounding box around the pickup in 10 km steps from 20 to 80 km, and
+// inside each ring offers the ride to candidates one at a time, nearest first,
+// ties broken by driver seniority. Each offer blocks on the driver's answer, so a
+// ring of ten candidates can take minutes — which is why callers run this detached
+// (see startAssignment) rather than inside a request.
+//
+// Sharing rides get a first pass that tries to join them to a driver already
+// carrying a compatible trip; everything else takes the second pass.
 export async function getDriver(bookingId) {
   let assignedDriver = null
 
@@ -128,6 +140,14 @@ export async function getDriver(bookingId) {
       : 'IMMEDIATE PICKUP'
     
 
+    // Pass 1 — join an existing shared trip: a driver already carrying a ride whose
+    // drop lies in the same 45° bearing corridor, so the detour stays small.
+    //
+    // !! THIS PASS IS DEAD. DriverLocation has no `sharing` column, so the filter
+    // below reads `undefined === true` on every row and sortedSharing is always
+    // empty — the corridor check never runs. Sharing riders fall through to pass 2
+    // and each start a fresh shared trip instead of pooling. The flag lives on
+    // Booking, so the test likely belongs on the driver's active booking.
     if(row.sharing){
       const sortedSharing = sorted
         .filter((loc) => loc.sharing === true)
@@ -193,6 +213,7 @@ export async function getDriver(bookingId) {
     }
     
      
+    // Pass 2 — start a new trip on an idle-enough vehicle.
     for (const x of sorted) {
       triedDriverIds.add(x.driverId)
 

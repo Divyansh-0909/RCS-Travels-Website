@@ -1,24 +1,22 @@
 import rateLimit from 'express-rate-limit'
 
-// These endpoints cannot require auth — a rider sees fares and types addresses
-// before logging in — so per-IP throttling is the only front-line defence.
+// Riders see fares and type addresses before logging in, so these endpoints can't
+// require auth and per-IP throttling is the only front-line defence.
 //
-// The limits are deliberately loose. Campus users sit behind one NAT'd public
-// IP, so a tight per-IP cap would throttle the whole university at once. These
-// exist to stop a script hammering the proxy; the real ceiling is the monthly
-// cap in services/apiUsage.js, which bounds the bill regardless of source.
+// Loose on purpose: campus sits behind one NAT'd IP, so a tight cap would throttle
+// the whole university at once. These stop a script hammering the proxy; the spend
+// ceiling is the per-key quota in Google Cloud Console (see routes/googleAPI.js).
 //
-// NOTE: on Render this only works with `app.set('trust proxy', 1)` — without it
-// every request appears to come from the load balancer and one caller would
-// exhaust the limit for everybody.
+// Needs `app.set('trust proxy', 1)` on Render, or every request looks like it came
+// from the load balancer and one caller exhausts the limit for everyone.
 const shared = {
   standardHeaders: 'draft-7',
   legacyHeaders: false,
   message: { error: 'Too many requests. Please slow down and try again in a few minutes.' },
 }
 
-// Autocomplete fires on a debounced keystroke across two address fields, so one
-// genuine booking is easily a dozen calls before anyone has picked anything.
+// One genuine booking is easily a dozen calls — autocomplete fires on debounced
+// keystrokes across two address fields, before anyone has picked anything.
 export const googleApiLimiter = rateLimit({
   ...shared,
   windowMs: 15 * 60 * 1000,

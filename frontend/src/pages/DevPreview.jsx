@@ -102,9 +102,8 @@ const DevPreview = () => {
     if (view === "vehicle") return <VehicleSelect key={search} />;
     if (view === "tracking") return <TrackingPage key={search} />;
 
-    // The skeleton only renders when a status fetch is in flight, which the dev
-    // routes never trigger (they seed bookingId as null), so it had no way to be
-    // reviewed against the panel it stands in for.
+    // Mounted directly because nothing else can reach it: the skeleton shows only
+    // while a status fetch is in flight, and these routes seed bookingId as null.
     if (view === "skeleton")
         return (
             <div className="relative w-[100vw] h-[100vh]">
@@ -118,10 +117,9 @@ const DevPreview = () => {
             </div>
         );
 
-    // Mirrors how TrackingPage and VehicleSelect actually mount this panel —
-    // desktop map beside the column, land-coloured background map under the
-    // sheet on mobile. Without it the preview showed a bare panel and misread
-    // as the real screen missing its map.
+    // The map has to come with it, exactly as TrackingPage and VehicleSelect mount
+    // it — desktop map beside the column, land-coloured one under the mobile sheet.
+    // A bare panel reads as the real screen missing its map.
     if (view === "ride-details")
         return (
             <div className="relative w-[100vw] h-[100vh]">

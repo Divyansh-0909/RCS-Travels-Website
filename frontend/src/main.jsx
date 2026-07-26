@@ -44,7 +44,11 @@ const router = createBrowserRouter([
     element: <ProtectedRoute><VehicleSelect /></ProtectedRoute>,
   },
   {
-    // path: "/booking/:id", 
+    // !! Pinned to a literal while TrackingPage reads its booking from the store
+    // rather than the URL. VehicleSelect navigates here hard-coded too, so the real
+    // `/booking/:id` can't be reached — restore both together, or a booking opened
+    // from a link (or a reload) has no id to fetch.
+    // path: "/booking/:id",
     path: "/booking/test",
     element: <ProtectedRoute><TrackingPage /></ProtectedRoute>,
   },

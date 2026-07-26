@@ -54,10 +54,9 @@ app.use('/api/admin', adminRouter)
 app.use('/api/googleAPI', googleApiLimiter, googleRouter)
 
 // The database round trip is load-bearing, not decorative. Supabase's free tier
-// pauses a project after 7 days without database activity, and the keep-alive
-// cron that stops Render sleeping only ever hit this endpoint — so one ping now
-// keeps both awake. Until now the only thing touching Postgres on a timer was
-// assignScheduledRides, which is a side effect we shouldn't depend on.
+// pauses a project after 7 days without database activity, and the keep-alive cron
+// that stops Render sleeping only ever hits this endpoint — so one ping keeps both
+// awake, instead of depending on assignScheduledRides happening to touch Postgres.
 //
 // Always 200, even when the query fails: this is the liveness URL an uptime
 // monitor polls, and if Render is configured to health-check it, a transient

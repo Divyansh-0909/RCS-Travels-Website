@@ -2,57 +2,66 @@
 
 > A single source of truth for understanding this codebase. Read this first.
 > For the phased build plan and future ideas, see [ROADMAP.txt](ROADMAP.txt).
-> Status reflects the **actual code** as of June 2026, not just intentions.
+> Status reflects the **actual code** as of July 2026, not just intentions.
 
 ---
 
 ## 1. What this is
 
 **RCS Travels** is a full-stack **cab-booking platform** for a small/local cab operator in the
-Delhi-NCR region (owner referred to as "Raju"). It is **not** a generic Uber clone — it is built
-around a specific operating model:
+Delhi-NCR region (owner referred to as "Raju"), serving a university campus (Shiv Nadar) and the
+surrounding NCR. It is **not** a generic Uber clone — it is built around a specific operating model:
 
 - **Pay the driver directly.** No in-app payments, no card/wallet screens, no in-app toll handling.
-  Tolls for non-fixed destinations are paid to the driver separately (shown as a note on the UI).
+  Tolls on per-km-priced routes are paid to the driver separately (shown as a note on the UI).
 - **Scheduling-first.** The primary flow is booking a ride up to 7 days in advance; on-spot ("now")
   rides are secondary and subject to availability.
 - **WhatsApp is a first-class channel** — for OTP login, customer notifications, and (planned) a
   booking bot. The owner is not tech-savvy, so WhatsApp is the low-friction surface.
-- **Fixed-fare table for known NCR destinations**, falling back to per-km pricing via Google Routes
-  for anything else.
+- **Fares come from a hand-drawn zone map** of NCR, falling back to a fixed destination table and
+  then to a per-km formula fitted to the provider's rate card.
 - **Solo vs. Sharing rides.** A customer can book a whole vehicle (solo) or a shared seat.
 
-Three apps are envisioned: the **customer website** (this repo, being built now), an **admin
-dashboard** (not started), and a **driver mobile app** (Expo, not started). Only the customer
-website and its backend exist today.
+Three apps are envisioned. The **customer website** and its backend are built. The **admin
+dashboard** exists as a read-only view inside the same React app. The **driver mobile app** (Expo)
+has not been started — which is why half the ride lifecycle has no producer.
 
 ---
 
 ## 2. Tech stack
 
 ### Frontend (`frontend/`)
-- **React 18.3** + **Vite 6** (ES Modules, `.jsx`).
+- **React 18.3** + **Vite 6** (ES Modules, mostly `.jsx`; `.tsx` where types earn their keep —
+  `AdminDashboard`, `Chips`, `types/enums`).
 - **Tailwind CSS v4** (via `@tailwindcss/vite`). NOTE: v4 utilities use independent `scale` /
   `translate` / `rotate` CSS properties (not the `transform` shorthand), so keyframe `transform`
   animations compose cleanly with positioning utilities. This is relied on throughout the animations.
 - **React Router 6.28** (`createBrowserRouter`), using the stable `viewTransition` navigate option.
 - **Clerk** (`@clerk/clerk-react`) for auth/session.
-- **Zustand 5** for client state (`useData`) — **not persisted** (in-memory; lost on refresh).
+- **Zustand 5** for client state (`useData`), **persisted to localStorage** under key `rcs-data`
+  via `partialize` — see §7 for exactly which keys survive a reload.
 - **Radix UI**, **@mdi/react** (Material Design Icons), **react-day-picker** + **date-fns** for the
-  date/time picker.
+  date/time picker, **@lottiefiles/dotlottie-react** for the success/error marks.
 - **i18next / react-i18next** installed for future multi-language (Hindi) — **not wired up yet**.
+  The language setting persists but changes nothing.
 
 ### Backend (`backend/`)
-- **Node + Express 4.21** (ES Modules, `type: "module"`).
+- **Node + Express 5.2** (ES Modules, `type: "module"`). Mixed `.js` and `.ts`, run through
+  **`tsx`** in dev and plain `node` in prod, so TypeScript files are type-checked (`npm run
+  typecheck`) but never separately built.
 - **Prisma 7.8** ORM with the **`@prisma/adapter-pg`** driver adapter over **`pg`**.
 - **PostgreSQL** (Supabase, free tier).
 - **Clerk** (`@clerk/express`) — `clerkMiddleware()` globally, `requireAuth()` on protected routes.
-- **firebase-admin** (for FCM push to drivers) and **multer** + **@aws-sdk/client-s3** (for driver
-  document uploads) are installed but **not yet used** — placeholders for later phases.
+- **zod** for query-parameter validation on the list endpoints (`types.ts`).
+- **express-rate-limit** on the unauthenticated Google-proxy and fare endpoints.
+- **pdfkit** for the account-data download.
+- **firebase-admin** (FCM push to drivers) and **multer** + **@aws-sdk/client-s3** (driver document
+  uploads) are installed but **not yet used** — placeholders for later phases.
 
-### Deployment (planned — see [project_deployment](.) memory)
-- Frontend → **Vercel**. Backend → **Render** (free tier, kept alive via a cron pinging `/health`).
-  Database → **Supabase PostgreSQL** (free tier; kept from pausing via a daily cron ping). Driver app → **Expo EAS** (later).
+### Deployment (planned)
+- Frontend → **Vercel**. Backend → **Render** (free tier, kept alive via a cron pinging `/health`,
+  which runs a `select 1` so Supabase doesn't pause either). Database → **Supabase PostgreSQL**.
+  Driver app → **Expo EAS** (later). See ROADMAP for the pre- and post-deploy checklists.
 
 ---
 
@@ -62,77 +71,105 @@ website and its backend exist today.
 RCS-Travels-Website/
 ├── CONTEXT.md            ← this file
 ├── ROADMAP.txt           ← phased plan + backlog of ideas
+├── tools/zone-editor.html            browser tool for drawing/pricing fare zones
 ├── backend/
 │   ├── index.js                       Express app entry; mounts routers, starts assignment job
-│   ├── middleware/auth.js              clerkAuth, protect (requireAuth), protectAdmin (role check)
+│   ├── types.ts                       zod query schemas + shared API types
+│   ├── middleware/
+│   │   ├── auth.js                     clerkAuth, protect (requireAuth), protectAdmin (role check)
+│   │   ├── rateLimit.js                per-IP limits for the unauthenticated Google/fare routes
+│   │   └── errorHandler.js
 │   ├── db/prisma.js , lib/prisma.js    Prisma client (pg adapter)
-│   ├── prisma/schema.prisma            data model (8 models, 4 enums)
-│   ├── prisma/seed.js                  DB seed
+│   ├── prisma/
+│   │   ├── schema.prisma               data model (8 models, 4 enums)
+│   │   ├── seed.js , clean-bookings.js
+│   ├── data/zones.geojson              hand-drawn NCR fare zones + per-class prices
+│   ├── scripts/free-port.js            frees the port before dev/start
 │   ├── routes/
 │   │   ├── hybridAuth.js               POST /api/auth/send-otp, /verify-otp  (WhatsApp-OTP→Clerk)
-│   │   ├── users.js                    GET/POST /api/users/me
+│   │   ├── users.js                    me, recent-places, gender/DOB/emergency, download, delete
 │   │   ├── fare.js                     POST /api/fare/estimate
-│   │   ├── bookings.js                 create / status / cancel / my-bookings / admin list
-│   │   └── driver.js                   PATCH /api/driver/rides/:id/accept | /decline
+│   │   ├── bookings.js                 create / status / cancel / my-bookings
+│   │   ├── driver.js                   PATCH /api/driver/rides/:id/accept | /decline
+│   │   ├── admin.ts                    GET /api/admin/booking | /driver | /user   (read-only)
+│   │   └── googleAPI.js                autocomplete / place details / reverse-geocode proxies
 │   └── services/
-│       ├── fares.js                    fixed table → Google Routes fallback + monthly usage cap
+│       ├── rideEstimate.js             zones → fixed table → per-km formula; Routes API + usage cap
+│       ├── fareZones.js                point-in-polygon zone matching, border blending
 │       ├── driverAssignment.js         nearest-driver matching (Haversine + sharing corridor)
 │       ├── assignScheduledRides.js     setInterval job, runs every 5 min
-│       └── notification.js             sendFCM / sendWhatsApp  ← STUBBED (console.log)
+│       └── notification.js             sendFCM / sendWhatsApp  ← BOTH STUBBED (console.log)
 └── frontend/
     └── src/
         ├── main.jsx                    router + ClerkProvider + ThemeProvider
-        ├── App.jsx                     "/" → OnBoarding + NavBar
+        ├── App.jsx                     "/" → NavBar + OnBoarding + marketing sections + Footer
         ├── api/api.js                  thin fetch wrapper, one fn per endpoint
+        ├── constants/                  fares (surcharge), statusLabels, support contact details
+        ├── types/enums.ts              frontend mirror of the Prisma enums
         ├── hooks/
-        │   ├── useData.js              Zustand store (booking draft + session bits)
+        │   ├── useData.js              Zustand store (booking draft + session bits), persisted
         │   ├── useApi.js               binds Clerk getToken to each api.js call
-        │   └── useViewNavigate.js      navigate() wrapper that enables View Transitions
-        ├── context/ThemeContext.jsx    dark/light (ThemeToggle incomplete)
+        │   ├── useViewNavigate.js      navigate() wrapper that enables View Transitions
+        │   ├── useIsMobile.js          live <640px check for behaviour CSS can't express
+        │   └── useExitAnim.js          keeps a panel mounted through its closing animation
+        ├── context/ThemeContext.jsx    dark/light (ThemeToggle renders null by design)
         ├── components/
         │   ├── ProtectedRoute.jsx      Clerk gate → redirects to /login?redirect=
-        │   ├── ErrorBoundary.jsx , LoadingScreen.jsx
-        │   ├── RideDetails.jsx         ride-details sub-panel (extracted from TrackingPage)
-        │   ├── illustrations/          inline SVG illustrations (radar, en-route, whatsapp, map)
-        │   └── ui/                      Button, Input, NavBar, BackgroundPanel, ErrorPanel,
-        │                               DateTimeSelector
+        │   ├── ErrorBoundary.jsx       ← currently commented out in main.jsx
+        │   ├── RideDetails.jsx         ride-details sub-panel (shared by /book and tracking)
+        │   ├── *Skeleton.jsx           tracking / ride-history / admin first-load placeholders
+        │   ├── illustrations/          inline SVG + Lottie illustrations
+        │   └── ui/                     Button, Input, NavBar, BackgroundPanel, ErrorPanel,
+        │                               DateTimeSelector, GoogleMap, mapOverlays, RoutePanel,
+        │                               NoticePill, Chips, Skeleton, Toggle, …
         └── pages/
-            ├── OnBoarding.jsx          landing/booking form (timing, pickup, drop)
+            ├── OnBoarding.jsx          landing/booking form (timing, pickup, drop, autocomplete)
+            ├── HowItWorks / Services / AboutUs / WhyUs   marketing sections of "/"
             ├── LoginPage.jsx           phone → OTP → /book or /signup
-            ├── SignUpPage.jsx          phone → OTP → username → /book
-            ├── VehicleSelect.jsx       vehicle + fare + confirm + searching/confirmed panels
-            └── TrackingPage.jsx        "driver arriving" status screen (in progress)
+            ├── SignUpPage.jsx          name → phone → OTP → /book
+            ├── VehicleSelect.jsx       vehicle + fare + pin-confirm + searching/confirmed panels
+            ├── TrackingPage.jsx        status-driven ride screen, polls every 5s
+            ├── ManageAccount.jsx       profile, ride history, privacy & data
+            ├── SettingsPage / SafetyPage / HelpPage
+            ├── AdminDashboard.tsx      bookings / drivers / users tables (read-only)
+            └── DevPreview.jsx          dev-only harness for previewing any screen without a backend
 ```
 
 ---
 
 ## 4. Data model (`backend/prisma/schema.prisma`)
 
-**Enums:** `BookingStatus` (pending → confirmed → assigned → en_route → reached → started →
-completed, plus cancelled), `BookingSource` (website | whatsapp | admin), `CancelledBy`
+**Enums:** `BookingStatus` (pending, confirmed, assigned, en_route, reached, started, completed,
+cancelled, **no_driver**), `BookingSource` (website | whatsapp | admin), `CancelledBy`
 (user | driver | admin), `VerificationStatus` (pending | approved | rejected).
 
-**Models:**
-- **User** — `clerkId` (unique), `phone` (unique), `name`, `whatsappNumber`. One-to-many `bookings`.
+**Models (8):**
+- **User** — `clerkId` (unique), `phone` (unique), `name`, `whatsappNumber`, `bookingCode`
+  (**stable 4-digit code generated once at signup — it lives on the user, not the ride**), optional
+  `gender`, `dob`, `emergencyContact`, `deletedAt`. One-to-many `bookings`.
 - **Driver** — `name`, `phone`, `vehicleType` (Int: number of seats), `vehicleCapacity` (Int: seats
   currently free — the live availability counter), `vehicleNumber`, `isActive`, `isOnline`,
   `fcmToken`, `dlDocUrl`/`aadharDocUrl`, `verificationStatus`. Has one `DriverLocation`.
-- **DriverLocation** — one row per driver, `latitude`/`longitude`/`bearing`/`speedKmh`, upserted (per
-  the design) every 4s while online. `bearing`+`speedKmh` enable client-side **dead reckoning**
-  between the customer's 5-second status polls.
-- **Booking** — the core record: `bookingCode` (6-digit unique, doubles as the start OTP), `userId`,
-  optional `driverId`, pickup/drop address + lat/lng, `vehicleType`, `scheduledAt` (null = on-spot),
-  `isOutstation`, `distanceKm`, `fare`, `commissionPct`/`commissionAmt`, `status`, `confirmedAt`,
-  cancellation fields, `source`, `sharing` (bool), `shareGroupId`, `pickupOrder`.
+- **DriverLocation** — one row per driver, `latitude`/`longitude`/`bearing`/`speedKmh`, designed to
+  be upserted every 4s while online. `bearing`+`speedKmh` enable client-side **dead reckoning**
+  between the customer's 5-second status polls. **Nothing writes this table yet.**
+- **Booking** — the core record: `userId`, optional `driverId`, pickup/drop address + lat/lng,
+  `vehicleType`, `scheduledAt` (null = on-spot), `isOutstation`, `preferSafeRoute`, `distanceKm`,
+  `fare`, `commissionPct`/`commissionAmt`, `status`, `confirmedAt`, `cancellationCharge` and the
+  other cancellation fields, `source`, `sharing` (bool), `shareGroupId`, `pickupOrder`.
 - **FareTable** — fixed NCR pricing, unique on (`destinationName`, `vehicleType`).
-- **ApiUsage** — monthly external-API call counter (`service`, `month` "YYYY-MM", `count`) to stay
-  under free limits.
+- **ApiUsage** — monthly external-API call counter (`service`, `month` "YYYY-MM", `count`).
 - **OtpVerification** — one row per phone: `otpHash`, `expiresAt`, `used`. Backs the WhatsApp OTP.
-- **WhatsappSession** — in-progress WhatsApp booking-bot conversation state (`step`, `data` JSON,
-  `language`). For the future WhatsApp bot; nothing writes it yet.
+- **WhatsappSession** — in-progress WhatsApp booking-bot conversation state. Nothing reads or
+  writes it yet.
+
+Every index in the schema is justified by a named call site in a comment above it — read those
+before adding more.
 
 **Vehicle types are integers = seat counts:** `4`, `6`, and `1` is a special **"ANY"** marker (book
 the cheapest available 4- or 6-seater; priced at the 4-seater rate). Valid set: `[4, 6, 1]`.
+Internally these map to fare *classes* — `4 → hatchback`, `6 → suv`, `1 → hatchback`. A `sedan`
+class exists in the zone data but no vehicle type selects it yet.
 
 ---
 
@@ -140,34 +177,68 @@ the cheapest available 4- or 6-seater; priced at the 4-seater rate). Valid set: 
 
 **Booking modes**
 - **Scheduled** (primary): `scheduledAt` set, must be **≥30 min** and **≤7 days** out (else 422).
-  Created immediately as `confirmed` with fare locked and code issued; **driver not assigned yet**.
-  A background job assigns a driver closer to pickup time.
-- **On-spot** (secondary): `scheduledAt` null. Tries to assign a driver **immediately** on creation.
-  If none available → **HTTP 503 and the booking row is deleted** (not persisted).
+  Created immediately as `confirmed` with fare locked; **driver not assigned yet**. A background
+  job assigns closer to pickup time.
+- **On-spot** (secondary): `scheduledAt` null. The row is created as **`pending`** and
+  `startAssignment()` is fired **detached** — the response returns immediately so the client can
+  show "Requesting a ride" and poll. A search that reaches nobody ends at **`no_driver`**, a
+  terminal status deliberately excluded from `ACTIVE_STATUSES` so the rider can retry at once.
+  Failed bookings persist in ride history on purpose.
+- **Crash guard:** `GET /:id/status` lazily expires any `pending` row older than
+  `ASSIGNMENT_DEADLINE_MS` (5 min), so a restart mid-search can't strand a booking. No scheduler
+  needed — the poll that just arrived is the only thing waiting on the answer.
 
-**Fare** (`services/fares.js`)
-- If the drop matches an active `FareTable` row for that vehicle type → return the fixed fare.
-- Else call **Google Routes API** (`computeRoutes`, distance only) and price at per-km rate
-  (`{4: 14, 6: 18, 1: 14}` ₹/km), incrementing `ApiUsage`; hard cap **10,000 calls/month** → 503.
-- Commission: 10% only when fare ≥ ₹1000, else 0 (stored on the booking).
+**Duplicate guard:** a create is rejected (409) if the user has an active booking within 15 minutes
+of the requested time, or an active booking on the same pickup+drop pair.
+
+**Fare** (`services/rideEstimate.js`, `services/fareZones.js`) — resolved **per vehicle class**, in
+order:
+1. **Zone** — the drop point (or the pickup, for trips *back* to campus) is matched against
+   hand-drawn polygons in `data/zones.geojson`. Highest `priority` wins so exception zones override
+   the broad areas containing them; two same-priority zones disagreeing on price means an accidental
+   border overlap, and the midpoint is charged.
+2. **FareTable** — fixed price for an exact destination name.
+3. **Per-km formula** — a power law fitted to the provider's rate card
+   (hatchback ≈ `36.7·km^0.897`, suv ≈ 1.6×, sedan +₹100), with a flat ₹16/km beyond 56 km and two
+   distance bands bumped ₹50. Floor of ₹400, rounded to ₹50.
+
+Distance/duration/polyline come from the **Google Routes API**, counted against a **10,000
+calls/month** cap in `ApiUsage` (503 past it). Metrics are best-effort: zone and fixed-table fares
+still price without them, only formula-priced types drop out.
+
+- **Sharing** takes 25% off (`SHARING_DISCOUNT_PCT`) — **this number is ours, not the provider's,
+  and still needs confirming.**
+- **Safer route** adds a flat ₹150 (`SAFE_ROUTE_SURCHARGE`, mirrored in `frontend/src/constants/
+  fares.js`), applied *after* the sharing discount because it's a flat road cost. It is meant to
+  force the route through a lit-highway waypoint — but `SAFE_WAYPOINT` is **still null**, so today
+  it charges the surcharge and changes nothing about the road. Do not ship it as-is.
+- **Commission:** 10% only when fare ≥ ₹1000, else 0 (stored on the booking).
+
+**Cancellation** — free while `pending`/`confirmed`/`assigned`/`en_route`; **35%** once the driver
+has `reached` the pickup (that driver turned down other rides and spent the fuel). A ride already
+`started` can't be self-cancelled. The status endpoint returns the live `cancellationCharge` from
+the same helper the cancel endpoint uses, so the warning and the charge can never drift apart.
+Cancelling restores driver capacity: solo back to full, sharing +1 seat capped at full.
 
 **Driver assignment** (`services/driverAssignment.js`)
-- Expanding **bounding-box → Haversine** search: radius grows 20→80 km in 10 km steps.
+- Expanding **bounding-box → Haversine** search: radius grows 20→80 km in 10 km steps, re-checking
+  the booking's status between rings so an expired or cancelled ride stops pinging drivers.
 - Filters drivers: `isActive` + `isOnline` + `verificationStatus = approved`, matching `vehicleType`
-  (or any of 4/6 when the request is type `1`/ANY). Sorted by distance, ties broken by driver seniority.
-- **Sharing rides** additionally require the driver's current active drop to be in the **same
-  directional corridor** (bearing within 45°) as the new drop, and a free seat.
-- Sends an **FCM** offer to the driver and waits for accept; on accept, updates booking → `assigned`
-  and decrements capacity.
-- **Capacity model (important):** a **solo** ride takes the whole vehicle out of the pool
-  (`vehicleCapacity = 0`); a **sharing** ride consumes **one seat** (`-1`). On **cancel**, solo
-  restores capacity to full (`= vehicleType`), sharing returns one seat (`+1`, capped at full).
-- No driver found: on-spot → 503; scheduled → stays `confirmed`, admin alerted via WhatsApp.
+  (or any of 4/6 when the request is type `1`/ANY). Sorted by distance, ties broken by seniority.
+- Offers are **sequential** — one FCM per candidate, awaiting each answer — which is why a single
+  ring can take minutes and why the whole search runs detached.
+- `claimBooking` takes the booking with a **status-guarded `updateMany`** before decrementing
+  capacity, so a search still in flight can never overwrite a booking that has moved on, and a lost
+  claim can't leak a seat.
+- **Capacity model:** a **solo** ride takes the whole vehicle (`vehicleCapacity = 0`); a **sharing**
+  ride consumes **one seat** (`-1`).
+- No driver found: on-spot → `no_driver`; scheduled → stays `confirmed`, admin alerted via WhatsApp.
 
 **Scheduled assignment job** (`services/assignScheduledRides.js`)
 - `setInterval` every **5 minutes**: picks `confirmed` bookings with `scheduledAt` within the next
-  **12 hours** and runs `getDriver` on each. If still unassigned and pickup is within the next hour,
-  WhatsApps `ADMIN_PHONE` to assign manually.
+  **12 hours** and runs `getDriver` on each; WhatsApps `ADMIN_PHONE` if one is still unfilled inside
+  the last hour. Both the 12-hour window and the overlapping-interval problem are known defects —
+  see §11 and ROADMAP.
 
 ---
 
@@ -176,36 +247,49 @@ the cheapest available 4- or 6-seater; priced at the 4-seater rate). Valid set: 
 There is **no password and no Clerk-hosted UI**. Flow:
 1. Frontend `POST /api/auth/send-otp { phone }` → backend stores `otpHash` (5-min expiry) and
    (eventually) WhatsApps the code. **In dev the OTP is `console.log`ged** by the backend.
-2. Frontend `POST /api/auth/verify-otp { phone, otp }` → backend verifies, then finds/creates a Clerk
-   user keyed by a **fake email** `91{phone}@rcs-travels.com`, and returns a **Clerk sign-in ticket**.
+2. Frontend `POST /api/auth/verify-otp { phone, otp }` → backend verifies, burns the OTP, then
+   finds/creates a Clerk user keyed by a **fake email** `91{phone}@rcs-travels.com`, and returns a
+   **Clerk sign-in ticket** (60s expiry).
 3. Frontend completes the session with `signIn.create({ strategy: "ticket", ticket })`.
-4. `GET /api/users/me`: 404 → new user → `/signup` (collect username); found → `/book`.
-- Phone is always derived from the verified Clerk email, **never trusted from form input**.
-- `protectAdmin` checks `req.auth.sessionClaims.metadata.role === "admin"` (Raju to be made admin in
-  Clerk dashboard).
+4. `GET /api/users/me`: 404 → new user → `/signup`; found → `/book`.
+- Because the phone is encoded in that email, the backend always derives it from the verified
+  session and **never trusts a phone sent by the client**.
+- Signup collects the **name first**, so the DB user is created in the same step as OTP
+  verification — there's no post-OTP screen to abandon into a profile-less session.
+- `protectAdmin` checks `req.auth.sessionClaims.metadata.role === "admin"` (Raju still needs the
+  `admin` role set in the Clerk dashboard).
 
 ---
 
 ## 7. Frontend state & navigation
 
-**`useData` (Zustand, in-memory):** holds the booking draft and a few session values — `phone`,
-`pickupLocation`, `dropLocation`, `scheduledTime`, `fare`, `vehicleType` (default 4), `bookingId`,
-`bookingCode`, `username`, `sharing` (default true). **Not persisted**, so a hard refresh on
-`/book` or `/booking/...` loses the in-progress booking context.
+**`useData` (Zustand, localStorage key `rcs-data`)** holds the booking draft and session values.
+**Persisted:** `phone`, `language`, `recentPlaces`, and the ride form — `pickupLocation`,
+`dropLocation`, `pickupCoords`, `dropCoords` (addresses and coords must travel together or a reload
+would rebook from fallback anchors) plus `distanceKm`, `durationMin`, `routePolyline`, `fareSource`
+so tracking still draws the real road route after a reload. `/book` wipes the metrics on mount so a
+new booking can't inherit the old route. **Not persisted:** `bookingId`, `status`, `safeRoute`,
+`sharing`, `fare` and the rest — a per-trip choice belongs to the trip, not the account.
 
 **Routes (`main.jsx`):**
 | Path | Element | Guard |
 |------|---------|-------|
-| `/` | `App` → `OnBoarding` + `NavBar` | public |
+| `/` | `App` → NavBar + OnBoarding + marketing sections + Footer | public |
 | `/login` | `LoginPage` | public |
 | `/signup` | `SignUpPage` | public |
+| `/help` | `HelpPage` | public |
 | `/book` | `VehicleSelect` | `ProtectedRoute` |
 | `/booking/test` | `TrackingPage` | `ProtectedRoute` |
+| `/manage-account` | `ManageAccount` | `ProtectedRoute` |
+| `/settings` | `SettingsPage` | `ProtectedRoute` |
+| `/safety` | `SafetyPage` | `ProtectedRoute` |
+| `/dashboard` | `AdminDashboard` | `ProtectedRoute requireAdmin` |
+| `/dev`, `/dev/:view` | `DevPreview` | dev builds only |
 
-> NOTE: the tracking route is currently hard-coded to **`/booking/test`** (the real
-> `"/booking/:id"` line is commented out) so the half-built `TrackingPage` can be viewed in
-> isolation. VehicleSelect still navigates to `/booking/${bookingId}` after assignment, which won't
-> match until the param route is restored.
+> **NOTE:** the tracking route is still pinned to the literal **`/booking/test`** — the real
+> `"/booking/:id"` line is commented out, and `VehicleSelect` navigates to the literal too.
+> `TrackingPage` reads its booking id from the store rather than the URL, so restoring the param
+> route means changing all three together. Until then a booking can't be opened from a link.
 
 **Navigation uses `useViewNavigate`** — a `useNavigate` wrapper that passes `{ viewTransition: true }`
 so the browser's native **View Transitions API** animates page changes (CSS in `index.css` under
@@ -216,204 +300,170 @@ so the browser's native **View Transitions API** animates page changes (CSS in `
 ## 8. Design system & animation conventions
 
 - **Dark, premium aesthetic.** Custom CSS variables for backgrounds (`--background`,
-  `--background-primary`, `--background-muted`) and text. Brand primary blue `#243AFB`. Poppins font.
+  `--background-primary`, `--background-muted`) and text. Brand primary blue `#243AFB`. PP Mori.
+- **A shared layout + type scale** runs across the booking flow (OnBoarding, VehicleSelect,
+  TrackingPage, RideDetails): a real **377px** desktop content column — OnBoarding's effective
+  control width — reached as a width rather than a transform, so type stays honest at both
+  breakpoints. Spacing tokens (`PAIR` / `GROUP` / `STACK`) express the vertical rhythm.
 - **`BackgroundPanel`** is the core surface: a bottom-anchored (mobile) / full-height (desktop) panel
   that **owns its own enter/exit animation** via a `show` prop — it stays mounted through the exit
-  animation (`animate-panel-transition-out`) then unmounts. Panels slide in/out from the **right**.
+  animation then unmounts. Panels slide in/out from the **right**.
 - **`ErrorPanel`** wraps `BackgroundPanel`, shown on `!!error`, with a `lastError` latch so the
   message stays readable while animating out.
+- **`useExitAnim(open, duration)`** (`hooks/useExitAnim.js`) is the shared mounted/closing pattern
+  for every dropdown, drawer and panel. `BackgroundPanel` has the same logic inline.
 - **Custom animations** in `index.css` (`@layer base`): `panel-transition(-out)`,
-  `dropdown-reveal/collapse`, `datetime-bloom/wilt`, `fade-swap`, `loading-bar`, `illus-fade`. The
-  `useExitAnim(open, duration)` hook (in OnBoarding) is the reusable mounted/closing pattern for
-  dropdowns; `BackgroundPanel` has the same logic inline.
+  `dropdown-reveal/collapse`, `datetime-bloom/wilt`, `sheet-in/out` + `backdrop-in` (the mobile nav
+  drawer), `fade-swap`, `loading-bar`, `illus-fade`, `skeleton-sheen`.
+- **The map is a singleton** (`ui/GoogleMap.jsx`) with module-level overlay registries
+  (`ui/mapOverlays.jsx`), because overlays outlive any one component — a StrictMode remount or a
+  page change must still be able to find and clear them.
 - **House rules (from CLAUDE.md):** no default Tailwind blue/indigo as primary; no `transition-all`;
-  animate only `transform`/`opacity`; layered tinted shadows; pair display + sans fonts. The
-  `frontend-design` skill must be invoked before writing frontend code.
+  animate only `transform`/`opacity`; layered tinted shadows. The `frontend-design` skill must be
+  invoked before writing frontend code.
 
 ---
 
 ## 9. Status — what's DONE / IN PROGRESS / LEFT
 
 ### ✅ Done (built and wired)
-- **Backend foundation:** Express app, Clerk middleware, Prisma + Supabase Postgres, schema with all 8 models,
-  `/health`.
-- **Auth backend:** WhatsApp-OTP → Clerk-ticket flow (`hybridAuth.js`), `users.js` me/create.
-- **Fare backend:** fixed-table + Google Routes fallback, monthly usage cap. **Google Routes is the
-  one external API actually wired and working.**
-- **Booking backend:** create (scheduled + on-spot), `:id/status` polling endpoint, cancel (with the
-  solo/sharing capacity restore), `my-bookings`, admin list (`/admin/all`).
-- **Driver assignment engine:** nearest-driver matching with Haversine, expanding radius, sharing
-  directional corridor, capacity decrement; the 5-min scheduled-assignment job.
-- **Driver accept/decline endpoints.**
-- **Customer front end — booking funnel:** OnBoarding (timing/pickup/drop with scheduled date-time
-  picker), LoginPage and SignUpPage (full phone→OTP→session flows), VehicleSelect (vehicle choice,
-  fare preview, solo/share toggle, confirm, and the searching / confirmed / no-driver panels with
-  polished animations).
-- **Shared UI kit:** Button, Input, BackgroundPanel, ErrorPanel, DateTimeSelector, NavBar,
-  ProtectedRoute, View-Transition navigation.
+- **Backend foundation:** Express app, Clerk middleware, Prisma + Supabase Postgres, 8 models with
+  justified indexes, `/health` (runs `select 1`), per-IP rate limiting, zod-validated list queries.
+- **Auth backend:** WhatsApp-OTP → Clerk-ticket flow, `users.js` me/create plus profile fields,
+  account data download (PDF) and account deletion.
+- **Fare backend:** zone matching over a hand-drawn GeoJSON map, fixed table, per-km formula, Routes
+  API with a monthly usage cap, safe-route surcharge plumbing.
+- **Google proxies:** autocomplete, place details, reverse-geocode — all cached in-process and
+  rate-limited, so the API key never reaches the browser.
+- **Booking backend:** create (scheduled + on-spot with detached assignment), `:id/status` polling
+  with lazy expiry and live cancellation quote, cancel with capacity restore, `my-bookings` with
+  search/filter/pagination.
+- **Driver assignment engine:** nearest-driver matching, expanding radius, guarded claim, capacity
+  decrement; the 5-min scheduled-assignment job.
+- **Admin backend (read-only):** booking / driver / user lists with the full filter set.
+- **Customer front end:** the whole booking funnel — OnBoarding (autocomplete, recents, scheduling),
+  Login and SignUp, VehicleSelect (fare cards, solo/share, safer-route toggle, pin-confirm on a map,
+  searching / confirmed / no-driver panels), **TrackingPage (status-driven, polls every 5s)**,
+  RideDetails, ManageAccount (profile, ride history, privacy), Settings, Safety, Help, and the
+  marketing homepage (How it works, Services, About, Why us, CTA, Footer).
+- **Admin dashboard UI:** bookings / drivers / users tables with filters, chips and skeletons.
+- **Shared UI kit** and the `DevPreview` harness for reviewing any screen without a backend.
 
-### 🚧 In progress
-- **`TrackingPage.jsx`** — currently a **static "driver arriving" mock** (placeholder OTP "1 2 3 4 5
-  6", "Driver name", "Car name", hard-coded `pickupTime`/`pickupDistance`). It is **not yet
-  status-driven** and **does not poll** `GET /api/bookings/:id/status`. Mounted at the temporary
-  `/booking/test` route.
-- **`RideDetails.jsx`** — just extracted from TrackingPage as the "ride details" sub-panel. **It is
-  broken:** it references `useData`, `useApi`, `Icon`, `mdiKeyboardBackspace`, `Button`, `navigate`,
-  `dashedLine`, `arrow`, `waLogo`, `pickupLocation`, `dropLocation` **without importing them**, and
-  `handleCancel` checks `prop.bookingId` (never passed) — it will throw on render. Needs imports +
-  prop wiring before use.
-- **`ThemeToggle.jsx` / appearance setting** — incomplete (noted in ROADMAP).
+### 🚧 Partial / placeholder
+- **`TrackingPage` driver card** — the page polls correctly, but `driverCard` and `driverRow` render
+  **hardcoded** text ("Driver name", "UP 16 AB 1234"). The `driver` object from the status endpoint
+  is only used for the map puck. They also aren't gated on `driver` being non-null, so an unassigned
+  booking shows a driver who doesn't exist.
+- **`ThemeToggle.jsx`** renders `null` by design — the site follows the OS theme and there's no
+  manual override yet.
+- **Local-only UI** — see §12.
 
 ### ⬜ Left to build (priority order — see ROADMAP "WORK PRIORITY")
-**1. Finish pages + backend ride lifecycle (critical path):**
-   - Make `TrackingPage` a real **status-driven screen** that polls and swaps UI by `booking.status`:
-     `assigned/en_route` → "Driver on the way" (driver card, ETA, live map, call/cancel);
-     `reached` → "Driver arrived" (show start-OTP = `bookingCode`); `started` → "On trip";
-     `completed` → "Trip complete" + final fare. Restore the `/booking/:id` param route.
-   - **Backend lifecycle endpoints** to advance `en_route / reached / started / completed` (today the
-     status enum is unused past `assigned`/`cancelled`; `driver.js` only has accept/decline).
-   - **Driver-location write endpoint** (`POST /api/driver/location`) — nothing populates
-     `DriverLocation` yet, so there is no live position to poll/track.
-   - **Fare finalization** on completion (no final-amount logic beyond the original fare).
-   - **Pin-point pickup on a map** (OnBoarding uses plain text inputs; no Places autocomplete / map).
-   - **My Trips / ride history page** (backend `my-bookings` exists, no UI consumes it).
-   - **Profile / Account page**, **rating/feedback** (no rating field in schema yet).
 
-**2. Link real external services (the "go-live" layer — not needed to build):**
-   - **WhatsApp Cloud API** — replace the `notification.js` `sendWhatsApp` stub (currently
-     `console.log`) for OTP + customer updates.
-   - **FCM** — replace the `sendFCM` stub (currently `await delay(30s)` then random true/false) so
-     real driver devices receive ride offers.
-   - Google Routes is already live; add IP restriction on the key after deploying to Render.
+**1. Restore the real tracking route** — `/booking/:id` + `useParams`, and the two hard-coded
+   `navigate('/booking/test')` calls in VehicleSelect.
 
-**3. Admin dashboard** (web — same React app or a separate admin area; not started)
+**2. Driver-side backend** (the missing half of the ride loop). Today `driver.js` has only
+   accept/decline, and **nothing creates a `Driver` row or writes `DriverLocation` at all**:
+   - `POST /api/driver/location` (4s GPS upsert with bearing + speedKmh)
+   - lifecycle transitions `en_route → reached → started → completed`, plus fare finalization
+   - online/offline toggle, FCM token registration, `GET /api/driver/me` for the approval screen
+   - driver registration + DL/Aadhaar upload (multer + S3 are installed, unused)
 
-   Purpose: **visibility + driver management**. Assignment is automatic, so the admin only
-   *intervenes* when it fails. The backend list endpoint already exists
-   (`GET /api/bookings/admin/all`, gated by `protectAdmin`); everything else here is to build.
+**3. Admin mutations** — approve / reject / deactivate a driver, and manual booking re-assignment.
+   These gate the driver app: only `approved` drivers can go online, and nothing can approve one.
 
-   Pages / screens:
-   - **`/admin/bookings`** — a live table of all bookings (status, customer, driver, pickup/drop,
-     fare, scheduled time). Filter by status/date (the endpoint already supports `status`, `date`,
-     `page`, `limit`). **Manual re-assign** control as a fallback for when no driver auto-accepted
-     (e.g. a scheduled ride the 5-min job couldn't fill). Lets the admin watch the full loop:
-     *customer books → system auto-assigns → customer sees driver*, stepping in only on failure.
-   - **`/admin/drivers`** — list all drivers; **approve / reject pending verifications**; deactivate
-     (soft-remove) any driver.
+**4. Driver mobile app** (Expo, separate `driver-app/` at repo root; not started) — register/login,
+   document upload + pending-approval screen, go online/offline, incoming ride with a 30s timer,
+   active-ride lifecycle buttons, and GPS broadcasting. Dead reckoning on the customer side:
+   ```
+   predictedLat = lat + (speedKmh/3600 × Δt) × cos(bearing × π/180) / 111
+   predictedLng = lng + (speedKmh/3600 × Δt) × sin(bearing × π/180) / (111 × cos(lat × π/180))
+   ```
 
-   Driver verification flow this dashboard drives:
-   - Driver self-registers (phone OTP) and uploads **DL + Aadhaar** → `verificationStatus = pending`
-     (schema fields `dlDocUrl`, `aadharDocUrl` already exist; document **upload to S3** via the
-     installed `multer` + `@aws-sdk/client-s3` is not wired yet).
-   - Admin reviews the documents → **approve** sets `verificationStatus = approved` and
-     `isActive = true`; **reject** sets `verificationStatus = rejected`.
-   - Only `approved` drivers can go online and receive rides — this is already enforced everywhere
-     in `driverAssignment.js` and `driver.js` (`verificationStatus !== 'approved'` → 403).
+**5. Link real external services** — WhatsApp Cloud API for OTP + customer updates, FCM for real
+   driver devices. Google Routes/Places are already live.
 
-   Backend to add: admin endpoints for **list/approve/reject/deactivate drivers**, and a
-   **manual-assign** endpoint for bookings. Access is already protected by `protectAdmin`
-   (`req.auth.sessionClaims.metadata.role === "admin"`); Raju must be given the `admin` role in the
-   Clerk dashboard.
-
-**4. Driver mobile app** (Expo / React Native, separate `driver-app/` folder at repo root; not started)
-
-   Purpose: let an approved driver receive and complete rides, and broadcast live GPS. This is the
-   missing half of the ride loop — today there is **no producer** for `DriverLocation` rows or for
-   the `en_route/reached/started/completed` transitions, which is why the customer TrackingPage has
-   nothing real to poll.
-
-   Screens (ROADMAP priority order):
-   1. **Register / Login** — phone OTP (same hybrid Clerk-ticket flow as the customer site).
-   2. **Onboarding / verification** — upload DL + Aadhaar, submit for review; show a
-      "Pending approval" screen until an admin approves (`verificationStatus`).
-   3. **Home** — **Go Online / Go Offline** toggle (only enabled once `approved`); flips
-      `Driver.isOnline`.
-   4. **Incoming ride** — accept / decline with a **30-second timer** → calls the existing
-      `PATCH /api/driver/rides/:id/accept | /decline`. (Backlog idea: shorten 30s → 20s.) The offer
-      itself arrives as an **FCM push** (today stubbed in `notification.js`).
-   5. **Active ride** — **"Reached Pickup" → "Start Ride" → "Complete Ride"** buttons that advance
-      the booking through `en_route → reached → started → completed`. **These lifecycle endpoints
-      don't exist yet** (`driver.js` only has accept/decline) — they must be built alongside this
-      screen, together with fare finalization on completion.
-
-   GPS broadcasting (the heart of live tracking):
-   - When the driver goes **Online**, the app `POST`s to **`/api/driver/location`** every **4
-     seconds** (this write endpoint is **not implemented yet**). Payload includes computed
-     **`bearing` + `speedKmh`** (derived from the last two positions). Going **Offline** stops the
-     broadcast. Each post **upserts** the driver's single `DriverLocation` row.
-   - **Dead reckoning (client-side, on the customer TrackingPage):** because the customer only polls
-     status every ~5s, between polls the page predicts the driver's position from the last known
-     `lat/lng`, `bearing`, and `speedKmh`:
-     ```
-     predictedLat = lat + (speedKmh/3600 × Δt) × cos(bearing × π/180) / 111
-     predictedLng = lng + (speedKmh/3600 × Δt) × sin(bearing × π/180) / (111 × cos(lat × π/180))
-     ```
-     where `Δt` = seconds since the last known update; when the next poll arrives, snap to the real
-     position. This keeps the on-map car moving smoothly instead of teleporting every 5s.
-
-   Setup note: scaffold a **new Expo project** in `driver-app/`; ship later via **Expo EAS**. It
-   reuses the same backend and Clerk project as the customer site.
-
-**5. Optimizations (last):** extract shared components while building (not as a separate pass), DB
-   index/query tuning on the assignment bounding-box query once there's real driver volume, i18next
-   Hindi support, homepage.
-
-**Smaller backlog (from ROADMAP.txt — not yet scheduled into the phases above):**
-   - **Customer UX:** "Tolls payable to driver separately" note on non-fixed destinations; let
-     selected users see their ride status; a **NavBar notification bell** (scheduled-ride
-     assigned/unassigned, driver-needs-admin-approval); if a **non-shared** ride goes unassigned to
-     the end, notify the customer and offer to make it shared.
-   - **Optional profile fields:** gender, email, emergency contact, DOB (all optional).
-   - **Accessibility "simple mode":** auto-simplify the UI for users aged ≥ 60, plus a manual
-     toggle in settings for anyone.
-   - **Appearance:** finish `ThemeToggle.jsx` and add an Appearance option in profile.
-   - **API hardening:** per-key call-count restriction + rate limiting on Maps and all external
-     APIs; enable **Places API (New)** alongside Routes API; after deploying to Render, lock the
-     Google key to the server's outbound IP.
-   - **Tuning knobs:** try shortening the driver ride-offer timeout from 30s → 20s.
-   - **Ops one-offs:** assign the **admin role to Raju** in the Clerk dashboard.
-   - **Cancellation policy:** `/my-bookings` cancel should warn about a **35% charge** if the driver
-     has already reached pickup (schema has `cancellationCharge`; not enforced yet).
-   - **WhatsApp booking bot:** the `WhatsappSession` model exists for a future conversational
-     booking flow over WhatsApp; nothing reads/writes it yet.
-   - **TypeScript migration:** codebase is intentionally plain JS/ESM now; convert `.js`→`.ts` /
-     `.jsx`→`.tsx` incrementally once the system works.
-
-### ⚠️ Known gaps / gotchas for anyone working here
-- **Everything runs end-to-end on stubs.** `sendFCM` returns random success after a 30s delay;
-  `sendWhatsApp` only logs. The only live external call is the Google Routes fare lookup. So in dev,
-  driver assignment "succeeds" randomly and OTPs appear in the **backend console**.
-- **Zustand store is not persisted** — refreshing `/book` or `/booking/...` drops the booking draft.
-- **`/booking/:id` is temporarily `/booking/test`** in `main.jsx`; restore the param route when
-  TrackingPage is wired to real data.
-- **`RideDetails.jsx` will crash** until its missing imports/props are added (see In Progress).
-- **`ErrorBoundary` is commented out** around the router in `main.jsx`.
+**6. Polish** — Legal page (the nav links to `/`), i18next Hindi wiring, rating/feedback (no schema
+   field yet), and the optimizations in ROADMAP.
 
 ---
 
 ## 10. Running locally
 
 **Backend** (`backend/`): needs `.env` with `DATABASE_URL` (Supabase Postgres), `CLERK_SECRET_KEY`,
-`GOOGLE_MAPS_API_KEY`, `ADMIN_PHONE`.
+`GOOGLE_MAPS_API_KEY`, `ADMIN_PHONE`. Optionally `DIRECT_URL` (migrations need a direct/session
+connection, not the transaction pooler), `CORS_ORIGINS`, `FCM_ALWAYS_ACCEPT`.
 ```
 npm install
 npm run db:generate    # prisma generate
 npm run db:migrate     # create tables
-npm run db:seed        # optional seed
-npm run dev            # nodemon → http://localhost:5000 ; GET /health → { status: "ok" }
+npm run db:seed        # optional seed   (npm run db:clean resets bookings to the seed)
+npm run dev            # tsx watch → http://localhost:5000 ; GET /health → { status: "ok" }
+npm run typecheck      # tsc --noEmit over the .ts files
 ```
 
-**Frontend** (`frontend/`): needs `.env` with `VITE_CLERK_PUBLISHABLE_KEY` (and optional
-`VITE_API_URL`, defaults to `http://localhost:5000`).
+**Frontend** (`frontend/`): needs `.env` with `VITE_CLERK_PUBLISHABLE_KEY`,
+`VITE_GOOGLE_MAPS_API_KEY`, and optional `VITE_API_BASE_URL` (defaults to `http://localhost:5000`).
 ```
 npm install
 npm run dev            # vite → http://localhost:1574
 ```
 
 Dev login: enter a phone on `/login`, then read the OTP from the **backend terminal** (it's logged,
-not sent). Protected pages require a completed Clerk session.
+not sent). Visit **`/dev`** for an index of every booking-flow screen, rendered with a mock booking
+and no backend or Clerk session required.
 
 ---
 
-*Keep this file updated as features land — especially the §9 status section. When a stub is replaced
-with a real integration or a page moves from "in progress" to "done", reflect it here.*
+## 11. Known bugs and gotchas
+
+- **Everything runs end-to-end on stubs.** `sendFCM` waits 30s and returns a coin flip (or always
+  true with `FCM_ALWAYS_ACCEPT=1`); `sendWhatsApp` only logs. The only live external calls are the
+  Google Routes/Places ones. So in dev, driver assignment "succeeds" randomly and OTPs appear in the
+  backend console.
+- **The sharing-assignment pass is dead code.** `driverAssignment.js` filters candidates on
+  `loc.sharing === true`, but `DriverLocation` has no `sharing` column — the filter is always false,
+  the 45° corridor check never runs, and sharing riders each start a *fresh* shared trip instead of
+  pooling into an existing one.
+- **`driver.js` accept diverges from `getDriver`** on the same transition: it writes `assigned` with
+  an unguarded `update` (no status guard, unlike `claimBooking`) and never decrements
+  `vehicleCapacity`. Harmless until a real driver app calls it.
+- **`GET /api/bookings/admin/all` is unused** — the dashboard reads `/api/admin/booking`.
+- **The scheduled job's window is 12h, not the 60min it was specified as**, so a ride booked half a
+  day out gets a full driver sweep every 5 minutes for nothing; and its `setInterval` doesn't wait
+  for the previous run, so two sweeps can double-notify the same driver. Both are invisible while
+  FCM is stubbed.
+- **`SAFE_WAYPOINT` is null** — the safer-route toggle charges ₹150 and changes no road path.
+- **`/booking/:id` is pinned to `/booking/test`** in `main.jsx` and VehicleSelect.
+- **`ErrorBoundary` is commented out** around the router in `main.jsx`.
+- **Rate-limiter counters live in process memory**, so Render's free tier resets them on every cold
+  start. The Google Console quota is the real ceiling.
+
+---
+
+## 12. Local-only UI (not wired to a backend)
+
+These controls exist and look real, but hold local React state. They reset on reload and change
+nothing server-side. Each needs an endpoint + persistence before it counts.
+
+  **Settings** (`pages/SettingsPage.jsx`)
+  - [ ] Notification toggles — whatsapp / push / promotions. Needs preference columns + GET/PUT.
+  - [ ] Saved places — Home / Work / custom. Needs a table (or JSON column) + CRUD.
+  - [~] Language — persists to the store and survives reload, but **isn't connected to i18next**, so
+        switching it doesn't change the app language.
+
+  **Safety** (`pages/SafetyPage.jsx`)
+  - [ ] "Share my live location" toggle — needs a preference field and the actual share-on-start
+        behaviour on the tracking side.
+  - [x] Emergency contact — genuinely wired to `updateEmergencyContact` (listed for contrast).
+
+  **Manage Account** (`pages/ManageAccount.jsx`)
+  - [ ] "What drivers see" panel (Privacy & Data) — placeholder lists. Reconcile with the real
+        driver payload once the driver-facing route exists (today only `customerPhone` and the trip
+        locations are sent).
+
+---
+
+*Keep this file updated as features land — especially §9, §11 and §12. When a stub is replaced with
+a real integration or a page moves from partial to done, reflect it here.*

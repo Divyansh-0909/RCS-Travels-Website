@@ -2,6 +2,14 @@ import { prisma } from '../db/prisma.js'
 import { getDriver } from './driverAssignment.js'
 import { sendWhatsApp } from './notification.js'
 
+// Assigns drivers to scheduled bookings ahead of their pickup time, and nags the
+// admin when one can't be filled in the last hour.
+//
+// Two known defects, spelled out in ROADMAP: the 12-hour window is ~12x wider than
+// the 60-minute spec, so a ride booked half a day out gets a full driver sweep every
+// 5 minutes for nothing; and setInterval doesn't wait for the previous run, so two
+// sweeps can overlap and offer the same booking to the same driver twice. Both stay
+// invisible while FCM is stubbed and bite the moment it isn't.
 export default function startAssignmentJob() {
   setInterval(async () => {
     try {

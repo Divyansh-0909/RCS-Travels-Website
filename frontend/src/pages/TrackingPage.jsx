@@ -240,6 +240,11 @@ const TrackingPage = () => {
 
     // One driver card for every state that shows one, so its type scale and
     // padding can't drift between the scheduled / live / completed screens.
+    //
+    // !! Still placeholder content. The name, plate and photo below are literals —
+    // the `driver` object the status poll fills in is only read for the map puck.
+    // Wire these up and gate the card on driver !== null; a booking that reaches
+    // this screen unassigned currently shows a driver who doesn't exist.
     const driverCard = (
         <Button
             className="w-full"
@@ -270,10 +275,10 @@ const TrackingPage = () => {
         </Button>
     );
 
-    // Compact variant for the completed receipt, where the driver sits inside
-    // the card rather than beside it: the ride is over, so the plate is a record
-    // of who drove rather than something to identify at the kerb. No border of
-    // its own — the receipt card already provides one.
+    // Compact variant for the completed receipt, where the driver sits inside the
+    // card rather than beside it: the ride is over, so the plate is a record of who
+    // drove rather than something to identify at the kerb. No border of its own —
+    // the receipt card already provides one. Placeholder content, same as driverCard.
     const driverRow = (
         <div className="flex items-center gap-3 w-full">
             <div className="w-10 h-10 rounded-full overflow-hidden shrink-0">
@@ -287,8 +292,8 @@ const TrackingPage = () => {
     );
 
     // One pill for every "Ride details" affordance on this page, so the live,
-    // scheduled and completed screens can't drift apart. Content-sized with a
-    // nowrap label — the old fixed 110px wrapped it at the desktop type size.
+    // scheduled and completed screens can't drift apart. Content-sized with a nowrap
+    // label; a fixed width wraps it once the type scales up on desktop.
     const rideDetailsPill = (
         <Button
             onClick={() => setDetialsVisibility(true)}

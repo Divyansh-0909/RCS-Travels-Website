@@ -11,14 +11,10 @@ const VALID_VEHICLE_TYPES = [4, 6, 1]
 
 export const ACTIVE_STATUSES = ['pending', 'confirmed', 'assigned', 'en_route', 'reached', 'started']
 
-// Cancelling once the driver is waiting at the pickup point costs the rider 35%
-// of the fare — that driver turned down other rides and has already spent the
-// fuel. Anything earlier is free, including en_route: the driver is moving but
-// hasn't committed the wait. A ride already underway can't be self-cancelled;
-// that's a support conversation.
-//
-// `reached` and `en_route` were previously not cancellable at all, so the
-// cancellation_charge column could never be written.
+// Cancelling once the driver is waiting at the pickup costs the rider 35% — that
+// driver turned down other rides and has already spent the fuel. Anything earlier
+// is free, including en_route: the driver is moving but hasn't committed the wait.
+// A ride already underway can't be self-cancelled; that's a support conversation.
 const CANCELLABLE_STATUSES = ['pending', 'confirmed', 'assigned', 'en_route', 'reached']
 const CHARGEABLE_STATUSES = ['reached']
 export const CANCELLATION_CHARGE_PCT = 35
@@ -146,8 +142,6 @@ bookingsRouter.get('/:id/status', protect, async (req, res) => {
     if (await markNoDriver(booking.id)) status = 'no_driver'
   }
 
-  // What cancelling right now would cost, from the same helper the cancel
-  // endpoint uses — so the warning the rider sees is the number they get charged.
   const cancellationCharge = cancellationChargeFor({ ...booking, status })
 
   if (!booking.driverId) return res.json({ bookingId: booking.id, bookingCode: user.bookingCode, status, cancellationCharge, driver: null })
@@ -279,12 +273,16 @@ bookingsRouter.get('/my-bookings', protect, async (req, res) => {
         prisma.booking.count({ where }),
     ])
 
-    // The code lives on the user now; surface it so callers reading booking.bookingCode keep working.
+    // The code belongs to the user, not the ride; flattened onto each row because
+    // that's the shape the client reads.
     const withCode = bookings.map(b => ({ ...b, bookingCode: user.bookingCode }))
 
     return res.json({ total, page, limit, bookings: withCode })
 })
 
+// !! UNUSED. The dashboard reads GET /api/admin/booking (routes/admin.ts), which
+// supersedes this with the full filter set. Kept only until something confirms
+// nothing else calls it.
 bookingsRouter.get('/admin/all', protect, protectAdmin, async (req, res) => {
   const { status, date, page = 1, limit = 20 } = req.query
 
