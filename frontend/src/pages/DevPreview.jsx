@@ -9,6 +9,7 @@ import BackgroundPanel from "../components/ui/BackgroundPanel";
 import GoogleMap, { MAP_LAND_COLOR } from "../components/ui/GoogleMap";
 import { MAP_CLASSES } from "../components/ui/mapOverlays";
 import { useIsMobile } from "../hooks/useIsMobile";
+import TrackingSkeleton from "../components/TrackingSkeleton";
 
 // Dev-only preview harness — registered in main.jsx behind import.meta.env.DEV.
 // Seeds the store with a mock booking and renders any booking-flow screen without
@@ -50,6 +51,7 @@ const PREVIEWS = [
     ["/dev/trip", 'OnBoarding — live "Current Trip" card'],
     ["/dev/trip?scheduled=1", "OnBoarding — scheduled-ride card"],
     ["/dev/ride-details", "RideDetails panel"],
+    ["/dev/skeleton", "TrackingPage — first-load skeleton"],
 ];
 
 const DevPreview = () => {
@@ -99,6 +101,22 @@ const DevPreview = () => {
     if (view === "home" || view === "trip") return <OnBoarding key={view + search} />;
     if (view === "vehicle") return <VehicleSelect key={search} />;
     if (view === "tracking") return <TrackingPage key={search} />;
+
+    // The skeleton only renders when a status fetch is in flight, which the dev
+    // routes never trigger (they seed bookingId as null), so it had no way to be
+    // reviewed against the panel it stands in for.
+    if (view === "skeleton")
+        return (
+            <div className="relative w-[100vw] h-[100vh]">
+                {isMobile && (
+                    <>
+                        <div className="absolute inset-0 z-0" style={{ background: MAP_LAND_COLOR }} />
+                        <GoogleMap center={MOCK.pickupCoords} zoom={12} className="absolute inset-0 z-0" />
+                    </>
+                )}
+                <TrackingSkeleton />
+            </div>
+        );
 
     // Mirrors how TrackingPage and VehicleSelect actually mount this panel —
     // desktop map beside the column, land-coloured background map under the

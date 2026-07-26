@@ -71,12 +71,16 @@ const RideDetails = ({ prop }) => {
         }
     }
 
+    // sm:relative, not relative: on mobile this column must NOT be the offset
+    // parent, so the arrow inside resolves against the surrounding
+    // BackgroundPanel and can float above the sheet like every other screen's.
+    // z-10 still applies — it is a flex item of that panel.
     return (
-        <div className={`relative z-10 sm:order-1 flex flex-col justify-center items-center sm:items-start text-left w-full sm:w-auto sm:h-[100vh] ${STACK}`}>
-            {/* same anchor as TrackingPage's arrow: in the sheet on mobile,
-                the panel's top-left corner on desktop — the column is w-auto
-                here, so an absolute left-5 would track the content instead */}
-            <div onClick={() => prop.setDetialsVisibility(false)} className="flex gap-2 sm:gap-2 items-center cursor-pointer opacity-[0.8] transition-opacity duration-300 hover:opacity-[1] justify-center absolute left-5 top-0 sm:fixed sm:left-6 sm:top-6 text-[var(--text)]">
+        <div className={`sm:relative z-10 sm:order-1 flex flex-col justify-center items-center sm:items-start text-left w-full sm:w-auto sm:h-[100vh] ${STACK}`}>
+            {/* same treatment as TrackingPage's backArrow: a pill over the map
+                just above the sheet on mobile, a bare glyph fixed to the
+                panel's top-left corner on desktop */}
+            <div onClick={() => prop.setDetialsVisibility(false)} className="max-sm:absolute max-sm:z-20 max-sm:-top-14 max-sm:left-4 max-sm:w-11 max-sm:h-11 max-sm:rounded-full max-sm:border max-sm:border-[var(--foreground)]/30 max-sm:bg-[var(--background-muted)] max-sm:shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)] flex items-center justify-center cursor-pointer sm:opacity-[0.8] transition-opacity duration-300 hover:opacity-[1] text-[var(--text)] sm:fixed sm:left-6 sm:top-6">
                 <Icon path={mdiKeyboardBackspace} size={1.2} />
             </div>
             <div className={`flex flex-col justify-center items-center sm:items-start ${PAIR} ${COL}`}>

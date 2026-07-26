@@ -26,7 +26,6 @@ import { statusLabels } from "../constants/statusLabels";
 const COL = "w-[290px] sm:w-[377px]";
 const TITLE = "font-bold text-3xl sm:text-5xl leading-tight";
 const SUBTITLE = "text-lg sm:text-2xl font-normal leading-snug text-[var(--text-muted)]";
-const SECTION = "font-bold text-2xl sm:text-3xl leading-tight";
 const META = "text-base sm:text-xl";
 const STACK = "gap-6 sm:gap-8";
 const GROUP = "gap-2 sm:gap-3";
@@ -428,13 +427,45 @@ const OnBoarding = () => {
             </div>
 
             {activeBooking && authed && activeBooking.scheduledAt && !showForm
-              ? <div className={`flex flex-col justify-center items-center lg:items-start mt-3 sm:mt-0 ${GROUP}`}>
-                <h4 className={`w-full text-center lg:text-left ${SECTION} ${COL}`}>You have a scheduled ride</h4>
-                <div className={`flex flex-col ${GROUP} ${COL}`}>
-                  <Button onClick={openActiveBooking} prop={{ variant: "", width: "100%" }}>
+              // Same card pattern as Current Trip above: the ride states itself,
+              // so the old "You have a scheduled ride" sentence is gone. Every
+              // value here comes from activeBooking, which the existing
+              // getMyBookings effect already hydrates — no new fetch.
+              ? <div className={`flex flex-col justify-center items-center lg:items-start mt-3 sm:mt-0 ${TRIP_STEP}`}>
+                <div className={`flex flex-col items-stretch text-left ${GROUP} ${COL}`}>
+                  <RoutePanel size="sm" pickup={activeBooking.pickupAddress} drop={activeBooking.dropAddress}>
+                    <div className="flex items-center justify-between w-full">
+                      <h4 className={`${META} text-[var(--text-muted)]`}>Scheduled</h4>
+                      <h4 className={META}>
+                        {new Date(activeBooking.scheduledAt).toLocaleString("en-GB", {
+                          day: "numeric", month: "short", hour: "numeric", minute: "2-digit", hour12: true,
+                        })}
+                      </h4>
+                    </div>
+                    <div className="flex items-center justify-between w-full">
+                      <h4 className={`${META} text-[var(--text-muted)]`}>Fare</h4>
+                      <h4 className={META}>₹{activeBooking.fare}</h4>
+                    </div>
+                    {activeBooking.code && (
+                      <div className="flex items-center justify-between w-full">
+                        <h4 className={`${META} text-[var(--text-muted)]`}>Booking code</h4>
+                        <h4 className={`${META} tracking-[0.25em] -mr-[0.25em]`}>{activeBooking.code}</h4>
+                      </div>
+                    )}
+                  </RoutePanel>
+
+                  {/* "Confirmed" alone reads as done rather than waiting, so the
+                      pre-assignment state says what is actually pending. */}
+                  <p className="text-xs sm:text-sm text-[var(--text-muted)] leading-snug">
+                    {activeBooking.status === "confirmed"
+                      ? "Driver assigned closer to your pickup time."
+                      : statusLabels[activeBooking.status] || activeBooking.status}
+                  </p>
+
+                  <Button onClick={openActiveBooking} className="my-0!" prop={{ variant: "", width: "100%" }}>
                     <span className="text-base sm:text-lg">See Ride Details</span>
                   </Button>
-                  <Button onClick={() => setShowForm(true)} prop={{ variant: "input", width: "100%", bg: "var(--background-primary)" }}>
+                  <Button onClick={() => setShowForm(true)} className="my-0!" prop={{ variant: "input", width: "100%", bg: "var(--background-primary)" }}>
                     <span className="text-base sm:text-lg">Book another ride</span>
                   </Button>
                 </div>

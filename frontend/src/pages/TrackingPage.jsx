@@ -197,8 +197,22 @@ const TrackingPage = () => {
                 // reaching the destination — which the detail line below names.
                 : { title: <>Reaching in <br />{dropTime}</>, detail: `Driving towards ${dropLocation?.split(",")[0]}` };
 
+    // Mobile: floats over the map just above the sheet, mirroring the Share pill
+    // on the opposite edge — same -top-14, same muted fill and shadow, so the
+    // two read as a pair. Must be a direct child of BackgroundPanel: the panel
+    // is the positioned ancestor, and anchoring to the content column instead
+    // would drift with the content. Desktop is unchanged, a bare glyph fixed to
+    // the top-left corner.
     const backArrow = (
-        <div onClick={() => navigate('/')} className="flex gap-2 sm:gap-2 items-center justify-center cursor-pointer opacity-[0.8] transition-opacity duration-300 hover:opacity-[1] absolute left-5 top-0 sm:fixed sm:left-6 sm:top-6 text-[var(--text)]">
+        <div onClick={() => navigate('/')} className="max-sm:absolute max-sm:z-20 max-sm:-top-14 max-sm:left-4 max-sm:w-11 max-sm:h-11 max-sm:rounded-full max-sm:border max-sm:border-[var(--foreground)]/30 max-sm:bg-[var(--background-muted)] max-sm:shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)] flex items-center justify-center cursor-pointer sm:opacity-[0.8] transition-opacity duration-300 hover:opacity-[1] text-[var(--text)] sm:fixed sm:left-6 sm:top-6">
+            <Icon path={mdiKeyboardBackspace} size={1.2} />
+        </div>
+    );
+
+    // The completed screen fills the viewport — there is no map above its sheet
+    // for an arrow to float over — so it keeps the in-panel placement.
+    const backArrowInPanel = (
+        <div onClick={() => navigate('/')} className="absolute left-5 top-0 sm:fixed sm:left-6 sm:top-6 flex items-center justify-center cursor-pointer opacity-[0.8] transition-opacity duration-300 hover:opacity-[1] text-[var(--text)]">
             <Icon path={mdiKeyboardBackspace} size={1.2} />
         </div>
     );
@@ -309,12 +323,14 @@ const TrackingPage = () => {
                 ? <TrackingSkeleton />
                 : scheduledTime !== null && (status === "confirmed" || status === "assigned")
                     ? <BackgroundPanel className={"py-6 sm:overflow-hidden justify-center items-center text-left sm:px-[9%] md:px-[5%] xl:px-[13%] flex flex-col sm:flex-row sm:justify-center lg:justify-between"}>
+                        {backArrow}
                         {/* Scheduled ride: zoomed-out full route, no driver yet */}
                         {!isMobile && mapVisible && (
                             <GoogleMap center={pickupPoint} zoom={12} onMapReady={setMapApi} className={MAP_CLASSES} />
                         )}
-                        <div className={`relative z-10 sm:order-1 flex flex-col justify-center items-center sm:items-start pt-6 w-full sm:w-auto sm:h-full ${STACK}`}>
-                            {backArrow}
+                        {/* no pt-6: that reserved room for the arrow when it sat
+                            inside the column, and it now floats above the sheet */}
+                        <div className={`relative z-10 sm:order-1 flex flex-col justify-center items-center sm:items-start w-full sm:w-auto sm:h-full ${STACK}`}>
                             <div className={`flex flex-col justify-center items-center sm:items-start ${PAIR} ${COL}`}>
                                 <h2 className={`text-center sm:text-left w-full ${TITLE}`}>{status === "assigned" ? "Driver has been assigned" : "Driver has not been assigned"}</h2>
                                 <h3 className={`text-center sm:text-left w-full ${SUBTITLE}`}>{status === "assigned" ? "Give the driver a call to confirm" : "Assigned closer to your pickup time"}</h3>
@@ -366,7 +382,7 @@ const TrackingPage = () => {
                                right. Mobile drops the card and stacks the two
                                halves in reading order. */}
                             <div className="relative w-full h-full flex justify-center items-center">
-                                {backArrow}
+                                {backArrowInPanel}
                                 <div className={`w-full flex flex-col items-center ${STACK} sm:w-[820px] sm:flex-row sm:items-stretch sm:gap-0`}>
                                 <div className="flex flex-col justify-center items-center sm:items-start gap-3 w-[290px] sm:w-1/2 sm:px-8 sm:py-10">
                                     {/* -mb-2 pulls the outcome copy up under the
@@ -452,6 +468,7 @@ const TrackingPage = () => {
                                 top edge. Anchored to the panel, not the content
                                 column — the column is vertically centred on
                                 mobile, so its top moves with the content. */}
+                            {backArrow}
                             <Button prop={{ variant: "input", bg: "var(--background-muted)", rounded: "999px" }} className='absolute z-20 -top-14 right-4 px-3 sm:hidden block shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)]'>
                                 <div className="flex gap-1.5 items-center justify-center">
                                     <Icon path={mdiShareVariant} size={0.7} />
@@ -459,7 +476,6 @@ const TrackingPage = () => {
                                 </div>
                             </Button>
                             <div className={`relative z-10 sm:order-1 flex flex-col justify-center items-center sm:items-start w-full sm:w-auto ${STACK}`}>
-                                {backArrow}
                                 <div className={`flex flex-col justify-center items-center sm:items-start ${PAIR} ${COL}`}>
                                     <h2 className={`text-center sm:text-left w-full ${TITLE}`}>{liveHeadline.title}</h2>
                                     <h3 className={`text-center sm:text-left w-full ${SUBTITLE}`}>{liveHeadline.detail}</h3>

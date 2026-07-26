@@ -660,7 +660,7 @@ const VehicleSelect = ()=>{
                             </GoogleMap>
                         )}
 
-                        <div onClick={() => setStep("vehicleType")} className="flex gap-2 sm:gap-2 items-center justify-center cursor-pointer opacity-[0.8] transition-opacity duration-300 hover:opacity-[1] absolute z-10 left-5 top-6 text-[var(--text)]">
+                        <div onClick={() => setStep("vehicleType")} className="max-sm:-top-14 max-sm:left-4 max-sm:w-11 max-sm:h-11 max-sm:rounded-full max-sm:border max-sm:border-[var(--foreground)]/30 max-sm:bg-[var(--background-muted)] max-sm:shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)] flex items-center justify-center cursor-pointer sm:opacity-[0.8] transition-opacity duration-300 hover:opacity-[1] absolute z-20 sm:left-5 sm:top-6 text-[var(--text)]">
                             <Icon path={mdiKeyboardBackspace} size={1.2} />
                         </div>
 
@@ -719,7 +719,7 @@ const VehicleSelect = ()=>{
                             <GoogleMap center={pickupPoint} zoom={12} onMapReady={setMapApi} className={MAP_CLASSES} />
                         )}
 
-                        <div onClick={()=>navigate('/')} className="flex gap-2 sm:gap-2 items-center justify-center cursor-pointer opacity-[0.8] transition-opacity duration-300 hover:opacity-[1] absolute z-10 left-5 top-6 text-[var(--text)]">
+                        <div onClick={()=>navigate('/')} className="max-sm:-top-14 max-sm:left-4 max-sm:w-11 max-sm:h-11 max-sm:rounded-full max-sm:border max-sm:border-[var(--foreground)]/30 max-sm:bg-[var(--background-muted)] max-sm:shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)] flex items-center justify-center cursor-pointer sm:opacity-[0.8] transition-opacity duration-300 hover:opacity-[1] absolute z-20 sm:left-5 sm:top-6 text-[var(--text)]">
                             <Icon path={mdiKeyboardBackspace} size={1.2} />
                         </div>
                         <div className={`relative z-10 sm:order-1 flex flex-col justify-end sm:justify-center items-center sm:items-start ${STACK} w-full sm:w-auto h-full sm:h-auto`}>
