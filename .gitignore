@@ -122,3 +122,17 @@ screenshots/
 .design-sync/node_modules
 .ds-sync/
 ds-bundle/
+
+# =========================
+# Agent / AI tooling
+# =========================
+# .claude/, .agents/, .cursor/ etc. are already caught by the '.*' rule above.
+# These are the non-dotted leftovers: skill installs write a lockfile and an
+# empty root package-lock.json, neither of which describes this app's deps.
+/skills-lock.json
+/package-lock.json
+
+# Screenshot/preview harness the design workflow drops in the repo root.
+/serve.mjs
+/screenshot.mjs
+temporary screenshots/
