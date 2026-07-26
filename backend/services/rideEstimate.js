@@ -9,19 +9,19 @@ const VEHICLE_CLASS = {
   1: 'hatchback', // ANY — price as the cheapest class
 }
 
-// Fitted to the provider's rate card. Power law so the effective per-km rate
-// declines with distance, with a cheaper flat ₹16/km beyond 56 km (long trips
-// are priced softer — Dwarka/Gurugram/Manesar). The far segment continues from
-// the curve's value at 56 km, so shorter fares are unaffected.
-// hatchback ≈ 36.7·km^0.897, sedan = +100 flat, Ertiga ≈ 1.6× hatchback.
+// Fitted to the provider's rate card: hatchback ≈ 36.7·km^0.897, sedan +100 flat,
+// Ertiga ≈ 1.6x hatchback. The power law makes the effective per-km rate fall with
+// distance; beyond 56 km a flat ₹16/km takes over, because long trips (Dwarka,
+// Gurugram, Manesar) are priced softer. The far segment starts from the curve's own
+// value at 56 km, so shorter fares are untouched.
 const FAR_KM = 56
 const FAR_RATE = 16
 const FAR_BASE = 36.7 * Math.pow(FAR_KM, 0.897) // ≈1358, curve value at 56 km
 
-// Distance bands the provider prices above the curve. 20–25 km: congested
-// near-NCR (Gaur City, Ghaziabad) — the flat ₹400 GN locals at that distance
-// are zone-priced, so the formula leans toward the congested side. 49–52 km:
-// central Delhi ring (Old Delhi, Kashmiri Gate, Karol Bagh, Hauz Khas).
+// Bands the provider prices above the curve. 20-25 km is congested near-NCR (Gaur
+// City, Ghaziabad); the flat ₹400 GN locals at that distance are zone-priced, so the
+// formula can lean toward the congested side without overcharging them. 49-52 km is
+// the central Delhi ring (Old Delhi, Kashmiri Gate, Karol Bagh, Hauz Khas).
 const PREMIUM_BANDS = [
   { from: 20, to: 25, bump: 50 },
   { from: 49, to: 52, bump: 50 },
@@ -42,28 +42,29 @@ function formulaFare(distanceKm, vehicleClass) {
   return Math.round(fare / 50) * 50
 }
 
-// Google has no notion of a "safe" route — that knowledge is local. So we don't
-// ask it for one; we force the route through a point on the lit highway, which
-// makes it compute pickup → waypoint → drop and excludes the unlit shortcut.
+// Google has no notion of a "safe" route — that knowledge is local. So instead of
+// asking for one we force the path through a point on the lit highway, making it
+// compute pickup → waypoint → drop, which excludes the unlit shortcut.
 //
-// !! MUST BE FILLED IN with a real lat/lng on the safe stretch. While it's null
-// the safer-route option changes nothing about the road path — see ROADMAP.
+// !! STILL null. Until a real lat/lng on the safe stretch goes here, the safer-route
+// option charges the surcharge and changes nothing about the road. See ROADMAP.
 const SAFE_WAYPOINT = null // { latitude: __, longitude: __ }
 
 // Flat add-on, mirrored in frontend VehicleSelect (SAFE_ROUTE_SURCHARGE).
 export const SAFE_ROUTE_SURCHARGE = 150
 
-// !! NEEDS PROVIDER CONFIRMATION. The rate card quotes solo fares only, so this
-// number is ours, not theirs. It was reverse-engineered from the placeholder the
-// UI used to hardcode (400 solo / 300 sharing). Change this one constant to
-// reprice every sharing fare in the app.
+// !! NEEDS PROVIDER CONFIRMATION — this number is ours, not theirs. The rate card
+// quotes solo fares only, so it was backed out of the placeholder the UI used to
+// hardcode (400 solo / 300 sharing). One constant reprices every sharing fare.
 const SHARING_DISCOUNT_PCT = 25
 
 const GOOGLE_ROUTES_MONTHLY_LIMIT = 10_000
 
 const currentMonth = () => new Date().toISOString().slice(0, 7) // "YYYY-MM"
 
-// to keep under google free usage limit
+// Counts every Routes call for the month and refuses past the cap, keeping the bill
+// inside Google's free tier. Covers Routes only — the autocomplete/details/geocode
+// proxies in routes/googleAPI.js are bounded by the Console quota instead.
 async function checkAndIncrementRoutesUsage() {
   const month = currentMonth()
 
@@ -115,9 +116,9 @@ async function fetchRouteMetrics(pickupAddress, dropAddress, pickupCoords, dropC
   }
 }
 
-// Metrics are display-only for zone and fixed-table fares, so a Google failure
-// must not break those. Types that fall through to the per-km formula have no
-// price without a distance and are simply omitted from the response.
+// Distance is display-only for zone and fixed-table fares but mandatory for the
+// per-km formula, so a Routes failure drops the types that need it rather than
+// failing the whole estimate. getRideEstimate throws only if nothing can be priced.
 async function bestEffortMetrics(pickupAddress, dropAddress, pickupCoords, dropCoords, safeRoute) {
   try {
     return await fetchRouteMetrics(pickupAddress, dropAddress, pickupCoords, dropCoords, safeRoute)
@@ -155,16 +156,11 @@ export async function getRideEstimate({ pickupAddress, dropAddress, vehicleType,
     where: { destinationName: dropAddress, isActive: true },
   })
 
-  // Best-effort on purpose. Metrics are display-only for zone and fixed-table
-  // fares but mandatory for the formula, so a Routes failure should drop the
-  // types that need it rather than fail the whole estimate. If nothing can be
-  // priced we throw below, which is what the pure-formula path used to do.
   const metrics = await bestEffortMetrics(pickupAddress, dropAddress, pickupCoords, dropCoords, safeRoute)
 
-  // Resolve one seat type: zone fare, then the fixed table, then per-km. Each
-  // source is checked per CLASS, so a zone that prices hatchbacks but not SUVs
-  // still yields a formula price for Cab XL instead of no price at all — the
-  // old code fell through to the formula for the whole request in that case.
+  // Resolve one seat type: zone fare, then the fixed table, then per-km. Each source
+  // is checked per CLASS, so a zone that prices hatchbacks but not SUVs still yields
+  // a formula price for Cab XL instead of no price at all.
   function priceFor(type) {
     const cls = VEHICLE_CLASS[type]
     const zoneFare = zone?.fares?.[cls]
@@ -196,8 +192,8 @@ export async function getRideEstimate({ pickupAddress, dropAddress, vehicleType,
   }
   if (suv) fares[6] = priced(suv)
 
-  // Single-fare fields answer for the vehicleType that was asked about, so
-  // existing callers keep working unchanged.
+  // `fares` prices every card; the flat fare/fareSource fields answer for the one
+  // vehicleType that was asked about.
   const selected = fares[vehicleType] ?? fares[4] ?? fares[6]
 
   return {

@@ -35,13 +35,15 @@ export function isNearCampus({ lat, lng }) {
   return Math.sqrt(dLat * dLat + dLng * dLng) <= SNU_RADIUS_KM
 }
 
-// Highest priority wins so exception zones (IIT, Pari Chowk, Sarai Kale Khan)
-// override the broad areas they sit inside. But when the top two zones are
-// siblings (priority within 1) with different prices, the point is in an
-// accidental border overlap — neither zone is "more right" there, so charge
-// the midpoint (e.g. the Ashram/Lajpat strip: 1100/1200 → 1150).
 const FARE_CLASSES = ['hatchback', 'sedan', 'suv']
 
+// Zones overlap, so pick one. Highest priority wins, which lets exception zones
+// (IIT, Pari Chowk, Sarai Kale Khan) override the broad areas they sit inside.
+//
+// The exception: when the top two are siblings — priority within 1 — and disagree
+// on price, the point is in an accidental border overlap rather than a deliberate
+// carve-out. Neither zone is more right there, so charge the midpoint (the
+// Ashram/Lajpat strip, 1100/1200 → 1150).
 export function matchZone(coords) {
   if (!coords) return null
   const hits = zones.filter((z) => pointInRing(coords.lng, coords.lat, z.ring))
