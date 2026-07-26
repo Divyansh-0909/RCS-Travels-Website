@@ -21,6 +21,8 @@ import RideCancelledToast from './components/ui/RideCancelledToast';
 import DevPreview from './pages/DevPreview';
 import PageMeta from './components/PageMeta';
 import NotFound from './pages/NotFound';
+import LegalPage from './pages/LegalPage';
+import { legalPaths } from './constants/legal';
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
 
@@ -74,6 +76,12 @@ const router = createBrowserRouter([{
     path: "/safety",
     element: <ProtectedRoute><SafetyPage /></ProtectedRoute>,
   },
+  // Public, and deliberately one route per document rather than tabs behind a
+  // single /legal: each has to be linkable on its own — from the signup consent
+  // line, from a support reply, from a payment gateway's onboarding form. The
+  // paths come from constants/legal.js so the footer links, the tab rail and the
+  // routes can't drift apart.
+  ...legalPaths.map(path => ({ path, element: <LegalPage /> })),
   {
     path: "/dashboard",
     element: <ProtectedRoute requireAdmin><AdminDashboard/></ProtectedRoute>

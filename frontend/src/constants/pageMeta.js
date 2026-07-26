@@ -48,6 +48,30 @@ export const pageMeta = {
             "Sign up with your phone number and book your first ride in a couple of minutes. No passwords, no card details.",
     },
 
+    /* Legal pages stay indexable on purpose. They're the pages people look for
+       before trusting a service with a phone number, and the ones a payment
+       gateway or a consumer forum will ask for a public URL to. */
+    "/terms": {
+        title: "Terms of Service | RCS Travels",
+        description:
+            "What you agree to when you book: how fares are fixed, when you pay, what we're responsible for, and what we expect on board.",
+    },
+    "/privacy": {
+        title: "Privacy Policy | RCS Travels",
+        description:
+            "What we hold about you, exactly what your driver sees, who else it reaches, and how to download or delete all of it.",
+    },
+    "/refunds": {
+        title: "Refunds & Cancellation | RCS Travels",
+        description:
+            "Cancelling is free until your driver reaches you. Here's what happens after that, and when a ride costs you nothing at all.",
+    },
+    "/grievance": {
+        title: "Grievance Redressal | RCS Travels",
+        description:
+            "Something gone wrong? Reach our grievance officer, see how long we'll take to fix it, and where to escalate if we don't.",
+    },
+
     /* Behind auth from here down — kept out of search, but the titles still do
        real work in the tab bar and browser history. */
     "/book": {
