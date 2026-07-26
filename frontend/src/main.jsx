@@ -19,6 +19,8 @@ import AdminDashboard from './pages/AdminDashboard';
 import HelpPage from './pages/HelpPage';
 import RideCancelledToast from './components/ui/RideCancelledToast';
 import DevPreview from './pages/DevPreview';
+import PageMeta from './components/PageMeta';
+import NotFound from './pages/NotFound';
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
 
@@ -26,7 +28,11 @@ if (!PUBLISHABLE_KEY) {
   throw new Error('Missing Clerk Publishable Key')
 }
 
-const router = createBrowserRouter([
+// Pathless layout route: PageMeta renders every page through an <Outlet/> and
+// sets that route's title/description from constants/pageMeta.js.
+const router = createBrowserRouter([{
+  element: <PageMeta />,
+  children: [
   {
     path: "/",
     element: <App />,
@@ -79,7 +85,15 @@ const router = createBrowserRouter([
         { path: "/dev/:view", element: <DevPreview /> },
       ]
     : []),
-]);
+  // Catch-all. Without it an unmatched URL hits the router's default error
+  // screen, which sits outside PageMeta and so keeps index.html's home-page
+  // metadata — telling Google that every typo is the home page.
+  {
+    path: "*",
+    element: <NotFound />,
+  },
+  ],
+}]);
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

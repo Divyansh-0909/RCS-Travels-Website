@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <title>RCS Travels</title>
+  <!-- The drop-location marker from the booking map (DROP_MARKER_SVG in
+       components/ui/mapOverlays.jsx), opened up into a ring. The centre is left
+       transparent rather than filled with the page background, so the mark sits
+       on a light tab strip as readily as a dark one.
+       r + half the stroke = 15, so the ring's outer edge lands 1px inside the
+       box. No drop shadow — it's there to lift the pin off the map, and at 16px
+       it would only muddy the edge. -->
+  <circle cx="16" cy="16" r="11.4" fill="none" stroke="#243AFB" stroke-width="7.2"/>
+</svg>

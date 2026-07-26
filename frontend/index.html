@@ -2,9 +2,27 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>RCS Travels</title>
+
+    <!-- Home page metadata, duplicated from src/constants/pageMeta.js. usePageMeta
+         rewrites these on every navigation, but link-preview crawlers (WhatsApp,
+         Facebook) never run JS — they only ever see what's here. Keep the two in
+         sync for "/", and prerender the public routes if previews for deeper
+         pages ever matter. -->
+    <title>Ride Days Ahead at a Fixed Fare | RCS Travels</title>
+    <meta name="description" content="Lock in your ride and your fare up to 7 days before you travel. No surge pricing, drivers we vet ourselves, and you pay at the end of the trip." />
+    <meta name="robots" content="index, follow" />
+    <meta name="theme-color" content="#0B0B14" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="RCS Travels" />
+    <meta property="og:title" content="Ride Days Ahead at a Fixed Fare | RCS Travels" />
+    <meta property="og:description" content="Lock in your ride and your fare up to 7 days before you travel. No surge pricing, drivers we vet ourselves, and you pay at the end of the trip." />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Ride Days Ahead at a Fixed Fare | RCS Travels" />
+    <meta name="twitter:description" content="Lock in your ride and your fare up to 7 days before you travel. No surge pricing, drivers we vet ourselves, and you pay at the end of the trip." />
   </head>
   <body>
     <div id="root"></div>
