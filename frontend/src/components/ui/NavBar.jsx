@@ -157,14 +157,14 @@ const NavBar = ({ invert = false, hideExpanded = false }) => {
                 <div className='flex items-center justify-between gap-2 px-5 pt-6 pb-5'>
                     {isSignedIn
                         ? loading
-                            ? <>
-                                <Skeleton tone={dropdownTone} className='h-8 w-36' />
-                                <Skeleton tone={dropdownTone} rounded='rounded-full' className='w-12 h-12' />
-                            </>
-                            : <>
-                                <h3 className='text-2xl font-semibold truncate'>{displayName}</h3>
+                            ? <div className='flex min-w-0 items-center gap-3'>
+                                <Skeleton tone={dropdownTone} rounded='rounded-full' className='w-12 h-12 shrink-0' />
+                                <Skeleton tone={dropdownTone} className='h-8 w-32' />
+                            </div>
+                            : <div className='flex min-w-0 items-center gap-3'>
                                 <Avatar invert={invert} initial={user?.name?.charAt(0)} box='w-12 h-12 shrink-0' text='text-2xl' />
-                            </>
+                                <h3 className='truncate text-xl font-semibold'>{displayName}</h3>
+                            </div>
                         : <h3><span className='font-semibold'>RCS</span> travels</h3>
                     }
                     <Icon
