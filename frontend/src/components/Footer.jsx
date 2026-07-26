@@ -1,4 +1,5 @@
 import { useViewNavigate } from "../hooks/useViewNavigate";
+import { scrollToSection, scrollToTop } from "../hooks/useSmoothScroll";
 import { callSupport, emailSupport, openSupportWhatsApp } from "../constants/support";
 
 const linkClass = "text-left text-[var(--text)]/90 hover:text-[var(--text)] active:opacity-70 cursor-pointer transition-colors duration-300 rounded focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-current";
@@ -6,17 +7,15 @@ const linkClass = "text-left text-[var(--text)]/90 hover:text-[var(--text)] acti
 const Footer = () => {
     const navigate = useViewNavigate();
 
-    const scrollTo = (id) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
-
     const columns = [
         {
             heading: "Pages",
             links: [
-                { label: "Book a ride", onClick: () => window.scrollTo({ top: 0, behavior: "smooth" }) },
-                { label: "How it works", onClick: () => scrollTo("how-it-works") },
-                { label: "Services", onClick: () => scrollTo("services") },
-                { label: "Why us", onClick: () => scrollTo("why-us") },
-                { label: "About", onClick: () => scrollTo("about") },
+                { label: "Book a ride", onClick: scrollToTop },
+                { label: "How it works", onClick: () => scrollToSection("how-it-works") },
+                { label: "Services", onClick: () => scrollToSection("services") },
+                { label: "Why us", onClick: () => scrollToSection("why-us") },
+                { label: "About", onClick: () => scrollToSection("about") },
             ],
         },
         {

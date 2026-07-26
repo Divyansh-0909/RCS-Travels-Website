@@ -9,6 +9,7 @@ import Button from './Button';
 import { useData } from '../../hooks/useData';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { useExitAnim } from '../../hooks/useExitAnim';
+import { scrollToSection } from '../../hooks/useSmoothScroll';
 import pfpPlaceholder from "../../assets/pfp-placeholder.webp"
 import FourSeaterSide from "../../assets/4-seater-bottom-left.webp"
 import SixSeaterSide from "../../assets/6-seater-bottom-left.webp"
@@ -110,10 +111,10 @@ const NavBar = ({ invert = false, hideExpanded = false }) => {
         }
     }
 
+    // scrollToSection returns false when the section isn't on this route — the
+    // navbar renders on every page, so About has to be able to send you home.
     const goToSection = (id) => {
-        const el = document.getElementById(id);
-        if (el) el.scrollIntoView({ behavior: "smooth" });
-        else navigate('/', { state: { scrollTo: id } });
+        if (!scrollToSection(id)) navigate('/', { state: { scrollTo: id } });
     }
 
     // Close first, act on the next task — the scroll lock has to be released
