@@ -310,7 +310,8 @@
         "priority": 5,
         "fares": {
           "hatchback": 1200,
-          "sedan": 1300
+          "sedan": 1300,
+          "suv": 1900
         }
       },
       "geometry": {
@@ -396,7 +397,8 @@
         "priority": 5,
         "fares": {
           "hatchback": 1300,
-          "sedan": 1400
+          "sedan": 1400,
+          "suv": 2100
         }
       },
       "geometry": {
@@ -434,7 +436,8 @@
         "priority": 5,
         "fares": {
           "hatchback": 1400,
-          "sedan": 1500
+          "sedan": 1500,
+          "suv": 2250
         }
       },
       "geometry": {
@@ -472,7 +475,8 @@
         "priority": 5,
         "fares": {
           "hatchback": 700,
-          "sedan": 800
+          "sedan": 800,
+          "suv": 1100
         }
       },
       "geometry": {
@@ -558,7 +562,8 @@
         "priority": 5,
         "fares": {
           "hatchback": 800,
-          "sedan": 800
+          "sedan": 800,
+          "suv": 1300
         }
       },
       "geometry": {
@@ -646,10 +651,7 @@
           "hatchback": 800,
           "sedan": 900,
           "suv": 1300
-        },
-        "derived": [
-          "sedan"
-        ]
+        }
       },
       "geometry": {
         "type": "Polygon",
@@ -734,11 +736,9 @@
         "priority": 0,
         "fares": {
           "hatchback": 400,
-          "sedan": 500
+          "sedan": 500,
+          "suv": 650
         },
-        "derived": [
-          "sedan"
-        ],
         "notes": "Beta/Gamma/Zeta/Delta + Omicron/Mu sectors (provider confirmed 400), Depot metro, Bennett (via highway). Verify Depot + Bennett fall inside."
       },
       "geometry": {
@@ -788,11 +788,9 @@
         "priority": 10,
         "fares": {
           "hatchback": 500,
-          "sedan": 600
+          "sedan": 600,
+          "suv": 800
         },
-        "derived": [
-          "sedan"
-        ],
         "notes": "Kept tight so adjacent Beta sector stays in the 400 zone."
       },
       "geometry": {
@@ -874,16 +872,105 @@
     {
       "type": "Feature",
       "properties": {
+        "name": "Beyond Pari Chowk",
+        "priority": 3,
+        "fares": {
+          "hatchback": 500,
+          "sedan": 600,
+          "suv": 800
+        },
+        "notes": "Around/ahead of Pari Chowk (Omicron, Mu, Pi, Chi/Phi, toward Kasna and the expressway) - provider: 500. Explicit pockets (Kasna 500, GBU 550, Buddh Circuit 700) sit on top."
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              77.43,
+              28.475
+            ],
+            [
+              77.505,
+              28.475
+            ],
+            [
+              77.516,
+              28.445
+            ],
+            [
+              77.52,
+              28.385
+            ],
+            [
+              77.5,
+              28.36
+            ],
+            [
+              77.43,
+              28.36
+            ],
+            [
+              77.415,
+              28.43
+            ],
+            [
+              77.43,
+              28.475
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Beta sectors core",
+        "priority": 6,
+        "fares": {
+          "hatchback": 400,
+          "sedan": 500,
+          "suv": 650
+        },
+        "notes": "Beta 1/2 and adjacent quoted-400 sectors, protected from the Beyond Pari Chowk 500 zone."
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              77.495,
+              28.466
+            ],
+            [
+              77.535,
+              28.466
+            ],
+            [
+              77.535,
+              28.43
+            ],
+            [
+              77.495,
+              28.43
+            ],
+            [
+              77.495,
+              28.466
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
         "name": "Gaur City",
         "priority": 5,
         "fares": {
           "hatchback": 650,
           "sedan": 750,
           "suv": 1000
-        },
-        "derived": [
-          "sedan"
-        ]
+        }
       },
       "geometry": {
         "type": "Polygon",
@@ -968,11 +1055,9 @@
         "priority": 5,
         "fares": {
           "hatchback": 1500,
-          "sedan": 1600
+          "sedan": 1600,
+          "suv": 2400
         },
-        "derived": [
-          "sedan"
-        ],
         "notes": "VERIFY anchor position on geojson.io. Highway toll extra, off-system."
       },
       "geometry": {
@@ -1058,11 +1143,9 @@
         "priority": 5,
         "fares": {
           "hatchback": 1100,
-          "sedan": 1200
-        },
-        "derived": [
-          "sedan"
-        ]
+          "sedan": 1200,
+          "suv": 1750
+        }
       },
       "geometry": {
         "type": "Polygon",
@@ -1147,11 +1230,9 @@
         "priority": 5,
         "fares": {
           "hatchback": 1200,
-          "sedan": 1300
-        },
-        "derived": [
-          "sedan"
-        ]
+          "sedan": 1300,
+          "suv": 1900
+        }
       },
       "geometry": {
         "type": "Polygon",
@@ -1236,11 +1317,9 @@
         "priority": 5,
         "fares": {
           "hatchback": 1200,
-          "sedan": 1300
-        },
-        "derived": [
-          "sedan"
-        ]
+          "sedan": 1300,
+          "suv": 1900
+        }
       },
       "geometry": {
         "type": "Polygon",
@@ -1325,11 +1404,9 @@
         "priority": 5,
         "fares": {
           "hatchback": 1200,
-          "sedan": 1300
-        },
-        "derived": [
-          "sedan"
-        ]
+          "sedan": 1300,
+          "suv": 1900
+        }
       },
       "geometry": {
         "type": "Polygon",
@@ -1414,11 +1491,9 @@
         "priority": 5,
         "fares": {
           "hatchback": 1200,
-          "sedan": 1300
+          "sedan": 1300,
+          "suv": 1900
         },
-        "derived": [
-          "sedan"
-        ],
         "notes": "Provider round-trip override: 1970."
       },
       "geometry": {
@@ -1504,11 +1579,9 @@
         "priority": 0,
         "fares": {
           "hatchback": 1300,
-          "sedan": 1400
-        },
-        "derived": [
-          "sedan"
-        ]
+          "sedan": 1400,
+          "suv": 2100
+        }
       },
       "geometry": {
         "type": "Polygon",
@@ -1545,11 +1618,9 @@
         "priority": 10,
         "fares": {
           "hatchback": 1200,
-          "sedan": 1300
-        },
-        "derived": [
-          "sedan"
-        ]
+          "sedan": 1300,
+          "suv": 1900
+        }
       },
       "geometry": {
         "type": "Polygon",
@@ -1634,11 +1705,9 @@
         "priority": 10,
         "fares": {
           "hatchback": 1250,
-          "sedan": 1350
-        },
-        "derived": [
-          "sedan"
-        ]
+          "sedan": 1350,
+          "suv": 2000
+        }
       },
       "geometry": {
         "type": "Polygon",
@@ -1723,11 +1792,9 @@
         "priority": 5,
         "fares": {
           "hatchback": 1300,
-          "sedan": 1400
+          "sedan": 1400,
+          "suv": 2100
         },
-        "derived": [
-          "sedan"
-        ],
         "notes": "Includes US Embassy (round-trip override 2150)."
       },
       "geometry": {
@@ -1813,11 +1880,9 @@
         "priority": 6,
         "fares": {
           "hatchback": 1400,
-          "sedan": 1500
+          "sedan": 1500,
+          "suv": 2250
         },
-        "derived": [
-          "sedan"
-        ],
         "notes": "Round-trip override 2100."
       },
       "geometry": {
@@ -1903,11 +1968,9 @@
         "priority": 5,
         "fares": {
           "hatchback": 1300,
-          "sedan": 1400
-        },
-        "derived": [
-          "sedan"
-        ]
+          "sedan": 1400,
+          "suv": 2100
+        }
       },
       "geometry": {
         "type": "Polygon",
@@ -1992,11 +2055,9 @@
         "priority": 0,
         "fares": {
           "hatchback": 1450,
-          "sedan": 1550
+          "sedan": 1550,
+          "suv": 2300
         },
-        "derived": [
-          "sedan"
-        ],
         "notes": "Includes Greater Faridabad / Neharpar (provider confirmed same 1450)."
       },
       "geometry": {
@@ -2034,11 +2095,9 @@
         "priority": 1,
         "fares": {
           "hatchback": 1500,
-          "sedan": 1600
+          "sedan": 1600,
+          "suv": 2400
         },
-        "derived": [
-          "sedan"
-        ],
         "notes": "Priority 1 so the West Delhi border blends to the midpoint instead of West Delhi winning outright."
       },
       "geometry": {
@@ -2076,11 +2135,9 @@
         "priority": 10,
         "fares": {
           "hatchback": 1550,
-          "sedan": 1650
-        },
-        "derived": [
-          "sedan"
-        ]
+          "sedan": 1650,
+          "suv": 2500
+        }
       },
       "geometry": {
         "type": "Polygon",
@@ -2165,11 +2222,9 @@
         "priority": 5,
         "fares": {
           "hatchback": 1600,
-          "sedan": 1700
-        },
-        "derived": [
-          "sedan"
-        ]
+          "sedan": 1700,
+          "suv": 2550
+        }
       },
       "geometry": {
         "type": "Polygon",
@@ -2254,11 +2309,9 @@
         "priority": 4,
         "fares": {
           "hatchback": 1800,
-          "sedan": 1900
+          "sedan": 1900,
+          "suv": 2900
         },
-        "derived": [
-          "sedan"
-        ],
         "notes": "Sectors 76-83 along NH-48 (provider: 1800). Toll extra."
       },
       "geometry": {
@@ -2296,11 +2349,9 @@
         "priority": 5,
         "fares": {
           "hatchback": 2000,
-          "sedan": 2100
+          "sedan": 2100,
+          "suv": 3200
         },
-        "derived": [
-          "sedan"
-        ],
         "notes": "IMT Phases I-V, Sectors 1-5, M-1 to M-11 (provider: 2000). Toll extra."
       },
       "geometry": {
@@ -2338,11 +2389,9 @@
         "priority": 5,
         "fares": {
           "hatchback": 500,
-          "sedan": 600
+          "sedan": 600,
+          "suv": 800
         },
-        "derived": [
-          "sedan"
-        ],
         "notes": "Knowledge Park I-III, Alpha, Jagat Farm, Surajpur, Sharda University."
       },
       "geometry": {
@@ -2380,12 +2429,10 @@
         "priority": 2,
         "fares": {
           "hatchback": 400,
-          "sedan": 500
+          "sedan": 500,
+          "suv": 650
         },
-        "derived": [
-          "sedan"
-        ],
-        "notes": "Provider quoted 350-400; using 400."
+        "notes": "Provider: 400 toward Greater Noida side; Tilapta roundabout pocket is 350 (separate zone)."
       },
       "geometry": {
         "type": "Polygon",
@@ -2418,15 +2465,101 @@
     {
       "type": "Feature",
       "properties": {
+        "name": "Tilapta roundabout",
+        "priority": 6,
+        "fares": {
+          "hatchback": 350,
+          "sedan": 450,
+          "suv": 550
+        },
+        "notes": "Provider: 350 at the roundabout. Verify anchor on the map."
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              77.468,
+              28.52678
+            ],
+            [
+              77.47269,
+              28.52596
+            ],
+            [
+              77.47667,
+              28.52362
+            ],
+            [
+              77.47933,
+              28.52013
+            ],
+            [
+              77.48027,
+              28.516
+            ],
+            [
+              77.47933,
+              28.51187
+            ],
+            [
+              77.47667,
+              28.50838
+            ],
+            [
+              77.47269,
+              28.50604
+            ],
+            [
+              77.468,
+              28.50522
+            ],
+            [
+              77.46331,
+              28.50604
+            ],
+            [
+              77.45933,
+              28.50838
+            ],
+            [
+              77.45667,
+              28.51187
+            ],
+            [
+              77.45573,
+              28.516
+            ],
+            [
+              77.45667,
+              28.52013
+            ],
+            [
+              77.45933,
+              28.52362
+            ],
+            [
+              77.46331,
+              28.52596
+            ],
+            [
+              77.468,
+              28.52678
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
         "name": "Kasna",
         "priority": 8,
         "fares": {
           "hatchback": 500,
-          "sedan": 600
-        },
-        "derived": [
-          "sedan"
-        ]
+          "sedan": 600,
+          "suv": 800
+        }
       },
       "geometry": {
         "type": "Polygon",
@@ -2511,11 +2644,9 @@
         "priority": 8,
         "fares": {
           "hatchback": 550,
-          "sedan": 650
-        },
-        "derived": [
-          "sedan"
-        ]
+          "sedan": 650,
+          "suv": 900
+        }
       },
       "geometry": {
         "type": "Polygon",
@@ -2600,11 +2731,9 @@
         "priority": 5,
         "fares": {
           "hatchback": 700,
-          "sedan": 800
-        },
-        "derived": [
-          "sedan"
-        ]
+          "sedan": 800,
+          "suv": 1100
+        }
       },
       "geometry": {
         "type": "Polygon",
@@ -2689,11 +2818,9 @@
         "priority": 0,
         "fares": {
           "hatchback": 800,
-          "sedan": 900
+          "sedan": 900,
+          "suv": 1300
         },
-        "derived": [
-          "sedan"
-        ],
         "notes": "YEIDA sectors between Buddh Circuit and Jewar."
       },
       "geometry": {
@@ -2731,12 +2858,10 @@
         "priority": 2,
         "fares": {
           "hatchback": 650,
-          "sedan": 750
+          "sedan": 750,
+          "suv": 1050
         },
-        "derived": [
-          "sedan"
-        ],
-        "notes": "Ek Murti, Sector 1/4, Char Murti, Bisrakh. Provider quoted 600-650; using 650 (same as Gaur City)."
+        "notes": "Gaur City / Char Murti side is 650; Ek Murti side is 600 (separate zone)."
       },
       "geometry": {
         "type": "Polygon",
@@ -2769,16 +2894,102 @@
     {
       "type": "Feature",
       "properties": {
+        "name": "Ek Murti side",
+        "priority": 4,
+        "fares": {
+          "hatchback": 600,
+          "sedan": 700,
+          "suv": 950
+        },
+        "notes": "Provider: 600 near Ek Murti. Verify anchor on the map."
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              77.41,
+              28.60447
+            ],
+            [
+              77.41587,
+              28.60345
+            ],
+            [
+              77.42085,
+              28.60053
+            ],
+            [
+              77.42418,
+              28.59616
+            ],
+            [
+              77.42535,
+              28.591
+            ],
+            [
+              77.42418,
+              28.58584
+            ],
+            [
+              77.42085,
+              28.58147
+            ],
+            [
+              77.41587,
+              28.57855
+            ],
+            [
+              77.41,
+              28.57753
+            ],
+            [
+              77.40413,
+              28.57855
+            ],
+            [
+              77.39915,
+              28.58147
+            ],
+            [
+              77.39582,
+              28.58584
+            ],
+            [
+              77.39465,
+              28.591
+            ],
+            [
+              77.39582,
+              28.59616
+            ],
+            [
+              77.39915,
+              28.60053
+            ],
+            [
+              77.40413,
+              28.60345
+            ],
+            [
+              77.41,
+              28.60447
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
         "name": "Noida expressway sectors",
         "priority": 3,
         "fares": {
           "hatchback": 700,
-          "sedan": 800
+          "sedan": 800,
+          "suv": 1100
         },
-        "derived": [
-          "sedan"
-        ],
-        "notes": "Sectors 125-168. Provider answered 700 but wrote 800 inline - confirm; sectors near Botanical fall in the 800 zone anyway."
+        "notes": "Confirmed: 700 for expressway sectors away from Botanical (Amity, 137, 142); sectors near Botanical are 800 via the Botanical zone."
       },
       "geometry": {
         "type": "Polygon",
@@ -2815,11 +3026,9 @@
         "priority": 3,
         "fares": {
           "hatchback": 800,
-          "sedan": 900
+          "sedan": 900,
+          "suv": 1300
         },
-        "derived": [
-          "sedan"
-        ],
         "notes": "Sector 18 / Atta / City Centre - provider confirmed same 800 as Botanical."
       },
       "geometry": {
@@ -2857,11 +3066,9 @@
         "priority": 5,
         "fares": {
           "hatchback": 650,
-          "sedan": 750
-        },
-        "derived": [
-          "sedan"
-        ]
+          "sedan": 750,
+          "suv": 1050
+        }
       },
       "geometry": {
         "type": "Polygon",
@@ -2946,11 +3153,9 @@
         "priority": 5,
         "fares": {
           "hatchback": 800,
-          "sedan": 900
-        },
-        "derived": [
-          "sedan"
-        ]
+          "sedan": 900,
+          "suv": 1300
+        }
       },
       "geometry": {
         "type": "Polygon",
@@ -3035,11 +3240,9 @@
         "priority": 5,
         "fares": {
           "hatchback": 800,
-          "sedan": 900
-        },
-        "derived": [
-          "sedan"
-        ]
+          "sedan": 900,
+          "suv": 1300
+        }
       },
       "geometry": {
         "type": "Polygon",
@@ -3124,11 +3327,9 @@
         "priority": 6,
         "fares": {
           "hatchback": 900,
-          "sedan": 1000
+          "sedan": 1000,
+          "suv": 1450
         },
-        "derived": [
-          "sedan"
-        ],
         "notes": "Kept tight - Anand Vihar station (also 900) is 800 m west."
       },
       "geometry": {
@@ -3214,11 +3415,9 @@
         "priority": 5,
         "fares": {
           "hatchback": 900,
-          "sedan": 1000
-        },
-        "derived": [
-          "sedan"
-        ]
+          "sedan": 1000,
+          "suv": 1450
+        }
       },
       "geometry": {
         "type": "Polygon",
@@ -3303,11 +3502,9 @@
         "priority": 4,
         "fares": {
           "hatchback": 1000,
-          "sedan": 1100
-        },
-        "derived": [
-          "sedan"
-        ]
+          "sedan": 1100,
+          "suv": 1600
+        }
       },
       "geometry": {
         "type": "Polygon",
@@ -3344,11 +3541,9 @@
         "priority": 4,
         "fares": {
           "hatchback": 950,
-          "sedan": 1050
-        },
-        "derived": [
-          "sedan"
-        ]
+          "sedan": 1050,
+          "suv": 1500
+        }
       },
       "geometry": {
         "type": "Polygon",
@@ -3385,11 +3580,9 @@
         "priority": 6,
         "fares": {
           "hatchback": 1100,
-          "sedan": 1200
-        },
-        "derived": [
-          "sedan"
-        ]
+          "sedan": 1200,
+          "suv": 1750
+        }
       },
       "geometry": {
         "type": "Polygon",
@@ -3474,12 +3667,10 @@
         "priority": 4,
         "fares": {
           "hatchback": 1000,
-          "sedan": 1100
+          "sedan": 1100,
+          "suv": 1600
         },
-        "derived": [
-          "sedan"
-        ],
-        "notes": "Includes Apollo Hospital. Kalindi Kunj quoted 950-1000; using 1000."
+        "notes": "Includes Apollo Hospital. Kalindi Kunj 1000 confirmed by provider."
       },
       "geometry": {
         "type": "Polygon",
@@ -3515,13 +3706,11 @@
         "name": "Badarpur",
         "priority": 6,
         "fares": {
-          "hatchback": 1200,
-          "sedan": 1300
+          "hatchback": 1000,
+          "sedan": 1100,
+          "suv": 1600
         },
-        "derived": [
-          "sedan"
-        ],
-        "notes": "Provider quoted 1200 - higher than Sarita Vihar; confirm."
+        "notes": "Corrected by provider from 1200 to 1000."
       },
       "geometry": {
         "type": "Polygon",
@@ -3606,11 +3795,9 @@
         "priority": 4,
         "fares": {
           "hatchback": 1100,
-          "sedan": 1200
+          "sedan": 1200,
+          "suv": 1750
         },
-        "derived": [
-          "sedan"
-        ],
         "notes": "ITO, Pragati Maidan, India Gate, Mandi House."
       },
       "geometry": {
@@ -3648,12 +3835,10 @@
         "priority": 4,
         "fares": {
           "hatchback": 1150,
-          "sedan": 1250
+          "sedan": 1250,
+          "suv": 1850
         },
-        "derived": [
-          "sedan"
-        ],
-        "notes": "CR Park, Govindpuri included. Provider quoted 1100-1200; using 1150."
+        "notes": "Kalkaji, Govindpuri included; 1150 confirmed. CR Park is 1200 (separate zone)."
       },
       "geometry": {
         "type": "Polygon",
@@ -3686,15 +3871,101 @@
     {
       "type": "Feature",
       "properties": {
+        "name": "CR Park",
+        "priority": 6,
+        "fares": {
+          "hatchback": 1200,
+          "sedan": 1300,
+          "suv": 1900
+        },
+        "notes": "Provider: 1200 for CR Park specifically."
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              77.2495,
+              28.54628
+            ],
+            [
+              77.25302,
+              28.54567
+            ],
+            [
+              77.25601,
+              28.54392
+            ],
+            [
+              77.258,
+              28.54129
+            ],
+            [
+              77.2587,
+              28.5382
+            ],
+            [
+              77.258,
+              28.53511
+            ],
+            [
+              77.25601,
+              28.53248
+            ],
+            [
+              77.25302,
+              28.53073
+            ],
+            [
+              77.2495,
+              28.53012
+            ],
+            [
+              77.24598,
+              28.53073
+            ],
+            [
+              77.24299,
+              28.53248
+            ],
+            [
+              77.241,
+              28.53511
+            ],
+            [
+              77.2403,
+              28.5382
+            ],
+            [
+              77.241,
+              28.54129
+            ],
+            [
+              77.24299,
+              28.54392
+            ],
+            [
+              77.24598,
+              28.54567
+            ],
+            [
+              77.2495,
+              28.54628
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
         "name": "AIIMS / Green Park",
         "priority": 5,
         "fares": {
           "hatchback": 1200,
-          "sedan": 1300
-        },
-        "derived": [
-          "sedan"
-        ]
+          "sedan": 1300,
+          "suv": 1900
+        }
       },
       "geometry": {
         "type": "Polygon",
@@ -3779,11 +4050,9 @@
         "priority": 4,
         "fares": {
           "hatchback": 1300,
-          "sedan": 1400
+          "sedan": 1400,
+          "suv": 2100
         },
-        "derived": [
-          "sedan"
-        ],
         "notes": "Munirka, RK Puram, Vasant Vihar."
       },
       "geometry": {
@@ -3821,11 +4090,9 @@
         "priority": 6,
         "fares": {
           "hatchback": 1300,
-          "sedan": 1400
-        },
-        "derived": [
-          "sedan"
-        ]
+          "sedan": 1400,
+          "suv": 2100
+        }
       },
       "geometry": {
         "type": "Polygon",
@@ -3910,11 +4177,9 @@
         "priority": 4,
         "fares": {
           "hatchback": 1400,
-          "sedan": 1500
+          "sedan": 1500,
+          "suv": 2250
         },
-        "derived": [
-          "sedan"
-        ],
         "notes": "Civil Lines, Majnu ka Tila."
       },
       "geometry": {
@@ -3952,11 +4217,9 @@
         "priority": 2,
         "fares": {
           "hatchback": 1600,
-          "sedan": 1700
+          "sedan": 1700,
+          "suv": 2550
         },
-        "derived": [
-          "sedan"
-        ],
         "notes": "Includes Model Town, Azadpur."
       },
       "geometry": {
@@ -3994,11 +4257,9 @@
         "priority": 2,
         "fares": {
           "hatchback": 1600,
-          "sedan": 1700
+          "sedan": 1700,
+          "suv": 2550
         },
-        "derived": [
-          "sedan"
-        ],
         "notes": "Rajouri Garden, Janakpuri, Tilak Nagar, Uttam Nagar."
       },
       "geometry": {
@@ -4036,11 +4297,9 @@
         "priority": 2,
         "fares": {
           "hatchback": 1600,
-          "sedan": 1700
+          "sedan": 1700,
+          "suv": 2550
         },
-        "derived": [
-          "sedan"
-        ],
         "notes": "Cyber City, Udyog Vihar, DLF 1-3, MG Road, Sector 29, Golf Course Road - provider confirmed same 1600 as Huda City Centre."
       },
       "geometry": {
@@ -4078,11 +4337,9 @@
         "priority": 3,
         "fares": {
           "hatchback": 1700,
-          "sedan": 1800
-        },
-        "derived": [
-          "sedan"
-        ]
+          "sedan": 1800,
+          "suv": 2700
+        }
       },
       "geometry": {
         "type": "Polygon",
@@ -4119,11 +4376,9 @@
         "priority": 5,
         "fares": {
           "hatchback": 1500,
-          "sedan": 1600
-        },
-        "derived": [
-          "sedan"
-        ]
+          "sedan": 1600,
+          "suv": 2400
+        }
       },
       "geometry": {
         "type": "Polygon",
@@ -4208,11 +4463,9 @@
         "priority": 5,
         "fares": {
           "hatchback": 1500,
-          "sedan": 1600
-        },
-        "derived": [
-          "sedan"
-        ]
+          "sedan": 1600,
+          "suv": 2400
+        }
       },
       "geometry": {
         "type": "Polygon",
