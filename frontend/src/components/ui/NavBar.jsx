@@ -1,11 +1,14 @@
 import Icon from '@mdi/react';
-import { mdiMenu, mdiAccountCircle, mdiChevronDown, mdiCog, mdiInformation, mdiShieldCheck } from '@mdi/js';
+import { mdiMenu, mdiClose, mdiAccountCircle, mdiChevronDown, mdiCog, mdiInformation, mdiShieldCheck } from '@mdi/js';
 import { useViewNavigate } from "../../hooks/useViewNavigate";
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useApi } from '../../hooks/useApi';
 import { useSignIn, useAuth, useUser } from "@clerk/clerk-react";
 import Button from './Button';
 import { useData } from '../../hooks/useData';
+import { useIsMobile } from '../../hooks/useIsMobile';
+import { useExitAnim } from '../../hooks/useExitAnim';
 import pfpPlaceholder from "../../assets/pfp-placeholder.webp"
 import FourSeaterSide from "../../assets/4-seater-bottom-left.webp"
 import SixSeaterSide from "../../assets/6-seater-bottom-left.webp"
@@ -13,11 +16,21 @@ import Skeleton from './Skeleton';
 import ErrorPanel from './ErrorPanel';
 
 
+// The initial-in-a-circle, at whatever size the surface needs.
+const Avatar = ({ invert, initial, box, text }) => (
+    <div className={`${invert ? "bg-[var(--foreground)]" : "bg-[var(--background-primary)]"} flex items-center justify-center rounded-full ${box}`}>
+        <h3 className={`font-semibold ${text} ${invert ? "text-[var(--text-foreground)]" : "text-[var(--text)]"}`}>
+            {initial}
+        </h3>
+    </div>
+)
+
 const NavBar = ({ invert = false, hideExpanded = false }) => {
     const { user: clerkUser } = useUser();
     const navigate = useViewNavigate();
     const { signIn } = useSignIn();
     const { isSignedIn } = useAuth();
+    const isMobile = useIsMobile();
     const scheduledTime = useData(state => state.scheduledTime);
     const bookingId = useData(state => state.bookingId);
     const bookingCode = useData(state => state.bookingCode);
@@ -32,6 +45,7 @@ const NavBar = ({ invert = false, hideExpanded = false }) => {
     const [user, setUser] = useState(null)
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState(null)
+    const drawerRef = useRef(null)
 
     useEffect(() => {
         if (isSignedIn) {
@@ -56,22 +70,32 @@ const NavBar = ({ invert = false, hideExpanded = false }) => {
         }
     }, [isSignedIn])
 
-    const [menuMounted, setMenuMounted] = useState(false)
-    const [menuClosing, setMenuClosing] = useState(false)
+    // One `expand` drives both surfaces — the avatar chip is hidden on mobile and
+    // the hamburger on desktop, so only one of them can ever be the trigger.
+    const { mounted: menuMounted, closing: menuClosing } = useExitAnim(expand, isMobile ? 280 : 220)
+
+    // Crossing the breakpoint would swap the drawer for the dropdown mid-open.
+    useEffect(() => { setExpand(false) }, [isMobile])
+
     useEffect(() => {
-        if (expand) {
-            setMenuMounted(true)
-            setMenuClosing(false)
-            return
-        }
-        if (!menuMounted) return
-        setMenuClosing(true)
-        const t = setTimeout(() => {
-            setMenuMounted(false)
-            setMenuClosing(false)
-        }, 220)
-        return () => clearTimeout(t)
-    }, [expand, menuMounted])
+        if (!expand) return
+        const onKey = (e) => { if (e.key === "Escape") setExpand(false) }
+        window.addEventListener("keydown", onKey)
+        return () => window.removeEventListener("keydown", onKey)
+    }, [expand])
+
+    // Lock the page behind the drawer. Cleanup also covers unmount, so a route
+    // change with the drawer open can't leave the body frozen.
+    useEffect(() => {
+        if (!(expand && isMobile)) return
+        const previous = document.body.style.overflow
+        document.body.style.overflow = "hidden"
+        return () => { document.body.style.overflow = previous }
+    }, [expand, isMobile])
+
+    useEffect(() => {
+        if (menuMounted && isMobile) drawerRef.current?.focus()
+    }, [menuMounted, isMobile])
 
     const dropdownTone = invert ? "dark" : "light"
 
@@ -92,7 +116,125 @@ const NavBar = ({ invert = false, hideExpanded = false }) => {
         else navigate('/', { state: { scrollTo: id } });
     }
 
+    // Close first, act on the next task — the scroll lock has to be released
+    // before goToSection's smooth scroll can move the page.
+    const go = (fn) => {
+        setExpand(false)
+        setTimeout(fn, 0)
+    }
+
+    // One source for both the desktop row and the drawer, so the signed-in and
+    // admin conditions can't drift apart.
+    const navLinks = [
+        ["About", () => goToSection('about')],
+        ["Help", () => navigate('/help')],
+        ...(isSignedIn ? [["Ride History", () => navigate('/manage-account', { state: { tab: "Ride History" } })]] : []),
+        ...(clerkUser?.publicMetadata?.role === "admin" ? [["Dashboard", () => navigate('/dashboard')]] : []),
+    ]
+
     const userDropDownList = [[<Icon path={mdiAccountCircle} size={1.2} />, "Manage Account", "/manage-account"], [<Icon path={mdiCog} size={1.1} />, "Settings", "/settings"], [<Icon path={mdiShieldCheck} size={1.1} />, "Safety", "/safety"], [<Icon path={mdiInformation} size={1.1} />, "Legal", "/"]]
+
+    const displayName = user?.name?.length > 15 ? `${user.name.slice(0, 15)}...` : user?.name
+
+    const rowHover = invert
+        ? "hover:bg-[var(--foreground)]/8 active:bg-[var(--foreground)]/12"
+        : "hover:bg-[var(--foreground-muted)] active:bg-[var(--foreground-muted)]"
+
+    const drawer = (
+        <>
+            <div
+                onClick={() => setExpand(false)}
+                className={`fixed inset-0 z-90 bg-black/40 backdrop-blur-[2px] ${menuClosing ? "animate-panel-fade-out" : "animate-backdrop"} motion-reduce:animate-none`}
+            />
+            <div
+                ref={drawerRef}
+                tabIndex={-1}
+                role="dialog"
+                aria-modal="true"
+                aria-label="Menu"
+                className={`fixed right-0 top-0 z-100 h-dvh w-[82%] max-w-[320px] flex flex-col overflow-y-auto overscroll-contain outline-none border-l shadow-[-8px_0_24px_rgba(0,0,0,0.35)] ${menuClosing ? "animate-sheet-out" : "animate-sheet"} motion-reduce:animate-none ${invert ? "bg-[var(--background-primary)] text-[var(--text)] border-[var(--foreground)]/15" : "bg-[var(--foreground)] text-[var(--text-foreground)] border-black/10"}`}
+            >
+                <div className='flex items-center justify-between gap-2 px-5 pt-6 pb-5'>
+                    {isSignedIn
+                        ? loading
+                            ? <>
+                                <Skeleton tone={dropdownTone} className='h-8 w-36' />
+                                <Skeleton tone={dropdownTone} rounded='rounded-full' className='w-12 h-12' />
+                            </>
+                            : <>
+                                <h3 className='text-2xl font-semibold truncate'>{displayName}</h3>
+                                <Avatar invert={invert} initial={user?.name?.charAt(0)} box='w-12 h-12 shrink-0' text='text-2xl' />
+                            </>
+                        : <h3><span className='font-semibold'>RCS</span> travels</h3>
+                    }
+                    <Icon
+                        path={mdiClose}
+                        size={1}
+                        onClick={() => setExpand(false)}
+                        className='shrink-0 cursor-pointer opacity-60 hover:opacity-100 active:opacity-80 transition-opacity duration-300'
+                    />
+                </div>
+
+                <ul className='flex flex-col gap-0.5 px-2'>
+                    {navLinks.map(([label, action], i) => (
+                        <li
+                            key={i}
+                            onClick={() => go(action)}
+                            className={`cursor-pointer rounded-xl px-3 py-3 text-lg transition-colors duration-300 ${rowHover}`}
+                        >
+                            {label}
+                        </li>
+                    ))}
+                </ul>
+
+                {isSignedIn &&
+                    <>
+                        <div className={`mx-5 my-3 h-px ${invert ? "bg-[var(--foreground)]/10" : "bg-black/10"}`} />
+                        <ul className='flex flex-col gap-0.5 px-2'>
+                            {loading
+                                ? userDropDownList.map((_, i) => (
+                                    <li key={i} className='flex items-center gap-3 rounded-xl px-3 py-3'>
+                                        <Skeleton tone={dropdownTone} rounded='rounded-md' className='h-6 w-6' />
+                                        <Skeleton tone={dropdownTone} className='h-5 w-32' />
+                                    </li>
+                                ))
+                                : userDropDownList.map((item, i) => (
+                                    <li
+                                        key={i}
+                                        onClick={() => go(() => navigate(`${item[2]}`))}
+                                        className={`flex cursor-pointer items-center justify-start gap-3 rounded-xl px-3 py-3 text-lg transition-colors duration-300 ${rowHover}`}
+                                    >
+                                        {item[0]}
+                                        <h4>{item[1]}</h4>
+                                    </li>
+                                ))
+                            }
+                        </ul>
+                    </>
+                }
+
+                <div className='mt-auto px-5 pt-6 pb-6'>
+                    {isSignedIn
+                        ? <Button onClick={handleSignOut} prop={{ variant: "negative", width: "100%" }}>Sign out</Button>
+                        : <div className='flex flex-col gap-2'>
+                            <h4
+                                onClick={() => go(() => navigate('/login'))}
+                                className={`cursor-pointer rounded-xl border py-3 text-center text-base font-medium transition-colors duration-300 ${invert ? "border-[var(--foreground)]/25 hover:bg-[var(--foreground)]/10 active:bg-[var(--foreground)]/15" : "border-black/15 hover:bg-[var(--foreground-muted)] active:bg-[var(--foreground-muted)]"}`}
+                            >
+                                Log in
+                            </h4>
+                            <h4
+                                onClick={() => go(() => navigate('/signup'))}
+                                className='cursor-pointer rounded-xl bg-[var(--background-primary)] py-3 text-center text-base font-semibold text-[var(--text)] transition-opacity duration-300 hover:opacity-90 active:opacity-80'
+                            >
+                                Sign up
+                            </h4>
+                        </div>
+                    }
+                </div>
+            </div>
+        </>
+    )
 
     return (
         <div className={`flex flex-col justify-center items-center ${invert ? "bg-[var(--background-primary)]" : "bg-[var(--foreground)]"} w-[300px] sm:w-[700px] h-[40px] sm:h-[50px] gap-1 px-2 py-6 rounded-xl shadow-[8px_10px_0_rgba(0,0,0,0.25)] outline-1 outline-gray-400`}>
@@ -101,15 +243,9 @@ const NavBar = ({ invert = false, hideExpanded = false }) => {
 
                 <div className='sm:block hidden'>
                     <ul className={`flex gap-2 [&>li]:cursor-pointer [&>li]:text-sm [&>li]:transition-all [&>li]:duration-300 [&>*]:px-2 [&>*]:py-1.5 [&>*]:rounded-lg ${invert ? "[&>*]:text-[var(--text)]/80 [&>*]:hover:text-[var(--text)] [&>*]:bg-[var(--background-primary)] [&>*]:hover:bg-[var(--foreground)]/10" : "[&>*]:text-[var(--text-foreground)]/80 [&>*]:hover:text-[var(--text-foreground)] [&>*]:bg-[var(--foreground)] [&>*]:hover:bg-[var(--background-primary)]/10"}`}>
-                        <li onClick={() => goToSection('about')}>About</li>
-                        <li onClick={() => navigate('/help')}>Help</li>
-                        {isSignedIn &&
-                            <li onClick={() => navigate('/manage-account', { state: { tab: "Ride History" } })}>Ride History</li>
-                        }
-                        {(clerkUser?.publicMetadata?.role === "admin") &&
-                            <li onClick={() => navigate('/dashboard')}>Dashboard</li>
-                        }
-
+                        {navLinks.map(([label, action], i) => (
+                            <li key={i} onClick={action}>{label}</li>
+                        ))}
                     </ul>
                 </div>
 
@@ -117,11 +253,7 @@ const NavBar = ({ invert = false, hideExpanded = false }) => {
                     {isSignedIn
                         ?
                         <div onClick={() => setExpand(!expand)} className={`flex ${invert ? "text-[var(--text)] bg-[var(--background-primary)] hover:bg-[var(--foreground)]/10" : "text-[var(--text-foreground)] bg-[var(--foreground)] hover:bg-[var(--background-primary)]/10"} jusityf-center items-center px-1 py-1 rounded-3xl justify-center items-center gap-1 cursor-pointer transition-color duration-300`}>
-                            <div className={`${invert ? "bg-[var(--foreground)]" : "bg-[var(--background-primary)]"} flex items-center justify-center w-8 h-8 rounded-full`}>
-                                <h3 className={`font-semibold ${invert ? "text-[var(--text-foreground)]" : "text-[var(--text)]"}`}>
-                                    {user?.name?.charAt(0)}
-                                </h3>
-                            </div>
+                            <Avatar invert={invert} initial={user?.name?.charAt(0)} box='w-8 h-8' text='' />
                             <Icon path={mdiChevronDown} style={{
                                 transform: expand
                                     ? "rotate(180deg)"
@@ -134,7 +266,7 @@ const NavBar = ({ invert = false, hideExpanded = false }) => {
                             <h4 onClick={() => navigate('/signup')} className='text-base font-medium text-[var(--text)] bg-[var(--background-primary)] px-3 py-2 rounded-lg'>Sign up</h4>
                         </div>
                     }
-                    {menuMounted &&
+                    {menuMounted && !isMobile &&
                         <Button prop={{ variant: "dropdown", width: "390px", innerClassName: "flex flex-col gap-3 sm:gap-4 items-start justify-center" }} className={`flex flex-col p-2 absolute right-0 top-[130%] ${menuClosing ? "animate-dropdown-out" : "animate-dropdown"} hover:opacity-[1] ${invert ? "" : "bg-[var(--foreground)]"}`}>
                             {loading
                                 ? <>
@@ -155,18 +287,8 @@ const NavBar = ({ invert = false, hideExpanded = false }) => {
                                 </>
                                 : <>
                                     <div className={`${invert ? "text-[var(--text)]" : "text-[var(--text-foreground)]"} flex items-center w-full justify-between`}>
-                                        <h3 className='text-3xl font-semibold'>
-                                            {
-                                                user?.name?.length > 15
-                                                    ? `${user.name.slice(0, 15)}...`
-                                                    : user?.name
-                                            }
-                                        </h3>
-                                        <div className={`${invert ? "bg-[var(--foreground)]" : "bg-[var(--background-primary)]"} flex items-center justify-center w-14 h-14 rounded-full`}>
-                                            <h3 className={`font-semibold text-3xl ${invert ? "text-[var(--text-foreground)]" : "text-[var(--text)]"}`}>
-                                                {user?.name?.charAt(0)}
-                                            </h3>
-                                        </div>
+                                        <h3 className='text-3xl font-semibold'>{displayName}</h3>
+                                        <Avatar invert={invert} initial={user?.name?.charAt(0)} box='w-14 h-14' text='text-3xl' />
                                     </div>
                                     <div className='w-full'>
                                         <ul className='flex flex-col items-start justify-center gap-1 w-full'>
@@ -187,10 +309,17 @@ const NavBar = ({ invert = false, hideExpanded = false }) => {
                     }
                 </div>
 
-                <Icon path={mdiMenu} className='block sm:hidden' size={0.9} />
+                <Icon
+                    path={mdiMenu}
+                    onClick={() => setExpand(!expand)}
+                    className='block sm:hidden cursor-pointer opacity-100 hover:opacity-70 active:opacity-60 transition-opacity duration-300'
+                    size={0.9}
+                />
             </div>
 
             <ErrorPanel prop={{ error: expand ? error : null, setError, onOkay: () => navigate('/') }} />
+
+            {menuMounted && isMobile && createPortal(drawer, document.body)}
 
             {/* expanded panel */}
             {/* {!hideExpanded && bookingId && isSignedIn &&

@@ -15,6 +15,7 @@ import { useViewNavigate } from "../hooks/useViewNavigate";
 import { DateTimeSelector } from "../components/ui/DateTimeSelector";
 import { useData } from "../hooks/useData";
 import { useIsMobile } from "../hooks/useIsMobile";
+import { useExitAnim } from "../hooks/useExitAnim";
 import { useSignIn, useAuth, useUser } from "@clerk/clerk-react";
 import RoutePanel from "../components/ui/RoutePanel";
 import { statusLabels } from "../constants/statusLabels";
@@ -35,27 +36,6 @@ const PAIR = "gap-0.5 sm:gap-1";
 // here, a GROUP too tight.
 const TRIP_STEP = "gap-4 sm:gap-5";
 
-function useExitAnim(open, duration) {
-  const [mounted, setMounted] = useState(open);
-  const [closing, setClosing] = useState(false);
-
-  useEffect(() => {
-    if (open) {
-      setMounted(true);
-      setClosing(false);
-      return;
-    }
-    if (!mounted) return;
-    setClosing(true);
-    const t = setTimeout(() => {
-      setMounted(false);
-      setClosing(false);
-    }, duration);
-    return () => clearTimeout(t);
-  }, [open, mounted, duration]);
-
-  return { mounted, closing };
-}
 
 // Autocomplete state for one address field: debounced Google matches at 3+
 // typed chars, recent places when (near-)empty. select() resolves coords

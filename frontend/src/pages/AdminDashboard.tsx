@@ -3,6 +3,7 @@ import { act, useEffect, useRef, useState } from "react"
 import Icon from '@mdi/react';
 import { mdiMagnify, mdiTuneVertical, mdiSortCalendarDescending, mdiContentCopy, mdiSortCalendarAscending } from '@mdi/js';
 import { useApi } from "../hooks/useApi";
+import { useExitAnim } from "../hooks/useExitAnim";
 import AdminDashboardSkeleton from "../components/AdminDashboardSkeleton";
 import { vehicleLabel, statusChip, splitAddress, displayPhone, formatDateTime, CopyBtn } from "../components/ui/bookingDisplay";
 import Button from "../components/ui/Button";
@@ -16,28 +17,6 @@ const verificationChip = (status: VerificationStatus) => {
     if (status === "approved") return "text-green-700 bg-green-600/10"
     if (status === "rejected") return "text-red-600 bg-red-500/10"
     return "text-amber-600 bg-amber-500/10"
-}
-
-function useExitAnim(open: boolean, duration: number) {
-    const [mounted, setMounted] = useState(open);
-    const [closing, setClosing] = useState(false);
-
-    useEffect(() => {
-        if (open) {
-            setMounted(true);
-            setClosing(false);
-            return;
-        }
-        if (!mounted) return;
-        setClosing(true);
-        const t = setTimeout(() => {
-            setMounted(false);
-            setClosing(false);
-        }, duration);
-        return () => clearTimeout(t);
-    }, [open, mounted, duration]);
-
-    return { mounted, closing };
 }
 
 const bookingStatuses: BookingStatus[] = ["pending", "confirmed", "assigned", "en_route", "reached", "started", "completed", "cancelled", "no_driver"]

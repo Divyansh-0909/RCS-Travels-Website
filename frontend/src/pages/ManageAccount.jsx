@@ -5,6 +5,7 @@ import { mdiPlus, mdiClose, mdiLock, mdiChevronDown, mdiTrayArrowDown, mdiCheck,
 import { useViewNavigate } from "../hooks/useViewNavigate";
 import { useData } from "../hooks/useData";
 import { useApi } from "../hooks/useApi";
+import { useExitAnim } from "../hooks/useExitAnim";
 import Button from "../components/ui/Button";
 import AccountLayout from "../components/ui/AccountLayout";
 import SettingRow from "../components/ui/SettingRow";
@@ -15,29 +16,6 @@ import FourSeaterCar from "../assets/4-seater-bottom-left.webp"
 import SixSeaterCar from "../assets/6-seater-bottom-left.webp"
 import { vehicleLabel, statusChip, splitAddress, displayPhone, formatDateTime, CopyBtn } from "../components/ui/bookingDisplay";
 import Chips, { filterLabel, filterField } from "../components/ui/Chips";
-
-// Keeps a dropdown mounted through its closing animation, then unmounts it.
-function useExitAnim(open, duration) {
-    const [mounted, setMounted] = useState(open);
-    const [closing, setClosing] = useState(false);
-
-    useEffect(() => {
-        if (open) {
-            setMounted(true);
-            setClosing(false);
-            return;
-        }
-        if (!mounted) return;
-        setClosing(true);
-        const t = setTimeout(() => {
-            setMounted(false);
-            setClosing(false);
-        }, duration);
-        return () => clearTimeout(t);
-    }, [open, mounted, duration]);
-
-    return { mounted, closing };
-}
 
 const genderOptions = ["Male", "Female", "Others", "Rather not say"]
 

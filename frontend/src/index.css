@@ -209,6 +209,38 @@
         will-change: transform, opacity;
     }
 
+    /* Drawer backdrop — pairs with .animate-panel-fade-out on the way out */
+    @keyframes backdrop-in {
+        from { opacity: 0; }
+        to   { opacity: 1; }
+    }
+
+    .animate-backdrop {
+        animation: backdrop-in 0.3s ease-out forwards;
+        will-change: opacity;
+    }
+
+    /* Mobile nav drawer — slides in from the right edge */
+    @keyframes sheet-in {
+        from { transform: translateX(100%); }
+        to   { transform: translateX(0); }
+    }
+
+    .animate-sheet {
+        animation: sheet-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        will-change: transform;
+    }
+
+    @keyframes sheet-out {
+        from { transform: translateX(0); }
+        to   { transform: translateX(100%); }
+    }
+
+    .animate-sheet-out {
+        animation: sheet-out 0.26s cubic-bezier(0.7, 0, 0.84, 0) forwards;
+        will-change: transform;
+    }
+
     /* Distinct from a dropdown — a soft "bloom" that scales up and settles */
     @keyframes datetime-bloom {
         0% {
