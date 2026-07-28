@@ -20,6 +20,7 @@ const LoginPage = () => {
   const otpRefs = useRef([]);
   const OTP_LENGTH = 6;
   const OTP_TTL = 300; // seconds until the OTP expires — matches the backend's 5-minute window
+  const RESEND_COOLDOWN = 45; // matches the backend's per-phone cooldown, which 429s early resends
   const [expiresIn, setExpiresIn] = useState(0);
   const [step, setStep] = useState("phone"); // "phone" | "otp"
   const [error, setError] = useState(null);
@@ -106,12 +107,21 @@ const LoginPage = () => {
 
   const sendOtp = async () => {
     const data = await api.sendOtp(phone);
+    // 429 means an OTP went out less than 45s ago and is still valid (the backend
+    // rejects before generating a new one) — e.g. after a page refresh. Advance to
+    // the OTP step so that code can be used, instead of stranding the user here.
+    if (data.status === 429) {
+      setStep("otp");
+      setResendIn(RESEND_COOLDOWN);
+      setExpiresIn(OTP_TTL - RESEND_COOLDOWN); // true remaining TTL is unknown; assume the worst
+      return;
+    }
     if (data.error) {
       setError(data.error);
       return;
     }
     setStep("otp");
-    setResendIn(30);
+    setResendIn(RESEND_COOLDOWN);
     setExpiresIn(OTP_TTL);
   };
 
@@ -124,10 +134,14 @@ const LoginPage = () => {
       const data = await api.sendOtp(phone);
       if (data.error) {
         setError(data.error);
+        // The client timer normally prevents a 429, but clocks can disagree
+        // (rejoining a session from another tab) — restart it so the user isn't
+        // shown a Resend button that keeps bouncing.
+        if (data.status === 429) setResendIn(RESEND_COOLDOWN);
         return;
       }
       setOtp("");
-      setResendIn(30);
+      setResendIn(RESEND_COOLDOWN);
       setExpiresIn(OTP_TTL);
     } catch (err) {
       console.error(err);

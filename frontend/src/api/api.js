@@ -16,7 +16,8 @@ async function request(path, { method = "GET", body, getToken } = {}) {
 
     if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        return { error: data.error || `Server error (${res.status})` };
+        // status lets callers react to specific codes (429 = OTP cooldown)
+        return { error: data.error || `Server error (${res.status})`, status: res.status };
     }
 
     return res.json();
