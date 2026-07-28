@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import Icon from '@mdi/react';
-import { mdiKeyboardBackspace, mdiMenu } from '@mdi/js';
+import { mdiHomeOutline, mdiMenu } from '@mdi/js';
 import { useViewNavigate } from "../../hooks/useViewNavigate";
 
 
@@ -15,7 +15,7 @@ const AccountLayout = ({ items, selected, onSelect, title, children, startOnCont
         <div className="w-[100vw] h-[100dvh] flex flex-col justify-center items-center px-5 sm:px-10 bg-[var(--foreground)] text-[var(--text-foreground)]">
             <div className="flex w-full justify-start items-center gap-3 py-6">
                 <h3 onClick={() => navigate('/')} className="sm:block hidden cursor-pointer text-[var(--background-primary)] text-2xl pl-1 opacity-[0.85] transition-opacity duration-300 hover:opacity-[1]"><span className="font-semibold">RCS</span> travels</h3>
-                <Icon onClick={() => navigate('/')} className="sm:hidden block cursor-pointer text-[var(--background-primary)] opacity-[0.85] transition-opacity duration-300 hover:opacity-[1]" path={mdiKeyboardBackspace} size={1.2} />
+                <Icon onClick={() => navigate('/')} className="sm:hidden block cursor-pointer text-[var(--background-primary)] opacity-[0.85] transition-opacity duration-300 hover:opacity-[1]" path={mdiHomeOutline} size={1.2} />
                 {title && (
                     <>
                         <span className="text-[var(--background-primary)]/25 text-xl font-light select-none">/</span>

@@ -2,9 +2,12 @@ RCS TRAVELS — PROJECT ROADMAP
 ===============================
 
 IMPORTANT:
-- add the ability in AdminDashboard to change the fare of zones or outstation 
+- add the ability in AdminDashboard to change the fare of zones or outstation
 - add the ability to scroll background panel on mobile
 - add the ability to remove a driver or verify a driver in the dashboard
+- remove the dummy bookings and drivers data from the production DB before launch
+  (backend/prisma/clean-bookings.js clears non-seed bookings; drivers need a
+  similar pass — and the seed rows themselves must go too)
 - !! GET THE LEGAL DOCS REVIEWED BY A LAWYER. Terms, Privacy, Refunds and Grievance
   in frontend/src/constants/legal.js are a DRAFT written from what the code does,
   not legal advice. Before they can count as published:
@@ -532,8 +535,9 @@ reload and change nothing server-side. Each needs an API endpoint + persistence
   Settings page (pages/SettingsPage.jsx)
     [ ] Notifications toggles — whatsapp / push / promotions. Local `notifs`
         state. Needs a notification-preferences column(s) + GET/PUT endpoint.
-    [ ] Saved places — Home / Work / custom addresses. Local `places` state.
-        Needs a saved_places table (or JSON column) + CRUD endpoints.
+    [x] Saved places — wired to the saved_places table via
+        /api/users/me/saved-places (GET/PUT/DELETE, capped at 12). Home/Work are
+        fixed slots; the booking form suggests saved places above recents.
     [~] Language — persists to the zustand store (partialize) and survives
         reload, BUT is not actually connected to i18next, so switching it does
         not change the app language yet. Wire it into the i18n provider.
