@@ -106,7 +106,7 @@ const LoginPage = () => {
   }
 
   const sendOtp = async () => {
-    const data = await api.sendOtp(phone);
+    const data = await api.sendOtp(phone, "login");
     // 429 means an OTP went out less than 45s ago and is still valid (the backend
     // rejects before generating a new one) — e.g. after a page refresh. Advance to
     // the OTP step so that code can be used, instead of stranding the user here.
@@ -114,6 +114,13 @@ const LoginPage = () => {
       setStep("otp");
       setResendIn(RESEND_COOLDOWN);
       setExpiresIn(OTP_TTL - RESEND_COOLDOWN); // true remaining TTL is unknown; assume the worst
+      return;
+    }
+    // No account behind this number — no OTP was sent. Flip the button into the
+    // Sign Up escape hatch instead of leaving a dead end; typing again flips back.
+    if (data.status === 404) {
+      setError(data.error);
+      setShowSignUp(true);
       return;
     }
     if (data.error) {
@@ -131,7 +138,7 @@ const LoginPage = () => {
     try {
       setError(null);
       setResending(true);
-      const data = await api.sendOtp(phone);
+      const data = await api.sendOtp(phone, "login");
       if (data.error) {
         setError(data.error);
         // The client timer normally prevents a 429, but clocks can disagree
@@ -152,7 +159,7 @@ const LoginPage = () => {
   }
 
   const verifyOtp = async () => {
-    const data = await api.verifyOtp(phone, otp);
+    const data = await api.verifyOtp(phone, otp, "login");
     if (data.error) {
       setError(data.error);
       await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -360,7 +367,11 @@ const LoginPage = () => {
               />
             }
             <Button
-              onClick={isPhone && showSignUp ? () => navigate('/signup') : undefined}
+              onClick={isPhone && showSignUp
+                // Carry the number over so signup can prefill its phone step —
+                // it was just typed here and the backend confirmed it's unclaimed.
+                ? () => navigate('/signup', { state: { phone } })
+                : undefined}
               prop={{
                 type: isPhone && showSignUp ? "button" : "submit",
                 disabled: (isPhone && showSignUp)

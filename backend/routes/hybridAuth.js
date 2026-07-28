@@ -16,12 +16,30 @@ const hybridAuthRouter = Router()
 
 const generateOTP = () => String(crypto.randomInt(100000, 1000000))
 
+// Login and signup share these routes but must not share outcomes: login used to
+// get-or-create the Clerk user, so any stranger's number became an account the
+// moment they verified. The intent gate splits them — only signup may create,
+// and login for an unknown number fails BEFORE an OTP is sent, so no WhatsApp
+// message is paid for on a number that can't log in anyway. Anything that isn't
+// 'signup' is treated as login: the default must be the path that can't create.
+// (This makes send-otp confirm which numbers have accounts; every consumer app
+// leaks the same, and the auth limiter throttles anyone harvesting it.)
+async function intentMismatch(phone, intent) {
+  const account = await prisma.user.findUnique({ where: { phone }, select: { id: true } })
+  if (intent === 'signup')
+    return account ? { status: 409, error: 'This number already has an account' } : null
+  return account ? null : { status: 404, error: 'No account found with this number' }
+}
+
 hybridAuthRouter.post('/send-otp', async (req, res) => {
-  const { phone } = req.body
+  const { phone, intent } = req.body
 
   if (!phone || phone.length !== 10) {
     return res.status(400).json({ error: 'Invalid phone number' })
   }
+
+  const mismatch = await intentMismatch(phone, intent)
+  if (mismatch) return res.status(mismatch.status).json({ error: mismatch.error })
 
   // Per-phone cooldown: expiresAt is always sentAt + 5min, so "sent under 45s
   // ago" reads as expiresAt more than 4m15s away — no sentAt column needed. This,
@@ -57,7 +75,7 @@ hybridAuthRouter.post('/send-otp', async (req, res) => {
 })
 
 hybridAuthRouter.post('/verify-otp', async (req, res) => {
-  const { phone, otp } = req.body
+  const { phone, otp, intent } = req.body
 
   if (!phone || !otp) {
     return res.status(400).json({ error: 'Phone and OTP are required' })
@@ -72,11 +90,21 @@ hybridAuthRouter.post('/verify-otp', async (req, res) => {
   const userHash = crypto.createHash('sha256').update(String(otp)).digest('hex')
   if (userHash !== record.otpHash)    return res.status(400).json({ error: 'Invalid OTP' })
 
+  // Re-checked here because send-otp's answer isn't binding — anyone can call
+  // this route directly. After the hash check but before the burn: the OTP
+  // itself is intent-less, so a code declined here stays valid and the other
+  // page can verify it (its send-otp will 429 on the cooldown, which the
+  // frontend already reads as "previous code still good, go to the OTP step").
+  const mismatch = await intentMismatch(phone, intent)
+  if (mismatch) return res.status(mismatch.status).json({ error: mismatch.error })
+
   // Burn it before minting the ticket, so a replayed request can't get a second one.
   await prisma.otpVerification.update({ where: { phone }, data: { used: true } })
 
   const userEmail = `91${phone}@rcs-travels.com`
 
+  // With the gate above, the create branch is only reachable from signup; for
+  // login it is a self-heal for a DB user whose Clerk twin somehow vanished.
   const existing = await clerkClient.users.getUserList({ emailAddress: [userEmail] })
 
   const clerkUser = existing.data.length > 0

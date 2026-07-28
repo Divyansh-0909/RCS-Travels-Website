@@ -1,5 +1,6 @@
 import { useSignIn, useAuth } from "@clerk/clerk-react";
 import { useState, useEffect, useRef } from "react";
+import { useLocation } from "react-router-dom";
 import { useViewNavigate } from "../hooks/useViewNavigate";
 import Input from "../components/ui/Input";
 import Button from "../components/ui/Button";
@@ -54,9 +55,13 @@ const SignUpPage = () => {
     return () => clearInterval(timer);
   }, [expiresIn]);
 
+  const location = useLocation();
+
   // Signing up is for a fresh number — don't pre-fill the persisted login number.
+  // The one exception is arriving from login's "no account" redirect, which hands
+  // the number over in route state: it was just typed and confirmed unclaimed.
   useEffect(() => {
-    setPhone("");
+    setPhone(location.state?.phone ?? "");
   }, []);
 
   function handleUsernameSubmit(e) {
@@ -132,7 +137,7 @@ const SignUpPage = () => {
   }
 
   const sendOtp = async () => {
-    const data = await api.sendOtp(phone);
+    const data = await api.sendOtp(phone, "signup");
     // 429 means an OTP went out less than 45s ago and is still valid (the backend
     // rejects before generating a new one) — e.g. after a page refresh. Advance to
     // the OTP step so that code can be used, instead of stranding the user here.
@@ -140,6 +145,14 @@ const SignUpPage = () => {
       setStep("otp");
       setResendIn(RESEND_COOLDOWN);
       setExpiresIn(OTP_TTL - RESEND_COOLDOWN); // true remaining TTL is unknown; assume the worst
+      return;
+    }
+    // This number already has an account — mirror of login's 404: no OTP went
+    // out, so flip the button into the Login escape hatch. The store keeps the
+    // typed number, which login reads, so it arrives prefilled over there.
+    if (data.status === 409) {
+      setError(data.error);
+      setShowLogin(true);
       return;
     }
     if (data.error) { setError(data.error); return; }
@@ -154,7 +167,7 @@ const SignUpPage = () => {
     try {
       setError(null);
       setResending(true);
-      const data = await api.sendOtp(phone);
+      const data = await api.sendOtp(phone, "signup");
       if (data.error) {
         setError(data.error);
         // The client timer normally prevents a 429, but clocks can disagree
@@ -175,7 +188,7 @@ const SignUpPage = () => {
   }
 
   const verifyOtp = async () => {
-    const data = await api.verifyOtp(phone, otp);
+    const data = await api.verifyOtp(phone, otp, "signup");
     if (data.error) {
       setError(data.error);
       await new Promise((resolve) => setTimeout(resolve, 2000));
