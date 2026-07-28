@@ -99,7 +99,7 @@ const LegalPage = () => {
 
                     {DRAFT && (
                         <p className="mb-8 rounded-2xl border border-[var(--color-negative)]/25 bg-[var(--color-negative)]/5 px-5 py-4 text-sm text-[var(--color-negative)] leading-relaxed">
-                            <span className="font-semibold">Draft — not yet reviewed by a lawyer.</span>{" "}
+                            <span className="font-semibold">Draft: not yet reviewed by a lawyer.</span>{" "}
                             Nothing on this page is in force. Every highlighted note below is a decision
                             still to be made. Set <span className="font-mono">DRAFT = false</span> in
                             constants/legal.js once it's signed off.
@@ -150,7 +150,7 @@ const LegalPage = () => {
                     <footer className="mt-12 pt-8 border-t border-[var(--background-primary)]/10">
                         <h4 className="text-lg font-medium text-[var(--text-foreground)] pb-2">Reaching a person</h4>
                         <p className="text-base text-[var(--background-primary)]/70 leading-[1.75] pb-4">
-                            Anything on this page, or anything that's gone wrong with a ride — we'd rather you asked.
+                            Anything on this page, or anything that's gone wrong with a ride: we'd rather you asked.
                         </p>
                         <div className="flex flex-wrap gap-2">
                             {[

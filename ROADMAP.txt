@@ -2,9 +2,21 @@ RCS TRAVELS — PROJECT ROADMAP
 ===============================
 
 IMPORTANT:
+- add the ability in AdminDashboard to change the fare of zones or outstation 
 - add the ability to scroll background panel on mobile
 - add the ability to remove a driver or verify a driver in the dashboard
-- Build legal page
+- !! GET THE LEGAL DOCS REVIEWED BY A LAWYER. Terms, Privacy, Refunds and Grievance
+  in frontend/src/constants/legal.js are a DRAFT written from what the code does,
+  not legal advice. Before they can count as published:
+    1. Replace every `[TO CONFIRM: …]` marker — registered business name and type,
+       address, effective date, and the rest. `grep "TO CONFIRM"` finds them all.
+       They render on the page in red on purpose, so nothing ships half-filled.
+    2. Lawyer reviews the copy, THEN set DRAFT = false in legal.js to drop the
+       banner. Do not flip it early — the banner is the only thing telling a
+       reader these terms aren't final.
+  The grievance officer entry needs a real name, email and phone: an intermediary
+  under the IT Rules has to publish one, and payment gateways ask for these pages
+  during onboarding.
 - Women get a safer road route for rides.
   WHY: uni is in a remote area; the shortest route passes through shady areas that
   girls avoid. A slightly longer highway route is safer. Goal: female users (or anyone
@@ -47,10 +59,8 @@ IMPORTANT:
   and the ₹150 lands ON TOP of that for formula-priced routes. Zone and fixed-table
   fares only take the flat ₹150.
 - Clear the hard coded data in the schema models
-- make the confirm pickup point page
 - Make the share location and share drivers details page
 - Before deploying whole code to github, verify from claude if that can cause security issue
-- Enable these API's: Routes API, Places API (New)
 - GOOGLE CLOUD CONSOLE — THERE ARE TWO KEYS AND THEY NEED OPPOSITE RESTRICTIONS.
   This is why they must stay separate: a key can only carry ONE application
   restriction type, so a single shared key could never be locked down for both.
@@ -78,21 +88,23 @@ IMPORTANT:
   determined attacker. The per-API quota is the actual ceiling — which is why the
   quotas already set in the console are the load-bearing control here.
 - AFTER YOU DEPLOY TO RENDER — none of these are optional:
-  - SET CORS_ORIGINS to the Vercel URL (e.g. https://rcstravels.vercel.app).
-    It is UNSET by default, which allows only the local Vite ports, so leaving it
-    blank means the deployed frontend is blocked by CORS on every single request.
-    Comma-separate if there is more than one origin (preview deployments).
-  - POINT THE KEEP-ALIVE CRON AT /health, not at the root. cron-job.org every
-    10 min against https://<render-app>/health. That endpoint now runs a
-    `select 1`, so the single ping keeps Render awake AND stops Supabase pausing
-    after 7 days idle. Pinging anything else keeps Render up but lets the
-    database pause.
-  - SET FCM_ALWAYS_ACCEPT=0. It is 1 locally. Left at 1 in production the first
-    eligible driver is auto-assigned with no notification round-trip at all.
-  - BACKEND KEY -> Application restrictions -> IP addresses, set to Render's
-    outbound IPs. (The frontend key must NOT get this — it is called from browsers,
-    so IP restriction would break every map. See the two-keys entry above.)
-    At that point the backend key is fully locked down.
+  - DONE 2026-07-28: CORS_ORIGINS set on Render to
+    https://www.rcstravels.co.in,https://rcstravels.co.in
+  - DONE 2026-07-28: keep-alive cron on cron-job.org, every 10 min against
+    https://rcs-travels-api.onrender.com/health (runs `select 1`, so the single
+    ping keeps Render awake AND stops Supabase pausing). UptimeRobot monitor
+    retired in its favour.
+  - DONE 2026-07-28: FCM_ALWAYS_ACCEPT not set on Render (unset = off in code).
+    BUT NOTE: production bookings still flow through the MOCK sendFCM coin flip —
+    real driver notifications are Phase 6.
+  - DEFERRED TO LAST (do after everything else is live and verified):
+    BACKEND KEY -> Application restrictions -> IP addresses, set to Render's 3
+    outbound IPs (Render dashboard -> service -> Connect). The frontend key must
+    NOT get this — browsers call it, IP restriction would break every map.
+    GOTCHA: local dev uses the same key, so IP-locking it breaks localhost fare
+    estimates. Plan: create a second key `rcs-server-key-dev` (same API
+    restrictions: Routes, Geocoding, Places New; no IP restriction) for
+    backend/.env, so the production key never leaves Render.
   - ADD THE VERCEL DOMAIN to the frontend key's HTTP referrer list, alongside the
     localhost entry added earlier.
   NOTE: the per-IP rate limiters keep their counters in process memory, so Render's
@@ -159,7 +171,6 @@ IMPORTANT:
   VehicleSelect CHARGES ₹150 AND CHANGES NOTHING about the road path. Do not ship the
   toggle until this is set. An unset waypoint is a deliberate no-op, not a broken route,
   so nothing crashes — it just silently isn't the feature. See the women-safety entry above.
-- !! RUN THE MIGRATION for the new `prefer_safe_route` column: cd backend && npm run db:migrate
 - Round-trip toggle on VehicleSelect — a SECOND SLIDER under "Share a ride?", not a button.
   It is a state that re-prices the three fare cards, exactly like `sharing`, so it should
   reuse that row pattern. Once it ships, drop "round trip" from the "Special requirements?"
@@ -203,19 +214,16 @@ Order: FINISH PAGES + RIDE LIFECYCLE  →  LINK REAL APIS  →  OPTIMIZE LAST.
    is broken. Can be built entirely against the existing stubs (no real APIs needed).
 
    Missing pages / screens:
-     - Pin-point pickup on a map (autocomplete + coords done; confirm screen
-       pending — needs Maps JS + reverse-geocode endpoint). DECIDED: happens
-       AFTER vehicle select, as a new "confirmPickup" step inside VehicleSelect
-       ("Book ride" -> pin confirm -> createBooking -> searching). Fixed center
-       pin, map drags underneath; confirm coords become the booking's
-       pickupLat/Lng.
-     - Route map on /book (VehicleSelect) — pickup→drop route polyline with
-       markers shown alongside the vehicle cards (Maps JS; polyline comes from
-       the existing Routes call by adding routes.polyline.encodedPolyline to
-       the field mask in rideEstimate.js)
-     - Map on TrackingPage — phase 1 now: static route map with pickup/drop
-       markers (same polyline). Phase 2 after driver app: live driver marker
-       fed by the 5s status poll + dead reckoning.
+     X Pin-point pickup on a map — BUILT as the "confirmLocation" step inside
+       VehicleSelect ("Book ride" -> pin confirm -> createBooking -> searching).
+       Fixed center pin, map drags underneath; confirmed coords become the
+       booking's pickupLat/Lng.
+     X Route map on /book (VehicleSelect) — BUILT. routes.polyline.encodedPolyline
+       is in the field mask, and showRouteView draws the pickup→drop polyline with
+       markers alongside the vehicle cards.
+     X Map on TrackingPage — phase 1 BUILT (static route map with pickup/drop
+       markers, same polyline). PHASE 2 STILL OPEN, waiting on the driver app:
+       live driver marker fed by the 5s status poll + dead reckoning.
 
 2. LINK GOOGLE / WHATSAPP / FCM  (do second — the "go-live" layer)
    Reason: needed to test with real people, NOT to build. Develop on stubs until then.
@@ -344,7 +352,7 @@ Files to create:
 Rule: Test every endpoint in Postman before touching any frontend.
 
 
-PHASE 3 — Customer Website (Day 4-7)
+X PHASE 3 — Customer Website (Day 4-7)
 --------------------------------------
 Goal: Build the pages that make the booking flow work end-to-end.
 
@@ -507,8 +515,9 @@ CURRENT STATUS
   [x] Prisma schema created with all 6 tables
   [x] Phase 1 — Foundation
   [x] Phase 2 — Core Backend APIs
-  [ ] Phase 3 — Customer Website
-  [ ] Phase 4 — Admin Dashboard
+  [x] Phase 3 — Customer Website
+  [~] Phase 4 — Admin Dashboard  (bookings + drivers lists with filters are in;
+      driver approve/reject/remove actions and fare editing are still missing)
   [ ] Phase 5 — Driver App
   [ ] Phase 6 — Notifications
   [ ] Phase 7 — Tracking + Polish
@@ -543,3 +552,265 @@ reload and change nothing server-side. Each needs an API endpoint + persistence
         lists are a PLACEHOLDER. The driver-facing ride route isn't finalised, so
         reconcile this panel with whatever the real driver payload exposes once
         that route exists (currently only customerPhone + trip locations are sent).
+
+
+LEARNING PLAN — FULL STACK OPEN PART 10 -> DRIVER APP (PHASE 5)
+----------------------------------------------------------------
+Decision: build the DRIVER APP as the Part 10 project instead of doing the course's
+own Rate Repository App. This REVERSES the earlier plan (course app first, driver app
+after). Reason: one build instead of two.
+
+Where the material lives: Part 10 has been MOVED off fullstackopen.com to
+  https://courses.mooc.fi/org/uh-cs/courses/full-stack-open-react-native
+Four chapters, exercises 10.1-10.27.
+
+  10a  Introduction     Expo init, emulator / Expo Go, ESLint, debugging   10.1-10.2
+  10b  Basics           core components, StyleSheet, theming, flexbox,
+                        routing (react-router-native), Formik, Yup,
+                        Platform.select                                    10.3-10.10
+  10c  Server           fetch/axios, GraphQL + Apollo, env vars,
+                        AsyncStorage + SecureStore, Context for DI         10.11-10.16
+  10d  Testing/extend   jest-expo, RN Testing Library, container pattern,
+                        cursor pagination, infinite scroll,
+                        Linking.openURL, debounced search, Alert           10.17-10.27
+
+CREDITS CAVEAT: the ECTS credits require submitting the actual Rate Repository App.
+Substituting the driver app means no certificate. Decide before starting, not at 10.20.
+
+
+CHAPTER -> DRIVER APP FEATURE
+
+10a -> Project scaffold.
+  Create driver-app/ at repo root with Expo, ESLint matching the existing config, run
+  on a real Android phone via Expo Go.
+  DO THIS EARLY: an EAS dev build (not Expo Go) is required the moment FCM or
+  background location go in. Set up the Expo account in 10a, not in month three.
+
+10b -> The whole UI shell. Highest-yield chapter.
+  - Theme module (colors / type scale) ported from the website's design language
+  - 10.3 / 10.5 repository FlatList        -> today's assigned rides list (pickup, drop,
+    time, fare, vehicle class). Same component shape, different card.
+  - 10.4 / 10.7 AppBar with tabs           -> bottom tabs: Rides / Earnings / Profile,
+    plus the Go Online / Go Offline toggle
+  - 10.6 routing                           -> screen navigation
+  - 10.8 / 10.9 Formik + Yup sign-in form  -> phone + OTP entry, and the driver
+    registration form (name, vehicle number, DL number)
+  - 10.10 Platform.select                  -> skip, Android-only app
+
+10c -> Backend spine, but HALF OF IT IS DEAD WEIGHT.
+  Sections 2, 3 and 7 are Apollo/GraphQL. Part 8 was skipped and RCS is REST — read
+  them, do not build them. Replace Apollo with axios against the existing Express API.
+  What actually transfers:
+  - the useRepositories custom-hook pattern -> useAssignedRides, useRideStatus,
+    useEarnings
+  - env vars section                        -> API base URL per environment.
+    GOTCHA: localhost on the phone is the PHONE. Dev needs the laptop's LAN IP.
+  - 10.14 AuthStorage class                 -> Clerk session token in expo-secure-store.
+    This exercise is literally a driver-app file.
+  - 10.15 / 10.16 sign-in / sign-out        -> OTP login, logout, and the
+    "logged in but verificationStatus = pending" gate (see Phase 4 verification flow)
+  - Context DI                              -> AuthContext + online/offline state
+
+10d -> Second half of the app.
+  - testing sections        -> ride card rendering, status-transition buttons, OTP form.
+    The container/presentational split (10.17) is what makes ride screens testable.
+  - 10.19 Linking.openURL   -> open Google Maps navigation to the pickup coords. This is
+    also where the SAFE_WAYPOINT deep link from the women-safety entry above gets built:
+    ...&waypoints=WAYPOINT_LATLNG. A real shipped feature, not a course toy.
+  - 10.20 FlatList + header -> ride detail screen: ride info as header, status timeline
+    / round-trip legs below
+  - 10.21 / 10.22 form + mutation + redirect -> accept / decline, mark cash collected,
+    complete ride
+  - 10.23 / 10.24 sorting + debounced filter -> driver marketplace browse, ride-history
+    search
+  - 10.26 Alert confirm + destructive action -> "Decline this ride?" confirmation
+  - 10.27 infinite scroll                    -> ride history, earnings history
+
+
+NOT IN PART 10 — roughly half the driver app. Budget time for these separately.
+There is NO location chapter in Part 10 at all; an earlier note claiming otherwise
+was wrong.
+
+  1. BACKGROUND GPS — expo-location, watchPositionAsync, background task. The 4s pings
+     with bearing + speedKmh (Phase 5 above). Hardest part of the app, zero coverage.
+  2. PUSH NOTIFICATIONS — FCM / expo-notifications, plus the 30s accept/decline window
+     while the app is backgrounded. Note the STILL OPEN two-phase notify->accept->claim
+     race in Phase 2 lands here.
+  3. REACT NAVIGATION — the course uses react-router-native; the real app wants React
+     Navigation (stack + tabs + deep link from a push). Course mentions it only under
+     "additional resources".
+  4. EAS BUILD / PLAY STORE — release, signing, OTA updates.
+  5. CAMERA / DOCUMENT UPLOAD — DL + Aadhar via expo-image-picker -> R2.
+  6. ANDROID PERMISSION HELL — background location, and OEM battery killers. Xiaomi /
+     Oppo / Vivo will kill the GPS service. This is a real shipping blocker, not a nit.
+  7. OFFLINE QUEUEING — driver loses signal mid-ride, requests must not just vanish.
+  8. i18next IN RN — works, but needs expo-localization and a different init than web.
+  9. MAPS RENDERING — react-native-maps, only if an in-app map is wanted over the
+     Google Maps hand-off in item 10.19 above.
+
+Expect the course to carry the first ~40% (shell, forms, lists, auth storage, testing).
+The GPS / push / permissions half comes from Expo docs.
+
+
+PHASE 8 — NEXT FEATURE WAVE (decided Jul 2026, not started)
+------------------------------------------------------------
+Decisions from the Jul 2026 planning sessions. Build order is dependency order:
+each numbered block unblocks the ones after it. Outstation is PARKED (see bottom).
+
+1. VEHICLE CLASSES (blocks round trip, sedan, marketplace matching)
+   vehicleType Int (seat count) -> class enum: hatchback | sedan | suv.
+   Sedan and hatchback are both 4 seats, so seat count cannot express sedan.
+   The three classes map 1:1 onto the fare keys ALREADY in zones.geojson — every
+   zone carries all three prices, so NO new fare data is needed. Ertiga and Innova
+   are both `suv` locally (same price, one "6 Seater" card); they only diverge on
+   outstation per-day rates, which are parked — an optional display-only
+   vehicleModel on Driver covers the difference until then.
+   Touches: VALID_VEHICLE_TYPES (bookings.js), VEHICLE_CLASS + formulaFare
+   (rideEstimate.js), driver filter + BOTH capacity writes (driverAssignment.js),
+   cancel restore (bookings.js), the z.literal(4/6) filters in types.ts, frontend
+   enums.ts / useData / VehicleSelect / NavBar / ManageAccount / AdminDashboard.
+   vehicleCapacity currently derives from vehicleType — needs a separate seats
+   field on Driver. Data migration for existing rows.
+
+2. ROUND TRIP (point-to-point only — outstation has no round-trip concept)
+   Price: roundTrip = base × 1.64 (18% off the doubled one-way), computed on the
+   fly from zone fares, rounded to nearest ₹50. NO stored overrides — the 18% was
+   fitted to Raju's three quoted RT prices (Shivaji 1970→1950, US Embassy
+   2150→2150, DU South 2100→2300, accepted). The rate card's "15%" is WRONG —
+   do not revert the multiplier.
+   The 1.64 applies to the BASE FARE ONLY. Extras per occurrence:
+     safer route ×2 (₹300), toll ×2 (both crossings), carrier ×1, airport ×1.
+   Model: TripGroup parent + two linked Booking legs (existing status machine,
+   tracking, cancellation untouched). Same driver takes both legs — one offer,
+   both legs claimed atomically. Billing split: full one-way on leg 1, remainder
+   on the return — so a cancelled return needs no refund unwinding.
+   Sharing and round trip are mutually exclusive.
+   Driver is freed between legs only if the gap > 1 hour; needs nextCommitmentAt
+   on Driver so an in-between ride can't overrun the return pickup.
+   Toggle lives on OnBoarding (needs the return-time picker there) — exact UX
+   still to be designed, DO NOT build the toggle before that's settled.
+   !! TWO LATENT BUGS TO FIX WHEN THIS LANDS: the carrier waiver
+   (rideEstimate.js) tests base+toll per LEG and the commission floor
+   (commission.js) is applied per ROW — both are specified as group-level.
+   Compute both on the TripGroup.
+
+3. SCHEDULING / OWNER-FIRST DISPATCH
+   Min scheduling lead: 45 min (was 30 — constant + copy in bookings.js,
+   DateTimeSelector ×2, legal.js, HelpPage, plus new OnBoarding copy; ONE
+   exported constant, not six literals).
+   Owner hold on scheduled bookings: Raju gets first right to assign his own
+   fleet. Hold = 60 min if pickup > 2 h away, else 15 min, clock starts at
+   booking confirmation. RIDE-NOW HAS NO HOLD — the on-spot path is unchanged.
+   Raju assigns over WhatsApp with a TAPPABLE flow (approved template with an
+   [Assign] button -> tap opens the 24h session window -> interactive list of
+   his registered drivers; templates cannot carry list menus, hence two steps).
+   Needs the inbound-WhatsApp webhook (signature-verified, idempotent — Meta
+   retries) + WhatsappSession state. Reply after the hold expired -> tell him
+   it's too late, never silence.
+   Fleet drivers are ordinary registered app drivers — if Raju misses the
+   window the booking falls to the normal open-pool assignment, so no quiet
+   hours needed. Manual assign must re-apply the verificationStatus=approved
+   check and use a status-guarded updateMany + capacity decrement (same shape
+   as claimBooking) — NOT the unguarded update driver.js accept still has.
+
+4. REMINDERS (needs a scheduler + real WhatsApp/FCM first)
+   T−30 min before pickup, to rider AND driver, on BOTH legs of a round trip.
+   Skip the return-leg reminder when the inter-leg gap < 30 min.
+   Status-aware copy: at T−30 a driver may not be assigned yet ("still
+   confirming your driver", not a countdown). Ride-now bookings get no reminder
+   (no scheduledAt) — intended. Idempotency stamps (reminderSentAt per
+   recipient per leg) so restarts / overlapping ticks can't double-send.
+   Scheduler choice (external cron vs Supabase pg_cron) STILL OPEN.
+
+5. PAYMENTS + MONTHLY ACCOUNTS (gateway choice still open — discussion pending)
+   Pay later to driver or to Raju. Dues cycle for EVERYONE: statement on the
+   1st of the month -> one week to pay -> one WhatsApp reminder per day (~7pm)
+   -> bookings blocked on day 8. Monthly-account users (picked by admin from
+   the user list; User.paymentTerms) skip the per-ride payment step entirely
+   and ride on account until the statement. NO credit limit (deliberate) and
+   NO late fee (dropped). Never block a return leg mid-trip (same TripGroup).
+   Driver's ride card for account customers must say "do not collect".
+   Statements can reuse pdfkit. WhatsApp is billed PER MESSAGE since Jul 2025
+   (~₹0.115/utility) — the free 24h session window only opens when the USER
+   messages us.
+
+6. DRIVER DOCUMENTS
+   RC + insurance + DL (replaces the dlDocUrl/aadharDocUrl columns with a
+   DriverDocument model: type, fileUrl, number, expiresAt, status,
+   rejectionReason — insurance and licences EXPIRE, one URL column can't
+   auto-suspend a lapsed driver). verificationStatus becomes derived.
+   Storage: SUPABASE STORAGE (decided — same project, signed URLs, private
+   bucket; free tier covers ~160 drivers at 3 docs each). COSTS.md still says
+   R2 — update it. Needs admin approve/reject mutations.
+
+7. DRIVER MARKETPLACE (needs payments + driver app)
+   A driver with an off-app booking he can't do posts it; another driver claims
+   it. Model 1 ONLY: the platform NEVER touches the fare itself (the real
+   customer still pays the claiming driver directly, exactly as before —
+   holding that fare would be payment-aggregator licensing).
+   !! MODEL CHANGED (28 Jul 2026, Raju's direction) — the deposit is no longer
+   refunded to the claimer. It is now PAID TO THE POSTER instead:
+     - POSTER sets the deposit amount himself when he posts the ride (his own
+       number, not a formula off the fare — validate deposit < fare at post
+       time, since no rational claimer would ever accept the reverse).
+     - CLAIMER pays that deposit by UPI to claim it.
+     - PLATFORM FEE = flat 15% of the deposit (Raju's number), no cap.
+     - MINIMUM DEPOSIT = ₹100 (Raju's number — supersedes Claude's earlier
+       ₹300 recommendation below the fee-vs-payout-cost line).
+     - ON COMPLETION: poster is paid `deposit − fee`. Claimer gets NOTHING
+       back — the deposit IS his payment to the poster for taking the job;
+       the platform's cut is its 10% of that payment.
+     - POSTER cancels the posting (even after the claimer already paid) ->
+       claimer gets the FULL deposit refunded, fee charged to nobody.
+     - CLAIMER cancels after accepting -> claimer forfeits ONLY the fee, gets
+       `deposit − fee` back, poster gets nothing (ride never happened for him
+       either).
+   !! ₹100 FLOOR IS THIN AT THE BOTTOM OF THE RANGE. Fee on a ₹100 deposit is
+   ₹15; the RazorpayX payout to the poster (~₹5–6, unavoidable since every
+   completed ride pays a DIFFERENT poster — payouts can no longer collapse
+   into one weekly transfer the way "pay Raju" alone could) plus WhatsApp
+   notifications for claim + completion can consume all of that ₹15 or push
+   the ride into a net loss. This was flagged to Raju as a trade-off; ₹100 is
+   his explicit choice, not a bug — but do not "fix" it by silently raising
+   the floor. If per-ride losses become visible in practice, that's the
+   trigger to revisit, not a hunch beforehand.
+   !! COST-RECOVERY GOAL NO LONGER APPLIES CLEANLY — the old 30%-of-deposit
+   fee was sized to recover the project's ~₹620–800/mo running costs from
+   marketplace volume alone. That link is now broken: the fee is fixed at 10%
+   by mandate, and the deposit is poster-chosen rather than tied to the fare,
+   so revenue is no longer a predictable function of ride volume. Don't
+   assume this feature funds anything now — track it separately.
+   NO DRIVER WALLET (still decided) — this is collect-and-settle per ride, on
+   UPI throughout, not a maintained balance.
+   RESOLVED (was open, Raju's direction closes it): yes, the poster gets paid.
+
+8. AIRPORT TERMINALS
+   T2 is already covered by the T3 circle (they're ~100 m apart) — only T1
+   needs adding to IGI_TERMINALS (fareZones.js), with a TIGHTER radius
+   (~1.2 km; 2.5 km would reach Palam/Sagarpur/Dabri). READ THE T1 COORDINATE
+   OFF GOOGLE MAPS — two guessed coordinates have already been wrong; verify
+   with kmBetween that T1 -> Sagarpur > 1.5 km.
+   INTER-TERMINAL TRIPS are standalone fixed fares (T1<->T3 200, T2<->T1 200,
+   T2<->T3 100): both endpoints inside terminals -> pair-price lookup, NO
+   airport surcharge, NO marketFare. Telling T2 from T3 needs the Places
+   address string, not a radius. Still open with Raju: is toll/parking inside
+   those prices?
+
+SERVER-SIDE FARE RECOMPUTATION (belongs to blocks 2+5, listed once):
+   POST /api/bookings trusts the client's fare (validates only "positive
+   number"). Before payments or any new money-bearing option ships, the server
+   must recompute (or verify a signed estimate). The flat() clamps on the
+   pass-through charges are a stopgap, not the fix.
+
+OUTSTATION — PARKED until the driver app exists. When it returns: per-day
+   packages (flyer rates), Wagon R rate + >250 km/day rate + calendar-vs-24h
+   day + plain/hills split still unanswered; Ertiga/Innova split into separate
+   classes; plain-vs-hills via Elevation API (outstation only, cached by
+   destination, counted in ApiUsage). isOutstation stays on Booking meanwhile.
+
+OPEN QUESTIONS LOG (as of 28 Jul 2026)
+   For Raju: (a) 5% commission / ₹800 floor redistribution vs his ₹25-₹100
+   sheet — confirm; (b) inter-terminal prices: toll/parking included?;
+   (c) marketplace: does the posting driver get a share?
+   For us: round-trip toggle UX on OnBoarding; scheduler mechanism; payment
+   gateway (Razorpay vs Cashfree — discussion pending).

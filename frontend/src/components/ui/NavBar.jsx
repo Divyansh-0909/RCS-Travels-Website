@@ -238,7 +238,7 @@ const NavBar = ({ invert = false, hideExpanded = false }) => {
     )
 
     return (
-        <div className={`flex flex-col justify-center items-center ${invert ? "bg-[var(--background-primary)]" : "bg-[var(--foreground)]"} w-[300px] sm:w-[700px] h-[40px] sm:h-[50px] gap-1 px-2 py-6 rounded-xl shadow-[8px_10px_0_rgba(0,0,0,0.25)] outline-1 outline-gray-400`}>
+        <div className={`flex flex-col justify-center items-center ${invert ? "bg-[var(--background-primary)]" : "bg-[var(--foreground)]"} w-[310px] sm:w-[700px] h-[40px] sm:h-[50px] gap-1 px-2 py-6 rounded-xl shadow-[8px_10px_0_rgba(0,0,0,0.25)] outline-1 outline-gray-400`}>
             <div className={`flex justify-between items-center ${invert ? "text-[var(--text)]" : "text-[var(--text-foreground)]"} [&>*]:select-none w-full sm:gap-24 px-1`}>
                 <h3 onClick={() => navigate('/')} className={`cursor-pointer pl-1 sm:opacity-[0.85] transition-opacity duration-300 opacity-[1] hover:opacity-[1]`}><span className='font-semibold'>RCS</span> travels</h3>
 
