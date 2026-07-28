@@ -6,7 +6,7 @@ import LoginPage from './pages/LoginPage'
 import './index.css'
 import App from './App'
 import {ThemeProvider} from './context/ThemeContext';
-import ErrorBoundary from './components/ErrorBoundary';
+import ErrorBoundary, { RouteErrorBoundary } from './components/ErrorBoundary';
 import OnBoarding from './pages/OnBoarding';
 import VehicleSelect from './pages/VehicleSelect';
 import SignUpPage from './pages/SignUpPage';
@@ -18,6 +18,7 @@ import SafetyPage from './pages/SafetyPage';
 import AdminDashboard from './pages/AdminDashboard';
 import HelpPage from './pages/HelpPage';
 import RideCancelledToast from './components/ui/RideCancelledToast';
+import RefreshNotice from './components/ui/RefreshNotice';
 import DevPreview from './pages/DevPreview';
 import PageMeta from './components/PageMeta';
 import NotFound from './pages/NotFound';
@@ -34,6 +35,11 @@ if (!PUBLISHABLE_KEY) {
 // sets that route's title/description from constants/pageMeta.js.
 const router = createBrowserRouter([{
   element: <PageMeta />,
+  // A data router swallows throws from its own routes and renders React
+  // Router's built-in "Unexpected Application Error!" page, which never reaches
+  // the <ErrorBoundary> below. Since every page is inside the router, this is
+  // the boundary that actually fires.
+  errorElement: <RouteErrorBoundary />,
   children: [
   {
     path: "/",
@@ -107,10 +113,13 @@ createRoot(document.getElementById('root')).render(
   <StrictMode>
     <ClerkProvider publishableKey={PUBLISHABLE_KEY}>
       <ThemeProvider>
-        {/* <ErrorBoundary> */}
+        <ErrorBoundary>
           <RouterProvider router={router} />
           <RideCancelledToast />
-        {/* </ErrorBoundary> */}
+          {/* Global, like the toast above: any page can raise a stale-data
+              notice through the useRefreshNotice store without threading props */}
+          <RefreshNotice />
+        </ErrorBoundary>
       </ThemeProvider>
     </ClerkProvider>
   </StrictMode>,

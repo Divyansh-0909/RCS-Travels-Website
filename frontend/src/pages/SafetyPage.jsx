@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import Icon from '@mdi/react';
 import { mdiCheck, mdiClose, mdiPencil, mdiPlus, mdiPhone } from '@mdi/js';
 import { useData } from "../hooks/useData";
@@ -8,6 +8,7 @@ import SettingRow from "../components/ui/SettingRow";
 import CircleIconButton from "../components/ui/CircleIconButton";
 import Toggle from "../components/ui/Toggle";
 import { supportTel } from "../constants/support";
+import { useRefreshNotice } from "../hooks/useRefreshNotice";
 
 const items = ["Emergency contact", "Live location", "Helpline"]
 
@@ -23,15 +24,35 @@ const SafetyPage = () => {
     const setEmergencyContact = useData(state => state.setEmergencyContact)
     const [selected, setSelected] = useState(0)
     const { getMe, updateEmergencyContact: updateEmergencyContactApi } = useApi()
+    const notifyRefreshFailed = useRefreshNotice(state => state.notifyRefreshFailed)
+    const clearRefreshNotice = useRefreshNotice(state => state.clearRefreshNotice)
+    const mountedRef = useRef(true)
 
     // The contact lives server-side; hydrate it so this page shows the real value.
-    useEffect(() => {
-        let active = true
-        getMe().then(me => {
-            if (!active || !me || me.error) return
+    // On failure the persisted copy stays on screen, so this raises the ambient
+    // notice rather than replacing the page — but it must not stay silent: this
+    // is the number we call if something goes wrong on a ride, and someone who
+    // just changed it elsewhere needs to know they may be looking at the old one.
+    async function hydrateContact({ isRetry = false } = {}) {
+        try {
+            const me = await getMe()
+            if (!mountedRef.current) return
+            if (!me || me.error) throw new Error(me?.error || "Request failed")
             if (me.emergencyContact) setEmergencyContact(me.emergencyContact)
-        }).catch(() => { })
-        return () => { active = false }
+            if (isRetry) clearRefreshNotice()
+        } catch {
+            if (!mountedRef.current) return
+            notifyRefreshFailed(
+                "Couldn't refresh your safety details. Showing the last saved copy.",
+                () => hydrateContact({ isRetry: true }),
+            )
+        }
+    }
+
+    useEffect(() => {
+        mountedRef.current = true
+        hydrateContact()
+        return () => { mountedRef.current = false; clearRefreshNotice() }
     }, [])
 
     const [editingContact, setEditingContact] = useState(false)

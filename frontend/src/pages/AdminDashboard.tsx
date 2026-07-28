@@ -7,6 +7,8 @@ import { useExitAnim } from "../hooks/useExitAnim";
 import AdminDashboardSkeleton from "../components/AdminDashboardSkeleton";
 import { vehicleLabel, statusChip, splitAddress, displayPhone, formatDateTime, CopyBtn } from "../components/ui/bookingDisplay";
 import Button from "../components/ui/Button";
+import EmptyState from "../components/ui/EmptyState";
+import FailureState from "../components/ui/FailureState";
 import Chips, { filterLabel, filterField } from "../components/ui/Chips";
 import { VerificationStatus, BookingStatus, CancelledBy, BookingSource } from "../types/enums";
 
@@ -216,8 +218,47 @@ const AdminDashboard = () => {
             setPage(1) // page effect refetches with the current search state
             return
         }
+        refetch()
+    }
+
+    // Re-runs the active tab's request on the CURRENT page — what the failure
+    // state's retry needs, as opposed to runSearch, which resets to page 1.
+    function refetch() {
         selected === 0 ? searchBooking() : selected === 1 ? searchDrivers() : searchUsers()
     }
+
+    // Whether the empty result is "there is nothing here" or "nothing matched
+    // what you asked for" — the two need different copy and different ways out.
+    // Booleans are compared against null: `isOnline === false` (Offline) and
+    // `isOutstation === false` are real filters, not absent ones.
+    const tabFiltersActive = selected === 0
+        ? !!(status || vehicleType || startDate || endDate || source || cancelledBy) || isOutstation !== null
+        : selected === 1
+            ? !!(vehicleType || vehicleNumber || driverPhone || verificationStatus || startDate || endDate) || isOnline !== null
+            : !!(gender || userPhone || startDate || endDate)
+    const filtersActive = !!searchParam || tabFiltersActive
+
+    // Clearing filters is only an escape route when some are set; searching is
+    // handled by clearing the box, so that gets its own action below.
+    const emptyEscape = tabFiltersActive
+        ? { label: "Clear all filters", onClick: clearFilters }
+        : searchParam
+            ? { label: "Clear search", onClick: () => setSearch("") }
+            : undefined
+
+    const entity = selected === 0 ? "bookings" : selected === 1 ? "drivers" : "users"
+
+    // Copy follows whichever narrowed the list, so a search-only miss isn't told
+    // to "drop a filter" it never set. Defined once — all three tabs share it.
+    const emptyCopy = tabFiltersActive
+        ? {
+            title: `No ${entity} match those filters`,
+            message: "Try widening the date range, or drop a filter and search again.",
+        }
+        : {
+            title: `No ${entity} match your search`,
+            message: "Check the spelling, or try a phone number or ID instead.",
+        }
 
     // Debounced search: fire 400ms after typing stops; 1-char input is skipped.
     useEffect(() => {
@@ -396,10 +437,29 @@ const AdminDashboard = () => {
                 {loading ? (
                     <AdminDashboardSkeleton variant={selected === 0 ? "bookings" : selected === 1 ? "drivers" : "users"} />
                 ) : error ? (
-                    <h4 className="text-gray-500 py-6">{error}</h4>
+                    <FailureState
+                        tone="light"
+                        title={`Couldn't load ${entity}`}
+                        detail={error}
+                        onRetry={refetch}
+                    />
                 ) : selected === 0 ? (
                     bookings.length === 0 ? (
-                        <h4 className="text-gray-500 py-6">No bookings found</h4>
+                        filtersActive ? (
+                            <EmptyState
+                                tone="light"
+                                glyph="search"
+                                title={emptyCopy.title}
+                                message={emptyCopy.message}
+                                secondaryAction={emptyEscape}
+                            />
+                        ) : (
+                            <EmptyState
+                                tone="light"
+                                title="No bookings yet"
+                                message="Rides booked from the website, over WhatsApp, or by an admin all land here."
+                            />
+                        )
                     ) : (
                         (order ? bookings : [...bookings].reverse()).map((booking) => {
                             const [pickupMain, pickupRest] = splitAddress(booking.pickupAddress)
@@ -476,7 +536,21 @@ const AdminDashboard = () => {
                     )
                 ) : selected === 1 ? (
                     drivers.length === 0 ? (
-                        <h4 className="text-gray-500 py-6">No drivers found</h4>
+                        filtersActive ? (
+                            <EmptyState
+                                tone="light"
+                                glyph="search"
+                                title={emptyCopy.title}
+                                message={emptyCopy.message}
+                                secondaryAction={emptyEscape}
+                            />
+                        ) : (
+                            <EmptyState
+                                tone="light"
+                                title="No drivers registered yet"
+                                message="Drivers appear here once they sign up and submit their vehicle details for approval."
+                            />
+                        )
                     ) : (
                         drivers.map((driver) => (
                             <div key={driver.id} className="cursor-default bg-[var(--foreground-muted)] py-5 px-5 sm:py-6 sm:px-8 rounded-2xl my-4 sm:my-6 flex flex-col justify-center items-start gap-4">
@@ -502,7 +576,21 @@ const AdminDashboard = () => {
                     )
                 ) : (
                     users.length === 0 ? (
-                        <h4 className="text-gray-500 py-6">No users found</h4>
+                        filtersActive ? (
+                            <EmptyState
+                                tone="light"
+                                glyph="search"
+                                title={emptyCopy.title}
+                                message={emptyCopy.message}
+                                secondaryAction={emptyEscape}
+                            />
+                        ) : (
+                            <EmptyState
+                                tone="light"
+                                title="No users yet"
+                                message="Anyone who signs up on the website or books over WhatsApp appears here."
+                            />
+                        )
                     ) : (
                         users.map((user) => (
                             <div key={user.id} className={`${user.deletedAt ? "opacity-60" : ""} cursor-default bg-[var(--foreground-muted)] py-5 px-5 sm:py-6 sm:px-8 rounded-2xl my-4 sm:my-6 flex flex-col justify-center items-start gap-4`}>

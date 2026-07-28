@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState } from "react";
+import Icon from "@mdi/react";
+import { mdiAlertCircleOutline } from "@mdi/js";
 import Skeleton from "./Skeleton";
+import googleLogo from "../../assets/google-logo.webp";
+import googleAttribution from "../../assets/google-ad.webp";
 
 // Usage:
 //   <GoogleMap center={{ lat, lng }} zoom={17} onIdle={(c) => ...} className="...">
@@ -59,6 +63,10 @@ const GoogleMap = ({ center, zoom = 16, onMapReady, onIdle, className, children 
     // covers the map with a shimmer until Google reports the first tiles
     // painted — otherwise tiles pop in over white
     const [ready, setReady] = useState(tilesEverLoaded);
+    // Maps JS never loaded (blocked, offline, bad key). The container used to be
+    // left as a bare grey rectangle, which reads as a broken page rather than a
+    // missing map.
+    const [loadFailed, setLoadFailed] = useState(false);
     // ref so the single idle listener always calls the latest callback without
     // re-running the mount effect
     const onIdleRef = useRef(onIdle);
@@ -77,6 +85,7 @@ const GoogleMap = ({ center, zoom = 16, onMapReady, onIdle, className, children 
                 // drop the shimmer so the container shows its land colour
                 // instead of pretending to still be loading
                 setReady(true);
+                setLoadFailed(true);
                 return;
             }
             if (cancelled || !hostRef.current) return;
@@ -139,10 +148,53 @@ const GoogleMap = ({ center, zoom = 16, onMapReady, onIdle, className, children 
         <div className={`${className ?? ""} overflow-hidden`}>
             <div ref={hostRef} className="absolute inset-0" />
             {children}
+            {/* Branding the SDK would normally draw itself — disableDefaultUI
+                strips the logo and the data attribution along with the buttons,
+                so they're redrawn here. Phones only: there the map is the page
+                background and the sheets cover the bottom corners where Google
+                puts them, so they move to the top row instead — logo left,
+                attribution right, the same pairing Google ships. The
+                attribution hugs its corner with no inset — Google's own chrome
+                runs it flush to the edge.
+                Hidden until the tiles are up (and dropped entirely if the
+                script never loads): branding over a shimmer or over the
+                "Map unavailable" card would be crediting a map that isn't
+                there. */}
+            {ready && !loadFailed && (
+                <>
+                    <img
+                        src={googleLogo}
+                        alt="Google"
+                        className="absolute top-1 left-3 z-10 sm:hidden w-[58px] h-auto pointer-events-none"
+                    />
+                    <img
+                        src={googleAttribution}
+                        alt="Map data ©2026"
+                        className="absolute top-0 right-0 z-10 sm:hidden w-[150px] h-auto pointer-events-none"
+                    />
+                </>
+            )}
             {/* above children too: a pin floating on a shimmer reads as broken */}
             {!ready && (
                 <div className="absolute inset-0 z-20" style={{ background: MAP_LAND_COLOR }}>
                     <Skeleton className="w-full h-full" rounded="rounded-none" />
+                </div>
+            )}
+            {/* Names the gap rather than filling it. pointer-events-none on
+                purpose: on phones this sits behind the booking sheets, and the
+                map failing must never intercept a tap meant for the panel. The
+                trip itself is unaffected, and the copy says so — every screen
+                that shows a map states the same facts in text beside it. */}
+            {loadFailed && (
+                <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-1.5 px-6 text-center pointer-events-none" style={{ background: MAP_LAND_COLOR }}>
+                    <Icon path={mdiAlertCircleOutline} size={1} className="text-[var(--text-muted)]/70" />
+                    <h4 className="text-sm sm:text-base font-medium text-[var(--text)]/80">Map unavailable</h4>
+                    {/* No "below": this panel sits beside the content on
+                        desktop and behind the sheet on phones, so the copy
+                        can't name a direction. */}
+                    <p className="text-xs sm:text-sm leading-snug text-[var(--text-muted)] max-w-[28ch]">
+                        Your ride is unaffected. Your driver and route details are live.
+                    </p>
                 </div>
             )}
         </div>

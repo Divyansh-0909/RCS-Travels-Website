@@ -19,6 +19,7 @@ import { useExitAnim } from "../hooks/useExitAnim";
 import { useSignIn, useAuth, useUser } from "@clerk/clerk-react";
 import RoutePanel from "../components/ui/RoutePanel";
 import { statusLabels } from "../constants/statusLabels";
+import { useRefreshNotice } from "../hooks/useRefreshNotice";
 
 // ---- Shared layout + type scale -------------------------------------------
 // Same tokens as VehicleSelect / TrackingPage / RideDetails. 377px is the width
@@ -45,6 +46,10 @@ function useAddressSuggestions(value, setValue, setCoords, api, exclusiveRef, cl
   const recentPlaces = useData(state => state.recentPlaces);
   const addRecentPlace = useData(state => state.addRecentPlace);
   const [googleSuggestions, setGoogleSuggestions] = useState([]);
+  // Set when the lookup itself failed, as opposed to succeeding with no matches.
+  // The panel used to close on both, so a typo and a dead connection looked the
+  // same: the suggestions simply disappeared as you typed.
+  const [lookupError, setLookupError] = useState(null);
   const [expanded, setExpanded] = useState(false);
   const justSelectedRef = useRef(false);
   // input -> fetched suggestions; repeat queries skip the API and the debounce
@@ -93,27 +98,37 @@ function useAddressSuggestions(value, setValue, setCoords, api, exclusiveRef, cl
     if (!value || value.trim().length < 3) {
       // keep the panel open — while focused it now shows recents instead
       setGoogleSuggestions([]);
+      setLookupError(null);
       return;
     }
     const cacheKey = value.trim().toLowerCase();
     const cached = cacheRef.current.get(cacheKey);
     if (cached) {
       setGoogleSuggestions(cached);
-      if (cached.length > 0) open(); else setExpanded(false);
+      setLookupError(null);
+      open(); // open even at zero rows — the panel says "no matches" itself now
       return;
     }
     const timer = setTimeout(async () => {
-      const data = await api.placesAutoComplete(value);
+      let data;
+      try {
+        data = await api.placesAutoComplete(value);
+      } catch {
+        // request() only maps HTTP errors to { error }; a network failure rejects
+        data = { error: "network" };
+      }
       if (data.error) {
         // errors are not cached — the next keystroke should retry
         setGoogleSuggestions([]);
-        setExpanded(false);
+        setLookupError("Couldn't load suggestions. You can still type the address in full.");
+        open();
         return;
       }
       const suggestions = data.suggestions ?? [];
       cacheRef.current.set(cacheKey, suggestions);
+      setLookupError(null);
       setGoogleSuggestions(suggestions);
-      if (suggestions.length > 0) open(); else setExpanded(false);
+      open();
     }, 300);
     return () => clearTimeout(timer);
   }, [value]);
@@ -133,21 +148,23 @@ function useAddressSuggestions(value, setValue, setCoords, api, exclusiveRef, cl
   }
 
   function onFocus() {
-    if (items.length) open();
+    // Also opens for a typed query with nothing to show, so returning to the
+    // field re-states why it is empty instead of silently showing nothing.
+    if (items.length || typed) open();
   }
 
   function onBlur() {
     setExpanded(false);
   }
 
-  return { items, dropdown, select, onFocus, onBlur };
+  return { items, dropdown, select, onFocus, onBlur, lookupError, typed };
 }
 
 // Suggestion panel for an address input. `above` opens it over the input and
 // reverses rows so the best match stays nearest the input. onMouseDown is
 // prevented panel-wide: blur fires before click and would close the panel
 // before a row's onClick could run.
-const SuggestionDropdown = ({ anim, items, onSelect, above = false }) => {
+const SuggestionDropdown = ({ anim, items, onSelect, above = false, error = null, typed = false }) => {
   const panelRef = useRef(null);
   const itemsKey = items.map(i => i.id).join("|");
 
@@ -157,7 +174,33 @@ const SuggestionDropdown = ({ anim, items, onSelect, above = false }) => {
       panelRef.current.scrollTop = panelRef.current.scrollHeight;
   }, [above, itemsKey, anim.mounted]);
 
-  if (!anim.mounted || items.length === 0) return null;
+  if (!anim.mounted) return null;
+
+  // Nothing to list. A typed query still gets a panel — saying "no matches" or
+  // why the lookup failed — but an untouched field with no recents stays silent
+  // rather than popping an empty box on focus.
+  if (items.length === 0) {
+    if (!typed && !error) return null;
+    return (
+      <div
+        onMouseDown={(e) => e.preventDefault()}
+        className={`${anim.closing ? "animate-dropdown-out" : "animate-dropdown"
+          } absolute z-10 ${above ? "bottom-13 sm:bottom-15 origin-bottom" : "top-13 sm:top-15"} sm:ml-7 scale-[1] sm:scale-[1.3]
+          w-[290px] border border-[var(--foreground)]/15 bg-[var(--background-muted)]
+          rounded-[16px] shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)]`}
+      >
+        <div className="px-4 py-3 text-left">
+          <h4 className="text-sm text-[var(--text)]">
+            {error ? "Suggestions unavailable" : "No matching places"}
+          </h4>
+          <p className="text-xs leading-snug text-[var(--text-muted)] mt-0.5">
+            {error || "Check the spelling, or type the address in full and we'll find it."}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   const rows = above ? [...items].reverse() : items;
   return (
     <div
@@ -235,6 +278,11 @@ const OnBoarding = () => {
   const [showForm, setShowForm] = useState(false);
   const api = useApi();
   const navigate = useViewNavigate();
+  const notifyRefreshFailed = useRefreshNotice(state => state.notifyRefreshFailed);
+  const clearRefreshNotice = useRefreshNotice(state => state.clearRefreshNotice);
+  // Guards the active-booking hydration (and its retry) against landing after
+  // this page is gone.
+  const hydrationCancelledRef = useRef(false);
 
   // Copy the active booking into the shared tracking fields and open tracking.
   function openActiveBooking() {
@@ -262,34 +310,57 @@ const OnBoarding = () => {
 
   // Hydrate activeBooking so the trip cards survive reloads. Deliberately
   // leaves the form fields alone — they belong to the new-booking form.
+  //
+  // A failure here is not cosmetic: with no trip card the page shows only the
+  // booking form, so a rider who already has a live ride can't tell it exists
+  // and may book a second one. It can't take the page over either — the form
+  // underneath is perfectly usable — so it raises the ambient notice.
+  async function hydrateActiveBooking({ isRetry = false } = {}) {
+    let data;
+    try {
+      data = await api.getMyBookings();
+    } catch {
+      data = { error: "Couldn't reach the server" };
+    }
+    if (hydrationCancelledRef.current) return;
+    if (data?.error) {
+      notifyRefreshFailed(
+        "Couldn't check whether you have a ride booked.",
+        () => hydrateActiveBooking({ isRetry: true }),
+      );
+      return;
+    }
+    if (isRetry) clearRefreshNotice();
+    if (!data?.bookings) return;
+    const active = data.bookings.find(b => ACTIVE_STATUSES.includes(b.status));
+    if (!active) return;
+    setActiveBooking({
+      id: active.id,
+      code: active.bookingCode,
+      status: active.status,
+      pickupAddress: active.pickupAddress,
+      dropAddress: active.dropAddress,
+      pickupLat: active.pickupLat,
+      pickupLng: active.pickupLng,
+      dropLat: active.dropLat,
+      dropLng: active.dropLng,
+      fare: active.fare,
+      scheduledAt: active.scheduledAt ? new Date(active.scheduledAt) : null,
+    });
+  }
+
   useEffect(() => {
     if (!isSignedIn) return;
-    let cancelled = false;
+    hydrationCancelledRef.current = false;
+    // Recents failing stays silent on purpose: the field still works, it just
+    // opens without history, and there is nothing for the rider to act on.
     (async () => {
-      const data = await api.getRecentPlaces();
-      if (cancelled || data?.error || !data?.places) return;
+      const data = await api.getRecentPlaces().catch(() => ({ error: "network" }));
+      if (hydrationCancelledRef.current || data?.error || !data?.places) return;
       mergeRecentPlaces(data.places);
     })();
-    (async () => {
-      const data = await api.getMyBookings();
-      if (cancelled || data?.error || !data?.bookings) return;
-      const active = data.bookings.find(b => ACTIVE_STATUSES.includes(b.status));
-      if (!active) return;
-      setActiveBooking({
-        id: active.id,
-        code: active.bookingCode,
-        status: active.status,
-        pickupAddress: active.pickupAddress,
-        dropAddress: active.dropAddress,
-        pickupLat: active.pickupLat,
-        pickupLng: active.pickupLng,
-        dropLat: active.dropLat,
-        dropLng: active.dropLng,
-        fare: active.fare,
-        scheduledAt: active.scheduledAt ? new Date(active.scheduledAt) : null,
-      });
-    })();
-    return () => { cancelled = true; };
+    hydrateActiveBooking();
+    return () => { hydrationCancelledRef.current = true; clearRefreshNotice(); };
   }, [isSignedIn]);
 
   // One autocomplete instance per address field; the shared ref keeps at most
@@ -669,6 +740,8 @@ const OnBoarding = () => {
                     items={pickupAutocomplete.items}
                     onSelect={pickupAutocomplete.select}
                     above={isMobile}
+                    error={pickupAutocomplete.lookupError}
+                    typed={pickupAutocomplete.typed}
                   />
                 </div>
 
@@ -720,6 +793,8 @@ const OnBoarding = () => {
                     items={dropAutocomplete.items}
                     onSelect={dropAutocomplete.select}
                     above
+                    error={dropAutocomplete.lookupError}
+                    typed={dropAutocomplete.typed}
                   />
                 </div>
 

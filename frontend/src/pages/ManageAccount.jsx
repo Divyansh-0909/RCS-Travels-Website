@@ -11,7 +11,10 @@ import AccountLayout from "../components/ui/AccountLayout";
 import SettingRow from "../components/ui/SettingRow";
 import CircleIconButton from "../components/ui/CircleIconButton";
 import ErrorMark from "../components/illustrations/ErrorMark";
+import EmptyState from "../components/ui/EmptyState";
+import FailureState from "../components/ui/FailureState";
 import RideHistorySkeleton from "../components/RideHistorySkeleton";
+import { useRefreshNotice } from "../hooks/useRefreshNotice";
 import FourSeaterCar from "../assets/4-seater-bottom-left.webp"
 import SixSeaterCar from "../assets/6-seater-bottom-left.webp"
 import { vehicleLabel, statusChip, splitAddress, displayPhone, formatDateTime, CopyBtn } from "../components/ui/bookingDisplay";
@@ -82,21 +85,44 @@ const ManageAccount = () => {
     const rideFilterDropdown = useExitAnim(rideFilterExpand, 300)
     const bookingId = useData(state => state.bookingId)
     const setBookingId = useData(state => state.setBookingId)
+    const notifyRefreshFailed = useRefreshNotice(state => state.notifyRefreshFailed)
+    const clearRefreshNotice = useRefreshNotice(state => state.clearRefreshNotice)
+    // Guards the profile refresh (and its retry) against landing after unmount.
+    const mountedRef = useRef(true)
     const { getMe, updateGender: updateGenderApi, updateEmergencyContact: updateEmergencyContactApi, updateDOB: updateDOBApi, deleteMe, logout, downloadMyData, getMyBookings, cancelBooking } = useApi()
 
     // Clear any tab restore left over from the post-cancel reload.
     useEffect(() => { sessionStorage.removeItem("manageAccountTab") }, [])
 
-    useEffect(() => {
-        let active = true
-        getMe().then(me => {
-            if (!active || !me || me.error) return
+    // Refresh the profile from the server. The store already holds a persisted
+    // copy, so the fields below stay filled and usable when this fails — which
+    // is why it raises the ambient notice rather than a FailureState. Silently
+    // swallowing it, as this used to, left the account page showing stale values
+    // with no hint that the server was ever unreachable.
+    async function hydrateProfile({ isRetry = false } = {}) {
+        try {
+            const me = await getMe()
+            if (!mountedRef.current) return
+            if (!me || me.error) throw new Error(me?.error || "Request failed")
             if (me.name) setUsername(me.name)
             if (me.gender) setGender(me.gender)
             if (me.dob) setDOB(me.dob)
             if (me.emergencyContact) setEmergencyContact(me.emergencyContact)
-        }).catch(() => { })
-        return () => { active = false }
+            if (isRetry) clearRefreshNotice()
+        } catch {
+            if (!mountedRef.current) return
+            notifyRefreshFailed(
+                "Couldn't refresh your profile. Showing your last saved details.",
+                () => hydrateProfile({ isRetry: true }),
+            )
+        }
+    }
+
+    useEffect(() => {
+        mountedRef.current = true
+        hydrateProfile()
+        // The notice holds a closure over this page, so it must not outlive it.
+        return () => { mountedRef.current = false; clearRefreshNotice() }
     }, [])
 
     const rideLimit = 10
@@ -105,6 +131,14 @@ const ManageAccount = () => {
     // Backend rejects 1-char searches (min 2), so send null below that
     const rideSearchParam = rideSearch.trim().length >= 2 ? rideSearch.trim() : null
     const rideFiltersActive = !!(rideSearchParam || rideStatus || rideVehicleType || rideStartDate || rideEndDate)
+
+    // Clearing filters is no help when the only thing narrowing the list is the
+    // search box, so the escape route matches whichever is actually set.
+    const rideEmptyEscape = (rideStatus || rideVehicleType || rideStartDate || rideEndDate)
+        ? { label: "Clear filters", onClick: clearRideFilters }
+        : rideSearchParam
+            ? { label: "Clear search", onClick: () => setRideSearch("") }
+            : undefined
 
     async function searchRides(e, overrides = {}) {
         e?.preventDefault()
@@ -393,7 +427,7 @@ const ManageAccount = () => {
                                 {expanded === "deactivate" && (
                                     <div className="w-full flex flex-col gap-4 mb-1">
                                         <ul className="list-disc pl-5 flex flex-col gap-2 text-left text-sm text-[var(--foreground-muted)]/70 marker:text-[var(--foreground-muted)]/40">
-                                            <li>Your personal details are erased — name, gender, DOB, and emergency contact.</li>
+                                            <li>Your personal details are erased: name, gender, DOB, and emergency contact.</li>
                                             <li>Your past rides are kept anonymously for our records.</li>
                                             <li>You're signed out on all your devices.</li>
                                             <li>You can sign up again with this number, but your history won't return.</li>
@@ -599,20 +633,35 @@ const ManageAccount = () => {
                     <div className="w-full flex-1 min-h-0 overflow-y-auto mt-4 px-4 [mask-image:linear-gradient(to_bottom,black_calc(100%-56px),transparent)]">
                     {rideError
                         ?
-                        <h4 className="text-gray-500 py-6">{rideError}</h4>
+                        <FailureState
+                            tone="light"
+                            title="Couldn't load your rides"
+                            detail={rideError}
+                            onRetry={() => searchRides()}
+                        />
                         : rideLoading || bookings === null
                         ?
                         <RideHistorySkeleton />
                         : (bookings?.length ?? 0) === 0
                         ? (rideFiltersActive
                             ?
-                            <h4 className="text-gray-500 py-6">No rides match your search or filters</h4>
+                            <EmptyState
+                                tone="light"
+                                glyph="search"
+                                title="No rides match your search"
+                                message="Try a wider date range, or clear what's set to see every ride."
+                                secondaryAction={rideEmptyEscape}
+                            />
                             :
-                            <div className="flex flex-col justify-center items-center w-full h-full gap-1 sm:gap-2">
-                                <ErrorMark className="-my-8" size={140} />
-                                <h2 className="text-[var(--background-primary)]">No rides found</h2>
-                                <h3 className="w-fit text-[var(--background-primary)]">Try <u className="cursor-pointer text-primary/80 transition-color duration-300 hover:text-primary" onClick={() => navigate('/')} >booking a ride</u></h3>
-                            </div>)
+                            // No ErrorMark here any more: a red error badge over
+                            // "you haven't booked yet" read as a fault the rider
+                            // had caused. The action carries this screen instead.
+                            <EmptyState
+                                tone="light"
+                                title="No rides yet"
+                                message="Your trips show up here once you book one, with the driver's details and what you paid."
+                                action={{ label: "Book a ride", onClick: () => navigate('/') }}
+                            />)
                         :
                         orderedBookings.map((booking) => {
                             const [pickupMain, pickupRest] = splitAddress(booking.pickupAddress)

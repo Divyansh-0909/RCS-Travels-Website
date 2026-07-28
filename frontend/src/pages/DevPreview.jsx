@@ -4,11 +4,21 @@ import { useData } from "../hooks/useData";
 import OnBoarding from "./OnBoarding";
 import VehicleSelect from "./VehicleSelect";
 import TrackingPage from "./TrackingPage";
+// The account pages sit behind ProtectedRoute in main.jsx. Rendering them here
+// is not a bypass of that gate — this whole route is registered only under
+// import.meta.env.DEV and never ships — it just lets their empty/failure states
+// be seen without a Clerk session. Their data still comes from the API, so the
+// states are driven by stubbing those responses, not by faking them in the page.
+import ManageAccount from "./ManageAccount";
+import AdminDashboard from "./AdminDashboard";
 import RideDetails from "../components/RideDetails";
 import BackgroundPanel from "../components/ui/BackgroundPanel";
 import GoogleMap, { MAP_LAND_COLOR } from "../components/ui/GoogleMap";
 import { MAP_CLASSES } from "../components/ui/mapOverlays";
 import { useIsMobile } from "../hooks/useIsMobile";
+import EmptyState from "../components/ui/EmptyState";
+import FailureState from "../components/ui/FailureState";
+import RefreshNotice from "../components/ui/RefreshNotice";
 
 // Dev-only preview harness — registered in main.jsx behind import.meta.env.DEV.
 // Seeds the store with a mock booking and renders any booking-flow screen without
@@ -29,28 +39,156 @@ const MOCK = {
 
 // The whole flow, in the order a rider walks through it.
 const PREVIEWS = [
-    ["/dev/home", "OnBoarding — fresh booking form"],
-    ["/dev/vehicle", "VehicleSelect — choose a ride"],
-    ["/dev/vehicle?fare=formula", "VehicleSelect — choose a ride, per-km (tolls pill)"],
-    ["/dev/vehicle?step=confirmLocation", "VehicleSelect — confirm pickup point"],
-    ["/dev/vehicle?step=searching", "VehicleSelect — requesting a ride"],
-    ["/dev/vehicle?panel=noDriver", "VehicleSelect — no drivers nearby"],
-    ["/dev/vehicle?panel=confirmed&scheduled=1", "VehicleSelect — scheduled booking confirmed"],
-    ["/dev/tracking?status=assigned", "TrackingPage — driver assigned"],
-    ["/dev/tracking?status=en_route&driver=1", "TrackingPage — live map with driver puck"],
-    ["/dev/tracking?status=en_route", "TrackingPage — driver arriving (OTP visible)"],
-    ["/dev/tracking?status=reached", "TrackingPage — driver has arrived"],
-    ["/dev/tracking?status=on_trip", "TrackingPage — driving to destination"],
-    ["/dev/tracking?status=on_trip&fare=formula", "TrackingPage — live, per-km (tolls + extra-fare pills)"],
-    ["/dev/tracking?status=completed", "TrackingPage — ride completed"],
-    ["/dev/tracking?status=completed&fare=formula", "TrackingPage — completed, per-km (both pills)"],
-    ["/dev/tracking?status=confirmed&scheduled=1", "TrackingPage — scheduled, driver not assigned"],
-    ["/dev/tracking?status=assigned&scheduled=1", "TrackingPage — scheduled, driver assigned"],
-    ["/dev/tracking?status=assigned&scheduled=1&fare=formula", "TrackingPage — scheduled + assigned, per-km (both pills)"],
-    ["/dev/trip", 'OnBoarding — live "Current Trip" card'],
-    ["/dev/trip?scheduled=1", "OnBoarding — scheduled-ride card"],
+    ["/dev/home", "OnBoarding: fresh booking form"],
+    ["/dev/vehicle", "VehicleSelect: choose a ride"],
+    ["/dev/vehicle?fare=formula", "VehicleSelect: choose a ride, per-km (tolls pill)"],
+    ["/dev/vehicle?step=confirmLocation", "VehicleSelect: confirm pickup point"],
+    ["/dev/vehicle?step=searching", "VehicleSelect: requesting a ride"],
+    ["/dev/vehicle?panel=noDriver", "VehicleSelect: no drivers nearby"],
+    ["/dev/vehicle?panel=confirmed&scheduled=1", "VehicleSelect: scheduled booking confirmed"],
+    ["/dev/tracking?status=assigned", "TrackingPage: driver assigned"],
+    ["/dev/tracking?status=en_route&driver=1", "TrackingPage: live map with driver puck"],
+    ["/dev/tracking?status=en_route", "TrackingPage: driver arriving (OTP visible)"],
+    ["/dev/tracking?status=reached", "TrackingPage: driver has arrived"],
+    ["/dev/tracking?status=on_trip", "TrackingPage: driving to destination"],
+    ["/dev/tracking?status=on_trip&fare=formula", "TrackingPage: live, per-km (tolls + extra-fare pills)"],
+    ["/dev/tracking?status=completed", "TrackingPage: ride completed"],
+    ["/dev/tracking?status=completed&fare=formula", "TrackingPage: completed, per-km (both pills)"],
+    ["/dev/tracking?status=confirmed&scheduled=1", "TrackingPage: scheduled, driver not assigned"],
+    ["/dev/tracking?status=assigned&scheduled=1", "TrackingPage: scheduled, driver assigned"],
+    ["/dev/tracking?status=assigned&scheduled=1&fare=formula", "TrackingPage: scheduled + assigned, per-km (both pills)"],
+    ["/dev/trip", 'OnBoarding: live "Current Trip" card'],
+    ["/dev/trip?scheduled=1", "OnBoarding: scheduled-ride card"],
     ["/dev/ride-details", "RideDetails panel"],
+    // Empty / failure / stale states.
+    ["/dev/vehicle?route=none", "VehicleSelect: no route set (empty)"],
+    ["/dev/tracking?status=none", "TrackingPage: no ride to track (empty)"],
+    ["/dev/states", "EmptyState / FailureState / RefreshNotice: both tones"],
+    // Auth-gated in the real router; here they render bare so their list states
+    // can be driven by whatever the API returns.
+    ["/dev/rides", "ManageAccount: Ride History (empty / failure via API)"],
+    ["/dev/admin", "AdminDashboard: bookings, drivers, users (empty / failure via API)"],
+    ["/dev/crash", "ErrorBoundary: deliberate render throw"],
 ];
+
+// Every variant of the three state components on the two surfaces they have to
+// work on: --background (booking flow) and --foreground (account pages). They
+// are full-width by design, so each is boxed at the width it actually renders
+// at in the app — 290px inside the booking column, wide on the account pages.
+const StatesGallery = () => {
+    const Box = ({ label, tone, width, children }) => (
+        <div className="flex flex-col gap-1">
+            <p className="text-xs font-mono text-[var(--text-muted)]">{label}</p>
+            <div
+                className={`${tone === "light" ? "bg-[var(--foreground)]" : "bg-[var(--background)]"} rounded-xl overflow-hidden border border-[var(--foreground)]/15`}
+                // maxWidth, not width: at 390px the fixed 560px boxes ran off
+                // the side and the gallery couldn't be read on a phone at all.
+                style={{ width: "100%", maxWidth: width }}
+            >
+                {children}
+            </div>
+        </div>
+    );
+
+    return (
+        <div className="min-h-[100vh] p-8 bg-[var(--background-primary)] text-[var(--text)] flex flex-col gap-8">
+            <h2 className="font-bold">State components</h2>
+
+            <div className="flex flex-wrap items-start gap-8">
+                <Box label="EmptyState · light · action" tone="light" width={560}>
+                    <EmptyState
+                        tone="light"
+                        title="No rides yet"
+                        message="Your trips show up here once you book one, with the driver's details and what you paid."
+                        action={{ label: "Book a ride", onClick: () => { } }}
+                    />
+                </Box>
+
+                <Box label="EmptyState · light · search + clear" tone="light" width={560}>
+                    <EmptyState
+                        tone="light"
+                        glyph="search"
+                        title="No rides match your search"
+                        message="Try a wider date range, or clear what's set to see every ride."
+                        secondaryAction={{ label: "Clear filters", onClick: () => { } }}
+                    />
+                </Box>
+
+                <Box label="EmptyState · light · no action (admin)" tone="light" width={560}>
+                    <EmptyState
+                        tone="light"
+                        title="No drivers registered yet"
+                        message="Drivers appear here once they sign up and submit their vehicle details for approval."
+                    />
+                </Box>
+
+                <Box label="FailureState · light · retry" tone="light" width={560}>
+                    <FailureState
+                        tone="light"
+                        title="Couldn't load your rides"
+                        detail="Server error (503)"
+                        onRetry={() => { }}
+                    />
+                </Box>
+            </div>
+
+            {/* 290px is the real booking-flow column width on phones — the
+                tightest box any of these has to survive. */}
+            <div className="flex flex-wrap items-start gap-8">
+                <Box label="EmptyState · dark · 290px col" tone="dark" width={290}>
+                    <EmptyState
+                        tone="dark"
+                        title="No route set"
+                        message="Tell us where you're starting from and where you're headed, and we'll price it."
+                        action={{ label: "Set your route", onClick: () => { } }}
+                    />
+                </Box>
+
+                <Box label="EmptyState · dark · both actions" tone="dark" width={290}>
+                    <EmptyState
+                        tone="dark"
+                        title="We don't price this route yet"
+                        message="This drop-off isn't on our rate card. Message us and we'll quote it by hand."
+                        action={{ label: "Ask us for a fare", onClick: () => { } }}
+                        secondaryAction={{ label: "Change your route", onClick: () => { } }}
+                    />
+                </Box>
+
+                <Box label="FailureState · dark · retry + secondary" tone="dark" width={290}>
+                    <FailureState
+                        tone="dark"
+                        title="Couldn't price this route"
+                        detail="Couldn't reach the server to price this route."
+                        onRetry={() => { }}
+                        secondaryAction={{ label: "Change your route", onClick: () => { } }}
+                    />
+                </Box>
+
+                <Box label="FailureState · dark · retrying" tone="dark" width={290}>
+                    <FailureState
+                        tone="dark"
+                        title="Couldn't load your ride"
+                        detail="Couldn't reach the server"
+                        onRetry={() => { }}
+                        retrying
+                    />
+                </Box>
+            </div>
+
+            {/* Fixed-position pill, so it lands at the top of the viewport
+                rather than inside a box. */}
+            <p className="text-xs font-mono text-[var(--text-muted)]">
+                RefreshNotice: fixed bottom-centre, shown live below
+            </p>
+            <RefreshNotice
+                notice={{
+                    message: "Couldn't refresh your profile. Showing your last saved details.",
+                    onRetry: () => { },
+                }}
+            />
+        </div>
+    );
+};
 
 const DevPreview = () => {
     const { view } = useParams();
@@ -62,11 +200,16 @@ const DevPreview = () => {
 
     useEffect(() => {
         const params = new URLSearchParams(search);
-        const status = params.get("status") || MOCK.status;
+        // ?status=none seeds an empty status, which with no bookingId is how a
+        // rider reaches tracking with nothing to track.
+        const statusParam = params.get("status");
+        const status = statusParam === "none" ? "" : (statusParam || MOCK.status);
         const scheduled = params.get("scheduled")
             ? new Date(Date.now() + 60 * 60 * 1000)
             : null;
-        const fresh = view === "home"; // pre-booking: empty form, no trip card
+        // ?route=none clears the addresses, which is what /book looks like when
+        // it is opened directly with nothing in the store.
+        const fresh = view === "home" || params.get("route") === "none"; // pre-booking: empty form, no trip card
 
         const s = useData.getState();
         s.setActiveBooking(fresh ? null : { ...MOCK, status, scheduledAt: scheduled });
@@ -83,6 +226,12 @@ const DevPreview = () => {
         // ?fare=formula → per-km pricing, which is the only source that shows
         // the tolls notice. Default null keeps previews on the all-in quote.
         s.setFareSource(fresh ? null : params.get("fare"));
+        // Cleared for the same reason the polyline is: a real booking made
+        // earlier in this browser would otherwise leave its toll and carrier
+        // itemised under a mock fare they were never part of.
+        s.setFareToll(0);
+        s.setFareCarrier(0);
+        s.setFareAirport(0);
         s.setFare(MOCK.fare);
         s.setStatus(status);
         s.setBookingCode(MOCK.code);
@@ -90,12 +239,21 @@ const DevPreview = () => {
         s.setBookingId(null);
         s.setScheduledTime(scheduled);
         s.setDevAuthBypass(true);
+        // ManageAccount picks its opening tab from this key, so the preview
+        // lands straight on Ride History rather than Account information.
+        if (view === "rides") sessionStorage.setItem("manageAccountTab", "Ride History");
         setSeeded(view + search);
     }, [view, search]);
 
     if (view && seeded !== view + search) return null;
 
     // key remounts the page between previews so internal state resets.
+    // Deliberate render throw, so the ErrorBoundary above RouterProvider can be
+    // seen without breaking a real page. Dev-only, like everything on this route.
+    if (view === "crash") throw new Error("Deliberate crash from /dev/crash");
+    if (view === "states") return <StatesGallery />;
+    if (view === "rides") return <ManageAccount key={search} />;
+    if (view === "admin") return <AdminDashboard key={search} />;
     if (view === "home" || view === "trip") return <OnBoarding key={view + search} />;
     if (view === "vehicle") return <VehicleSelect key={search} />;
     if (view === "tracking") return <TrackingPage key={search} />;
@@ -135,7 +293,7 @@ const DevPreview = () => {
             {view && <p className="mb-2 text-[var(--text-muted)]">Unknown preview: {view}</p>}
             {PREVIEWS.map(([to, label]) => (
                 <Link key={to} to={to} className="underline text-left">
-                    {to} <span className="text-[var(--text-muted)]">— {label}</span>
+                    {to} <span className="text-[var(--text-muted)]">{label}</span>
                 </Link>
             ))}
         </div>
