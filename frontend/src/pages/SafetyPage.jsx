@@ -96,7 +96,7 @@ const SafetyPage = () => {
                                     onChange={(e) => setContactInput(e.target.value.replace(/\D/g, "").slice(0, 10))}
                                     onKeyDown={(e) => { if (e.key === "Enter") saveContact(); if (e.key === "Escape") cancelEdit() }}
                                     placeholder="XXXXX XXXXX"
-                                    className={`w-full rounded-full py-2 px-3 text-base text-[var(--text-foreground)] bg-transparent outline-none placeholder:text-[var(--background-primary)]/40 border ${contactError ? "border-[rgba(239,68,68,0.5)]" : "border-[var(--background-primary)]/30"}`}
+                                    className={`w-full rounded-xl py-2 px-3 text-base text-[var(--text-foreground)] bg-transparent outline-none placeholder:text-[var(--background-primary)]/40 border ${contactError ? "border-[rgba(239,68,68,0.5)]" : "border-[var(--background-primary)]/30"}`}
                                 />
                                 <CircleIconButton icon={mdiCheck} size={0.9} disabled={savingContact} onClick={saveContact} />
                                 <div onClick={cancelEdit} className="cursor-pointer p-1 rounded-full text-[var(--background-primary)]/60 transition-color duration-300 hover:text-[var(--background-primary)]">

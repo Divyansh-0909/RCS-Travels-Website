@@ -289,7 +289,7 @@ export function DateTimeSelector({ onClick, onChange, onConfirm, initial }) {
           onClick={(e) => { e.stopPropagation(); handleConfirm() }}
           disabled={!combined || isTooSoon}
           className={cn(
-            "w-full h-9 rounded-full text-sm font-semibold transition-all active:scale-[0.98]",
+            "w-full h-9 rounded-xl text-sm font-semibold transition-all active:scale-[0.98]",
             combined && !isTooSoon
               ? "bg-white text-black hover:bg-white/90 cursor-pointer"
               : "bg-white/10 text-white/30 cursor-not-allowed"

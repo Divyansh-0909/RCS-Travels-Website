@@ -1,7 +1,7 @@
 // Single-select chips + field styles shared by the filter panels. Clicking the active chip deselects it.
 
 export const filterLabel = "text-xs uppercase tracking-wide text-[var(--foreground-muted)]/50 pl-1"
-export const filterField = "w-full rounded-full py-2 px-3 text-sm bg-transparent outline-none border border-[var(--foreground)]/30 placeholder:text-[var(--foreground-muted)]/50"
+export const filterField = "w-full rounded-xl py-2 px-3 text-sm bg-transparent outline-none border border-[var(--foreground)]/30 placeholder:text-[var(--foreground-muted)]/50"
 
 type ChipOption<T> = {
     label: string
