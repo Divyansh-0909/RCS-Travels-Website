@@ -76,6 +76,9 @@ const ManageAccount = () => {
     const [rideFilterExpand, setRideFilterExpand] = useState(false)
     const [rideFilterSection, setRideFilterSection] = useState(0)
     const [rideLoading, setRideLoading] = useState(false)
+    // Whether the ride list is scrolled off its top — drives the top fade,
+    // which must stay invisible while the first card is still in place.
+    const [rideScrolled, setRideScrolled] = useState(false)
     const [ridePage, setRidePage] = useState(1)
     const [ridePageInput, setRidePageInput] = useState("1")
     const [rideTotal, setRideTotal] = useState(null)
@@ -410,7 +413,7 @@ const ManageAccount = () => {
     )
 
     return (
-        <AccountLayout items={items} selected={selected} onSelect={setSelected} title="Manage Account" startOnContent={items.includes(requestedTab)}>
+        <AccountLayout items={items} selected={selected} onSelect={(i) => { setSelected(i); setRideScrolled(false) }} title="Manage Account" startOnContent={items.includes(requestedTab)}>
                     <Button
                         className={`${expanded ? "block animate-datetime" : "hidden animate-datetime-out"} z-200 py-6 flex flex-col justify-center items-center fixed left-1/2 top-1/2 -translate-x-1/2 mt-10 -translate-y-1/2 hover:opacity-[1]`}
                         prop={{ variant: "dropdown", width: "310px" }}
@@ -638,7 +641,9 @@ const ManageAccount = () => {
                         </div>
                         {ridePagination && <div className="max-sm:hidden">{ridePagination}</div>}
                     </form>
-                    <div className="w-full flex-1 min-h-0 overflow-y-auto mt-4 px-4 max-sm:px-0">
+                    <div onScroll={(e) => setRideScrolled(e.currentTarget.scrollTop > 4)} className="w-full flex-1 min-h-0 overflow-y-auto mt-4 px-4 max-sm:px-0">
+                    {/* Top fade — sticky so it hugs the scroll edge; hidden until the list is actually scrolled. */}
+                    <div aria-hidden="true" className={`${rideScrolled ? "opacity-100" : "opacity-0"} pointer-events-none sticky top-0 z-10 h-14 -mb-14 w-full bg-gradient-to-b from-[var(--foreground)] to-transparent transition-opacity duration-300`} />
                     {rideError
                         ?
                         <FailureState

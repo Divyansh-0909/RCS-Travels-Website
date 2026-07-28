@@ -116,6 +116,12 @@ const AdminDashboard = () => {
 
     const api = useApi()
 
+    // Whether the results list is scrolled off its top — drives the top fade,
+    // which must stay invisible while the first row is still in place.
+    const [listScrolled, setListScrolled] = useState(false)
+    // Booking card whose people/ride-id details are popped open (one at a time).
+    const [expandedBooking, setExpandedBooking] = useState<string | null>(null)
+
     const copyId = (id: string) => {
         if (!id) return
         navigator.clipboard.writeText(id)
@@ -318,7 +324,7 @@ const AdminDashboard = () => {
     )
 
     return (
-        <AccountLayout items={items} selected={selected} onSelect={(i : number) => { setSelected(i); setPage(1); setFilterSection(0) }} title="Admin Dashboard">
+        <AccountLayout items={items} selected={selected} onSelect={(i : number) => { setSelected(i); setPage(1); setFilterSection(0); setListScrolled(false) }} title="Admin Dashboard">
             {filterDropdown.mounted && (
                 <Button
                     prop={{
@@ -440,7 +446,9 @@ const AdminDashboard = () => {
                 Copied to clipboard
             </div>
 
-            <div className="w-full flex-1 min-h-0 overflow-y-auto mt-4 px-5 max-sm:px-0">
+            <div onScroll={(e) => setListScrolled(e.currentTarget.scrollTop > 4)} className="w-full flex-1 min-h-0 overflow-y-auto mt-4 px-5 max-sm:px-0">
+                {/* Top fade — sticky so it hugs the scroll edge; hidden until the list is actually scrolled. */}
+                <div aria-hidden="true" className={`${listScrolled ? "opacity-100" : "opacity-0"} pointer-events-none sticky top-0 z-10 h-14 -mb-14 w-full bg-gradient-to-b from-[var(--foreground)] to-transparent transition-opacity duration-300`} />
                 {loading ? (
                     <AdminDashboardSkeleton variant={selected === 0 ? "bookings" : selected === 1 ? "drivers" : "users"} />
                 ) : error ? (
@@ -471,8 +479,9 @@ const AdminDashboard = () => {
                         (order ? bookings : [...bookings].reverse()).map((booking) => {
                             const [pickupMain, pickupRest] = splitAddress(booking.pickupAddress)
                             const [dropMain, dropRest] = splitAddress(booking.dropAddress)
+                            const isOpen = expandedBooking === booking.id
                             return (
-                                <div key={booking.id} className={`${booking.status === "cancelled" ? "opacity-60" : ""} cursor-default bg-[var(--foreground-muted)] py-5 px-5 sm:py-6 sm:px-8 rounded-2xl my-4 sm:my-6 flex flex-col justify-center items-start gap-4`}>
+                                <div key={booking.id} onClick={() => setExpandedBooking(isOpen ? null : booking.id)} className={`${booking.status === "cancelled" ? "opacity-60" : ""} cursor-pointer bg-[var(--foreground-muted)] py-5 px-5 sm:py-6 sm:px-8 rounded-2xl my-4 sm:my-6 flex flex-col justify-center items-start gap-4`}>
                                     <div className="flex justify-between items-start gap-4 w-full">
                                         {/* Route: pickup → drop */}
                                         <div className="flex flex-col gap-3 min-w-0">
@@ -500,43 +509,57 @@ const AdminDashboard = () => {
 
                                     <div className="w-full border-t border-[var(--background-primary)]/10"></div>
 
-                                    {/* Trip meta */}
-                                    <p className="text-base text-gray-500">
-                                        {[
-                                            formatDateTime(booking.scheduledAt ?? booking.createdAt),
-                                            `${vehicleLabel(booking.vehicleType)}${booking.sharing ? " • Sharing" : ""}`,
-                                            booking.isOutstation ? "Outstation" : null,
-                                            booking.source.charAt(0).toUpperCase() + booking.source.slice(1),
-                                        ].filter(Boolean).join("  •  ")}
-                                    </p>
+                                    {/* Trip meta; details attached so the collapsed grid adds no flex-gap */}
+                                    <div className="flex flex-col w-full">
+                                        <p className="text-base text-gray-500">
+                                            {[
+                                                formatDateTime(booking.scheduledAt ?? booking.createdAt),
+                                                `${vehicleLabel(booking.vehicleType)}${booking.sharing ? " • Sharing" : ""}`,
+                                                booking.isOutstation ? "Outstation" : null,
+                                                booking.source.charAt(0).toUpperCase() + booking.source.slice(1),
+                                            ].filter(Boolean).join("  •  ")}
+                                        </p>
 
-                                    {/* People */}
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
-                                        <div>
-                                            <p className="text-xs uppercase tracking-wide text-gray-500 mb-0.5">Customer</p>
-                                            <h4 className="text-[var(--background-primary)]">{booking.user?.name ?? "—"} <span className="text-gray-500">• {displayPhone(booking.customerPhone)}</span> <CopyBtn value={displayPhone(booking.customerPhone)} onCopy={copyId} /></h4>
-                                            {booking.sharing && booking.coRiders?.length > 0 && (
-                                                <div className="mt-1">
-                                                    <p className="text-xs uppercase tracking-wide text-gray-500 mb-0.5">Sharing with</p>
-                                                    {booking.coRiders.map((rider, i) => (
-                                                        <h4 key={i} className="text-[var(--background-primary)]">{rider.name ?? "—"} <span className="text-gray-500">• {displayPhone(rider.phone)}</span> <CopyBtn value={displayPhone(rider.phone)} onCopy={copyId} /></h4>
-                                                    ))}
+                                        {/* People + ride id — hidden until the card is clicked open. Clicks
+                                            inside don't bubble, so copying a number can't collapse the card. */}
+                                        <div className={`grid w-full transition-[grid-template-rows] duration-300 ${isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
+                                            <div className="overflow-hidden min-h-0 w-full" onClick={(e) => e.stopPropagation()}>
+                                                <div className={`${isOpen ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2"} transition-[opacity,transform] duration-300 flex flex-col gap-4 w-full pt-4 cursor-default`}>
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
+                                                        <div>
+                                                            <p className="text-xs uppercase tracking-wide text-gray-500 mb-0.5">Customer</p>
+                                                            <h4 className="text-[var(--background-primary)]">{booking.user?.name ?? "—"} <span className="text-gray-500">• {displayPhone(booking.customerPhone)}</span> <CopyBtn value={displayPhone(booking.customerPhone)} onCopy={copyId} /></h4>
+                                                            {booking.sharing && booking.coRiders?.length > 0 && (
+                                                                <div className="mt-1">
+                                                                    <p className="text-xs uppercase tracking-wide text-gray-500 mb-0.5">Sharing with</p>
+                                                                    {booking.coRiders.map((rider, i) => (
+                                                                        <h4 key={i} className="text-[var(--background-primary)]">{rider.name ?? "—"} <span className="text-gray-500">• {displayPhone(rider.phone)}</span> <CopyBtn value={displayPhone(rider.phone)} onCopy={copyId} /></h4>
+                                                                    ))}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-xs uppercase tracking-wide text-gray-500 mb-0.5">Driver</p>
+                                                            {booking.driver
+                                                                ? <h4 className="text-[var(--background-primary)]">{booking.driver.name} <span className="text-gray-500">• {displayPhone(booking.driver.phone)}</span> <CopyBtn value={displayPhone(booking.driver.phone)} onCopy={copyId} /></h4>
+                                                                : <h4 className="text-gray-500">{booking.status === "cancelled" ? "—" : new Date(booking.scheduledAt ?? booking.createdAt) > new Date() ? "Yet to be assigned" : "Couldn't be assigned"}</h4>}
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex flex-row gap-2 h-fit justify-center items-start sm:items-center">
+                                                        <p className="text-gray-500 text-sm">Ride ID: {booking.id?.slice(0, 8)}....</p>
+                                                        <CopyBtn value={booking?.id} onCopy={copyId} />
+                                                    </div>
                                                 </div>
-                                            )}
-                                        </div>
-                                        <div>
-                                            <p className="text-xs uppercase tracking-wide text-gray-500 mb-0.5">Driver</p>
-                                            {booking.driver
-                                                ? <h4 className="text-[var(--background-primary)]">{booking.driver.name} <span className="text-gray-500">• {displayPhone(booking.driver.phone)}</span> <CopyBtn value={displayPhone(booking.driver.phone)} onCopy={copyId} /></h4>
-                                                : <h4 className="text-gray-500">{booking.status === "cancelled" ? "—" : new Date(booking.scheduledAt ?? booking.createdAt) > new Date() ? "Yet to be assigned" : "Couldn't be assigned"}</h4>}
+                                            </div>
                                         </div>
                                     </div>
 
-                                    {/* Ride ID */}
-                                    <div className="flex flex-row gap-2 h-fit justify-center items-start sm:items-center">
-                                        <p className="text-gray-500 text-sm">Ride ID: {booking.id?.slice(0, 8)}....</p>
-                                        <CopyBtn value={booking?.id} onCopy={copyId} />
-                                    </div>
+                                    {/* "hover: hover" picks the wording — no JS device sniffing */}
+                                    <p className="w-full text-center text-xs text-gray-400 select-none -mt-1">
+                                        <span className="hidden [@media(hover:hover)]:inline">{isOpen ? "Click to collapse" : "Click to expand"}</span>
+                                        <span className="[@media(hover:hover)]:hidden">{isOpen ? "Tap to collapse" : "Tap to expand"}</span>
+                                    </p>
                                 </div>
                             )
                         })
