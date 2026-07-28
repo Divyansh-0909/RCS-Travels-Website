@@ -17,12 +17,15 @@ import { mdiKeyboardBackspace, mdiPhone, mdiShareVariant } from '@mdi/js';
 import waLogo from '../assets/whatsapp-logo.webp';
 import { openSupportWhatsApp } from "../constants/support";
 import ErrorPanel from "../components/ui/ErrorPanel";
+import EmptyState from "../components/ui/EmptyState";
+import FailureState from "../components/ui/FailureState";
+import { useRefreshNotice } from "../hooks/useRefreshNotice";
 import BackgroundPanel from "../components/ui/BackgroundPanel";
 import NoticePill from "../components/ui/NoticePill";
 import pfpPlaceholder from "../assets/pfp-placeholder.webp"
 import RideDetails from "../components/RideDetails";
 import Skeleton from "../components/ui/Skeleton";
-import { SAFE_ROUTE_SURCHARGE } from "../constants/fares";
+import { SAFE_ROUTE_SURCHARGE, isDistancePriced } from "../constants/fares";
 
 // Statuses where a driver exists and may be moving — the only ones that poll.
 const LIVE_STATUSES = ["assigned", "en_route", "reached", "started"];
@@ -91,6 +94,18 @@ const TrackingPage = () => {
     const cancelledBy = useData(state => state.cancelledBy);
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(false);
+    // Only set when the FIRST status fetch fails with nothing already on screen —
+    // that's the one case this page genuinely cannot render. Later poll failures
+    // leave the previous status up and go to the ambient notice instead.
+    const [statusError, setStatusError] = useState(null);
+    // Bumped by the retry button to restart the poll effect immediately rather
+    // than waiting out the 5s tick.
+    const [retryTick, setRetryTick] = useState(0);
+    const notifyRefreshFailed = useRefreshNotice(state => state.notifyRefreshFailed);
+    const clearRefreshNotice = useRefreshNotice(state => state.clearRefreshNotice);
+    // Raise the stale notice once per outage, not once per 5s tick — otherwise
+    // an offline rider gets a pill whose dismiss timer restarts forever.
+    const staleNotifiedRef = useRef(false);
     const [panelState, setPanelState] = useState("");  // "confirm" | "error"
     const [step, setStep] = useState("searching"); // "vehicleType" | "searching"
     const [detialsVisibility, setDetialsVisibility] = useState(false)
@@ -138,9 +153,29 @@ const TrackingPage = () => {
 
         async function poll(isFirst) {
             if (isFirst && !arrivedFresh.current) setBookingLoading(true);
-            const data = await api.getBookingStatus(bookingId);
+            // request() only turns HTTP errors into { error } — a network failure
+            // rejects, which used to escape this effect entirely.
+            let data;
+            try {
+                data = await api.getBookingStatus(bookingId);
+            } catch {
+                data = { error: "Couldn't reach the server" };
+            }
             if (cancelled) return;
-            if (!data?.error) {
+            if (data?.error) {
+                // Nothing on screen yet → the page can't render an honest status,
+                // so it hands over to FailureState. Otherwise the last known
+                // status stays put and is only marked stale.
+                if (isFirst && !status) {
+                    setStatusError(data.error);
+                } else if (!staleNotifiedRef.current) {
+                    staleNotifiedRef.current = true;
+                    notifyRefreshFailed("Couldn't refresh your ride. Showing the last update we got.");
+                }
+            } else {
+                staleNotifiedRef.current = false;
+                setStatusError(null);
+                clearRefreshNotice();
                 if (data.status) setStatus(data.status);
                 setDriver(data.driver ?? null);
                 // Server-computed, so the cancel warning and the actual charge
@@ -159,8 +194,10 @@ const TrackingPage = () => {
         }
         poll(true);
 
-        return () => { cancelled = true; clearTimeout(timer); };
-    }, [bookingId]);
+        // clearRefreshNotice on the way out: the stale pill belongs to this
+        // ride's poll, and shouldn't follow the rider to another page.
+        return () => { cancelled = true; clearTimeout(timer); clearRefreshNotice(); };
+    }, [bookingId, retryTick]);
 
     const pickupPoint = pickupCoords;
     const dropPoint = dropCoords;
@@ -255,7 +292,7 @@ const TrackingPage = () => {
 
     // Per-km (formula) pricing covers the drive only; zone and fixed-table
     // destinations are quoted all-in.
-    const tollNotice = fareSource === "formula" && (
+    const tollNotice = isDistancePriced(fareSource) && (
         <NoticePill>Tolls payable to driver separately</NoticePill>
     );
 
@@ -354,11 +391,77 @@ const TrackingPage = () => {
         </div>
     );
 
+    // Both of the states below take the whole page, so they share the shell the
+    // main return uses rather than rendering inside the panel chain.
+    const SHELL = "relative overflow-hidden bg-transparent text-center flex flex-col justify-center items-center w-[100vw] h-[100vh]";
+    const FULL_PANEL = "py-6 h-[100vh] rounded-t-none flex justify-center items-center sm:px-[9%] md:px-[5%] xl:px-[13%]";
+
+    // LoginPage's arrow, copied exactly: these two screens fill the viewport with
+    // no map behind them, so neither of this page's other arrows fits. `backArrow`
+    // is a pill that floats above the sheet over the map, and backArrowInPanel
+    // expects the completed screen's inner `relative w-full h-full` wrapper for
+    // its offset, which is why it sat flush against the top edge here.
+    const stateBackArrow = (
+        <div
+            onClick={() => navigate('/')}
+            className="flex cursor-pointer justify-center items-center gap-2 sm:gap-3 absolute left-3 top-3 text-[var(--text)] sm:opacity-80 hover:opacity-100 transition-opacity duration-300"
+        >
+            <Icon path={mdiKeyboardBackspace} size={1.2} />
+        </div>
+    );
+
+    // Nothing to track. Reached by a direct link, a reload after the store was
+    // cleared, or a ride that ended. Without this the page fell through to the
+    // live panel and showed a placeholder driver, an OTP card and a "Call driver"
+    // button to someone with no ride at all. `status` is checked too: the dev
+    // preview route drives this page from the store with no bookingId.
+    if (!bookingId && !status) {
+        return (
+            <div className={SHELL}>
+                <BackgroundPanel className={FULL_PANEL}>
+                    {stateBackArrow}
+                    <EmptyState
+                        tone="dark"
+                        title="No ride to track"
+                        message="Once you book, this is where you'll watch your driver arrive and follow the trip."
+                        action={{ label: "Book a ride", onClick: () => navigate('/') }}
+                    />
+                </BackgroundPanel>
+            </div>
+        );
+    }
+
+    // First status fetch failed with nothing to fall back on. The poll is still
+    // running underneath, so this clears itself if the connection returns; the
+    // button just skips the wait.
+    if (statusError) {
+        return (
+            <div className={SHELL}>
+                <BackgroundPanel className={FULL_PANEL}>
+                    {stateBackArrow}
+                    <FailureState
+                        tone="dark"
+                        title="Couldn't load your ride"
+                        detail={statusError}
+                        onRetry={() => { setStatusError(null); setRetryTick(t => t + 1); }}
+                        retrying={bookingLoading}
+                        secondaryAction={{
+                            label: "Message support",
+                            onClick: () => openSupportWhatsApp(
+                                `Hi, I can't open my ride's tracking page${bookingId ? ` (ID: ${bookingId})` : ""}.`
+                            ),
+                        }}
+                    />
+                </BackgroundPanel>
+            </div>
+        );
+    }
+
     // overflow-hidden clips the panels while they sit off-screen at
     // translateX(100%) — without it a viewport-wide panel parked to the right
     // would double the page width and let the whole screen scroll sideways.
     return (
-        <div className="relative overflow-hidden bg-transparent text-center flex flex-col justify-center items-center w-[100vw] h-[100vh]">
+        <div className={SHELL}>
             <ErrorPanel prop={{ error: error, setError: setError }} />
 
             {/* Mobile: land-coloured backdrop + persistent page-background map,

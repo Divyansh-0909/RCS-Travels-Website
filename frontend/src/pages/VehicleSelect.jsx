@@ -16,9 +16,12 @@ import { mdiKeyboardBackspace } from '@mdi/js';
 import ErrorPanel from "../components/ui/ErrorPanel";
 import BackgroundPanel from "../components/ui/BackgroundPanel";
 import NoticePill from "../components/ui/NoticePill";
+import { openSupportWhatsApp } from "../constants/support";
 import RideDetails from "../components/RideDetails";
-import { SAFE_ROUTE_SURCHARGE } from "../constants/fares";
+import { SAFE_ROUTE_SURCHARGE, CARRIER_CHARGE, isDistancePriced } from "../constants/fares";
 import Skeleton from "../components/ui/Skeleton";
+import EmptyState from "../components/ui/EmptyState";
+import FailureState from "../components/ui/FailureState";
 
 // Every price on this screen comes from /api/fare/estimate, which resolves each
 // seat type through zones -> the fixed fare table -> the per-km formula. There is
@@ -86,6 +89,11 @@ const VehicleSelect = ()=>{
     const setSharing = useData(state => state.setSharing);
     const safeRoute = useData(state=>state.safeRoute);
     const setSafeRoute = useData(state => state.setSafeRoute);
+    const needsCarrier = useData(state=>state.needsCarrier);
+    const setNeedsCarrier = useData(state => state.setNeedsCarrier);
+    const setFareToll = useData(state => state.setFareToll);
+    const setFareCarrier = useData(state => state.setFareCarrier);
+    const setFareAirport = useData(state => state.setFareAirport);
     const bookingId = useData(state=>state.bookingId);
     const setBookingId = useData(state => state.setBookingId);
     const bookingCode = useData(state=>state.bookingCode);
@@ -104,6 +112,10 @@ const VehicleSelect = ()=>{
     // should show skeletons. Seeded from the same guard fetchEstimate uses, so
     // the cards don't paint a "₹—" frame before the mount fetch starts.
     const [pricing, setPricing] = useState(() => Boolean(pickupLocation?.trim() && dropLocation?.trim()));
+    // The estimate's own failure, kept separate from `error` (the ErrorPanel):
+    // this one has to persist on the panel with a retry, where ErrorPanel's only
+    // action is "Okay", which dismissed straight back onto unpriced cards.
+    const [estimateError, setEstimateError] = useState(null);
     // Dev-only: /dev/vehicle?step=|?panel= force internal states for previews.
     const devParams = import.meta.env.DEV ? new URLSearchParams(window.location.search) : null;
     const [panelState, setPanelState]= useState(devParams?.get("panel") ?? "");  // "confirm" | "error"
@@ -144,16 +156,17 @@ const VehicleSelect = ()=>{
     async function fetchEstimate() {
         if (!pickupLocation?.trim() || !dropLocation?.trim()) return null;
         setPricing(true);
+        setEstimateError(null);
         // finally, not a clear on each exit: the error path returns early and
         // estimateFare can throw, and either leaving `pricing` stuck true would
         // strand the cards on skeletons forever.
         try {
-            const data = await api.estimateFare(pickupLocation, dropLocation, vehicleType ?? 4, pickupCoords, dropCoords, safeRoute);
+            const data = await api.estimateFare(pickupLocation, dropLocation, vehicleType ?? 4, pickupCoords, dropCoords, safeRoute, needsCarrier);
             if (data?.error) {
                 // These prices are what the booking is created with, so a failed
                 // estimate has to surface — say so and leave the cards unpriced.
                 setServerFares(null);
-                setError("Couldn't price this route. Check the addresses and try again.");
+                setEstimateError(data.error);
                 return null;
             }
             setServerFares(data.fares ?? null);
@@ -164,6 +177,14 @@ const VehicleSelect = ()=>{
             // source the real route wouldn't produce. null in prod.
             setFareSource(devParams?.get("fare") ?? data.fareSource ?? null);
             return data;
+        } catch (err) {
+            // request() only converts HTTP errors into { error } — a network
+            // failure rejects, and both call sites used to let it escape
+            // unhandled, leaving the cards on "₹—" with nothing said.
+            console.error(err);
+            setServerFares(null);
+            setEstimateError("Couldn't reach the server to price this route.");
+            return null;
         } finally {
             setPricing(false);
         }
@@ -177,6 +198,12 @@ const VehicleSelect = ()=>{
         setDurationMin(null);
         setRoutePolyline(null);
         setServerFares(null);
+        // the add-ons are part of the previous booking's total, so they go with
+        // its metrics — otherwise ride details would itemise a toll this trip
+        // never crosses
+        setFareToll(0);
+        setFareCarrier(0);
+        setFareAirport(0);
         // ?fare= survives the wipe so previews can force a pricing source
         // without the backend; null in prod, where devParams is null.
         setFareSource(devParams?.get("fare") ?? null);
@@ -185,14 +212,18 @@ const VehicleSelect = ()=>{
 
     // The safer route runs through a forced waypoint, so the road path, distance
     // and duration all change with it — the map would otherwise keep drawing the
-    // shortcut. Compares values rather than using a one-shot flag, so StrictMode's
-    // throwaway run can't consume it (same pattern as OnBoarding's address hook).
-    const safeRouteRef = useRef(safeRoute);
+    // shortcut. The carrier moves only the price, but that price is the server's
+    // to decide (it is waived on the expensive routes), so it needs the same
+    // round trip. Compares values rather than using a one-shot flag, so
+    // StrictMode's throwaway run can't consume it (same pattern as OnBoarding's
+    // address hook).
+    const rideOptionsRef = useRef({ safeRoute, needsCarrier });
     useEffect(() => {
-        if (safeRouteRef.current === safeRoute) return;
-        safeRouteRef.current = safeRoute;
+        const prev = rideOptionsRef.current;
+        if (prev.safeRoute === safeRoute && prev.needsCarrier === needsCarrier) return;
+        rideOptionsRef.current = { safeRoute, needsCarrier };
         fetchEstimate();
-    }, [safeRoute]);
+    }, [safeRoute, needsCarrier]);
 
     useEffect(() => {
         if (step !== "searching") return;
@@ -253,6 +284,11 @@ const VehicleSelect = ()=>{
     const pickupPoint = pickupCoords ?? PICKUP_FALLBACK;
     const dropPoint = dropCoords ?? DROP_FALLBACK;
 
+    // Declared up here, not with the other pricing flags below, because the map
+    // overlay effect reads it — a const declared after that useEffect would be
+    // in its TDZ when the dep array is evaluated during render.
+    const hasRoute = Boolean(pickupLocation?.trim() && dropLocation?.trim());
+
     // Marker click on the full-route view → zoom into that endpoint and let
     // the user drag the map under the fixed pin to move it.
     function openLocationAdjust(target) {
@@ -302,6 +338,14 @@ const VehicleSelect = ()=>{
     // otherwise leave the straight-line fallback on screen).
     useEffect(() => {
         if (!mapApi) return;
+        // With no addresses the endpoints are only the seed anchors, so drawing
+        // them put a confident pickup→drop line on the map beside a panel
+        // reading "No route set". The map stays (it is just context); the claim
+        // about a route the rider has not set does not.
+        if (!hasRoute) {
+            clearRouteView();
+            return;
+        }
         if (step === "confirmLocation") {
             clearRouteView();
             mapApi.setCenter(confirmTarget === "pickup" ? pickupPoint : dropPoint);
@@ -316,7 +360,7 @@ const VehicleSelect = ()=>{
         // leaving /book (or a StrictMode remount) must not strand overlays on
         // the shared map
         return clearRouteView;
-    }, [mapApi, isMobile, step, confirmTarget, routePolyline]);
+    }, [mapApi, isMobile, step, confirmTarget, routePolyline, hasRoute]);
 
     // "Book ride" leads to the pickup pin-confirm; the booking is only
     // created from there (confirmBooking).
@@ -329,7 +373,7 @@ const VehicleSelect = ()=>{
         }
 
         if (fareFor(vehicleType) == null) {
-            setError("Still pricing this route — one moment.");
+            setError("Still pricing this route. One moment.");
             return;
         }
 
@@ -358,6 +402,16 @@ const VehicleSelect = ()=>{
         return low === high ? `₹${low}` : `₹${low}-${high}`;
     };
 
+    // Whether this screen has anything bookable to offer, and if not, why —
+    // three outcomes that all used to look identical: three cards reading "₹—"
+    // with a disabled button and no explanation.
+    //   !hasRoute      → /book opened with no addresses (direct link, cleared store)
+    //                    — declared above, next to the map points that consume it
+    //   estimateError  → the estimate request itself failed
+    //   routeUnpriced  → the estimate succeeded but priced nothing for this route
+    const anyFare = fareOf(4, "solo") ?? fareOf(6, "solo") ?? fareOf(4, "sharing") ?? fareOf(6, "sharing");
+    const routeUnpriced = hasRoute && !pricing && !estimateError && anyFare == null;
+
     async function confirmBooking(freshMetrics) {
         // freshMetrics carries the estimate that was just re-fetched for the
         // adjusted pin — its fares are newer than serverFares, which can't have
@@ -382,6 +436,12 @@ const VehicleSelect = ()=>{
             // the tolls notice for the right ride rather than for whichever type
             // the last estimate happened to ask about.
             setFareSource(devParams?.get("fare") ?? fares[vehicleType].source ?? null);
+            // Same reason, and from the same row: ride details itemises the
+            // total, and the carrier it shows must be the amount actually
+            // charged — 0 on the routes where the provider waives it.
+            setFareToll(fares[vehicleType].toll ?? 0);
+            setFareCarrier(fares[vehicleType].carrier ?? 0);
+            setFareAirport(fares[vehicleType].airport ?? 0);
 
             // Coords come from the Places selection; seed anchors remain as a
             // dev fallback so hand-typed bookings still find seeded drivers.
@@ -397,6 +457,13 @@ const VehicleSelect = ()=>{
                 distanceKm:     freshMetrics?.distanceKm ?? distanceKm,
                 sharing:       sharing,
                 preferSafeRoute: safeRoute,
+                needsCarrier:  needsCarrier,
+                // Itemised so the server can take its commission off the driving
+                // alone — a toll or a carrier is money passing through, not fare
+                // earned. Sent from the same row the price came from.
+                toll:          fares[vehicleType].toll ?? 0,
+                airport:       fares[vehicleType].airport ?? 0,
+                carrier:       fares[vehicleType].carrier ?? 0,
                 scheduledAt: scheduledTime,
                 isOutstation:  false,
             });
@@ -457,21 +524,31 @@ const VehicleSelect = ()=>{
     let shareVisiblity = sharing? "hidden" : "block"
     let safeSliderColor = safeRoute ? "bg-green-500" : "bg-gray-500"
     let safeSliderPosition = safeRoute ? "-left-2" : "left-5"
+    let carrierSliderColor = needsCarrier ? "bg-green-500" : "bg-gray-500"
+    let carrierSliderPosition = needsCarrier ? "-left-2" : "left-5"
 
     // Any panel state (noDriver / confirmed) supersedes the search.
     const searchingVisible = step === "searching" && !panelState
 
-    // Zone and fixed-table destinations are quoted all-in; only the per-km
-    // formula prices the drive alone, leaving tolls to settle with the driver.
-    // Per seat type, not per request: a destination the rate card prices for
-    // hatchbacks but not SUVs is 'zone' for Cab Economy and 'formula' for Cab XL,
-    // so the tolls warning has to follow the card you actually selected. The
+    // Everything the quoted number does or doesn't cover, read off the card the
+    // rider actually selected. Per seat type, not per request: a destination the
+    // rate card prices for hatchbacks but not SUVs is 'zone' for Cab Economy and
+    // 'formula' for Cab XL, so the tolls warning has to follow the selection. The
     // store's fareSource is only a fallback for the ?fare= dev override, which
     // has no serverFares behind it.
-    const selectedSource = serverFares?.[vehicleType]?.source ?? fareSource;
-    const tollNotice = selectedSource === "formula" && (
-        <NoticePill>Tolls payable to driver separately</NoticePill>
-    );
+    //
+    // Rate-card destinations are quoted all-in, and where the provider charges a
+    // toll on top it is now inside the price — said out loud, because "₹1600 to
+    // the airport" is worth more than ₹1600 with a surprise attached. The per-km
+    // formula still prices the drive alone and leaves tolls with the driver.
+    const selectedFare = serverFares?.[vehicleType];
+    const selectedSource = selectedFare?.source ?? fareSource;
+    const fareNotices = [
+        isDistancePriced(selectedSource) && "Tolls payable to driver separately",
+        selectedFare?.toll > 0 && `Includes the ₹${selectedFare.toll} highway toll`,
+        selectedFare?.airport > 0 && `Includes the ₹${selectedFare.airport} airport pickup charge`,
+        selectedFare?.carrierWaived && "Roof carrier included free on this route",
+    ].filter(Boolean);
 
     // One card per vehicle type — same block for all three, so the type scale
     // and internal spacing can't drift between them.
@@ -696,7 +773,7 @@ const VehicleSelect = ()=>{
                                         <>
                                             <div className="w-full h-px bg-[var(--foreground)]/10" />
                                             <div className="flex items-center justify-between w-full py-3 gap-3">
-                                                <h4 className="text-sm sm:text-base text-[var(--text-muted)]">{vehicleType === 6 ? "Cab XL" : vehicleType === 1 ? "Book any" : "Cab Economy"}{sharing ? " · Sharing" : " · Solo"}{safeRoute ? " · Safer route" : ""}</h4>
+                                                <h4 className="text-sm sm:text-base text-[var(--text-muted)]">{vehicleType === 6 ? "Cab XL" : vehicleType === 1 ? "Book any" : "Cab Economy"}{sharing ? " · Sharing" : " · Solo"}{safeRoute ? " · Safer route" : ""}{needsCarrier ? " · Carrier" : ""}</h4>
                                                 {/* re-priced on every pin adjust, so it
                                                     skeletons rather than flashing ₹— */}
                                                 {pricing && fareFor(vehicleType) == null
@@ -753,6 +830,49 @@ const VehicleSelect = ()=>{
                                 )}
                             </div>
 
+                            {!hasRoute ? (
+                                <div className={COL}>
+                                    <EmptyState
+                                        tone="dark"
+                                        align="sm-left"
+                                        title="No route set"
+                                        message="Tell us where you're starting from and where you're headed, and we'll price it."
+                                        action={{ label: "Set your route", onClick: () => navigate('/') }}
+                                    />
+                                </div>
+                            ) : estimateError ? (
+                                <div className={COL}>
+                                    <FailureState
+                                        tone="dark"
+                                        align="sm-left"
+                                        title="Couldn't price this route"
+                                        detail={estimateError}
+                                        onRetry={() => fetchEstimate()}
+                                        retrying={pricing}
+                                        secondaryAction={{ label: "Change your route", onClick: () => navigate('/') }}
+                                    />
+                                </div>
+                            ) : routeUnpriced ? (
+                                <div className={COL}>
+                                    {/* Deliberately not a fallback price. A placeholder
+                                        here is what once charged ₹400 for a trip the
+                                        rate card prices at ₹1800 — so an unpriced
+                                        route asks a human instead of guessing. */}
+                                    <EmptyState
+                                        tone="dark"
+                                        align="sm-left"
+                                        title="We don't price this route yet"
+                                        message="This drop-off isn't on our rate card. Message us and we'll quote it by hand."
+                                        action={{
+                                            label: "Ask us for a fare",
+                                            onClick: () => openSupportWhatsApp(
+                                                `Hi, I'd like a fare for ${pickupLocation} to ${dropLocation}.`
+                                            ),
+                                        }}
+                                        secondaryAction={{ label: "Change your route", onClick: () => navigate('/') }}
+                                    />
+                                </div>
+                            ) : (
                             <form className={`flex flex-col justify-center items-stretch gap-2 ${COL}`} noValidate onSubmit={handleSubmit}>
                                 {vehicleCard(4, "Cab Economy", "4 Seater", label(4, "solo"), label(4, "sharing"))}
                                 {vehicleCard(6, "Cab XL", "6 Seater", label(6, "solo"), label(6, "sharing"))}
@@ -787,9 +907,37 @@ const VehicleSelect = ()=>{
                                             <div className={`${safeSliderColor} rounded-full w-[inherit] h-[14px]`}/>
                                         </div>
                                     </div>
+
+                                    <div className="w-full h-px bg-[var(--foreground)]/10" />
+
+                                    {/* The cards re-price on toggle, so the charge
+                                        lands in the fares themselves rather than
+                                        being promised here — hence "from": on the
+                                        expensive runs the provider throws it in,
+                                        and the pill below says so. */}
+                                    <div className="flex justify-between items-start w-full py-3 gap-3">
+                                        <div className="flex flex-col gap-0.5 text-left">
+                                            <h4 className="text-base sm:text-lg font-medium text-[var(--text)]">Roof carrier?</h4>
+                                            <p className="text-xs sm:text-sm leading-snug text-[var(--text-muted)]">
+                                                {!needsCarrier
+                                                    ? `For luggage that won't fit in the boot. Adds ₹${CARRIER_CHARGE}.`
+                                                    : selectedFare?.carrierWaived
+                                                        ? "Included free on this route — no extra charge."
+                                                        : `₹${selectedFare?.carrier ?? CARRIER_CHARGE} extra fare, already in the prices above.`}
+                                            </p>
+                                        </div>
+                                        <div onClick={()=>setNeedsCarrier(!needsCarrier)} className="relative w-[50px] h-[22px] mt-1 shrink-0 scale-[0.9] sm:scale-[1] flex items-center justify-center ">
+                                            <div className={`absolute inset-0 ${carrierSliderPosition} border-b-2 border-[rgba(255,255,255,0.05)] bg-white scale-[1] hover:scale-[1.1] cursor-pointer [transition:all_300ms,transform_300ms_150ms] bg-[linear-gradient(to_top,transparent_50%,rgba(146,146,139,0.25)_100%)] shadow-[inset_0px_2px_2px_1px_rgba(255,255,255,0.4),0px_0px_10px_rgba(0,0,0,0.6)]  w-[40px] rounded-full h-[inherit]`}/>
+                                            <div className={`${carrierSliderColor} rounded-full w-[inherit] h-[14px]`}/>
+                                        </div>
+                                    </div>
                                 </div>
 
-                                {tollNotice && <div className="w-full mt-2">{tollNotice}</div>}
+                                {fareNotices.length > 0 && (
+                                    <div className="w-full mt-2 flex flex-col gap-2">
+                                        {fareNotices.map(text => <NoticePill key={text}>{text}</NoticePill>)}
+                                    </div>
+                                )}
 
                                 <div className="mt-3 w-full flex flex-col gap-2">
                                     <Button
@@ -807,6 +955,7 @@ const VehicleSelect = ()=>{
                                     
                                 </div>
                             </form>
+                            )}
                         </div>
                     </BackgroundPanel>
                 </>
