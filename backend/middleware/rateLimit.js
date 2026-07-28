@@ -15,18 +15,31 @@ const shared = {
   message: { error: 'Too many requests. Please slow down and try again in a few minutes.' },
 }
 
-// One genuine booking is easily a dozen calls — autocomplete fires on debounced
-// keystrokes across two address fields, before anyone has picked anything.
+// Measured per booking: two address fields × ~6 debounced lookups (300ms debounce,
+// 3-char minimum, repeat queries served from the client cache) + 2 place-details
+// ≈ 15 calls. A Friday-evening peak of ~15 simultaneous bookers behind the campus
+// IP ≈ 225 — 300 covers that with headroom while still stopping a scripted loop.
 export const googleApiLimiter = rateLimit({
   ...shared,
   windowMs: 15 * 60 * 1000,
   limit: 300,
 })
 
-// One estimate per vehicle-type change, plus a refresh after the pin confirm and
-// another if the safer-route toggle flips.
+// Measured per booking: one estimate on address confirm, one per vehicle-class
+// change (4 classes), plus carrier and safer-route toggles ≈ 8 calls. The same
+// ~15-booker campus peak ≈ 120, so 150 leaves room without inviting abuse.
 export const fareLimiter = rateLimit({
   ...shared,
   windowMs: 15 * 60 * 1000,
-  limit: 100,
+  limit: 150,
+})
+
+// Login is once per device — Clerk sessions persist — so even a hostel IP rarely
+// produces more than ~10 fresh logins an hour (each ≈ 2 sends + a few verify
+// attempts). 60 absorbs that; the per-phone cooldown in /send-otp is what actually
+// guards the WhatsApp spend (~₹0.115 per OTP), this just caps one IP's burn rate.
+export const authLimiter = rateLimit({
+  ...shared,
+  windowMs: 60 * 60 * 1000,
+  limit: 60,
 })

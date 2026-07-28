@@ -4,7 +4,7 @@ import cors from 'cors'
 import { prisma } from './db/prisma.js'
 import { clerkAuth } from './middleware/auth.js'
 import { errorHandler } from './middleware/errorHandler.js'
-import { googleApiLimiter, fareLimiter } from './middleware/rateLimit.js'
+import { googleApiLimiter, fareLimiter, authLimiter } from './middleware/rateLimit.js'
 import fareRouter from './routes/fare.js'
 import bookingsRouter from './routes/bookings.js'
 import driverRouter from './routes/driver.js'
@@ -49,7 +49,7 @@ app.use('/api/fare', fareLimiter, fareRouter)
 app.use('/api/bookings', bookingsRouter)
 app.use('/api/driver', driverRouter)
 app.use('/api/users', usersRouter)
-app.use('/api/auth', hybridAuthRouter)
+app.use('/api/auth', authLimiter, hybridAuthRouter)
 app.use('/api/admin', adminRouter)
 app.use('/api/googleAPI', googleApiLimiter, googleRouter)
 
