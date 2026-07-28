@@ -5,7 +5,7 @@ const Input = ({ prop, className, leading, trailing }) => {
   const hasError = prop.error === true;
 
   return (
-    <div className={`${className} relative w-fit my-1 sm:scale-y-[1.3]`}>
+    <div className={`${className} relative w-fit max-sm:w-[86vw] max-sm:max-w-full my-1 sm:scale-y-[1.3]`}>
       <input
         id={prop.id}
         name={prop.name}
@@ -20,7 +20,7 @@ const Input = ({ prop, className, leading, trailing }) => {
         style={{ "--input-bg": prop.bg }}
         className={`
           font-medium text-default text-[var(--text)]
-          px-4 py-2 w-[290px] rounded-xl
+          px-4 py-2 w-[290px] max-sm:w-full rounded-xl
           ${leading ? "pl-9" : ""}
           ${trailing ? "pr-10" : ""}
           border outline-none

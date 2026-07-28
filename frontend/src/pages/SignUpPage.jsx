@@ -479,7 +479,7 @@ const SignUpPage = () => {
               )}
 
               {isPhone && (
-                <p className="text-[var(--text-muted)] text-sm mt-3 sm:mt-5 max-w-[290px] sm:max-w-[340px]">Your number can't be changed later. By continuing, you consent to receive an OTP by text or WhatsApp.</p>
+                <p className="text-[var(--text-muted)] text-sm mt-3 sm:mt-5 max-sm:max-w-[min(86vw,100%)] sm:max-w-[340px]">Your number can't be changed later. By continuing, you consent to receive an OTP by text or WhatsApp.</p>
               )}
 
               {isOtp && (

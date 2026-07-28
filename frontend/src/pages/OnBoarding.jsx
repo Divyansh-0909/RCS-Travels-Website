@@ -25,7 +25,7 @@ import { useRefreshNotice } from "../hooks/useRefreshNotice";
 // Same tokens as VehicleSelect / TrackingPage / RideDetails. 377px is the width
 // this page's scaled controls already render at (290 × 1.3), reached here as a
 // real width so the trip screens carry no transform and their type is honest.
-const COL = "w-[290px] sm:w-[377px]";
+const COL = "w-[min(86vw,100%)] sm:w-[377px]";
 const TITLE = "font-bold text-3xl sm:text-5xl leading-tight";
 const SUBTITLE = "text-lg sm:text-2xl font-normal leading-snug text-[var(--text-muted)]";
 const META = "text-base sm:text-xl";
@@ -36,6 +36,10 @@ const PAIR = "gap-0.5 sm:gap-1";
 // the CTA. One token for all three so they stay equal — a STACK reads too loose
 // here, a GROUP too tight.
 const TRIP_STEP = "gap-4 sm:gap-5";
+// The booking form sits just inside the page rail on phones. Marked important:
+// it has to beat the 86vw default Button and Input carry for every other
+// screen. sm+ is untouched — the components keep their fixed widths there.
+const FORM_W = "max-sm:w-[82vw]!";
 
 
 // Autocomplete state for one address field: debounced Google matches at 3+
@@ -198,7 +202,7 @@ const SuggestionDropdown = ({ anim, items, onSelect, above = false, error = null
         onMouseDown={(e) => e.preventDefault()}
         className={`${anim.closing ? "animate-dropdown-out" : "animate-dropdown"
           } absolute z-10 ${above ? "bottom-13 sm:bottom-15 origin-bottom" : "top-13 sm:top-15"} sm:ml-7 scale-[1] sm:scale-[1.3]
-          w-[290px] border border-[var(--foreground)]/15 bg-[var(--background-muted)]
+          max-sm:w-full sm:w-[290px] max-w-full border border-[var(--foreground)]/15 bg-[var(--background-muted)]
           rounded-[16px] shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)]`}
       >
         <div className="px-4 py-3 text-left">
@@ -220,7 +224,7 @@ const SuggestionDropdown = ({ anim, items, onSelect, above = false, error = null
       onMouseDown={(e) => e.preventDefault()}
       className={`${anim.closing ? "animate-dropdown-out" : "animate-dropdown"
         } absolute z-10 ${above ? "bottom-13 sm:bottom-15 origin-bottom" : "top-13 sm:top-15"} sm:ml-7 scale-[1] sm:scale-[1.3]
-        w-[290px] max-h-[200px] overflow-y-auto scrollbar-inset
+        max-sm:w-full sm:w-[290px] max-w-full max-h-[200px] overflow-y-auto scrollbar-inset
         border border-[var(--foreground)]/15 bg-[var(--background-muted)]
         rounded-[16px] shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)]`}
     >
@@ -561,7 +565,7 @@ const OnBoarding = () => {
                   </p>
                 )}
                 <div className="flex flex-col relative">
-                  <div className="flex scale-[1] sm:scale-[1.3] lg:ml-7 justify-start gap-2 sm:gap-3 justify-center items-center w-[73vw] sm:w-[290px]">
+                  <div className="flex scale-[1] sm:scale-[1.3] lg:ml-7 justify-start gap-2 sm:gap-3 justify-center items-center max-sm:w-[82vw] max-sm:max-w-full sm:w-[290px]">
                     <Button
                       prop={{
                         variant: "input",
@@ -738,7 +742,7 @@ const OnBoarding = () => {
                       onFocusFn: pickupAutocomplete.onFocus,
                       onBlurFn: pickupAutocomplete.onBlur,
                     }}
-                    className="scale-[1] sm:scale-[1.3] lg:ml-7"
+                    className={`scale-[1] sm:scale-[1.3] lg:ml-7 ${FORM_W}`}
                     leading={
                       <div className="w-3 h-3 rounded-full bg-[var(--foreground)]" />
                     }
@@ -789,7 +793,7 @@ const OnBoarding = () => {
                       onFocusFn: dropAutocomplete.onFocus,
                       onBlurFn: dropAutocomplete.onBlur,
                     }}
-                    className="scale-[1] sm:scale-[1.3] lg:ml-7"
+                    className={`scale-[1] sm:scale-[1.3] lg:ml-7 ${FORM_W}`}
                     leading={
                       <div className="w-3 h-3 rounded-full bg-primary relative">
                         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-[var(--background)]" />
@@ -829,7 +833,7 @@ const OnBoarding = () => {
                       !pickupLocation?.trim() ||
                       !dropLocation?.trim(),
                   }}
-                  className="scale-[1] sm:scale-[1.3] lg:ml-7"
+                  className={`scale-[1] sm:scale-[1.3] lg:ml-7 ${FORM_W}`}
                 >
                   {loading ? "Loading..." : "See prices"}
                 </Button>

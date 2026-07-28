@@ -14,7 +14,7 @@ import { SAFE_ROUTE_SURCHARGE } from "../constants/fares";
 // Same layout + type scale as VehicleSelect / TrackingPage: a real 377px
 // desktop column (OnBoarding's effective control width) instead of a scale
 // transform, with one rhythm for pairs, groups and stacks.
-const COL = "w-[290px] sm:w-[377px]";
+const COL = "w-[min(86vw,100%)] sm:w-[377px]";
 const TITLE = "font-bold text-3xl sm:text-5xl leading-tight";
 const SUBTITLE = "text-lg sm:text-2xl font-normal leading-snug text-[var(--text-muted)]";
 const META = "text-base sm:text-xl";

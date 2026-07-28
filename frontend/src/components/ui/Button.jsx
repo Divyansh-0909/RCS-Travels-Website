@@ -24,11 +24,28 @@ const Button = ({ prop, className, children, onClick }) => {
   const isDisabled = prop.disabled === true;
   const isSolid = !prop.variant || isNegative;
 
+  // Fluid below sm, fixed from sm up: default-width controls sit on an 86vw
+  // rail on phones, with max-w-full so a narrower parent still clips them.
+  //
+  // A definite length, not min(86vw,100%): several callers put these inside a
+  // shrink-to-fit flex column (OnBoarding's booking form), where a percentage
+  // has no definite basis to resolve against and collapses the control to its
+  // content width. 86vw contributes a real max-content size instead, so the
+  // form itself widens to the rail. sm+ keeps the exact pixel value, and
+  // dropdowns are absolutely positioned panels that keep their inline width.
+  const width = prop.width ?? (isInput ? undefined : "290px");
+  const mobileWidth = isDropdown ? ""
+    : prop.width ? "max-sm:w-[var(--btn-w)] max-sm:max-w-full"
+    : isInput ? ""
+    : "max-sm:w-[86vw] max-sm:max-w-full";
+
   return (
     <div
       className={`
         ${className}
-        ${isInput ? "w-fit" : ""}
+        ${isInput && !width ? "w-fit" : ""}
+        ${mobileWidth}
+        ${width && !isDropdown ? "sm:w-[var(--btn-w)]" : ""}
         flex items-center justify-center
         ${isSolid ? "font-semibold" : "font-medium"} text-default text-[var(--text)] my-1
         ${isDisabled ? "opacity-40 cursor-not-allowed" : isDropdown ? "" : "cursor-pointer"}
@@ -44,7 +61,8 @@ const Button = ({ prop, className, children, onClick }) => {
       `}
       style={{
         "--btn-bg": prop.bg,
-        width: prop.width ?? (isInput ? undefined : "290px"),
+        "--btn-w": !isDropdown ? width : undefined,
+        width: isDropdown ? width : undefined,
         borderRadius: prop.rounded ?? (isDropdown ? "16px" : "12px"),
         paddingLeft: prop.paddingX,
         paddingRight: prop.paddingX,

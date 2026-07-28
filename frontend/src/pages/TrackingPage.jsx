@@ -57,7 +57,7 @@ const minsLabel = (n) => (n == null ? "—" : `${n} min${n === 1 ? "" : "s"}`);
 // The desktop content column is 377px — OnBoarding's effective control width
 // (290px base × its 1.3 scale) — reached with a real width instead of a
 // transform, so spacing and type sizes stay honest at both breakpoints.
-const COL = "w-[290px] sm:w-[377px]";
+const COL = "w-[min(86vw,100%)] sm:w-[377px]";
 const TITLE = "font-bold text-3xl sm:text-5xl leading-tight";
 const SUBTITLE = "text-lg sm:text-2xl font-normal leading-snug text-[var(--text-muted)]";
 const META = "text-base sm:text-xl";
@@ -541,7 +541,7 @@ const TrackingPage = () => {
                             <div className="relative w-full h-full flex justify-center items-center">
                                 {backArrowInPanel}
                                 <div className={`w-full flex flex-col items-center ${STACK} sm:w-[820px] sm:flex-row sm:items-stretch sm:gap-0`}>
-                                <div className="flex flex-col justify-center items-center sm:items-start gap-3 w-[290px] sm:w-1/2 sm:px-8 sm:py-10">
+                                <div className="flex flex-col justify-center items-center sm:items-start gap-3 max-sm:w-[min(86vw,100%)] sm:w-1/2 sm:px-8 sm:py-10">
                                     {/* -mb-2 pulls the outcome copy up under the
                                         badge: the container gap alone left more
                                         air here than between any other pair in
@@ -561,7 +561,7 @@ const TrackingPage = () => {
                                     <div className="hidden sm:flex w-full flex-col gap-2 mt-2">{completedActions}</div>
                                 </div>
 
-                                <div className="flex flex-col justify-center items-start gap-3 w-[290px] sm:w-1/2 sm:px-8 sm:py-10 sm:border-l sm:border-[var(--foreground)]/10">
+                                <div className="flex flex-col justify-center items-start gap-3 max-sm:w-[min(86vw,100%)] sm:w-1/2 sm:px-8 sm:py-10 sm:border-l sm:border-[var(--foreground)]/10">
                                     {/* One receipt card: what it cost, broken down
                                         the same way Ride details breaks it down,
                                         and who drove. No route — the ride is over,

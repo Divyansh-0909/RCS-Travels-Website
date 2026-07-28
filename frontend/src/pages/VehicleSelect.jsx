@@ -45,7 +45,7 @@ const DROP_FALLBACK = { lat: 28.4951, lng: 77.0890 };
 // The desktop content column is 377px — OnBoarding's effective control width
 // (290px base × its 1.3 scale) — reached with a real width instead of a
 // transform, so spacing and type sizes stay honest at both breakpoints.
-const COL = "w-[290px] sm:w-[377px]";
+const COL = "w-[min(86vw,100%)] sm:w-[377px]";
 const TITLE = "font-bold text-3xl sm:text-5xl leading-tight";
 const SUBTITLE = "text-lg sm:text-2xl font-normal leading-snug text-[var(--text-muted)]";
 // Vertical rhythm: 8px inside a pair, 12–16px within a group, 32/48 between.
