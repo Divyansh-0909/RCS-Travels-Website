@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { prisma } from '../db/prisma.js'
 import { clerkClient } from '@clerk/express'
 import crypto from 'crypto'
+import { sendOtpWhatsApp } from '../services/notification.js'
 
 // Phone-OTP login without Clerk's hosted UI and without passwords. We own the OTP
 // (stored hashed, 5-minute expiry) and Clerk owns the session; the two are bridged
@@ -22,6 +23,15 @@ hybridAuthRouter.post('/send-otp', async (req, res) => {
     return res.status(400).json({ error: 'Invalid phone number' })
   }
 
+  // Per-phone cooldown: expiresAt is always sentAt + 5min, so "sent under 45s
+  // ago" reads as expiresAt more than 4m15s away — no sentAt column needed. This,
+  // not the per-IP limiter, is what stops someone bombarding one victim's phone.
+  const existing = await prisma.otpVerification.findUnique({ where: { phone } })
+  if (existing && !existing.used &&
+      existing.expiresAt > new Date(Date.now() + (5 * 60 - 45) * 1000)) {
+    return res.status(429).json({ error: 'Please wait before requesting another OTP' })
+  }
+
   const otp = generateOTP()
 
   const otpHash = crypto.createHash('sha256').update(otp).digest('hex')
@@ -33,8 +43,15 @@ hybridAuthRouter.post('/send-otp', async (req, res) => {
     create: { phone, otpHash, expiresAt },
   })
 
-  // TODO: send otp via WhatsApp here
-  console.log(`OTP for ${phone}: ${otp}`) // remove after WhatsApp is wired
+  // Fail loudly if delivery fails — otherwise the user sits on the OTP screen
+  // waiting for a message that will never arrive.
+  try {
+    await sendOtpWhatsApp(phone, otp)
+  } catch (err) {
+    console.error(err)
+    return res.status(502).json({ error: 'Could not send OTP, please retry' })
+  }
+  console.log(`OTP for ${phone}: ${otp}`) // dev fallback — remove before launch
 
   return res.json({ ok: true })
 })
