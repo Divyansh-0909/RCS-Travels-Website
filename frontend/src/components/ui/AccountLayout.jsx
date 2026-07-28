@@ -12,7 +12,7 @@ const AccountLayout = ({ items, selected, onSelect, title, children, startOnCont
     const [menuOpen, setMenuOpen] = useState(!startOnContent);
 
     return (
-        <div className="w-[100vw] h-[100dvh] flex flex-col justify-center items-center px-5 pb-10 sm:px-10 bg-[var(--foreground)] text-[var(--text-foreground)]">
+        <div className="w-[100vw] h-[100dvh] flex flex-col justify-center items-center px-5 sm:px-10 bg-[var(--foreground)] text-[var(--text-foreground)]">
             <div className="flex w-full justify-start items-center gap-3 py-6">
                 <h3 onClick={() => navigate('/')} className="sm:block hidden cursor-pointer text-[var(--background-primary)] text-2xl pl-1 opacity-[0.85] transition-opacity duration-300 hover:opacity-[1]"><span className="font-semibold">RCS</span> travels</h3>
                 <Icon onClick={() => navigate('/')} className="sm:hidden block cursor-pointer text-[var(--background-primary)] opacity-[0.85] transition-opacity duration-300 hover:opacity-[1]" path={mdiKeyboardBackspace} size={1.2} />

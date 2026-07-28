@@ -440,7 +440,7 @@ const AdminDashboard = () => {
                 Copied to clipboard
             </div>
 
-            <div className="w-full flex-1 min-h-0 overflow-y-auto mt-4 px-5 max-sm:px-0 [mask-image:linear-gradient(to_bottom,black_calc(100%-56px),transparent)]">
+            <div className="w-full flex-1 min-h-0 overflow-y-auto mt-4 px-5 max-sm:px-0">
                 {loading ? (
                     <AdminDashboardSkeleton variant={selected === 0 ? "bookings" : selected === 1 ? "drivers" : "users"} />
                 ) : error ? (

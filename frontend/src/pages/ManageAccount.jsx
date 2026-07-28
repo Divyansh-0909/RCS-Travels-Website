@@ -638,7 +638,7 @@ const ManageAccount = () => {
                         </div>
                         {ridePagination && <div className="max-sm:hidden">{ridePagination}</div>}
                     </form>
-                    <div className="w-full flex-1 min-h-0 overflow-y-auto mt-4 px-4 max-sm:px-0 [mask-image:linear-gradient(to_bottom,black_calc(100%-56px),transparent)]">
+                    <div className="w-full flex-1 min-h-0 overflow-y-auto mt-4 px-4 max-sm:px-0">
                     {rideError
                         ?
                         <FailureState
