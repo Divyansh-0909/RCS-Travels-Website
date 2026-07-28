@@ -215,11 +215,24 @@ const LoginPage = () => {
   };
 
   const handleOtpDigit = (i, value) => {
-    const char = value.replace(/\D/g, "").slice(-1);
-    if (!char) return;
+    const digits = value.replace(/\D/g, "");
+    if (!digits) return;
+
+    // Phone keyboards paste through onChange, not onPaste — Gboard's clipboard
+    // chip and iOS's from-messages autofill insert the whole code as one change
+    // event. More than one digit therefore means a paste: fill from the first
+    // box, same as handleOtpPaste. This is also why the boxes have no maxLength
+    // — it would truncate the insert before this handler ever sees it.
+    if (digits.length > 1) {
+      const pasted = digits.slice(0, OTP_LENGTH);
+      setOtp(pasted);
+      clearOtpError();
+      focusBox(Math.min(pasted.length, OTP_LENGTH - 1));
+      return;
+    }
 
     const chars = Array.from({ length: OTP_LENGTH }, (_, idx) => otp[idx] ?? "");
-    chars[i] = char;
+    chars[i] = digits;
     setOtp(chars.join(""));
     clearOtpError();
 
@@ -315,7 +328,6 @@ const LoginPage = () => {
                       autoComplete={i === 0 ? "one-time-code" : "off"}
                       name={`otp-number-${i + 1}`}
                       id={`otp-number-${i + 1}`}
-                      maxLength={1}
                       value={otp[i] ?? ""}
                       onChange={(e) => handleOtpDigit(i, e.target.value)}
                       onKeyDown={(e) => handleOtpKeyDown(i, e)}
