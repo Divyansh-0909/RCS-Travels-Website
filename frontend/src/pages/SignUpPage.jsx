@@ -445,6 +445,20 @@ const SignUpPage = () => {
                   : (loading ? "Verifying..." : "Verify")}
               </Button>
 
+              {/* Mirror of login's "No account?" link, on both pre-OTP steps
+                  since signup opens on the name screen. Hidden once the 409
+                  flips the main button into "Login" — two login actions on
+                  one screen would compete. */}
+              {!isOtp && !showLogin && (
+                <p className="mt-3 sm:mt-6 text-sm text-[var(--text-muted)]">
+                  <span className="text-[var(--text)]">Have an account?</span>{" "}
+                  <button
+                    type="button"
+                    onClick={() => navigate('/login')}
+                    className="cursor-pointer text-[var(--text)] underline underline-offset-4 decoration-[var(--foreground)]/40 hover:decoration-[var(--foreground)] transition-colors duration-300 rounded-sm outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]/70"
+                  >Log in</button>
+                </p>
+              )}
               {isOtp && (
                 <p className={`mt-3 sm:mt-6 text-sm text-[var(--text-muted)] ${busy ? "invisible" : ""}`}>
                   <span className="text-[var(--text)]">Didn't get it?</span>{" "}

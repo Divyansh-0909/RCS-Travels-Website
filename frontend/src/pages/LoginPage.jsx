@@ -396,6 +396,18 @@ const LoginPage = () => {
                 ? (showSignUp ? "Sign Up" : (loading ? "Sending OTP..." : "Continue"))
                 : (loading ? "Redirecting..." : "Confirm")}
             </Button>
+            {/* Hidden once the 404 flips the main button into "Sign Up" —
+                two sign-up actions on one screen would compete. */}
+            {isPhone && !showSignUp && (
+              <p className="mt-3 sm:mt-6 text-sm text-[var(--text-muted)]">
+                <span className="text-[var(--text)]">No account?</span>{" "}
+                <button
+                  type="button"
+                  onClick={() => navigate('/signup')}
+                  className="cursor-pointer text-[var(--text)] underline underline-offset-4 decoration-[var(--foreground)]/40 hover:decoration-[var(--foreground)] transition-colors duration-300 rounded-sm outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]/70"
+                >Sign up</button>
+              </p>
+            )}
             {!isPhone && (
               <p className={`mt-3 sm:mt-6 text-sm text-[var(--text-muted)] ${busy ? "invisible" : ""}`}>
                 <span className="text-[var(--text)]">Didn't get it?</span>{" "}
