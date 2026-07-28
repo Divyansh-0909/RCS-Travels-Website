@@ -7,7 +7,7 @@
     "dev": "tsx watch index.js",
     "typecheck": "tsc --noEmit",
     "prestart": "node scripts/free-port.js",
-    "start": "node index.js",
+    "start": "tsx index.js",
     "db:generate": "prisma generate --config ./prisma.config.js",
     "db:migrate": "prisma migrate dev --config ./prisma.config.js",
     "db:deploy": "prisma migrate deploy --config ./prisma.config.js",
@@ -31,6 +31,7 @@
     "multer": "^2.1.1",
     "pdfkit": "^0.19.1",
     "pg": "^8.21.0",
+    "tsx": "^4.23.1",
     "uuid": "^11.0.5",
     "zod": "^4.4.3"
   },
@@ -44,7 +45,6 @@
     "@types/pg": "^8.20.0",
     "nodemon": "^3.1.9",
     "prisma": "^7.8.0",
-    "tsx": "^4.23.1",
     "typescript": "^7.0.2"
   }
 }
