@@ -25,7 +25,7 @@ async function request(path, { method = "GET", body, getToken } = {}) {
 
 export const getMe             = (getToken)              => request("/api/users/me", { getToken });
 export const createMe          = (name, getToken)        => request("/api/users/me", { method: "POST", body: { name }, getToken });
-export const estimateFare      = (pickupAddress, dropAddress, vehicleType, pickupCoords, dropCoords, preferSafeRoute, getToken) => request("/api/fare/estimate", { method: "POST", body: { pickupAddress, dropAddress, vehicleType, pickupCoords, dropCoords, preferSafeRoute }, getToken });
+export const estimateFare      = (pickupAddress, dropAddress, vehicleType, pickupCoords, dropCoords, preferSafeRoute, needsCarrier, getToken) => request("/api/fare/estimate", { method: "POST", body: { pickupAddress, dropAddress, vehicleType, pickupCoords, dropCoords, preferSafeRoute, needsCarrier }, getToken });
 export const createBooking     = (data, getToken)        => request("/api/bookings", { method: "POST", body: data, getToken });
 export const cancelBooking     = (bookingId, getToken)   => request("/api/bookings/cancel", { method: "POST", body: { bookingId }, getToken});
 export const getBookingStatus  = (id, getToken)          => request(`/api/bookings/${id}/status`, { getToken });

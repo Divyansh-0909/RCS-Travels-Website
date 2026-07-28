@@ -3,6 +3,8 @@ import { protect, protectAdmin } from '../middleware/auth.js'
 import { startAssignment, markNoDriver, ASSIGNMENT_DEADLINE_MS } from '../services/driverAssignment.js'
 import { sendWhatsApp } from '../services/notification.js'
 import { prisma } from '../db/prisma.js'
+import { commissionOn, rideFareOf } from '../services/commission.js'
+import { AIRPORT_PICKUP_SURCHARGE, CARRIER_CHARGE } from '../services/rideEstimate.js'
 import { myBookingsQuerySchema } from '../types.ts'
 
 const bookingsRouter = Router()
@@ -36,7 +38,11 @@ bookingsRouter.post('/', protect, async (req, res) => {
         pickupAddress, pickupLat, pickupLng,
         dropAddress, dropLat, dropLng,
         vehicleType, fare, distanceKm,
-        scheduledAt, isOutstation, sharing, preferSafeRoute
+        scheduledAt, isOutstation, sharing, preferSafeRoute, needsCarrier,
+        // Pass-through charges inside `fare`, itemised by the estimate so the
+        // commission can be taken off the driving alone. `parking` has no source
+        // yet — it is accepted now so that the day it exists it is already exempt.
+        toll, airport, carrier, parking
     } = req.body
 
     if (!pickupAddress || !dropAddress)
@@ -67,8 +73,17 @@ bookingsRouter.post('/', protect, async (req, res) => {
     }
 
 
-    const commissionPct = fare >= 1000 ? 10 : 0
-    const commissionAmt = (fare * commissionPct) / 100
+    // A number the client sends must never be able to shrink the commission
+    // below what the ride actually earns, so each add-on is clamped to something
+    // sane before it is deducted.
+    const flat = (v, cap) => (Number.isFinite(v) && v > 0 ? Math.min(v, cap) : 0)
+    const rideFare = rideFareOf(fare, {
+        toll:    flat(toll, 500),
+        parking: flat(parking, 500),
+        airport: flat(airport, AIRPORT_PICKUP_SURCHARGE),
+        carrier: flat(carrier, CARRIER_CHARGE),
+    })
+    const { pct: commissionPct, amt: commissionAmt } = commissionOn(rideFare)
 
     const user = await prisma.user.findUnique({ where: { clerkId: req.auth.userId } })
     if (!user) return res.status(401).json({ error: 'Complete signup before booking' })
@@ -94,9 +109,12 @@ bookingsRouter.post('/', protect, async (req, res) => {
         customerPhone: user.phone, vehicleType,
         pickupAddress, pickupLat, pickupLng,
         dropAddress, dropLat, dropLng,
-        fare, distanceKm: distanceKm ?? null,
+        fare, rideFare, distanceKm: distanceKm ?? null,
         isOutstation: isOutstation ?? false,
         preferSafeRoute: preferSafeRoute === true,
+        // Stored because the driver has to actually turn up with a roof carrier
+        // fitted — the charge is already inside `fare`, but the instruction isn't.
+        needsCarrier: needsCarrier === true,
         scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
         commissionPct, commissionAmt, sharing
     }

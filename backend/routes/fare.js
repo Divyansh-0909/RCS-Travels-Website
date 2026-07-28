@@ -11,7 +11,7 @@ const cleanCoords = (c) =>
     ? { lat: c.lat, lng: c.lng } : null
 
 fareRouter.post('/estimate', async (req, res) => {
-  const { pickupAddress, dropAddress, vehicleType, pickupCoords, dropCoords, preferSafeRoute } = req.body
+  const { pickupAddress, dropAddress, vehicleType, pickupCoords, dropCoords, preferSafeRoute, needsCarrier } = req.body
 
   if (!pickupAddress || !dropAddress || !vehicleType) {
     return res.status(400).json({ error: 'pickupAddress, dropAddress, and vehicleType are required' })
@@ -28,6 +28,7 @@ fareRouter.post('/estimate', async (req, res) => {
       pickupCoords: cleanCoords(pickupCoords),
       dropCoords: cleanCoords(dropCoords),
       preferSafeRoute: preferSafeRoute === true,
+      needsCarrier: needsCarrier === true,
     })
     res.json(result)
   } catch (err) {

@@ -123,8 +123,13 @@ model Booking {
   scheduledAt        DateTime?     @map("scheduled_at")
   isOutstation       Boolean       @default(false) @map("is_outstation")
   preferSafeRoute    Boolean       @default(false) @map("prefer_safe_route")
+  needsCarrier       Boolean       @default(false) @map("needs_carrier")
   distanceKm         Float?        @map("distance_km")  
   fare               Float         @map("fare")
+  // `fare` minus the pass-through charges (toll, parking, airport access, roof
+  // carrier). Commission is a percentage of THIS, so storing it makes the cut
+  // auditable from the row alone — and fare - rideFare recovers the add-ons.
+  rideFare           Float?        @map("ride_fare")
   commissionPct      Float         @default(0) @map("commission_pct")
   commissionAmt      Float         @default(0) @map("commission_amt")
   status             BookingStatus @default(pending)

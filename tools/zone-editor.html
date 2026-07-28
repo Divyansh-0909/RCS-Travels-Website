@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>RCS Travels — Fare Zone Editor</title>
+<title>RCS Travels — Kiraya Zone Editor</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <link rel="stylesheet" href="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.17.0/dist/leaflet-geoman.css" />
 <style>
@@ -17,6 +17,7 @@
     --primary: #243AFB;
     --primary-light: #7A94FF;
     --negative: #E86A6A;
+    --positive: #5FCB8A;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { height: 100%; }
@@ -62,7 +63,26 @@
   button.danger { color: var(--negative); }
   button.danger:hover { border-color: var(--negative); }
 
-  .list { flex: 1; overflow-y: auto; }
+  /* Which car the map is coloured and labelled for. He quotes three, so the
+     map has to be able to show all three — not just the Wagon R. */
+  .classbar { display: flex; padding: 0 16px 12px; gap: 0; border-bottom: 1px solid var(--line); }
+  .classbar button {
+    flex: 1; border-radius: 0; font-size: 12px; padding: 7px 4px;
+    border-right-width: 0; color: var(--text-muted);
+  }
+  .classbar button:first-child { border-radius: 8px 0 0 8px; }
+  .classbar button:last-child { border-radius: 0 8px 8px 0; border-right-width: 1px; }
+  .classbar button.on { background: var(--primary); border-color: var(--primary); color: #fff; }
+
+  .search { padding: 12px 16px 0; }
+  .search input {
+    width: 100%; font: inherit; font-size: 13px;
+    background: var(--bg-field); border: 1px solid var(--line);
+    border-radius: 8px; color: var(--text); padding: 8px 10px;
+  }
+  .search input:focus-visible { outline: none; border-color: var(--primary-light); }
+
+  .list { flex: 1; overflow-y: auto; margin-top: 10px; }
   .zone-row {
     display: flex; align-items: center; gap: 10px;
     width: 100%; text-align: left;
@@ -76,11 +96,12 @@
   .zone-row .dot { width: 12px; height: 12px; border-radius: 4px; flex: none; }
   .zone-row .nm { flex: 1; font-size: 13px; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .zone-row .fare { font-size: 13px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+  .zone-row.changed .nm::after { content: " •"; color: var(--primary-light); }
 
   /* ---------- edit form ---------- */
   .editor { flex: 1; overflow-y: auto; padding: 16px; display: none; }
   .editor.open { display: block; }
-  .list.hidden { display: none; }
+  .list.hidden, .search.hidden { display: none; }
   .editor label { display: block; font-size: 12px; color: var(--text-muted); margin: 12px 0 4px; }
   .editor input, .editor textarea {
     width: 100%;
@@ -94,8 +115,16 @@
   .editor input:focus-visible, .editor textarea:focus-visible {
     outline: none; border-color: var(--primary-light);
   }
+  /* An auto-filled price is shown greyed so it reads as "worked out for you"
+     rather than as something he typed and must maintain. */
+  .editor input.auto { color: var(--text-muted); font-style: italic; }
   .fare-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
   .fare-grid label { margin-top: 0; }
+  .fare-grid .reset {
+    font-size: 10.5px; padding: 2px 0; margin-top: 3px; width: 100%;
+    border: none; background: none; color: var(--primary-light); text-align: left;
+  }
+  .fare-grid .reset[hidden] { display: none; }
   .hint { font-size: 11.5px; color: var(--text-muted); margin-top: 6px; line-height: 1.5; }
   .editor .actions { display: flex; gap: 8px; margin-top: 18px; }
   .editor .actions .grow { flex: 1; }
@@ -111,6 +140,39 @@
   main { flex: 1; position: relative; }
   #map { position: absolute; inset: 0; background: #e8e8e8; }
 
+  /* Geoman ships 12px white pips with a hairline ring — on a pale zone fill they
+     all but disappear, and you cannot drag a corner you cannot find. These are
+     bigger, dark-ringed and shadowed so they read as grab handles over any fill.
+     Geoman sets the size with !important, so matching it is the only way in, and
+     the negative margins are what keep the dot centred on its corner. */
+  .leaflet-container .marker-icon,
+  .leaflet-container .marker-icon-middle {
+    background: #ffffff !important;
+    border: 3px solid #0B0B14 !important;
+    border-radius: 50% !important;
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.95), 0 2px 6px rgba(11, 11, 20, 0.55) !important;
+  }
+  .leaflet-container .marker-icon {
+    width: 20px !important; height: 20px !important;
+    margin-left: -10px !important; margin-top: -10px !important;
+  }
+  /* Mid-edge handles add a corner rather than move one, so they stay a size down
+     and hollow — same affordance, clearly the lesser one. */
+  .leaflet-container .marker-icon-middle {
+    width: 14px !important; height: 14px !important;
+    margin-left: -7px !important; margin-top: -7px !important;
+    opacity: 1 !important;
+    background: rgba(255, 255, 255, 0.72) !important;
+    border-width: 2px !important;
+    box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.8), 0 1px 4px rgba(11, 11, 20, 0.5) !important;
+  }
+  .leaflet-container .marker-icon:hover,
+  .leaflet-container .marker-icon-middle:hover {
+    background: #7A94FF !important;
+    border-color: #ffffff !important;
+    box-shadow: 0 0 0 3px rgba(36, 58, 251, 0.45), 0 2px 8px rgba(11, 11, 20, 0.6) !important;
+  }
+
   .zone-label {
     background: rgba(11, 11, 20, 0.85);
     border: none;
@@ -124,18 +186,47 @@
   }
   .zone-label::before { display: none; }
   .zone-label .rs { color: var(--primary-light); }
+  /* 67 labels at once is unreadable zoomed out; the colour bands carry the
+     picture on their own until he zooms into somewhere specific. */
+  #map.hide-labels .zone-label { display: none; }
 
-  .legend {
-    position: absolute; left: 12px; bottom: 24px; z-index: 800;
-    background: rgba(11, 11, 20, 0.88);
+  /* ---------- price checker ---------- */
+  .probe {
+    position: absolute; right: 12px; top: 12px; z-index: 800; width: 234px;
+    background: rgba(11, 11, 20, 0.92);
+    border: 1px solid var(--line);
     border-radius: 10px;
-    padding: 10px 12px;
-    font-size: 11px;
-    color: #fff;
+    padding: 11px 13px;
+    font-size: 12px;
   }
-  .legend h2 { font-size: 11px; font-weight: 700; margin-bottom: 6px; }
-  .legend .step { display: flex; align-items: center; gap: 7px; margin-top: 3px; }
-  .legend .sw { width: 14px; height: 10px; border-radius: 3px; }
+  .probe h2 { font-size: 11px; font-weight: 700; color: var(--text-muted); margin-bottom: 7px; }
+  .probe .zn { font-size: 13px; font-weight: 700; line-height: 1.35; }
+  .probe .row { display: flex; justify-content: space-between; margin-top: 4px; font-variant-numeric: tabular-nums; }
+  .probe .row span:first-child { color: var(--text-muted); }
+  .probe .warn { margin-top: 7px; color: #FFC46B; line-height: 1.45; font-size: 11px; }
+
+  /* ---------- send-back summary ---------- */
+  .modal {
+    position: fixed; inset: 0; z-index: 1200;
+    background: rgba(6, 6, 12, 0.72);
+    display: none; align-items: center; justify-content: center; padding: 24px;
+  }
+  .modal.open { display: flex; }
+  .sheet {
+    background: var(--bg-raised); border: 1px solid var(--line);
+    border-radius: 14px; padding: 20px; width: 100%; max-width: 460px;
+    max-height: 80vh; display: flex; flex-direction: column;
+  }
+  .sheet h2 { font-size: 16px; margin-bottom: 4px; }
+  .sheet > p { font-size: 12.5px; color: var(--text-muted); line-height: 1.55; }
+  .changes { margin: 14px 0; overflow-y: auto; font-size: 12.5px; line-height: 1.6; }
+  .changes li { list-style: none; padding: 5px 0; border-bottom: 1px solid var(--line); }
+  .changes .tag { font-weight: 700; margin-right: 6px; }
+  .changes .add { color: var(--positive); }
+  .changes .del { color: var(--negative); }
+  .changes .mod { color: var(--primary-light); }
+  .sheet .actions { display: flex; gap: 8px; }
+  .sheet .actions .grow { flex: 1; }
 
   /* empty state */
   .empty {
@@ -144,13 +235,31 @@
     background: rgba(11, 11, 20, 0.72);
     text-align: center; padding: 24px;
   }
+  /* display:flex above beats the hidden attribute's default display:none, which
+     left the "open a file" overlay sitting on top of a fully loaded map. */
+  .empty[hidden] { display: none; }
   .empty h2 { font-size: 18px; }
   .empty p { font-size: 13px; color: var(--text-muted); max-width: 380px; line-height: 1.6; }
 
   @media (max-width: 720px) {
     body { flex-direction: column; }
-    aside { width: 100%; height: 45%; border-right: none; border-top: 1px solid var(--line); order: 2; }
     main { height: 55%; order: 1; }
+    /* On a phone the panel is one scroll, not five. The desktop layout pins the
+       heading, buttons, car switch and status bar and scrolls only the list
+       between them — in 45% of a phone screen that leaves the list about two
+       rows tall. Dropping the column flex lets the whole panel scroll as one
+       piece, so the pinned chrome moves out of the way when he scrolls down. */
+    aside {
+      display: block;
+      width: 100%; height: 45%; order: 2;
+      border-right: none; border-top: 1px solid var(--line);
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+    }
+    /* Nested scrollers would fight the outer one — hand their content over. */
+    .list, .editor { flex: none; overflow: visible; }
+    .probe { width: 190px; }
   }
 </style>
 </head>
@@ -158,103 +267,242 @@
 
 <aside>
   <div class="brand">
-    <h1>RCS Travels <span>· Fare zone editor</span></h1>
-    <p>Click a zone to edit its prices. Drag the white dots to reshape it.</p>
+    <h1>RCS Travels <span>· Kiraya zone editor</span></h1>
+    <p>Kisi bhi area par tap karke uska rate badlein. Safed golon ko kheench kar area ki shape badlein. Map par kahin bhi tap karke dekhein wahan ka kiraya kitna banta hai.</p>
   </div>
 
   <div class="toolbar">
-    <button id="btn-open">Open file</button>
-    <button id="btn-draw">Draw new zone</button>
-    <button id="btn-download" class="primary">Download</button>
+    <button id="btn-open" hidden>File kholein</button>
+    <button id="btn-draw">Naya area banayein</button>
+    <button id="btn-download" class="primary">Save karke wapas bhejein</button>
+  </div>
+
+  <div class="classbar" id="classbar"></div>
+
+  <div class="search" id="search">
+    <input id="f-search" type="search" placeholder="Jagah ka naam dhoondhein…" autocomplete="off" />
   </div>
 
   <div class="list" id="zone-list"></div>
 
   <div class="editor" id="editor">
-    <label for="f-name">Zone name</label>
+    <label for="f-name">Area ka naam</label>
     <input id="f-name" type="text" autocomplete="off" />
 
-    <label>Prices (₹, one-way from Shiv Nadar)</label>
+    <label>Rate (₹, Shiv Nadar se one way)</label>
     <div class="fare-grid">
-      <div><label for="f-hatchback">Wagon R</label><input id="f-hatchback" type="number" min="0" step="50" inputmode="numeric" /></div>
-      <div><label for="f-sedan">Sedan</label><input id="f-sedan" type="number" min="0" step="50" inputmode="numeric" /></div>
-      <div><label for="f-suv">Ertiga</label><input id="f-suv" type="number" min="0" step="50" inputmode="numeric" /></div>
+      <div>
+        <label for="f-hatchback">Wagon R</label>
+        <input id="f-hatchback" type="number" min="0" step="50" inputmode="numeric" />
+      </div>
+      <div>
+        <label for="f-sedan">Sedan</label>
+        <input id="f-sedan" type="number" min="0" step="50" inputmode="numeric" />
+        <button type="button" class="reset" data-cls="sedan">normal rate lagayein</button>
+      </div>
+      <div>
+        <label for="f-suv">Ertiga</label>
+        <input id="f-suv" type="number" min="0" step="50" inputmode="numeric" />
+        <button type="button" class="reset" data-cls="suv">normal rate lagayein</button>
+      </div>
     </div>
-    <p class="hint">Leave a box empty if that car is not offered — the website then quotes by distance instead.</p>
+    <p class="hint">
+      Sirf Wagon R ka rate likhein, baaki dono apne aap bhar jaayenge — Sedan ₹100 zyada,
+      Ertiga 1.6&times;. Agar is jagah ka rate alag hai to uske upar apna number likh dein.
+      Kisi box ko khaali chhod dein to wahan wo gaadi nahi chalegi; tab website distance
+      ke hisaab se kiraya batayegi.
+    </p>
 
-    <label for="f-priority">Wins overlaps</label>
-    <input id="f-priority" type="number" min="0" step="1" inputmode="numeric" />
-    <p class="hint">When two zones overlap, the higher number wins. Small special areas (like Pari Chowk inside Greater Noida) should have the higher number.</p>
+    <label for="f-toll">Raste mein toll (₹)</label>
+    <input id="f-toll" type="number" min="0" step="50" inputmode="numeric" />
+    <p class="hint">Yeh kiraye mein jud kar customer ko dikhta hai. Toll nahi hai to khaali chhod dein.</p>
 
-    <label for="f-notes">Notes</label>
+    <label for="f-notes">Notes (is area mein kaun kaun si jagah aati hain)</label>
     <textarea id="f-notes" rows="3"></textarea>
 
     <div class="actions">
-      <button id="btn-done" class="primary grow">Done</button>
-      <button id="btn-delete" class="danger">Delete zone</button>
+      <button id="btn-done" class="primary grow">Ho gaya</button>
+      <button id="btn-delete" class="danger">Hata dein</button>
     </div>
   </div>
 
   <div class="footer">
-    <div class="status" id="status">No file loaded yet.</div>
+    <div class="status" id="status">Load ho raha hai…</div>
   </div>
 </aside>
 
 <main>
   <div id="map"></div>
-  <div class="legend" id="legend"></div>
-  <div class="empty" id="empty">
-    <h2>Open the zones file to start</h2>
-    <p>Click <strong>Open file</strong> and choose <strong>zones.geojson</strong>, or drag the file anywhere onto this page. When you finish editing, click <strong>Download</strong> and send the file back on WhatsApp.</p>
-    <button class="primary" id="btn-open-2">Open file</button>
+  <div class="probe" id="probe">
+    <h2>YAHAN KA KIRAYA KITNA?</h2>
+    <div id="probe-body"><p style="color:var(--text-muted);line-height:1.5">Map par kahin bhi tap karein.</p></div>
+  </div>
+  <div class="empty" id="empty" hidden>
+    <h2>Shuru karne ke liye zones file kholein</h2>
+    <p><strong>File kholein</strong> dabakar <strong>zones.geojson</strong> chunein, ya file ko kheench kar is page par chhod dein.</p>
+    <button class="primary" id="btn-open-2">File kholein</button>
   </div>
 </main>
+
+<div class="modal" id="modal">
+  <div class="sheet">
+    <h2 id="modal-title">Yeh badlaav wapas bhejein</h2>
+    <p>List ek baar dekh lein, phir file save karke WhatsApp par wapas bhej dein. Jab tak yeh live nahi ki jaati, website par kuch nahi badlega.</p>
+    <ul class="changes" id="changes"></ul>
+    <div class="actions">
+      <button id="btn-cancel">Abhi aur badlein</button>
+      <button id="btn-confirm" class="primary grow">File save karein</button>
+    </div>
+  </div>
+</div>
 
 <input type="file" id="file-input" accept=".geojson,.json,application/geo+json,application/json" hidden />
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.17.0/dist/leaflet-geoman.min.js"></script>
 <script>
+  // Replaced with the live rate card by tools/build-owner-editor.mjs, which is
+  // what makes the sent copy a single file that opens on a double-click. Left
+  // null in the repo, where the page is served next to zones.geojson and can
+  // just fetch it.
+  const EMBEDDED_ZONES = null; /*__ZONES__*/
+
   const map = L.map('map', { zoomControl: true }).setView([28.52, 77.35], 10);
   L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
     attribution: '&copy; OpenStreetMap &copy; CARTO', maxZoom: 19,
   }).addTo(map);
   map.pm.setGlobalOptions({ allowSelfIntersection: false });
 
-  // Fare bands drive zone colors so the pricing geography is visible at a glance.
-  const BANDS = [
-    { max: 500,      color: '#8FA5FF', label: 'up to ₹500' },
-    { max: 800,      color: '#647FFF', label: '₹501 – 800' },
-    { max: 1100,     color: '#3D55FC', label: '₹801 – 1100' },
-    { max: 1400,     color: '#2036D6', label: '₹1101 – 1400' },
-    { max: 1700,     color: '#161FA0', label: '₹1401 – 1700' },
-    { max: Infinity, color: '#0D0F6B', label: 'above ₹1700' },
-  ];
-  const bandColor = (fare) =>
-    fare == null ? '#8b8b9d' : BANDS.find((b) => fare <= b.max).color;
+  // ---------- pricing rules, mirrored from the website ----------
+  // Sedan and Ertiga follow the Wagon R everywhere except the handful of places
+  // the provider quoted individually, so the form asks for one number and works
+  // the rest out. Any value that is not the worked-out one counts as quoted.
+  const derive = { sedan: (h) => h + 100, suv: (h) => Math.round((h * 1.6) / 50) * 50 };
+  const isAuto = (props, cls) => {
+    const h = props.fares?.hatchback, v = props.fares?.[cls];
+    return h != null && v != null && v === derive[cls](h);
+  };
 
-  document.getElementById('legend').innerHTML =
-    '<h2>Wagon R price</h2>' +
-    BANDS.map((b) => `<div class="step"><span class="sw" style="background:${b.color}"></span>${b.label}</div>`).join('');
+  const CLASSES = [
+    { key: 'hatchback', label: 'Wagon R', scale: (n) => n },
+    { key: 'sedan',     label: 'Sedan',   scale: (n) => n + 100 },
+    { key: 'suv',       label: 'Ertiga',  scale: (n) => Math.round((n * 1.6) / 50) * 50 },
+  ];
+  let activeClass = 'hatchback';
+  const activeDef = () => CLASSES.find((c) => c.key === activeClass);
+
+  // Fare bands drive zone colors so the pricing geography is visible at a glance.
+  // Green is cheap, red is dear — the one colour scale nobody has to be taught.
+  // The thresholds are scaled by the same rule the prices are, so switching car
+  // keeps the same colour geography instead of turning the whole map red.
+  const BANDS = [
+    { max: 500,      color: '#2FBF71' },
+    { max: 800,      color: '#8CC63F' },
+    { max: 1100,     color: '#E8C13F' },
+    { max: 1400,     color: '#F2913D' },
+    { max: 1700,     color: '#E0603A' },
+    { max: Infinity, color: '#C8362F' },
+  ];
+  const scaledBands = () => {
+    const s = activeDef().scale;
+    return BANDS.map((b) => ({ ...b, max: b.max === Infinity ? Infinity : s(b.max) }));
+  };
+  const bandColor = (fare) =>
+    fare == null ? '#8b8b9d' : scaledBands().find((b) => fare <= b.max).color;
+
+
+  // ---------- what the website would charge here ----------
+  // A faithful copy of backend/services/fareZones.js. It has to stay faithful:
+  // the whole point of the checker is that it answers with the real fare,
+  // including the boundary-averaging rule, which is not something you can guess
+  // by looking at the map.
+  function pointInRing(lng, lat, ring) {
+    let inside = false;
+    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+      const [xi, yi] = ring[i], [xj, yj] = ring[j];
+      if ((yi > lat) !== (yj > lat) && lng < ((xj - xi) * (lat - yi)) / (yj - yi) + xi)
+        inside = !inside;
+    }
+    return inside;
+  }
+
+  const ringOf = (z) => z.layer.toGeoJSON().geometry.coordinates[0];
+
+  function matchZone(lat, lng) {
+    const hits = zones
+      .filter((z) => pointInRing(lng, lat, ringOf(z)))
+      .map((z) => ({ name: z.props.name, priority: z.props.priority ?? 0, fares: z.props.fares ?? {}, toll: z.props.toll ?? 0 }));
+    if (!hits.length) return null;
+    hits.sort((a, b) => b.priority - a.priority);
+
+    const [top, second] = hits;
+    const isBorder =
+      second &&
+      top.priority - second.priority <= 1 &&
+      second.fares.hatchback != null &&
+      second.fares.hatchback !== top.fares.hatchback;
+    if (!isBorder) return top;
+
+    const fares = {};
+    for (const { key } of CLASSES) {
+      if (top.fares[key] != null && second.fares[key] != null)
+        fares[key] = Math.round((top.fares[key] + second.fares[key]) / 2 / 50) * 50;
+      else if (top.fares[key] != null) fares[key] = top.fares[key];
+    }
+    return {
+      name: `${top.name} / ${second.name} border`,
+      priority: top.priority,
+      fares,
+      toll: Math.max(top.toll, second.toll),
+      blended: true,
+      pair: [top.name, second.name],
+    };
+  }
+
+  function showProbe(lat, lng) {
+    const m = matchZone(lat, lng);
+    const body = $('probe-body');
+    if (!m) {
+      body.innerHTML =
+        '<div class="zn">Kisi bhi area mein nahi hai</div>' +
+        '<p class="warn">Yahan ki ride aapke rate card se nahi, distance ke hisaab se lagegi.</p>';
+      return;
+    }
+    const rows = CLASSES.map(({ key, label }) => {
+      const base = m.fares[key];
+      const total = base == null ? null : base + m.toll;
+      return `<div class="row"><span>${label}</span><span>${fmt(total)}</span></div>`;
+    }).join('');
+    const notes = [
+      m.toll ? `Ismein ${fmt(m.toll)} ka toll shaamil hai.` : '',
+      m.blended ? `Yeh jagah <strong>${m.pair[0]}</strong> aur <strong>${m.pair[1]}</strong> dono mein aati hai, isliye rate dono ka average liya gaya hai. Agar aisa nahi chahiye to kisi ek ki boundary hata dein.` : '',
+    ].filter(Boolean).map((t) => `<p class="warn">${t}</p>`).join('');
+    body.innerHTML = `<div class="zn">${escapeHtml(m.name)}</div>${rows}${notes}`;
+  }
 
   /** zones: [{ props, layer }] — props is the feature's properties object, kept verbatim. */
   let zones = [];
   let selected = null;
   let fileName = 'zones.geojson';
+  // What the file looked like when it was opened, so the send-back screen can
+  // list what actually changed rather than asking him to remember.
+  let baseline = new Map();
 
   const $ = (id) => document.getElementById(id);
   const listEl = $('zone-list');
   const editorEl = $('editor');
 
   const fmt = (n) => (n == null ? '—' : '₹' + Number(n).toLocaleString('en-IN'));
+  const escapeHtml = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const roundRing = (ring) => ring.map(([lng, lat]) => [+lng.toFixed(5), +lat.toFixed(5)]);
 
   function zoneStyle(z, active) {
-    const c = bandColor(z.props.fares?.hatchback);
+    const c = bandColor(z.props.fares?.[activeClass]);
     return { color: active ? '#ffffff' : c, weight: active ? 3 : 2, fillColor: c, fillOpacity: active ? 0.45 : 0.28 };
   }
 
   function labelHtml(z) {
-    return `${z.props.name} <span class="rs">${fmt(z.props.fares?.hatchback)}</span>`;
+    return `${escapeHtml(z.props.name)} <span class="rs">${fmt(z.props.fares?.[activeClass])}</span>`;
   }
 
   function refreshZone(z) {
@@ -262,41 +510,86 @@
     z.layer.setTooltipContent(labelHtml(z));
   }
 
+  const refreshAll = () => { zones.forEach(refreshZone); renderList(); };
+
+  // ---------- change tracking ----------
+  const snapshot = (z) => JSON.stringify({ p: z.props, r: roundRing(ringOf(z)) });
+  const captureBaseline = () => { baseline = new Map(zones.map((z) => [z, snapshot(z)])); };
+  const isChanged = (z) => !baseline.has(z) || baseline.get(z) !== snapshot(z);
+
+  function changeList() {
+    const out = [];
+    const live = new Set(zones);
+    for (const [z] of baseline) if (!live.has(z)) out.push({ kind: 'del', text: `<strong>${escapeHtml(z.props.name)}</strong> hata diya` });
+    for (const z of zones) {
+      if (!baseline.has(z)) { out.push({ kind: 'add', text: `Naya area <strong>${escapeHtml(z.props.name)}</strong> — ${fmt(z.props.fares?.hatchback)}` }); continue; }
+      const was = JSON.parse(baseline.get(z));
+      if (JSON.stringify({ p: z.props, r: roundRing(ringOf(z)) }) === baseline.get(z)) continue;
+      const bits = [];
+      if (was.p.name !== z.props.name) bits.push(`naam pehle “${escapeHtml(was.p.name)}” tha`);
+      for (const { key, label } of CLASSES) {
+        const a = was.p.fares?.[key], b = z.props.fares?.[key];
+        if (a !== b) bits.push(`${label} ${fmt(a)} → ${fmt(b)}`);
+      }
+      if ((was.p.toll ?? 0) !== (z.props.toll ?? 0)) bits.push(`toll ${fmt(was.p.toll ?? 0)} → ${fmt(z.props.toll ?? 0)}`);
+      if (JSON.stringify(was.r) !== JSON.stringify(roundRing(ringOf(z)))) bits.push('shape badli');
+      if ((was.p.notes ?? '') !== (z.props.notes ?? '')) bits.push('notes badle');
+      if (bits.length) out.push({ kind: 'mod', text: `<strong>${escapeHtml(z.props.name)}</strong> — ${bits.join(', ')}` });
+    }
+    return out;
+  }
+
+  // ---------- sidebar ----------
   function renderList() {
+    const q = $('f-search').value.trim().toLowerCase();
     listEl.innerHTML = '';
     [...zones]
-      .sort((a, b) => (a.props.fares?.hatchback ?? 1e9) - (b.props.fares?.hatchback ?? 1e9))
+      .filter((z) => !q || (z.props.name ?? '').toLowerCase().includes(q) || (z.props.notes ?? '').toLowerCase().includes(q))
+      .sort((a, b) => (a.props.fares?.[activeClass] ?? 1e9) - (b.props.fares?.[activeClass] ?? 1e9))
       .forEach((z) => {
         const row = document.createElement('button');
-        row.className = 'zone-row' + (z === selected ? ' active' : '');
+        row.className = 'zone-row' + (z === selected ? ' active' : '') + (isChanged(z) ? ' changed' : '');
         row.innerHTML =
-          `<span class="dot" style="background:${bandColor(z.props.fares?.hatchback)}"></span>` +
-          `<span class="nm"></span><span class="fare">${fmt(z.props.fares?.hatchback)}</span>`;
+          `<span class="dot" style="background:${bandColor(z.props.fares?.[activeClass])}"></span>` +
+          `<span class="nm"></span><span class="fare">${fmt(z.props.fares?.[activeClass])}</span>`;
         row.querySelector('.nm').textContent = z.props.name;
         row.addEventListener('click', () => { select(z); map.fitBounds(z.layer.getBounds(), { maxZoom: 14 }); });
         listEl.appendChild(row);
       });
   }
 
+  function paintFareInputs() {
+    if (!selected) return;
+    const f = selected.props.fares ?? {};
+    $('f-hatchback').value = f.hatchback ?? '';
+    for (const cls of ['sedan', 'suv']) {
+      const auto = isAuto(selected.props, cls);
+      const input = $('f-' + cls);
+      input.value = f[cls] ?? '';
+      input.classList.toggle('auto', auto);
+      document.querySelector(`.reset[data-cls="${cls}"]`).hidden = auto || f.hatchback == null;
+    }
+  }
+
   function select(z) {
-    if (selected && selected !== z) { selected.layer.pm.disable(); }
+    if (selected && selected !== z) selected.layer.pm.disable();
     selected = z;
-    zones.forEach((x) => refreshZone(x));
+    zones.forEach(refreshZone);
     if (!z) {
       editorEl.classList.remove('open');
       listEl.classList.remove('hidden');
+      $('search').classList.remove('hidden');
       renderList();
       return;
     }
     z.layer.pm.enable();
     $('f-name').value = z.props.name ?? '';
-    $('f-priority').value = z.props.priority ?? 0;
-    $('f-hatchback').value = z.props.fares?.hatchback ?? '';
-    $('f-sedan').value = z.props.fares?.sedan ?? '';
-    $('f-suv').value = z.props.fares?.suv ?? '';
+    $('f-toll').value = z.props.toll ?? '';
     $('f-notes').value = z.props.notes ?? '';
+    paintFareInputs();
     editorEl.classList.add('open');
     listEl.classList.add('hidden');
+    $('search').classList.add('hidden');
   }
 
   function addZone(feature, layer) {
@@ -304,16 +597,17 @@
     layer.addTo(map);
     layer.setStyle(zoneStyle(z, false));
     layer.bindTooltip(labelHtml(z), { permanent: true, direction: 'center', className: 'zone-label' });
-    layer.on('click', () => select(z));
+    layer.on('click', (e) => { L.DomEvent.stop(e); select(z); });
     zones.push(z);
     return z;
   }
 
-  function loadGeoJSON(text, name) {
-    let data;
-    try { data = JSON.parse(text); } catch { alert('That file is not valid JSON.'); return; }
+  function loadGeoJSON(data, name) {
+    if (typeof data === 'string') {
+      try { data = JSON.parse(data); } catch { alert('Yeh file kharab hai — isse padha nahi ja sakta.'); return; }
+    }
     if (data.type !== 'FeatureCollection' || !Array.isArray(data.features)) {
-      alert('That file is not a zones file (expected a GeoJSON FeatureCollection).');
+      alert('Yeh zones wali file nahi hai. zones.geojson naam ki file chunein.');
       return;
     }
     zones.forEach((z) => z.layer.remove());
@@ -324,57 +618,144 @@
       addZone(f, L.polygon(latlngs));
     });
     fileName = name || fileName;
+    captureBaseline();
     select(null);
     if (zones.length) map.fitBounds(L.featureGroup(zones.map((z) => z.layer)).getBounds().pad(0.05));
-    $('empty').style.display = 'none';
-    setStatus(`${zones.length} zones loaded from ${fileName}. Edits stay on this page until you download.`);
+    $('empty').hidden = true;
+    setStatus(`${zones.length} area load ho gaye. Jab tak aap “Save karke wapas bhejein” nahi dabate, kuch bhi kahin nahi jaata.`);
   }
 
   function setStatus(msg) { $('status').textContent = msg; }
 
   // ---------- form bindings ----------
+  $('f-search').addEventListener('input', renderList);
   $('f-name').addEventListener('input', (e) => { selected.props.name = e.target.value; refreshZone(selected); });
-  $('f-priority').addEventListener('input', (e) => { selected.props.priority = e.target.value === '' ? 0 : +e.target.value; });
   $('f-notes').addEventListener('input', (e) => {
     if (e.target.value) selected.props.notes = e.target.value; else delete selected.props.notes;
   });
-  for (const cls of ['hatchback', 'sedan', 'suv']) {
+  $('f-toll').addEventListener('input', (e) => {
+    if (e.target.value === '' || +e.target.value === 0) delete selected.props.toll;
+    else selected.props.toll = +e.target.value;
+  });
+
+  // The Wagon R box drags the other two along, but only the ones that were
+  // following it — a price the provider quoted separately stays put.
+  $('f-hatchback').addEventListener('input', (e) => {
+    const f = (selected.props.fares = selected.props.fares ?? {});
+    const following = { sedan: isAuto(selected.props, 'sedan'), suv: isAuto(selected.props, 'suv') };
+    if (e.target.value === '') delete f.hatchback; else f.hatchback = +e.target.value;
+    for (const cls of ['sedan', 'suv']) {
+      if (!following[cls]) continue;
+      if (f.hatchback == null) delete f[cls]; else f[cls] = derive[cls](f.hatchback);
+    }
+    paintFareInputs();
+    refreshZone(selected);
+  });
+
+  for (const cls of ['sedan', 'suv']) {
     $('f-' + cls).addEventListener('input', (e) => {
-      selected.props.fares = selected.props.fares ?? {};
-      if (e.target.value === '') delete selected.props.fares[cls];
-      else selected.props.fares[cls] = +e.target.value;
-      // a hand-entered price is provider-confirmed, no longer derived
-      if (Array.isArray(selected.props.derived)) {
-        selected.props.derived = selected.props.derived.filter((d) => d !== cls);
-        if (!selected.props.derived.length) delete selected.props.derived;
-      }
+      const f = (selected.props.fares = selected.props.fares ?? {});
+      if (e.target.value === '') delete f[cls]; else f[cls] = +e.target.value;
+      paintFareInputs();
       refreshZone(selected);
     });
   }
+  document.querySelectorAll('.reset').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const cls = btn.dataset.cls;
+      const f = selected.props.fares ?? {};
+      if (f.hatchback == null) return;
+      f[cls] = derive[cls](f.hatchback);
+      paintFareInputs();
+      refreshZone(selected);
+    });
+  });
+
   $('btn-done').addEventListener('click', () => select(null));
   $('btn-delete').addEventListener('click', () => {
     if (!selected) return;
-    if (!confirm(`Delete the zone "${selected.props.name}"?`)) return;
+    if (!confirm(`“${selected.props.name}” hata dein? Wahan ki ride ka kiraya phir distance ke hisaab se lagega.`)) return;
     selected.layer.remove();
     zones = zones.filter((z) => z !== selected);
     selected = null;
     select(null);
   });
 
+  // ---------- car class switch ----------
+  $('classbar').innerHTML = CLASSES.map((c) =>
+    `<button data-cls="${c.key}"${c.key === activeClass ? ' class="on"' : ''}>${c.label}</button>`).join('');
+  $('classbar').addEventListener('click', (e) => {
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    activeClass = btn.dataset.cls;
+    [...$('classbar').children].forEach((b) => b.classList.toggle('on', b === btn));
+    refreshAll();
+  });
+
   // ---------- drawing new zones ----------
   $('btn-draw').addEventListener('click', () => {
     select(null);
     map.pm.enableDraw('Polygon', { snappable: true, finishOn: 'dblclick' });
-    setStatus('Click on the map to place corners. Double-click the last corner to finish the zone.');
-  });
-  map.on('pm:create', (e) => {
-    map.pm.disableDraw();
-    const z = addZone({ properties: { name: 'New zone', priority: 5, fares: {} } }, e.layer);
-    select(z);
-    setStatus('New zone added — give it a name and prices.');
+    setStatus('Boundary ke har mod par map ko tap karein. Aakhri point par do baar tap karke area band kar dein.');
   });
 
-  // ---------- file open / drop / download ----------
+  // Centre of the drawn shape, good enough to ask "what is this sitting inside".
+  const centroid = (ring) => {
+    const n = ring.length;
+    return [ring.reduce((s, p) => s + p[0], 0) / n, ring.reduce((s, p) => s + p[1], 0) / n];
+  };
+
+  map.on('pm:create', (e) => {
+    map.pm.disableDraw();
+    const ring = e.layer.toGeoJSON().geometry.coordinates[0];
+    const [clng, clat] = centroid(ring);
+
+    // Overlap order decides which price wins, and getting it wrong misprices the
+    // area silently — no error, just an averaged fare nobody asked for. So it is
+    // never typed in: it is worked out from an answer he can actually give.
+    const inside = zones
+      .filter((z) => pointInRing(clng, clat, ringOf(z)))
+      .sort((a, b) => (b.props.priority ?? 0) - (a.props.priority ?? 0))[0];
+
+    let priority = 5;
+    if (inside) {
+      const keep = !confirm(
+        `Yeh area “${inside.props.name}” ke andar hai, jahan ${fmt(inside.props.fares?.hatchback)} lagta hai.\n\n` +
+        `OK — yahan alag rate lagana hai.\nCancel — ${fmt(inside.props.fares?.hatchback)} hi rehne dein.`
+      );
+      if (keep) { e.layer.remove(); setStatus(`Kuch nahi joda — us jagah par ${inside.props.name} wala rate hi rahega.`); return; }
+      priority = (inside.props.priority ?? 0) + 2;
+    }
+
+    const z = addZone({ properties: { name: 'Naya area', priority, fares: {} } }, e.layer);
+    select(z);
+    setStatus('Naya area ban gaya — ab iska naam aur Wagon R ka rate bhar dein.');
+  });
+
+  // ---------- price checker ----------
+  map.on('click', (e) => {
+    if (map.pm.globalDrawModeEnabled()) return;
+    showProbe(e.latlng.lat, e.latlng.lng);
+  });
+
+  // ---------- label density ----------
+  // Labels stay hidden until you have zoomed into somewhere specific — all 67 at
+  // once, zoomed out, is just names stacked on names.
+  //
+  // A step earlier on a phone, where the map is 55% of a small screen: far fewer
+  // zones fit in frame at any given zoom, so the labels stop colliding sooner —
+  // and pinching your way in on a touchscreen is a lot more work than a scroll
+  // wheel. Matches the 720px CSS breakpoint. Whole steps only: zoomSnap is at
+  // its default of 1, so getZoom() is an integer here and a .5 threshold would
+  // behave exactly like the integer above it.
+  const narrow = window.matchMedia('(max-width: 720px)');
+  const labelZoom = () => (narrow.matches ? 11 : 12);
+  const syncLabels = () => $('map').classList.toggle('hide-labels', map.getZoom() < labelZoom());
+  map.on('zoomend', syncLabels);
+  // Rotating the phone crosses the breakpoint, so the threshold has to follow.
+  narrow.addEventListener('change', syncLabels);
+
+  // ---------- file open / drop / save ----------
   const fileInput = $('file-input');
   $('btn-open').addEventListener('click', () => fileInput.click());
   $('btn-open-2').addEventListener('click', () => fileInput.click());
@@ -391,16 +772,39 @@
   });
 
   $('btn-download').addEventListener('click', () => {
-    if (!zones.length) { alert('Nothing to download — open the zones file first.'); return; }
-    const missing = zones.filter((z) => !z.props.name || z.props.fares?.hatchback == null);
-    if (missing.length &&
-        !confirm(`${missing.length} zone(s) have no name or no Wagon R price and will quote by distance. Download anyway?`)) return;
+    if (!zones.length) { alert('Abhi save karne ko kuch nahi hai.'); return; }
+    const changes = changeList();
+    const unpriced = zones.filter((z) => !z.props.name || z.props.fares?.hatchback == null);
+    const list = $('changes');
+
+    if (!changes.length) {
+      $('modal-title').textContent = 'Abhi tak kuch nahi badla';
+      list.innerHTML = '<li>Kisi area mein koi badlaav nahi hua, isliye bhejne ko kuch nahi hai.</li>';
+      $('btn-confirm').textContent = 'Phir bhi file save karein';
+    } else {
+      $('modal-title').textContent = `${changes.length} badlaav wapas bhejein`;
+      list.innerHTML = changes
+        .map((c) => `<li><span class="tag ${c.kind}">${c.kind === 'add' ? 'NAYA' : c.kind === 'del' ? 'HATAYA' : 'BADLA'}</span>${c.text}</li>`)
+        .join('');
+      $('btn-confirm').textContent = 'File save karein';
+    }
+    if (unpriced.length) {
+      list.insertAdjacentHTML('beforeend',
+        `<li><span class="tag del">DHYAN DEIN</span>${unpriced.length} area ka naam ya Wagon R ka rate nahi bhara hai, ` +
+        `isliye ${unpriced.length > 1 ? 'unka' : 'uska'} kiraya distance ke hisaab se lagega.</li>`);
+    }
+    $('modal').classList.add('open');
+  });
+
+  $('btn-cancel').addEventListener('click', () => $('modal').classList.remove('open'));
+  $('modal').addEventListener('click', (e) => { if (e.target === $('modal')) $('modal').classList.remove('open'); });
+
+  $('btn-confirm').addEventListener('click', () => {
     const fc = {
       type: 'FeatureCollection',
       features: zones.map((z) => {
         const geo = z.layer.toGeoJSON().geometry;
-        geo.coordinates = geo.coordinates.map((ring) =>
-          ring.map(([lng, lat]) => [+lng.toFixed(5), +lat.toFixed(5)]));
+        geo.coordinates = geo.coordinates.map(roundRing);
         return { type: 'Feature', properties: z.props, geometry: geo };
       }),
     };
@@ -409,14 +813,25 @@
     a.download = 'zones.geojson';
     a.click();
     URL.revokeObjectURL(a.href);
-    setStatus('Downloaded zones.geojson — send it back on WhatsApp to update the website.');
+    $('modal').classList.remove('open');
+    captureBaseline();
+    renderList();
+    setStatus('zones.geojson ke naam se save ho gayi — website update karne ke liye yahi file WhatsApp par wapas bhej dein.');
   });
 
-  // If the page is served alongside the file (e.g. from the repo), load it automatically.
-  fetch('../backend/data/zones.geojson')
-    .then((r) => (r.ok ? r.text() : Promise.reject()))
-    .then((t) => loadGeoJSON(t, 'backend/data/zones.geojson'))
-    .catch(() => {}); // file:// or hosted standalone — the Open button handles it
+  // ---------- boot ----------
+  syncLabels();
+  if (EMBEDDED_ZONES) {
+    loadGeoJSON(EMBEDDED_ZONES, 'zones.geojson');
+  } else {
+    // Served from the repo next to the data — load it. Otherwise fall back to
+    // the Open button, which is the only way in when this file stands alone.
+    $('btn-open').hidden = false;
+    fetch('../backend/data/zones.geojson')
+      .then((r) => (r.ok ? r.text() : Promise.reject()))
+      .then((t) => loadGeoJSON(t, 'backend/data/zones.geojson'))
+      .catch(() => { $('empty').hidden = false; setStatus('Abhi koi file nahi khuli hai.'); });
+  }
 </script>
 </body>
 </html>

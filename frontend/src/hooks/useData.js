@@ -44,11 +44,26 @@ export const useData = create (persist (set =>({
     routePolyline: null,
     setRoutePolyline: (polyline)=> set (state => ({routePolyline: polyline})),
 
-    // How the estimate priced the ride: 'zone' | 'fixed_table' | 'formula'.
-    // Only 'formula' (per-km) excludes tolls, so it's what the tolls notice
-    // keys off. Tracking never calls the estimate, so it reads this.
+    // How the estimate priced the ride: 'zone' | 'fixed_table' | 'formula' |
+    // 'per_km'. The two distance sources exclude tolls, so isDistancePriced()
+    // in constants/fares is what the tolls notice keys off. Tracking never calls
+    // the estimate, so it reads this.
     fareSource: null,
     setFareSource: (source)=> set (state => ({fareSource: source})),
+
+    // The flat add-ons the server folded into the booked fare. Kept so the ride
+    // details breakdown can subtract them back out of the total rather than
+    // re-deriving them from a client-side copy of the rate card — the carrier in
+    // particular is waived on some routes, so its sticker price is not the
+    // amount charged. Persisted with fareSource: tracking never re-estimates.
+    fareToll: 0,
+    setFareToll: (amount)=> set (state => ({fareToll: amount ?? 0})),
+
+    fareCarrier: 0,
+    setFareCarrier: (amount)=> set (state => ({fareCarrier: amount ?? 0})),
+
+    fareAirport: 0,
+    setFareAirport: (amount)=> set (state => ({fareAirport: amount ?? 0})),
 
     // Autocomplete picks for the on-focus recents panel. Persisted; capped at
     // 15 by evicting the lowest frecency score (count decayed by age).
@@ -141,6 +156,11 @@ export const useData = create (persist (set =>({
     safeRoute: false,
     setSafeRoute: (on) => set(state=>({safeRoute: on})),
 
+    // Roof carrier for oversized luggage. Same reasoning as safeRoute: it belongs
+    // to this trip's luggage, not to the account, so it is not persisted.
+    needsCarrier: false,
+    setNeedsCarrier: (on) => set(state=>({needsCarrier: on})),
+
     // Dev-only: lets /dev/* preview routes render auth-gated UI without Clerk.
     devAuthBypass: false,
     setDevAuthBypass: (on) => set(() => ({devAuthBypass: on})),
@@ -159,5 +179,7 @@ export const useData = create (persist (set =>({
         pickupCoords: state.pickupCoords, dropCoords: state.dropCoords,
         distanceKm: state.distanceKm, durationMin: state.durationMin,
         routePolyline: state.routePolyline, fareSource: state.fareSource,
+        fareToll: state.fareToll, fareCarrier: state.fareCarrier,
+        fareAirport: state.fareAirport,
     }),
 }))

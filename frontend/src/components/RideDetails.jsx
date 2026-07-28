@@ -40,7 +40,13 @@ const RideDetails = ({ prop }) => {
     const cancellationCharge = useData(state => state.cancellationCharge);
     const [confirmCancel, setConfirmCancel] = useState(false);
     const surcharge = safeRoute ? SAFE_ROUTE_SURCHARGE : 0;
-    const baseFare = fare != null ? fare - surcharge : null;
+    // Both are the amounts the estimate actually charged, saved at booking time:
+    // the carrier is waived on the pricier routes, so its sticker price would be
+    // the wrong thing to subtract here.
+    const toll = useData(state => state.fareToll);
+    const carrier = useData(state => state.fareCarrier);
+    const airport = useData(state => state.fareAirport);
+    const baseFare = fare != null ? fare - surcharge - toll - carrier - airport : null;
 
     async function handleCancel(e) {
         e.preventDefault();
@@ -112,6 +118,24 @@ const RideDetails = ({ prop }) => {
                         <div className="flex items-center justify-between w-full">
                             <h4 className={`${META} text-[var(--text-muted)]`}>Safer route</h4>
                             <h4 className={META}>₹{surcharge}</h4>
+                        </div>
+                    )}
+                    {toll > 0 && (
+                        <div className="flex items-center justify-between w-full">
+                            <h4 className={`${META} text-[var(--text-muted)]`}>Highway toll</h4>
+                            <h4 className={META}>₹{toll}</h4>
+                        </div>
+                    )}
+                    {airport > 0 && (
+                        <div className="flex items-center justify-between w-full">
+                            <h4 className={`${META} text-[var(--text-muted)]`}>Airport pickup</h4>
+                            <h4 className={META}>₹{airport}</h4>
+                        </div>
+                    )}
+                    {carrier > 0 && (
+                        <div className="flex items-center justify-between w-full">
+                            <h4 className={`${META} text-[var(--text-muted)]`}>Roof carrier</h4>
+                            <h4 className={META}>₹{carrier}</h4>
                         </div>
                     )}
                     <div className="flex items-center justify-between w-full">

@@ -134,7 +134,8 @@ function pastBookings(user, drivers) {
     },
     {
       id: '00000000-0000-0000-0000-000000000002', userId: user.id, driverId: drivers[1]?.id ?? null,
-      customerPhone: user.phone, vehicleType: 6, fare: 1200, distanceKm: 41.0, commissionPct: 10, commissionAmt: 120,
+      customerPhone: user.phone, vehicleType: 6, fare: 1200, distanceKm: 41.0,
+      rideFare: 1200, commissionPct: 5, commissionAmt: 60,
       pickupAddress: 'IGI Airport T3, New Delhi', pickupLat: 28.5562, pickupLng: 77.1000,
       dropAddress: 'Noida Sector 18',             dropLat: 28.5708, dropLng: 77.3260,
       status: 'completed', confirmedAt: daysAgo(3), createdAt: daysAgo(3), completedAt: daysAgo(3),

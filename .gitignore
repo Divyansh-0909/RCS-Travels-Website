@@ -136,3 +136,11 @@ ds-bundle/
 /serve.mjs
 /screenshot.mjs
 temporary screenshots/
+
+# =========================
+# Owner fare-zone editor
+# =========================
+# Built by tools/build-owner-editor.mjs from zone-editor.html + zones.geojson.
+# Not committed on purpose: it is a copy of the rate card, and a committed copy
+# is one somebody sends after it has gone stale. Rebuild before every send.
+/tools/rcs-fare-zones.html
