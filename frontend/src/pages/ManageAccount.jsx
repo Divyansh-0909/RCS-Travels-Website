@@ -23,7 +23,7 @@ import Chips, { filterLabel, filterField } from "../components/ui/Chips";
 const genderOptions = ["Male", "Female", "Others", "Rather not say"]
 
 const RIDE_TAB = "Ride History"
-const items = ["Account information", RIDE_TAB, "Privacy & Data"]
+const items = ["Account info", RIDE_TAB, "Privacy & Data"]
 
 const rideStatuses = ["pending", "confirmed", "assigned", "en_route", "reached", "started", "completed", "cancelled"]
 const vehicleOptions = [{ value: 4, label: vehicleLabel(4) }, { value: 6, label: vehicleLabel(6) }]
@@ -47,10 +47,10 @@ const ManageAccount = () => {
     const setDOB = useData(state => state.setDOB)
     const location = useLocation();
     // A tab can be requested via router state (NavBar) or sessionStorage (post-cancel reload).
-    const [selected, setSelected] = useState(() => {
-        const requested = sessionStorage.getItem("manageAccountTab") ?? location.state?.tab
-        return Math.max(0, items.indexOf(requested))
-    })
+    // Kept in state so it survives the sessionStorage cleanup below — on phones it
+    // decides whether the layout opens on the section list or straight on the tab.
+    const [requestedTab] = useState(() => sessionStorage.getItem("manageAccountTab") ?? location.state?.tab)
+    const [selected, setSelected] = useState(Math.max(0, items.indexOf(requestedTab)))
     const navigate = useViewNavigate();
     const [expanded, setExpanded] = useState(null)
     const [genderSelected, setGenderSelected] = useState("Not Selected")
@@ -260,9 +260,10 @@ const ManageAccount = () => {
     }
 
     const lockedFields = ["Name", "Phone number"]
+    // Locked rows carry [label, value, popup heading, popup description].
     const AccountInfo_items = [
-        ["Name", username, "Your name is linked to your verified identity and can't be edited."],
-        ["Phone number", phone, "Your phone number is tied to your account and can't be changed."],
+        ["Name", username, "Your name can't be edited", "It's linked to your verified identity, so it stays as it was when you signed up."],
+        ["Phone number", phone, "Your phone number can't be changed", "It's how you sign in, and your account and rides are tied to it."],
         ["Gender", gender],
         ["Emergency Contact", emergencyContact],
         ["DOB", dob]
@@ -386,8 +387,30 @@ const ManageAccount = () => {
         }
     }
 
+    // Rendered twice: inside the toolbar on sm+, pinned under the list on phones.
+    // Hidden entirely while everything fits on one page.
+    const ridePagination = (rideTotal ?? 0) <= rideLimit ? null : (
+        <div className="flex gap-3 sm:gap-4 items-center justify-center">
+            <button type="button" disabled={ridePage <= 1} onClick={() => setRidePage(p => p - 1)} className="disabled:opacity-[0.8] disabled:cursor-not-allowed disabled:hover:bg-[var(--background)]/90 py-2 px-3 flex items-center justify-center gap-1 cursor-pointer text-[var(--text)] bg-[var(--background)]/90 hover:bg-[var(--background)] transition-color duration-300 rounded-xl"><h4>Prev</h4></button>
+            <span className="text-[var(--text-foreground)] flex w-fit items-center justify-center gap-2">
+                <input
+                    type="text"
+                    inputMode="numeric"
+                    value={ridePageInput}
+                    onChange={(e) => setRidePageInput(e.target.value.replace(/\D/g, ""))}
+                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); commitRidePage() } }}
+                    onBlur={commitRidePage}
+                    className="flex text-center justify-center items-center border box-border rounded-lg h-10 w-10 p-0 m-0 bg-transparent leading-none outline-none text-sm sm:text-lg"
+                />
+                <h4>of</h4>
+                <h4 className="flex text-center justify-center items-center border box-border rounded-lg h-10 w-10 p-0 m-0 bg-transparent leading-none text-sm sm:text-lg">{totalRidePages}</h4>
+            </span>
+            <button type="button" disabled={ridePage >= totalRidePages} onClick={() => setRidePage(p => p + 1)} className="disabled:opacity-[0.8] disabled:cursor-not-allowed disabled:hover:bg-[var(--background)]/90 py-2 px-3 flex items-center justify-center gap-1 cursor-pointer text-[var(--text)] bg-[var(--background)]/90 hover:bg-[var(--background)] transition-color duration-300 rounded-xl"><h4>Next</h4></button>
+        </div>
+    )
+
     return (
-        <AccountLayout items={items} selected={selected} onSelect={setSelected} title="Manage Account">
+        <AccountLayout items={items} selected={selected} onSelect={setSelected} title="Manage Account" startOnContent={items.includes(requestedTab)}>
                     <Button
                         className={`${expanded ? "block animate-datetime" : "hidden animate-datetime-out"} z-200 py-6 flex flex-col justify-center items-center fixed left-1/2 top-1/2 -translate-x-1/2 mt-10 -translate-y-1/2 hover:opacity-[1]`}
                         prop={{ variant: "dropdown", width: "310px" }}
@@ -398,6 +421,7 @@ const ManageAccount = () => {
                             ? <div className="flex flex-col justify-center px-3 w-full items-center text-center">
                                 <ErrorMark className="mb-2" size={140} />
                                 <h2 className="text-2xl">{expanded[2]}</h2>
+                                <p className="mt-1 text-sm text-[var(--foreground-muted)]/70">{expanded[3]}</p>
                             </div>
                             : <div className="flex flex-col gap-3 w-full justify-center px-3 pt-3 items-center text-center">
                                 <h2 className="text-2xl">{expanded === "deactivate" ? "Before you deactivate" : expanded === "drivers" ? "What your driver sees" : `${field}`}</h2>
@@ -427,7 +451,7 @@ const ManageAccount = () => {
                                 {expanded === "deactivate" && (
                                     <div className="w-full flex flex-col gap-4 mb-1">
                                         <ul className="list-disc pl-5 flex flex-col gap-2 text-left text-sm text-[var(--foreground-muted)]/70 marker:text-[var(--foreground-muted)]/40">
-                                            <li>Your personal details are erased: name, gender, DOB, and emergency contact.</li>
+                                            <li>Your personal details are erased: name, gender, DOB, emergency contact, and saved places.</li>
                                             <li>Your past rides are kept anonymously for our records.</li>
                                             <li>You're signed out on all your devices.</li>
                                             <li>You can sign up again with this number, but your history won't return.</li>
@@ -437,13 +461,13 @@ const ManageAccount = () => {
                                             value={confirmText}
                                             onChange={(e) => setConfirmText(e.target.value)}
                                             placeholder={`Type "Deactivate"`}
-                                            className="w-full rounded-full py-2 px-3 text-base text-center text-[var(--text)] bg-transparent outline-none placeholder:text-[var(--foreground-muted)]/50 border border-[var(--foreground)]/30"
+                                            className="w-full rounded-xl py-2 px-3 text-base text-center text-[var(--text)] bg-transparent outline-none placeholder:text-[var(--foreground-muted)]/50 border border-[var(--foreground)]/30"
                                         />
                                     </div>
                                 )}
 
                                 {/* Gender — dropdown selector */}
-                                <div onClick={() => setDropdownExpand(!dropdownExpand)} className={`${field === "Gender" ? "block" : "hidden"} relative w-full flex items-center rounded-full py-2 justify-between px-3 border border-[var(--foreground)]/30`}>
+                                <div onClick={() => setDropdownExpand(!dropdownExpand)} className={`${field === "Gender" ? "block" : "hidden"} relative w-full flex items-center rounded-xl py-2 justify-between px-3 border border-[var(--foreground)]/30`}>
                                     <h4 className={`${genderSelected === "Not Selected" && "text-[var(--foreground-muted)]/50"} text-lg`}>{genderSelected}</h4>
                                     <Icon path={mdiChevronDown} style={{
                                         transform: dropdownExpand
@@ -486,7 +510,7 @@ const ManageAccount = () => {
                                         value={fieldValue}
                                         onChange={field === "DOB" ? handleDobChange : handleContactChange}
                                         placeholder={field === "DOB" ? "DD/MM/YYYY" : "XXXXX XXXXX"}
-                                        className={`w-full rounded-full py-2 px-3 text-lg text-center text-[var(--text)] bg-transparent outline-none placeholder:text-[var(--foreground-muted)]/50 border ${(field === "DOB" && fieldValue && !dobValid) || (field === "Emergency Contact" && fieldValue && fieldValue.length !== 10) ? "border-[rgba(239,68,68,0.5)]" : "border-[var(--foreground)]/30"}`}
+                                        className={`w-full rounded-xl py-2 px-3 text-lg text-center text-[var(--text)] bg-transparent outline-none placeholder:text-[var(--foreground-muted)]/50 border ${(field === "DOB" && fieldValue && !dobValid) || (field === "Emergency Contact" && fieldValue && fieldValue.length !== 10) ? "border-[rgba(239,68,68,0.5)]" : "border-[var(--foreground)]/30"}`}
                                     />
                                 )}
 
@@ -580,24 +604,16 @@ const ManageAccount = () => {
                                     </div>
                                 </div>
                                 <div className="w-full flex gap-2 px-3 pt-3 mt-3 border-t border-[var(--foreground)]/10">
-                                    <div onClick={clearRideFilters} className="flex-1 flex justify-center items-center py-2 rounded-full border border-[var(--foreground)]/30 text-sm cursor-pointer hover:bg-[var(--foreground)]/10 transition-colors duration-300">Clear</div>
-                                    <div onClick={applyRideFilters} className="flex-1 flex justify-center items-center py-2 rounded-full bg-primary text-[var(--foreground)] text-sm font-semibold cursor-pointer hover:opacity-[0.9] transition-opacity duration-300">Apply</div>
+                                    <div onClick={clearRideFilters} className="flex-1 flex justify-center items-center py-2 rounded-xl border border-[var(--foreground)]/30 text-sm cursor-pointer hover:bg-[var(--foreground)]/10 transition-colors duration-300">Clear</div>
+                                    <div onClick={applyRideFilters} className="flex-1 flex justify-center items-center py-2 rounded-xl bg-primary text-[var(--foreground)] text-sm font-semibold cursor-pointer hover:opacity-[0.9] transition-opacity duration-300">Apply</div>
                                 </div>
                             </div>
                         </Button>
                     )}
                     {/* Toolbar: sort order, filter panel toggle, debounced search, pagination */}
-                    <form onSubmit={(e) => { e.preventDefault(); clearTimeout(rideDebounceRef.current); runRideSearch() }} className="flex w-full justify-between px-4 gap-2 items-center">
-                        <div className="flex w-fit justify-start gap-2 items-center">
-                        <button type="button" onClick={() => setRideOrder(!rideOrder)} className="py-2 px-3 flex items-center justify-center gap-1 cursor-pointer text-[var(--text)] bg-[var(--background)]/90 hover:bg-[var(--background)] transition-color duration-300 rounded-xl">
-                            <Icon path={rideOrder ? mdiSortCalendarDescending : mdiSortCalendarAscending} size={1.1} />
-                            <h4>Sort</h4>
-                        </button>
-                        <button type="button" onClick={() => setRideFilterExpand(!rideFilterExpand)} className="py-2 px-3 flex items-center justify-center gap-1 cursor-pointer text-[var(--text)] bg-[var(--background)]/90 hover:bg-[var(--background)] transition-color duration-300 rounded-xl">
-                            <Icon path={mdiTuneVertical} size={1} className="rotate-[90deg]" />
-                            <h4>Filter</h4>
-                        </button>
-                        <div className={`flex justify-start gap-1 items-center rounded-xl py-5 px-3 w-[20vw] ${rideSearchActive ? "border-[var(--background-muted)]" : "border-[var(--background-muted)]/40"} h-[5vh] text-[var(--text-foreground)] transition-all duration-300 border-2`}>
+                    <form onSubmit={(e) => { e.preventDefault(); clearTimeout(rideDebounceRef.current); runRideSearch() }} className="flex w-full flex-wrap justify-between px-4 max-sm:px-0 gap-2 gap-y-3 items-center">
+                        <div className="flex w-fit max-sm:w-full max-sm:flex-wrap justify-start gap-2 items-center">
+                        <div className={`flex justify-start gap-1 items-center rounded-xl py-5 px-3 w-[20vw] max-sm:w-full ${rideSearchActive ? "border-[var(--background-muted)]" : "border-[var(--background-muted)]/40"} h-[5vh] text-[var(--text-foreground)] transition-all duration-300 border-2`}>
                             <Icon path={mdiMagnify} size={0.9} className="cursor-pointer text-sm sm:text-lg hover:text-[var(--text-foreground)] transition-color duration-300 text-[var(--text-foreground)]/40" />
                             <input
                                 onFocus={() => setRideSearchActive(true)}
@@ -611,26 +627,18 @@ const ManageAccount = () => {
                                 className={`w-[95%] h-[5vh] text-[var(--text-foreground)]  outline-none border-none`}
                             />
                         </div>
+                        <button type="button" onClick={() => setRideOrder(!rideOrder)} className="py-2 px-3 flex items-center justify-center gap-1 cursor-pointer text-[var(--text)] bg-[var(--background)]/90 hover:bg-[var(--background)] transition-color duration-300 rounded-xl">
+                            <Icon path={rideOrder ? mdiSortCalendarDescending : mdiSortCalendarAscending} size={1.1} />
+                            <h4>Sort</h4>
+                        </button>
+                        <button type="button" onClick={() => setRideFilterExpand(!rideFilterExpand)} className="py-2 px-3 flex items-center justify-center gap-1 cursor-pointer text-[var(--text)] bg-[var(--background)]/90 hover:bg-[var(--background)] transition-color duration-300 rounded-xl">
+                            <Icon path={mdiTuneVertical} size={1} className="rotate-[90deg]" />
+                            <h4>Filter</h4>
+                        </button>
                         </div>
-                        <div className="flex gap-3 sm:gap-4 items-center justify-center">
-                            <button type="button" disabled={ridePage <= 1} onClick={() => setRidePage(p => p - 1)} className="disabled:opacity-[0.8] disabled:cursor-not-allowed disabled:hover:bg-[var(--background)]/90 py-2 px-3 flex items-center justify-center gap-1 cursor-pointer text-[var(--text)] bg-[var(--background)]/90 hover:bg-[var(--background)] transition-color duration-300 rounded-xl"><h4>Prev</h4></button>
-                            <span className="text-[var(--text-foreground)] flex w-fit items-center justify-center gap-2">
-                                <input
-                                    type="text"
-                                    inputMode="numeric"
-                                    value={ridePageInput}
-                                    onChange={(e) => setRidePageInput(e.target.value.replace(/\D/g, ""))}
-                                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); commitRidePage() } }}
-                                    onBlur={commitRidePage}
-                                    className="flex text-center justify-center items-center border box-border rounded-lg h-10 w-10 p-0 m-0 bg-transparent leading-none outline-none text-sm sm:text-lg"
-                                />
-                                <h4>of</h4>
-                                <h4 className="flex text-center justify-center items-center border box-border rounded-lg h-10 w-10 p-0 m-0 bg-transparent leading-none text-sm sm:text-lg">{totalRidePages}</h4>
-                            </span>
-                            <button type="button" disabled={ridePage >= totalRidePages} onClick={() => setRidePage(p => p + 1)} className="disabled:opacity-[0.8] disabled:cursor-not-allowed disabled:hover:bg-[var(--background)]/90 py-2 px-3 flex items-center justify-center gap-1 cursor-pointer text-[var(--text)] bg-[var(--background)]/90 hover:bg-[var(--background)] transition-color duration-300 rounded-xl"><h4>Next</h4></button>
-                        </div>
+                        {ridePagination && <div className="max-sm:hidden">{ridePagination}</div>}
                     </form>
-                    <div className="w-full flex-1 min-h-0 overflow-y-auto mt-4 px-4 [mask-image:linear-gradient(to_bottom,black_calc(100%-56px),transparent)]">
+                    <div className="w-full flex-1 min-h-0 overflow-y-auto mt-4 px-4 max-sm:px-0 [mask-image:linear-gradient(to_bottom,black_calc(100%-56px),transparent)]">
                     {rideError
                         ?
                         <FailureState
@@ -752,6 +760,7 @@ const ManageAccount = () => {
                         })
                     }
                     </div>
+                    {ridePagination && <div className="sm:hidden w-full flex justify-center pt-3">{ridePagination}</div>}
                 </>
                 : <ul className="flex flex-col items-start gap-4 justify-center w-full">
                 {selected === 0

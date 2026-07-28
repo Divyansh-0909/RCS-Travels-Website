@@ -11,6 +11,9 @@ import TrackingPage from "./TrackingPage";
 // states are driven by stubbing those responses, not by faking them in the page.
 import ManageAccount from "./ManageAccount";
 import AdminDashboard from "./AdminDashboard";
+import SettingsPage from "./SettingsPage";
+import SafetyPage from "./SafetyPage";
+import HelpPage from "./HelpPage";
 import RideDetails from "../components/RideDetails";
 import BackgroundPanel from "../components/ui/BackgroundPanel";
 import GoogleMap, { MAP_LAND_COLOR } from "../components/ui/GoogleMap";
@@ -67,6 +70,10 @@ const PREVIEWS = [
     // Auth-gated in the real router; here they render bare so their list states
     // can be driven by whatever the API returns.
     ["/dev/rides", "ManageAccount: Ride History (empty / failure via API)"],
+    ["/dev/account", "ManageAccount: opens on the section list (phone menu-first flow)"],
+    ["/dev/settings", "SettingsPage: language, notifications, saved places"],
+    ["/dev/safety", "SafetyPage: emergency contact, live location, helpline"],
+    ["/dev/help", "HelpPage: FAQ, contact, cancellation (also public at /help)"],
     ["/dev/admin", "AdminDashboard: bookings, drivers, users (empty / failure via API)"],
     ["/dev/crash", "ErrorBoundary: deliberate render throw"],
 ];
@@ -252,7 +259,12 @@ const DevPreview = () => {
     // seen without breaking a real page. Dev-only, like everything on this route.
     if (view === "crash") throw new Error("Deliberate crash from /dev/crash");
     if (view === "states") return <StatesGallery />;
-    if (view === "rides") return <ManageAccount key={search} />;
+    // view in the key: /dev/rides and /dev/account render the same component,
+    // and without a remount the rides tab would survive the switch between them.
+    if (view === "rides" || view === "account") return <ManageAccount key={view + search} />;
+    if (view === "settings") return <SettingsPage />;
+    if (view === "safety") return <SafetyPage />;
+    if (view === "help") return <HelpPage />;
     if (view === "admin") return <AdminDashboard key={search} />;
     if (view === "home" || view === "trip") return <OnBoarding key={view + search} />;
     if (view === "vehicle") return <VehicleSelect key={search} />;

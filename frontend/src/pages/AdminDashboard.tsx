@@ -294,6 +294,29 @@ const AdminDashboard = () => {
         selected === 0 ? searchBooking(null, cleared) : selected === 1 ? searchDrivers(null, cleared) : searchUsers(null, cleared)
     }
 
+    // Rendered twice: inside the toolbar on sm+, pinned under the list on phones.
+    // Hidden entirely while the current tab fits on one page.
+    const currentTotal = selected === 0 ? totalBookings : selected === 1 ? totalDrivers : totalUsers
+    const pagination = (currentTotal ?? 0) <= limit ? null : (
+        <div className="flex gap-3 sm:gap-4 items-center justify-center">
+            <button type="button" disabled={page <= 1} onClick={() => setPage(p => p - 1)} className="disabled:opacity-[0.8] disabled:cursor-not-allowed disabled:hover:bg-[var(--background)]/90 py-2 px-3 flex items-center justify-center gap-1 cursor-pointer text-[var(--text)] bg-[var(--background)]/90 hover:bg-[var(--background)] transition-color duration-300 rounded-xl"><h4>Prev</h4></button>
+            <span className="text-[var(--text-foreground)] flex w-fit items-center justify-center gap-2">
+                <input
+                    type="text"
+                    inputMode="numeric"
+                    value={pageInput}
+                    onChange={(e) => setPageInput(e.target.value.replace(/\D/g, ""))}
+                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); commitPage() } }}
+                    onBlur={commitPage}
+                    className="flex text-center justify-center items-center border box-border rounded-lg h-10 w-10 p-0 m-0 bg-transparent leading-none outline-none text-sm sm:text-lg"
+                />
+                <h4>of</h4>
+                <h4 className="flex text-center justify-center items-center border box-border rounded-lg h-10 w-10 p-0 m-0 bg-transparent leading-none text-sm sm:text-lg">{totalPages}</h4>
+            </span>
+            <button type="button" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} className="disabled:opacity-[0.8] disabled:cursor-not-allowed disabled:hover:bg-[var(--background)]/90 py-2 px-3 flex items-center justify-center gap-1 cursor-pointer text-[var(--text)] bg-[var(--background)]/90 hover:bg-[var(--background)] transition-color duration-300 rounded-xl"><h4>Next</h4></button>
+        </div>
+    )
+
     return (
         <AccountLayout items={items} selected={selected} onSelect={(i : number) => { setSelected(i); setPage(1); setFilterSection(0) }} title="Admin Dashboard">
             {filterDropdown.mounted && (
@@ -376,23 +399,15 @@ const AdminDashboard = () => {
                             </div>
                         </div>
                         <div className="w-full flex gap-2 px-3 pt-3 mt-3 border-t border-[var(--foreground)]/10">
-                            <div onClick={clearFilters} className="flex-1 flex justify-center items-center py-2 rounded-full border border-[var(--foreground)]/30 text-sm cursor-pointer hover:bg-[var(--foreground)]/10 transition-colors duration-300">Clear</div>
-                            <div onClick={applyFilters} className="flex-1 flex justify-center items-center py-2 rounded-full bg-primary text-[var(--foreground)] text-sm font-semibold cursor-pointer hover:opacity-[0.9] transition-opacity duration-300">Apply</div>
+                            <div onClick={clearFilters} className="flex-1 flex justify-center items-center py-2 rounded-xl border border-[var(--foreground)]/30 text-sm cursor-pointer hover:bg-[var(--foreground)]/10 transition-colors duration-300">Clear</div>
+                            <div onClick={applyFilters} className="flex-1 flex justify-center items-center py-2 rounded-xl bg-primary text-[var(--foreground)] text-sm font-semibold cursor-pointer hover:opacity-[0.9] transition-opacity duration-300">Apply</div>
                         </div>
                     </div>
                 </Button>
             )}
-            <form onSubmit={(e) => { e.preventDefault(); clearTimeout(debounceRef.current); runSearch() }} className="flex w-full justify-between px-5 gap-2 items-center">
-                <div className="flex w-fit justify-start gap-2 items-center">
-                    <button onClick={(e) => { e.preventDefault(); setOrder(!order); }} className="py-2 px-3 flex items-center justify-center gap-1 cursor-pointer text-[var(--text)] bg-[var(--background)]/90 hover:bg-[var(--background)] transition-color duration-300 rounded-xl">
-                        <Icon path={order ? mdiSortCalendarDescending : mdiSortCalendarAscending} size={1.1} />
-                        <h4>Sort</h4>
-                    </button>
-                    <button onClick={(e) => { e.preventDefault(); setExpanded(!expanded); }} className="py-2 px-3 flex items-center justify-center gap-1 cursor-pointer text-[var(--text)] bg-[var(--background)]/90 hover:bg-[var(--background)] transition-color duration-300 rounded-xl">
-                        <Icon path={mdiTuneVertical} size={1} className="rotate-[90deg]" />
-                        <h4>Filter</h4>
-                    </button>
-                    <div className={`flex justify-start gap-1 items-center rounded-xl py-5 px-3 w-[20vw] ${active ? "border-[var(--background-muted)]" : "border-[var(--background-muted)]/40"} h-[5vh] text-[var(--text-foreground)] transition-all duration-300 border-2`}>
+            <form onSubmit={(e) => { e.preventDefault(); clearTimeout(debounceRef.current); runSearch() }} className="flex w-full flex-wrap justify-between px-5 max-sm:px-0 gap-2 gap-y-3 items-center">
+                <div className="flex w-fit max-sm:w-full max-sm:flex-wrap justify-start gap-2 items-center">
+                    <div className={`flex justify-start gap-1 items-center rounded-xl py-5 px-3 w-[20vw] max-sm:w-full ${active ? "border-[var(--background-muted)]" : "border-[var(--background-muted)]/40"} h-[5vh] text-[var(--text-foreground)] transition-all duration-300 border-2`}>
                         <Icon path={mdiMagnify} size={0.9} className="cursor-pointer text-sm sm:text-lg hover:text-[var(--text-foreground)] transition-color duration-300 text-[var(--text-foreground)]/40" />
                         <input
                             onFocus={() => setActive(true)}
@@ -406,24 +421,16 @@ const AdminDashboard = () => {
                             className={`w-[95%] h-[5vh] text-[var(--text-foreground)]  outline-none border-none`}
                         />
                     </div>
+                    <button onClick={(e) => { e.preventDefault(); setOrder(!order); }} className="py-2 px-3 flex items-center justify-center gap-1 cursor-pointer text-[var(--text)] bg-[var(--background)]/90 hover:bg-[var(--background)] transition-color duration-300 rounded-xl">
+                        <Icon path={order ? mdiSortCalendarDescending : mdiSortCalendarAscending} size={1.1} />
+                        <h4>Sort</h4>
+                    </button>
+                    <button onClick={(e) => { e.preventDefault(); setExpanded(!expanded); }} className="py-2 px-3 flex items-center justify-center gap-1 cursor-pointer text-[var(--text)] bg-[var(--background)]/90 hover:bg-[var(--background)] transition-color duration-300 rounded-xl">
+                        <Icon path={mdiTuneVertical} size={1} className="rotate-[90deg]" />
+                        <h4>Filter</h4>
+                    </button>
                 </div>
-                <div className="flex gap-3 sm:gap-4 items-center justify-center">
-                    <button type="button" disabled={page <= 1} onClick={() => setPage(p => p - 1)} className="disabled:opacity-[0.8] disabled:cursor-not-allowed disabled:hover:bg-[var(--background)]/90 py-2 px-3 flex items-center justify-center gap-1 cursor-pointer text-[var(--text)] bg-[var(--background)]/90 hover:bg-[var(--background)] transition-color duration-300 rounded-xl"><h4>Prev</h4></button>
-                    <span className="text-[var(--text-foreground)] flex w-fit items-center justify-center gap-2">
-                        <input
-                            type="text"
-                            inputMode="numeric"
-                            value={pageInput}
-                            onChange={(e) => setPageInput(e.target.value.replace(/\D/g, ""))}
-                            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); commitPage() } }}
-                            onBlur={commitPage}
-                            className="flex text-center justify-center items-center border box-border rounded-lg h-10 w-10 p-0 m-0 bg-transparent leading-none outline-none text-sm sm:text-lg"
-                        />
-                        <h4>of</h4>
-                        <h4 className="flex text-center justify-center items-center border box-border rounded-lg h-10 w-10 p-0 m-0 bg-transparent leading-none text-sm sm:text-lg">{totalPages}</h4>
-                    </span>
-                    <button type="button" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} className="disabled:opacity-[0.8] disabled:cursor-not-allowed disabled:hover:bg-[var(--background)]/90 py-2 px-3 flex items-center justify-center gap-1 cursor-pointer text-[var(--text)] bg-[var(--background)]/90 hover:bg-[var(--background)] transition-color duration-300 rounded-xl"><h4>Next</h4></button>
-                </div>
+                {pagination && <div className="max-sm:hidden">{pagination}</div>}
             </form>
 
             <div
@@ -433,7 +440,7 @@ const AdminDashboard = () => {
                 Copied to clipboard
             </div>
 
-            <div className="w-full flex-1 min-h-0 overflow-y-auto mt-4 px-5 [mask-image:linear-gradient(to_bottom,black_calc(100%-56px),transparent)]">
+            <div className="w-full flex-1 min-h-0 overflow-y-auto mt-4 px-5 max-sm:px-0 [mask-image:linear-gradient(to_bottom,black_calc(100%-56px),transparent)]">
                 {loading ? (
                     <AdminDashboardSkeleton variant={selected === 0 ? "bookings" : selected === 1 ? "drivers" : "users"} />
                 ) : error ? (
@@ -619,6 +626,7 @@ const AdminDashboard = () => {
                     )
                 )}
             </div>
+            {pagination && <div className="sm:hidden w-full flex justify-center pt-3">{pagination}</div>}
         </AccountLayout>
     )
 }

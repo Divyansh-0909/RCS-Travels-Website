@@ -286,6 +286,33 @@
         will-change: transform;
     }
 
+    /* Account pages (AccountLayout) — the phone-only swap between the section
+       list and a section's content. The panes swap via display, which replays
+       the entrance each time one is shown. The list lives "left of" the
+       content, so each pane slides in from its own side. Defined only below
+       sm: on desktop both panes are always visible and must not animate. */
+    @media (width < 40rem) {
+        @keyframes account-pane-left {
+            from { opacity: 0; transform: translateX(-28px); }
+            to   { opacity: 1; transform: translateX(0); }
+        }
+
+        @keyframes account-pane-right {
+            from { opacity: 0; transform: translateX(28px); }
+            to   { opacity: 1; transform: translateX(0); }
+        }
+
+        .animate-account-menu {
+            animation: account-pane-left 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+            will-change: transform, opacity;
+        }
+
+        .animate-account-content {
+            animation: account-pane-right 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+            will-change: transform, opacity;
+        }
+    }
+
     /* Distinct from a dropdown — a soft "bloom" that scales up and settles */
     @keyframes datetime-bloom {
         0% {
