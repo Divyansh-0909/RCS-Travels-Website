@@ -54,12 +54,33 @@ model User {
   createdAt      DateTime  @default(now()) @map("created_at")
   deletedAt      DateTime? @map("deleted_at")
 
-  bookings Booking[]
+  bookings    Booking[]
+  savedPlaces SavedPlace[]
 
   // Admin user list sorts by createdAt desc; its filters (name/phone/gender)
   // are all `contains`, which no btree can serve anyway.
   @@index([createdAt])
   @@map("users")
+}
+
+// Account-level addresses (Home / Work / custom) managed from Settings and
+// offered first in the booking form's suggestions. Coords are nullable: the
+// address is typed free-text in Settings, so they're only filled when known.
+// No [userId, label] unique — every custom row shares the "Saved place" label.
+model SavedPlace {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  label     String
+  address   String
+  lat       Float?
+  lng       Float?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // The only read is "this user's places", oldest first.
+  @@index([userId])
+  @@map("saved_places")
 }
 
 model Driver {

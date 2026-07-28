@@ -58,6 +58,74 @@ usersRouter.get('/me/recent-places', protect, async (req, res) => {
   return res.json({ places: [...places.values()] })
 })
 
+// ─── Saved places — Home / Work / custom rows managed from Settings ──────────
+
+const SAVED_PLACE_CAP = 12
+const savedPlaceShape = { id: true, label: true, address: true, lat: true, lng: true }
+
+usersRouter.get('/me/saved-places', protect, async (req, res) => {
+  const user = await prisma.user.findUnique({ where: { clerkId: req.auth.userId } })
+  if (!user) return res.status(404).json({ error: 'User has not signed up' })
+
+  const places = await prisma.savedPlace.findMany({
+    where: { userId: user.id },
+    orderBy: { createdAt: 'asc' },
+    select: savedPlaceShape,
+  })
+  return res.json({ places })
+})
+
+// Upsert: with an id it updates that row (own rows only), without one it
+// creates. One route because the Settings form doesn't care which it was.
+usersRouter.put('/me/saved-places', protect, async (req, res) => {
+  const { id, label, address, lat, lng } = req.body
+  const cleanLabel = String(label ?? '').trim()
+  const cleanAddress = String(address ?? '').trim()
+  if (!cleanLabel || cleanLabel.length > 40)
+    return res.status(400).json({ error: 'Label must be 1–40 characters' })
+  if (!cleanAddress || cleanAddress.length > 200)
+    return res.status(400).json({ error: 'Address must be 1–200 characters' })
+  const coords = {
+    lat: typeof lat === 'number' && Number.isFinite(lat) ? lat : null,
+    lng: typeof lng === 'number' && Number.isFinite(lng) ? lng : null,
+  }
+
+  const user = await prisma.user.findUnique({ where: { clerkId: req.auth.userId } })
+  if (!user) return res.status(404).json({ error: 'User has not signed up' })
+
+  if (id) {
+    // Scoped find first so one user can't update another's row by id.
+    const existing = await prisma.savedPlace.findFirst({ where: { id: String(id), userId: user.id }, select: { id: true } })
+    if (!existing) return res.status(404).json({ error: 'Saved place not found' })
+    const place = await prisma.savedPlace.update({
+      where: { id: existing.id },
+      data: { label: cleanLabel, address: cleanAddress, ...coords },
+      select: savedPlaceShape,
+    })
+    return res.json({ place })
+  }
+
+  const count = await prisma.savedPlace.count({ where: { userId: user.id } })
+  if (count >= SAVED_PLACE_CAP)
+    return res.status(400).json({ error: `You can save up to ${SAVED_PLACE_CAP} places` })
+
+  const place = await prisma.savedPlace.create({
+    data: { userId: user.id, label: cleanLabel, address: cleanAddress, ...coords },
+    select: savedPlaceShape,
+  })
+  return res.json({ place })
+})
+
+usersRouter.delete('/me/saved-places/:id', protect, async (req, res) => {
+  const user = await prisma.user.findUnique({ where: { clerkId: req.auth.userId } })
+  if (!user) return res.status(404).json({ error: 'User has not signed up' })
+
+  // deleteMany so the userId scope rides along; count 0 = not yours / gone.
+  const { count } = await prisma.savedPlace.deleteMany({ where: { id: req.params.id, userId: user.id } })
+  if (!count) return res.status(404).json({ error: 'Saved place not found' })
+  return res.json({ ok: true })
+})
+
 usersRouter.get('/me/download', protect, async (req, res) => {
   const user = await prisma.user.findUnique({ where: { clerkId: req.auth.userId } })
   if (!user) return res.status(404).json({ error: 'User has not signed up' })
@@ -139,6 +207,9 @@ usersRouter.delete('/me', protect, async (req, res) => {
   })
   if (liveBooking)
     return res.status(409).json({ error: 'You have an active ride. Cancel or complete it before deleting your account.' })
+
+  // Saved addresses are personal data — erased with the rest of the profile.
+  await prisma.savedPlace.deleteMany({ where: { userId: user.id } })
 
   const sentinel = `deleted:${user.id}`
   await prisma.user.update({

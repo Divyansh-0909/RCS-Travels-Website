@@ -44,6 +44,7 @@ const TRIP_STEP = "gap-4 sm:gap-5";
 // edits clear them.
 function useAddressSuggestions(value, setValue, setCoords, api, exclusiveRef, closeOthers) {
   const recentPlaces = useData(state => state.recentPlaces);
+  const savedPlaces = useData(state => state.savedPlaces);
   const addRecentPlace = useData(state => state.addRecentPlace);
   const [googleSuggestions, setGoogleSuggestions] = useState([]);
   // Set when the lookup itself failed, as opposed to succeeding with no matches.
@@ -71,15 +72,24 @@ function useAddressSuggestions(value, setValue, setCoords, api, exclusiveRef, cl
 
   const typed = (value ?? "").trim().length >= 3;
 
+  // Saved places (Home/Work/custom, from Settings) lead the panel; `name`
+  // renders as the row heading with the address beneath, and `saved` keeps
+  // select() from treating the id as a Google place id. Recents that repeat
+  // a saved address are dropped so a place never shows twice.
+  const saved = savedPlaces
+    .filter(p => p.address)
+    .map(p => ({ id: `saved-${p.id ?? p.label}`, saved: true, name: p.label, label: p.address, lat: p.lat ?? null, lng: p.lng ?? null }));
+  const savedAddresses = new Set(saved.map(s => s.label));
+
   let recents = [];
   if (recentPlaces.length) {
     const [latest, ...rest] = [...recentPlaces].sort((a, b) => b.lastUsedAt - a.lastUsedAt);
-    recents = [latest, ...rest.sort((a, b) => b.count - a.count)];
+    recents = [latest, ...rest.sort((a, b) => b.count - a.count)].filter(p => !savedAddresses.has(p.label));
   }
 
   const items = typed
     ? googleSuggestions.map(s => ({ id: s.placePrediction?.placeId, label: s.placePrediction?.text?.text }))
-    : recents.map(p => ({ id: p.label, label: p.label, lat: p.lat, lng: p.lng }));
+    : [...saved, ...recents.map(p => ({ id: p.label, label: p.label, lat: p.lat, lng: p.lng }))];
 
   // Only react to actual value CHANGES: a store-prefilled value on mount (and
   // StrictMode's double effect run) must not auto-open the panel or wipe
@@ -139,7 +149,9 @@ function useAddressSuggestions(value, setValue, setCoords, api, exclusiveRef, cl
     setExpanded(false);
 
     let coords = item.lat != null ? { lat: item.lat, lng: item.lng } : null;
-    if (!coords && item.id) {
+    // Saved-place ids aren't Google place ids — a saved row without coords
+    // resolves later, exactly like a hand-typed address.
+    if (!coords && item.id && !item.saved) {
       const data = await api.placeDetails(item.id);
       if (!data.error && data.lat != null) coords = { lat: data.lat, lng: data.lng };
     }
@@ -216,11 +228,14 @@ const SuggestionDropdown = ({ anim, items, onSelect, above = false, error = null
         {rows.map((item, index) => {
           const commaIndex = item.label.indexOf(",");
 
-          const mainLocation =
-            commaIndex === -1 ? item.label : item.label.slice(0, commaIndex);
+          // Saved places show their name (Home, Work) as the heading and the
+          // full address beneath; everything else splits at the first comma.
+          const mainLocation = item.name
+            ?? (commaIndex === -1 ? item.label : item.label.slice(0, commaIndex));
 
-          const remainingLocation =
-            commaIndex === -1 ? "" : item.label.slice(commaIndex + 1).trim();
+          const remainingLocation = item.name
+            ? item.label
+            : commaIndex === -1 ? "" : item.label.slice(commaIndex + 1).trim();
 
           return (
             <li
@@ -268,6 +283,7 @@ const OnBoarding = () => {
   const activeBooking = useData(state => state.activeBooking);
   const setActiveBooking = useData(state => state.setActiveBooking);
   const mergeRecentPlaces = useData(state => state.mergeRecentPlaces);
+  const setSavedPlaces = useData(state => state.setSavedPlaces);
   const { isSignedIn } = useAuth();
   const devAuthBypass = useData(state => state.devAuthBypass);
   // Render gate only; the hydration effect stays on real isSignedIn so the
@@ -358,6 +374,13 @@ const OnBoarding = () => {
       const data = await api.getRecentPlaces().catch(() => ({ error: "network" }));
       if (hydrationCancelledRef.current || data?.error || !data?.places) return;
       mergeRecentPlaces(data.places);
+    })();
+    // Saved places (Home/Work/custom) refresh the same way — silently, over
+    // the persisted copy the suggestion panels already render from.
+    (async () => {
+      const data = await api.getSavedPlaces().catch(() => ({ error: "network" }));
+      if (hydrationCancelledRef.current || data?.error || !data?.places) return;
+      setSavedPlaces(data.places);
     })();
     hydrateActiveBooking();
     return () => { hydrationCancelledRef.current = true; clearRefreshNotice(); };

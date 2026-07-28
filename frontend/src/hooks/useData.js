@@ -113,6 +113,12 @@ export const useData = create (persist (set =>({
         return { recentPlaces: updated };
     }),
 
+    // Saved places (Home / Work / custom) managed from Settings. The server is
+    // the source of truth; this holds the last fetched copy — persisted so the
+    // booking form's suggestions can show them before any refresh lands.
+    savedPlaces: [],
+    setSavedPlaces: (places)=> set (() => ({savedPlaces: places ?? []})),
+
     scheduledTime: null,
     setScheduledTime: (time)=> set(state=> ({scheduledTime: time})),
 
@@ -175,6 +181,7 @@ export const useData = create (persist (set =>({
     // the metrics on mount, so a new booking can't inherit the old route.
     partialize: (state) => ({
         phone: state.phone, language: state.language, recentPlaces: state.recentPlaces,
+        savedPlaces: state.savedPlaces,
         pickupLocation: state.pickupLocation, dropLocation: state.dropLocation,
         pickupCoords: state.pickupCoords, dropCoords: state.dropCoords,
         distanceKm: state.distanceKm, durationMin: state.durationMin,

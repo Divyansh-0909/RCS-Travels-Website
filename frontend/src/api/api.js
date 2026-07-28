@@ -40,6 +40,10 @@ export const placesAutoComplete = (input)                => request(`/api/google
 export const placeDetails      = (placeId)               => request(`/api/googleAPI/details/${encodeURIComponent(placeId)}`);
 export const reverseGeocode    = (lat, lng)              => request(`/api/googleAPI/reverse-geocode?lat=${lat}&lng=${lng}`);
 export const getRecentPlaces   = (getToken)              => request("/api/users/me/recent-places", { getToken });
+export const getSavedPlaces    = (getToken)              => request("/api/users/me/saved-places", { getToken });
+// Upserts: pass an id to update that row, omit it to create.
+export const saveSavedPlace    = (place, getToken)       => request("/api/users/me/saved-places", { method: "PUT", body: place, getToken });
+export const deleteSavedPlace  = (id, getToken)          => request(`/api/users/me/saved-places/${encodeURIComponent(id)}`, { method: "DELETE", getToken });
 // filters: query-param object; empty values are dropped before serializing.
 const toQuery = (filters = {}) => {
     const params = new URLSearchParams();

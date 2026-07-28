@@ -28,5 +28,8 @@ export function useApi() {
     placeDetails:     (placeId)       => api.placeDetails(placeId),
     reverseGeocode:   (lat, lng)      => api.reverseGeocode(lat, lng),
     getRecentPlaces:  ()              => api.getRecentPlaces(getToken),
+    getSavedPlaces:   ()              => api.getSavedPlaces(getToken),
+    saveSavedPlace:   (place)         => api.saveSavedPlace(place, getToken),
+    deleteSavedPlace: (id)            => api.deleteSavedPlace(id, getToken),
   };
 }
