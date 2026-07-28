@@ -1,3 +1,40 @@
+/* ─── EVERY PAGE OF THE PROJECT (dev server: http://localhost:1574) ───────────
+
+   Real routes (auth-gated ones need a Clerk session):
+     http://localhost:1574/                 OnBoarding — booking form / current trip
+     http://localhost:1574/login            LoginPage
+     http://localhost:1574/signup           SignUpPage
+     http://localhost:1574/book             VehicleSelect            (auth)
+     http://localhost:1574/booking/test     TrackingPage             (auth)
+     http://localhost:1574/manage-account   ManageAccount            (auth)
+     http://localhost:1574/settings         SettingsPage             (auth)
+     http://localhost:1574/safety           SafetyPage               (auth)
+     http://localhost:1574/help             HelpPage                 (public)
+     http://localhost:1574/terms            LegalPage — Terms        (public)
+     http://localhost:1574/privacy          LegalPage — Privacy      (public)
+     http://localhost:1574/refunds          LegalPage — Refunds      (public)
+     http://localhost:1574/grievance        LegalPage — Grievance    (public)
+     http://localhost:1574/dashboard        AdminDashboard           (admin)
+
+   Dev previews (no sign-in; this file, dev builds only):
+     http://localhost:1574/dev              index of every preview below
+     http://localhost:1574/dev/home         OnBoarding, fresh form
+     http://localhost:1574/dev/trip         OnBoarding, current-trip card
+     http://localhost:1574/dev/vehicle      VehicleSelect (see PREVIEWS for variants)
+     http://localhost:1574/dev/tracking     TrackingPage  (see PREVIEWS for variants)
+     http://localhost:1574/dev/ride-details RideDetails panel
+     http://localhost:1574/dev/account      ManageAccount, section list first
+     http://localhost:1574/dev/rides        ManageAccount, straight to Ride History
+     http://localhost:1574/dev/settings     SettingsPage
+     http://localhost:1574/dev/safety       SafetyPage
+     http://localhost:1574/dev/help         HelpPage
+     http://localhost:1574/dev/admin        AdminDashboard
+     http://localhost:1574/dev/states       EmptyState / FailureState / RefreshNotice
+     http://localhost:1574/dev/crash        ErrorBoundary crash test
+
+   The PREVIEWS list below is the source of truth for query-param variants
+   (?status=, ?fare=formula, ?scheduled=1, …) — keep this block in sync. */
+
 import { useEffect, useState } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
 import { useData } from "../hooks/useData";
