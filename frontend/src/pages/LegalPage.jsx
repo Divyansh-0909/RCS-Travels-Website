@@ -12,7 +12,7 @@ import { callSupport, emailSupport, openSupportWhatsApp, supportPhoneDisplay, su
    from their copy, which lives in constants/legal.js.
 
    Deliberately NOT built on AccountLayout, which the account screens share.
-   That layout pins itself to h-[100vh] and scrolls an inner pane, which is right
+   That layout pins itself to h-[100dvh] and scrolls an inner pane, which is right
    for settings rows and wrong for a document: these pages get printed, deep
    linked to a section, and read on a phone, and all three want the page itself to
    scroll. Its 16%-wide tab rail also can't hold "Grievance" on a narrow screen. */
@@ -39,7 +39,7 @@ const LegalPage = () => {
     const doc = legalDocs[path];
 
     return (
-        <div className="min-h-screen bg-[var(--foreground)] text-[var(--text-foreground)] px-5 sm:px-10 pb-20">
+        <div className="min-h-[100dvh] bg-[var(--foreground)] text-[var(--text-foreground)] px-5 sm:px-10 pb-20">
 
             {/* Same header as the account screens, so arriving here from the footer
                 still feels like the same site. */}

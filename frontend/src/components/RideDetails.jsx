@@ -82,7 +82,7 @@ const RideDetails = ({ prop }) => {
     // BackgroundPanel and can float above the sheet like every other screen's.
     // z-10 still applies — it is a flex item of that panel.
     return (
-        <div className={`sm:relative z-10 sm:order-1 flex flex-col justify-center items-center sm:items-start text-left w-full sm:w-auto sm:h-[100vh] ${STACK}`}>
+        <div className={`sm:relative z-10 sm:order-1 flex flex-col justify-center items-center sm:items-start text-left w-full sm:w-auto sm:h-[100dvh] ${STACK}`}>
             {/* same treatment as TrackingPage's backArrow: a pill over the map
                 just above the sheet on mobile, a bare glyph fixed to the
                 panel's top-left corner on desktop */}

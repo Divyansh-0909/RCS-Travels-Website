@@ -440,7 +440,7 @@ const OnBoarding = () => {
   }
 
   return (
-    <div className="relative flex flex-col sm:flex-row h-[100vh] sm:px-[9%] md:px-[5%] xl:px-[13%] sm:pt-16 sm:justify-center lg:justify-between items-center bg-[var(--background-primary)]">
+    <div className="relative flex flex-col sm:flex-row h-[100dvh] sm:px-[9%] md:px-[5%] xl:px-[13%] sm:pt-16 sm:justify-center lg:justify-between items-center bg-[var(--background-primary)]">
       <div className="relative z-10 py-8 flex flex-col items-center lg:items-start w-full max-w-[500px] h-[inherit] sm:h-fit justify-end sm:justify-center">
         {(activeBooking && authed && !activeBooking.scheduledAt)
           // one rhythm down the whole card: heading block → route panel → CTA
@@ -822,7 +822,7 @@ const OnBoarding = () => {
         }
       </div>
 
-      <div className="block sm:hidden absolute z-5 inset-x-0 top-0 h-[100vh] bg-[linear-gradient(to_top,var(--background)_5%,var(--background-primary)_40%,transparent_100%)]" />
+      <div className="block sm:hidden absolute z-5 inset-x-0 top-0 h-[100dvh] bg-[linear-gradient(to_top,var(--background)_5%,var(--background-primary)_40%,transparent_100%)]" />
 
       <img
         src={mobileBackgroundIllustration}

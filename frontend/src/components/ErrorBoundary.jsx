@@ -25,7 +25,7 @@ import FailureState from "./ui/FailureState";
 
 // Shared presentation, so the two paths can't drift apart.
 const CrashScreen = ({ error }) => (
-    <div className="w-[100vw] h-[100vh] flex flex-col justify-center items-center bg-[var(--background)] text-[var(--text)]">
+    <div className="w-[100vw] h-[100dvh] flex flex-col justify-center items-center bg-[var(--background)] text-[var(--text)]">
         <FailureState
             tone="dark"
             title="This page stopped responding"

@@ -2,7 +2,7 @@ import { AccountLayout, SettingRow, Toggle } from 'rcs-travels-frontend';
 
 // The account-area shell: RCS wordmark and breadcrumb title across the top, a
 // left rail of section names, and the selected section's content on the right.
-// It fills the viewport (100vw/100vh) and sits on the LIGHT surface, so the
+// It fills the viewport (100vw/100dvh) and sits on the LIGHT surface, so the
 // card renders at a desktop viewport. Navigation comes from the router the
 // preview provider supplies.
 

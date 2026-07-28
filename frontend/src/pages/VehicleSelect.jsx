@@ -600,7 +600,7 @@ const VehicleSelect = ()=>{
     // translateX(100%) — without it a viewport-wide panel parked to the right
     // would double the page width and let the whole screen scroll sideways.
     return (
-        <div className="relative overflow-hidden bg-transparent text-center flex flex-col justify-center items-center w-[100vw] h-[100vh]">
+        <div className="relative overflow-hidden bg-transparent text-center flex flex-col justify-center items-center w-[100vw] h-[100dvh]">
                 <>
                     <ErrorPanel prop={{error: error, setError: setError}} />
 
@@ -726,7 +726,7 @@ const VehicleSelect = ()=>{
                         <RideDetails prop={{setLoading,setError,setDetialsVisibility}}/>
                     </BackgroundPanel>
                     
-                    <div className={`${panelState === "noDriver" || (panelState === "confirmed" && scheduledTime) || step === "searching" ? "block" : "hidden" } absolute z-2 sm:z-1 bottom-0 bg-black/40 w-[100vw] h-[100vh]`}/>
+                    <div className={`${panelState === "noDriver" || (panelState === "confirmed" && scheduledTime) || step === "searching" ? "block" : "hidden" } absolute z-2 sm:z-1 bottom-0 bg-black/40 w-[100vw] h-[100dvh]`}/>
                     
                     {/* Confirm-location panel — zoomed into the target endpoint;
                         the map drags under a fixed pin, and each settle

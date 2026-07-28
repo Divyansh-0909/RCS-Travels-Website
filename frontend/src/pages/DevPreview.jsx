@@ -91,7 +91,7 @@ const StatesGallery = () => {
     );
 
     return (
-        <div className="min-h-[100vh] p-8 bg-[var(--background-primary)] text-[var(--text)] flex flex-col gap-8">
+        <div className="min-h-[100dvh] p-8 bg-[var(--background-primary)] text-[var(--text)] flex flex-col gap-8">
             <h2 className="font-bold">State components</h2>
 
             <div className="flex flex-wrap items-start gap-8">
@@ -263,7 +263,7 @@ const DevPreview = () => {
     // A bare panel reads as the real screen missing its map.
     if (view === "ride-details")
         return (
-            <div className="relative w-[100vw] h-[100vh]">
+            <div className="relative w-[100vw] h-[100dvh]">
                 {isMobile && (
                     <>
                         <div className="absolute inset-0 z-0" style={{ background: MAP_LAND_COLOR }} />
@@ -288,7 +288,7 @@ const DevPreview = () => {
 
     // /dev or an unknown view → index of every preview.
     return (
-        <div className="min-h-[100vh] p-8 flex flex-col items-start gap-2 bg-[var(--background-primary)] text-[var(--text)]">
+        <div className="min-h-[100dvh] p-8 flex flex-col items-start gap-2 bg-[var(--background-primary)] text-[var(--text)]">
             <h2 className="font-bold mb-2">Booking-flow previews</h2>
             {view && <p className="mb-2 text-[var(--text-muted)]">Unknown preview: {view}</p>}
             {PREVIEWS.map(([to, label]) => (

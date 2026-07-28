@@ -393,8 +393,8 @@ const TrackingPage = () => {
 
     // Both of the states below take the whole page, so they share the shell the
     // main return uses rather than rendering inside the panel chain.
-    const SHELL = "relative overflow-hidden bg-transparent text-center flex flex-col justify-center items-center w-[100vw] h-[100vh]";
-    const FULL_PANEL = "py-6 h-[100vh] rounded-t-none flex justify-center items-center sm:px-[9%] md:px-[5%] xl:px-[13%]";
+    const SHELL = "relative overflow-hidden bg-transparent text-center flex flex-col justify-center items-center w-[100vw] h-[100dvh]";
+    const FULL_PANEL = "py-6 h-[100dvh] rounded-t-none flex justify-center items-center sm:px-[9%] md:px-[5%] xl:px-[13%]";
 
     // LoginPage's arrow, copied exactly: these two screens fill the viewport with
     // no map behind them, so neither of this page's other arrows fits. `backArrow`
@@ -533,7 +533,7 @@ const TrackingPage = () => {
                     </BackgroundPanel>
                     : status === "completed"
                         ?
-                        <BackgroundPanel className={"py-6 h-[100vh] rounded-t-none flex justify-center items-center sm:px-[9%] md:px-[5%] xl:px-[13%]"}>
+                        <BackgroundPanel className={"py-6 h-[100dvh] rounded-t-none flex justify-center items-center sm:px-[9%] md:px-[5%] xl:px-[13%]"}>
                             {/* Desktop: one wide card split down the middle —
                                outcome on the left, receipt and actions on the
                                right. Mobile drops the card and stacks the two

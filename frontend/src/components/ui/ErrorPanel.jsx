@@ -36,7 +36,7 @@ const ErrorPanel = ({ prop }) => {
                     Okay
                 </Button>
             </BackgroundPanel>
-            <div className={`${prop.error ? "block" : "hidden"} absolute z-2 sm:z-1 bottom-0 bg-black/40 w-[100vw] h-[100vh]`} />
+            <div className={`${prop.error ? "block" : "hidden"} absolute z-2 sm:z-1 bottom-0 bg-black/40 w-[100vw] h-[100dvh]`} />
         </>
 
     )
