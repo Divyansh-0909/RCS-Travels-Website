@@ -30,9 +30,22 @@ function App() {
       <div>
         {/* Outside #smooth-content on purpose. ScrollSmoother transforms the
             content, and a transformed ancestor re-anchors position:fixed to
-            itself — the navbar would scroll away with the page. */}
-        <div className="fixed z-100 flex flex-col justify-center items-center left-1/2 -translate-x-1/2 top-6 sm:top-10">
-          <NavBar/>
+            itself — the navbar would scroll away with the page.
+
+            Full-width rail rather than left-1/2 + -translate-x-1/2: with `left`
+            set and `right` auto, a fixed box shrink-to-fits against what's left
+            of the viewport, and the bar's own max-sm:w-[min(86vw,100%)] then
+            resolves its 100% against THAT — a percentage of a width that was
+            itself derived from the content, which collapses the bar to about
+            the width of its logo. inset-x-0 gives it a real 100vw to be a
+            percentage of, and justify-center does the centring the transform
+            used to.
+
+            pointer-events: the rail spans the viewport now, so it must not eat
+            clicks either side of the bar. The drawer portals to body, so it is
+            unaffected. */}
+        <div className="fixed inset-x-0 z-100 flex justify-center top-6 sm:top-10 pointer-events-none">
+          <NavBar className="pointer-events-auto"/>
         </div>
         <div id="smooth-wrapper">
           <div id="smooth-content">

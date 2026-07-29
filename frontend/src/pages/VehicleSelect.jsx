@@ -74,19 +74,29 @@ const SliderToggle = ({ on, onClick, className = "" }) => (
     </div>
 );
 
-// One half of the pinned bar's options row: the question, what it does to the
-// fare underneath, and the switch on the right.
-// Sized to the longest label there is, "Roof carrier?", against the ~100px each
-// half gets on a 360px phone once the switch and the divider are paid for.
+// One column of the pinned bar's options row: the question, what it does to the
+// fare underneath, and the switch stacked below both.
+// The switch sits under the label rather than beside it, so the text gets the
+// column's full width instead of what's left once a 50px switch is paid for.
 // nowrap on both lines so a narrower device clips rather than reflows: two rows
-// of heading here would push the two halves out of alignment with each other.
-const BarPref = ({ label, note, on, onClick }) => (
-    <div className="flex-1 min-w-0 flex items-center justify-between gap-1.5">
-        <div className="flex flex-col text-left min-w-0">
-            <h4 className="text-sm font-medium leading-tight whitespace-nowrap text-[var(--text)]">{label}</h4>
-            <p className="text-[10px] leading-snug whitespace-nowrap text-[var(--text-muted)]">{note}</p>
+// of heading here would push the columns out of alignment with each other.
+// The group is centred in the column it occupies, but everything inside it hangs
+// off one left edge: the note reads as a caption under the label, and the
+// switch lines up beneath both. origin-left so the switch's 0.9 scale shrinks
+// towards that edge rather than away from it.
+// `dense` is the three-column case — a 360px phone gives each column ~90px once
+// the dividers are paid for, and "Roof carrier?" doesn't fit that at 16px.
+const BarPref = ({ label, note, on, onClick, dense = false }) => (
+    <div className="flex-1 min-w-0 flex justify-center">
+        {/* Shrink-wrapped to the widest line, so items-start is the label's own
+            left edge and not the column's — the column is flex-1 and wider. */}
+        <div className="flex flex-col items-start gap-2.5 min-w-0">
+            <div className="flex flex-col gap-0.5 text-left min-w-0">
+                <h4 className={`${dense ? "text-sm" : "text-base"} font-medium leading-tight whitespace-nowrap text-[var(--text)]`}>{label}</h4>
+                <p className={`${dense ? "text-xs" : "text-sm"} leading-snug whitespace-nowrap text-[var(--text-muted)]`}>{note}</p>
+            </div>
+            <SliderToggle on={on} onClick={onClick} className="origin-left" />
         </div>
-        <SliderToggle on={on} onClick={onClick} />
     </div>
 );
 
@@ -630,22 +640,31 @@ const VehicleSelect = ()=>{
         return () => observer.disconnect();
     }, [pinBookBar]);
 
+    // Three columns instead of two in the pinned bar, which is what makes the
+    // type step down — see BarPref's `dense`.
+    const barDense = !!safeRouteInfo?.available;
+
     // Rendered inside the form on desktop and in the pinned bar on phones, so
     // there is one definition of the CTA rather than two that can drift. The
     // `form` attribute is what lets the phone copy submit a form it isn't nested
     // in — see Button's pass-through.
     const bookAction = (
         <div className="w-full flex flex-col gap-2 sm:mt-3">
-            {/* Phones only: the two options that change the fare, immediately
+            {/* Phones only: every option that changes the fare, immediately
                 above the button that commits to it. Desktop keeps these in the
-                sheet's preferences card. */}
+                sheet's preferences card.
+
+                The safer route is a third column only on the routes that have
+                one — most destinations never cross a shady zone, and an empty
+                column there would be an offer of nothing. */}
             {isMobile && (
-                <div className="flex w-full items-center gap-2 py-1">
+                <div className="flex w-full items-center gap-2 pt-1 pb-3">
                     <BarPref
                         label="Share ride?"
                         note="Reduces fare"
                         on={sharing}
                         onClick={() => setSharing(!sharing)}
+                        dense={barDense}
                     />
                     <div className="w-px self-stretch bg-[var(--foreground)]/20" />
                     <BarPref
@@ -656,7 +675,23 @@ const VehicleSelect = ()=>{
                         note={selectedFare?.carrierWaived ? "Free on this route." : `Adds ₹${CARRIER_CHARGE}.`}
                         on={needsCarrier}
                         onClick={() => setNeedsCarrier(!needsCarrier)}
+                        dense={barDense}
                     />
+                    {barDense && (
+                        <>
+                            <div className="w-px self-stretch bg-[var(--foreground)]/20" />
+                            <BarPref
+                                label="Safer route?"
+                                // The fee is the server's, not a constant here:
+                                // it's priced per route from the detour it
+                                // actually needs.
+                                note={`Adds ₹${safeRouteInfo.fee}.`}
+                                on={safeRoute}
+                                onClick={() => setSafeRoute(!safeRoute)}
+                                dense
+                            />
+                        </>
+                    )}
                 </div>
             )}
 
@@ -959,14 +994,21 @@ const VehicleSelect = ()=>{
                         map's centre is the centre of the VISIBLE area, and that
                         centre is the coordinate the pin confirms. A sheet
                         floating over a full-bleed map there would move the
-                        pin. */}
+                        pin.
+
+                        max-sm:pb-0: as a sheet, this panel's bottom edge is
+                        already the Book bar's top edge, and the scroll region is
+                        flex-1 of the padding box — 24px there doesn't pad the
+                        scroll, it shortens it, so the last card was clipped with
+                        a dead band beneath it. Desktop keeps py-6; it isn't a
+                        scroller. */}
                     <BackgroundPanel
                         sheet
                         initialSnap="half"
                         duration={420}
                         bottomInset={pinBookBar ? bookBarHeight : 0}
                         show={step === "vehicleType"}
-                        className={`z-1 sm:z-0 sm:overflow-hidden py-6 text-left sm:px-[9%] md:px-[5%] xl:px-[13%] flex flex-col sm:flex-row sm:justify-center lg:justify-between items-center`}
+                        className={`z-1 sm:z-0 sm:overflow-hidden py-6 max-sm:pb-0 text-left sm:px-[9%] md:px-[5%] xl:px-[13%] flex flex-col sm:flex-row sm:justify-center lg:justify-between items-center`}
                     >
                         {/* Zoomed-out full-route view; markers are clickable to
                             adjust either endpoint. Guarded on `step` so the
@@ -1116,20 +1158,16 @@ const VehicleSelect = ()=>{
                                     hairline between them, so they read as a
                                     settings group rather than loose rows.
 
-                                    On phones sharing and the carrier have moved to
-                                    the pinned bar — two controls for one setting on
-                                    one screen is a way to make a rider doubt which
-                                    one took. That can leave only the safer route
-                                    here, and nothing at all on a route with no
-                                    safer alternative, so the card is conditional. */}
-                                {(!isMobile || safeRouteInfo?.available) && (
+                                    Desktop only: every one of these three is now a
+                                    column of the pinned bar on phones, and two
+                                    controls for one setting on one screen is a way
+                                    to make a rider doubt which one took. */}
+                                {!isMobile && (
                                 <div className="mt-2 w-full rounded-xl border border-[var(--foreground)]/30 bg-[var(--background-muted)] px-4">
-                                    {!isMobile && (
                                     <div className="flex justify-between items-center w-full py-3">
                                         <h4 className="text-base sm:text-lg font-medium text-[var(--text)]">Share a ride?</h4>
                                         <SliderToggle on={sharing} onClick={()=>setSharing(!sharing)} />
                                     </div>
-                                    )}
 
                                     {/* Shown ONLY when this trip's default route actually
                                         crosses a shady zone and the server found a way
@@ -1143,9 +1181,7 @@ const VehicleSelect = ()=>{
                                         not a gender rule. */}
                                     {safeRouteInfo?.available && (
                                         <>
-                                            {/* No hairline when this is the first
-                                                row, which it is on phones. */}
-                                            {!isMobile && <div className="w-full h-px bg-[var(--foreground)]/10" />}
+                                            <div className="w-full h-px bg-[var(--foreground)]/10" />
 
                                             <div className="flex justify-between items-start w-full py-3 gap-3">
                                                 <div className="flex flex-col gap-0.5 text-left">
@@ -1161,10 +1197,6 @@ const VehicleSelect = ()=>{
                                         </>
                                     )}
 
-                                    <div className="w-full h-px bg-[var(--foreground)]/10" />
-
-                                    {!isMobile && (
-                                    <>
                                     <div className="w-full h-px bg-[var(--foreground)]/10" />
 
                                     {/* The cards re-price on toggle, so the charge
@@ -1185,8 +1217,6 @@ const VehicleSelect = ()=>{
                                         </div>
                                         <SliderToggle on={needsCarrier} onClick={()=>setNeedsCarrier(!needsCarrier)} className="mt-1 shrink-0" />
                                     </div>
-                                    </>
-                                    )}
                                 </div>
                                 )}
 
