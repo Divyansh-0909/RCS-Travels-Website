@@ -25,7 +25,7 @@ async function request(path, { method = "GET", body, getToken } = {}) {
 
 export const getMe             = (getToken)              => request("/api/users/me", { getToken });
 export const createMe          = (name, getToken)        => request("/api/users/me", { method: "POST", body: { name }, getToken });
-export const estimateFare      = (pickupAddress, dropAddress, vehicleType, pickupCoords, dropCoords, preferSafeRoute, needsCarrier, getToken) => request("/api/fare/estimate", { method: "POST", body: { pickupAddress, dropAddress, vehicleType, pickupCoords, dropCoords, preferSafeRoute, needsCarrier }, getToken });
+export const estimateFare      = (pickupAddress, dropAddress, vehicleClass, pickupCoords, dropCoords, preferSafeRoute, needsCarrier, getToken) => request("/api/fare/estimate", { method: "POST", body: { pickupAddress, dropAddress, vehicleClass, pickupCoords, dropCoords, preferSafeRoute, needsCarrier }, getToken });
 export const createBooking     = (data, getToken)        => request("/api/bookings", { method: "POST", body: data, getToken });
 export const cancelBooking     = (bookingId, getToken)   => request("/api/bookings/cancel", { method: "POST", body: { bookingId }, getToken});
 export const getBookingStatus  = (id, getToken)          => request(`/api/bookings/${id}/status`, { getToken });
@@ -56,6 +56,8 @@ const toQuery = (filters = {}) => {
 export const getBookings       = (filters, getToken)     => request(`/api/admin/booking${toQuery(filters)}`, { getToken });
 export const getDrivers        = (filters, getToken)     => request(`/api/admin/driver${toQuery(filters)}`, { getToken });
 export const getUsers          = (filters, getToken)     => request(`/api/admin/user${toQuery(filters)}`, { getToken });
+export const getFareZones      = (getToken)              => request("/api/admin/zones", { getToken });
+export const saveFareZones     = (zones, getToken)       => request("/api/admin/zones", { method: "PUT", body: zones, getToken });
 
 // Streams a PDF, so it can't use request() (which parses JSON); fetch a Blob.
 export const downloadMyData = async (getToken) => {

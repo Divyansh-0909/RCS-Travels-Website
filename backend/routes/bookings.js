@@ -6,10 +6,9 @@ import { prisma } from '../db/prisma.js'
 import { commissionOn, rideFareOf } from '../services/commission.js'
 import { AIRPORT_PICKUP_SURCHARGE, CARRIER_CHARGE } from '../services/rideEstimate.js'
 import { myBookingsQuerySchema } from '../types.ts'
+import { VEHICLE_CLASS_NAMES, isVehicleClass, seatsOf } from '../constants/vehicles.js'
 
 const bookingsRouter = Router()
-
-const VALID_VEHICLE_TYPES = [4, 6, 1]
 
 export const ACTIVE_STATUSES = ['pending', 'confirmed', 'assigned', 'en_route', 'reached', 'started']
 
@@ -33,12 +32,23 @@ const OVERLAP_MS = 15 * 60 * 1000
 
 const normAddress = (s) => s?.trim().toLowerCase()
 
+// Same shape check the fare route applies to pickup/drop coords. It bounds the
+// value but cannot prove the point came from an estimate — see the server-side
+// recomputation item in ROADMAP, which covers every client-sent number here.
+const validWaypoint = (w) =>
+    Boolean(w) && Number.isFinite(w.lat) && Number.isFinite(w.lng) &&
+    Math.abs(w.lat) <= 90 && Math.abs(w.lng) <= 180
+
 bookingsRouter.post('/', protect, async (req, res) => {
     const {
         pickupAddress, pickupLat, pickupLng,
         dropAddress, dropLat, dropLng,
-        vehicleType, fare, distanceKm,
+        vehicleClass, fare, distanceKm,
         scheduledAt, isOutstation, sharing, preferSafeRoute, needsCarrier,
+        // The via-point the estimate resolved for this trip. Echoed back by the
+        // client rather than recomputed here so the stored route is provably the
+        // one the rider saw priced; validated below, never trusted as sent.
+        safeWaypoint,
         // Pass-through charges inside `fare`, itemised by the estimate so the
         // commission can be taken off the driving alone. `parking` has no source
         // yet — it is accepted now so that the day it exists it is already exempt.
@@ -51,8 +61,8 @@ bookingsRouter.post('/', protect, async (req, res) => {
     if (pickupLat == null || pickupLng == null || dropLat == null || dropLng == null)
         return res.status(400).json({ error: 'pickupLat, pickupLng, dropLat and dropLng are required' })
 
-    if (!vehicleType || !VALID_VEHICLE_TYPES.includes(vehicleType))
-        return res.status(400).json({ error: `vehicleType must be one of: ${VALID_VEHICLE_TYPES.join(', ')}` })
+    if (!vehicleClass || !isVehicleClass(vehicleClass))
+        return res.status(400).json({ error: `vehicleClass must be one of: ${VEHICLE_CLASS_NAMES.join(', ')}` })
 
     if (!fare || typeof fare !== 'number' || fare <= 0)
         return res.status(400).json({ error: 'fare must be a positive number' })
@@ -106,12 +116,19 @@ bookingsRouter.post('/', protect, async (req, res) => {
 
     const bookingData = {
         userId: user.id,
-        customerPhone: user.phone, vehicleType,
+        customerPhone: user.phone, vehicleClass,
         pickupAddress, pickupLat, pickupLng,
         dropAddress, dropLat, dropLng,
         fare, rideFare, distanceKm: distanceKm ?? null,
         isOutstation: isOutstation ?? false,
         preferSafeRoute: preferSafeRoute === true,
+        // Only kept when the rider actually took the safer route. A waypoint on a
+        // booking that didn't ask for one would put the driver on a detour nobody
+        // was charged for; a malformed pair is dropped rather than stored, since a
+        // half-valid coordinate is worse than none.
+        ...(preferSafeRoute === true && validWaypoint(safeWaypoint)
+            ? { safeWaypointLat: safeWaypoint.lat, safeWaypointLng: safeWaypoint.lng }
+            : { safeWaypointLat: null, safeWaypointLng: null }),
         // Stored because the driver has to actually turn up with a roof carrier
         // fitted — the charge is already inside `fare`, but the instruction isn't.
         needsCarrier: needsCarrier === true,
@@ -209,7 +226,7 @@ bookingsRouter.post('/cancel', protect, async (req, res) => {
         if (booking.driver) {
             if (booking.sharing) {
                 // Sharing ride freed a single seat — give it back (capped at full).
-                if (booking.driver.vehicleCapacity < booking.driver.vehicleType) {
+                if (booking.driver.vehicleCapacity < seatsOf(booking.driver.vehicleClass)) {
                     await tx.driver.update({
                         where: { id: booking.driver.id },
                         data: {
@@ -224,7 +241,7 @@ bookingsRouter.post('/cancel', protect, async (req, res) => {
                 await tx.driver.update({
                     where: { id: booking.driver.id },
                     data: {
-                        vehicleCapacity: booking.driver.vehicleType,
+                        vehicleCapacity: seatsOf(booking.driver.vehicleClass),
                     },
                 })
             }
@@ -248,7 +265,7 @@ bookingsRouter.get('/my-bookings', protect, async (req, res) => {
     if (!parsed.success) {
         return res.status(400).json({ error: 'Invalid query parameters', issues: parsed.error.issues })
     }
-    const { search, status, vehicleType, startDate, endDate, page, limit } = parsed.data
+    const { search, status, vehicleClass, startDate, endDate, page, limit } = parsed.data
 
     const user = await prisma.user.findUnique({ where: { clerkId: req.auth.userId } })
     if (!user) return res.status(401).json({ error: 'User not found' })
@@ -268,7 +285,7 @@ bookingsRouter.get('/my-bookings', protect, async (req, res) => {
         }
     }
     if (status) where.status = status
-    if (vehicleType) where.vehicleType = vehicleType
+    if (vehicleClass) where.vehicleClass = vehicleClass
     if (startDate || endDate) {
         const scheduledAt = {}
         if (startDate) scheduledAt.gte = new Date(`${startDate}T00:00:00+05:30`)

@@ -5,6 +5,7 @@ import { clerkClient } from '@clerk/express'
 import crypto from 'crypto'
 import { ACTIVE_STATUSES } from './bookings.js'
 import PDFDocument from "pdfkit";
+import { labelOf } from '../constants/vehicles.js'
 
 const usersRouter = Router()
 
@@ -181,7 +182,7 @@ usersRouter.get('/me/download', protect, async (req, res) => {
       const when = new Date(b.scheduledAt ?? b.createdAt).toLocaleString("en-IN", {
         day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
       })
-      const vehicle = b.vehicleType === 4 ? "Cab Economy" : "Cab XL"
+      const vehicle = labelOf(b.vehicleClass)
 
       doc.font("Helvetica-Bold").text(`${when}   ·   ${b.status}`)
       doc.font("Helvetica")

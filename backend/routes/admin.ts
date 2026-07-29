@@ -1,8 +1,10 @@
 import { Router } from 'express'
+import { getAuth } from '@clerk/express'
 import type { Prisma } from '@prisma/client'
 import { protect, protectAdmin } from '../middleware/auth.js'
 import { prisma } from '../db/prisma.js'
-import { bookingListQuerySchema, driverListQuerySchema, userListQuerySchema } from '../types.ts'
+import { getFareZones, saveFareZones } from '../services/fareZones.js'
+import { bookingListQuerySchema, driverListQuerySchema, userListQuerySchema, fareZoneCollectionSchema } from '../types.ts'
 
 // Read-only, by omission rather than design: three list endpoints and no mutations.
 // The dashboard can therefore show a driver's pending verification but not act on
@@ -17,7 +19,7 @@ adminRouter.get('/booking', protect, protectAdmin, async (req, res) => {
     if (!parsed.success) {
         return res.status(400).json({ error: 'Invalid query parameters', issues: parsed.error.issues })
     }
-    const { search, status, startDate, endDate, customerPhone, customerName, driverName, vehicleType, source, isOutstation, cancelledBy, page, limit } = parsed.data
+    const { search, status, startDate, endDate, customerPhone, customerName, driverName, vehicleClass, source, isOutstation, cancelledBy, page, limit } = parsed.data
 
     const where: Prisma.BookingWhereInput = {}
     if (search) {
@@ -46,7 +48,7 @@ adminRouter.get('/booking', protect, protectAdmin, async (req, res) => {
     if (driverName) where.driver = {
         name: { contains: driverName, mode: "insensitive" },
     }
-    if (vehicleType) where.vehicleType = vehicleType
+    if (vehicleClass) where.vehicleClass = vehicleClass
     if (source) where.source = source
     if (isOutstation !== undefined) where.isOutstation = isOutstation
     if (cancelledBy) where.cancelledBy = cancelledBy
@@ -67,7 +69,7 @@ adminRouter.get('/booking', protect, protectAdmin, async (req, res) => {
         customerPhone: true,
         pickupAddress: true,
         dropAddress: true,
-        vehicleType: true,
+        vehicleClass: true,
         scheduledAt: true,
         createdAt: true,
         isOutstation: true,
@@ -121,7 +123,7 @@ adminRouter.get('/driver', protect, protectAdmin, async (req, res) => {
     if (!parsed.success) {
         return res.status(400).json({ error: 'Invalid query parameters', issues: parsed.error.issues })
     }
-    const { search, driverName, driverPhone, vehicleType, vehicleNumber, verificationStatus, isOnline, startDate, endDate, page, limit } = parsed.data
+    const { search, driverName, driverPhone, vehicleClass, vehicleNumber, verificationStatus, isOnline, startDate, endDate, page, limit } = parsed.data
 
     const where: Prisma.DriverWhereInput = {}
     if (search) {
@@ -144,7 +146,7 @@ adminRouter.get('/driver', protect, protectAdmin, async (req, res) => {
     }
     if (driverPhone) where.phone = driverPhone
     if (isOnline !== undefined) where.isOnline = isOnline
-    if (vehicleType) where.vehicleType = vehicleType
+    if (vehicleClass) where.vehicleClass = vehicleClass
     if (vehicleNumber) where.vehicleNumber = {
         contains: vehicleNumber ,
         mode: "insensitive",
@@ -168,7 +170,7 @@ adminRouter.get('/driver', protect, protectAdmin, async (req, res) => {
                 id: true,
                 name: true,
                 phone: true,
-                vehicleType: true,
+                vehicleClass: true,
                 vehicleNumber: true,
                 isOnline: true,
                 verificationStatus: true,
@@ -244,6 +246,38 @@ adminRouter.get('/user', protect, protectAdmin, async (req, res) => {
     ])
 
     res.json({ total, page, limit, users })
+})
+
+// ─── Fare zones ──────────────────────────────────────────────────────────────
+// The Edit Fares tab. The first mutation on this router, and the one with the
+// widest blast radius: a save here changes what every rider is quoted on the
+// next request, with no deploy in between.
+
+adminRouter.get('/zones', protect, protectAdmin, (_req, res) => {
+    res.json(getFareZones())
+})
+
+adminRouter.put('/zones', protect, protectAdmin, async (req, res) => {
+    const parsed = fareZoneCollectionSchema.safeParse(req.body)
+    if (!parsed.success) {
+        return res.status(400).json({ error: 'Invalid fare zones', issues: parsed.error.issues })
+    }
+
+    // Two zones sharing a name make the change summary ambiguous and any later
+    // "which zone priced this ride" question unanswerable.
+    const names = parsed.data.features.map(f => f.properties.name)
+    const duplicate = names.find((n, i) => names.indexOf(n) !== i)
+    if (duplicate) {
+        return res.status(400).json({ error: `Do area ka naam ek jaisa hai: “${duplicate}”. Dono ke naam alag rakhein.` })
+    }
+
+    try {
+        const saved = await saveFareZones(parsed.data, getAuth(req).userId)
+        res.json(saved)
+    } catch (err) {
+        console.error('saveFareZones failed:', err)
+        res.status(500).json({ error: 'Fare zones save nahi ho paaye. Dobara koshish karein.' })
+    }
 })
 
 export default adminRouter

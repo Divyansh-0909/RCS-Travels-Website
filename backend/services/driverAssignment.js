@@ -1,5 +1,6 @@
 import { prisma } from '../db/prisma.js'
 import {sendFCM, sendWhatsApp} from './notification.js'
+import { seatsOf } from '../constants/vehicles.js'
 
 const EARTH_RADIUS_KM = 6371
 
@@ -101,16 +102,10 @@ export async function getDriver(bookingId) {
           isActive:           true,
           isOnline:           true,
           verificationStatus: 'approved',
-          ...(row.vehicleType === 1
-          ? {
-              OR: [
-                { vehicleType: 4 },
-                { vehicleType: 6 },
-              ],
-            }
-          : {
-              vehicleType: row.vehicleType,
-            }),
+          // Matched exactly, never widened: a rider who picked and was quoted for
+          // a sedan must not be sent a hatchback, and the premium SUV is a
+          // different price from the plain one.
+          vehicleClass: row.vehicleClass,
         },
       },
       include: {
@@ -181,7 +176,7 @@ export async function getDriver(bookingId) {
               dropLat:        String(row.dropLat),
               dropLng:        String(row.dropLng),
               fare:           String(row.fare),
-              vehicleType:    row.vehicleType,
+              vehicleClass:   row.vehicleClass,
               pickupTime:     pickupTimeLabel,
               customerPhone:  row.customerPhone,
             },
@@ -218,8 +213,10 @@ export async function getDriver(bookingId) {
       triedDriverIds.add(x.driverId)
 
       // Solo rides need a fully-free vehicle; a sharing ride falling through here
-      // starts a fresh shared trip and needs just one free seat.
-      if (row.sharing ? x.driver.vehicleCapacity <= 0 : x.driver.vehicleCapacity < x.driver.vehicleType) continue
+      // starts a fresh shared trip and needs just one free seat. "Fully free" is
+      // measured against the vehicle's own seat count, which now comes from its
+      // class rather than from the column that used to hold both.
+      if (row.sharing ? x.driver.vehicleCapacity <= 0 : x.driver.vehicleCapacity < seatsOf(x.driver.vehicleClass)) continue
 
       const response =
         await sendFCM(x.driver.fcmToken, {
@@ -236,7 +233,7 @@ export async function getDriver(bookingId) {
             dropLat:        String(row.dropLat),
             dropLng:        String(row.dropLng),
             fare:           String(row.fare),
-            vehicleType:    row.vehicleType,
+            vehicleClass:   row.vehicleClass,
             pickupTime:     pickupTimeLabel,
             customerPhone:  row.customerPhone,
           },

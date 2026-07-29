@@ -81,8 +81,8 @@ const TrackingPage = () => {
     const fareSource = useData(state => state.fareSource)
     const fare = useData(state => state.fare)
     const safeRoute = useData(state => state.safeRoute)
-    const vehicleType = useData(state => state.vehicleType);
-    const setvehicleType = useData(state => state.setvehicleType);
+    const vehicleClass = useData(state => state.vehicleClass);
+    const setVehicleClass = useData(state => state.setVehicleClass);
     const sharing = useData(state => state.sharing);
     const setSharing = useData(state => state.setSharing);
     const bookingId = useData(state => state.bookingId);
@@ -254,15 +254,16 @@ const TrackingPage = () => {
                 : { title: <>Reaching in <br />{dropTime}</>, detail: `Driving towards ${dropLocation?.split(",")[0]}` };
 
     // Mobile: floats over the map just above the sheet, mirroring the Share pill
-    // on the opposite edge — same -top-14, same muted fill and shadow, and a
+    // on the opposite edge — same -top-12, same muted fill and shadow, and a
     // matching pill shape: h-9 is the height Button's py-2 gives Share around its
     // text-sm row, and my-1 copies the 4px offset Button adds, so the two line up
-    // exactly. Must be a direct child of BackgroundPanel: the panel
+    // exactly. -top-12 leaves 8px between the pill and the panel: at -top-14 the
+    // pair read as floating loose over the map rather than belonging to it. Must be a direct child of BackgroundPanel: the panel
     // is the positioned ancestor, and anchoring to the content column instead
     // would drift with the content. Desktop is unchanged, a bare glyph fixed to
     // the top-left corner.
     const backArrow = (
-        <div onClick={() => navigate('/')} className="max-sm:absolute max-sm:z-20 max-sm:-top-14 max-sm:left-4 max-sm:h-9 max-sm:my-1 max-sm:px-3 max-sm:rounded-full max-sm:border max-sm:border-[var(--foreground)]/30 max-sm:bg-[var(--background-muted)] max-sm:shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)] flex items-center justify-center cursor-pointer sm:opacity-[0.8] transition-opacity duration-300 hover:opacity-[1] text-[var(--text)] sm:fixed sm:left-6 sm:top-6">
+        <div onClick={() => navigate('/')} className="max-sm:absolute max-sm:z-20 max-sm:-top-12 max-sm:left-4 max-sm:h-9 max-sm:my-1 max-sm:px-3 max-sm:rounded-full max-sm:border max-sm:border-[var(--foreground)]/30 max-sm:bg-[var(--background-muted)] max-sm:shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)] flex items-center justify-center cursor-pointer sm:opacity-[0.8] transition-opacity duration-300 hover:opacity-[1] text-[var(--text)] sm:fixed sm:left-6 sm:top-6">
             <Icon path={mdiKeyboardBackspace} size={1.2} />
         </div>
     );
@@ -626,7 +627,7 @@ const TrackingPage = () => {
                                 column — the column is vertically centred on
                                 mobile, so its top moves with the content. */}
                             {backArrow}
-                            <Button prop={{ variant: "input", bg: "var(--background-muted)", rounded: "999px" }} className='absolute z-20 -top-14 right-4 px-3 sm:hidden block shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)]'>
+                            <Button prop={{ variant: "input", bg: "var(--background-muted)", rounded: "999px" }} className='absolute z-20 -top-12 right-4 px-3 sm:hidden block shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)]'>
                                 <div className="flex gap-1.5 items-center justify-center">
                                     <Icon path={mdiShareVariant} size={0.7} />
                                     <h4 className="text-sm">Share</h4>

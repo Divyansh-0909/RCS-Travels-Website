@@ -38,6 +38,17 @@ enum VerificationStatus {
   rejected
 }
 
+// Replaced the old `vehicleType Int` (4 | 6 | 1). A seat count could not
+// distinguish a sedan from a hatchback — both carry four — so the class is the
+// stored identity and seats are derived from it (constants/vehicles.js). The old
+// `1` ("book any") is gone with it: every ride now names the car it booked.
+enum VehicleClass {
+  hatchback
+  sedan
+  suv
+  suv_premium
+}
+
 // ─── Models ──────────────────────────────────────────────────────────────────
 
 model User {
@@ -88,23 +99,25 @@ model Driver {
   clerkId       String?     @unique @map("clerk_id")
   name          String
   phone         String      @unique
-  vehicleType   Int         @map("vehicle_type")
+  vehicleClass  VehicleClass @map("vehicle_class")
   vehicleCapacity     Int         @map("vehicle_capacity")
   vehicleNumber String         @map("vehicle_number")
   isActive      Boolean     @default(true) @map("is_active")
   isOnline      Boolean     @default(false) @map("is_online")
   fcmToken            String?            @map("fcm_token")
   dlDocUrl            String?            @map("dl_doc_url")
+  dlExpiresAt    DateTime?
+  pfpUrl              String?            @map("profile_picture_url")
   aadharDocUrl        String?            @map("aadhar_doc_url")
   createdAt           DateTime           @default(now()) @map("created_at")
   verificationStatus  VerificationStatus @default(pending) @map("verification_status")
-
+  rejectionReason String?
+  reviewedAt   DateTime?
+  
   location DriverLocation?
   bookings Booking[]
 
-  // The eligibility filter driverAssignment applies to every candidate.
-  @@index([isOnline, isActive, verificationStatus, vehicleType])
-  // Admin driver list sort.
+  @@index([isOnline, isActive, verificationStatus, vehicleClass])
   @@index([createdAt])
   @@map("drivers")
 }
@@ -140,10 +153,19 @@ model Booking {
   dropAddress        String        @map("drop_address")
   dropLat            Float         @map("drop_lat")
   dropLng            Float         @map("drop_lng")
-  vehicleType        Int           @map("vehicle_type")
+  vehicleClass       VehicleClass  @map("vehicle_class")
   scheduledAt        DateTime?     @map("scheduled_at")
   isOutstation       Boolean       @default(false) @map("is_outstation")
   preferSafeRoute    Boolean       @default(false) @map("prefer_safe_route")
+  // The via-point the safer route was quoted on, resolved once at booking time.
+  // Null when the rider declined it or no safer route existed for this trip.
+  //
+  // Stored rather than recomputed because the driver's navigation link has to use
+  // the SAME point the fare was quoted on: a redrawn zone or a change in Google's
+  // routing between booking and pickup would otherwise send him down a different
+  // road than the one the rider paid for, with nothing to show the mismatch.
+  safeWaypointLat    Float?        @map("safe_waypoint_lat")
+  safeWaypointLng    Float?        @map("safe_waypoint_lng")
   needsCarrier       Boolean       @default(false) @map("needs_carrier")
   distanceKm         Float?        @map("distance_km")  
   fare               Float         @map("fare")
@@ -189,15 +211,37 @@ model Booking {
   @@map("bookings")
 }
 
-// Fixed NCR pricing — looked up by destination + vehicle type
-model FareTable {
-  id              String      @id @default(uuid())
-  destinationName String      @map("destination_name")
-  vehicleType     Int         @map("vehicle_type")
-  fixedFare       Float       @map("fixed_fare")
-  isActive        Boolean     @default(true) @map("is_active")
+// The live fare-zone map, edited from the admin dashboard's Edit Fares tab and
+// read by services/fareZones.js to price every ride.
+//
+// One row, always id 1, holding the whole GeoJSON FeatureCollection. The editor
+// loads, edits and saves the entire collection in one go — a row per zone would
+// turn every save into a full-table rewrite and buy no query we actually make,
+// since matchZone tests a point against all zones anyway.
+//
+// backend/data/zones.geojson stays in git as the seed and the cold-start
+// fallback. Once this table has a row, it is the source of truth.
+model FareZoneSet {
+  id        Int      @id @default(1)
+  zones     Json
+  updatedAt DateTime @updatedAt @map("updated_at")
+  // Clerk user id of the admin who saved it, so a bad rate card has an author.
+  updatedBy String   @map("updated_by")
 
-  @@unique([destinationName, vehicleType])
+  @@map("fare_zone_set")
+}
+
+// Fixed NCR pricing — looked up by destination + vehicle class. Only the two
+// base classes are ever stored; sedan and suv_premium are derived from their
+// sibling in rideEstimate, so a destination needs no extra rows to gain them.
+model FareTable {
+  id              String       @id @default(uuid())
+  destinationName String       @map("destination_name")
+  vehicleClass    VehicleClass @map("vehicle_class")
+  fixedFare       Float        @map("fixed_fare")
+  isActive        Boolean      @default(true) @map("is_active")
+
+  @@unique([destinationName, vehicleClass])
   @@map("fare_table")
 }
 

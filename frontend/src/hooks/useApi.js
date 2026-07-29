@@ -8,7 +8,7 @@ export function useApi() {
   return {
     getMe:            ()              => api.getMe(getToken),
     createMe:         (name)          => api.createMe(name, getToken),
-    estimateFare:     (pickupAddress, dropAddress, vehicleType, pickupCoords, dropCoords, preferSafeRoute, needsCarrier) => api.estimateFare(pickupAddress, dropAddress, vehicleType, pickupCoords, dropCoords, preferSafeRoute, needsCarrier, getToken),
+    estimateFare:     (pickupAddress, dropAddress, vehicleClass, pickupCoords, dropCoords, preferSafeRoute, needsCarrier) => api.estimateFare(pickupAddress, dropAddress, vehicleClass, pickupCoords, dropCoords, preferSafeRoute, needsCarrier, getToken),
     createBooking:    (data)          => api.createBooking(data, getToken),
     cancelBooking:    (bookingId)     => api.cancelBooking(bookingId, getToken),
     getBookingStatus: (id)            => api.getBookingStatus(id, getToken),
@@ -24,6 +24,8 @@ export function useApi() {
     getBookings:      (filters)       => api.getBookings(filters, getToken),
     getDrivers:       (filters)       => api.getDrivers(filters, getToken),
     getUsers:         (filters)       => api.getUsers(filters, getToken),
+    getFareZones:     ()              => api.getFareZones(getToken),
+    saveFareZones:    (zones)         => api.saveFareZones(zones, getToken),
     placesAutoComplete: (input)       => api.placesAutoComplete(input),
     placeDetails:     (placeId)       => api.placeDetails(placeId),
     reverseGeocode:   (lat, lng)      => api.reverseGeocode(lat, lng),

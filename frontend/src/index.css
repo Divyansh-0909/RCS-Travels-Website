@@ -580,6 +580,20 @@
         margin-block: 10px;
     }
 
+    /* The bottom sheet's scroll region. A scrollbar down the side of a sheet
+       reads as a desktop window rather than a surface you drag: the grab handle
+       and the sheet's own movement already say the content goes on, and phones
+       don't paint a persistent one anyway. The region still scrolls — only the
+       indicator is gone. Applied by attribute so every sheet gets it without
+       having to remember a class. */
+    [data-sheet-scroll] {
+        scrollbar-width: none;
+    }
+
+    [data-sheet-scroll]::-webkit-scrollbar {
+        display: none;
+    }
+
     .bg-primary-gradient {
         background: linear-gradient(195deg,
                 var(--color-primary-light) 0%,

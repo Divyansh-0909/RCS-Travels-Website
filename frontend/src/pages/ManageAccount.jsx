@@ -18,6 +18,7 @@ import { useRefreshNotice } from "../hooks/useRefreshNotice";
 import FourSeaterCar from "../assets/4-seater-bottom-left.webp"
 import SixSeaterCar from "../assets/6-seater-bottom-left.webp"
 import { vehicleLabel, statusChip, splitAddress, displayPhone, formatDateTime, CopyBtn } from "../components/ui/bookingDisplay";
+import { VEHICLE_CLASS_NAMES, seatsOf } from "../constants/vehicles";
 import Chips, { filterLabel, filterField } from "../components/ui/Chips";
 
 const genderOptions = ["Male", "Female", "Others", "Rather not say"]
@@ -26,7 +27,8 @@ const RIDE_TAB = "Ride History"
 const items = ["Account info", RIDE_TAB, "Privacy & Data"]
 
 const rideStatuses = ["pending", "confirmed", "assigned", "en_route", "reached", "started", "completed", "cancelled"]
-const vehicleOptions = [{ value: 4, label: vehicleLabel(4) }, { value: 6, label: vehicleLabel(6) }]
+// One filter chip per car.
+const vehicleOptions = VEHICLE_CLASS_NAMES.map(cls => ({ value: cls, label: vehicleLabel(cls) }))
 const rideFilterSections = ["Status", "Vehicle type", "Dates"]
 
 const fieldDescriptions = {
@@ -70,7 +72,7 @@ const ManageAccount = () => {
     const [rideSearchActive, setRideSearchActive] = useState(false)
     const [rideOrder, setRideOrder] = useState(true) // true = as returned (newest first)
     const [rideStatus, setRideStatus] = useState(null)
-    const [rideVehicleType, setRideVehicleType] = useState(null)
+    const [rideVehicleClass, setRideVehicleClass] = useState(null)
     const [rideStartDate, setRideStartDate] = useState(null)
     const [rideEndDate, setRideEndDate] = useState(null)
     const [rideFilterExpand, setRideFilterExpand] = useState(false)
@@ -133,11 +135,11 @@ const ManageAccount = () => {
 
     // Backend rejects 1-char searches (min 2), so send null below that
     const rideSearchParam = rideSearch.trim().length >= 2 ? rideSearch.trim() : null
-    const rideFiltersActive = !!(rideSearchParam || rideStatus || rideVehicleType || rideStartDate || rideEndDate)
+    const rideFiltersActive = !!(rideSearchParam || rideStatus || rideVehicleClass || rideStartDate || rideEndDate)
 
     // Clearing filters is no help when the only thing narrowing the list is the
     // search box, so the escape route matches whichever is actually set.
-    const rideEmptyEscape = (rideStatus || rideVehicleType || rideStartDate || rideEndDate)
+    const rideEmptyEscape = (rideStatus || rideVehicleClass || rideStartDate || rideEndDate)
         ? { label: "Clear filters", onClick: clearRideFilters }
         : rideSearchParam
             ? { label: "Clear search", onClick: () => setRideSearch("") }
@@ -149,7 +151,7 @@ const ManageAccount = () => {
         setRideError(null)
         setRideLoading(true)
         try {
-            const data = await getMyBookings({ search: rideSearchParam, status: rideStatus, vehicleType: rideVehicleType, startDate: rideStartDate, endDate: rideEndDate, page: ridePage, limit: rideLimit, ...overrides })
+            const data = await getMyBookings({ search: rideSearchParam, status: rideStatus, vehicleClass: rideVehicleClass, startDate: rideStartDate, endDate: rideEndDate, page: ridePage, limit: rideLimit, ...overrides })
             if (id !== rideReqRef.current) return // a newer request superseded this one
             if (data?.error) {
                 setRideError(data.error)
@@ -253,13 +255,13 @@ const ManageAccount = () => {
     const orderedBookings = rideOrder ? (bookings ?? []) : [...(bookings ?? [])].reverse()
 
     function clearRideFilters() {
-        setRideStatus(null); setRideVehicleType(null); setRideStartDate(null); setRideEndDate(null)
+        setRideStatus(null); setRideVehicleClass(null); setRideStartDate(null); setRideEndDate(null)
         setRideFilterExpand(false)
         if (ridePage !== 1) {
             setRidePage(1)
             return
         }
-        searchRides(null, { status: null, vehicleType: null, startDate: null, endDate: null })
+        searchRides(null, { status: null, vehicleClass: null, startDate: null, endDate: null })
     }
 
     const lockedFields = ["Name", "Phone number"]
@@ -595,7 +597,7 @@ const ManageAccount = () => {
                                     <div className="flex-1 min-w-0 flex flex-col gap-3 px-4 py-1 overflow-y-auto">
                                         <h4 className="font-semibold text-base">{rideFilterSections[rideFilterSection]}</h4>
                                         {rideFilterSection === 0 && <Chips options={rideStatuses.map(s => ({ value: s, label: s.replace("_", " ") }))} value={rideStatus} onChange={setRideStatus} />}
-                                        {rideFilterSection === 1 && <Chips options={vehicleOptions} value={rideVehicleType} onChange={setRideVehicleType} />}
+                                        {rideFilterSection === 1 && <Chips options={vehicleOptions} value={rideVehicleClass} onChange={setRideVehicleClass} />}
                                         {rideFilterSection === 2 && (
                                             <>
                                                 <label className={filterLabel}>Start date</label>
@@ -686,7 +688,7 @@ const ManageAccount = () => {
                                     <div className="flex justify-between items-start gap-4 w-full">
                                         {/* Route: pickup → drop, with the car on its left on sm+ */}
                                         <div className="flex items-center gap-4 min-w-0">
-                                            <img src={booking.vehicleType === 6 ? SixSeaterCar : FourSeaterCar} className={`hidden sm:block w-44 -ml-4 shrink-0 ${booking.status === "cancelled" ? "grayscale" : ""}`} alt="car-image" />
+                                            <img src={seatsOf(booking.vehicleClass) === 6 ? SixSeaterCar : FourSeaterCar} className={`hidden sm:block w-44 -ml-4 shrink-0 ${booking.status === "cancelled" ? "grayscale" : ""}`} alt="car-image" />
                                             <div className="flex flex-col gap-3 min-w-0">
                                                 <div className="flex items-center gap-3">
                                                     <div className="w-3 h-3 rounded-full bg-[var(--background-primary)] shrink-0"></div>
@@ -717,7 +719,7 @@ const ManageAccount = () => {
                                     <div className="flex flex-col w-full">
                                         <div className="flex justify-between items-center w-full gap-4">
                                             <p className="text-base text-gray-500">
-                                                {formatDateTime(booking.scheduledAt ?? booking.createdAt)}  •  {vehicleLabel(booking.vehicleType)}{booking.sharing ? " • Sharing" : ""}
+                                                {formatDateTime(booking.scheduledAt ?? booking.createdAt)}  •  {vehicleLabel(booking.vehicleClass)}{booking.sharing ? " • Sharing" : ""}
                                             </p>
                                             <div onClick={() => setExpandedRide(isOpen ? null : booking.id)} className="cursor-pointer text-[var(--foreground-muted)] bg-[var(--background-primary)]/80 transition-color duration-300 hover:bg-[var(--background-primary)] p-1 rounded-full shrink-0">
                                                 <Icon path={mdiChevronDown} size={1} className={`transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`} />

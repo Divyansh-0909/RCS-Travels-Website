@@ -1,9 +1,12 @@
 import Icon from "@mdi/react";
 import { mdiContentCopy } from "@mdi/js";
+import { labelOf } from "../../constants/vehicles";
 
 // Shared display helpers for booking/driver cards (admin dashboard + ride history).
 
-export const vehicleLabel = (t) => (t === 4 ? "Cab Economy" : t === 6 ? "Cab XL" : "—");
+// The car, not the category. A history row that said "Cab Economy" could no
+// longer tell a hatchback from a sedan, and the two are different fares.
+export const vehicleLabel = labelOf;
 
 // Soft-tinted chip colors per booking status; active trip states share the brand blue.
 export const statusChip = (status) => {

@@ -1,37 +1,42 @@
 import { prisma } from '../db/prisma.js'
+import { seatsOf } from '../constants/vehicles.js'
 
+// Only the two base classes are stored. Sedan and premium SUV are derived from
+// their sibling in rideEstimate (DERIVED_CLASS), so a destination gains both
+// without a row of its own — and there is no second copy of the card to keep
+// in step when a price moves.
 const fareData = [
   // ── Gurgaon ──────────────────────────────────────────────────────────────
-  { destinationName: 'Gurgaon',          vehicleType: 4, fixedFare: 800  },
-  { destinationName: 'Gurgaon',          vehicleType: 6, fixedFare: 1150 },
+  { destinationName: 'Gurgaon',          vehicleClass: 'hatchback', fixedFare: 800  },
+  { destinationName: 'Gurgaon',          vehicleClass: 'suv',       fixedFare: 1150 },
 
   // ── IGI Airport ───────────────────────────────────────────────────────────
-  { destinationName: 'IGI Airport',      vehicleType: 4, fixedFare: 550  },
-  { destinationName: 'IGI Airport',      vehicleType: 6, fixedFare: 875  },
+  { destinationName: 'IGI Airport',      vehicleClass: 'hatchback', fixedFare: 550  },
+  { destinationName: 'IGI Airport',      vehicleClass: 'suv',       fixedFare: 875  },
 
   // ── Noida ─────────────────────────────────────────────────────────────────
-  { destinationName: 'Noida',            vehicleType: 4, fixedFare: 625  },
-  { destinationName: 'Noida',            vehicleType: 6, fixedFare: 975  },
+  { destinationName: 'Noida',            vehicleClass: 'hatchback', fixedFare: 625  },
+  { destinationName: 'Noida',            vehicleClass: 'suv',       fixedFare: 975  },
 
   // ── Faridabad ─────────────────────────────────────────────────────────────
-  { destinationName: 'Faridabad',        vehicleType: 4, fixedFare: 875  },
-  { destinationName: 'Faridabad',        vehicleType: 6, fixedFare: 1300 },
+  { destinationName: 'Faridabad',        vehicleClass: 'hatchback', fixedFare: 875  },
+  { destinationName: 'Faridabad',        vehicleClass: 'suv',       fixedFare: 1300 },
 
   // ── Greater Noida ─────────────────────────────────────────────────────────
-  { destinationName: 'Greater Noida',    vehicleType: 4, fixedFare: 1100 },
-  { destinationName: 'Greater Noida',    vehicleType: 6, fixedFare: 1625 },
+  { destinationName: 'Greater Noida',    vehicleClass: 'hatchback', fixedFare: 1100 },
+  { destinationName: 'Greater Noida',    vehicleClass: 'suv',       fixedFare: 1625 },
 
   // ── Ghaziabad ─────────────────────────────────────────────────────────────
-  { destinationName: 'Ghaziabad',        vehicleType: 4, fixedFare: 825  },
-  { destinationName: 'Ghaziabad',        vehicleType: 6, fixedFare: 1225 },
+  { destinationName: 'Ghaziabad',        vehicleClass: 'hatchback', fixedFare: 825  },
+  { destinationName: 'Ghaziabad',        vehicleClass: 'suv',       fixedFare: 1225 },
 
   // ── Agra (outstation) ─────────────────────────────────────────────────────
-  { destinationName: 'Agra',             vehicleType: 4, fixedFare: 3750 },
-  { destinationName: 'Agra',             vehicleType: 6, fixedFare: 5250 },
+  { destinationName: 'Agra',             vehicleClass: 'hatchback', fixedFare: 3750 },
+  { destinationName: 'Agra',             vehicleClass: 'suv',       fixedFare: 5250 },
 
   // ── Jaipur (outstation) ───────────────────────────────────────────────────
-  { destinationName: 'Jaipur',           vehicleType: 4, fixedFare: 6000 },
-  { destinationName: 'Jaipur',           vehicleType: 6, fixedFare: 8500 },
+  { destinationName: 'Jaipur',           vehicleClass: 'hatchback', fixedFare: 6000 },
+  { destinationName: 'Jaipur',           vehicleClass: 'suv',       fixedFare: 8500 },
 ]
 
 // Test pickup anchor (Connaught Place) — all test drivers sit here, inside the
@@ -42,11 +47,15 @@ const PICKUP = { lat: 28.6315, lng: 77.2167 }
 // Set it before seeding:  SEED_CLERK_ID=user_xxx npm run db:seed
 const SEED_CLERK_ID = process.env.SEED_CLERK_ID || 'user_3FdlhBI7SlbMclO523ek4cXH1pl'
 
-// vehicleCapacity === vehicleType so solo rides pass the `capacity < vehicleType` skip check.
+// One driver per class — assignment matches the class EXACTLY, so a fleet
+// missing a class means every booking of it goes unassigned. vehicleCapacity is
+// seeded to the class's full seat count so solo rides pass the
+// `capacity < seatsOf(class)` skip check.
 const drivers = [
-  { name: 'Ramesh Kumar', phone: '+919810000001', vehicleType: 4, vehicleNumber: 'DL01AB1234' },
-  { name: 'Suresh Yadav', phone: '+919810000002', vehicleType: 6, vehicleNumber: 'DL02CD5678' },
-  { name: 'Anil Sharma',  phone: '+919810000003', vehicleType: 4, vehicleNumber: 'DL03EF9012' },
+  { name: 'Ramesh Kumar', phone: '+919810000001', vehicleClass: 'hatchback',   vehicleNumber: 'DL01AB1234' },
+  { name: 'Suresh Yadav', phone: '+919810000002', vehicleClass: 'suv',         vehicleNumber: 'DL02CD5678' },
+  { name: 'Anil Sharma',  phone: '+919810000003', vehicleClass: 'sedan',       vehicleNumber: 'DL03EF9012' },
+  { name: 'Vikram Singh', phone: '+919810000004', vehicleClass: 'suv_premium', vehicleNumber: 'DL04GH3456' },
 ]
 
 async function seedFares() {
@@ -86,14 +95,14 @@ async function seedTestData() {
         isActive:           true,
         isOnline:           true,
         verificationStatus: 'approved',
-        vehicleCapacity:    d.vehicleType,
+        vehicleCapacity:    seatsOf(d.vehicleClass),
         fcmToken:           `test-fcm-${d.phone}`,
       },
       create: {
         name:               d.name,
         phone:              d.phone,
-        vehicleType:        d.vehicleType,
-        vehicleCapacity:    d.vehicleType,
+        vehicleClass:       d.vehicleClass,
+        vehicleCapacity:    seatsOf(d.vehicleClass),
         vehicleNumber:      d.vehicleNumber,
         isActive:           true,
         isOnline:           true,
@@ -113,7 +122,7 @@ async function seedTestData() {
         longitude: PICKUP.lng + jitter(),
       },
     })
-    console.log(`  Driver ${driver.name} (type ${driver.vehicleType}) @ ${driver.id}`)
+    console.log(`  Driver ${driver.name} (${driver.vehicleClass}) @ ${driver.id}`)
     createdDrivers.push(driver)
   }
 
@@ -127,14 +136,14 @@ function pastBookings(user, drivers) {
   return [
     {
       id: '00000000-0000-0000-0000-000000000001', userId: user.id, driverId: drivers[0]?.id ?? null,
-      customerPhone: user.phone, vehicleType: 4, fare: 850, distanceKm: 32.4,
+      customerPhone: user.phone, vehicleClass: 'hatchback', fare: 850, distanceKm: 32.4,
       pickupAddress: 'Connaught Place, New Delhi', pickupLat: 28.6315, pickupLng: 77.2167,
       dropAddress: 'Cyber Hub, Gurugram',          dropLat: 28.4951, dropLng: 77.0890,
       status: 'completed', confirmedAt: daysAgo(5), createdAt: daysAgo(5), completedAt: daysAgo(5),
     },
     {
       id: '00000000-0000-0000-0000-000000000002', userId: user.id, driverId: drivers[1]?.id ?? null,
-      customerPhone: user.phone, vehicleType: 6, fare: 1200, distanceKm: 41.0,
+      customerPhone: user.phone, vehicleClass: 'suv', fare: 1200, distanceKm: 41.0,
       rideFare: 1200, commissionPct: 5, commissionAmt: 60,
       pickupAddress: 'IGI Airport T3, New Delhi', pickupLat: 28.5562, pickupLng: 77.1000,
       dropAddress: 'Noida Sector 18',             dropLat: 28.5708, dropLng: 77.3260,
@@ -142,7 +151,7 @@ function pastBookings(user, drivers) {
     },
     {
       id: '00000000-0000-0000-0000-000000000003', userId: user.id, driverId: null,
-      customerPhone: user.phone, vehicleType: 4, fare: 420, distanceKm: 18.7,
+      customerPhone: user.phone, vehicleClass: 'hatchback', fare: 420, distanceKm: 18.7,
       pickupAddress: 'Karol Bagh, New Delhi', pickupLat: 28.6519, pickupLng: 77.1909,
       dropAddress: 'Saket, New Delhi',        dropLat: 28.5245, dropLng: 77.2066,
       status: 'cancelled', cancelledBy: 'user', cancellationCharge: 50, createdAt: daysAgo(1),
@@ -167,7 +176,7 @@ async function main() {
   await seedFares()
   const { user, drivers } = await seedTestData()
   await seedPastBookings(user, drivers)
-  console.log('\nDone. Book near Connaught Place (28.6315, 77.2167) with vehicleType 1, 4, or 6.')
+  console.log('\nDone. Book near Connaught Place (28.6315, 77.2167) with any vehicle class (hatchback, sedan, suv, suv_premium, any).')
   console.log('Note: sendFCM is a 30s coin-flip — assignment may take a while or 503; reseeded drivers give it retries.')
 }
 

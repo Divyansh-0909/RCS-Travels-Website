@@ -1,31 +1,83 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
+import { kmBetween, pointInRing } from './geo.js'
+import { prisma } from '../db/prisma.js'
 
-// Zones are geometry + provider rate card, versioned in git and loaded once at
-// boot. Move to a DB table only when the admin dashboard needs to edit fares.
+// Zones are geometry + provider rate card. The file in git is the seed and the
+// cold-start fallback; the fare_zone_set table is the source of truth once the
+// Edit Fares tab has saved to it. Both hold the same GeoJSON FeatureCollection.
 const ZONES_PATH = path.join(path.dirname(fileURLToPath(import.meta.url)), '../data/zones.geojson')
 
-const zones = JSON.parse(readFileSync(ZONES_PATH, 'utf8')).features.map((f) => ({
+// The shape matchZone wants: rate card lifted out of GeoJSON properties and the
+// polygon flattened to its outer ring.
+const toZone = (f) => ({
   name: f.properties.name,
   priority: f.properties.priority ?? 0,
-  fares: f.properties.fares,
+  fares: f.properties.fares ?? {},
   // Mandatory road toll on the way to this zone, quoted separately by the
   // provider and so not inside `fares`. Most zones have none.
   toll: f.properties.toll ?? 0,
   ring: f.geometry.coordinates[0], // outer ring only; zones have no holes
-}))
+})
 
-// Ray casting. GeoJSON positions are [lng, lat].
-function pointInRing(lng, lat, ring) {
-  let inside = false
-  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
-    const [xi, yi] = ring[i]
-    const [xj, yj] = ring[j]
-    if (yi > lat !== yj > lat && lng < ((xj - xi) * (lat - yi)) / (yj - yi) + xi)
-      inside = !inside
+const SEED = JSON.parse(readFileSync(ZONES_PATH, 'utf8'))
+
+// Read synchronously at import so matchZone is never called against an empty
+// list — initFareZones() replaces this from the database a moment later, and a
+// database that is down or empty leaves the file's rates standing rather than
+// dropping every ride onto the distance curve.
+let collection = SEED
+let zones = SEED.features.map(toZone)
+let meta = { updatedAt: null, updatedBy: null }
+
+// Swaps both representations together. Nothing reads one without the other, and
+// a half-applied save would price rides off a rate card no one can see.
+function apply(fc, next = meta) {
+  collection = fc
+  zones = fc.features.map(toZone)
+  meta = next
+}
+
+/** The collection as the editor wants it back, plus who last saved it. */
+export const getFareZones = () => ({ ...collection, meta })
+
+/**
+ * Loads the live rate card at boot, seeding the table from the git file the
+ * first time. Failure is survivable by design: the file is already loaded, so a
+ * database outage costs the latest edits, not the ability to quote a fare.
+ */
+export async function initFareZones() {
+  try {
+    const row = await prisma.fareZoneSet.findUnique({ where: { id: 1 } })
+    if (row) {
+      apply(row.zones, { updatedAt: row.updatedAt, updatedBy: row.updatedBy })
+      console.log(`Fare zones: ${zones.length} loaded from the database`)
+      return
+    }
+    const seeded = await prisma.fareZoneSet.create({
+      data: { id: 1, zones: SEED, updatedBy: 'seed:zones.geojson' },
+    })
+    apply(seeded.zones, { updatedAt: seeded.updatedAt, updatedBy: seeded.updatedBy })
+    console.log(`Fare zones: seeded the database with ${zones.length} zones from zones.geojson`)
+  } catch (err) {
+    console.error('Fare zones: database load failed, using zones.geojson —', err.message)
   }
-  return inside
+}
+
+/**
+ * Persists an edited collection and swaps it in for the next request. The write
+ * comes first: if it throws, the in-memory card is untouched and the admin gets
+ * an error, rather than a dashboard that shows a saved rate the database lost.
+ */
+export async function saveFareZones(fc, updatedBy) {
+  const row = await prisma.fareZoneSet.upsert({
+    where: { id: 1 },
+    create: { id: 1, zones: fc, updatedBy },
+    update: { zones: fc, updatedBy },
+  })
+  apply(row.zones, { updatedAt: row.updatedAt, updatedBy: row.updatedBy })
+  return { count: zones.length, updatedAt: row.updatedAt, updatedBy: row.updatedBy }
 }
 
 // Surveyed campus centre, to ~10 cm. Everything about pricing hangs off this
@@ -38,14 +90,6 @@ const SNU = { lat: 28.527202, lng: 77.575486 }
 // 3 km a drop in that strip had BOTH endpoints "near campus", matched no zone,
 // and lost its ₹400 quote to the distance curve. 1.5 km keeps a 400 m buffer.
 const SNU_RADIUS_KM = 1.5
-
-// Flat-earth approximation. Every distance it is asked for here is a few km, so
-// the error against a great circle is centimetres.
-function kmBetween(a, b) {
-  const dLat = (a.lat - b.lat) * 111.32
-  const dLng = (a.lng - b.lng) * 111.32 * Math.cos((b.lat * Math.PI) / 180)
-  return Math.sqrt(dLat * dLat + dLng * dLng)
-}
 
 // The rate card is anchored at campus, so trips are priced by the far endpoint.
 export function isNearCampus(coords) {

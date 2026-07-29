@@ -1,5 +1,5 @@
 import AccountLayout from "../components/ui/AccountLayout"
-import { act, useEffect, useRef, useState } from "react"
+import { act, lazy, Suspense, useEffect, useRef, useState } from "react"
 import Icon from '@mdi/react';
 import { mdiMagnify, mdiTuneVertical, mdiSortCalendarDescending, mdiContentCopy, mdiSortCalendarAscending } from '@mdi/js';
 import { useApi } from "../hooks/useApi";
@@ -10,10 +10,18 @@ import Button from "../components/ui/Button";
 import EmptyState from "../components/ui/EmptyState";
 import FailureState from "../components/ui/FailureState";
 import Chips, { filterLabel, filterField } from "../components/ui/Chips";
-import { VerificationStatus, BookingStatus, CancelledBy, BookingSource } from "../types/enums";
+import { VerificationStatus, BookingStatus, CancelledBy, BookingSource, VehicleClass } from "../types/enums";
+import { VEHICLE_CLASS_NAMES } from "../constants/vehicles";
 
 
-const items = ['Bookings', 'Drivers', 'Users']
+// Leaflet, Geoman and the whole rate card are a few hundred KB that the three
+// list tabs never touch, so the editor only loads once its tab is opened.
+const EditFares = lazy(() => import("./EditFares"))
+
+const items = ['Bookings', 'Drivers', 'Users', 'Edit Fares']
+// The last tab is the zone editor, which shares none of the list chrome — no
+// search, no filters, no pagination, and no fetch on page change.
+const FARES_TAB = 3
 
 const verificationChip = (status: VerificationStatus) => {
     if (status === "approved") return "text-green-700 bg-green-600/10"
@@ -30,7 +38,7 @@ type Booking = {
     status: BookingStatus
     scheduledAt: string | null
     createdAt: string
-    vehicleType: number
+    vehicleClass: VehicleClass
     sharing: boolean
     isOutstation: boolean
     source: BookingSource
@@ -48,7 +56,7 @@ type Driver = {
     phone: string
     isOnline: boolean
     verificationStatus: VerificationStatus
-    vehicleType: number
+    vehicleClass: VehicleClass
     vehicleNumber: string
     createdAt: string
 }
@@ -64,7 +72,10 @@ type User = {
     _count: { bookings: number }
 }
 
-const vehicleOptions = [{ value: 4, label: vehicleLabel(4) }, { value: 6, label: vehicleLabel(6) }]
+// One chip per car.
+// constants/vehicles.js is plain JS, so its keys widen to string — the cast puts
+// them back on the enum the filter state and the API both expect.
+const vehicleOptions = VEHICLE_CLASS_NAMES.map(cls => ({ value: cls as VehicleClass, label: vehicleLabel(cls) }))
 const bookingSections = ["Status", "Vehicle type", "Dates", "Source", "Cancelled by"]
 const driverSections = ["Vehicle type", "Verification", "Availability", "Vehicle number", "Driver phone", "Joined"]
 const userSections = ["Gender", "User phone", "Joined"]
@@ -83,7 +94,7 @@ const AdminDashboard = () => {
     const [driverPhone, setDriverPhone] = useState<string | null>(null)
     const [customerName, setCustomerName] = useState<string | null>(null)
     const [driverName, setDriverName] = useState<string | null>(null)
-    const [vehicleType, setVehicleType] = useState<number | null>(null)
+    const [vehicleClass, setVehicleClass] = useState<VehicleClass | null>(null)
     const [vehicleNumber, setVehicleNumber] = useState<string | null>(null)
     const [verificationStatus, setVerificationStatus] = useState<VerificationStatus | null>(null)
     const [isOnline, setIsOnline] = useState<boolean | null>(null)
@@ -135,6 +146,8 @@ const AdminDashboard = () => {
     const totalPages : number = Math.max(1, selected === 0 ? totalBookingsPages : selected === 1 ? totalDriversPages : totalUsersPages)
 
     useEffect(() => {
+        // The fares tab has no list to fetch, and loads its own rate card.
+        if (selected === FARES_TAB) return
         selected === 0 ? searchBooking() : selected === 1 ? searchDrivers() : searchUsers()
     }, [page, selected])
 
@@ -162,7 +175,7 @@ const AdminDashboard = () => {
         setError(null)
         setLoading(true)
         try {
-            const data = await api.getBookings({ search: searchParam, status, startDate, endDate, customerPhone, customerName, driverName, vehicleType, source, isOutstation, cancelledBy, page, limit, ...overrides })
+            const data = await api.getBookings({ search: searchParam, status, startDate, endDate, customerPhone, customerName, driverName, vehicleClass, source, isOutstation, cancelledBy, page, limit, ...overrides })
             if (id !== reqRef.current) return // a newer request superseded this one
             if (data?.error) {
                 setError(data.error)
@@ -183,7 +196,7 @@ const AdminDashboard = () => {
         setError(null)
         setLoading(true)
         try {
-            const data = await api.getDrivers({ search: searchParam, driverName, driverPhone, vehicleType, vehicleNumber, verificationStatus, isOnline, startDate, endDate, page, limit, ...overrides })
+            const data = await api.getDrivers({ search: searchParam, driverName, driverPhone, vehicleClass, vehicleNumber, verificationStatus, isOnline, startDate, endDate, page, limit, ...overrides })
             if (id !== reqRef.current) return
             if (data?.error) {
                 setError(data.error)
@@ -238,9 +251,9 @@ const AdminDashboard = () => {
     // Booleans are compared against null: `isOnline === false` (Offline) and
     // `isOutstation === false` are real filters, not absent ones.
     const tabFiltersActive = selected === 0
-        ? !!(status || vehicleType || startDate || endDate || source || cancelledBy) || isOutstation !== null
+        ? !!(status || vehicleClass || startDate || endDate || source || cancelledBy) || isOutstation !== null
         : selected === 1
-            ? !!(vehicleType || vehicleNumber || driverPhone || verificationStatus || startDate || endDate) || isOnline !== null
+            ? !!(vehicleClass || vehicleNumber || driverPhone || verificationStatus || startDate || endDate) || isOnline !== null
             : !!(gender || userPhone || startDate || endDate)
     const filtersActive = !!searchParam || tabFiltersActive
 
@@ -288,7 +301,7 @@ const AdminDashboard = () => {
     }
 
     function clearFilters() {
-        setStatus(null); setVehicleType(null); setStartDate(null); setEndDate(null); setSource(null); setCancelledBy(null)
+        setStatus(null); setVehicleClass(null); setStartDate(null); setEndDate(null); setSource(null); setCancelledBy(null)
         setVerificationStatus(null); setIsOnline(null); setVehicleNumber(null); setDriverPhone(null)
         setGender(null); setUserPhone(null)
         setExpanded(false)
@@ -296,7 +309,7 @@ const AdminDashboard = () => {
             setPage(1)
             return
         }
-        const cleared = { status: null, vehicleType: null, startDate: null, endDate: null, source: null, cancelledBy: null, verificationStatus: null, isOnline: null, vehicleNumber: null, driverPhone: null, gender: null, userPhone: null }
+        const cleared = { status: null, vehicleClass: null, startDate: null, endDate: null, source: null, cancelledBy: null, verificationStatus: null, isOnline: null, vehicleNumber: null, driverPhone: null, gender: null, userPhone: null }
         selected === 0 ? searchBooking(null, cleared) : selected === 1 ? searchDrivers(null, cleared) : searchUsers(null, cleared)
     }
 
@@ -325,6 +338,18 @@ const AdminDashboard = () => {
 
     return (
         <AccountLayout items={items} selected={selected} onSelect={(i : number) => { setSelected(i); setPage(1); setFilterSection(0); setListScrolled(false) }} title="Admin Dashboard">
+            {selected === FARES_TAB ? (
+                <Suspense
+                    fallback={
+                        <div className="w-full flex-1 min-h-0 flex items-center justify-center px-5 max-sm:px-0">
+                            <p className="text-sm text-gray-500">Map load ho raha hai…</p>
+                        </div>
+                    }
+                >
+                    <EditFares />
+                </Suspense>
+            ) : (
+            <>
             {filterDropdown.mounted && (
                 <Button
                     prop={{
@@ -360,7 +385,7 @@ const AdminDashboard = () => {
                                 {selected === 0 ? (
                                     <>
                                         {sectionIndex === 0 && <Chips options={bookingStatuses.map(s => ({ value: s, label: s.replace("_", " ") }))} value={status} onChange={setStatus} />}
-                                        {sectionIndex === 1 && <Chips options={vehicleOptions} value={vehicleType} onChange={setVehicleType} />}
+                                        {sectionIndex === 1 && <Chips options={vehicleOptions} value={vehicleClass} onChange={setVehicleClass} />}
                                         {sectionIndex === 2 && (
                                             <>
                                                 <label className={filterLabel}>Start date</label>
@@ -374,7 +399,7 @@ const AdminDashboard = () => {
                                     </>
                                 ) : selected === 1 ? (
                                     <>
-                                        {sectionIndex === 0 && <Chips options={vehicleOptions} value={vehicleType} onChange={setVehicleType} />}
+                                        {sectionIndex === 0 && <Chips options={vehicleOptions} value={vehicleClass} onChange={setVehicleClass} />}
                                         {sectionIndex === 1 && <Chips options={[{ value: "pending", label: "Pending" }, { value: "approved", label: "Approved" }, { value: "rejected", label: "Rejected" }]} value={verificationStatus} onChange={setVerificationStatus} />}
                                         {sectionIndex === 2 && <Chips options={[{ value: true, label: "Online" }, { value: false, label: "Offline" }]} value={isOnline} onChange={setIsOnline} />}
                                         {sectionIndex === 3 && <input type="text" value={vehicleNumber ?? ""} onChange={(e) => setVehicleNumber(e.target.value || null)} placeholder="e.g. UP32 AB 1234" className={filterField} />}
@@ -514,7 +539,7 @@ const AdminDashboard = () => {
                                         <p className="text-base text-gray-500">
                                             {[
                                                 formatDateTime(booking.scheduledAt ?? booking.createdAt),
-                                                `${vehicleLabel(booking.vehicleType)}${booking.sharing ? " • Sharing" : ""}`,
+                                                `${vehicleLabel(booking.vehicleClass)}${booking.sharing ? " • Sharing" : ""}`,
                                                 booking.isOutstation ? "Outstation" : null,
                                                 booking.source.charAt(0).toUpperCase() + booking.source.slice(1),
                                             ].filter(Boolean).join("  •  ")}
@@ -599,7 +624,7 @@ const AdminDashboard = () => {
                                 <div className="w-full border-t border-[var(--background-primary)]/10"></div>
 
                                 <p className="text-base text-gray-500">
-                                    {vehicleLabel(driver.vehicleType)}  •  {driver.vehicleNumber}  •  Joined {new Date(driver.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                                    {vehicleLabel(driver.vehicleClass)}  •  {driver.vehicleNumber}  •  Joined {new Date(driver.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
                                 </p>
                             </div>
                         ))
@@ -650,6 +675,8 @@ const AdminDashboard = () => {
                 )}
             </div>
             {pagination && <div className="sm:hidden w-full flex justify-center pt-3">{pagination}</div>}
+            </>
+            )}
         </AccountLayout>
     )
 }

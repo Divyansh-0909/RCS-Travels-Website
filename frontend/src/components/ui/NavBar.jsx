@@ -12,7 +12,10 @@ import { useExitAnim } from '../../hooks/useExitAnim';
 import { scrollToSection } from '../../hooks/useSmoothScroll';
 import pfpPlaceholder from "../../assets/pfp-placeholder.webp"
 import FourSeaterSide from "../../assets/4-seater-bottom-left.webp"
+// Two car illustrations for four classes: the art is per seat count, so a sedan
+// shows the 4-seater and a premium SUV the 6-seater until per-class art exists.
 import SixSeaterSide from "../../assets/6-seater-bottom-left.webp"
+import { labelOf, seatsOf } from "../../constants/vehicles"
 import Skeleton from './Skeleton';
 import ErrorPanel from './ErrorPanel';
 
@@ -37,7 +40,7 @@ const NavBar = ({ invert = false, hideExpanded = false }) => {
     const bookingCode = useData(state => state.bookingCode);
     const status = useData(state => state.status);
     const sharing = useData(state => state.sharing);
-    const vehicleType = useData(state => state.vehicleType);
+    const vehicleClass = useData(state => state.vehicleClass);
     const fare = useData(state => state.fare);
     const dropLocation = useData(state => state.dropLocation);
     const pickupLocation = useData(state => state.pickupLocation);
@@ -348,7 +351,7 @@ const NavBar = ({ invert = false, hideExpanded = false }) => {
                                     <h4 className="text-sm sm:text-base text-[var(--text-muted)] sm:hidden block"> UP 16 AB 1234</h4>
                                 </>
                                 : <h4 className="text-sm sm:text-base text-[var(--text-muted)]">
-                                    {vehicleType === 4 ? "Cab Economy" : "Cab XL"}
+                                    {labelOf(vehicleClass)}
                                     {scheduledTime && (
                                         <>
                                             {" • "}
@@ -371,7 +374,7 @@ const NavBar = ({ invert = false, hideExpanded = false }) => {
 
                         </div>
                         <div className='items-right'>
-                            <img className='w-30 -mr-2 ml-1 sm:ml-0 sm:mr-0 -my-2' src={vehicleType === 4 ? FourSeaterSide : SixSeaterSide} alt="car" />
+                            <img className='w-30 -mr-2 ml-1 sm:ml-0 sm:mr-0 -my-2' src={seatsOf(vehicleClass) === 6 ? SixSeaterSide : FourSeaterSide} alt="car" />
                         </div>
                     </div>
                 </div>

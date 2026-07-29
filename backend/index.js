@@ -9,6 +9,7 @@ import fareRouter from './routes/fare.js'
 import bookingsRouter from './routes/bookings.js'
 import driverRouter from './routes/driver.js'
 import startAssignmentJob from './services/assignScheduledRides.js'
+import { initFareZones } from './services/fareZones.js'
 import usersRouter from './routes/users.js'
 import hybridAuthRouter from './routes/hybridAuth.js'
 import adminRouter from './routes/admin.js'
@@ -77,6 +78,10 @@ app.use(errorHandler)
 
 const server = app.listen(PORT, async () => {
   await prisma.$connect()
+  // Before the assignment job, which prices the rides it assigns. Never throws —
+  // a failure here leaves the zones.geojson rates loaded, so the server still
+  // quotes fares while the database is unreachable.
+  await initFareZones()
   startAssignmentJob()
   console.log(`Server running on port ${PORT}`)
 })

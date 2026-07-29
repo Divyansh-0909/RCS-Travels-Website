@@ -128,8 +128,11 @@ export const useData = create (persist (set =>({
     fare: null,
     setFare: (fare)=> set(state=> ({fare: fare})),
 
-    vehicleType: null,
-    setvehicleType: (vehicle)=> set(state=> ({vehicleType: vehicle})),
+    // One of the keys in constants/vehicles.js. Null until the rider picks —
+    // there is deliberately no default class, because a default would mean the
+    // Book button is live before anyone has chosen what they're paying for.
+    vehicleClass: null,
+    setVehicleClass: (vehicle)=> set(state=> ({vehicleClass: vehicle})),
 
     bookingId: null,
     setBookingId: (id)=> set(state=> ({bookingId: id})),
@@ -153,7 +156,10 @@ export const useData = create (persist (set =>({
     cancellationCharge: 0,
     setCancellationCharge: (amount)=> set(state=> ({cancellationCharge: amount ?? 0})),
 
-    sharing: true,
+    // Off by default: a solo ride is the ride the rider asked for, and sharing
+    // is the opt-in that trades privacy for a lower fare. Defaulting it on made
+    // the headline price one the rider hadn't agreed to the terms of.
+    sharing: false,
     setSharing: (share) => set(state=>({sharing: share})),
 
     // Forces the route through the lit highway instead of the shorter unlit

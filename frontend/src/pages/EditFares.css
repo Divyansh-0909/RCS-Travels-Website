@@ -1,0 +1,96 @@
+/* Map chrome for the Edit Fares tab. Everything that can be a Tailwind class is
+   one — what lives here is the handful of rules that cannot be: Geoman sets its
+   handle sizes with !important, and Leaflet builds tooltips and panes outside
+   React's tree, so both have to be reached by their own class names. */
+
+/* Geoman ships 12px white pips with a hairline ring — on a pale zone fill they
+   all but disappear, and you cannot drag a corner you cannot find. These are
+   bigger, dark-ringed and shadowed so they read as grab handles over any fill.
+   Geoman sets the size with !important, so matching it is the only way in, and
+   the negative margins are what keep the dot centred on its corner. */
+.leaflet-container .marker-icon,
+.leaflet-container .marker-icon-middle {
+    background: #ffffff !important;
+    border: 3px solid var(--background-primary) !important;
+    border-radius: 50% !important;
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.95), 0 2px 6px rgba(18, 18, 32, 0.55) !important;
+}
+
+.leaflet-container .marker-icon {
+    width: 20px !important;
+    height: 20px !important;
+    margin-left: -10px !important;
+    margin-top: -10px !important;
+}
+
+/* Mid-edge handles add a corner rather than move one, so they stay a size down
+   and hollow — same affordance, clearly the lesser one. */
+.leaflet-container .marker-icon-middle {
+    width: 14px !important;
+    height: 14px !important;
+    margin-left: -7px !important;
+    margin-top: -7px !important;
+    opacity: 1 !important;
+    background: rgba(255, 255, 255, 0.72) !important;
+    border-width: 2px !important;
+    box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.8), 0 1px 4px rgba(18, 18, 32, 0.5) !important;
+}
+
+.leaflet-container .marker-icon:hover,
+.leaflet-container .marker-icon-middle:hover {
+    background: var(--color-primary-light) !important;
+    border-color: #ffffff !important;
+    box-shadow: 0 0 0 3px rgba(36, 58, 251, 0.45), 0 2px 8px rgba(18, 18, 32, 0.6) !important;
+}
+
+/* The permanent per-zone price label. Stays dark on the light dashboard: it sits
+   on top of the map's own colours, not on the panel, so it needs its own
+   contrast rather than the surface's. */
+.zone-label {
+    background: rgba(18, 18, 32, 0.85);
+    border: none;
+    border-radius: 6px;
+    color: #fff;
+    font-weight: 600;
+    font-size: 11.5px;
+    padding: 3px 7px;
+    box-shadow: 0 1px 4px rgba(18, 18, 32, 0.4);
+    white-space: nowrap;
+}
+
+.zone-label::before {
+    display: none;
+}
+
+.zone-label .rs {
+    color: var(--color-primary-light);
+}
+
+/* 67 labels at once is unreadable zoomed out; the colour bands carry the picture
+   on their own until you zoom into somewhere specific. */
+.leaflet-container.hide-labels .zone-label {
+    display: none;
+}
+
+/* Leaflet's own controls, matched to the panel rather than left at their default
+   grey-on-white browser chrome. */
+.leaflet-container .leaflet-bar a {
+    color: var(--background-primary);
+    border-bottom-color: rgba(18, 18, 32, 0.12);
+}
+
+.leaflet-container .leaflet-bar a:hover {
+    background-color: #f3f3f3;
+}
+
+.leaflet-container .leaflet-control-attribution {
+    background: rgba(255, 255, 255, 0.82);
+    font-size: 10px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .leaflet-container .leaflet-fade-anim .leaflet-tile,
+    .leaflet-container .leaflet-zoom-anim .leaflet-zoom-animated {
+        transition: none !important;
+    }
+}

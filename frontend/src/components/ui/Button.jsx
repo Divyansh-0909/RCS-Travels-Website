@@ -70,6 +70,10 @@ const Button = ({ prop, className, children, onClick }) => {
     >
       <button
         type={prop.type ?? "button"}
+        // Lets a submit button live outside its <form> — the vehicle screen
+        // pins its CTA to the viewport on mobile, where nesting it in the form
+        // inside the sheet is exactly what it can't do.
+        form={prop.form}
         onClick={onClick}
         disabled={isDisabled}
         className={` ${prop.innerClassName}

@@ -26,21 +26,44 @@ IMPORTANT:
   who opts in) are routed via the highway automatically.
 
   KEY INSIGHT: Google Routes API has NO concept of a "shady"/"safe" route. That
-  knowledge is local. So we do NOT ask Google for a safer route — we FORCE the route
-  through a highway waypoint we pick once (a lat/lng on the safe highway stretch).
-  Passing it as an `intermediates` waypoint makes Google compute pickup -> waypoint ->
-  drop, which excludes the shady shortcut.
+  knowledge is local — but it does NOT follow that we should name the road ourselves.
 
-  BUILT: "Safer route?" toggle on VehicleSelect under "Share a ride?", default OFF, with
-  "Adds ₹150" under it. Flows through as `preferSafeRoute` to /api/fare/estimate and
-  /api/bookings, and is stored on the Booking row. Toggling re-fetches the estimate so
-  the map polyline redraws along the new path. Label is deliberately neutral, not
-  gendered — anyone can want it at night. Waypoint only applies when one endpoint is
-  within 3 km of campus (isNearCampus), so it can't detour a Delhi→Delhi trip.
+  SUPERSEDED (29 Jul 2026): the original plan forced every campus trip through ONE
+  hardcoded highway waypoint. That can only ever be right for a single corridor —
+  the shortcut riders avoid is on the way to some destinations and nowhere near the
+  others, so the same waypoint that fixes a Noida run detours a Dadri one. The
+  constant was never filled in, which is the only reason it never shipped wrong.
 
-  !! 1. SAFE_WAYPOINT IS STILL null in backend/services/rideEstimate.js. Until a real
-        lat/lng on the safe highway stretch is filled in, the toggle charges ₹150 and
-        changes NOTHING about the road path. Do not ship without it.
+  BUILT INSTEAD — mark the ground, not the road:
+    - backend/data/shady-zones.geojson holds POLYGONS around the avoided stretches.
+      SEPARATE from zones.geojson on purpose (fare zones are drawn around
+      destinations; these are drawn around roads). EMPTY = feature fully dormant:
+      no alternatives requested, no toggle shown, nothing charged. !! STILL EMPTY.
+    - The estimate asks Routes for `computeAlternativeRoutes`, decodes each one and
+      measures how far it runs inside a shady polygon (sampled every 50 m, so a
+      sparse motorway polyline can't slip through; 400 m inside is the threshold,
+      so clipping a corner doesn't count). Primary clean -> nothing offered.
+      Primary shady -> fastest clean alternative wins. Google finds the Eastern
+      Peripheral on its own; no highway is named anywhere in the code.
+    - Only if EVERY alternative is shady does it force a waypoint, from that zone's
+      own optional `fallback` property, and it re-verifies the result is clean.
+    - The chosen route is reduced back to ONE coordinate (the point furthest from
+      the primary path — a midpoint sits on shared road and forces nothing) and
+      stored on the booking as safeWaypointLat/Lng, because a Maps nav link takes
+      coordinates, not "Google's second suggestion".
+    - backend/scripts/check-shady-zones.js routes campus -> every fare zone and
+      reports which destinations actually cross the polygon and whether a clean
+      alternative exists. RUN IT after drawing a zone — it is the difference
+      between knowing this works and hoping.
+
+  FIXED IN PASSING: the surcharge used to follow the rider's checkbox while the
+  routing followed a separate condition, so a trip with no safer route available was
+  still billed ₹150 for taking one. Charge and route now come from one flag
+  (`applied`), and the toggle is hidden entirely when there is nothing to offer.
+
+  !! 1. DRAW AT LEAST ONE POLYGON. Until shady-zones.geojson has a feature, the
+        toggle never appears and the feature does nothing — by design, but it is
+        also not shipped.
      2. THE ROUTE ONLY MATTERS IF THE DRIVER FOLLOWS IT. Backend routing alone does not
         put the human driver on the highway. Hand the driver a Google Maps nav deep link
         with the SAME waypoint (driver app, Phase 5):
@@ -55,12 +78,20 @@ IMPORTANT:
     - Was "do NOT add a visible safety surcharge (reads badly) — cap or absorb the
       difference"; built as a visible flat +₹150. Worth revisiting: charging a woman
       extra to avoid an unlit road reads differently from absorbing it silently.
-      Changing it later means editing SAFE_ROUTE_SURCHARGE in BOTH rideEstimate.js and
-      VehicleSelect.jsx — they are mirrored constants, not a shared source.
+      Changing it means editing SAFE_ROUTE_SURCHARGE in BOTH rideEstimate.js and
+      frontend constants/fares.js — mirrored constants, not a shared source. (The
+      booking screen no longer reads the frontend one: the estimate now tells it the
+      fee. TrackingPage and RideDetails still use it to back the charge out of a
+      stored fare, which stays correct because the fee is only ever added when the
+      stored preferSafeRoute is true.)
 
   TRADEOFF: highway is longer -> higher distanceKm -> higher fare at the per-km rate,
   and the ₹150 lands ON TOP of that for formula-priced routes. Zone and fixed-table
   fares only take the flat ₹150.
+  WORTH REVISITING NOW THAT THE DATA EXISTS: the estimate returns extraKm/extraMin for
+  the detour it found, so a 2 km diversion and a 15 km one no longer have to cost the
+  same ₹150. Log a week of real bookings before changing anything — how often the
+  default route is even shady is now measurable rather than assumed.
 - Clear the hard coded data in the schema models
 - Make the share location and share drivers details page
 - Before deploying whole code to github, verify from claude if that can cause security issue
@@ -169,11 +200,13 @@ IMPORTANT:
   infrastructure — but it is not worth the complexity until volume justifies it,
   and items 1-4 remove most of the pain for a fraction of the effort. Do NOT start
   here.
-- !! FILL IN SAFE_WAYPOINT in backend/services/rideEstimate.js — a real lat/lng on the lit
-  highway stretch. It is currently null, which means the "Safer route?" toggle on
-  VehicleSelect CHARGES ₹150 AND CHANGES NOTHING about the road path. Do not ship the
-  toggle until this is set. An unset waypoint is a deliberate no-op, not a broken route,
-  so nothing crashes — it just silently isn't the feature. See the women-safety entry above.
+- !! DRAW THE SHADY POLYGONS in backend/data/shady-zones.geojson. Replaces the old
+  "fill in SAFE_WAYPOINT" item — there is no single waypoint any more. While the file
+  has no features the "Safer route?" toggle never renders and nothing is charged, so
+  this is dormant rather than broken, but it also isn't shipped. Draw one on
+  geojson.io, set its optional `fallback`, then run
+  `node backend/scripts/check-shady-zones.js` to see which destinations actually take
+  that road. See the women-safety entry at the top for the full design.
 - Round-trip toggle on VehicleSelect — a SECOND SLIDER under "Share a ride?", not a button.
   It is a state that re-prices the three fare cards, exactly like `sharing`, so it should
   reuse that row pattern. Once it ships, drop "round trip" from the "Special requirements?"
@@ -452,6 +485,7 @@ Goal: Driver can receive and complete rides.
     Payload includes bearing + speedKmh (calculated from last two positions).
     When driver goes Offline → stop broadcasting.
 
+  Change this to a websocket
   Dead reckoning (client-side, customer tracking page):
     Between 5-second polls, predict driver position using:
       predictedLat = lat + (speedKmh/3600 × Δt) × cos(bearing × π/180) / 111
@@ -619,8 +653,11 @@ CHAPTER -> DRIVER APP FEATURE
   - testing sections        -> ride card rendering, status-transition buttons, OTP form.
     The container/presentational split (10.17) is what makes ride screens testable.
   - 10.19 Linking.openURL   -> open Google Maps navigation to the pickup coords. This is
-    also where the SAFE_WAYPOINT deep link from the women-safety entry above gets built:
-    ...&waypoints=WAYPOINT_LATLNG. A real shipped feature, not a course toy.
+    also where the safer-route deep link from the women-safety entry above gets built:
+    ...&waypoints=<booking.safeWaypointLat>,<booking.safeWaypointLng>. Read it OFF THE
+    BOOKING — it was resolved and stored when the fare was quoted, and recomputing it
+    at pickup can pick a different road than the rider paid for. Skip the param when
+    the columns are null. A real shipped feature, not a course toy.
   - 10.20 FlatList + header -> ride detail screen: ride info as header, status timeline
     / round-trip legs below
   - 10.21 / 10.22 form + mutation + redirect -> accept / decline, mark cash collected,
@@ -661,20 +698,30 @@ PHASE 8 — NEXT FEATURE WAVE (decided Jul 2026, not started)
 Decisions from the Jul 2026 planning sessions. Build order is dependency order:
 each numbered block unblocks the ones after it. Outstation is PARKED (see bottom).
 
-1. VEHICLE CLASSES (blocks round trip, sedan, marketplace matching)
-   vehicleType Int (seat count) -> class enum: hatchback | sedan | suv.
-   Sedan and hatchback are both 4 seats, so seat count cannot express sedan.
-   The three classes map 1:1 onto the fare keys ALREADY in zones.geojson — every
-   zone carries all three prices, so NO new fare data is needed. Ertiga and Innova
-   are both `suv` locally (same price, one "6 Seater" card); they only diverge on
-   outstation per-day rates, which are parked — an optional display-only
-   vehicleModel on Driver covers the difference until then.
-   Touches: VALID_VEHICLE_TYPES (bookings.js), VEHICLE_CLASS + formulaFare
-   (rideEstimate.js), driver filter + BOTH capacity writes (driverAssignment.js),
-   cancel restore (bookings.js), the z.literal(4/6) filters in types.ts, frontend
-   enums.ts / useData / VehicleSelect / NavBar / ManageAccount / AdminDashboard.
-   vehicleCapacity currently derives from vehicleType — needs a separate seats
-   field on Driver. Data migration for existing rows.
+1. VEHICLE CLASSES — DONE (Jul 29 2026, migration not yet applied)
+   vehicleType Int (4|6|1) -> VehicleClass enum, on Booking, Driver AND FareTable.
+   FOUR classes, not the three originally planned: hatchback | sedan | suv |
+   suv_premium, grouped on the booking screen under two rider-facing categories,
+   Cab Economy (hatchback, sedan) and Cab XL (SUV, premium SUV).
+   "Book any" (vehicleType 1 / ANY) was REMOVED from the product entirely.
+
+   hatchback/sedan/suv map 1:1 onto the fare keys already in zones.geojson.
+   suv_premium has no rate data anywhere, so it is DERIVED — suv ×
+   PREMIUM_SUV_MULTIPLIER at whichever source priced the SUV (zone, fixed table,
+   formula or market), rounded back onto that source's own grid.
+   !! The multiplier is a PLACEHOLDER 1.15 — Raju has not confirmed the real
+   premium yet. One constant in rideEstimate.js reprices every premium fare.
+   Sedan uses the same derivation mechanism for the fixed table only, the one
+   source with no sedan column (+100, the provider's own rule).
+
+   Seats are no longer a column: seatsOf(vehicleClass) in constants/vehicles.js
+   is the single source, and vehicleCapacity is measured against it — so no
+   separate seats field on Driver was needed after all.
+   Driver matching is now EXACT on class, never widened.
+   Backfill: 6 -> suv, everything else (4 and the old ANY 1) -> hatchback.
+
+   STILL TO DO: run the migration (prisma/migrations/20260729120000_vehicle_class_enum),
+   reseed, and confirm the premium multiplier with Raju.
 
 2. ROUND TRIP (point-to-point only — outstation has no round-trip concept)
    Price: roundTrip = base × 1.64 (18% off the doubled one-way), computed on the
@@ -758,29 +805,29 @@ each numbered block unblocks the ones after it. Outstation is PARKED (see bottom
        number, not a formula off the fare — validate deposit < fare at post
        time, since no rational claimer would ever accept the reverse).
      - CLAIMER pays that deposit by UPI to claim it.
-     - PLATFORM FEE = flat 15% of the deposit (Raju's number), no cap.
+     - PLATFORM FEE = flat 12% of the deposit (Raju's number), no cap.
      - MINIMUM DEPOSIT = ₹100 (Raju's number — supersedes Claude's earlier
        ₹300 recommendation below the fee-vs-payout-cost line).
      - ON COMPLETION: poster is paid `deposit − fee`. Claimer gets NOTHING
        back — the deposit IS his payment to the poster for taking the job;
-       the platform's cut is its 10% of that payment.
+       the platform's cut is its 12% of that payment.
      - POSTER cancels the posting (even after the claimer already paid) ->
        claimer gets the FULL deposit refunded, fee charged to nobody.
      - CLAIMER cancels after accepting -> claimer forfeits ONLY the fee, gets
        `deposit − fee` back, poster gets nothing (ride never happened for him
        either).
    !! ₹100 FLOOR IS THIN AT THE BOTTOM OF THE RANGE. Fee on a ₹100 deposit is
-   ₹15; the RazorpayX payout to the poster (~₹5–6, unavoidable since every
+   ₹12; the RazorpayX payout to the poster (~₹5–6, unavoidable since every
    completed ride pays a DIFFERENT poster — payouts can no longer collapse
    into one weekly transfer the way "pay Raju" alone could) plus WhatsApp
-   notifications for claim + completion can consume all of that ₹15 or push
+   notifications for claim + completion can consume all of that ₹12 or push
    the ride into a net loss. This was flagged to Raju as a trade-off; ₹100 is
    his explicit choice, not a bug — but do not "fix" it by silently raising
    the floor. If per-ride losses become visible in practice, that's the
    trigger to revisit, not a hunch beforehand.
    !! COST-RECOVERY GOAL NO LONGER APPLIES CLEANLY — the old 30%-of-deposit
    fee was sized to recover the project's ~₹620–800/mo running costs from
-   marketplace volume alone. That link is now broken: the fee is fixed at 10%
+   marketplace volume alone. That link is now broken: the fee is fixed at 12%
    by mandate, and the deposit is poster-chosen rather than tied to the fare,
    so revenue is no longer a predictable function of ride volume. Don't
    assume this feature funds anything now — track it separately.

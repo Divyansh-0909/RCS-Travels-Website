@@ -147,17 +147,20 @@ cancelled, **no_driver**), `BookingSource` (website | whatsapp | admin), `Cancel
 - **User** — `clerkId` (unique), `phone` (unique), `name`, `whatsappNumber`, `bookingCode`
   (**stable 4-digit code generated once at signup — it lives on the user, not the ride**), optional
   `gender`, `dob`, `emergencyContact`, `deletedAt`. One-to-many `bookings`.
-- **Driver** — `name`, `phone`, `vehicleType` (Int: number of seats), `vehicleCapacity` (Int: seats
+- **Driver** — `name`, `phone`, `vehicleClass` (VehicleClass enum — the car itself; its seat count
+  comes from `constants/vehicles.js`), `vehicleCapacity` (Int: seats
   currently free — the live availability counter), `vehicleNumber`, `isActive`, `isOnline`,
   `fcmToken`, `dlDocUrl`/`aadharDocUrl`, `verificationStatus`. Has one `DriverLocation`.
 - **DriverLocation** — one row per driver, `latitude`/`longitude`/`bearing`/`speedKmh`, designed to
   be upserted every 4s while online. `bearing`+`speedKmh` enable client-side **dead reckoning**
   between the customer's 5-second status polls. **Nothing writes this table yet.**
 - **Booking** — the core record: `userId`, optional `driverId`, pickup/drop address + lat/lng,
-  `vehicleType`, `scheduledAt` (null = on-spot), `isOutstation`, `preferSafeRoute`, `distanceKm`,
+  `vehicleClass`, `scheduledAt` (null = on-spot), `isOutstation`, `preferSafeRoute`, `distanceKm`,
   `fare`, `commissionPct`/`commissionAmt`, `status`, `confirmedAt`, `cancellationCharge` and the
   other cancellation fields, `source`, `sharing` (bool), `shareGroupId`, `pickupOrder`.
-- **FareTable** — fixed NCR pricing, unique on (`destinationName`, `vehicleType`).
+- **FareTable** — fixed NCR pricing, unique on (`destinationName`, `vehicleClass`). Only the two
+  base classes are stored; `sedan` and `suv_premium` are derived from their sibling in
+  `rideEstimate` (`DERIVED_CLASS`), so a destination needs no extra rows to gain them.
 - **ApiUsage** — monthly external-API call counter (`service`, `month` "YYYY-MM", `count`).
 - **OtpVerification** — one row per phone: `otpHash`, `expiresAt`, `used`. Backs the WhatsApp OTP.
 - **WhatsappSession** — in-progress WhatsApp booking-bot conversation state. Nothing reads or
@@ -166,10 +169,17 @@ cancelled, **no_driver**), `BookingSource` (website | whatsapp | admin), `Cancel
 Every index in the schema is justified by a named call site in a comment above it — read those
 before adding more.
 
-**Vehicle types are integers = seat counts:** `4`, `6`, and `1` is a special **"ANY"** marker (book
-the cheapest available 4- or 6-seater; priced at the 4-seater rate). Valid set: `[4, 6, 1]`.
-Internally these map to fare *classes* — `4 → hatchback`, `6 → suv`, `1 → hatchback`. A `sedan`
-class exists in the zone data but no vehicle type selects it yet.
+**Vehicles are a class enum, not a seat count.** Valid set: `[hatchback, sedan, suv, suv_premium]`,
+defined once in `backend/constants/vehicles.js` and mirrored in `frontend/src/constants/vehicles.js`.
+Seats are a property of the class (4, 4, 6, 6), so `vehicleCapacity` is measured against
+`seatsOf(vehicleClass)`. The booking screen groups them under two rider-facing **categories** —
+**Cab Economy** (hatchback, sedan) and **Cab XL** (SUV, premium SUV) — but the class is what gets
+priced, matched to a driver and stored. There is no "ANY" option: the old `vehicleType 1` was
+removed along with the integer scheme, and every ride now names the car it booked.
+
+`hatchback`, `sedan` and `suv` are priced from the zone/fixed/formula/market cards directly.
+`suv_premium` has no rate data anywhere and is always derived — `suv × PREMIUM_SUV_MULTIPLIER`
+(**placeholder 1.15, needs provider confirmation**) at whichever source priced the SUV.
 
 ---
 
@@ -223,8 +233,9 @@ Cancelling restores driver capacity: solo back to full, sharing +1 seat capped a
 **Driver assignment** (`services/driverAssignment.js`)
 - Expanding **bounding-box → Haversine** search: radius grows 20→80 km in 10 km steps, re-checking
   the booking's status between rings so an expired or cancelled ride stops pinging drivers.
-- Filters drivers: `isActive` + `isOnline` + `verificationStatus = approved`, matching `vehicleType`
-  (or any of 4/6 when the request is type `1`/ANY). Sorted by distance, ties broken by seniority.
+- Filters drivers: `isActive` + `isOnline` + `verificationStatus = approved`, matching `vehicleClass`
+  **exactly** — never widened, since the rider was quoted for that specific car. Sorted by distance,
+  ties broken by seniority.
 - Offers are **sequential** — one FCM per candidate, awaiting each answer — which is why a single
   ring can take minutes and why the whole search runs detached.
 - `claimBooking` takes the booking with a **status-guarded `updateMany`** before decrementing
