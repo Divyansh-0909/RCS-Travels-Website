@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { prisma } from '../db/prisma.js'
 import { clerkClient } from '@clerk/express'
 import crypto from 'crypto'
+// Unused while the send below is commented out — kept so putting it back is one edit.
 import { sendOtpWhatsApp } from '../services/notification.js'
 
 // Phone-OTP login without Clerk's hosted UI and without passwords. We own the OTP
@@ -61,15 +62,20 @@ hybridAuthRouter.post('/send-otp', async (req, res) => {
     create: { phone, otpHash, expiresAt },
   })
 
+  // !! TESTING ONLY — WhatsApp delivery is commented out and the code is printed
+  // to this server's console instead, so logging in needs no WhatsApp
+  // credentials and costs no messages. Put the block back before anyone outside
+  // this machine uses it: a code on stdout is a login for whoever reads the logs.
+  //
   // Fail loudly if delivery fails — otherwise the user sits on the OTP screen
   // waiting for a message that will never arrive.
-  try {
-    await sendOtpWhatsApp(phone, otp)
-  } catch (err) {
-    console.error(err)
-    return res.status(502).json({ error: 'Could not send OTP, please retry' })
-  }
-  console.log(`OTP for ${phone}: ${otp}`) // dev fallback — remove before launch
+  // try {
+  //   await sendOtpWhatsApp(phone, otp)
+  // } catch (err) {
+  //   console.error(err)
+  //   return res.status(502).json({ error: 'Could not send OTP, please retry' })
+  // }
+  console.log(`\n  ── OTP for ${phone}: ${otp} ──  (WhatsApp send is commented out)\n`)
 
   return res.json({ ok: true })
 })
