@@ -96,6 +96,7 @@ RCS-Travels-Website/
 │   └── services/
 │       ├── rideEstimate.js             zones → fixed table → per-km formula; Routes API + usage cap
 │       ├── fareZones.js                point-in-polygon zone matching, border blending
+│       ├── fareQuote.js                HMAC-signs each estimate; bookings price from it, not the body
 │       ├── driverAssignment.js         nearest-driver matching (Haversine + sharing corridor)
 │       ├── assignScheduledRides.js     setInterval job, runs every 5 min
 │       └── notification.js             sendFCM / sendWhatsApp  ← BOTH STUBBED (console.log)
@@ -232,6 +233,14 @@ still price without them, only formula-priced types drop out.
   force the route through a lit-highway waypoint — but `SAFE_WAYPOINT` is **still null**, so today
   it charges the surcharge and changes nothing about the road. Do not ship it as-is.
 - **Commission:** 10% only when fare ≥ ₹1000, else 0 (stored on the booking).
+- **The client never names a price.** `/api/fare/estimate` returns its `fares` together with a
+  `quote` — the same numbers HMAC-signed (`services/fareQuote.js`, `FARE_QUOTE_SECRET`, 10-min TTL).
+  `POST /api/bookings` requires that quote and takes the fare, toll, airport and carrier amounts,
+  the distance, the safer-route decision and its waypoint out of it, after checking the quote was
+  issued for the route being booked. The body's `fare` is kept only as a cross-check: if it
+  disagrees with the signed number the booking is refused (`code: "FARE_QUOTE"`) rather than
+  charged either way. Recomputing at booking time was the alternative — it costs a second Routes
+  call per booking and re-prices against traffic that has moved since the rider looked.
 
 **Cancellation** — free while `pending`/`confirmed`/`assigned`/`en_route`; **35%** once the driver
 has `reached` the pickup (that driver turned down other rides and spent the fuel). A ride already
@@ -446,9 +455,11 @@ and no backend or Clerk session required.
   `loc.sharing === true`, but `DriverLocation` has no `sharing` column — the filter is always false,
   the 45° corridor check never runs, and sharing riders each start a *fresh* shared trip instead of
   pooling into an existing one.
-- **`driver.js` accept diverges from `getDriver`** on the same transition: it writes `assigned` with
-  an unguarded `update` (no status guard, unlike `claimBooking`) and never decrements
-  `vehicleCapacity`. Harmless until a real driver app calls it.
+- ~~**`driver.js` accept diverges from `getDriver`**~~ — fixed. `driver.ts` accept now imports
+  `claimBooking`/`ASSIGNABLE_STATUSES` from `driverAssignment.js`, so it takes the transition under
+  the same status guard, refuses when the vehicle has no room, and decrements `vehicleCapacity`
+  after the claim. `decline` uses the same allowlist but still writes nothing — it only echoes the
+  booking's status.
 - **`GET /api/bookings/admin/all` is unused** — the dashboard reads `/api/admin/booking`.
 - **The scheduled job's window is 12h, not the 60min it was specified as**, so a ride booked half a
   day out gets a full driver sweep every 5 minutes for nothing; and its `setInterval` doesn't wait

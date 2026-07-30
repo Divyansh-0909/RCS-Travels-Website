@@ -1,6 +1,7 @@
 import { prisma } from '../db/prisma.js'
 import { matchZone, isNearCampus, isAirportPickup } from './fareZones.js'
 import { classifyRoutes, hasShadyZones, isClean, decodePolyline } from './safeRoute.js'
+import { signQuote } from './fareQuote.js'
 import { VEHICLE_CLASS_NAMES } from '../constants/vehicles.js'
 
 // ---------------------------------------------------------------------------
@@ -405,7 +406,24 @@ export async function getRideEstimate({ pickupAddress, dropAddress, vehicleClass
   // class that was asked about.
   const selected = fares[vehicleClass] ?? Object.values(fares)[0]
 
+  // Signed here rather than in the route so an estimate can never leave this
+  // module unsigned. It carries everything POST /api/bookings needs to price the
+  // ride without asking the client for a number: every card (the class is picked
+  // after this call, so all four are signed), the route they belong to, and the
+  // options they were priced under. See fareQuote.js.
+  const quote = signQuote({
+    pickup: { address: pickupAddress, coords: pickupCoords ?? null },
+    drop:   { address: dropAddress,   coords: dropCoords ?? null },
+    fares,
+    distanceKm: metrics.distanceKm,
+    // `applied`, not the rider's toggle: it is the one that decided whether the
+    // ₹150 is in those fares and whether the driver gets sent the long way.
+    safeRoute: { applied, waypoint: safeRouteInfo.waypoint },
+    needsCarrier: Boolean(needsCarrier),
+  })
+
   return {
+    quote,
     fares,
     fare: selected?.solo ?? null,
     fareSource: selected?.source ?? null,

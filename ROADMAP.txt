@@ -122,6 +122,12 @@ IMPORTANT:
   determined attacker. The per-API quota is the actual ceiling — which is why the
   quotas already set in the console are the load-bearing control here.
 - AFTER YOU DEPLOY TO RENDER — none of these are optional:
+  - TODO, AND IT IS BEFORE THE NEXT DEPLOY, NOT AFTER: set FARE_QUOTE_SECRET on
+    Render (openssl rand -hex 32). With NODE_ENV=production the server now
+    REFUSES TO BOOT without it — deliberately: an unsigned fare quote is the
+    same hole as the client naming its own fare (see SERVER-SIDE FARE
+    RECOMPUTATION below). Dev needs nothing; it generates a throwaway key per
+    process, so quotes just stop verifying across a restart.
   - DONE 2026-07-28: CORS_ORIGINS set on Render to
     https://www.rcstravels.co.in,https://rcstravels.co.in
   - DONE 2026-07-28: keep-alive cron on cron-job.org, every 10 min against
@@ -878,11 +884,22 @@ each numbered block unblocks the ones after it. Outstation is PARKED (see bottom
    address string, not a radius. Still open with Raju: is toll/parking inside
    those prices?
 
-SERVER-SIDE FARE RECOMPUTATION (belongs to blocks 2+5, listed once):
-   POST /api/bookings trusts the client's fare (validates only "positive
-   number"). Before payments or any new money-bearing option ships, the server
-   must recompute (or verify a signed estimate). The flat() clamps on the
-   pass-through charges are a stopgap, not the fix.
+SERVER-SIDE FARE RECOMPUTATION — DONE 31 Jul 2026, as a signed estimate.
+   /api/fare/estimate now returns `quote` alongside `fares`: the same numbers
+   HMAC-signed (services/fareQuote.js, FARE_QUOTE_SECRET, 10-min TTL). POST
+   /api/bookings requires it and reads the fare, the pass-through charges, the
+   distance and the safer-route decision out of it, after checking the quote was
+   issued for the route being booked (addresses, and the coords when it was
+   priced with any). The body's `fare` survives only as a cross-check — a
+   mismatch is refused with code FARE_QUOTE rather than charged. The flat()
+   clamps are gone with the fields they guarded.
+   WHY NOT RECOMPUTE: a second Routes call on every booking against a 10k/month
+   cap, and a re-price against traffic that moved since the rider looked — the
+   quote is the one number the rider saw, which is what they are held to.
+   STILL OPEN: any NEW money-bearing field must go inside the quote, not beside
+   it (parking is the next one). Payments will also want one-time use — today a
+   quote can back more than one booking, which is harmless only because each is
+   the right price for that route.
 
 OUTSTATION — PARKED until the driver app exists. When it returns: per-day
    packages (flyer rates), Wagon R rate + >250 km/day rate + calendar-vs-24h

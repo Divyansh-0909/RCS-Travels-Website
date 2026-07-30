@@ -50,12 +50,20 @@ function getBoundingBox(lat, lng, radiusKm) {
 // Assignment is only legal from these. A booking expired to `no_driver`,
 // cancelled, or already assigned must never be claimed by a search still in
 // flight — see claimBooking.
-const ASSIGNABLE_STATUSES = ['pending', 'confirmed']
+//
+// Annotated for the same reason as ACTIVE_STATUSES in routes/bookings.js: the
+// typed driver route imports it and needs BookingStatus[], not string[].
+/** @type {import('@prisma/client').BookingStatus[]} */
+export const ASSIGNABLE_STATUSES = ['pending', 'confirmed']
 
 // Atomically take the booking for this driver. Returns false if it moved on
 // while we were notifying, in which case the caller abandons the search. Done
 // before the capacity decrement so a lost claim can't strand a seat.
-async function claimBooking(bookingId, driverId, confirmedAt) {
+//
+// Shared with PATCH /driver/rides/:id/accept: the driver app takes the same
+// transition, and the guard has to be the same one.
+/** @type {(bookingId: string, driverId: string, confirmedAt: Date) => Promise<boolean>} */
+export async function claimBooking(bookingId, driverId, confirmedAt) {
   const { count } = await prisma.booking.updateMany({
     where: { id: bookingId, status: { in: ASSIGNABLE_STATUSES } },
     data: { status: 'assigned', driverId, confirmedAt },

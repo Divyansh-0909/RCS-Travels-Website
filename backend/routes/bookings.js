@@ -4,7 +4,7 @@ import { startAssignment, markNoDriver, ASSIGNMENT_DEADLINE_MS } from '../servic
 import { sendWhatsApp } from '../services/notification.js'
 import { prisma } from '../db/prisma.js'
 import { commissionOn, rideFareOf } from '../services/commission.js'
-import { AIRPORT_PICKUP_SURCHARGE, CARRIER_CHARGE } from '../services/rideEstimate.js'
+import { verifyQuote } from '../services/fareQuote.js'
 import { myBookingsQuerySchema } from '../types.ts'
 import { VEHICLE_CLASS_NAMES, isVehicleClass, seatsOf } from '../constants/vehicles.js'
 
@@ -36,27 +36,25 @@ const OVERLAP_MS = 15 * 60 * 1000
 
 const normAddress = (s) => s?.trim().toLowerCase()
 
-// Same shape check the fare route applies to pickup/drop coords. It bounds the
-// value but cannot prove the point came from an estimate — see the server-side
-// recomputation item in ROADMAP, which covers every client-sent number here.
-const validWaypoint = (w) =>
-    Boolean(w) && Number.isFinite(w.lat) && Number.isFinite(w.lng) &&
-    Math.abs(w.lat) <= 90 && Math.abs(w.lng) <= 180
+// The quote is signed with the coordinates it was priced from, and the client
+// echoes those same doubles back, so this only has to survive a JSON round trip
+// — 1e-6° is about 10 cm, far tighter than any pin the rider can drag.
+const sameCoords = (a, b) =>
+    Boolean(a) && Number.isFinite(b?.lat) && Number.isFinite(b?.lng) &&
+    Math.abs(a.lat - b.lat) < 1e-6 && Math.abs(a.lng - b.lng) < 1e-6
 
 bookingsRouter.post('/', protect, async (req, res) => {
     const {
         pickupAddress, pickupLat, pickupLng,
         dropAddress, dropLat, dropLng,
-        vehicleClass, fare, distanceKm,
-        scheduledAt, isOutstation, sharing, preferSafeRoute, needsCarrier,
-        // The via-point the estimate resolved for this trip. Echoed back by the
-        // client rather than recomputed here so the stored route is provably the
-        // one the rider saw priced; validated below, never trusted as sent.
-        safeWaypoint,
-        // Pass-through charges inside `fare`, itemised by the estimate so the
-        // commission can be taken off the driving alone. `parking` has no source
-        // yet — it is accepted now so that the day it exists it is already exempt.
-        toll, airport, carrier, parking
+        vehicleClass, sharing,
+        scheduledAt, isOutstation,
+        // The signed estimate this booking is being made against. Everything the
+        // ride costs comes out of it — see the block below and fareQuote.js.
+        fareQuote,
+        // What the rider was looking at when they pressed the button. Advisory:
+        // the quote decides the price, this only has to agree with it.
+        fare: quotedToRider,
     } = req.body
 
     if (!pickupAddress || !dropAddress)
@@ -68,8 +66,66 @@ bookingsRouter.post('/', protect, async (req, res) => {
     if (!vehicleClass || !isVehicleClass(vehicleClass))
         return res.status(400).json({ error: `vehicleClass must be one of: ${VEHICLE_CLASS_NAMES.join(', ')}` })
 
-    if (!fare || typeof fare !== 'number' || fare <= 0)
-        return res.status(400).json({ error: 'fare must be a positive number' })
+    // ---- Price the ride from the signed estimate, never from the request ----
+    //
+    // `fare` used to be taken straight off the body and stored, checked only for
+    // being a positive number, so a crafted POST booked any ride for ₹1. Every
+    // money-bearing field is now read out of a quote this server signed: the
+    // fare, the pass-through charges the commission is taken off, the distance,
+    // and the two options that move the total (the safer route and the carrier).
+    // The client still chooses the class and solo-vs-sharing — but only among
+    // the cards the quote already priced.
+    //
+    // Everything below is tagged FARE_QUOTE, because the client's answer to all
+    // of them is the same one: re-price the route and show the rider the number
+    // again. 400 is a request that was never going to work, 422 a price that has
+    // simply gone stale.
+    const staleQuote = (status, error) => res.status(status).json({ error, code: 'FARE_QUOTE' })
+
+    const { quote, error: quoteError } = verifyQuote(fareQuote)
+    if (quoteError === 'QUOTE_MISSING') return staleQuote(400, 'fareQuote is required')
+    if (quoteError === 'QUOTE_INVALID') return staleQuote(400, 'Invalid fare quote')
+    if (quoteError === 'QUOTE_EXPIRED') return staleQuote(422, 'This price has expired. Refresh and try again.')
+
+    // A quote is for one route. Without this, the cheapest quote on the rate
+    // card would book the most expensive trip on it.
+    if (normAddress(quote.pickup?.address) !== normAddress(pickupAddress) ||
+        normAddress(quote.drop?.address) !== normAddress(dropAddress))
+        return staleQuote(422, 'This price was quoted for a different route. Refresh and try again.')
+
+    // Coords are what unlock zone pricing, so a quote priced with them is only
+    // valid for them. A quote priced without them (hand-typed addresses, no
+    // pin) went down the per-km path, where the coords sent here are dispatch
+    // detail rather than an input to the fare — nothing to bind.
+    if ((quote.pickup.coords && !sameCoords(quote.pickup.coords, { lat: pickupLat, lng: pickupLng })) ||
+        (quote.drop.coords   && !sameCoords(quote.drop.coords,   { lat: dropLat,   lng: dropLng })))
+        return staleQuote(422, 'The pickup or drop point moved after this price was quoted. Refresh and try again.')
+
+    const pricedClass = quote.fares?.[vehicleClass]
+    const fare = pricedClass?.[sharing === true ? 'sharing' : 'solo']
+    if (typeof fare !== 'number' || fare <= 0)
+        return staleQuote(422, 'That vehicle could not be priced for this route')
+
+    // The rider is held to the number they saw. If it disagrees with the quote
+    // the screen is out of step with the price behind it, and charging either
+    // one silently is worse than saying so.
+    if (typeof quotedToRider === 'number' && quotedToRider !== fare)
+        return staleQuote(422, 'The price for this ride has changed. Refresh and try again.')
+
+    // Itemised inside `fare` by the estimate, so the commission comes off the
+    // driving alone. `parking` has no source yet; when one exists it will be
+    // quoted here like the rest rather than accepted from the client.
+    const toll    = pricedClass.toll ?? 0
+    const airport = pricedClass.airport ?? 0
+    const carrier = pricedClass.carrier ?? 0
+
+    // Both of these are already paid for inside `fare`, so neither can be a
+    // request field any more: a booking claiming preferSafeRoute against a quote
+    // priced without it would send the driver the long way round for free.
+    const preferSafeRoute = quote.safeRoute?.applied === true
+    const safeWaypoint = preferSafeRoute ? quote.safeRoute.waypoint : null
+    const needsCarrier = quote.needsCarrier === true
+    const distanceKm = quote.distanceKm
 
     if (scheduledAt) {
         const scheduled = new Date(scheduledAt)
@@ -87,16 +143,11 @@ bookingsRouter.post('/', protect, async (req, res) => {
     }
 
 
-    // A number the client sends must never be able to shrink the commission
-    // below what the ride actually earns, so each add-on is clamped to something
-    // sane before it is deducted.
-    const flat = (v, cap) => (Number.isFinite(v) && v > 0 ? Math.min(v, cap) : 0)
-    const rideFare = rideFareOf(fare, {
-        toll:    flat(toll, 500),
-        parking: flat(parking, 500),
-        airport: flat(airport, AIRPORT_PICKUP_SURCHARGE),
-        carrier: flat(carrier, CARRIER_CHARGE),
-    })
+    // No clamps here any more: every one of these came out of the quote this
+    // server signed, so there is nothing to bound. The old flat() caps existed
+    // because the client sent them, and they only ever protected the commission
+    // — the fare they were subtracted from was itself unchecked.
+    const rideFare = rideFareOf(fare, { toll, airport, carrier })
     const { pct: commissionPct, amt: commissionAmt } = commissionOn(rideFare)
 
     const user = await prisma.user.findUnique({ where: { clerkId: req.auth.userId } })
@@ -125,19 +176,19 @@ bookingsRouter.post('/', protect, async (req, res) => {
         dropAddress, dropLat, dropLng,
         fare, rideFare, distanceKm: distanceKm ?? null,
         isOutstation: isOutstation ?? false,
-        preferSafeRoute: preferSafeRoute === true,
-        // Only kept when the rider actually took the safer route. A waypoint on a
-        // booking that didn't ask for one would put the driver on a detour nobody
-        // was charged for; a malformed pair is dropped rather than stored, since a
-        // half-valid coordinate is worse than none.
-        ...(preferSafeRoute === true && validWaypoint(safeWaypoint)
+        preferSafeRoute,
+        // Only kept when the rider actually took the safer route — and it is the
+        // quote's own waypoint, so the road stored here is provably the one the
+        // ₹150 was charged for. A quote with the flag set but no point is still
+        // dropped rather than stored: half a coordinate is worse than none.
+        ...(preferSafeRoute && Number.isFinite(safeWaypoint?.lat) && Number.isFinite(safeWaypoint?.lng)
             ? { safeWaypointLat: safeWaypoint.lat, safeWaypointLng: safeWaypoint.lng }
             : { safeWaypointLat: null, safeWaypointLng: null }),
         // Stored because the driver has to actually turn up with a roof carrier
         // fitted — the charge is already inside `fare`, but the instruction isn't.
-        needsCarrier: needsCarrier === true,
+        needsCarrier,
         scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
-        commissionPct, commissionAmt, sharing
+        commissionPct, commissionAmt, sharing: sharing === true
     }
 
     if (scheduledAt) {

@@ -310,6 +310,8 @@ usersRouter.post('/me', protect, async (req, res) => {
   // The booking code is only ever set on create (it must stay stable for the life
   // of the account), but a create can still collide with an existing code, so we
   // retry with a fresh code on a booking_code unique violation.
+  let lastConflict = null
+
   for (let attempt = 0; attempt < 5; attempt++) {
     try {
       const user = await prisma.user.upsert({
@@ -322,16 +324,27 @@ usersRouter.post('/me', protect, async (req, res) => {
     } catch (e) {
       // P2002 = unique constraint violation. `phone`, `clerkId` and `booking_code`
       // are unique on User. A booking_code clash just needs a fresh code + retry;
-      // a phone clash means the derived phone is tied to another account.
+      // a clerk_id clash means two concurrent requests both took the create path,
+      // and retrying lands on the update path now that the row exists; a phone
+      // clash means the derived phone is tied to another account. `name` is not
+      // unique, so it can never be the constraint that failed here.
       if (e.code === 'P2002') {
-        if (String(e.meta?.target).includes('booking_code')) continue
-        return res.status(409).json({ error: 'Username is already taken' })
+        const target = String(e.meta?.target)
+        if (target.includes('booking_code') || target.includes('clerk_id')) {
+          lastConflict = target
+          continue
+        }
+        if (target.includes('phone'))
+          return res.status(409).json({ error: 'That phone number is already linked to another account' })
+        return res.status(409).json({ error: 'Could not save profile' })
       }
       throw e
     }
   }
 
-  return res.status(500).json({ error: 'Failed to generate booking code' })
+  console.error(`POST /me gave up after 5 attempts, last unique conflict on: ${lastConflict}`)
+
+  return res.status(500).json({ error: 'Could not save profile' })
 })
 
 export default usersRouter

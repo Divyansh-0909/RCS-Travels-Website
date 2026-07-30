@@ -33,7 +33,11 @@
      http://localhost:1574/dev/crash        ErrorBoundary crash test
 
    The PREVIEWS list below is the source of truth for query-param variants
-   (?status=, ?fare=formula, ?scheduled=1, …) — keep this block in sync. */
+   (?status=, ?fare=formula, ?scheduled=1, ?safe=1, …) — keep this block in sync.
+
+   ?safe=1 is the one variant that is not purely a store seed: on /dev/vehicle the
+   row only exists if the SERVER said this route has a safer alternative, so
+   VehicleSelect fakes that verdict from the same param (see DEV_SAFE_ROUTE). */
 
 import { useEffect, useState } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
@@ -82,6 +86,7 @@ const PREVIEWS = [
     ["/dev/home", "OnBoarding: fresh booking form"],
     ["/dev/vehicle", "VehicleSelect: choose a ride"],
     ["/dev/vehicle?fare=formula", "VehicleSelect: choose a ride, per-km (tolls pill)"],
+    ["/dev/vehicle?safe=1", "VehicleSelect: safer route offered, off (3-column phone bar)"],
     ["/dev/vehicle?step=confirmLocation", "VehicleSelect: confirm pickup point"],
     ["/dev/vehicle?step=searching", "VehicleSelect: requesting a ride"],
     ["/dev/vehicle?panel=noDriver", "VehicleSelect: no drivers nearby"],
@@ -94,12 +99,14 @@ const PREVIEWS = [
     ["/dev/tracking?status=on_trip&fare=formula", "TrackingPage: live, per-km (tolls + extra-fare pills)"],
     ["/dev/tracking?status=completed", "TrackingPage: ride completed"],
     ["/dev/tracking?status=completed&fare=formula", "TrackingPage: completed, per-km (both pills)"],
+    ["/dev/tracking?status=completed&safe=1", "TrackingPage: completed receipt, safer-route line"],
     ["/dev/tracking?status=confirmed&scheduled=1", "TrackingPage: scheduled, driver not assigned"],
     ["/dev/tracking?status=assigned&scheduled=1", "TrackingPage: scheduled, driver assigned"],
     ["/dev/tracking?status=assigned&scheduled=1&fare=formula", "TrackingPage: scheduled + assigned, per-km (both pills)"],
     ["/dev/trip", 'OnBoarding: live "Current Trip" card'],
     ["/dev/trip?scheduled=1", "OnBoarding: scheduled-ride card"],
     ["/dev/ride-details", "RideDetails panel"],
+    ["/dev/ride-details?safe=1", "RideDetails panel: safer-route line item"],
     // Empty / failure / stale states.
     ["/dev/vehicle?route=none", "VehicleSelect: no route set (empty)"],
     ["/dev/tracking?status=none", "TrackingPage: no ride to track (empty)"],
@@ -276,6 +283,17 @@ const DevPreview = () => {
         s.setFareToll(0);
         s.setFareCarrier(0);
         s.setFareAirport(0);
+        // ?safe=1 means "this trip has a safer route". On the booking screen that
+        // is an OFFER, not a decision — opting in is the rider's move — so the
+        // toggle starts off and off is the state the preview lands on. Past
+        // booking there is no toggle to read it off, so the same param means the
+        // ride took it and the fare carries the fee.
+        //
+        // Written on every seed either way, for the same reason the add-ons above
+        // are cleared: it is a sticky store flag, so a real booking made earlier
+        // in this browser would otherwise have tracking and ride details itemise
+        // a ₹150 detour under a mock fare that never included one.
+        s.setSafeRoute(params.get("safe") === "1" && view !== "vehicle");
         s.setFare(MOCK.fare);
         s.setStatus(status);
         s.setBookingCode(MOCK.code);

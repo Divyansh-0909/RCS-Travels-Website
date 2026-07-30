@@ -16,8 +16,10 @@ async function request(path, { method = "GET", body, getToken } = {}) {
 
     if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        // status lets callers react to specific codes (429 = OTP cooldown)
-        return { error: data.error || `Server error (${res.status})`, status: res.status };
+        // status lets callers react to specific codes (429 = OTP cooldown); code
+        // is the server's own machine-readable tag where it sets one (FARE_QUOTE),
+        // for the cases where reacting means more than showing the message.
+        return { error: data.error || `Server error (${res.status})`, status: res.status, code: data.code };
     }
 
     return res.json();

@@ -1,63 +1,5 @@
 {
   "type": "FeatureCollection",
-  "_readme": [
-    "PUT THE SHADY AREAS HERE. One Polygon feature per unlit / avoided stretch of road.",
-    "",
-    "This file is deliberately SEPARATE from zones.geojson. A fare zone answers 'where is",
-    "the rider going, and what does that cost' — it is drawn around destinations. A shady",
-    "zone answers 'what road will we not put a rider on after dark' — it is a corridor drawn",
-    "around a stretch of road. Different shapes, different reasons to change. Sharing one",
-    "polygon set means the first redraw of one silently breaks the other.",
-    "",
-    "WHILE features IS EMPTY THE WHOLE FEATURE IS DORMANT: no alternatives are requested,",
-    "no toggle is offered, nothing is charged. That is intended — the safer-route option",
-    "should not appear until a real polygon exists to justify it.",
-    "",
-    "HOW TO DRAW ONE",
-    "  1. Open geojson.io, trace a polygon around the unlit stretch — the ROAD and a little",
-    "     either side, not the whole village. A corridor roughly 300-500 m wide is right.",
-    "     Too wide and safe parallel roads get flagged; too narrow and a route slips past it.",
-    "  2. Copy the feature into `features` below and give it a name.",
-    "  3. Set `fallback` to a lat/lng ON the Eastern Peripheral (or whichever highway the",
-    "     detour should use) for this corridor — see below for when it is used.",
-    "  4. Restart the backend. Zones load once at boot, same as fare zones.",
-    "",
-    "COORDINATE ORDER: `geometry.coordinates` is [lng, lat] (GeoJSON) and `fallback` below is",
-    "{ lat, lng } — this file holds both, and the property name is the only thing separating",
-    "them. geojson.io emits the geometry correctly; hand-edits are where this goes wrong, and",
-    "a reversed ring is NOT rejected anywhere: 77 is a legal latitude, so the polygon simply",
-    "lands in the Arabian Sea and no route ever tests inside it. The failure looks exactly",
-    "like this file still being empty. Verify with check-shady-zones.js, below.",
-    "",
-    "PROPERTIES",
-    "  name      Shown in logs and admin only. Riders never see it — the UI says 'safer",
-    "            route', never 'we think your area is unsafe'.",
-    "  fallback  { lat, lng } on the highway, or null. Used ONLY when Google offers no",
-    "            alternative that misses this zone: the estimate then re-asks with this point",
-    "            forced as a via-waypoint. Normally unused — alternatives usually contain a",
-    "            clean route already, and letting Google pick beats a coordinate we froze.",
-    "            null means 'if there is no clean alternative, offer nothing' — safe default.",
-    "  notes     Free text. Why this polygon exists, who reported it, when it was drawn.",
-    "",
-    "EXAMPLE — delete the quotes and paste into `features`:",
-    "  {",
-    "    \"type\": \"Feature\",",
-    "    \"properties\": {",
-    "      \"name\": \"Chithera cut\",",
-    "      \"fallback\": { \"lat\": 28.5, \"lng\": 77.5 },",
-    "      \"notes\": \"Unlit village road, shortest campus exit toward Noida. Reported by students Jul 2026.\"",
-    "    },",
-    "    \"geometry\": {",
-    "      \"type\": \"Polygon\",",
-    "      \"coordinates\": [[[77.55, 28.52], [77.56, 28.52], [77.56, 28.53], [77.55, 28.53], [77.55, 28.52]]]",
-    "    }",
-    "  }",
-    "",
-    "VERIFY BEFORE YOU TRUST IT: run `node backend/scripts/check-shady-zones.js`. It routes",
-    "campus to every fare zone and reports which destinations actually cross this polygon,",
-    "and whether a clean alternative exists for them. That is the difference between knowing",
-    "the feature works and hoping it does."
-  ],
   "features": [
     {
       "type": "Feature",
@@ -70,25 +12,106 @@
         "type": "Polygon",
         "coordinates": [
           [
-            [77.5802261, 28.5301263],
-            [77.5901923, 28.523779],
-            [77.5902631, 28.5197636],
-            [77.5909166, 28.5121411],
-            [77.5928234, 28.5057876],
-            [77.6051276, 28.4703483],
-            [77.6012049, 28.4547203],
-            [77.584082, 28.4406229],
-            [77.5577173, 28.4713029],
-            [77.5500164, 28.4822145],
-            [77.5227865, 28.5205084],
-            [77.5280132, 28.5242097],
-            [77.5308332, 28.5292475],
-            [77.5361135, 28.5329022],
-            [77.5379772, 28.538827],
-            [77.5549931, 28.5502987],
-            [77.5671567, 28.5398357],
-            [77.5715424, 28.5368305],
-            [77.5802261, 28.5301263]
+            [
+              77.5807902,
+              28.5047562
+            ],
+            [
+              77.5884834,
+              28.5248551
+            ],
+            [
+              77.5930677,
+              28.5222792
+            ],
+            [
+              77.5912876,
+              28.5191064
+            ],
+            [
+              77.5909166,
+              28.5121411
+            ],
+            [
+              77.5928234,
+              28.5057876
+            ],
+            [
+              77.6051276,
+              28.4703483
+            ],
+            [
+              77.6012049,
+              28.4547203
+            ],
+            [
+              77.585795,
+              28.4490973
+            ],
+            [
+              77.5638588,
+              28.4713096
+            ],
+            [
+              77.555241,
+              28.481295
+            ],
+            [
+              77.5421185,
+              28.5021236
+            ],
+            [
+              77.5227865,
+              28.5205084
+            ],
+            [
+              77.5280132,
+              28.5242097
+            ],
+            [
+              77.5308332,
+              28.5292475
+            ],
+            [
+              77.5361135,
+              28.5329022
+            ],
+            [
+              77.5379772,
+              28.538827
+            ],
+            [
+              77.5556361,
+              28.5511203
+            ],
+            [
+              77.5640743,
+              28.5427188
+            ],
+            [
+              77.5683402,
+              28.5386178
+            ],
+            [
+              77.5732831,
+              28.5351148
+            ],
+            [
+              77.5646625,
+              28.5270048
+            ],
+            [
+              77.5619923,
+              28.5121909
+            ],
+            [
+              77.5694547,
+              28.4990308
+            ],
+            [
+              77.5807902,
+              28.5047562
+            ]
           ]
         ]
       }
@@ -104,27 +127,90 @@
         "type": "Polygon",
         "coordinates": [
           [
-            [77.5417943, 28.5640292],
-            [77.5368294, 28.5602276],
-            [77.5309534, 28.5562238],
-            [77.5284904, 28.5539208],
-            [77.5267425, 28.5510594],
-            [77.5259889, 28.5471969],
-            [77.5274262, 28.5396147],
-            [77.5322464, 28.5358494],
-            [77.5252116, 28.5284165],
-            [77.5190863, 28.5273287],
-            [77.5037619, 28.5320253],
-            [77.4914667, 28.5515923],
-            [77.4788151, 28.5655217],
-            [77.4660659, 28.591573],
-            [77.4384355, 28.6173737],
-            [77.4641369, 28.6322347],
-            [77.4790265, 28.6202379],
-            [77.4873896, 28.6139708],
-            [77.4949377, 28.6050178],
-            [77.5259212, 28.5782232],
-            [77.5417943, 28.5640292]
+            [
+              77.5417943,
+              28.5640292
+            ],
+            [
+              77.5368294,
+              28.5602276
+            ],
+            [
+              77.5309534,
+              28.5562238
+            ],
+            [
+              77.5284904,
+              28.5539208
+            ],
+            [
+              77.5267425,
+              28.5510594
+            ],
+            [
+              77.5259889,
+              28.5471969
+            ],
+            [
+              77.5274262,
+              28.5396147
+            ],
+            [
+              77.5322464,
+              28.5358494
+            ],
+            [
+              77.5252116,
+              28.5284165
+            ],
+            [
+              77.5190863,
+              28.5273287
+            ],
+            [
+              77.5037619,
+              28.5320253
+            ],
+            [
+              77.4914667,
+              28.5515923
+            ],
+            [
+              77.4788151,
+              28.5655217
+            ],
+            [
+              77.4660659,
+              28.591573
+            ],
+            [
+              77.4384355,
+              28.6173737
+            ],
+            [
+              77.4641369,
+              28.6322347
+            ],
+            [
+              77.4790265,
+              28.6202379
+            ],
+            [
+              77.4873896,
+              28.6139708
+            ],
+            [
+              77.4949377,
+              28.6050178
+            ],
+            [
+              77.5259212,
+              28.5782232
+            ],
+            [
+              77.5417943,
+              28.5640292
+            ]
           ]
         ]
       }

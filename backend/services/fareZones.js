@@ -42,24 +42,67 @@ function apply(fc, next = meta) {
 /** The collection as the editor wants it back, plus who last saved it. */
 export const getFareZones = () => ({ ...collection, meta })
 
+// Marks a row this function wrote from the git file rather than a person. The
+// dashboard stamps a Clerk user id, so the two can never collide.
+const SEED_MARKER = 'seed:zones.geojson'
+
+// jsonb is not text: Postgres reorders object keys on the way in (`{hatchback,
+// sedan, suv}` comes back `{suv, sedan, hatchback}`) and drops whitespace, so a
+// row written from this very file does not survive a JSON.stringify comparison
+// against it. Sorting keys at every level is what makes "same collection" mean
+// the same thing on both sides of the driver.
+const canonical = (v) =>
+  Array.isArray(v)
+    ? `[${v.map(canonical).join(',')}]`
+    : v && typeof v === 'object'
+      ? `{${Object.keys(v).sort().map((k) => `${JSON.stringify(k)}:${canonical(v[k])}`).join(',')}}`
+      : JSON.stringify(v)
+
 /**
- * Loads the live rate card at boot, seeding the table from the git file the
- * first time. Failure is survivable by design: the file is already loaded, so a
- * database outage costs the latest edits, not the ability to quote a fare.
+ * Loads the live rate card at boot.
+ *
+ * zones.geojson stays authoritative until a HUMAN overrides it. A row still
+ * marked with the seed came out of an earlier version of that file — nothing in
+ * it is anyone's hand-edit — so an edited file is simply a newer seed and is
+ * written straight through on the next boot. Previously the first seed won
+ * forever and every later edit to the file was silently ignored: the polygons
+ * would be redrawn, the server restarted, and rides carried on being priced by
+ * the shapes from the day the table was created.
+ *
+ * The moment Edit Fares saves, updatedBy becomes that admin's id and the
+ * database takes over for good — a rate card someone set by hand is not
+ * something a stale file in a deploy gets to undo. To hand control back to the
+ * file, delete the row (or set updatedBy back to the marker) and restart.
+ *
+ * Failure is survivable by design: the file is already loaded, so a database
+ * outage costs the latest edits, not the ability to quote a fare.
  */
 export async function initFareZones() {
   try {
     const row = await prisma.fareZoneSet.findUnique({ where: { id: 1 } })
-    if (row) {
+
+    if (row && row.updatedBy !== SEED_MARKER) {
       apply(row.zones, { updatedAt: row.updatedAt, updatedBy: row.updatedBy })
-      console.log(`Fare zones: ${zones.length} loaded from the database`)
+      console.log(`Fare zones: ${zones.length} loaded from the database (last saved by ${row.updatedBy}; zones.geojson is ignored until that row is removed)`)
       return
     }
-    const seeded = await prisma.fareZoneSet.create({
-      data: { id: 1, zones: SEED, updatedBy: 'seed:zones.geojson' },
+
+    // Same file as last boot — skip the write. Restarts are frequent in dev and
+    // an identical UPDATE every time would just churn updatedAt, making the
+    // dashboard's "last saved" read as though someone had touched the rates.
+    if (row && canonical(row.zones) === canonical(SEED)) {
+      apply(row.zones, { updatedAt: row.updatedAt, updatedBy: row.updatedBy })
+      console.log(`Fare zones: ${zones.length} loaded from zones.geojson (database already matches)`)
+      return
+    }
+
+    const seeded = await prisma.fareZoneSet.upsert({
+      where: { id: 1 },
+      create: { id: 1, zones: SEED, updatedBy: SEED_MARKER },
+      update: { zones: SEED, updatedBy: SEED_MARKER },
     })
     apply(seeded.zones, { updatedAt: seeded.updatedAt, updatedBy: seeded.updatedBy })
-    console.log(`Fare zones: seeded the database with ${zones.length} zones from zones.geojson`)
+    console.log(`Fare zones: ${zones.length} zones written from zones.geojson${row ? ' (file changed since the last boot)' : ' (first seed)'}`)
   } catch (err) {
     console.error('Fare zones: database load failed, using zones.geojson —', err.message)
   }

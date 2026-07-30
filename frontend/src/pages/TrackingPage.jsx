@@ -480,20 +480,46 @@ const TrackingPage = () => {
                 no status at all this falls through to the live panel, which is
                 the shell those per-field skeletons hang on. */}
             {scheduledTime !== null && (status === "confirmed" || status === "assigned")
-                    ? <BackgroundPanel className={"py-6 sm:overflow-hidden justify-center items-center text-left sm:px-[9%] md:px-[5%] xl:px-[13%] flex flex-col sm:flex-row sm:justify-center lg:justify-between"}>
+                    // contentKey: this panel drops the driver card before a driver
+                    // exists, so its height changes with the status — and the sheet
+                    // is sized to that height.
+                    ? <BackgroundPanel
+                        sheet={mapVisible}
+                        initialSnap="half"
+                        duration={420}
+                        contentKey={status}
+                        className={"py-6 max-sm:pb-0 sm:overflow-hidden justify-center items-center text-left sm:px-[9%] md:px-[5%] xl:px-[13%] flex flex-col sm:flex-row sm:justify-center lg:justify-between"}
+                    >
                         {backArrow}
                         {/* Scheduled ride: zoomed-out full route, no driver yet */}
                         {!isMobile && mapVisible && (
                             <GoogleMap center={pickupPoint} zoom={12} onMapReady={setMapApi} className={MAP_CLASSES} />
                         )}
+                        {/* Bounds the column to the sheet's height on phones so the
+                            scroll region inside it has something to be flex-1 of;
+                            sm:contents removes it from layout entirely from sm up,
+                            leaving the desktop side panel exactly as it was. */}
+                        <div className="w-full flex-1 min-h-0 flex flex-col items-center sm:contents">
                         {/* no pt-6: that reserved room for the arrow when it sat
                             inside the column, and it now floats above the sheet */}
-                        <div className={`relative z-10 sm:order-1 flex flex-col justify-center items-center sm:items-start w-full sm:w-auto sm:h-full ${STACK}`}>
+                        {/* gap-4 on phones rather than STACK's gap-6: the heading
+                            block is the only thing a collapsed sheet shows, and 24px
+                            under it pushed the driver card off the half stop. */}
+                        <div className={`relative z-10 sm:order-1 flex flex-col justify-end sm:justify-center items-center sm:items-start w-full sm:w-auto flex-1 min-h-0 sm:flex-initial sm:h-full gap-4 sm:gap-8`}>
                             <div className={`flex flex-col justify-center items-center sm:items-start ${PAIR} ${COL}`}>
                                 <h2 className={`text-center sm:text-left w-full ${TITLE}`}>{status === "assigned" ? "Driver has been assigned" : "Driver has not been assigned"}</h2>
                                 <h3 className={`text-center sm:text-left w-full ${SUBTITLE}`}>{status === "assigned" ? "Give the driver a call to confirm" : "Assigned closer to your pickup time"}</h3>
                             </div>
 
+                            {/* The scroll region, phones only: everything below the
+                                heading. The heading itself stays put — it is the
+                                whole of the collapsed sheet, and it says what the
+                                screen is. sm:contents drops this on desktop, where
+                                the side panel is short enough not to scroll. */}
+                            <div
+                                data-sheet-scroll
+                                className="w-full min-h-0 flex-1 flex flex-col items-center gap-6 overscroll-contain sm:contents"
+                            >
                             <div className={`flex flex-col justify-center items-start gap-3 ${COL}`}>
                                 {status === "assigned" && driverCard}
 
@@ -512,7 +538,10 @@ const TrackingPage = () => {
                                 )}
                             </div>
 
-                            <div className={`flex flex-col justify-center gap-2 items-center ${COL}`}>
+                            {/* max-sm:pb-6 on the last child, not on the scroller:
+                                padding on the scroll box shortens the scroll instead
+                                of padding it, which clipped the last button. */}
+                            <div className={`flex flex-col justify-center gap-2 items-center max-sm:pb-6 ${COL}`}>
                                 <Button
                                     onClick={() => openSupportWhatsApp("Hi, I need help with my ride.")}
                                     prop={{ variant: "input", width: "100%", bg: "var(--background-muted)" }}
@@ -530,6 +559,8 @@ const TrackingPage = () => {
                                     Call driver
                                 </Button>
                             </div>
+                            </div>
+                        </div>
                         </div>
                     </BackgroundPanel>
                     : status === "completed"
@@ -617,7 +648,16 @@ const TrackingPage = () => {
                             </div>
                         </BackgroundPanel>
 
-                        : <BackgroundPanel className={"py-6 sm:overflow-hidden justify-center items-center flex flex-col sm:flex-row sm:justify-center lg:justify-between text-left sm:px-[9%] md:px-[5%] xl:px-[13%]"}>
+                        : <BackgroundPanel
+                            sheet={mapVisible}
+                            initialSnap="half"
+                            duration={420}
+                            // The OTP card appears at en_route and the headline
+                            // grows a line with it, so the sheet's own height moves
+                            // with the status.
+                            contentKey={`${status}-${bookingLoading}`}
+                            className={"py-6 max-sm:pb-0 sm:overflow-hidden justify-center items-center flex flex-col sm:flex-row sm:justify-center lg:justify-between text-left sm:px-[9%] md:px-[5%] xl:px-[13%]"}
+                        >
                             {/* Live ride: route + the driver's current position */}
                             {!isMobile && mapVisible && (
                                 <GoogleMap center={pickupPoint} zoom={12} onMapReady={setMapApi} className={MAP_CLASSES} />
@@ -633,7 +673,15 @@ const TrackingPage = () => {
                                     <h4 className="text-sm">Share</h4>
                                 </div>
                             </Button>
-                            <div className={`relative z-10 sm:order-1 flex flex-col justify-center items-center sm:items-start w-full sm:w-auto ${STACK}`}>
+                            {/* Bounds the column to the sheet's height on phones so
+                                the scroll region inside it has something to be
+                                flex-1 of; sm:contents removes it from layout from
+                                sm up, leaving the desktop side panel untouched. */}
+                            <div className="w-full flex-1 min-h-0 flex flex-col items-center sm:contents">
+                            {/* gap-4 on phones rather than STACK's gap-6: the ETA
+                                headline is the whole of the collapsed sheet, and
+                                24px under it cost the OTP card its place at half. */}
+                            <div className={`relative z-10 sm:order-1 flex flex-col justify-end sm:justify-center items-center sm:items-start w-full sm:w-auto flex-1 min-h-0 sm:flex-initial sm:h-auto gap-4 sm:gap-8`}>
                                 <div className={`flex flex-col justify-center items-center sm:items-start ${PAIR} ${COL}`}>
                                     {/* The headline reads off status and the driver's
                                         ETA, so it is the one block here that can't be
@@ -659,7 +707,20 @@ const TrackingPage = () => {
                                     </Button>
                                 </div>
 
-                                <div className={`flex flex-col justify-center items-start gap-3 ${COL}`}>
+                                {/* The scroll region, phones only: everything under
+                                    the headline. The headline stays put — it is the
+                                    ETA, the one thing worth reading at a glance, and
+                                    the whole of the collapsed sheet. sm:contents
+                                    drops this on desktop, which doesn't scroll.
+
+                                    max-sm:pb-6 on the child, not here: padding on a
+                                    scroll box shortens the scroll instead of padding
+                                    it, which clipped the call buttons. */}
+                                <div
+                                    data-sheet-scroll
+                                    className="w-full min-h-0 flex-1 flex flex-col items-center overscroll-contain sm:contents"
+                                >
+                                <div className={`flex flex-col justify-center items-start gap-3 max-sm:pb-6 ${COL}`}>
                                     {/* OTP leads once there is one: from en_route on
                                         it is the thing the rider has to act on, and
                                         it reads out before the plate is checked. It
@@ -711,7 +772,9 @@ const TrackingPage = () => {
                                         </Button>
                                     </div>
                                 </div>
+                                </div>
 
+                            </div>
                             </div>
                         </BackgroundPanel>
             }

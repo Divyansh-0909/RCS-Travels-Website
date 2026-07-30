@@ -292,7 +292,11 @@ model Booking {
 // since matchZone tests a point against all zones anyway.
 //
 // backend/data/zones.geojson stays in git as the seed and the cold-start
-// fallback. Once this table has a row, it is the source of truth.
+// fallback, and it keeps writing through on every boot for as long as
+// updated_by is still the seed marker — editing the file and restarting is the
+// intended way to redraw zones before anyone has touched the dashboard. The
+// first save from Edit Fares stamps a Clerk user id here and this row becomes
+// the source of truth for good. See initFareZones().
 model FareZoneSet {
   id        Int      @id @default(1)
   zones     Json

@@ -5,6 +5,7 @@ import { getAuth } from '@clerk/express'
 import { protect } from '../middleware/auth.js'
 import { prisma } from '../db/prisma.js'
 import { ACTIVE_STATUSES } from './bookings.js'
+import { ASSIGNABLE_STATUSES, claimBooking } from '../services/driverAssignment.js'
 import { seatsOf } from '../constants/vehicles.js'
 import { locationSchema, rideParamsSchema, driverOnlineSchema, fcmTokenSchema, rideStatusSchema } from '../types.ts'
 
@@ -12,15 +13,12 @@ import { locationSchema, rideParamsSchema, driverOnlineSchema, fcmTokenSchema, r
 // it exists the assignment loop takes a driver's answer from sendFCM's return value
 // instead (services/notification.js).
 //
-// Two gaps remain in accept/decline, both flagged in ROADMAP and both left as-is here
-// because closing them changes behaviour rather than types:
-//   - accept writes `assigned` with a plain update, guarded only against a booking
-//     that is already assigned. getDriver uses a status-guarded updateMany for the
-//     same write (claimBooking), so a booking cancelled or expired mid-offer is safe
-//     there and clobberable here. `/rides/:id/status` below shows the intended shape.
-//   - accept doesn't touch vehicleCapacity. getDriver decrements it on the same
-//     transition, so a driver accepting through this route stays at full capacity
-//     and can be offered more rides than the vehicle holds.
+// accept now takes the same transition getDriver does, and takes it the same way:
+// claimBooking's status-guarded updateMany, then the capacity write. It used to be a
+// plain update guarded only against a booking that was already `assigned`, which let a
+// cancelled, completed or expired ride be re-assigned, and left the accepting driver at
+// full capacity. decline shares the same allowlist but still writes nothing — it only
+// reports the booking's status back.
 const driverRouter = Router()
 
 const EARTH_RADIUS_KM = 6371
@@ -360,11 +358,31 @@ driverRouter.patch('/rides/:id/accept', protect, async (req, res) => {
 
     if (!booking) return res.status(404).json({ error: 'Booking not found' })
 
-    if (booking.status === 'assigned') return res.status(409).json({ error: 'Booking already assigned' })
+    // Allowlist, not denylist: only a booking still looking for a driver can be
+    // accepted. Testing for `assigned` alone let a cancelled, completed, expired
+    // or already-underway ride be handed to a new driver.
+    if (!ASSIGNABLE_STATUSES.includes(booking.status)) {
+        return res.status(409).json({ error: `A ${booking.status} ride cannot be accepted`, status: booking.status })
+    }
 
-    await prisma.booking.update({
-        where: { id },
-        data: { status: 'assigned', driverId: driver.id, confirmedAt: booking.confirmedAt ?? new Date() },
+    // Same room test getDriver applies before it offers the ride: a solo ride
+    // needs the whole vehicle, a sharing ride one free seat. A class with no seat
+    // count is a data bug — refuse rather than write capacity from a null.
+    const seats = seatsOf(driver.vehicleClass)
+    const hasRoom = booking.sharing
+        ? driver.vehicleCapacity > 0
+        : seats !== null && driver.vehicleCapacity >= seats
+    if (!hasRoom) return res.status(409).json({ error: 'Vehicle has no room for this ride' })
+
+    // on-spot rides have no confirmedAt yet
+    if (!await claimBooking(id, driver.id, booking.confirmedAt ?? new Date())) {
+        return res.status(409).json({ error: 'Ride was taken while the request was in flight' })
+    }
+
+    // Only after the claim succeeds, so a lost race can't strand a seat.
+    await prisma.driver.update({
+        where: { id: driver.id },
+        data: { vehicleCapacity: booking.sharing ? { decrement: 1 } : 0 },
     })
 
     return res.json({
@@ -398,13 +416,22 @@ driverRouter.patch('/rides/:id/decline', protect, async (req, res) => {
     }
     const { id } = parsed.data
 
-    const booking = await prisma.booking.findUnique({ where: { id } })
+    const booking = await prisma.booking.findUnique({
+        where: { id },
+        select: { id: true, status: true },
+    })
 
     if (!booking) return res.status(404).json({ error: 'Booking not found' })
 
-    if (booking.status === 'assigned') return res.status(409).json({ error: 'Booking already assigned' })
+    // Same allowlist accept uses: there is nothing to decline on a ride that is
+    // already taken, cancelled, expired or underway. Writes nothing either way —
+    // the assignment loop moves on when sendFCM comes back false, and until the
+    // driver app is live this endpoint only reports what the booking is doing.
+    if (!ASSIGNABLE_STATUSES.includes(booking.status)) {
+        return res.status(409).json({ error: `A ${booking.status} ride cannot be declined`, status: booking.status })
+    }
 
-    console.log('Ride declined by the driver')
+    console.log(`Ride ${booking.id} declined by driver ${driver.id}`)
 
     return res.json({
         bookingId: booking.id,

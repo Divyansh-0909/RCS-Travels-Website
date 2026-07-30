@@ -63,14 +63,25 @@ const prefersReducedMotion = () =>
  * The sheet is flush with the bottom at translateY 0, so hiding
  * `height - fraction*vh` of it leaves exactly `fraction` on screen.
  */
-export function sheetStops(viewportHeight, bottomInset = 0) {
+export function sheetStops(viewportHeight, bottomInset = 0, naturalHeight = 0) {
     // A panel can pin an action bar below the sheet (the vehicle screen keeps its
     // Book button on screen at every stop). The sheet then owns everything above
     // that bar, and the fractions are of THAT space — measured against the full
     // viewport instead, a tall bar would quietly eat most of the collapsed sheet.
     const available = viewportHeight - bottomInset;
-    const height = available - EXPANDED_TOP_GAP_PX;
-    const yFor = (fraction) => height - fraction * available;
+    const maxHeight = available - EXPANDED_TOP_GAP_PX;
+    // A sheet is never taller than what it holds. The vehicle screen's fare list
+    // always overruns the cap, so this is inert there — but the tracking panels
+    // hold a fixed handful of rows, and at the full height `expanded` opened onto
+    // a few hundred px of empty panel with the map hidden behind it. Expanded now
+    // means "all of the content", which on those screens is the whole point of
+    // the stop. 0 (nothing measured yet) falls back to the cap.
+    const height = naturalHeight > 0 ? Math.min(maxHeight, naturalHeight) : maxHeight;
+    // Clamped at 0: once the sheet is shorter than a fraction of the screen, that
+    // stop would sit ABOVE the fully-open sheet, i.e. lifted off the bottom edge.
+    // It collapses onto expanded instead, which is the honest answer — there is
+    // no more content to reveal.
+    const yFor = (fraction) => Math.max(0, height - fraction * available);
     return {
         height,
         // Clear of the bar as well as its own box, so a closing sheet doesn't
@@ -142,9 +153,12 @@ export function resolveSnap(y, velocity, stops) {
  * @param {boolean} options.open             False plays the sheet back off-screen.
  * @param {typeof SNAP_NAMES[number]} options.initialSnap
  * @param {number} [options.bottomInset] Px of pinned chrome below the sheet (an action bar).
+ * @param {unknown} [options.contentKey] Changes when the panel swaps its content, so a sheet
+ *                                       sized to that content can be re-measured. Not a render
+ *                                       key — it only triggers a re-measure.
  * @param {(snap: typeof SNAP_NAMES[number]) => void} [options.onSnapChange] Fired on settle, not per frame.
  */
-export function useBottomSheet({ enabled, open = true, initialSnap = "collapsed", bottomInset = 0, onSnapChange }) {
+export function useBottomSheet({ enabled, open = true, initialSnap = "collapsed", bottomInset = 0, contentKey, onSnapChange }) {
     const sheetRef = useRef(null);
     const grabberRef = useRef(null);
 
@@ -170,12 +184,66 @@ export function useBottomSheet({ enabled, open = true, initialSnap = "collapsed"
     const bottomInsetRef = useRef(bottomInset);
     bottomInsetRef.current = bottomInset;
 
+    // The element that actually scrolls. A panel marks its content column with
+    // `data-sheet-scroll`; without one the sheet scrolls itself.
+    //
+    // Worth marking it: `overflow` establishes a clip, and anything the panel
+    // floats OUTSIDE its own box — the back button hanging above the top edge —
+    // is clipped away the moment the sheet becomes the scroller. Putting the
+    // overflow one level in keeps that chrome visible.
+    //
+    // Declared up here because the content measurement below depends on it.
+    const scrollerOf = useCallback(
+        () => sheetRef.current?.querySelector("[data-sheet-scroll]") ?? sheetRef.current,
+        [],
+    );
+
+    // How tall the sheet would be if nothing constrained it — the number the
+    // height cap in sheetStops needs.
+    //
+    // Releasing the height alone isn't enough, and neither is reading the
+    // scroller: the content column claims the sheet's height through a chain of
+    // flex-1 / min-h-0, which is flex-basis 0 with no content-based minimum. Left
+    // as it is, the panel reports whatever height is already in force — so the
+    // measurement feeds itself and the sheet walks a little shorter every pass.
+    //
+    // So the constraint is lifted before the read: the chain from the scroller up
+    // to the sheet goes back to sizing on its content, the scroller stops
+    // clipping, and the sheet's height is released. Every write is inline and
+    // undone in the same task, so the browser never paints an unconstrained
+    // frame, and none of this runs inside the rAF loop, where a layout read is
+    // what makes a drag janky.
+    const measureContent = useCallback(() => {
+        const el = sheetRef.current;
+        if (!el) return 0;
+        const scroller = scrollerOf();
+
+        const undo = [];
+        const lift = (node, prop, value) => {
+            undo.push([node, prop, node.style[prop]]);
+            node.style[prop] = value;
+        };
+
+        lift(el, "height", "auto");
+        if (scroller && scroller !== el) {
+            lift(scroller, "overflowY", "visible");
+            for (let node = scroller; node && node !== el; node = node.parentElement) {
+                lift(node, "flex", "0 0 auto");
+                lift(node, "minHeight", "auto");
+            }
+        }
+
+        const natural = el.scrollHeight;
+        for (const [node, prop, previous] of undo) node.style[prop] = previous;
+        return natural;
+    }, [scrollerOf]);
+
     const measure = useCallback(() => {
         const vh = window.innerHeight;
         const inset = bottomInsetRef.current;
-        geometryRef.current = { vh, bottomInset: inset, ...sheetStops(vh, inset) };
+        geometryRef.current = { vh, bottomInset: inset, ...sheetStops(vh, inset, measureContent()) };
         return geometryRef.current;
-    }, []);
+    }, [measureContent]);
 
     const paint = useCallback((y) => {
         // Expanded rests at 0 and nothing sits above it, so a negative value can
@@ -189,18 +257,6 @@ export function useBottomSheet({ enabled, open = true, initialSnap = "collapsed"
         const el = sheetRef.current;
         if (el) el.style.transform = `translate3d(0, ${clamped.toFixed(2)}px, 0)`;
     }, []);
-
-    // The element that actually scrolls. A panel marks its content column with
-    // `data-sheet-scroll`; without one the sheet scrolls itself.
-    //
-    // Worth marking it: `overflow` establishes a clip, and anything the panel
-    // floats OUTSIDE its own box — the back button hanging above the top edge —
-    // is clipped away the moment the sheet becomes the scroller. Putting the
-    // overflow one level in keeps that chrome visible.
-    const scrollerOf = useCallback(
-        () => sheetRef.current?.querySelector("[data-sheet-scroll]") ?? sheetRef.current,
-        [],
-    );
 
     // Content scrolls only at full expansion. Anywhere else a drag anywhere on
     // the sheet should move the sheet — that is the whole gesture at that point,
@@ -442,19 +498,21 @@ export function useBottomSheet({ enabled, open = true, initialSnap = "collapsed"
         return () => cancelAnimationFrame(id);
     }, [enabled, initialSnap, measure, paint, scrollerOf, springTo, syncScrollability]);
 
-    // The action bar below the sheet reports its height after it has rendered,
-    // and can change it later (a notice appearing, text wrapping). Re-measure and
-    // ease to the same stop's new position — springing rather than jumping,
-    // because this is a visible change to where the sheet rests. Skipped on the
-    // first run: the entrance above already applied the geometry.
-    const insetSettled = useRef(false);
+    // Two things move the sheet's geometry after the entrance has run: the action
+    // bar below it reports its height once rendered (and can change it later — a
+    // notice appearing, text wrapping), and the panel swaps its content, which for
+    // a content-sized sheet changes the sheet's own height. Re-measure and ease to
+    // the same stop's new position — springing rather than jumping, because this is
+    // a visible change to where the sheet rests. Skipped on the first run: the
+    // entrance above already applied the geometry.
+    const geometrySettled = useRef(false);
     useEffect(() => {
         if (!enabled) {
-            insetSettled.current = false;
+            geometrySettled.current = false;
             return;
         }
-        if (!insetSettled.current) {
-            insetSettled.current = true;
+        if (!geometrySettled.current) {
+            geometrySettled.current = true;
             return;
         }
         const el = sheetRef.current;
@@ -462,8 +520,12 @@ export function useBottomSheet({ enabled, open = true, initialSnap = "collapsed"
         const { height, stops } = measure();
         el.style.height = `${height}px`;
         el.style.bottom = `${bottomInset}px`;
+        // The stop the sheet is resting at may no longer exist as a distinct
+        // position (short content collapses half onto expanded), so this reads the
+        // new geometry rather than assuming the old y is still right.
         springTo(stops[snapRef.current] ?? stops.collapsed);
-    }, [enabled, bottomInset, measure, springTo]);
+        syncScrollability(snapRef.current);
+    }, [enabled, bottomInset, contentKey, measure, springTo, syncScrollability]);
 
     // Play back off-screen when the panel is closing, so the exit reads as the
     // sheet leaving rather than the horizontal wipe the other panels use.
