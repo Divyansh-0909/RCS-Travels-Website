@@ -38,6 +38,24 @@ enum VerificationStatus {
   rejected
 }
 
+// The provider's document checklist, in his own order — see
+// constants/driverDocuments.js for which are compulsory and which only exist for
+// some cars. Everything but the licence is about the VEHICLE: these are
+// owner-drivers, and what gets checked is that the car is road-legal and insured.
+// There is no police_verification member on purpose; it was dropped from the list.
+enum DriverDocumentType {
+  dl
+  rc
+  insurance
+  tax
+  fitness
+  permit_all_india
+  permit_one_year
+  cng_test
+  car_photo_front
+  car_photo_back
+}
+
 // Replaced the old `vehicleType Int` (4 | 6 | 1). A seat count could not
 // distinguish a sedan from a hatchback — both carry four — so the class is the
 // stored identity and seats are derived from it (constants/vehicles.js). The old
@@ -105,21 +123,62 @@ model Driver {
   isActive      Boolean     @default(true) @map("is_active")
   isOnline      Boolean     @default(false) @map("is_online")
   fcmToken            String?            @map("fcm_token")
-  dlDocUrl            String?            @map("dl_doc_url")
-  dlExpiresAt    DateTime?
   pfpUrl              String?            @map("profile_picture_url")
-  aadharDocUrl        String?            @map("aadhar_doc_url")
   createdAt           DateTime           @default(now()) @map("created_at")
+  // Kept as a stored column rather than derived from `documents` on read: it is
+  // the fourth column of the eligibility index below, which every assignment scan
+  // hits. Recompute it whenever a document is approved, rejected or lapses.
   verificationStatus  VerificationStatus @default(pending) @map("verification_status")
   rejectionReason String?
   reviewedAt   DateTime?
-  
-  location DriverLocation?
-  bookings Booking[]
+
+  location  DriverLocation?
+  documents DriverDocument[]
+  bookings  Booking[]
 
   @@index([isOnline, isActive, verificationStatus, vehicleClass])
   @@index([createdAt])
   @@map("drivers")
+}
+
+// One row per driver per document type. This is a table rather than a column per
+// document because these EXPIRE: insurance, road tax, fitness, the permits and the
+// CNG test all run out on a date of their own, and a lapsed one has to be able to
+// pull the driver offline by itself. A `*_doc_url` column can hold the file but
+// never the date, the number, or why an admin rejected it.
+//
+// The row is the upload, so re-uploading a renewed document overwrites it (the
+// unique key below) and sends it back through review — an expired file has no
+// value once its replacement is in.
+model DriverDocument {
+  id       String             @id @default(uuid())
+  driverId String             @map("driver_id")
+  type     DriverDocumentType
+  // Private Supabase Storage object; served to admins as a short-lived signed URL,
+  // never public — these are a driver's identity papers.
+  fileUrl  String             @map("file_url")
+  // As printed on the document: policy number, permit number, licence number. Null
+  // for the car photos, which have no number to carry.
+  number   String?
+  // Null only for the types that cannot lapse (the two car photos). For every other
+  // type this is what the nightly sweep reads to suspend a driver whose paperwork
+  // has run out, so an upload without it is incomplete.
+  expiresAt DateTime?         @map("expires_at")
+  status    VerificationStatus @default(pending)
+  rejectionReason String?     @map("rejection_reason")
+  reviewedAt      DateTime?   @map("reviewed_at")
+  uploadedAt      DateTime    @default(now()) @map("uploaded_at")
+
+  driver Driver @relation(fields: [driverId], references: [id], onDelete: Cascade)
+
+  // One live row per document per driver: the renewal replaces the old file rather
+  // than accumulating a history nobody reads. Also covers the driver FK, and serves
+  // the admin review screen's "all of this driver's documents".
+  @@unique([driverId, type])
+  // The lapse sweep asks one question — "which documents expire before now" —
+  // across every driver, and the answer is almost always a handful of rows.
+  @@index([expiresAt])
+  @@map("driver_documents")
 }
 
 // One row per driver — upserted every 4 seconds when driver is online
@@ -157,13 +216,6 @@ model Booking {
   scheduledAt        DateTime?     @map("scheduled_at")
   isOutstation       Boolean       @default(false) @map("is_outstation")
   preferSafeRoute    Boolean       @default(false) @map("prefer_safe_route")
-  // The via-point the safer route was quoted on, resolved once at booking time.
-  // Null when the rider declined it or no safer route existed for this trip.
-  //
-  // Stored rather than recomputed because the driver's navigation link has to use
-  // the SAME point the fare was quoted on: a redrawn zone or a change in Google's
-  // routing between booking and pickup would otherwise send him down a different
-  // road than the one the rider paid for, with nothing to show the mismatch.
   safeWaypointLat    Float?        @map("safe_waypoint_lat")
   safeWaypointLng    Float?        @map("safe_waypoint_lng")
   needsCarrier       Boolean       @default(false) @map("needs_carrier")
@@ -176,12 +228,32 @@ model Booking {
   commissionPct      Float         @default(0) @map("commission_pct")
   commissionAmt      Float         @default(0) @map("commission_amt")
   status             BookingStatus @default(pending)
+  // `status` is a current-state field: every transition overwrites the last, so once
+  // a ride is cancelled or completed nothing records that it ever passed through
+  // `reached`. That state is what decides the 35% cancellation charge
+  // (CHARGEABLE_STATUSES in routes/bookings.js), so the evidence for the charge is
+  // destroyed by the transition that acts on it. These stamps are what a disputed
+  // charge is defended with, and they cannot be backfilled — a column added later is
+  // null for every ride taken before it existed.
+  startedAt          DateTime?     @map("started_at")
+  reachedAt          DateTime?     @map("reached_at")
+  // How far the driver actually was from the pickup / drop when he marked arrival and
+  // completion, in km, measured server-side against the position his app reported.
+  // "The driver says he arrived" and "the driver was there" are different claims, and
+  // only the second should be able to bill a rider.
+  //
+  // Nullable, like distanceKm: a booking is created long before either is known, so a
+  // required column here would make every prisma.booking.create supply a distance for
+  // a trip that has not happened. Null also covers a transition sent with no position,
+  // which is the normal case when the OEM has killed the location service.
+  reachedDistanceKm   Float?       @map("reached_distance_km")
+  createdAt          DateTime      @default(now()) @map("created_at")
+  completedAt        DateTime?     @map("completed_at")
+  completedDistanceKm Float?       @map("completed_distance_km")
   confirmedAt        DateTime?     @map("confirmed_at")
   cancelledBy        CancelledBy?  @map("cancelled_by")
   cancellationCharge Float?        @map("cancellation_charge")
   source             BookingSource @default(website)
-  createdAt          DateTime      @default(now()) @map("created_at")
-  completedAt        DateTime?     @map("completed_at")
   sharing            Boolean       @default(false)
   shareGroupId       String?       @map("share_group_id")
   pickupOrder        Int?          @map("pickup_order")

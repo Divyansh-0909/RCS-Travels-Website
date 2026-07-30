@@ -10,6 +10,10 @@ import { VEHICLE_CLASS_NAMES, isVehicleClass, seatsOf } from '../constants/vehic
 
 const bookingsRouter = Router()
 
+// Annotated so the .ts routes that import this get BookingStatus[] rather than the
+// string[] TS would otherwise infer from a .js file — without it every
+// `status: { in: ACTIVE_STATUSES }` in a typed route fails to compile.
+/** @type {import('@prisma/client').BookingStatus[]} */
 export const ACTIVE_STATUSES = ['pending', 'confirmed', 'assigned', 'en_route', 'reached', 'started']
 
 // Cancelling once the driver is waiting at the pickup costs the rider 35% — that

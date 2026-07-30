@@ -19,6 +19,10 @@ export const VEHICLE_CLASSES = {
 // these. Every rider picks a specific car — there is no "whichever is nearest".
 export const VEHICLE_CLASS_NAMES = Object.keys(VEHICLE_CLASSES)
 
+// Annotated because the capacity math in the typed driver routes depends on it:
+// without this the .js inference hands them `any` and a null seat count would flow
+// straight into a vehicleCapacity write unchecked.
+/** @type {(cls: string) => number | null} */
 export const seatsOf = (cls) => VEHICLE_CLASSES[cls]?.seats ?? null
 export const labelOf = (cls) => VEHICLE_CLASSES[cls]?.label ?? '—'
 export const categoryOf = (cls) => VEHICLE_CLASSES[cls]?.category ?? null
