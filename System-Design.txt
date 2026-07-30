@@ -12,7 +12,7 @@ Functional
 - Customers schedule rides 30 minutes to 7 days in advance (primary use case)
 - Customers book on-spot rides subject to driver availability (secondary)
 - System auto-assigns the nearest available, approved driver
-- Drivers self-register via phone OTP, upload DL + Aadhar, await admin approval
+- Drivers self-register via phone OTP, upload their vehicle documents, await approval
 - Drivers accept/decline rides via mobile app within a 30-second window
 - Customers track ride status via polling with dead reckoning between updates
 - Admin approves/rejects drivers, monitors all bookings, intervenes when needed
@@ -236,7 +236,11 @@ New: drivers self-register, admin approves.
          │
          ├─ Signs up via phone OTP (Clerk)
          ├─ Fills name, vehicle type, vehicle number
-         ├─ Uploads DL photo + Aadhar photo → stored in Cloudflare R2
+         ├─ Uploads the document set → stored in Supabase Storage (private)
+         │    RC, insurance, road tax, fitness, All India permit, both car
+         │    photos and DL are compulsory; a one-year permit and a CNG
+         │    cylinder test only for the cars that have them. No police
+         │    verification — the provider dropped it from the list.
          │
          └─ verificationStatus = pending, isActive = false
                       │
@@ -330,7 +334,7 @@ phone numbers are the primary identity.
     └─ cron-job.org pings /health every 10 min to prevent cold starts
   Supabase PostgreSQL → Database (free tier, always-on instance; pauses after
                         7 days of zero activity — daily cron ping prevents this)
-  Cloudflare R2   → Driver document storage (DL + Aadhar photos)
+  Supabase Storage → Driver document storage (private bucket, signed URLs)
   Expo EAS        → Driver app Android APK distribution
 
 The Render cold start problem:

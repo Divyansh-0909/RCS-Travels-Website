@@ -460,7 +460,8 @@ This lets you monitor the full loop:
   Admin only intervenes if auto-assignment fails (no available drivers).
 
 Driver verification flow:
-  Driver self-registers via phone OTP → uploads DL + Aadhar → verificationStatus = pending
+  Driver self-registers via phone OTP → uploads the document set (block 6 below:
+  RC, insurance, tax, fitness, All India permit, car photos, DL) → pending
   Admin reviews documents → approves (verificationStatus = approved, isActive = true)
                            → or rejects (verificationStatus = rejected)
   Only approved drivers can go online and receive rides.
@@ -474,7 +475,7 @@ Goal: Driver can receive and complete rides.
 
   Screens (in priority order):
     1. Register/Login  → phone OTP via Clerk
-    2. Onboarding      → upload DL + Aadhar, submit for verification
+    2. Onboarding      → upload the document set (block 6), submit for verification
                          show "Pending approval" screen until admin approves
     3. Home            → Go Online / Go Offline toggle (only if approved)
     4. Incoming ride   → accept/decline with 30-second timer
@@ -681,7 +682,9 @@ was wrong.
      Navigation (stack + tabs + deep link from a push). Course mentions it only under
      "additional resources".
   4. EAS BUILD / PLAY STORE — release, signing, OTA updates.
-  5. CAMERA / DOCUMENT UPLOAD — DL + Aadhar via expo-image-picker -> R2.
+  5. CAMERA / DOCUMENT UPLOAD — the document set (block 6) via expo-image-picker
+     -> Supabase Storage. Eight to ten files per driver, not two: the screen is a
+     checklist with per-document state, not a pair of upload buttons.
   6. ANDROID PERMISSION HELL — background location, and OEM battery killers. Xiaomi /
      Oppo / Vivo will kill the GPS service. This is a real shipping blocker, not a nit.
   7. OFFLINE QUEUEING — driver loses signal mid-ride, requests must not just vanish.
@@ -705,14 +708,15 @@ each numbered block unblocks the ones after it. Outstation is PARKED (see bottom
    Cab Economy (hatchback, sedan) and Cab XL (SUV, premium SUV).
    "Book any" (vehicleType 1 / ANY) was REMOVED from the product entirely.
 
-   hatchback/sedan/suv map 1:1 onto the fare keys already in zones.geojson.
-   suv_premium has no rate data anywhere, so it is DERIVED — suv ×
-   PREMIUM_SUV_MULTIPLIER at whichever source priced the SUV (zone, fixed table,
-   formula or market), rounded back onto that source's own grid.
-   !! The multiplier is a PLACEHOLDER 1.15 — Raju has not confirmed the real
-   premium yet. One constant in rideEstimate.js reprices every premium fare.
-   Sedan uses the same derivation mechanism for the fixed table only, the one
-   source with no sedan column (+100, the provider's own rule).
+   Every source now prices the HATCHBACK ONLY, and the other three classes are
+   modifiers on that one number (CLASS_FROM_HATCHBACK in rideEstimate.js),
+   applied at whichever source answered (zone, fixed table, formula or market)
+   and rounded back onto that source's own grid: sedan +100 and suv x1.6 are the
+   provider's own rate-card rules, so they hold everywhere rather than only where
+   a column happens to exist.
+   !! suv_premium x3.2 (= 2x the SUV) is OURS, not Raju's — nothing on the rate
+   card prices a premium SUV and he has not confirmed one. One constant reprices
+   every premium fare on every route.
 
    Seats are no longer a column: seatsOf(vehicleClass) in constants/vehicles.js
    is the single source, and vehicleCapacity is measured against it — so no
@@ -785,14 +789,41 @@ each numbered block unblocks the ones after it. Outstation is PARKED (see bottom
    (~₹0.115/utility) — the free 24h session window only opens when the USER
    messages us.
 
-6. DRIVER DOCUMENTS
-   RC + insurance + DL (replaces the dlDocUrl/aadharDocUrl columns with a
-   DriverDocument model: type, fileUrl, number, expiresAt, status,
-   rejectionReason — insurance and licences EXPIRE, one URL column can't
-   auto-suspend a lapsed driver). verificationStatus becomes derived.
+6. DRIVER DOCUMENTS — SCHEMA DONE (Jul 30 2026, migration not yet applied)
+   Raju's list, and it is HIS list — everything but the licence is about the CAR,
+   because these are owner-drivers and what he checks is that the vehicle is
+   road-legal. POLICE VERIFICATION WAS ON THE EARLIER DRAFT AND HE REMOVED IT;
+   do not put it back without hearing that from him.
+     compulsory: RC, insurance, road tax, fitness certificate, All India permit,
+                 car photo front, car photo back
+     optional:   one-year permit (only if the cab holds an All India permit),
+                 CNG cylinder test certificate (only if the car runs on CNG)
+   DL is ours, not his: his list never mentions it, but valid vehicle paperwork
+   does not make an unlicensed driver legal to send to a rider. Ten types total —
+   backend/constants/driverDocuments.js is the single source, mirrored by the
+   DriverDocumentType enum. "Optional" means "only some cars have one", not
+   nice-to-have: a CNG certificate is compulsory for a CNG car.
+   dlDocUrl/aadharDocUrl are GONE, replaced by a DriverDocument model (type,
+   fileUrl, number, expiresAt, status, rejectionReason, reviewedAt, uploadedAt;
+   unique on [driverId, type] so a renewal replaces the file) — insurance, tax,
+   fitness and the permits all EXPIRE, and one URL column can't auto-suspend a
+   lapsed driver. Aadhar is dropped entirely: it was never uploadable and the
+   list doesn't ask for it.
+   verificationStatus STAYS A STORED COLUMN rather than derived — it is the
+   fourth column of the eligibility index every assignment scan hits. Recompute
+   it on approve/reject and on lapse.
+   MIGRATION APPLIED 30 Jul 2026 (20260730030000_driver_documents). It also
+   repaired drift that was breaking GET /api/driver/me: profile_picture_url,
+   rejectionReason and reviewedAt were in schema.prisma but had never existed in
+   the database, so every read of a driver row errored on the missing column.
+   STILL TO DO: the upload endpoint, the nightly expiry sweep, and admin
+   approve/reject mutations.
    Storage: SUPABASE STORAGE (decided — same project, signed URLs, private
-   bucket; free tier covers ~160 drivers at 3 docs each). COSTS.md still says
-   R2 — update it. Needs admin approve/reject mutations.
+   bucket). COSTS.md now carries the real numbers: 8-10 files per driver means
+   ~40 drivers per free GB straight off the camera, ~250 if the app compresses
+   before upload. COMPRESS ON THE DEVICE — that one choice is the difference.
+   Deleting the replaced file on renewal is the upload path's job; the unique
+   key only replaces the row.
 
 7. DRIVER MARKETPLACE (needs payments + driver app)
    A driver with an off-app booking he can't do posts it; another driver claims
@@ -859,9 +890,13 @@ OUTSTATION — PARKED until the driver app exists. When it returns: per-day
    classes; plain-vs-hills via Elevation API (outstation only, cached by
    destination, counted in ApiUsage). isOutstation stays on Booking meanwhile.
 
-OPEN QUESTIONS LOG (as of 28 Jul 2026)
+OPEN QUESTIONS LOG (as of 30 Jul 2026)
    For Raju: (a) 5% commission / ₹800 floor redistribution vs his ₹25-₹100
    sheet — confirm; (b) inter-terminal prices: toll/parking included?;
-   (c) marketplace: does the posting driver get a share?
+   (c) premium SUV x3.2 (= 2x the SUV) is our number, not his — confirm;
+   (d) outstation, whenever it comes back: Wagon R rate, the >250 km/day rate,
+   calendar day vs 24h, and the plain/hills split.
+   ANSWERED 30 Jul: driver documents — his list, police verification dropped
+   (block 6). Marketplace: yes, the posting driver is paid (block 7).
    For us: round-trip toggle UX on OnBoarding; scheduler mechanism; payment
    gateway (Razorpay vs Cashfree — discussion pending).

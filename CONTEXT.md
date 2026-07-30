@@ -150,7 +150,15 @@ cancelled, **no_driver**), `BookingSource` (website | whatsapp | admin), `Cancel
 - **Driver** — `name`, `phone`, `vehicleClass` (VehicleClass enum — the car itself; its seat count
   comes from `constants/vehicles.js`), `vehicleCapacity` (Int: seats
   currently free — the live availability counter), `vehicleNumber`, `isActive`, `isOnline`,
-  `fcmToken`, `dlDocUrl`/`aadharDocUrl`, `verificationStatus`. Has one `DriverLocation`.
+  `fcmToken`, `pfpUrl`, `verificationStatus`. Has one `DriverLocation` and many `DriverDocument`.
+- **DriverDocument** — one row per driver per document type (`type`, `fileUrl`, `number`,
+  `expiresAt`, `status`, `rejectionReason`), unique on `[driverId, type]` so a renewal replaces
+  the file. The provider's checklist, all about the **car** except the licence: RC, insurance,
+  road tax, fitness certificate, All India permit and both car photos are compulsory; a one-year
+  permit and a CNG cylinder test apply only to the cars that have them. **No police verification**
+  — it was dropped from the list on purpose. `backend/constants/driverDocuments.js` is the single
+  source. A table rather than columns because these **expire**, and a lapsed one must be able to
+  suspend a driver by itself. **Nothing writes this table yet.**
 - **DriverLocation** — one row per driver, `latitude`/`longitude`/`bearing`/`speedKmh`, designed to
   be upserted every 4s while online. `bearing`+`speedKmh` enable client-side **dead reckoning**
   between the customer's 5-second status polls. **Nothing writes this table yet.**
@@ -177,9 +185,10 @@ Seats are a property of the class (4, 4, 6, 6), so `vehicleCapacity` is measured
 priced, matched to a driver and stored. There is no "ANY" option: the old `vehicleType 1` was
 removed along with the integer scheme, and every ride now names the car it booked.
 
-`hatchback`, `sedan` and `suv` are priced from the zone/fixed/formula/market cards directly.
-`suv_premium` has no rate data anywhere and is always derived — `suv × PREMIUM_SUV_MULTIPLIER`
-(**placeholder 1.15, needs provider confirmation**) at whichever source priced the SUV.
+Only the **hatchback** price is ever looked up (zone, fixed table, formula or market); every other
+class is a modifier on it in `CLASS_FROM_HATCHBACK` — sedan `+₹100`, SUV `×1.6` (both the
+provider's own rules), premium SUV `×3.2` (**ours, still needs provider confirmation**) — applied
+at whichever source answered, then rounded back onto that source's own grid.
 
 ---
 

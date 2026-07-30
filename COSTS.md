@@ -1,6 +1,6 @@
 # Running Costs — RCS Travels Platform
 
-Last updated: 2026-07-23. All amounts in INR unless noted.
+Last updated: 2026-07-30. All amounts in INR unless noted.
 
 ## Monthly (recurring)
 
@@ -15,7 +15,7 @@ Last updated: 2026-07-23. All amounts in INR unless noted.
 | Clerk | Auth (free to 10,000 MAU) | ₹0 |
 | Google Maps Platform | Fare distance lookups (self-capped at 10k calls/mo via `api_usage` table) | ₹0 |
 | Firebase FCM | Driver push notifications | ₹0 |
-| Cloudflare R2 | Driver document storage (free to 10 GB) | ₹0 |
+| Supabase Storage | Driver documents (free to 1 GB — see below; replaces the planned R2) | ₹0 |
 | **Total** | | **~₹400–600 / month** |
 
 ## One-time
@@ -39,6 +39,34 @@ Last updated: 2026-07-23. All amounts in INR unless noted.
 
 Rule of thumb: **~₹0.25–0.40 per booking** (2–3 outbound messages).
 
+## Driver documents (Supabase Storage, free tier = 1 GB + 5 GB egress/month)
+
+Eight compulsory files per driver — DL, RC, insurance, road tax, fitness, All India permit,
+and the two car photos — plus up to two conditional ones (one-year permit, CNG cylinder test).
+Call it **8–10 files per driver**. Everything below follows from what those files weigh:
+
+| Upload handling | Per file | Per driver | Drivers before 1 GB |
+|---|---|---|---|
+| Straight off the camera | ~2.5 MB | ~20–25 MB | **~40** |
+| Compressed on device (recommended: long edge 1600px, JPEG q75) | ~400 KB | ~3–4 MB | **~250** |
+
+At 3 drivers today, and a fleet realistically in the tens, **compressed uploads keep this at ₹0
+indefinitely**. Uncompressed, a fleet of 40 exhausts the free tier — that is the entire risk here,
+and it is settled in the upload code, not in a plan.
+
+Egress is a non-issue: an admin reviewing one driver's full set pulls ~4 MB, so the 5 GB/month
+allowance is ~1,250 reviews. Nobody reads these except at approval and renewal.
+
+Beyond the free tier the marginal price is **~$0.021/GB/month (~₹1.80)** — about **₹0.007 per
+driver per month** compressed. Supabase Pro ($25/mo, ~₹2,150) includes 100 GB, which is ~25,000
+drivers' worth; storage will therefore never be what triggers that upgrade. The 500 MB database
+limit gets there first.
+
+**Renewals are the slow leak.** Insurance, tax, fitness and the permits all lapse yearly, so
+roughly six files per driver are replaced every year. The `[driverId, type]` unique key replaces
+the row, but the old object survives in the bucket unless the upload path deletes it — left
+alone, that is ~2.4 MB per driver per year of files nobody can reach.
+
 ## Known future upgrades (not subscribed — deliberate)
 
 | Trigger | Upgrade | Cost |
@@ -53,5 +81,10 @@ Rule of thumb: **~₹0.25–0.40 per booking** (2–3 outbound messages).
 - `/health` (the UptimeRobot keep-alive target) must **never query the database**.
 - Supabase free pauses a project after 7 days of zero activity — a **daily cron-job.org REST ping** (GET with `apikey` header) per project prevents this.
 - Driver GPS is **one upserted row per driver**, never an append-only trail. Adding route-history logging would blow the DB free tier — needs retention limits + its own plan.
-- Images/documents go to R2, never into Postgres.
+- Images/documents go to Supabase Storage (private bucket, signed URLs), never into Postgres.
+- **Compress every document upload on the device before it leaves it.** The whole free tier
+  turns on this one decision — see the driver-document table above.
+- Replacing a renewed document must **delete the old object**, not just overwrite the row. The
+  `[driverId, type]` unique key replaces the database row for free; the storage bucket keeps the
+  old file forever unless something removes it.
 - Google Routes calls stay behind the 10,000/month self-cap in the `api_usage` table; apply the same pattern to Places autocomplete when the pickup map is built.
