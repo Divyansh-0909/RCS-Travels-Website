@@ -22,8 +22,12 @@
     "     detour should use) for this corridor — see below for when it is used.",
     "  4. Restart the backend. Zones load once at boot, same as fare zones.",
     "",
-    "COORDINATE ORDER IS [lng, lat] — GeoJSON, not the { lat, lng } used everywhere else in",
-    "the codebase. geojson.io already emits it correctly; hand-edits are where this goes wrong.",
+    "COORDINATE ORDER: `geometry.coordinates` is [lng, lat] (GeoJSON) and `fallback` below is",
+    "{ lat, lng } — this file holds both, and the property name is the only thing separating",
+    "them. geojson.io emits the geometry correctly; hand-edits are where this goes wrong, and",
+    "a reversed ring is NOT rejected anywhere: 77 is a legal latitude, so the polygon simply",
+    "lands in the Arabian Sea and no route ever tests inside it. The failure looks exactly",
+    "like this file still being empty. Verify with check-shady-zones.js, below.",
     "",
     "PROPERTIES",
     "  name      Shown in logs and admin only. Riders never see it — the UI says 'safer",
@@ -54,5 +58,76 @@
     "and whether a clean alternative exists for them. That is the difference between knowing",
     "the feature works and hoping it does."
   ],
-  "features": []
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Greater Noida east corridor",
+        "fallback": null,
+        "notes": "Traced Jul 2026. Runs NW-SE from the Bil Akbarpur / Sector Zeta side (~77.523, 28.521) down past Kasna to the GBU approach (~77.584, 28.441). Name is a working label — rename to the road once confirmed. Band is ~4-5 km across, well wider than the 300-500 m the readme asks for, so it will also catch parallel roads inside it; tighten before trusting the flag rate."
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [77.5802261, 28.5301263],
+            [77.5901923, 28.523779],
+            [77.5902631, 28.5197636],
+            [77.5909166, 28.5121411],
+            [77.5928234, 28.5057876],
+            [77.6051276, 28.4703483],
+            [77.6012049, 28.4547203],
+            [77.584082, 28.4406229],
+            [77.5577173, 28.4713029],
+            [77.5500164, 28.4822145],
+            [77.5227865, 28.5205084],
+            [77.5280132, 28.5242097],
+            [77.5308332, 28.5292475],
+            [77.5361135, 28.5329022],
+            [77.5379772, 28.538827],
+            [77.5549931, 28.5502987],
+            [77.5671567, 28.5398357],
+            [77.5715424, 28.5368305],
+            [77.5802261, 28.5301263]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Dadri - Bisrakh corridor",
+        "fallback": null,
+        "notes": "Traced Jul 2026. Runs NW-SE from the Bisrakh / Gaur City end (~77.44, 28.62) down to the Dadri side (~77.542, 28.564). Name is a working label — rename to the road once confirmed. Same width caveat as the zone above: ~5 km across, not a 300-500 m corridor."
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [77.5417943, 28.5640292],
+            [77.5368294, 28.5602276],
+            [77.5309534, 28.5562238],
+            [77.5284904, 28.5539208],
+            [77.5267425, 28.5510594],
+            [77.5259889, 28.5471969],
+            [77.5274262, 28.5396147],
+            [77.5322464, 28.5358494],
+            [77.5252116, 28.5284165],
+            [77.5190863, 28.5273287],
+            [77.5037619, 28.5320253],
+            [77.4914667, 28.5515923],
+            [77.4788151, 28.5655217],
+            [77.4660659, 28.591573],
+            [77.4384355, 28.6173737],
+            [77.4641369, 28.6322347],
+            [77.4790265, 28.6202379],
+            [77.4873896, 28.6139708],
+            [77.4949377, 28.6050178],
+            [77.5259212, 28.5782232],
+            [77.5417943, 28.5640292]
+          ]
+        ]
+      }
+    }
+  ]
 }

@@ -45,7 +45,7 @@ export const hasShadyZones = () => shadyZones.length > 0
 // Index of the first zone containing this point, or -1. Overlapping corridors
 // attribute to the first drawn — they describe the same avoided ground, so the
 // only thing the choice affects is which zone's fallback point is offered.
-const shadyZoneAt = (p) => shadyZones.findIndex((z) => pointInRing(p.lng, p.lat, z.ring))
+const shadyZoneAt = (p) => shadyZones.findIndex((z) => pointInRing(p, z.ring))
 
 const inAnyShadyZone = (p) => shadyZoneAt(p) !== -1
 

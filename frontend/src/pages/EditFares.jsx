@@ -45,8 +45,19 @@ const BANDS = [
     { max: Infinity, color: '#C8362F' },
 ]
 
-// Ray casting. GeoJSON positions are [lng, lat].
-function pointInRing(lng, lat, ring) {
+// ---------------------------------------------------------------------------
+// THE ONE PLACE THE TWO COORDINATE ORDERS MEET — mirrors backend/services/geo.js.
+//
+// GeoJSON positions are [lng, lat]; Leaflet latlngs and every point in this app
+// are { lat, lng }. The three functions below are the only ones here that index
+// a position, so no call site carries an order it could state backwards. That
+// matters more than it looks: a point in NCR is lat 28, lng 77, and both are
+// legal latitudes, so a swap is never rejected — it just tests outside every
+// polygon, silently, forever.
+// ---------------------------------------------------------------------------
+
+/** Ray casting: is this { lat, lng } inside this GeoJSON linear ring? */
+function pointInRing({ lat, lng }, ring) {
     let inside = false
     for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
         const [xi, yi] = ring[i]
@@ -57,10 +68,22 @@ function pointInRing(lng, lat, ring) {
     return inside
 }
 
+// Mean of a ring's vertices, as a point. Only ever used to ask "roughly where is
+// this shape" — on a concave zone it can land outside the polygon itself.
+const ringCentroid = (ring) => {
+    const sum = ring.reduce((acc, [lng, lat]) => ({ lat: acc.lat + lat, lng: acc.lng + lng }), { lat: 0, lng: 0 })
+    return { lat: sum.lat / ring.length, lng: sum.lng / ring.length }
+}
+
+/** A GeoJSON ring as the [lat, lng] pairs L.polygon wants. */
+const ringToLatLngs = (ring) => ring.map(([lng, lat]) => [lat, lng])
+
 const fmt = (n) => (n == null ? '—' : '₹' + Number(n).toLocaleString('en-IN'))
 const escapeHtml = (s) =>
     String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
-const roundRing = (ring) => ring.map(([lng, lat]) => [+lng.toFixed(5), +lat.toFixed(5)])
+// Positions in, positions out — deliberately order-agnostic, so this is not a
+// fourth place that has to know which number is which.
+const roundRing = (ring) => ring.map((pos) => pos.map((n) => +n.toFixed(5)))
 const ringOf = (z) => z.layer.toGeoJSON().geometry.coordinates[0]
 
 // Shared input chrome, so the fare boxes and the notes field cannot drift apart.
@@ -177,9 +200,9 @@ const EditFares = () => {
     // the whole point of the checker is that it answers with the real fare,
     // including the boundary-averaging rule, which is not something you can guess
     // by looking at the map.
-    const matchZone = useCallback((lat, lng) => {
+    const matchZone = useCallback((point) => {
         const hits = zonesRef.current
-            .filter((z) => pointInRing(lng, lat, ringOf(z)))
+            .filter((z) => pointInRing(point, ringOf(z)))
             .map((z) => ({
                 name: z.props.name,
                 priority: z.props.priority ?? 0,
@@ -303,8 +326,7 @@ const EditFares = () => {
                 selectedRef.current = null
                 data.features.forEach((f) => {
                     if (f.geometry?.type !== 'Polygon') return
-                    const latlngs = f.geometry.coordinates[0].map(([lng, lat]) => [lat, lng])
-                    addZone(f, L.polygon(latlngs))
+                    addZone(f, L.polygon(ringToLatLngs(f.geometry.coordinates[0])))
                 })
                 captureBaseline()
                 setSelected(null)
@@ -349,28 +371,23 @@ const EditFares = () => {
         const map = mapRef.current
         if (!map || !ready) return
 
+        // A Leaflet latlng is already { lat, lng }, so it goes straight in.
         const onClick = (e) => {
             if (map.pm.globalDrawModeEnabled()) return
-            setProbe(matchZone(e.latlng.lat, e.latlng.lng) ?? 'none')
-        }
-
-        // Centre of the drawn shape, good enough to ask "what is this sitting inside".
-        const centroid = (ring) => {
-            const n = ring.length
-            return [ring.reduce((s, p) => s + p[0], 0) / n, ring.reduce((s, p) => s + p[1], 0) / n]
+            setProbe(matchZone(e.latlng) ?? 'none')
         }
 
         const onCreate = (e) => {
             map.pm.disableDraw()
-            const ring = e.layer.toGeoJSON().geometry.coordinates[0]
-            const [clng, clat] = centroid(ring)
+            // Centre of the drawn shape, good enough to ask "what is this sitting inside".
+            const centre = ringCentroid(e.layer.toGeoJSON().geometry.coordinates[0])
 
             // Overlap order decides which price wins, and getting it wrong misprices
             // the area silently — no error, just an averaged fare nobody asked for.
             // So it is never typed in: it is worked out from an answer he can
             // actually give.
             const inside = zonesRef.current
-                .filter((z) => pointInRing(clng, clat, ringOf(z)))
+                .filter((z) => pointInRing(centre, ringOf(z)))
                 .sort((a, b) => (b.props.priority ?? 0) - (a.props.priority ?? 0))[0]
 
             let priority = 5

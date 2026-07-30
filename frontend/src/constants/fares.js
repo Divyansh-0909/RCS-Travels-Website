@@ -22,10 +22,14 @@ export const CARRIER_CHARGE = 200;
 // If the server's figure moves, move this with it.
 export const CANCELLATION_CHARGE_PCT = 35;
 
-// How /api/fare/estimate priced a ride. 'zone' and 'fixed_table' are the
-// provider's own all-in quotes; the two distance sources pay for the drive alone
-// and leave tolls with the driver — 'formula' is the curve fitted to the campus
-// card, 'per_km' the app-style rate for trips that never touch campus. Screens
-// that warn about tolls care about the distinction between all-in and by-distance
-// and nothing finer, so they ask this rather than naming a source.
+// How /api/fare/estimate priced a ride. 'zone' is the provider's own all-in
+// quote; the two distance sources pay for the drive alone and leave tolls with
+// the driver — 'formula' is the curve fitted to the campus card, 'per_km' the
+// app-style rate for trips that never touch campus. Screens that warn about tolls
+// care about the distinction between all-in and by-distance and nothing finer, so
+// they ask this rather than naming a source.
+//
+// Older bookings can still carry 'fixed_table', a fourth source retired in favour
+// of zone → curve. It priced all-in like a zone, so it falls to `false` here,
+// which is what it always did.
 export const isDistancePriced = (source) => source === "formula" || source === "per_km";

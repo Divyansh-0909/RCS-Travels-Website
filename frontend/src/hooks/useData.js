@@ -44,10 +44,10 @@ export const useData = create (persist (set =>({
     routePolyline: null,
     setRoutePolyline: (polyline)=> set (state => ({routePolyline: polyline})),
 
-    // How the estimate priced the ride: 'zone' | 'fixed_table' | 'formula' |
-    // 'per_km'. The two distance sources exclude tolls, so isDistancePriced()
-    // in constants/fares is what the tolls notice keys off. Tracking never calls
-    // the estimate, so it reads this.
+    // How the estimate priced the ride: 'zone' | 'formula' | 'per_km' (older
+    // bookings may carry the retired 'fixed_table'). The two distance sources
+    // exclude tolls, so isDistancePriced() in constants/fares is what the tolls
+    // notice keys off. Tracking never calls the estimate, so it reads this.
     fareSource: null,
     setFareSource: (source)=> set (state => ({fareSource: source})),
 

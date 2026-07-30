@@ -21,8 +21,28 @@ export function kmBetween(a, b) {
   return Math.sqrt(dLat * dLat + dLng * dLng)
 }
 
-// Ray casting. GeoJSON positions are [lng, lat].
-export function pointInRing(lng, lat, ring) {
+// ---------------------------------------------------------------------------
+// THE ONE PLACE THE TWO COORDINATE ORDERS MEET.
+//
+// GeoJSON positions are [lng, lat]; every point in this codebase is { lat, lng }.
+// Both are right, and neither is going to change: the first is the spec that
+// geojson.io writes, the second is what Google, Prisma and Leaflet all hand us.
+//
+// What used to be wrong is that the disagreement was spread out. pointInRing
+// took (lng, lat) as bare numbers, so every caller re-stated the swap by hand,
+// three copies of the ray casting each had their own, and any one of them could
+// be written backwards without a symptom — a point in NCR is lat 28, lng 77, and
+// BOTH are legal latitudes, so nothing rejects a swapped pair. It just tests
+// outside every polygon forever.
+//
+// So the functions below are the only ones that index a position. Everything
+// downstream of them speaks { lat, lng } exclusively, and a call site cannot
+// carry an order to get wrong.
+// ---------------------------------------------------------------------------
+
+/** Ray casting: is this { lat, lng } inside this GeoJSON linear ring? */
+export function pointInRing(point, ring) {
+  const { lat, lng } = point
   let inside = false
   for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
     const [xi, yi] = ring[i]
@@ -31,6 +51,14 @@ export function pointInRing(lng, lat, ring) {
       inside = !inside
   }
   return inside
+}
+
+// Mean of a ring's vertices, as a point. NOT the true centroid of the polygon,
+// and for a concave or very large zone it can fall outside it — callers use it
+// only to ask "roughly where is this shape", never to price anything.
+export function ringCentroid(ring) {
+  const sum = ring.reduce((acc, [lng, lat]) => ({ lat: acc.lat + lat, lng: acc.lng + lng }), { lat: 0, lng: 0 })
+  return { lat: sum.lat / ring.length, lng: sum.lng / ring.length }
 }
 
 // Google's encoded polyline algorithm. Routes returns the road path this way,

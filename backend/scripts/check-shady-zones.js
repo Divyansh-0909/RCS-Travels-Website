@@ -21,7 +21,7 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import { metresInsideShadyZones, hasShadyZones, SHADY_MIN_METRES } from '../services/safeRoute.js'
-import { decodePolyline } from '../services/geo.js'
+import { decodePolyline, ringCentroid } from '../services/geo.js'
 
 // The git seed, not the live card in fare_zone_set — this only needs somewhere
 // to aim probes, and reading the file keeps the script runnable without a
@@ -34,14 +34,10 @@ const zones = JSON.parse(readFileSync(path.join(here, '../data/zones.geojson'), 
 // starts where a real campus ride starts.
 const SNU = { lat: 28.527202, lng: 77.575486 }
 
-// A polygon's centroid can sit outside a concave zone and is a poor stand-in for
-// a big one anyway — a zone spanning half of Delhi routes differently at its two
-// ends. Averaging the ring is enough to place a probe inside the typical zone;
-// widen this to several samples if a large zone reports surprising results.
-function centroid(ring) {
-  const [sumLng, sumLat] = ring.reduce(([x, y], [lng, lat]) => [x + lng, y + lat], [0, 0])
-  return { lat: sumLat / ring.length, lng: sumLng / ring.length }
-}
+// ringCentroid can sit outside a concave zone and is a poor stand-in for a big
+// one anyway — a zone spanning half of Delhi routes differently at its two ends.
+// Averaging the ring is enough to place a probe inside the typical zone; widen
+// this to several samples if a large zone reports surprising results.
 
 async function routesFor(dest) {
   const res = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
@@ -78,7 +74,7 @@ async function main() {
 
   for (const zone of zones) {
     const name = zone.properties.name
-    const dest = centroid(zone.geometry.coordinates[0])
+    const dest = ringCentroid(zone.geometry.coordinates[0])
 
     let paths
     try {

@@ -4,14 +4,18 @@ import { classifyRoutes, hasShadyZones, isClean, decodePolyline } from './safeRo
 import { VEHICLE_CLASS_NAMES } from '../constants/vehicles.js'
 
 // ---------------------------------------------------------------------------
-// Two distance formulas, because there are two different things to be fair to.
+// Every fare on this route is one number with a multiplier on it.
 //
-// A campus trip that lands in a gap between zones is still a trip the provider
-// prices, so it gets the curve fitted to their own card (formulaFare, below).
-// A trip that never touches campus is on nobody's card, and the rider pricing it
-// has an aggregator open in the next tab — so it gets aggregator shape instead:
-// a pickup fee, a rate per km, a rate for the minutes the car is tied up, and a
-// floor for very short hops.
+// The one number is the HATCHBACK price, and there are exactly two ways to reach
+// it. A trip with either end on campus is on the provider's own rate card, so it
+// is priced by zone, or — when it lands in a gap between zones — by the curve
+// fitted to that same card (formulaFare, below). A trip that never touches campus
+// is on nobody's card, and the rider pricing it has an aggregator open in the next
+// tab, so it gets aggregator shape instead: a pickup fee, a rate per km, a rate
+// for the minutes the car is tied up, and a floor for very short hops.
+//
+// Nothing else prices anything. Sedan, SUV and premium SUV are modifiers on
+// whichever of those two answered — see CLASS_FROM_HATCHBACK.
 // ---------------------------------------------------------------------------
 
 // Fitted (least squares) to 11 real quotes pulled from Uber and Rapido on six
@@ -24,32 +28,30 @@ import { VEHICLE_CLASS_NAMES } from '../constants/vehicles.js'
 // a 28 km expressway hop to Pari Chowk runs ~₹12/km. A per-km-heavy card would
 // overcharge every expressway trip by nearly 40% and undercharge every city one.
 //
-// Sedan ×1.20 and Ertiga ×1.65 come from the same quotes (Uber 1.08/1.58,
-// Rapido 1.35/1.80). Note the provider's own ×1.6 Ertiga rule is corroborated;
-// their flat +₹100 sedan rule is not, and is far too steep on a ₹300 city fare.
+// Hatchback only, now. The fit also produced sedan and SUV columns (×1.20 and
+// ×1.65 of this one, from Uber 1.08/1.58 and Rapido 1.35/1.80), but the provider's
+// own class rules apply everywhere instead — see CLASS_FROM_HATCHBACK.
 //
-// Re-fit these when the market moves. Nothing else in this file hardcodes a rate.
-const MARKET_RATES = {
-  hatchback: { pickup: 60,  perKm: 4.7, perMin: 5.3, minimum: 130 },
-  sedan:     { pickup: 70,  perKm: 5.6, perMin: 6.4, minimum: 155 },
-  suv:       { pickup: 100, perKm: 7.8, perMin: 8.7, minimum: 215 },
-}
+// Re-fit this when the market moves. Nothing else in this file hardcodes a rate.
+const MARKET_RATE = { pickup: 60, perKm: 4.7, perMin: 5.3, minimum: 130 }
 
-// !! NEEDS PROVIDER CONFIRMATION — this number is ours, not theirs. Nothing on
-// the rate card prices a premium SUV, so rather than invent a fourth column of
-// fare data it is expressed as a markup on the SUV price from whichever source
-// priced it. One constant reprices every premium fare on every route.
-const PREMIUM_SUV_MULTIPLIER = 1.15
-
-// The two classes no source prices directly, each as a modifier on the sibling
-// that IS priced. Applied AT the source that answered, so a zone quote yields a
-// premium zone price and the per-km formula yields a premium per-km price —
-// never a fall-through to a weaker source just because the rider picked the
-// nicer car. Sedan's +100 is the provider's own rule, the same one formulaFare
-// applies; it only fires for the fixed table, the one source with no sedan.
-const DERIVED_CLASS = {
-  sedan:       { from: 'hatchback', apply: (fare) => fare + 100 },
-  suv_premium: { from: 'suv',       apply: (fare) => fare * PREMIUM_SUV_MULTIPLIER },
+// The provider's class rules, and the only place a class other than hatchback is
+// priced. Applied AT the source that answered, so a zone quote yields a zone-priced
+// SUV and the per-km formula yields a market-priced SUV — never a fall-through to
+// a weaker source just because the rider picked the nicer car.
+//
+// Sedan's flat +₹100 and the Ertiga's ×1.6 are the provider's own rules, quoted on
+// their rate card. Note the +₹100 is worth watching on short city fares, where it
+// lands as +30% rather than the ~+8% it means on a campus run.
+//
+// !! NEEDS PROVIDER CONFIRMATION — ×3.2 for the premium SUV is ours, not theirs.
+// Nothing on the rate card prices one, so it is expressed against the hatchback
+// like every other class. One constant reprices every premium fare on every route.
+const CLASS_FROM_HATCHBACK = {
+  hatchback:   (fare) => fare,
+  sedan:       (fare) => fare + 100,
+  suv:         (fare) => fare * 1.6,
+  suv_premium: (fare) => fare * 3.2,
 }
 
 // Derived fares land back on the grid their source uses: the campus card deals
@@ -69,11 +71,9 @@ const roundTo = (value, step) => Math.round(value / step) * step
 // provider's own rate card, and their price is their price.
 export const AIRPORT_PICKUP_SURCHARGE = 200
 
-// null for a class this card doesn't rate — the caller derives it from a sibling
-// rather than silently quoting a hatchback price for a different car.
-function marketFare(distanceKm, durationMin, vehicleClass) {
-  const r = MARKET_RATES[vehicleClass]
-  if (!r) return null
+// The hatchback price for a trip that never touches campus.
+function marketFare(distanceKm, durationMin) {
+  const r = MARKET_RATE
   // Duration is best-effort from Routes. Without it the time component is
   // dropped rather than estimated — quoting a little low beats inventing traffic
   // that was never measured, and the quote is what the rider is held to.
@@ -84,11 +84,12 @@ function marketFare(distanceKm, durationMin, vehicleClass) {
   return Math.round(fare / 10) * 10
 }
 
-// Fitted to the provider's rate card: hatchback ≈ 36.7·km^0.897, sedan +100 flat,
-// Ertiga ≈ 1.6x hatchback. The power law makes the effective per-km rate fall with
-// distance; beyond 56 km a flat ₹16/km takes over, because long trips (Dwarka,
-// Gurugram, Manesar) are priced softer. The far segment starts from the curve's own
-// value at 56 km, so shorter fares are untouched.
+// Fitted to the provider's rate card: hatchback ≈ 36.7·km^0.897. The power law
+// makes the effective per-km rate fall with distance; beyond 56 km a flat ₹16/km
+// takes over, because long trips (Dwarka, Gurugram, Manesar) are priced softer. The
+// far segment starts from the curve's own value at 56 km, so shorter fares are
+// untouched. The card's sedan and Ertiga rules were fitted from here too, and now
+// live in CLASS_FROM_HATCHBACK where every source shares them.
 const FAR_KM = 56
 const FAR_RATE = 16
 const FAR_BASE = 36.7 * Math.pow(FAR_KM, 0.897) // ≈1358, curve value at 56 km
@@ -108,7 +109,8 @@ const rawCurve = (km) => {
   return base
 }
 
-function formulaFare(distanceKm, vehicleClass) {
+// The hatchback price for a campus trip that matched no zone.
+function formulaFare(distanceKm) {
   // A band's +50 is a step, so leaving a band used to make the fare FALL: 25.0 km
   // quoted 700 and 25.1 km quoted 650, a longer trip for less money. Clamping the
   // curve to its own running maximum fixes that without touching any price at or
@@ -116,14 +118,7 @@ function formulaFare(distanceKm, vehicleClass) {
   let base = rawCurve(distanceKm)
   for (const b of PREMIUM_BANDS)
     if (distanceKm > b.to) base = Math.max(base, rawCurve(b.to))
-  const hatchback = Math.max(400, base)
-  // null for anything this curve wasn't fitted to — same contract as marketFare.
-  const fare =
-    vehicleClass === 'hatchback' ? hatchback :
-    vehicleClass === 'sedan'     ? hatchback + 100 :
-    vehicleClass === 'suv'       ? hatchback * 1.6 :
-    null
-  return fare == null ? null : Math.round(fare / 50) * 50
+  return Math.round(Math.max(400, base) / 50) * 50
 }
 
 // How the safer route is chosen lives in safeRoute.js. The short version: we ask
@@ -291,15 +286,6 @@ export async function getRideEstimate({ pickupAddress, dropAddress, vehicleClass
     null
   const zone = matchZone(zoneCoords)
 
-  // One lookup covering every class at this destination, instead of one query
-  // per class — the caller prices every card from a single request. Skipped
-  // entirely off-corridor, where its answer wouldn't be used.
-  const rows = campusAnchored
-    ? await prisma.fareTable.findMany({
-        where: { destinationName: dropAddress, isActive: true },
-      })
-    : []
-
   const options = await bestEffortRouteOptions(pickupAddress, dropAddress, pickupCoords, dropCoords)
 
   // Whether the road actually changes and whether the rider pays are now the same
@@ -339,56 +325,44 @@ export async function getRideEstimate({ pickupAddress, dropAddress, vehicleClass
     ? AIRPORT_PICKUP_SURCHARGE
     : 0
 
-  // One source's answer for one class, or null if that source doesn't price it.
+  // One source's hatchback price, or null if that source can't answer.
   //
   // Neither distance source carries a toll: they pay for the drive, and whatever
   // barriers the route crosses settle with the driver. That is exactly what the
   // "tolls payable to driver separately" notice on the booking screen promises.
-  function fromSource(source, cls) {
+  function hatchbackFrom(source) {
     switch (source) {
       case 'zone': {
-        const fare = zone?.fares?.[cls]
+        const fare = zone?.fares?.hatchback
         return fare != null ? { base: fare, source: 'zone', toll: zone.toll, airport: 0 } : null
       }
-      case 'fixed_table': {
-        const row = rows.find(r => r.vehicleClass === cls)
-        return row ? { base: row.fixedFare, source: 'fixed_table', toll: 0, airport: 0 } : null
-      }
       case 'formula': {
-        const fare = formulaFare(metrics.distanceKm, cls)
+        const fare = formulaFare(metrics.distanceKm)
         return fare != null ? { base: fare, source: 'formula', toll: 0, airport: 0 } : null
       }
       case 'per_km': {
-        const fare = marketFare(metrics.distanceKm, metrics.durationMin, cls)
+        const fare = marketFare(metrics.distanceKm, metrics.durationMin)
         return fare != null ? { base: fare, source: 'per_km', toll: 0, airport } : null
       }
       default: return null
     }
   }
 
-  // Campus routes read the provider's own quotes first and only fall to the
-  // fitted curve; a trip that never touches campus is on nobody's card and goes
-  // straight to the market rate. Distance-priced sources drop out entirely when
-  // Routes couldn't measure the trip.
+  // Campus routes read the provider's own zone quote first and fall to the curve
+  // fitted to the same card; a trip that never touches campus is on nobody's card
+  // and goes straight to the market rate. Distance-priced sources drop out
+  // entirely when Routes couldn't measure the trip.
   const SOURCES = campusAnchored
-    ? ['zone', 'fixed_table', ...(metrics.distanceKm != null ? ['formula'] : [])]
+    ? ['zone', ...(metrics.distanceKm != null ? ['formula'] : [])]
     : (metrics.distanceKm != null ? ['per_km'] : [])
 
-  // First source that can answer wins. Within a source, a class it doesn't price
-  // is derived from its sibling there — so a destination the fixed table prices
-  // doesn't fall through to the formula just because the rider picked the sedan.
-  function priceFor(cls) {
-    const derived = DERIVED_CLASS[cls]
-
-    for (const source of SOURCES) {
-      const direct = fromSource(source, cls)
-      if (direct) return direct
-
-      if (!derived) continue
-      const sibling = fromSource(source, derived.from)
-      if (sibling) return { ...sibling, base: roundTo(derived.apply(sibling.base), gridOf(source)) }
-    }
-    return null
+  // First source that can answer prices the whole route. Every class comes off
+  // this one number, so the rider can never be quoted a sedan from one source and
+  // an SUV from another on the same trip.
+  let hatchback = null
+  for (const source of SOURCES) {
+    hatchback = hatchbackFrom(source)
+    if (hatchback) break
   }
 
   // Sharing splits the car. Everything else here is a flat cost of the trip
@@ -414,16 +388,18 @@ export async function getRideEstimate({ pickupAddress, dropAddress, vehicleClass
     }
   }
 
-  // Every class the route can be priced for, keyed by class name — one card each
-  // on the booking screen. A class only appears if a source actually answered
-  // for it, so a partially-priced route shows the cards it can and omits the rest.
+  // Every class, keyed by class name — one card each on the booking screen. They
+  // now stand or fall together: either a source priced the hatchback and all four
+  // cards are quoted off it, or nothing could be priced at all.
+  if (!hatchback) throw new Error('No route found between the given addresses')
+
   const fares = {}
+  const grid = gridOf(hatchback.source)
   for (const cls of VEHICLE_CLASS_NAMES) {
-    const resolved = priceFor(cls)
-    if (resolved) fares[cls] = priced(resolved)
+    const modify = CLASS_FROM_HATCHBACK[cls]
+    if (!modify) continue
+    fares[cls] = priced({ ...hatchback, base: roundTo(modify(hatchback.base), grid) })
   }
-  if (Object.keys(fares).length === 0)
-    throw new Error('No route found between the given addresses')
 
   // `fares` prices every card; the flat fare/fareSource fields answer for the one
   // class that was asked about.

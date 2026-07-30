@@ -129,7 +129,7 @@ const FARE_CLASSES = ['hatchback', 'sedan', 'suv']
 // Ashram/Lajpat strip, 1100/1200 → 1150).
 export function matchZone(coords) {
   if (!coords) return null
-  const hits = zones.filter((z) => pointInRing(coords.lng, coords.lat, z.ring))
+  const hits = zones.filter((z) => pointInRing(coords, z.ring))
   if (hits.length === 0) return null
   hits.sort((a, b) => b.priority - a.priority)
 
