@@ -21,3 +21,5 @@ export type VerificationStatus = "pending" | "approved" | "rejected";
 // Keys must match constants/vehicles.js — that map carries the labels, seat
 // counts and categories; this is only the type for them.
 export type VehicleClass = "hatchback" | "sedan" | "suv" | "suv_premium";
+
+export type RideStatusTransition = "reached" | "started" | "completed";
