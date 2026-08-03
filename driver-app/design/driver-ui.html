@@ -1,0 +1,840 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RCS Drivers — UI prototype</title>
+
+<style>
+/* ───────────────────────────────────────────────────────────────
+   PP Mori. Six cuts, one family name each — the same split the app
+   uses, so a weight here can't silently resolve to a faked face.
+   Paths are relative to driver-app/design/.
+   ─────────────────────────────────────────────────────────────── */
+@font-face { font-family: "PPMori-Extralight"; src: url("../assets/fonts/PPMori-Extralight.otf") format("opentype"); font-display: swap; }
+@font-face { font-family: "PPMori-Regular";    src: url("../assets/fonts/PPMori-Regular.otf")    format("opentype"); font-display: swap; }
+@font-face { font-family: "PPMori-SemiBold";   src: url("../assets/fonts/PPMori-SemiBold.otf")   format("opentype"); font-display: swap; }
+
+:root {
+  /* colours — shared/theme/tokens.cjs */
+  --primary:#243AFB; --primary-dark:#1212B4; --primary-light:#7A94FF;
+  --negative:#B91C1C; --negative-dark:#7A0F0F; --negative-light:#E86A6A;
+  --white-muted:#AEAEAE;
+  --background:#0B0B14; --background-primary:#121220; --background-muted:#1d1d27;
+  --foreground:#ffffff; --text-muted:#AEAEAE;
+
+  /* type scale — same values, px here because this mirrors the app */
+  --text-xs:12px;   --lh-xs:16px;
+  --text-sm:14px;   --lh-sm:20px;
+  --text-base:16px; --lh-base:24px;
+  --text-lg:18px;   --lh-lg:28px;
+  --text-xl:20px;   --lh-xl:28px;
+  --text-2xl:24px;  --lh-2xl:32px;
+  --text-fare:44px; --lh-fare:46px;
+  --text-plate:22px;--lh-plate:26px;
+
+  /* spacing — 4pt base, no arbitrary steps */
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:20px; --s6:24px; --s8:32px; --s10:40px;
+
+  --r-card:14px; --r-pill:999px;
+
+  /* layered, colour-tinted — never a flat grey box-shadow */
+  --lift-1: 0 1px 2px rgba(0,0,0,.5), 0 2px 10px -4px rgba(36,58,251,.18);
+  --lift-2: 0 2px 4px rgba(0,0,0,.55), 0 12px 32px -12px rgba(36,58,251,.28);
+
+  --ease-spring: cubic-bezier(.22,1,.36,1);
+}
+
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; min-height:100vh;
+  background:
+    radial-gradient(90rem 50rem at 12% -10%, rgba(36,58,251,.16), transparent 60%),
+    radial-gradient(70rem 45rem at 88% 108%, rgba(122,148,255,.10), transparent 62%),
+    var(--background);
+  color:var(--foreground);
+  font-family:"PPMori-Regular","Poppins",system-ui,sans-serif;
+  font-size:var(--text-base); line-height:var(--lh-base);
+  display:flex; flex-direction:column; align-items:center;
+  gap:var(--s6); padding:var(--s8) var(--s4);
+}
+
+/* grain — keeps the flat dark from reading as a plastic slab */
+body::after{
+  content:""; position:fixed; inset:0; pointer-events:none; opacity:.5; z-index:99;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/><feColorMatrix type='saturate' values='0'/></filter><rect width='140' height='140' filter='url(%23n)' opacity='.035'/></svg>");
+}
+
+/* ── page chrome ─────────────────────────────────────────────── */
+.masthead{text-align:center;max-width:46rem}
+.masthead h1{
+  font-family:"PPMori-Extralight",sans-serif; font-weight:400;
+  font-size:var(--text-2xl); line-height:var(--lh-2xl); letter-spacing:-.01em;
+  margin:0 0 var(--s2);
+}
+.masthead p{margin:0;color:var(--text-muted);font-size:var(--text-sm);line-height:var(--lh-sm)}
+
+.jump{display:flex;flex-wrap:wrap;gap:var(--s2);justify-content:center;max-width:46rem}
+.jump button{
+  font:inherit; font-size:var(--text-xs); line-height:var(--lh-xs);
+  color:var(--text-muted); background:var(--background-primary);
+  border:1px solid rgba(255,255,255,.08); border-radius:var(--r-pill);
+  padding:var(--s2) var(--s3); cursor:pointer;
+  transition:color .18s var(--ease-spring), border-color .18s var(--ease-spring), transform .18s var(--ease-spring);
+}
+.jump button:hover{color:var(--foreground);border-color:rgba(122,148,255,.4)}
+.jump button:focus-visible{outline:2px solid var(--primary-light);outline-offset:2px}
+.jump button:active{transform:translateY(1px)}
+.jump button[aria-current="true"]{color:var(--foreground);border-color:var(--primary);background:rgba(36,58,251,.14)}
+
+/* ── phone ───────────────────────────────────────────────────── */
+.phone{
+  width:390px; max-width:100%; height:844px; max-height:88vh;
+  position:relative; display:flex; flex-direction:column;
+  background:var(--background); border:1px solid rgba(255,255,255,.09);
+  border-radius:38px; box-shadow:var(--lift-2); overflow:hidden;
+}
+.statusbar{
+  flex:none; display:flex; justify-content:space-between; align-items:center;
+  padding:var(--s3) var(--s6) var(--s1);
+  font-size:var(--text-xs); line-height:var(--lh-xs); color:var(--text-muted);
+}
+.viewport{flex:1;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
+.viewport::-webkit-scrollbar{width:4px}
+.viewport::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:2px}
+
+.screen{display:none;padding:var(--s5) var(--s5) var(--s10);animation:enter .3s var(--ease-spring) both}
+.screen.is-active{display:block}
+@keyframes enter{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* ── type roles ──────────────────────────────────────────────── */
+.eyebrow{
+  font-family:"PPMori-SemiBold",sans-serif; font-size:var(--text-xs); line-height:var(--lh-xs);
+  letter-spacing:.14em; text-transform:uppercase; color:var(--text-muted); margin:0 0 var(--s3);
+}
+.title{
+  font-family:"PPMori-Extralight",sans-serif; font-size:var(--text-2xl); line-height:var(--lh-2xl);
+  letter-spacing:-.01em; margin:0 0 var(--s2);
+}
+.muted{color:var(--text-muted);font-size:var(--text-sm);line-height:var(--lh-sm);margin:0}
+
+/* THE distinction this whole UI turns on:
+   money-in is a payout — display cut, generous, calm.
+   money-out is a charge the driver can never get back — tight, tracked, red.
+   They must never be mistaken for one another. */
+.money-in{
+  font-family:"PPMori-Extralight",sans-serif;
+  font-size:var(--text-fare); line-height:var(--lh-fare); letter-spacing:-.03em;
+  color:var(--foreground); display:block;
+}
+.money-out{
+  font-family:"PPMori-SemiBold",sans-serif;
+  font-size:var(--text-plate); line-height:var(--lh-plate); letter-spacing:.08em;
+  color:var(--negative-light); display:block;
+}
+
+/* ── surfaces: base → elevated → floating ────────────────────── */
+.card{
+  background:var(--background-primary); border:1px solid rgba(255,255,255,.07);
+  border-radius:var(--r-card); padding:var(--s4); box-shadow:var(--lift-1);
+}
+.card + .card{margin-top:var(--s3)}
+.card-quiet{background:var(--background-muted);box-shadow:none}
+
+.commitment{
+  background:linear-gradient(168deg,rgba(36,58,251,.16),rgba(18,18,32,0) 62%),var(--background-primary);
+  border:1px solid rgba(36,58,251,.34); border-radius:var(--r-card);
+  padding:var(--s5); box-shadow:var(--lift-2);
+}
+
+.route{display:flex;align-items:baseline;gap:var(--s2);font-size:var(--text-lg);line-height:var(--lh-lg);margin:var(--s3) 0 var(--s1)}
+.route .arrow{color:var(--primary-light);flex:none}
+.meta{color:var(--text-muted);font-size:var(--text-sm);line-height:var(--lh-sm)}
+
+.tag{
+  display:inline-block; font-size:var(--text-xs); line-height:var(--lh-xs);
+  padding:2px var(--s2); border-radius:var(--r-pill);
+  background:rgba(255,255,255,.06); color:var(--text-muted); border:1px solid rgba(255,255,255,.08);
+}
+.tag-warn{background:rgba(185,28,28,.14);color:var(--negative-light);border-color:rgba(185,28,28,.4)}
+.tag-live{background:rgba(36,58,251,.18);color:var(--primary-light);border-color:rgba(36,58,251,.45)}
+
+/* ── buttons ─────────────────────────────────────────────────── */
+.btn{
+  font:inherit; font-family:"PPMori-SemiBold",sans-serif;
+  font-size:var(--text-base); line-height:var(--lh-base);
+  border-radius:var(--r-pill); border:1px solid transparent;
+  padding:var(--s3) var(--s5); cursor:pointer; width:100%;
+  display:inline-flex; align-items:center; justify-content:center; gap:var(--s2);
+  transition:transform .18s var(--ease-spring), background-color .18s var(--ease-spring), border-color .18s var(--ease-spring), opacity .18s var(--ease-spring);
+}
+.btn:focus-visible{outline:2px solid var(--primary-light);outline-offset:2px}
+.btn:active{transform:scale(.975)}
+.btn:disabled{opacity:.42;cursor:not-allowed}
+.btn:disabled:active{transform:none}
+
+.btn-primary{background:var(--primary);color:#fff}
+.btn-primary:hover:not(:disabled){background:var(--primary-dark)}
+.btn-ghost{background:transparent;color:var(--foreground);border-color:rgba(255,255,255,.16)}
+.btn-ghost:hover{border-color:rgba(122,148,255,.5)}
+.btn-danger{background:transparent;color:var(--negative-light);border-color:rgba(185,28,28,.5)}
+.btn-danger:hover{background:rgba(185,28,28,.12)}
+.btn-row{display:flex;gap:var(--s2);margin-top:var(--s4)}
+
+/* ── online toggle ───────────────────────────────────────────── */
+.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--s5)}
+.toggle{
+  display:inline-flex;align-items:center;gap:var(--s2);cursor:pointer;
+  background:var(--background-muted);border:1px solid rgba(255,255,255,.09);
+  border-radius:var(--r-pill);padding:var(--s2) var(--s4);
+  font:inherit; font-size:var(--text-sm); line-height:var(--lh-sm); color:var(--text-muted);
+  transition:border-color .18s var(--ease-spring),color .18s var(--ease-spring);
+}
+.toggle:focus-visible{outline:2px solid var(--primary-light);outline-offset:2px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--white-muted);flex:none;
+  transition:background-color .2s var(--ease-spring),box-shadow .2s var(--ease-spring)}
+.toggle[aria-pressed="true"]{color:var(--foreground);border-color:rgba(36,58,251,.5)}
+.toggle[aria-pressed="true"] .dot{background:var(--primary-light);box-shadow:0 0 0 4px rgba(36,58,251,.22)}
+
+.avatar{
+  width:36px;height:36px;border-radius:50%;flex:none;
+  background:linear-gradient(150deg,var(--primary),var(--primary-dark));
+  display:grid;place-items:center;font-family:"PPMori-SemiBold",sans-serif;font-size:var(--text-sm);
+}
+
+/* ── the status rail: the ride's real state machine, drawn ──────
+   backend RIDE_TRANSITIONS is assigned → en_route → reached →
+   started → completed. Numbering is earned here because the order
+   is enforced server-side, not decorative. */
+.rail-wrap{position:relative;margin:var(--s5) 0 0}
+.rail{list-style:none;margin:0;padding:0;position:relative}
+.rail::before{content:"";position:absolute;left:11px;top:11px;bottom:11px;width:2px;background:rgba(255,255,255,.09)}
+.rail-fill{position:absolute;left:11px;top:11px;width:2px;background:linear-gradient(var(--primary-light),var(--primary));
+  transition:height .45s var(--ease-spring)}
+.rail li{position:relative;padding:0 0 var(--s5) var(--s8);min-height:24px}
+.rail li:last-child{padding-bottom:0}
+.rail .pip{
+  position:absolute;left:4px;top:3px;width:16px;height:16px;border-radius:50%;
+  background:var(--background);border:2px solid rgba(255,255,255,.18);
+  display:grid;place-items:center;font-size:9px;color:var(--text-muted);
+  transition:border-color .3s var(--ease-spring),background-color .3s var(--ease-spring);
+}
+.rail li[data-state="done"] .pip{border-color:var(--primary);background:var(--primary);color:#fff}
+.rail li[data-state="now"] .pip{border-color:var(--primary-light);box-shadow:0 0 0 5px rgba(36,58,251,.2)}
+.rail .step{font-size:var(--text-base);line-height:var(--lh-base);color:var(--text-muted)}
+.rail li[data-state="done"] .step,.rail li[data-state="now"] .step{color:var(--foreground)}
+.rail li[data-state="now"] .step{font-family:"PPMori-SemiBold",sans-serif}
+.rail .when{font-size:var(--text-xs);line-height:var(--lh-xs);color:var(--text-muted);display:block}
+
+/* ── OTP ─────────────────────────────────────────────────────── */
+.otp{display:flex;gap:var(--s2);justify-content:center;margin:var(--s5) 0}
+.otp span{
+  width:46px;height:56px;border-radius:10px;display:grid;place-items:center;
+  background:var(--background-muted);border:1px solid rgba(255,255,255,.1);
+  font-family:"PPMori-SemiBold",sans-serif;font-size:var(--text-2xl);
+  transition:border-color .18s var(--ease-spring);
+}
+.otp span[data-filled="1"]{border-color:var(--primary)}
+.keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--s2)}
+.keypad button{
+  font:inherit;font-size:var(--text-xl);font-family:"PPMori-Regular",sans-serif;
+  padding:var(--s4) 0;border-radius:12px;cursor:pointer;
+  background:var(--background-primary);color:var(--foreground);border:1px solid rgba(255,255,255,.07);
+  transition:background-color .15s var(--ease-spring),transform .15s var(--ease-spring);
+}
+.keypad button:hover{background:var(--background-muted)}
+.keypad button:focus-visible{outline:2px solid var(--primary-light);outline-offset:2px}
+.keypad button:active{transform:scale(.94)}
+
+/* ── forms ───────────────────────────────────────────────────── */
+label{display:block;font-size:var(--text-sm);line-height:var(--lh-sm);color:var(--text-muted);margin:var(--s4) 0 var(--s2)}
+input[type="text"],input[type="number"]{
+  width:100%;font:inherit;font-size:var(--text-base);
+  background:var(--background-muted);color:var(--foreground);
+  border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:var(--s3) var(--s4);
+  transition:border-color .18s var(--ease-spring);
+}
+input:focus{outline:none;border-color:var(--primary)}
+input:focus-visible{outline:2px solid var(--primary-light);outline-offset:1px}
+.hint{font-size:var(--text-xs);line-height:var(--lh-xs);color:var(--text-muted);margin-top:var(--s2)}
+.hint[data-bad="1"]{color:var(--negative-light)}
+
+.split{display:flex;justify-content:space-between;align-items:baseline;gap:var(--s3);padding:var(--s2) 0}
+.split + .split{border-top:1px solid rgba(255,255,255,.06)}
+.split dt{color:var(--text-muted);font-size:var(--text-sm);margin:0}
+.split dd{margin:0;font-family:"PPMori-SemiBold",sans-serif;font-size:var(--text-base)}
+
+/* ── empty state ─────────────────────────────────────────────── */
+.empty{text-align:center;padding:var(--s10) var(--s4)}
+.empty .title{margin-bottom:var(--s2)}
+
+/* ── tabs ────────────────────────────────────────────────────── */
+.tabs{
+  flex:none;display:grid;grid-template-columns:repeat(4,1fr);
+  border-top:1px solid rgba(255,255,255,.08);
+  background:rgba(11,11,20,.92); backdrop-filter:blur(12px);
+  padding:var(--s2) var(--s2) var(--s5);
+}
+.tabs button{
+  font:inherit;font-size:var(--text-xs);line-height:var(--lh-xs);
+  background:none;border:0;color:var(--text-muted);cursor:pointer;
+  padding:var(--s2) 0;border-radius:10px;
+  display:flex;flex-direction:column;align-items:center;gap:var(--s1);
+  transition:color .18s var(--ease-spring),transform .18s var(--ease-spring);
+}
+.tabs button:hover{color:var(--foreground)}
+.tabs button:focus-visible{outline:2px solid var(--primary-light);outline-offset:-2px}
+.tabs button:active{transform:translateY(1px)}
+.tabs button[aria-current="page"]{color:var(--primary-light)}
+.tabs .glyph{font-size:var(--text-lg);line-height:1}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}
+}
+@media (max-width:460px){
+  body{padding:var(--s4) var(--s2)}
+  .phone{height:auto;min-height:82vh;border-radius:26px}
+}
+</style>
+
+<header class="masthead">
+  <h1>RCS Drivers</h1>
+  <p>Interactive UI prototype. Every button works — toggle online, open a ride, run it to completion, claim a marketplace posting. Numbers are invented.</p>
+</header>
+
+<nav class="jump" id="jump" aria-label="Jump to screen"></nav>
+
+<div class="phone">
+  <div class="statusbar"><span>9:41</span><span>RCS Drivers</span><span>76%</span></div>
+
+  <div class="viewport" id="viewport">
+
+    <!-- ── verification pending ─────────────────────────────── -->
+    <section class="screen" data-screen="pending">
+      <p class="eyebrow">Account</p>
+      <h2 class="title">We're checking your documents</h2>
+      <p class="muted">Raju usually clears this within a day. You'll get a notification the moment it's done — nothing to do until then.</p>
+      <div class="card" style="margin-top:var(--s6)">
+        <dl style="margin:0">
+          <div class="split"><dt>Licence</dt><dd style="color:var(--primary-light)">Received</dd></div>
+          <div class="split"><dt>Registration certificate</dt><dd style="color:var(--primary-light)">Received</dd></div>
+          <div class="split"><dt>Insurance</dt><dd style="color:var(--text-muted)">Not uploaded</dd></div>
+        </dl>
+        <div class="btn-row"><button class="btn btn-ghost" data-go="profile">Upload insurance</button></div>
+      </div>
+      <p class="muted" style="margin-top:var(--s5)">Rides and the marketplace open up once you're approved.</p>
+    </section>
+
+    <!-- ── verification rejected ───────────────────────────── -->
+    <section class="screen" data-screen="rejected">
+      <p class="eyebrow">Account</p>
+      <h2 class="title">Your application needs a fix</h2>
+      <div class="card" style="border-color:rgba(185,28,28,.4)">
+        <span class="tag tag-warn">Rejected</span>
+        <p style="margin:var(--s3) 0 0;font-size:var(--text-base);line-height:var(--lh-base)">
+          The registration certificate photo is cut off at the bottom — the expiry date isn't readable. Upload the full page and we'll look again.
+        </p>
+      </div>
+      <p class="muted" style="margin-top:var(--s4)">This is the exact text Raju wrote, shown verbatim. Fix the one thing named and resubmit.</p>
+      <div class="btn-row"><button class="btn btn-primary" data-go="profile">Re-upload document</button></div>
+    </section>
+
+    <!-- ── home ────────────────────────────────────────────── -->
+    <section class="screen" data-screen="home">
+      <div class="topbar">
+        <button class="toggle" id="onlineToggle" aria-pressed="true"><span class="dot"></span><span id="onlineLabel">Online</span></button>
+        <div class="avatar" aria-hidden="true">R</div>
+      </div>
+
+      <div id="homeCommitment">
+        <p class="eyebrow">Next ride · in 42 min</p>
+        <div class="commitment">
+          <span class="money-in">₹1,450</span>
+          <div class="route"><span>SNU Gate 2</span><span class="arrow">→</span><span>IGI T3</span></div>
+          <p class="meta">Today 4:15 PM · Sedan · Carrier needed</p>
+          <div class="btn-row">
+            <button class="btn btn-primary" data-go="active">Start ride</button>
+            <button class="btn btn-ghost" data-go="ride">Details</button>
+          </div>
+        </div>
+        <button class="btn btn-ghost" style="margin-top:var(--s3);justify-content:space-between" data-go="history">
+          <span>Later today</span><span class="tag">2 rides</span>
+        </button>
+      </div>
+
+      <div id="homeEmpty" hidden>
+        <div class="empty">
+          <h2 class="title">No rides booked</h2>
+          <p class="muted">You're online, so an assignment can land any moment. Until then, there's work on the marketplace.</p>
+          <div class="btn-row"><button class="btn btn-primary" data-go="market">Browse marketplace</button></div>
+        </div>
+      </div>
+
+      <div id="homeOffline" hidden>
+        <div class="empty">
+          <h2 class="title">You're offline</h2>
+          <p class="muted">No new rides will be assigned to you. Marketplace postings are still open to claim.</p>
+        </div>
+      </div>
+
+      <hr style="border:0;border-top:1px solid rgba(255,255,255,.08);margin:var(--s6) 0 var(--s5)">
+      <p class="eyebrow">Marketplace · 3 open</p>
+      <div class="card">
+        <div class="route" style="margin-top:0"><span>Ghaziabad</span><span class="arrow">→</span><span>Agra</span></div>
+        <p class="meta">Tomorrow 6:00 AM · Ertiga · posted by Anil</p>
+        <dl style="margin:var(--s3) 0 0">
+          <div class="split"><dt>Customer pays you</dt><dd>₹4,200</dd></div>
+        </dl>
+        <p class="muted" style="margin-top:var(--s3)">Deposit to claim</p>
+        <span class="money-out">₹400</span>
+        <div class="btn-row"><button class="btn btn-primary" data-go="claim">Claim this ride</button></div>
+      </div>
+      <div class="btn-row"><button class="btn btn-ghost" data-go="market">See all postings</button></div>
+    </section>
+
+    <!-- ── ride detail ─────────────────────────────────────── -->
+    <section class="screen" data-screen="ride">
+      <p class="eyebrow">Assigned ride</p>
+      <span class="money-in">₹1,450</span>
+      <p class="muted" style="margin-top:var(--s1)">Collect in cash · ₹145 commission deducted from your weekly payout</p>
+
+      <div class="card" style="margin-top:var(--s5)">
+        <p class="eyebrow" style="margin-bottom:var(--s2)">Pickup</p>
+        <p style="margin:0">SNU Gate 2, Shiv Nadar University</p>
+        <p class="meta">Today 4:15 PM</p>
+        <p class="eyebrow" style="margin:var(--s4) 0 var(--s2)">Drop</p>
+        <p style="margin:0">IGI Airport Terminal 3, Delhi</p>
+        <p class="meta">61.4 km</p>
+      </div>
+
+      <div class="card">
+        <div class="split"><dt>Rider</dt><dd>Ananya M.</dd></div>
+        <div class="split"><dt>Vehicle class</dt><dd>Sedan</dd></div>
+        <div class="split"><dt>Carrier</dt><dd>Required</dd></div>
+        <div class="split"><dt>Safer route</dt><dd style="color:var(--primary-light)">Requested</dd></div>
+      </div>
+
+      <div class="card card-quiet">
+        <p class="muted" style="margin:0">The rider gave a safer-route preference, so your navigation runs via the waypoint rather than the fastest line. Don't override it.</p>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-primary" data-go="active">Start ride</button>
+        <button class="btn btn-ghost" onclick="alert('Opens the dialler with the rider’s number.')">Call</button>
+      </div>
+      <div class="btn-row"><button class="btn btn-danger" data-go="home">Decline this ride</button></div>
+    </section>
+
+    <!-- ── active ride ─────────────────────────────────────── -->
+    <section class="screen" data-screen="active">
+      <p class="eyebrow">In progress</p>
+      <h2 class="title" id="activeHeading">Head to pickup</h2>
+      <p class="muted">SNU Gate 2 → IGI Terminal 3 · Ananya M.</p>
+
+      <div class="rail-wrap">
+        <ol class="rail" id="rail">
+          <li data-step="assigned"><span class="pip">✓</span><span class="step">Assigned</span><span class="when">4:02 PM</span></li>
+          <li data-step="en_route"><span class="pip"></span><span class="step">On the way to pickup</span><span class="when">location shared every 4s</span></li>
+          <li data-step="reached"><span class="pip"></span><span class="step">Reached pickup</span><span class="when">rider is notified</span></li>
+          <li data-step="started"><span class="pip"></span><span class="step">Ride started</span><span class="when">needs the rider's 4-digit code</span></li>
+          <li data-step="completed"><span class="pip"></span><span class="step">Completed</span><span class="when">collect ₹1,450 in cash</span></li>
+        </ol>
+        <div class="rail-fill" id="railFill" style="height:0"></div>
+      </div>
+
+      <div class="btn-row"><button class="btn btn-primary" id="advance">Start driving</button></div>
+      <div class="btn-row"><button class="btn btn-ghost" data-go="ride">Ride details</button></div>
+    </section>
+
+    <!-- ── OTP ─────────────────────────────────────────────── -->
+    <section class="screen" data-screen="otp">
+      <p class="eyebrow">Verify the rider</p>
+      <h2 class="title">Ask Ananya for her code</h2>
+      <p class="muted">Four digits, shown in her app. The ride can't start without it — this is what proves you picked up the right person.</p>
+
+      <div class="otp" id="otpBoxes">
+        <span data-filled="0"></span><span data-filled="0"></span><span data-filled="0"></span><span data-filled="0"></span>
+      </div>
+      <p class="hint" id="otpHint">Try 4913.</p>
+
+      <div class="keypad" id="keypad">
+        <button>1</button><button>2</button><button>3</button>
+        <button>4</button><button>5</button><button>6</button>
+        <button>7</button><button>8</button><button>9</button>
+        <button data-key="clear" style="font-size:var(--text-sm)">Clear</button>
+        <button>0</button>
+        <button data-key="back" style="font-size:var(--text-sm)">Back</button>
+      </div>
+
+      <div class="btn-row"><button class="btn btn-ghost" data-go="active">Rider isn't here yet</button></div>
+    </section>
+
+    <!-- ── marketplace ─────────────────────────────────────── -->
+    <section class="screen" data-screen="market">
+      <div class="topbar">
+        <div><p class="eyebrow" style="margin:0">Marketplace</p><h2 class="title" style="margin:0">3 open postings</h2></div>
+      </div>
+      <p class="muted">Rides other drivers can't take. You pay the poster a deposit to claim one; the customer still pays you the fare directly, in cash, as always.</p>
+
+      <div class="card" style="margin-top:var(--s5)">
+        <div class="route" style="margin-top:0"><span>Ghaziabad</span><span class="arrow">→</span><span>Agra</span></div>
+        <p class="meta">Tomorrow 6:00 AM · Ertiga · posted by Anil</p>
+        <dl style="margin:var(--s3) 0 0"><div class="split"><dt>Customer pays you</dt><dd>₹4,200</dd></div></dl>
+        <p class="muted" style="margin-top:var(--s3)">Deposit to claim</p>
+        <span class="money-out">₹400</span>
+        <div class="btn-row"><button class="btn btn-primary" data-go="claim">Claim</button></div>
+      </div>
+
+      <div class="card">
+        <div class="route" style="margin-top:0"><span>SNU</span><span class="arrow">→</span><span>Jaipur</span></div>
+        <p class="meta">Sat 5:30 AM · Innova · posted by Vikram</p>
+        <dl style="margin:var(--s3) 0 0"><div class="split"><dt>Customer pays you</dt><dd>₹7,800</dd></div></dl>
+        <p class="muted" style="margin-top:var(--s3)">Deposit to claim</p>
+        <span class="money-out">₹900</span>
+        <div class="btn-row"><button class="btn btn-primary" data-go="claim">Claim</button></div>
+      </div>
+
+      <div class="card">
+        <div class="route" style="margin-top:0"><span>Noida S-62</span><span class="arrow">→</span><span>Haridwar</span></div>
+        <p class="meta">Sun 7:00 AM · Wagon R · posted by Sunil</p>
+        <dl style="margin:var(--s3) 0 0"><div class="split"><dt>Customer pays you</dt><dd>₹3,100</dd></div></dl>
+        <p class="muted" style="margin-top:var(--s3)">Deposit to claim</p>
+        <span class="money-out">₹250</span>
+        <div class="btn-row"><button class="btn btn-primary" data-go="claim">Claim</button></div>
+      </div>
+
+      <div class="btn-row"><button class="btn btn-ghost" data-go="post">Post a ride you can't take</button></div>
+    </section>
+
+    <!-- ── claim ───────────────────────────────────────────── -->
+    <section class="screen" data-screen="claim">
+      <p class="eyebrow">Claim · Ghaziabad → Agra</p>
+      <h2 class="title">You're paying ₹400 to take this job</h2>
+
+      <div class="card" style="border-color:rgba(185,28,28,.4)">
+        <p class="muted" style="margin:0 0 var(--s2)">You pay Anil, by UPI, now</p>
+        <span class="money-out">₹400</span>
+        <p style="margin:var(--s3) 0 0;font-size:var(--text-sm);line-height:var(--lh-sm)">
+          This is not a hold. It does not come back to you when the ride finishes — it's what you're paying Anil for the job.
+        </p>
+      </div>
+
+      <div class="card">
+        <div class="split"><dt>Customer pays you, in cash</dt><dd>₹4,200</dd></div>
+        <div class="split"><dt>You pay Anil</dt><dd style="color:var(--negative-light)">−₹400</dd></div>
+        <div class="split"><dt style="color:var(--foreground)">You keep</dt><dd>₹3,800</dd></div>
+      </div>
+
+      <div class="card card-quiet">
+        <p class="muted" style="margin:0">Cancel after claiming and you forfeit ₹48 — the platform fee. The remaining ₹352 comes back.</p>
+      </div>
+
+      <div class="btn-row"><button class="btn btn-primary" onclick="alert('Opens a UPI intent for ₹400 to Anil.')">Pay ₹400 by UPI</button></div>
+      <div class="btn-row"><button class="btn btn-ghost" data-go="market">Back to postings</button></div>
+    </section>
+
+    <!-- ── post ────────────────────────────────────────────── -->
+    <section class="screen" data-screen="post">
+      <p class="eyebrow">Marketplace</p>
+      <h2 class="title">Post a ride you can't take</h2>
+      <p class="muted">Another driver pays you a deposit to take it over. The customer keeps paying that driver directly — nothing about the fare changes.</p>
+
+      <label for="pFrom">Pickup</label>
+      <input id="pFrom" type="text" value="Ghaziabad" autocomplete="off">
+      <label for="pTo">Drop</label>
+      <input id="pTo" type="text" value="Agra" autocomplete="off">
+      <label for="pFare">Fare the customer pays (₹)</label>
+      <input id="pFare" type="number" value="4200" inputmode="numeric">
+      <label for="pDep">Deposit you want (₹)</label>
+      <input id="pDep" type="number" value="400" inputmode="numeric">
+      <p class="hint" id="depHint">Minimum ₹100, and it has to be less than the fare.</p>
+
+      <div class="card" style="margin-top:var(--s5)">
+        <div class="split"><dt>Deposit</dt><dd id="sumDep">₹400</dd></div>
+        <div class="split"><dt>Platform fee (12%)</dt><dd id="sumFee" style="color:var(--negative-light)">−₹48</dd></div>
+        <div class="split"><dt style="color:var(--foreground)">You receive on completion</dt><dd id="sumNet">₹352</dd></div>
+      </div>
+
+      <div class="btn-row"><button class="btn btn-primary" id="postBtn">Post this ride</button></div>
+    </section>
+
+    <!-- ── earnings ────────────────────────────────────────── -->
+    <section class="screen" data-screen="earnings">
+      <p class="eyebrow">This week</p>
+      <span class="money-in">₹18,240</span>
+      <p class="muted" style="margin-top:var(--s1)">14 rides · Mon 28 Jul – Sun 3 Aug</p>
+
+      <div class="card" style="margin-top:var(--s5)">
+        <div class="split"><dt>Cash you collected</dt><dd>₹20,270</dd></div>
+        <div class="split"><dt>Commission owed to RCS</dt><dd style="color:var(--negative-light)">−₹2,030</dd></div>
+        <div class="split"><dt style="color:var(--foreground)">Settle by Monday</dt><dd>₹2,030</dd></div>
+      </div>
+
+      <p class="eyebrow" style="margin-top:var(--s6)">Recent</p>
+      <div class="card">
+        <div class="split"><dt>SNU → IGI T3 · Fri</dt><dd>₹1,450</dd></div>
+        <div class="split"><dt>SNU → Noida S-18 · Fri</dt><dd>₹620</dd></div>
+        <div class="split"><dt>Greater Noida → SNU · Thu</dt><dd>₹480</dd></div>
+        <div class="split"><dt>SNU → Agra · Thu</dt><dd>₹4,100</dd></div>
+      </div>
+      <div class="btn-row"><button class="btn btn-ghost" data-go="history">Full history</button></div>
+    </section>
+
+    <!-- ── history ─────────────────────────────────────────── -->
+    <section class="screen" data-screen="history">
+      <p class="eyebrow">Rides</p>
+      <h2 class="title">Later today</h2>
+      <div class="card">
+        <div class="route" style="margin-top:0"><span>SNU Gate 2</span><span class="arrow">→</span><span>IGI T3</span></div>
+        <p class="meta">4:15 PM · Sedan</p>
+        <span class="tag tag-live">Next</span>
+      </div>
+      <div class="card">
+        <div class="route" style="margin-top:0"><span>IGI T3</span><span class="arrow">→</span><span>SNU</span></div>
+        <p class="meta">9:40 PM · Sedan · return leg</p>
+        <span class="tag">Assigned</span>
+      </div>
+      <div class="card">
+        <div class="route" style="margin-top:0"><span>SNU</span><span class="arrow">→</span><span>Noida S-62</span></div>
+        <p class="meta">11:15 PM · Sedan · shared</p>
+        <span class="tag">Assigned</span>
+      </div>
+      <p class="muted" style="margin-top:var(--s5)">Round-trip legs sit next to each other because they're one commitment — you can't hand back only the return.</p>
+    </section>
+
+    <!-- ── profile ─────────────────────────────────────────── -->
+    <section class="screen" data-screen="profile">
+      <div class="topbar">
+        <div><p class="eyebrow" style="margin:0">Driver</p><h2 class="title" style="margin:0">Raju Kumar</h2></div>
+        <div class="avatar" aria-hidden="true">R</div>
+      </div>
+      <p class="muted">Approved · driving with RCS since March 2026</p>
+
+      <div class="card" style="margin-top:var(--s5)">
+        <p class="eyebrow" style="margin-bottom:var(--s2)">Vehicle</p>
+        <span class="money-out" style="color:var(--foreground)">UP 16 CJ 4471</span>
+        <p class="meta" style="margin-top:var(--s2)">Maruti Dzire · Sedan · 4 seats · carrier fitted</p>
+      </div>
+
+      <div class="card">
+        <div class="split"><dt>Licence</dt><dd style="color:var(--primary-light)">Valid to 2031</dd></div>
+        <div class="split"><dt>Registration certificate</dt><dd style="color:var(--primary-light)">Valid to 2029</dd></div>
+        <div class="split"><dt>Insurance</dt><dd class="tag tag-warn">Expires in 19 days</dd></div>
+      </div>
+
+      <div class="btn-row"><button class="btn btn-ghost" onclick="alert('Opens the camera to photograph the new policy.')">Update insurance</button></div>
+      <div class="btn-row"><button class="btn btn-ghost" data-go="post">Post a ride to the marketplace</button></div>
+      <div class="btn-row"><button class="btn btn-danger" id="goOffline">Go offline</button></div>
+      <p class="muted" style="margin-top:var(--s3)">You can't go offline while a ride is in progress.</p>
+    </section>
+
+  </div>
+
+  <nav class="tabs" id="tabs" aria-label="Main">
+    <button data-go="home" data-tab="home"><span class="glyph" aria-hidden="true">◎</span>Rides</button>
+    <button data-go="market" data-tab="market"><span class="glyph" aria-hidden="true">⇄</span>Market</button>
+    <button data-go="earnings" data-tab="earnings"><span class="glyph" aria-hidden="true">₹</span>Earnings</button>
+    <button data-go="profile" data-tab="profile"><span class="glyph" aria-hidden="true">◍</span>Profile</button>
+  </nav>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  const screens = [...document.querySelectorAll("[data-screen]")];
+  const viewport = document.getElementById("viewport");
+
+  const LABELS = {
+    pending:"Pending", rejected:"Rejected", home:"Home", ride:"Ride detail",
+    active:"Active ride", otp:"Rider code", market:"Marketplace", claim:"Claim",
+    post:"Post a ride", earnings:"Earnings", history:"Ride list", profile:"Profile",
+  };
+
+  /* ── navigation ─────────────────────────────────────────── */
+  let current = "home";
+
+  function show(name){
+    if (!LABELS[name]) return;
+    current = name;
+    screens.forEach(s => s.classList.toggle("is-active", s.dataset.screen === name));
+    viewport.scrollTop = 0;
+
+    // The rail measures itself, which only works once it has a layout.
+    if (name === "active") paintRide();
+
+    document.querySelectorAll("#jump button").forEach(b =>
+      b.setAttribute("aria-current", String(b.dataset.go === name)));
+
+    // A tab stays lit for the screens that live under it.
+    const owner = {ride:"home", active:"home", otp:"home", history:"home",
+                   claim:"market", post:"market"}[name] || name;
+    document.querySelectorAll("#tabs button").forEach(b => {
+      if (b.dataset.tab === owner) b.setAttribute("aria-current", "page");
+      else b.removeAttribute("aria-current");
+    });
+  }
+
+  // Build the jump bar from the screens themselves, so it can't drift.
+  const jump = document.getElementById("jump");
+  screens.forEach(s => {
+    const b = document.createElement("button");
+    b.textContent = LABELS[s.dataset.screen] || s.dataset.screen;
+    b.dataset.go = s.dataset.screen;
+    jump.append(b);
+  });
+
+  document.addEventListener("click", e => {
+    const t = e.target.closest("[data-go]");
+    if (t) show(t.dataset.go);
+  });
+
+  /* ── online toggle ──────────────────────────────────────── */
+  const toggle = document.getElementById("onlineToggle");
+  const onlineLabel = document.getElementById("onlineLabel");
+  const commitment = document.getElementById("homeCommitment");
+  const emptyBlock = document.getElementById("homeEmpty");
+  const offlineBlock = document.getElementById("homeOffline");
+
+  let online = true;
+  let hasRide = true;
+
+  function paintHome(){
+    onlineLabel.textContent = online ? "Online" : "Offline";
+    toggle.setAttribute("aria-pressed", String(online));
+    commitment.hidden  = !(online && hasRide);
+    emptyBlock.hidden  = !(online && !hasRide);
+    offlineBlock.hidden = online;
+  }
+
+  toggle.addEventListener("click", () => {
+    // Mirrors PATCH /driver/online: the server refuses to take you offline
+    // while a ride is still running, so the UI refuses in the same place.
+    if (online && rideStep > 0 && rideStep < 4){
+      alert("Finish your active ride before going offline.");
+      return;
+    }
+    online = !online;
+    paintHome();
+  });
+
+  document.getElementById("goOffline").addEventListener("click", () => {
+    if (rideStep > 0 && rideStep < 4){
+      alert("Finish your active ride before going offline.");
+      return;
+    }
+    online = false; paintHome(); show("home");
+  });
+
+  /* ── the ride state machine ─────────────────────────────── */
+  // Same order the backend enforces in RIDE_TRANSITIONS.
+  const STEPS = ["assigned","en_route","reached","started","completed"];
+  const HEADING = {
+    assigned:"Head to pickup", en_route:"On the way", reached:"Waiting at pickup",
+    started:"Ride in progress", completed:"Ride complete",
+  };
+  const NEXT_LABEL = {
+    assigned:"Start driving", en_route:"I've reached pickup",
+    reached:"Start ride", started:"Complete ride", completed:"Back to rides",
+  };
+
+  let rideStep = 0;
+  const rail = document.getElementById("rail");
+  const railFill = document.getElementById("railFill");
+  const advance = document.getElementById("advance");
+  const heading = document.getElementById("activeHeading");
+
+  function paintRide(){
+    const items = [...rail.querySelectorAll("li")];
+    items.forEach((li,i) => {
+      li.dataset.state = i < rideStep ? "done" : i === rideStep ? "now" : "";
+      li.querySelector(".pip").textContent = i < rideStep ? "✓" : "";
+    });
+    // Measured off the pips rather than a percentage: the last row has no
+    // padding-bottom, so an even 25%-per-step would drift low by the end.
+    // offsetTop reads 0 while the screen is display:none, hence the guard —
+    // show() re-runs this once the screen is actually laid out.
+    if (rail.offsetHeight){
+      railFill.style.height = (items[rideStep].offsetTop - items[0].offsetTop) + "px";
+    }
+    heading.textContent = HEADING[STEPS[rideStep]];
+    advance.textContent = NEXT_LABEL[STEPS[rideStep]];
+  }
+
+  advance.addEventListener("click", () => {
+    // reached → started is the one transition the driver can't make alone.
+    if (STEPS[rideStep] === "reached"){ otp = ""; paintOtp(); show("otp"); return; }
+    if (STEPS[rideStep] === "completed"){
+      rideStep = 0; hasRide = false; paintRide(); paintHome(); show("home"); return;
+    }
+    rideStep = Math.min(rideStep + 1, STEPS.length - 1);
+    paintRide();
+  });
+
+  /* ── OTP ────────────────────────────────────────────────── */
+  const CODE = "4913";
+  let otp = "";
+  const boxes = [...document.querySelectorAll("#otpBoxes span")];
+  const otpHint = document.getElementById("otpHint");
+
+  function paintOtp(){
+    boxes.forEach((b,i) => {
+      b.textContent = otp[i] ? "•" : "";
+      b.dataset.filled = otp[i] ? "1" : "0";
+    });
+  }
+
+  document.getElementById("keypad").addEventListener("click", e => {
+    const b = e.target.closest("button");
+    if (!b) return;
+
+    if (b.dataset.key === "clear"){ otp = ""; }
+    else if (b.dataset.key === "back"){ otp = otp.slice(0,-1); }
+    else if (otp.length < 4){ otp += b.textContent.trim(); }
+
+    otpHint.dataset.bad = "0";
+    otpHint.textContent = "Try 4913.";
+    paintOtp();
+
+    if (otp.length === 4){
+      if (otp === CODE){
+        rideStep = 3; paintRide(); show("active");
+      } else {
+        otpHint.dataset.bad = "1";
+        otpHint.textContent = "That code doesn't match. Check with the rider.";
+        otp = ""; setTimeout(paintOtp, 550);
+      }
+    }
+  });
+
+  /* ── post form ──────────────────────────────────────────── */
+  const fare = document.getElementById("pFare");
+  const dep = document.getElementById("pDep");
+  const depHint = document.getElementById("depHint");
+  const postBtn = document.getElementById("postBtn");
+  const rupees = n => "₹" + Math.round(n).toLocaleString("en-IN");
+
+  function paintPost(){
+    const f = Number(fare.value) || 0;
+    const d = Number(dep.value) || 0;
+    let bad = "";
+
+    if (d < 100) bad = "The minimum deposit is ₹100.";
+    else if (d >= f) bad = "The deposit has to be less than the fare, or nobody will take it.";
+
+    depHint.dataset.bad = bad ? "1" : "0";
+    depHint.textContent = bad || "Minimum ₹100, and it has to be less than the fare.";
+    postBtn.disabled = Boolean(bad);
+
+    const fee = d * 0.12;
+    document.getElementById("sumDep").textContent = rupees(d);
+    document.getElementById("sumFee").textContent = "−" + rupees(fee);
+    document.getElementById("sumNet").textContent = rupees(d - fee);
+  }
+
+  fare.addEventListener("input", paintPost);
+  dep.addEventListener("input", paintPost);
+  postBtn.addEventListener("click", () => { alert("Posted. Other drivers can claim it now."); show("market"); });
+
+  /* ── go ─────────────────────────────────────────────────── */
+  paintHome(); paintRide(); paintOtp(); paintPost(); show("home");
+})();
+</script>
