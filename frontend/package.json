@@ -4,7 +4,10 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "theme": "node ../shared/theme/build-css.cjs",
+    "predev": "npm run theme",
     "dev": "vite",
+    "prebuild": "npm run theme",
     "build": "vite build",
     "preview": "vite preview"
   },

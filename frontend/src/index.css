@@ -1,5 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
 @import "tailwindcss";
+/* Generated from shared/theme/tokens.cjs, which the driver app reads too. */
+@import "./theme.generated.css";
 
 /* PP Mori (Pangram Pangram, free personal v1.0). 700 maps to SemiBold so
    font-bold renders real glyphs. Metric overrides copy Poppins' ascent/descent
@@ -67,33 +69,13 @@
 
 @custom-variant dark (&:is(.dark *));
 
-@theme {
-    --font-sans: "PP Mori", "Poppins", sans-serif;
-    --color-white-muted: #AEAEAE;
-    --color-primary: #243AFB;
-    --color-primary-dark: #1212B4;
-    --color-primary-light: #7A94FF;
-    --color-negative: #B91C1C;
-    --color-negative-dark: #7A0F0F;
-    --color-negative-light: #E86A6A;
-}
+/* The @theme tokens and the :root theme colors now live in
+   theme.generated.css, imported above. Edit shared/theme/tokens.cjs. */
 
-/* Theme colors (dark is the default) */
 :root {
     /* Tells the UA to paint scrollbars and form controls dark, so transparent
        scrollbar surfaces reveal dark chrome instead of the light-mode default. */
     color-scheme: dark;
-
-    --background-muted: #1d1d27;
-    --background-primary: #121220;
-    --background: #0B0B14;
-    --foreground: #ffffff;
-    --foreground-muted: #f3f3f3;
-
-    --text: #ffffff;
-    --text-muted: #AEAEAE;
-    --text-foreground: #000000;
-    --text-muted-foreground: #AEAEAE;
 }
 
 /* .dark {
