@@ -358,28 +358,20 @@ driverRouter.patch('/rides/:id/accept', protect, async (req, res) => {
 
     if (!booking) return res.status(404).json({ error: 'Booking not found' })
 
-    // Allowlist, not denylist: only a booking still looking for a driver can be
-    // accepted. Testing for `assigned` alone let a cancelled, completed, expired
-    // or already-underway ride be handed to a new driver.
     if (!ASSIGNABLE_STATUSES.includes(booking.status)) {
         return res.status(409).json({ error: `A ${booking.status} ride cannot be accepted`, status: booking.status })
     }
 
-    // Same room test getDriver applies before it offers the ride: a solo ride
-    // needs the whole vehicle, a sharing ride one free seat. A class with no seat
-    // count is a data bug — refuse rather than write capacity from a null.
     const seats = seatsOf(driver.vehicleClass)
     const hasRoom = booking.sharing
         ? driver.vehicleCapacity > 0
         : seats !== null && driver.vehicleCapacity >= seats
     if (!hasRoom) return res.status(409).json({ error: 'Vehicle has no room for this ride' })
 
-    // on-spot rides have no confirmedAt yet
     if (!await claimBooking(id, driver.id, booking.confirmedAt ?? new Date())) {
         return res.status(409).json({ error: 'Ride was taken while the request was in flight' })
     }
 
-    // Only after the claim succeeds, so a lost race can't strand a seat.
     await prisma.driver.update({
         where: { id: driver.id },
         data: { vehicleCapacity: booking.sharing ? { decrement: 1 } : 0 },
@@ -423,10 +415,6 @@ driverRouter.patch('/rides/:id/decline', protect, async (req, res) => {
 
     if (!booking) return res.status(404).json({ error: 'Booking not found' })
 
-    // Same allowlist accept uses: there is nothing to decline on a ride that is
-    // already taken, cancelled, expired or underway. Writes nothing either way —
-    // the assignment loop moves on when sendFCM comes back false, and until the
-    // driver app is live this endpoint only reports what the booking is doing.
     if (!ASSIGNABLE_STATUSES.includes(booking.status)) {
         return res.status(409).json({ error: `A ${booking.status} ride cannot be declined`, status: booking.status })
     }
