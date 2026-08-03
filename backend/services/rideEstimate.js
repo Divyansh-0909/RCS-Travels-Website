@@ -45,14 +45,24 @@ const MARKET_RATE = { pickup: 60, perKm: 4.7, perMin: 5.3, minimum: 130 }
 // their rate card. Note the +₹100 is worth watching on short city fares, where it
 // lands as +30% rather than the ~+8% it means on a campus run.
 //
-// !! NEEDS PROVIDER CONFIRMATION — ×3.2 for the premium SUV is ours, not theirs.
-// Nothing on the rate card prices one, so it is expressed against the hatchback
-// like every other class. One constant reprices every premium fare on every route.
+// The premium SUV's ×2.75 is the provider's now, not ours: fitted to the four
+// Innova Crysta quotes they gave in August 2026 — IGI 4000 against a 1400
+// hatchback, Connaught Place 3000 against 1200, Botanical 2200 against 800, Advant
+// 2000 against 700. Least squares through the origin lands on 2.73 and the mean of
+// the four ratios on 2.74; 2.75 rounds to the same card on the ₹50 grid and is
+// exact on Botanical. It replaces the ×3.2 placeholder, which quoted every premium
+// fare about 16% over what they actually charge.
+//
+// !! Connaught Place is the one quote that argues — alone it implies 2.50, against
+// 2.75-2.86 everywhere else — so this multiplier quotes it at 3300 against their
+// 3000. Their number is in zones.geojson as a quoted `suv_premium`, but no stored
+// per-class zone fare is read yet (see the rate-card audit in ROADMAP.txt); until
+// one is, this constant is the only thing pricing a premium seat.
 const CLASS_FROM_HATCHBACK = {
   hatchback:   (fare) => fare,
   sedan:       (fare) => fare + 100,
   suv:         (fare) => fare * 1.6,
-  suv_premium: (fare) => fare * 3.2,
+  suv_premium: (fare) => fare * 2.75,
 }
 
 // Derived fares land back on the grid their source uses: the campus card deals

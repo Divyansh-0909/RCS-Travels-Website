@@ -8,6 +8,50 @@ IMPORTANT:
 - remove the dummy bookings and drivers data from the production DB before launch
   (backend/prisma/clean-bookings.js clears non-seed bookings; drivers need a
   similar pass — and the seed rows themselves must go too)
+- !! GO THROUGH THE WHOLE RATE CARD WITH RAJU AGAIN, PROPERLY — zone by zone, class
+  by class. Not another round of "aur X ka kitna?": read him the number the app
+  will actually quote and get a yes or no on each one. Everything below is a place
+  where the card and the code currently disagree, and none of it is guesswork we
+  can settle ourselves.
+    1. QUOTED PER-CLASS ZONE FARES ARE DEAD DATA. zones.geojson stores hatchback,
+       sedan, suv and suv_premium for all 45 zones, but rideEstimate.js reads
+       `zone.fares.hatchback` and derives every other class from
+       CLASS_FROM_HATCHBACK. So a price Raju quoted for a specific car in a
+       specific zone loses to the multiplier every time. It is already wrong in
+       production: IGI stores the Ertiga at his 2400, the app charges 1400×1.6 =
+       2250. Connaught Place stores his premium 3000, the app charges 1200×2.75 =
+       3300. THE FIX is small — have hatchbackFrom('zone') return the stored fare
+       for the class being priced and fall back to the multiplier when the zone
+       has none — but it reprices sedan and Ertiga across every zone at once, so
+       confirm the stored numbers with him BEFORE flipping it, not after.
+    2. Premium SUV ×2.75 (August 2026) is fitted to exactly four Innova Crysta
+       quotes: IGI 4000, Connaught Place 3000, Botanical 2200, Advant 2000. Three
+       of them agree at 2.75-2.86; CP alone implies 2.50 and is probably a rounded
+       "3k". Ask him CP again — if it is really 3300 the multiplier is exact and
+       the stored override can go.
+    3. PREMIUM TOLL AND PARKING ARE ALWAYS EXTRA, even on a zone fare — his rule,
+       and NOT what the code does. Today `toll` is a per-zone number added
+       identically to every class and only IGI has one (200). Premium needs a
+       per-class policy: leave the itemised toll at 0, add a `tollsAtActuals`
+       flag, and show "tolls and parking payable to the driver" instead of a
+       fabricated amount. Do NOT invent a parking figure — it varies with how long
+       the car waits, and signQuote would bind us to it. Also: apply the
+       multiplier to the 1400, not to 1400+200, or the toll gets charged twice.
+    4. PREMIUM ROUND TRIP = base × 1.5 (second leg at half price), against the
+       ×1.64 that Phase 3 records for everyone else. Two things to pin down: does
+       ×1.5 cover all classes or only premium, and does "the half fare includes
+       toll and parking" mean the return leg only, or the whole round trip? On an
+       IGI run that second question is worth about ₹450.
+    5. EditFares has no premium column — CLASSES in frontend/src/pages/EditFares.jsx
+       is hardcoded to hatchback/sedan/suv, so an admin cannot see or edit
+       suv_premium and editing a hatchback re-derives sedan and Ertiga while
+       leaving the premium stale. Add the column and its derive rule with the same
+       ×2.75, or the map editor quietly drifts from the file.
+    6. There is no Botanical Garden zone, despite two `notes` in zones.geojson
+       claiming trips are priced "via the Botanical zone". The metro falls inside
+       Noida central (Sector 18), which happens to carry the same 800, so nothing
+       is mispriced today — but the notes are lying and the next person to redraw
+       Sector 18 will break Botanical without knowing it.
 - !! GET THE LEGAL DOCS REVIEWED BY A LAWYER. Terms, Privacy, Refunds and Grievance
   in frontend/src/constants/legal.js are a DRAFT written from what the code does,
   not legal advice. Before they can count as published:

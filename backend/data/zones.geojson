@@ -9,7 +9,8 @@
         "fares": {
           "hatchback": 1400,
           "sedan": 1500,
-          "suv": 2400
+          "suv": 2400,
+          "suv_premium": 4000
         },
         "toll": 200,
         "notes": "Covers T1/T2/T3 + Aerocity/Mahipalpur (provider confirmed same 1400). Highway toll 200 is now priced in (see `toll`); the roof carrier is a rider option added on top, waived past the threshold in rideEstimate. Terminal deltas TBD."
@@ -58,7 +59,8 @@
         "fares": {
           "hatchback": 1200,
           "sedan": 1300,
-          "suv": 1900
+          "suv": 1900,
+          "suv_premium": 3300
         }
       },
       "geometry": {
@@ -145,7 +147,8 @@
         "fares": {
           "hatchback": 1300,
           "sedan": 1400,
-          "suv": 2100
+          "suv": 2100,
+          "suv_premium": 3600
         }
       },
       "geometry": {
@@ -208,7 +211,8 @@
         "fares": {
           "hatchback": 1400,
           "sedan": 1500,
-          "suv": 2250
+          "suv": 2250,
+          "suv_premium": 3850
         }
       },
       "geometry": {
@@ -247,7 +251,8 @@
         "fares": {
           "hatchback": 700,
           "sedan": 800,
-          "suv": 1100
+          "suv": 1100,
+          "suv_premium": 1950
         }
       },
       "geometry": {
@@ -346,7 +351,8 @@
         "fares": {
           "hatchback": 400,
           "sedan": 500,
-          "suv": 650
+          "suv": 650,
+          "suv_premium": 1100
         },
         "notes": "Beta/Gamma/Zeta/Delta + Omicron/Mu sectors (provider confirmed 400), Depot metro, Bennett (via highway). Verify Depot + Bennett fall inside."
       },
@@ -414,7 +420,8 @@
         "fares": {
           "hatchback": 650,
           "sedan": 750,
-          "suv": 1000
+          "suv": 1000,
+          "suv_premium": 1800
         }
       },
       "geometry": {
@@ -501,7 +508,8 @@
         "fares": {
           "hatchback": 1500,
           "sedan": 1600,
-          "suv": 2400
+          "suv": 2400,
+          "suv_premium": 4150
         },
         "notes": "VERIFY anchor position on geojson.io. Highway toll extra, off-system."
       },
@@ -589,7 +597,8 @@
         "fares": {
           "hatchback": 1200,
           "sedan": 1300,
-          "suv": 1900
+          "suv": 1900,
+          "suv_premium": 3300
         }
       },
       "geometry": {
@@ -692,7 +701,8 @@
         "fares": {
           "hatchback": 1200,
           "sedan": 1300,
-          "suv": 1900
+          "suv": 1900,
+          "suv_premium": 3000
         },
         "notes": "Provider round-trip override: 1970. Priority 6, not 5: this polygon overlaps ITO / India Gate (priority 4) right across CP itself, and at a gap of 1 matchZone read the carve-out as an accidental border and blended 1200 with 1100 down to 1150. 6 is the same gap every other deliberate carve-out uses."
       },
@@ -796,7 +806,8 @@
         "fares": {
           "hatchback": 1300,
           "sedan": 1400,
-          "suv": 2100
+          "suv": 2100,
+          "suv_premium": 3600
         }
       },
       "geometry": {
@@ -851,7 +862,8 @@
         "fares": {
           "hatchback": 1300,
           "sedan": 1400,
-          "suv": 2100
+          "suv": 2100,
+          "suv_premium": 3600
         },
         "notes": "Includes US Embassy (round-trip override 2150)."
       },
@@ -955,7 +967,8 @@
         "fares": {
           "hatchback": 1400,
           "sedan": 1500,
-          "suv": 2250
+          "suv": 2250,
+          "suv_premium": 3850
         },
         "notes": "Round-trip override 2100."
       },
@@ -1067,7 +1080,8 @@
         "fares": {
           "hatchback": 1300,
           "sedan": 1400,
-          "suv": 2100
+          "suv": 2100,
+          "suv_premium": 3600
         }
       },
       "geometry": {
@@ -1166,7 +1180,8 @@
         "fares": {
           "hatchback": 1450,
           "sedan": 1550,
-          "suv": 2300
+          "suv": 2300,
+          "suv_premium": 4000
         },
         "notes": "Includes Greater Faridabad / Neharpar (provider confirmed same 1450)."
       },
@@ -1266,7 +1281,8 @@
         "fares": {
           "hatchback": 1500,
           "sedan": 1600,
-          "suv": 2400
+          "suv": 2400,
+          "suv_premium": 4150
         },
         "notes": "Priority 1 so the West Delhi border blends to the midpoint instead of West Delhi winning outright."
       },
@@ -1318,7 +1334,8 @@
         "fares": {
           "hatchback": 1550,
           "sedan": 1650,
-          "suv": 2500
+          "suv": 2500,
+          "suv_premium": 4250
         }
       },
       "geometry": {
@@ -1405,7 +1422,8 @@
         "fares": {
           "hatchback": 1800,
           "sedan": 1900,
-          "suv": 2900
+          "suv": 2900,
+          "suv_premium": 4950
         },
         "notes": "Sectors 76-83 along NH-48 (provider: 1800). Toll extra."
       },
@@ -1445,7 +1463,8 @@
         "fares": {
           "hatchback": 2000,
           "sedan": 2100,
-          "suv": 3200
+          "suv": 3200,
+          "suv_premium": 5500
         },
         "notes": "IMT Phases I-V, Sectors 1-5, M-1 to M-11 (provider: 2000). Toll extra."
       },
@@ -1497,7 +1516,8 @@
         "fares": {
           "hatchback": 500,
           "sedan": 600,
-          "suv": 800
+          "suv": 800,
+          "suv_premium": 1400
         },
         "notes": "Knowledge Park I-III, Alpha, Jagat Farm, Surajpur, Sharda University."
       },
@@ -1569,7 +1589,8 @@
         "fares": {
           "hatchback": 400,
           "sedan": 500,
-          "suv": 650
+          "suv": 650,
+          "suv_premium": 1100
         },
         "notes": "Provider: 400 toward Greater Noida side; Tilapta roundabout pocket is 350 (separate zone)."
       },
@@ -1609,7 +1630,8 @@
         "fares": {
           "hatchback": 600,
           "sedan": 700,
-          "suv": 1000
+          "suv": 1000,
+          "suv_premium": 1650
         }
       },
       "geometry": {
@@ -1736,7 +1758,8 @@
         "fares": {
           "hatchback": 700,
           "sedan": 800,
-          "suv": 1100
+          "suv": 1100,
+          "suv_premium": 1950
         }
       },
       "geometry": {
@@ -1823,7 +1846,8 @@
         "fares": {
           "hatchback": 800,
           "sedan": 900,
-          "suv": 1300
+          "suv": 1300,
+          "suv_premium": 2200
         },
         "notes": "YEIDA sectors between Buddh Circuit and Jewar."
       },
@@ -1867,7 +1891,8 @@
         "fares": {
           "hatchback": 700,
           "sedan": 800,
-          "suv": 1100
+          "suv": 1100,
+          "suv_premium": 2000
         },
         "notes": "Confirmed: 700 for expressway sectors away from Botanical (Amity, 137, 142); sectors near Botanical are 800 via the Botanical zone."
       },
@@ -1935,7 +1960,8 @@
         "fares": {
           "hatchback": 800,
           "sedan": 900,
-          "suv": 1300
+          "suv": 1300,
+          "suv_premium": 2200
         },
         "notes": "Sector 18 / Atta / City Centre - provider confirmed same 800 as Botanical."
       },
@@ -1999,7 +2025,8 @@
         "fares": {
           "hatchback": 800,
           "sedan": 900,
-          "suv": 1300
+          "suv": 1300,
+          "suv_premium": 2200
         }
       },
       "geometry": {
@@ -2094,7 +2121,8 @@
         "fares": {
           "hatchback": 900,
           "sedan": 1000,
-          "suv": 1450
+          "suv": 1450,
+          "suv_premium": 2500
         },
         "notes": "Kept tight - Anand Vihar station (also 900) is 800 m west."
       },
@@ -2230,7 +2258,8 @@
         "fares": {
           "hatchback": 900,
           "sedan": 1000,
-          "suv": 1450
+          "suv": 1450,
+          "suv_premium": 2500
         }
       },
       "geometry": {
@@ -2321,7 +2350,8 @@
         "fares": {
           "hatchback": 1000,
           "sedan": 1100,
-          "suv": 1600
+          "suv": 1600,
+          "suv_premium": 2750
         }
       },
       "geometry": {
@@ -2392,7 +2422,8 @@
         "fares": {
           "hatchback": 950,
           "sedan": 1050,
-          "suv": 1500
+          "suv": 1500,
+          "suv_premium": 2600
         }
       },
       "geometry": {
@@ -2439,7 +2470,8 @@
         "fares": {
           "hatchback": 1100,
           "sedan": 1200,
-          "suv": 1750
+          "suv": 1750,
+          "suv_premium": 3050
         }
       },
       "geometry": {
@@ -2530,7 +2562,8 @@
         "fares": {
           "hatchback": 1000,
           "sedan": 1100,
-          "suv": 1600
+          "suv": 1600,
+          "suv_premium": 2750
         },
         "notes": "Corrected by provider from 1200 to 1000."
       },
@@ -2630,7 +2663,8 @@
         "fares": {
           "hatchback": 1100,
           "sedan": 1200,
-          "suv": 1750
+          "suv": 1750,
+          "suv_premium": 3050
         },
         "notes": "ITO, Pragati Maidan, India Gate, Mandi House."
       },
@@ -2670,7 +2704,8 @@
         "fares": {
           "hatchback": 1150,
           "sedan": 1250,
-          "suv": 1850
+          "suv": 1850,
+          "suv_premium": 3150
         },
         "notes": "Kalkaji, Govindpuri included; 1150 confirmed. CR Park is 1200 (separate zone)."
       },
@@ -2710,7 +2745,8 @@
         "fares": {
           "hatchback": 1200,
           "sedan": 1300,
-          "suv": 1900
+          "suv": 1900,
+          "suv_premium": 3300
         },
         "notes": "Provider: 1200 for CR Park specifically."
       },
@@ -2798,7 +2834,8 @@
         "fares": {
           "hatchback": 1300,
           "sedan": 1400,
-          "suv": 2100
+          "suv": 2100,
+          "suv_premium": 3600
         },
         "notes": "Munirka, RK Puram, Vasant Vihar."
       },
@@ -2846,7 +2883,8 @@
         "fares": {
           "hatchback": 1400,
           "sedan": 1500,
-          "suv": 2250
+          "suv": 2250,
+          "suv_premium": 3850
         },
         "notes": "Civil Lines, Majnu ka Tila."
       },
@@ -2898,7 +2936,8 @@
         "fares": {
           "hatchback": 1600,
           "sedan": 1700,
-          "suv": 2550
+          "suv": 2550,
+          "suv_premium": 4400
         },
         "notes": "Includes Model Town, Azadpur."
       },
@@ -2938,7 +2977,8 @@
         "fares": {
           "hatchback": 1600,
           "sedan": 1700,
-          "suv": 2550
+          "suv": 2550,
+          "suv_premium": 4400
         },
         "notes": "Rajouri Garden, Janakpuri, Tilak Nagar, Uttam Nagar."
       },
@@ -2990,7 +3030,8 @@
         "fares": {
           "hatchback": 1600,
           "sedan": 1700,
-          "suv": 2550
+          "suv": 2550,
+          "suv_premium": 4400
         },
         "notes": "Cyber City, Udyog Vihar, DLF 1-3, MG Road, Sector 29, Golf Course Road - provider confirmed same 1600 as Huda City Centre."
       },
@@ -3042,7 +3083,8 @@
         "fares": {
           "hatchback": 1700,
           "sedan": 1800,
-          "suv": 2700
+          "suv": 2700,
+          "suv_premium": 4700
         }
       },
       "geometry": {
@@ -3081,7 +3123,8 @@
         "fares": {
           "hatchback": 1500,
           "sedan": 1600,
-          "suv": 2400
+          "suv": 2400,
+          "suv_premium": 4150
         }
       },
       "geometry": {
@@ -3172,7 +3215,8 @@
         "fares": {
           "hatchback": 1800,
           "sedan": 2000,
-          "suv": 3000
+          "suv": 3000,
+          "suv_premium": 4950
         },
         "notes": "Chaudhari Charan Singh University/subharti University/Lala Lajpat Rai medical College/Meerut bypass/modipuram"
       },
@@ -3248,7 +3292,8 @@
         "fares": {
           "hatchback": 1800,
           "sedan": 2000,
-          "suv": 2800
+          "suv": 2800,
+          "suv_premium": 4950
         },
         "notes": "Ashoka University Sonipat/Jindal University/Sonipat city/Rajiv Gandhi education City"
       },

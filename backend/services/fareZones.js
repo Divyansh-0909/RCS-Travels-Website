@@ -161,7 +161,7 @@ export function isAirportPickup(coords) {
   return IGI_TERMINALS.some((t) => kmBetween(coords, t) <= IGI_RADIUS_KM)
 }
 
-const FARE_CLASSES = ['hatchback', 'sedan', 'suv']
+const FARE_CLASSES = ['hatchback', 'sedan', 'suv', 'suv_premium']
 
 // Zones overlap, so pick one. Highest priority wins, which lets exception zones
 // (IIT, Pari Chowk, Sarai Kale Khan) override the broad areas they sit inside.
