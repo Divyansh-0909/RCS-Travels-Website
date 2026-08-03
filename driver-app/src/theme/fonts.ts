@@ -7,6 +7,8 @@ export const fontAssets: Record<string, FontSource> = {
   'PPMori-RegularItalic': require('../../assets/fonts/PPMori-RegularItalic.otf'),
   'PPMori-SemiBold': require('../../assets/fonts/PPMori-SemiBold.otf'),
   'PPMori-SemiBoldItalic': require('../../assets/fonts/PPMori-SemiBoldItalic.otf'),
+  'PPMori-Black': require('../../assets/fonts/PPMori-Black.otf'),
+  'PPMori-BlackItalic': require('../../assets/fonts/PPMori-BlackItalic.otf'),
 };
 
 export const fonts = {
@@ -16,4 +18,6 @@ export const fonts = {
   italic: 'PPMori-RegularItalic',
   semibold: 'PPMori-SemiBold',
   semiboldItalic: 'PPMori-SemiBoldItalic',
+  black: 'PPMori-Black',
+  blackItalic: 'PPMori-BlackItalic',
 } as const;

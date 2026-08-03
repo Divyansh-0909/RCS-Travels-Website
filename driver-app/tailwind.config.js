@@ -20,6 +20,21 @@ module.exports = {
         // generates font-* from this and from fontFamily both, and which rule
         // wins comes down to core plugin order rather than anything you wrote.
         fontWeight: {},
+
+        // Overridden rather than extended, for the reason fontSize gives below:
+        // Tailwind's own scale is em, and RN reads letterSpacing as points, so
+        // its tracking-wide would set 0.025pt — nothing at all — instead of
+        // 0.025em. These are points.
+        //
+        // Points do not scale with the font, so one value cannot serve the whole
+        // type scale: `slight` is tuned for body text and is the default AppText
+        // applies. Display type still has to compute its tracking from its size.
+        letterSpacing: {
+            none: '0px',
+            slight: '0.3px',
+            wide: '0.6px',
+        },
+
         extend: {
             colors: tokens.colors,
 
@@ -39,9 +54,14 @@ module.exports = {
 
             // One family per file. The browser picks a face out of "PP Mori"
             // by weight, so the website's font-medium quietly renders Regular
-            // and its font-bold renders SemiBold — only three cuts exist. RN
-            // has no such matching, so each name maps to a cut explicitly and
-            // the same class renders the same glyphs on both platforms.
+            // — only three of its cuts exist as .woff2. RN has no such
+            // matching, so each name maps to a cut explicitly.
+            //
+            // font-bold is the exception to that parity. The app also ships
+            // Black, which the site does not have, so font-bold renders Black
+            // here and SemiBold there. It buys a weight step the site cannot
+            // make — font-semibold and font-bold are one face on the web — at
+            // the cost of the two platforms disagreeing on that one class.
             //
             // Order here is presentational only. Tailwind emits utilities
             // alphabetically, so two of these on one element resolve by name
@@ -53,12 +73,13 @@ module.exports = {
                 normal: [tokens.fontCuts.regular],
                 medium: [tokens.fontCuts.regular],
                 semibold: [tokens.fontCuts.semibold],
-                bold: [tokens.fontCuts.semibold],
+                bold: [tokens.fontCuts.black],
                 // The website's italic utility sets font-style, which RN will
                 // not honour against a custom family. These are the real faces.
                 'light-italic': [tokens.fontCuts['extralight-italic']],
                 'normal-italic': [tokens.fontCuts['regular-italic']],
                 'semibold-italic': [tokens.fontCuts['semibold-italic']],
+                'bold-italic': [tokens.fontCuts['black-italic']],
             },
         },
     },

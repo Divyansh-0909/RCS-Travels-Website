@@ -81,6 +81,11 @@ const fontCuts = {
   'regular-italic': 'PPMori-RegularItalic',
   semibold: 'PPMori-SemiBold',
   'semibold-italic': 'PPMori-SemiBoldItalic',
+  // App-only, with no counterpart in the web stack: the site loads six .woff2
+  // and has no Black, so a weight that resolves here to Black resolves there
+  // to SemiBold. Keep display type that has to match the site off these two.
+  black: 'PPMori-Black',
+  'black-italic': 'PPMori-BlackItalic',
 };
 
 /**

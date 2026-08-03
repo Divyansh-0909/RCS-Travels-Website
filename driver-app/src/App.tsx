@@ -1,15 +1,14 @@
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
+import { Outlet } from 'react-router-native';
 import AppBar from './components/AppBar';
+import OnlineToggle from './components/OnlineToggle';
 
-// The home screen, and nothing more. main.tsx owns the router and everything
-// that has to sit above every screen — the same split the website uses.
 const App = () => {
     return (
-        <View className='relative h-full flex flex-col items-center'>
+        <View className='relative w-full h-full bg-[var(--foreground)] pt-16 pb-32 flex flex-col justify-center items-center'>
+            <OnlineToggle visible={true} />
+            <Outlet/>
             <AppBar/>
-            <View>
-                <Text>RCS Travels Drivers App</Text>
-            </View>
         </View>
     )
 }
