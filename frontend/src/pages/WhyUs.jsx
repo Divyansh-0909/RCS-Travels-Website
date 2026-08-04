@@ -32,7 +32,7 @@ const WhyUs = () => {
     return (
         <div className="bg-[var(--foreground)] text-[var(--text-foreground)] gap-15 py-15 sm:py-20 flex flex-col items-center justify-center">
             <div className="text-left flex flex-col w-[82%] md:w-[90%] xl:w-[74%] justify-center gap-8 sm:gap-12 items-start">
-                <h1 className="font-bold text-4xl sm:text-5xl">Reasons to ride with us</h1>
+                <h1 className="font-bold text-3xl sm:text-5xl">Reasons to ride with us</h1>
                 <ul className="w-full flex flex-col items-start justify-center gap-10">
                     {data.map((item, index) => {
                         return (
@@ -43,7 +43,10 @@ const WhyUs = () => {
                                     onClick={() => setOpenIndex(openIndex === index ? null : index)}
                                     className="w-full flex items-center justify-between gap-4 text-left cursor-pointer rounded focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-current active:opacity-70"
                                 >
-                                    <h2 className="text-[25px] sm:text-2xl lg:text-3xl font-semibold">0{index + 1}. {item.title}</h2>
+                                    <div className="flex h-full text-2xl sm:text-3xl gap-2 justify-start items-start font-normal">
+                                        <h2 className="text-2xl h-full sm:text-3xl font-normal">0{index + 1}.</h2>
+                                        <h2 className="text-2xl h-full sm:text-3xl font-normal">{item.title}</h2>
+                                    </div>
                                     <svg
                                         className={`w-6 h-6 shrink-0 transition-transform duration-300 ${openIndex === index ? "rotate-180" : ""}`}
                                         viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"
@@ -53,7 +56,7 @@ const WhyUs = () => {
                                 </button>
                                 <div className={`grid w-full transition-[grid-template-rows] duration-300 ease-out ${openIndex === index ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
                                     <div className="min-h-0 overflow-hidden">
-                                        <h3 className={`pt-2 sm:text-xl lg:text-2xl transition-opacity duration-300 ${openIndex === index ? "opacity-100" : "opacity-0"}`}>{item.description}</h3>
+                                        <h3 className={`pt-2 text-lg sm:text-xl leading-[1.75] text-[var(--background-primary)]/65 transition-opacity duration-300 ${openIndex === index ? "opacity-100" : "opacity-0"}`}>{item.description}</h3>
                                     </div>
                                 </div>
                             </li>

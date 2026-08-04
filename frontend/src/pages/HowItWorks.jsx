@@ -48,9 +48,9 @@ const HowItWorks = () => {
     `;
 
     return (
-        <div className="bg-[var(--foreground)] text-[var(--text-foreground)] gap-15 py-15 sm:py-20 flex flex-col items-center justify-center">
+        <div className="bg-[var(--foreground)] text-[var(--text-foreground)] gap-15 pt-15 sm:pt-20 flex flex-col items-center justify-center">
             <div className="text-left flex flex-col w-[82%] md:w-[90%] xl:w-[74%] justify-center gap-2 items-start">
-                <h1 className="font-bold text-4xl sm:text-5xl">Book a ride in four simple steps</h1>
+                <h1 className="font-bold text-3xl sm:text-5xl">Book a ride in four simple steps</h1>
             </div>
 
             <div
@@ -73,11 +73,11 @@ const HowItWorks = () => {
                             >
                                 <img src={step.illustration} alt="illustration" className="md:w-90 lg:w-110 xl:w-130 rounded-xl" />
                                 <div className="lg:w-[48%] flex flex-col justify-center items-start text-left gap-4 sm:gap-6">
-                                    <h1 className="relative sm:text-2xl lg:text-4xl text-[25px] text-[var(--text-foreground)] flex flex-col sm:items-start justify-center">
+                                    <h1 className="relative text-3xl sm:text-4xl font-semibold text-[var(--text-foreground)] flex flex-col sm:items-start justify-center">
                                         <span className="w-fit z-1 relative text-[var(--text)] bg-[var(--background)] px-4 py-2 rounded-xl shadow-[4px_6px_0_rgba(0,0,0,0.25)] sm:shadow-[8px_10px_0_rgba(0,0,0,0.25)] ">{step.number}</span>
                                         <span className="text-[var(--text)] bg-primary px-4 py-2 pb-3 sm:pb-4 rounded-xl shadow-[4px_6px_0_rgba(0,0,0,0.25)] sm:shadow-[8px_10px_0_rgba(0,0,0,0.25)] rotate-[1deg]">{step.title}</span>
                                     </h1>
-                                    <h2 className="sm:text-xl lg:text-2xl flex flex-col items-start justify-center gap-2 text-[var(--text-foreground)]">
+                                    <h2 className="text-lg sm:text-xl leading-[1.75] flex flex-col items-start justify-center gap-2 text-[var(--background-primary)]">
                                         {step.description} <br />
                                         <span className="xl:block hidden">{step.detail}</span>
                                     </h2>

@@ -17,7 +17,7 @@ export type BookingSource = "website" | "whatsapp" | "admin";
 export type CancelledBy = "user" | "driver" | "admin";
 
 export type VerificationStatus = "pending" | "approved" | "rejected";
-
+  
 export type VehicleClass = "hatchback" | "sedan" | "suv" | "suv_premium";
 
 export type RideStatusTransition = "reached" | "started" | "completed";
