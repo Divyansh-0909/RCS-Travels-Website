@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { protect, protectAdmin } from '../middleware/auth.js'
+import { protect } from '../middleware/auth.js'
 import { startAssignment, markNoDriver, ASSIGNMENT_DEADLINE_MS } from '../services/driverAssignment.js'
 import { sendWhatsApp } from '../services/notification.js'
 import { prisma } from '../db/prisma.js'
@@ -369,37 +369,5 @@ bookingsRouter.get('/my-bookings', protect, async (req, res) => {
 
     return res.json({ total, page, limit, bookings: withCode })
 })
-
-// !! UNUSED. The dashboard reads GET /api/admin/booking (routes/admin.ts), which
-// supersedes this with the full filter set. Kept only until something confirms
-// nothing else calls it.
-bookingsRouter.get('/admin/all', protect, protectAdmin, async (req, res) => {
-  const { status, date, page = 1, limit = 20 } = req.query
-
-  const where = {}
-  if (status) where.status = status
-  if (date) {
-    const start = new Date(date)
-    const end   = new Date(date)
-    end.setDate(end.getDate() + 1)
-    where.createdAt = { gte: start, lt: end }
-  }
-
-  const [bookings, total] = await Promise.all([
-    prisma.booking.findMany({
-      where,
-      include: { driver: true, user: true },
-      skip:  (page - 1) * limit,
-      take:  Number(limit),
-      orderBy: { createdAt: 'desc' },
-    }),
-    prisma.booking.count({ where }),
-  ])
-
-  const withCode = bookings.map(b => ({ ...b, bookingCode: b.user?.bookingCode ?? null }))
-
-  res.json({ total, page: Number(page), limit: Number(limit), bookings: withCode })
-})
-
 
 export default bookingsRouter

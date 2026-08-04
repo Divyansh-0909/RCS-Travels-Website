@@ -186,6 +186,32 @@ driverRouter.post('/fcm-token', protect, async (req, res) => {
     return res.json({ ok: true })
 })
 
+driverRouter.get('/upcoming-ride', protect, async (req, res) => {
+    const driver = await requireApprovedDriver(req, res)
+    if (!driver) return
+
+    const booking = await prisma.booking.findFirst({
+        where: {
+            driverId: driver.id,
+            status: "assigned",
+        },
+        select: {
+            id: true,
+            status: true,
+            pickupAddress: true,
+            dropAddress: true,
+            scheduledAt: true,
+            fare: true,
+            vehicleClass: true,
+            sharing: true,
+            isOutstation: true,
+        },
+        orderBy: [{ scheduledAt: 'asc' }, { createdAt: 'asc' }],
+    })
+
+    return res.json({ booking })
+})
+
 driverRouter.get('/rides', protect, async (req, res) => {
     const driver = await requireApprovedDriver(req, res)
     if (!driver) return
