@@ -14,7 +14,9 @@
     "db:push": "prisma db push --config ./prisma.config.js",
     "db:studio": "prisma studio --config ./prisma.config.js",
     "db:seed": "node prisma/seed.js",
-    "db:clean": "node prisma/clean-bookings.js"
+    "db:seed:captain": "node prisma/seed-captain.js",
+    "db:clean": "node prisma/clean-bookings.js",
+    "db:clean:seed": "node prisma/clean-seed-data.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.726.1",
