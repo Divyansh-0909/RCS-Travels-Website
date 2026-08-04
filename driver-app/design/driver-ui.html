@@ -1,384 +1,664 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>RCS Drivers — UI prototype</title>
+<title>RCS Captains — UI prototype</title>
 
 <style>
 /* ───────────────────────────────────────────────────────────────
-   PP Mori. Six cuts, one family name each — the same split the app
-   uses, so a weight here can't silently resolve to a faked face.
-   Paths are relative to driver-app/design/.
+   PP Mori. One family name per cut, the same split fontCuts uses
+   in shared/theme/tokens.cjs, so a weight here can't silently
+   resolve to a browser-faked face. Paths relative to design/.
    ─────────────────────────────────────────────────────────────── */
-@font-face { font-family: "PPMori-Extralight"; src: url("../assets/fonts/PPMori-Extralight.otf") format("opentype"); font-display: swap; }
-@font-face { font-family: "PPMori-Regular";    src: url("../assets/fonts/PPMori-Regular.otf")    format("opentype"); font-display: swap; }
-@font-face { font-family: "PPMori-SemiBold";   src: url("../assets/fonts/PPMori-SemiBold.otf")   format("opentype"); font-display: swap; }
+@font-face { font-family:"PPMori-Extralight"; src:url("../assets/fonts/PPMori-Extralight.otf") format("opentype"); font-display:swap }
+@font-face { font-family:"PPMori-Regular";    src:url("../assets/fonts/PPMori-Regular.otf")    format("opentype"); font-display:swap }
+@font-face { font-family:"PPMori-SemiBold";   src:url("../assets/fonts/PPMori-SemiBold.otf")   format("opentype"); font-display:swap }
 
-:root {
-  /* colours — shared/theme/tokens.cjs */
+:root{
+  /* ── straight out of shared/theme/tokens.cjs ───────────────── */
   --primary:#243AFB; --primary-dark:#1212B4; --primary-light:#7A94FF;
   --negative:#B91C1C; --negative-dark:#7A0F0F; --negative-light:#E86A6A;
   --white-muted:#AEAEAE;
   --background:#0B0B14; --background-primary:#121220; --background-muted:#1d1d27;
-  --foreground:#ffffff; --text-muted:#AEAEAE;
+  --foreground:#ffffff; --foreground-muted:#f3f3f3;
+  --text:#ffffff; --text-muted:#AEAEAE; --text-foreground:#000000;
 
-  /* type scale — same values, px here because this mirrors the app */
+  /* App.tsx paints the page var(--foreground) and the copy
+     var(--background-primary): the captain app runs the tokens
+     inverted. Light page, dark floating chrome. Everything below
+     is derived from that, not invented alongside it. */
+  --page:var(--foreground);
+  --ink:var(--background-primary);
+
+  /* #AEAEAE is the muted text for a dark surface. On white it sits
+     at 2.3:1 and fails AA outright, so secondary copy on the page
+     needs its own value. Same hue family, dropped until it clears
+     4.5:1 (this is 6.7:1). Worth promoting into tokens.cjs as
+     text-muted-on-light — the app will need it the moment a screen
+     has two levels of copy. */
+  --ink-muted:#5A5A6B;
+  --hairline:#E6E6EE;
+  --quiet:#F4F4F8;
+
+  /* The app's online switch is the one colour in the codebase with
+     no token behind it — OnlineToggle.tsx hardcodes bg-green-500.
+     Mirrored verbatim so the prototype doesn't lie; it wants to
+     become --positive in tokens.cjs. */
+  --positive:#22c55e;
+
+  /* type scale — fontSize in tokens.cjs, px because the app is px */
   --text-xs:12px;   --lh-xs:16px;
   --text-sm:14px;   --lh-sm:20px;
   --text-base:16px; --lh-base:24px;
   --text-lg:18px;   --lh-lg:28px;
   --text-xl:20px;   --lh-xl:28px;
   --text-2xl:24px;  --lh-2xl:32px;
+  --text-3xl:30px;  --lh-3xl:36px;
   --text-fare:44px; --lh-fare:46px;
   --text-plate:22px;--lh-plate:26px;
 
-  /* spacing — 4pt base, no arbitrary steps */
-  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:20px; --s6:24px; --s8:32px; --s10:40px;
+  /* spacing — 4pt, no arbitrary steps */
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:20px; --s6:24px; --s8:32px; --s10:40px; --s12:48px;
 
-  --r-card:14px; --r-pill:999px;
+  /* radii — OnBoarding.jsx uses rounded-xl on actions and the app
+     chrome uses rounded-2xl. Pills are for status only. */
+  --r-btn:12px; --r-card:16px; --r-chip:16px; --r-pill:999px;
 
-  /* layered, colour-tinted — never a flat grey box-shadow */
-  --lift-1: 0 1px 2px rgba(0,0,0,.5), 0 2px 10px -4px rgba(36,58,251,.18);
-  --lift-2: 0 2px 4px rgba(0,0,0,.55), 0 12px 32px -12px rgba(36,58,251,.28);
+  /* Depth on a white page can't come from a black shadow alone or
+     everything greys out. Tinted toward the ink, layered. */
+  --lift-1:0 1px 2px rgba(18,18,32,.06), 0 4px 12px -6px rgba(18,18,32,.10);
+  --lift-2:0 2px 6px rgba(18,18,32,.10), 0 18px 40px -18px rgba(18,18,32,.34);
+  --lift-blue:0 2px 6px rgba(18,18,32,.14), 0 20px 44px -20px rgba(36,58,251,.55);
 
-  --ease-spring: cubic-bezier(.22,1,.36,1);
+  --ease-spring:cubic-bezier(.22,1,.36,1);
+  /* Animated.View in App.tsx enters on FadeIn.duration(220) —
+     every screen change in here runs at the same 220ms. */
+  --t-screen:220ms;
 }
 
 *,*::before,*::after{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
+
+/* ── prototype chrome: dark, so the white device is the subject ── */
 body{
   margin:0; min-height:100vh;
   background:
-    radial-gradient(90rem 50rem at 12% -10%, rgba(36,58,251,.16), transparent 60%),
-    radial-gradient(70rem 45rem at 88% 108%, rgba(122,148,255,.10), transparent 62%),
+    radial-gradient(80rem 44rem at 14% -12%, rgba(36,58,251,.20), transparent 62%),
+    radial-gradient(64rem 40rem at 86% 112%, rgba(122,148,255,.12), transparent 64%),
     var(--background);
   color:var(--foreground);
   font-family:"PPMori-Regular","Poppins",system-ui,sans-serif;
   font-size:var(--text-base); line-height:var(--lh-base);
   display:flex; flex-direction:column; align-items:center;
-  gap:var(--s6); padding:var(--s8) var(--s4);
+  gap:var(--s5); padding:var(--s8) var(--s4) var(--s10);
 }
-
-/* grain — keeps the flat dark from reading as a plastic slab */
 body::after{
   content:""; position:fixed; inset:0; pointer-events:none; opacity:.5; z-index:99;
   background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/><feColorMatrix type='saturate' values='0'/></filter><rect width='140' height='140' filter='url(%23n)' opacity='.035'/></svg>");
 }
 
-/* ── page chrome ─────────────────────────────────────────────── */
-.masthead{text-align:center;max-width:46rem}
+.masthead{text-align:center;max-width:44rem}
 .masthead h1{
-  font-family:"PPMori-Extralight",sans-serif; font-weight:400;
-  font-size:var(--text-2xl); line-height:var(--lh-2xl); letter-spacing:-.01em;
+  font-family:"PPMori-SemiBold",sans-serif; font-weight:400;
+  font-size:var(--text-2xl); line-height:var(--lh-2xl); letter-spacing:-.03em;
   margin:0 0 var(--s2);
 }
 .masthead p{margin:0;color:var(--text-muted);font-size:var(--text-sm);line-height:var(--lh-sm)}
 
-.jump{display:flex;flex-wrap:wrap;gap:var(--s2);justify-content:center;max-width:46rem}
-.jump button{
-  font:inherit; font-size:var(--text-xs); line-height:var(--lh-xs);
+.panel{display:flex;flex-direction:column;gap:var(--s2);align-items:center;max-width:46rem;width:100%}
+.panel-label{
+  font-family:"PPMori-SemiBold",sans-serif;font-size:var(--text-xs);line-height:var(--lh-xs);
+  letter-spacing:.14em;text-transform:uppercase;color:var(--white-muted);margin:0;
+}
+.chips{display:flex;flex-wrap:wrap;gap:var(--s2);justify-content:center}
+.chips button{
+  font:inherit; font-family:"PPMori-Regular",sans-serif;
+  font-size:var(--text-xs); line-height:var(--lh-xs);
   color:var(--text-muted); background:var(--background-primary);
   border:1px solid rgba(255,255,255,.08); border-radius:var(--r-pill);
   padding:var(--s2) var(--s3); cursor:pointer;
   transition:color .18s var(--ease-spring), border-color .18s var(--ease-spring), transform .18s var(--ease-spring);
 }
-.jump button:hover{color:var(--foreground);border-color:rgba(122,148,255,.4)}
-.jump button:focus-visible{outline:2px solid var(--primary-light);outline-offset:2px}
-.jump button:active{transform:translateY(1px)}
-.jump button[aria-current="true"]{color:var(--foreground);border-color:var(--primary);background:rgba(36,58,251,.14)}
+.chips button:hover{color:var(--foreground);border-color:rgba(122,148,255,.45)}
+.chips button:focus-visible{outline:2px solid var(--primary-light);outline-offset:2px}
+.chips button:active{transform:translateY(1px)}
+.chips button[aria-current="true"],
+.chips button[aria-pressed="true"]{color:var(--foreground);border-color:var(--primary);background:rgba(36,58,251,.18)}
 
-/* ── phone ───────────────────────────────────────────────────── */
-.phone{
-  width:390px; max-width:100%; height:844px; max-height:88vh;
-  position:relative; display:flex; flex-direction:column;
-  background:var(--background); border:1px solid rgba(255,255,255,.09);
-  border-radius:38px; box-shadow:var(--lift-2); overflow:hidden;
+/* ── device ──────────────────────────────────────────────────── */
+.device{
+  width:390px; max-width:100%; height:844px; max-height:86vh;
+  position:relative; display:flex; flex-direction:column; isolation:isolate;
+  background:var(--page); color:var(--ink);
+  border:1px solid rgba(255,255,255,.14);
+  border-radius:40px; box-shadow:var(--lift-2); overflow:hidden;
 }
 .statusbar{
   flex:none; display:flex; justify-content:space-between; align-items:center;
-  padding:var(--s3) var(--s6) var(--s1);
-  font-size:var(--text-xs); line-height:var(--lh-xs); color:var(--text-muted);
+  padding:var(--s3) var(--s6) 0;
+  font-family:"PPMori-SemiBold",sans-serif;
+  font-size:var(--text-xs); line-height:var(--lh-xs); color:var(--ink);
 }
-.viewport{flex:1;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
-.viewport::-webkit-scrollbar{width:4px}
-.viewport::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:2px}
 
-.screen{display:none;padding:var(--s5) var(--s5) var(--s10);animation:enter .3s var(--ease-spring) both}
-.screen.is-active{display:block}
-@keyframes enter{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+/* ── top chrome ──────────────────────────────────────────────
+   OnlineToggle.tsx is absolute top-10 w-[92%]: wordmark, then a
+   bell chip and the switch chip. Both dark cards on the white
+   page. Absolute here too, so content scrolls under it. */
+.topchrome{
+  position:absolute; top:44px; left:4%; width:92%; z-index:6;
+  display:flex; flex-direction:column; align-items:center; gap:var(--s3);
+  pointer-events:none;
+}
+.topchrome > *{pointer-events:auto}
+.wordmark{
+  display:flex; gap:6px; align-items:baseline; color:var(--ink);
+  font-size:var(--text-xl); line-height:var(--lh-xl); letter-spacing:-.03em;
+}
+.wordmark b{font-family:"PPMori-SemiBold",sans-serif;font-weight:400}
+.chrome-row{display:flex;justify-content:space-between;align-items:center;width:100%}
+.chip{
+  background:var(--ink); border:1px solid var(--background-muted);
+  border-radius:var(--r-chip); color:var(--text);
+  display:flex; align-items:center;
+}
+.chip-bell{padding:12px;cursor:pointer}
+.chip-toggle{padding:12px 24px 12px 16px;gap:var(--s3)}
+
+.bell-btn{
+  background:none;border:0;padding:0;cursor:pointer;color:var(--text);
+  width:22px;height:22px;display:grid;place-items:center;position:relative;
+}
+.bell-btn:focus-visible{outline:2px solid var(--primary-light);outline-offset:4px;border-radius:4px}
+.bell-btn .fillicon{position:absolute;inset:0;opacity:0;transition:opacity .2s var(--ease-spring)}
+.bell-btn[aria-current="page"] .fillicon{opacity:1}
+.bell-dot{
+  position:absolute;top:-1px;right:-1px;width:7px;height:7px;border-radius:50%;
+  background:var(--primary-light);border:1.5px solid var(--ink);
+}
+
+.toggle-label{
+  font-family:"PPMori-SemiBold",sans-serif;font-size:var(--text-xl);line-height:var(--lh-xl);
+  color:var(--text);width:74px;
+}
+/* The switch is copied dimension-for-dimension from OnlineToggle.tsx:
+   50×14 track, a 40×22 knob overhanging it, translateX 20 → −8 over
+   300ms. The knob being wider than its travel is what gives it the
+   heavy mechanical feel — don't "fix" it into a normal iOS switch. */
+.switch{
+  position:relative;width:50px;height:22px;border:0;background:none;padding:0;
+  cursor:pointer;display:grid;place-items:center;
+}
+.switch:focus-visible{outline:2px solid var(--primary-light);outline-offset:6px;border-radius:var(--r-pill)}
+.switch .track{
+  width:50px;height:14px;border-radius:var(--r-pill);background:#6b7280;
+  transition:background-color .3s var(--ease-spring);
+}
+.switch[aria-checked="true"] .track{background:var(--positive)}
+.switch .knob{
+  position:absolute;left:0;width:40px;height:22px;border-radius:var(--r-pill);
+  background:#fff;border-bottom:2px solid rgba(255,255,255,.05);
+  box-shadow:inset 0 2px 2px 1px rgba(255,255,255,.4), 0 0 10px rgba(0,0,0,.6);
+  transform:translateX(20px); transition:transform .3s var(--ease-spring);
+}
+.switch[aria-checked="true"] .knob{transform:translateX(-8px)}
+
+/* ── viewport ────────────────────────────────────────────────── */
+.viewport{
+  flex:1; overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin;
+  padding:150px 0 200px;      /* clears the floating chrome top and bottom */
+}
+.viewport::-webkit-scrollbar{width:4px}
+.viewport::-webkit-scrollbar-thumb{background:rgba(18,18,32,.16);border-radius:2px}
+/* Whatever is docked above the tab bar — the pinned ride action or
+   the active-ride bar — takes a slot out of the scroll. Without
+   this the last card can never be scrolled clear of it. */
+.device[data-pinned="1"] .viewport{padding-bottom:280px}
+
+/* The floating bars leave 4% gutters either side, so content would
+   otherwise slide past them in full contrast. Both fades run opaque
+   by the time they reach the bar and dissolve upward from there —
+   content leaves the screen, it never collides with the chrome. */
+.fade{position:absolute;left:0;right:0;pointer-events:none;z-index:5}
+.fade-top{top:96px;height:54px;background:linear-gradient(var(--page) 34%,rgba(255,255,255,0))}
+.fade-bot{bottom:0;height:210px;background:linear-gradient(rgba(255,255,255,0),var(--page) 34%)}
+
+.screen{display:none;padding:0 4%}
+.screen.is-active{display:block;animation:enter var(--t-screen) var(--ease-spring) both}
+@keyframes enter{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 
 /* ── type roles ──────────────────────────────────────────────── */
+/* OnBoarding.jsx sets headings SemiBold at −0.72px tracking. The
+   Extralight cut is reserved for the fare and nothing else — that
+   is the rule tokens.cjs writes down under fontSize.fare. */
 .eyebrow{
-  font-family:"PPMori-SemiBold",sans-serif; font-size:var(--text-xs); line-height:var(--lh-xs);
-  letter-spacing:.14em; text-transform:uppercase; color:var(--text-muted); margin:0 0 var(--s3);
+  font-family:"PPMori-SemiBold",sans-serif;font-size:var(--text-xs);line-height:var(--lh-xs);
+  letter-spacing:.14em;text-transform:uppercase;color:var(--ink-muted);margin:0 0 var(--s3);
 }
 .title{
-  font-family:"PPMori-Extralight",sans-serif; font-size:var(--text-2xl); line-height:var(--lh-2xl);
-  letter-spacing:-.01em; margin:0 0 var(--s2);
+  font-family:"PPMori-SemiBold",sans-serif;font-size:var(--text-3xl);line-height:var(--lh-3xl);
+  letter-spacing:-.03em;margin:0 0 var(--s2);color:var(--ink);
 }
-.muted{color:var(--text-muted);font-size:var(--text-sm);line-height:var(--lh-sm);margin:0}
+.title-sm{font-size:var(--text-2xl);line-height:var(--lh-2xl)}
+.muted{color:var(--ink-muted);font-size:var(--text-sm);line-height:var(--lh-sm);margin:0}
+.body{font-size:var(--text-base);line-height:var(--lh-base);margin:0;color:var(--ink)}
 
-/* THE distinction this whole UI turns on:
-   money-in is a payout — display cut, generous, calm.
-   money-out is a charge the driver can never get back — tight, tracked, red.
-   They must never be mistaken for one another. */
+/* THE distinction the whole product turns on. Money in is a payout:
+   Extralight, generous, calm. Money out is a charge that never
+   comes back: SemiBold, tracked wide like a registration plate,
+   red. They must never be mistaken for one another at a glance. */
 .money-in{
   font-family:"PPMori-Extralight",sans-serif;
-  font-size:var(--text-fare); line-height:var(--lh-fare); letter-spacing:-.03em;
-  color:var(--foreground); display:block;
+  font-size:var(--text-fare);line-height:var(--lh-fare);letter-spacing:-.03em;
+  display:block;color:var(--ink);
 }
 .money-out{
   font-family:"PPMori-SemiBold",sans-serif;
-  font-size:var(--text-plate); line-height:var(--lh-plate); letter-spacing:.08em;
-  color:var(--negative-light); display:block;
+  font-size:var(--text-plate);line-height:var(--lh-plate);letter-spacing:.08em;
+  display:block;color:var(--negative);
 }
 
-/* ── surfaces: base → elevated → floating ────────────────────── */
+/* ── surfaces ────────────────────────────────────────────────
+   Three levels, and the top one is rationed: exactly one dark
+   card per screen, and it is always the thing that owns the
+   captain right now. That is the whole hierarchy system — a
+   captain glancing at the phone at a red light finds the dark
+   rectangle and stops looking. */
 .card{
-  background:var(--background-primary); border:1px solid rgba(255,255,255,.07);
-  border-radius:var(--r-card); padding:var(--s4); box-shadow:var(--lift-1);
+  background:var(--page);border:1px solid var(--hairline);
+  border-radius:var(--r-card);padding:var(--s4);
 }
 .card + .card{margin-top:var(--s3)}
-.card-quiet{background:var(--background-muted);box-shadow:none}
+.card-quiet{background:var(--quiet);border-color:transparent}
+.card-warn{border-color:rgba(185,28,28,.35);background:rgba(185,28,28,.04)}
 
-.commitment{
-  background:linear-gradient(168deg,rgba(36,58,251,.16),rgba(18,18,32,0) 62%),var(--background-primary);
-  border:1px solid rgba(36,58,251,.34); border-radius:var(--r-card);
-  padding:var(--s5); box-shadow:var(--lift-2);
+.card-now{
+  background:linear-gradient(168deg,#1b1b46 0%,var(--ink) 58%);
+  border:1px solid rgba(122,148,255,.28);border-radius:var(--r-card);
+  padding:var(--s5);box-shadow:var(--lift-blue);color:var(--text);
 }
+.card-now .money-in{color:var(--text)}
+.card-now .muted{color:var(--text-muted)}
+.card-now .eyebrow{color:var(--primary-light)}
 
-.route{display:flex;align-items:baseline;gap:var(--s2);font-size:var(--text-lg);line-height:var(--lh-lg);margin:var(--s3) 0 var(--s1)}
-.route .arrow{color:var(--primary-light);flex:none}
-.meta{color:var(--text-muted);font-size:var(--text-sm);line-height:var(--lh-sm)}
+/* ── route displays ──────────────────────────────────────────── */
+.route{
+  display:flex;align-items:baseline;gap:var(--s2);
+  font-size:var(--text-lg);line-height:var(--lh-lg);letter-spacing:-.02em;
+}
+.route .arrow{color:var(--primary);flex:none}
+.card-now .route .arrow{color:var(--primary-light)}
+.meta{color:var(--ink-muted);font-size:var(--text-sm);line-height:var(--lh-sm);margin:var(--s1) 0 0}
+.card-now .meta{color:var(--text-muted)}
 
+/* Pickup над drop with a connector — order is information, so the
+   detail views draw it vertically instead of as A → B. */
+.leg{position:relative;padding-left:var(--s6)}
+.leg::before{content:"";position:absolute;left:5px;top:16px;bottom:18px;width:2px;background:var(--hairline)}
+.leg-row{position:relative;padding-bottom:var(--s4)}
+.leg-row:last-child{padding-bottom:0}
+.leg-row::before{
+  content:"";position:absolute;left:calc(-1 * var(--s6) + 1px);top:9px;
+  width:10px;height:10px;border-radius:50%;background:var(--primary);
+}
+.leg-row:last-child::before{border-radius:2px;background:var(--ink)}
+.leg-row .label{font-size:var(--text-xs);line-height:var(--lh-xs);color:var(--ink-muted);letter-spacing:.1em;text-transform:uppercase;font-family:"PPMori-SemiBold",sans-serif}
+
+/* ── tags ────────────────────────────────────────────────────── */
 .tag{
-  display:inline-block; font-size:var(--text-xs); line-height:var(--lh-xs);
-  padding:2px var(--s2); border-radius:var(--r-pill);
-  background:rgba(255,255,255,.06); color:var(--text-muted); border:1px solid rgba(255,255,255,.08);
+  display:inline-flex;align-items:center;gap:6px;
+  font-family:"PPMori-SemiBold",sans-serif;
+  font-size:var(--text-xs);line-height:var(--lh-xs);
+  padding:3px var(--s2);border-radius:var(--r-pill);
+  background:var(--quiet);color:var(--ink-muted);
 }
-.tag-warn{background:rgba(185,28,28,.14);color:var(--negative-light);border-color:rgba(185,28,28,.4)}
-.tag-live{background:rgba(36,58,251,.18);color:var(--primary-light);border-color:rgba(36,58,251,.45)}
+.tag-warn{background:rgba(185,28,28,.10);color:var(--negative)}
+.tag-live{background:rgba(36,58,251,.14);color:var(--primary)}
+.card-now .tag-live{background:rgba(122,148,255,.18);color:var(--primary-light)}
+.tag-live .pulse{
+  width:6px;height:6px;border-radius:50%;background:currentColor;
+  animation:pulse 1.8s var(--ease-spring) infinite;
+}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.7)}}
 
 /* ── buttons ─────────────────────────────────────────────────── */
 .btn{
-  font:inherit; font-family:"PPMori-SemiBold",sans-serif;
-  font-size:var(--text-base); line-height:var(--lh-base);
-  border-radius:var(--r-pill); border:1px solid transparent;
-  padding:var(--s3) var(--s5); cursor:pointer; width:100%;
-  display:inline-flex; align-items:center; justify-content:center; gap:var(--s2);
-  transition:transform .18s var(--ease-spring), background-color .18s var(--ease-spring), border-color .18s var(--ease-spring), opacity .18s var(--ease-spring);
+  font:inherit;font-family:"PPMori-SemiBold",sans-serif;
+  font-size:var(--text-base);line-height:var(--lh-base);
+  border-radius:var(--r-btn);border:1px solid transparent;
+  padding:var(--s3) var(--s5);cursor:pointer;width:100%;
+  display:inline-flex;align-items:center;justify-content:center;gap:var(--s2);
+  transition:transform .18s var(--ease-spring),background-color .18s var(--ease-spring),
+             border-color .18s var(--ease-spring),opacity .18s var(--ease-spring),color .18s var(--ease-spring);
 }
-.btn:focus-visible{outline:2px solid var(--primary-light);outline-offset:2px}
+.btn:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
 .btn:active{transform:scale(.975)}
-.btn:disabled{opacity:.42;cursor:not-allowed}
+.btn:disabled{opacity:.4;cursor:not-allowed}
 .btn:disabled:active{transform:none}
 
 .btn-primary{background:var(--primary);color:#fff}
 .btn-primary:hover:not(:disabled){background:var(--primary-dark)}
-.btn-ghost{background:transparent;color:var(--foreground);border-color:rgba(255,255,255,.16)}
-.btn-ghost:hover{border-color:rgba(122,148,255,.5)}
-.btn-danger{background:transparent;color:var(--negative-light);border-color:rgba(185,28,28,.5)}
-.btn-danger:hover{background:rgba(185,28,28,.12)}
+.btn-ghost{background:transparent;color:var(--ink);border-color:var(--hairline)}
+.btn-ghost:hover{border-color:var(--ink);background:var(--quiet)}
+.btn-danger{background:transparent;color:var(--negative);border-color:rgba(185,28,28,.35)}
+.btn-danger:hover{background:rgba(185,28,28,.07)}
+/* On the dark now-card the ghost has to re-derive from white. */
+.card-now .btn-ghost{color:var(--text);border-color:rgba(255,255,255,.22)}
+.card-now .btn-ghost:hover{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.4)}
 .btn-row{display:flex;gap:var(--s2);margin-top:var(--s4)}
+.btn-sm{padding:var(--s2) var(--s4);font-size:var(--text-sm);width:auto}
 
-/* ── online toggle ───────────────────────────────────────────── */
-.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--s5)}
-.toggle{
-  display:inline-flex;align-items:center;gap:var(--s2);cursor:pointer;
-  background:var(--background-muted);border:1px solid rgba(255,255,255,.09);
-  border-radius:var(--r-pill);padding:var(--s2) var(--s4);
-  font:inherit; font-size:var(--text-sm); line-height:var(--lh-sm); color:var(--text-muted);
-  transition:border-color .18s var(--ease-spring),color .18s var(--ease-spring);
+/* ── slide to confirm ────────────────────────────────────────
+   Uber and Ola both put a slider on the transitions that can't be
+   undone, and the reason is physical: the captain is holding the
+   phone in a car with the engine running. Completing collects
+   ₹1,450 in cash and closes the ride — a mis-tap there costs a
+   phone call to Raju. Every other transition stays a tap. */
+.slider{
+  position:relative;height:56px;border-radius:var(--r-btn);
+  background:var(--primary);overflow:hidden;user-select:none;touch-action:none;
+  box-shadow:var(--lift-blue);
 }
-.toggle:focus-visible{outline:2px solid var(--primary-light);outline-offset:2px}
-.dot{width:8px;height:8px;border-radius:50%;background:var(--white-muted);flex:none;
-  transition:background-color .2s var(--ease-spring),box-shadow .2s var(--ease-spring)}
-.toggle[aria-pressed="true"]{color:var(--foreground);border-color:rgba(36,58,251,.5)}
-.toggle[aria-pressed="true"] .dot{background:var(--primary-light);box-shadow:0 0 0 4px rgba(36,58,251,.22)}
-
-.avatar{
-  width:36px;height:36px;border-radius:50%;flex:none;
-  background:linear-gradient(150deg,var(--primary),var(--primary-dark));
-  display:grid;place-items:center;font-family:"PPMori-SemiBold",sans-serif;font-size:var(--text-sm);
+.slider-label{
+  position:absolute;inset:0;display:grid;place-items:center;
+  font-family:"PPMori-SemiBold",sans-serif;font-size:var(--text-base);
+  color:#fff;pointer-events:none;padding-left:52px;
+  transition:opacity .18s linear;
+}
+.slider-knob{
+  position:absolute;top:4px;left:4px;width:48px;height:48px;border-radius:10px;
+  background:#fff;display:grid;place-items:center;cursor:grab;
+  color:var(--primary);border:0;padding:0;
+  box-shadow:0 2px 8px rgba(0,0,0,.28);
+}
+.slider-knob:active{cursor:grabbing}
+.slider-knob:focus-visible{outline:2px solid #fff;outline-offset:-6px}
+.slider[data-settling="1"] .slider-knob{transition:transform .3s var(--ease-spring)}
+.slider-hint{
+  font-size:var(--text-xs);line-height:var(--lh-xs);color:var(--ink-muted);
+  text-align:center;margin:var(--s2) 0 0;
 }
 
-/* ── the status rail: the ride's real state machine, drawn ──────
-   backend RIDE_TRANSITIONS is assigned → en_route → reached →
-   started → completed. Numbering is earned here because the order
-   is enforced server-side, not decorative. */
+/* ── status rail ─────────────────────────────────────────────
+   backend RIDE_TRANSITIONS: assigned → en_route → reached →
+   started → completed. Drawn as a sequence because the server
+   genuinely enforces the order — the shape is reporting a fact,
+   not decorating a list. */
 .rail-wrap{position:relative;margin:var(--s5) 0 0}
 .rail{list-style:none;margin:0;padding:0;position:relative}
-.rail::before{content:"";position:absolute;left:11px;top:11px;bottom:11px;width:2px;background:rgba(255,255,255,.09)}
-.rail-fill{position:absolute;left:11px;top:11px;width:2px;background:linear-gradient(var(--primary-light),var(--primary));
-  transition:height .45s var(--ease-spring)}
+.rail::before{content:"";position:absolute;left:10px;top:11px;bottom:11px;width:2px;background:var(--hairline)}
+.rail-fill{
+  position:absolute;left:10px;top:11px;width:2px;
+  background:linear-gradient(var(--primary-light),var(--primary));
+  transition:height .45s var(--ease-spring);
+}
 .rail li{position:relative;padding:0 0 var(--s5) var(--s8);min-height:24px}
 .rail li:last-child{padding-bottom:0}
 .rail .pip{
-  position:absolute;left:4px;top:3px;width:16px;height:16px;border-radius:50%;
-  background:var(--background);border:2px solid rgba(255,255,255,.18);
-  display:grid;place-items:center;font-size:9px;color:var(--text-muted);
+  position:absolute;left:3px;top:3px;width:16px;height:16px;border-radius:50%;
+  background:var(--page);border:2px solid var(--hairline);
+  display:grid;place-items:center;font-size:11px;line-height:1;color:#fff;
   transition:border-color .3s var(--ease-spring),background-color .3s var(--ease-spring);
 }
-.rail li[data-state="done"] .pip{border-color:var(--primary);background:var(--primary);color:#fff}
-.rail li[data-state="now"] .pip{border-color:var(--primary-light);box-shadow:0 0 0 5px rgba(36,58,251,.2)}
-.rail .step{font-size:var(--text-base);line-height:var(--lh-base);color:var(--text-muted)}
-.rail li[data-state="done"] .step,.rail li[data-state="now"] .step{color:var(--foreground)}
-.rail li[data-state="now"] .step{font-family:"PPMori-SemiBold",sans-serif}
-.rail .when{font-size:var(--text-xs);line-height:var(--lh-xs);color:var(--text-muted);display:block}
+.rail li[data-state="done"] .pip{border-color:var(--primary);background:var(--primary)}
+.rail li[data-state="now"] .pip{border-color:var(--primary);box-shadow:0 0 0 5px rgba(36,58,251,.14)}
+.rail .step{font-size:var(--text-base);line-height:var(--lh-base);color:var(--ink-muted);display:block}
+.rail li[data-state="done"] .step{color:var(--ink)}
+.rail li[data-state="now"] .step{color:var(--ink);font-family:"PPMori-SemiBold",sans-serif}
+.rail .when{font-size:var(--text-xs);line-height:var(--lh-xs);color:var(--ink-muted);display:block}
 
 /* ── OTP ─────────────────────────────────────────────────────── */
-.otp{display:flex;gap:var(--s2);justify-content:center;margin:var(--s5) 0}
+.otp{display:flex;gap:var(--s2);justify-content:center;margin:var(--s5) 0 var(--s2)}
 .otp span{
-  width:46px;height:56px;border-radius:10px;display:grid;place-items:center;
-  background:var(--background-muted);border:1px solid rgba(255,255,255,.1);
-  font-family:"PPMori-SemiBold",sans-serif;font-size:var(--text-2xl);
-  transition:border-color .18s var(--ease-spring);
+  width:56px;height:64px;border-radius:var(--r-btn);display:grid;place-items:center;
+  background:var(--quiet);border:1.5px solid transparent;
+  font-family:"PPMori-SemiBold",sans-serif;font-size:var(--text-2xl);color:var(--ink);
+  transition:border-color .18s var(--ease-spring),background-color .18s var(--ease-spring);
 }
-.otp span[data-filled="1"]{border-color:var(--primary)}
-.keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--s2)}
+.otp span[data-filled="1"]{border-color:var(--primary);background:var(--page)}
+.otp[data-bad="1"]{animation:shake .4s var(--ease-spring)}
+@keyframes shake{
+  0%,100%{transform:translateX(0)} 20%{transform:translateX(-7px)}
+  40%{transform:translateX(6px)} 60%{transform:translateX(-4px)} 80%{transform:translateX(2px)}
+}
+.keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--s2);margin-top:var(--s4)}
 .keypad button{
-  font:inherit;font-size:var(--text-xl);font-family:"PPMori-Regular",sans-serif;
-  padding:var(--s4) 0;border-radius:12px;cursor:pointer;
-  background:var(--background-primary);color:var(--foreground);border:1px solid rgba(255,255,255,.07);
+  font:inherit;font-family:"PPMori-Regular",sans-serif;font-size:var(--text-xl);
+  padding:var(--s4) 0;border-radius:var(--r-btn);cursor:pointer;
+  background:var(--quiet);color:var(--ink);border:0;
   transition:background-color .15s var(--ease-spring),transform .15s var(--ease-spring);
 }
-.keypad button:hover{background:var(--background-muted)}
-.keypad button:focus-visible{outline:2px solid var(--primary-light);outline-offset:2px}
+.keypad button:hover{background:var(--hairline)}
+.keypad button:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
 .keypad button:active{transform:scale(.94)}
+.keypad .key-alt{font-family:"PPMori-SemiBold",sans-serif;font-size:var(--text-sm);background:transparent}
 
 /* ── forms ───────────────────────────────────────────────────── */
-label{display:block;font-size:var(--text-sm);line-height:var(--lh-sm);color:var(--text-muted);margin:var(--s4) 0 var(--s2)}
+label{display:block;font-size:var(--text-sm);line-height:var(--lh-sm);color:var(--ink-muted);margin:var(--s4) 0 var(--s2)}
 input[type="text"],input[type="number"]{
-  width:100%;font:inherit;font-size:var(--text-base);
-  background:var(--background-muted);color:var(--foreground);
-  border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:var(--s3) var(--s4);
-  transition:border-color .18s var(--ease-spring);
+  width:100%;font:inherit;font-size:var(--text-base);color:var(--ink);
+  background:var(--quiet);border:1.5px solid transparent;border-radius:var(--r-btn);
+  padding:var(--s3) var(--s4);
+  transition:border-color .18s var(--ease-spring),background-color .18s var(--ease-spring);
 }
-input:focus{outline:none;border-color:var(--primary)}
-input:focus-visible{outline:2px solid var(--primary-light);outline-offset:1px}
-.hint{font-size:var(--text-xs);line-height:var(--lh-xs);color:var(--text-muted);margin-top:var(--s2)}
-.hint[data-bad="1"]{color:var(--negative-light)}
+input:focus{outline:none;border-color:var(--primary);background:var(--page)}
+.hint{font-size:var(--text-xs);line-height:var(--lh-xs);color:var(--ink-muted);margin:var(--s2) 0 0}
+.hint[data-bad="1"]{color:var(--negative)}
 
 .split{display:flex;justify-content:space-between;align-items:baseline;gap:var(--s3);padding:var(--s2) 0}
-.split + .split{border-top:1px solid rgba(255,255,255,.06)}
-.split dt{color:var(--text-muted);font-size:var(--text-sm);margin:0}
-.split dd{margin:0;font-family:"PPMori-SemiBold",sans-serif;font-size:var(--text-base)}
+.split + .split{border-top:1px solid var(--hairline)}
+.split dt{color:var(--ink-muted);font-size:var(--text-sm);margin:0}
+.split dd{margin:0;font-family:"PPMori-SemiBold",sans-serif;font-size:var(--text-base);color:var(--ink);text-align:right}
+.split .neg{color:var(--negative)}
+.split .pos{color:var(--primary)}
+.card-quiet .split + .split{border-top-color:var(--hairline)}
 
-/* ── empty state ─────────────────────────────────────────────── */
-.empty{text-align:center;padding:var(--s10) var(--s4)}
-.empty .title{margin-bottom:var(--s2)}
-
-/* ── tabs ────────────────────────────────────────────────────── */
-.tabs{
-  flex:none;display:grid;grid-template-columns:repeat(4,1fr);
-  border-top:1px solid rgba(255,255,255,.08);
-  background:rgba(11,11,20,.92); backdrop-filter:blur(12px);
-  padding:var(--s2) var(--s2) var(--s5);
+/* ── list row (tappable) ─────────────────────────────────────── */
+.row{
+  display:flex;align-items:center;justify-content:space-between;gap:var(--s3);
+  width:100%;text-align:left;font:inherit;color:var(--ink);cursor:pointer;
+  background:var(--page);border:1px solid var(--hairline);border-radius:var(--r-card);
+  padding:var(--s4);
+  transition:border-color .18s var(--ease-spring),transform .18s var(--ease-spring),background-color .18s var(--ease-spring);
 }
-.tabs button{
-  font:inherit;font-size:var(--text-xs);line-height:var(--lh-xs);
-  background:none;border:0;color:var(--text-muted);cursor:pointer;
-  padding:var(--s2) 0;border-radius:10px;
+.row + .row{margin-top:var(--s2)}
+.row:hover{border-color:var(--ink)}
+.row:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+.row:active{transform:scale(.99)}
+.row .chev{color:var(--ink-muted);flex:none}
+.row-quiet{background:var(--quiet);border-color:transparent}
+
+.empty{text-align:center;padding:var(--s10) var(--s2)}
+.divider{border:0;border-top:1px solid var(--hairline);margin:var(--s6) 0 var(--s5)}
+
+/* ── the active-ride dock ────────────────────────────────────
+   THE signature of this app. While a ride is live it rides above
+   the tab bar on every screen, in the same dark material as the
+   chrome, so it reads as part of the frame rather than as content
+   on the page. It is what makes leaving the ride screen safe: the
+   captain can price a marketplace posting at a red light and the
+   way back is always in the same place, one thumb-width up.
+   Hidden on the ride's own screens — you don't need a shortcut to
+   where you already are. */
+/* ── the pinned ride action ──────────────────────────────────
+   The one transition the captain is here to make, held at the
+   bottom of the screen where a thumb already is, instead of
+   floating somewhere in a scroll. Uber and Ola both do this and
+   the reason is ergonomic, not stylistic: the captain is not
+   going to reach for the top of a 6.1" phone with one hand while
+   a rider waits. */
+.actionbar{
+  position:absolute;left:0;width:100%;bottom:132px;z-index:7;
+  padding:var(--s6) 4% var(--s2);
+  /* Full-bleed and opaque under the control, dissolving upward.
+     The dock can stay a floating pill because it's one line tall;
+     this one carries a caption too, and text over scrolling text
+     is unreadable at any opacity. */
+  background:linear-gradient(rgba(255,255,255,0), var(--page) 34%);
+  animation:dockin .3s var(--ease-spring) both;
+}
+.actionbar[hidden]{display:none}
+.actionbar .btn{box-shadow:var(--lift-blue)}
+.actionbar .btn-ghost{box-shadow:var(--lift-1);background:var(--page)}
+
+.dock{
+  position:absolute;left:4%;width:92%;bottom:140px;z-index:7;
+  display:flex;align-items:center;gap:var(--s3);
+  background:var(--ink);border:1px solid var(--background-muted);
+  border-radius:var(--r-chip);padding:var(--s3) var(--s3) var(--s3) var(--s4);
+  box-shadow:var(--lift-2);cursor:pointer;text-align:left;font:inherit;color:var(--text);
+  transition:transform .3s var(--ease-spring),opacity .22s linear;
+}
+.dock[hidden]{display:none}
+.dock.is-entering{animation:dockin .34s var(--ease-spring) both}
+@keyframes dockin{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.dock:hover{border-color:var(--primary)}
+.dock:focus-visible{outline:2px solid var(--primary-light);outline-offset:3px}
+.dock:active{transform:scale(.99)}
+.dock .dock-body{flex:1;min-width:0}
+.dock .dock-step{
+  display:flex;align-items:center;gap:6px;
+  font-family:"PPMori-SemiBold",sans-serif;font-size:var(--text-xs);line-height:var(--lh-xs);
+  letter-spacing:.08em;text-transform:uppercase;color:var(--primary-light);
+}
+.dock .dock-route{
+  font-size:var(--text-sm);line-height:var(--lh-sm);color:var(--text);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;
+}
+.dock .dock-cta{
+  flex:none;background:var(--primary);color:#fff;border-radius:10px;
+  padding:var(--s2) var(--s4);font-family:"PPMori-SemiBold",sans-serif;font-size:var(--text-sm);
+}
+
+/* ── tab bar ─────────────────────────────────────────────────
+   AppBar.tsx: five items, absolute bottom-10, w-[92%], rounded-2xl,
+   dark, with Post as a white circle in the middle rather than a
+   tab. Post is an action, not a place, which is exactly why it
+   gets a different shape and no label. */
+.appbar{
+  position:absolute;left:4%;width:92%;bottom:40px;z-index:8;
+  display:grid;grid-template-columns:repeat(5,1fr);align-items:center;
+  background:var(--ink);border:1px solid var(--background-muted);
+  border-radius:var(--r-chip);padding:4px;box-shadow:var(--lift-2);
+}
+.appbar button{
+  font:inherit;background:none;border:0;cursor:pointer;color:var(--text-muted);
+  padding:var(--s2) 0;border-radius:12px;
   display:flex;flex-direction:column;align-items:center;gap:var(--s1);
-  transition:color .18s var(--ease-spring),transform .18s var(--ease-spring);
+  transition:color .2s var(--ease-spring),transform .18s var(--ease-spring);
 }
-.tabs button:hover{color:var(--foreground)}
-.tabs button:focus-visible{outline:2px solid var(--primary-light);outline-offset:-2px}
-.tabs button:active{transform:translateY(1px)}
-.tabs button[aria-current="page"]{color:var(--primary-light)}
-.tabs .glyph{font-size:var(--text-lg);line-height:1}
+.appbar button:hover{color:var(--text)}
+.appbar button:focus-visible{outline:2px solid var(--primary-light);outline-offset:-2px}
+.appbar button:active{transform:translateY(1px)}
+.appbar .tab-label{
+  font-family:"PPMori-SemiBold",sans-serif;font-size:var(--text-sm);line-height:var(--lh-sm);
+}
+.appbar button[aria-current="page"]{color:var(--text)}
+/* weight is an SVG prop, not a style, so it can't tween. AppBar.tsx
+   stacks the fill glyph over the outline and fades it in — same
+   trick here, same 200ms. */
+.icon-stack{position:relative;width:22px;height:22px}
+.icon-stack .fillicon{position:absolute;inset:0;opacity:0;transition:opacity .2s var(--ease-spring)}
+.appbar button[aria-current="page"] .fillicon{opacity:1}
+.fab{
+  width:56px;height:56px;border-radius:50%;background:var(--page);color:var(--ink);
+  display:grid;place-items:center;margin:var(--s2) auto;
+  transition:transform .18s var(--ease-spring),background-color .18s var(--ease-spring);
+}
+.appbar button.fab-btn{padding:0}
+.appbar button.fab-btn:hover .fab{transform:scale(1.05)}
+.appbar button.fab-btn:active .fab{transform:scale(.94)}
 
 @media (prefers-reduced-motion:reduce){
-  *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
 }
 @media (max-width:460px){
-  body{padding:var(--s4) var(--s2)}
-  .phone{height:auto;min-height:82vh;border-radius:26px}
+  body{padding:var(--s4) var(--s2) var(--s8)}
+  .device{height:auto;min-height:80vh;border-radius:28px}
 }
 </style>
 
 <header class="masthead">
-  <h1>RCS Drivers</h1>
-  <p>Interactive UI prototype. Every button works — toggle online, open a ride, run it to completion, claim a marketplace posting. Numbers are invented.</p>
+  <h1>RCS Captains</h1>
+  <p>Interactive prototype, built against the app that exists: light page, dark floating chrome, five-tab bar with the Post action in the middle. Switch the scenario to see how Home behaves when a ride is live. Numbers are invented.</p>
 </header>
 
-<nav class="jump" id="jump" aria-label="Jump to screen"></nav>
+<div class="panel">
+  <p class="panel-label">Scenario</p>
+  <nav class="chips" id="scenarios" aria-label="Scenario"></nav>
+</div>
 
-<div class="phone">
-  <div class="statusbar"><span>9:41</span><span>RCS Drivers</span><span>76%</span></div>
+<div class="panel">
+  <p class="panel-label">Screen</p>
+  <nav class="chips" id="jump" aria-label="Jump to screen"></nav>
+</div>
 
-  <div class="viewport" id="viewport">
+<div class="device">
+  <div class="statusbar"><span>4:03</span><span></span><span>76%</span></div>
 
-    <!-- ── verification pending ─────────────────────────────── -->
-    <section class="screen" data-screen="pending">
-      <p class="eyebrow">Account</p>
-      <h2 class="title">We're checking your documents</h2>
-      <p class="muted">Raju usually clears this within a day. You'll get a notification the moment it's done — nothing to do until then.</p>
-      <div class="card" style="margin-top:var(--s6)">
-        <dl style="margin:0">
-          <div class="split"><dt>Licence</dt><dd style="color:var(--primary-light)">Received</dd></div>
-          <div class="split"><dt>Registration certificate</dt><dd style="color:var(--primary-light)">Received</dd></div>
-          <div class="split"><dt>Insurance</dt><dd style="color:var(--text-muted)">Not uploaded</dd></div>
-        </dl>
-        <div class="btn-row"><button class="btn btn-ghost" data-go="profile">Upload insurance</button></div>
-      </div>
-      <p class="muted" style="margin-top:var(--s5)">Rides and the marketplace open up once you're approved.</p>
-    </section>
-
-    <!-- ── verification rejected ───────────────────────────── -->
-    <section class="screen" data-screen="rejected">
-      <p class="eyebrow">Account</p>
-      <h2 class="title">Your application needs a fix</h2>
-      <div class="card" style="border-color:rgba(185,28,28,.4)">
-        <span class="tag tag-warn">Rejected</span>
-        <p style="margin:var(--s3) 0 0;font-size:var(--text-base);line-height:var(--lh-base)">
-          The registration certificate photo is cut off at the bottom — the expiry date isn't readable. Upload the full page and we'll look again.
-        </p>
-      </div>
-      <p class="muted" style="margin-top:var(--s4)">This is the exact text Raju wrote, shown verbatim. Fix the one thing named and resubmit.</p>
-      <div class="btn-row"><button class="btn btn-primary" data-go="profile">Re-upload document</button></div>
-    </section>
-
-    <!-- ── home ────────────────────────────────────────────── -->
-    <section class="screen" data-screen="home">
-      <div class="topbar">
-        <button class="toggle" id="onlineToggle" aria-pressed="true"><span class="dot"></span><span id="onlineLabel">Online</span></button>
-        <div class="avatar" aria-hidden="true">R</div>
-      </div>
-
-      <div id="homeCommitment">
-        <p class="eyebrow">Next ride · in 42 min</p>
-        <div class="commitment">
-          <span class="money-in">₹1,450</span>
-          <div class="route"><span>SNU Gate 2</span><span class="arrow">→</span><span>IGI T3</span></div>
-          <p class="meta">Today 4:15 PM · Sedan · Carrier needed</p>
-          <div class="btn-row">
-            <button class="btn btn-primary" data-go="active">Start ride</button>
-            <button class="btn btn-ghost" data-go="ride">Details</button>
-          </div>
-        </div>
-        <button class="btn btn-ghost" style="margin-top:var(--s3);justify-content:space-between" data-go="history">
-          <span>Later today</span><span class="tag">2 rides</span>
+  <!-- ── top chrome — OnlineToggle.tsx ─────────────────────── -->
+  <div class="topchrome">
+    <div class="wordmark"><b>RCS</b><span>Captains</span></div>
+    <div class="chrome-row">
+      <div class="chip chip-bell">
+        <button class="bell-btn" id="bellBtn" aria-label="Notifications" data-go="notifications">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M6 9a6 6 0 0 1 12 0c0 4 1.5 5.5 1.5 5.5h-15S6 13 6 9Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+            <path d="M9.5 18a2.5 2.5 0 0 0 5 0" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+          </svg>
+          <svg class="fillicon" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 9a6 6 0 0 1 12 0c0 4 1.5 5.5 1.5 5.5h-15S6 13 6 9Z" fill="currentColor"/>
+            <path d="M9.5 18a2.5 2.5 0 0 0 5 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+          <span class="bell-dot" id="bellDot"></span>
         </button>
       </div>
 
+      <div class="chip chip-toggle">
+        <span class="toggle-label" id="onlineLabel">Online</span>
+        <button class="switch" id="onlineSwitch" role="switch" aria-checked="true" aria-label="Online">
+          <span class="track"></span><span class="knob"></span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="fade fade-top"></div>
+
+  <div class="viewport" id="viewport">
+
+    <!-- ══ home ═══════════════════════════════════════════════ -->
+    <section class="screen" data-screen="home">
+
+      <!-- Slot 1 — the ride that owns you now. Live ride if there
+           is one, otherwise the next booking. One meaning at a
+           time, one primary action, always the dark card. -->
+      <div id="slot1"></div>
+
+      <!-- Slot 2 — what you've committed to after it. Quiet, and
+           deliberately unactionable: a captain can't be started on
+           two rides at once, so a second Start button here would be
+           offering something the server would refuse. Details only. -->
+      <div id="slot2"></div>
+
       <div id="homeEmpty" hidden>
         <div class="empty">
-          <h2 class="title">No rides booked</h2>
-          <p class="muted">You're online, so an assignment can land any moment. Until then, there's work on the marketplace.</p>
-          <div class="btn-row"><button class="btn btn-primary" data-go="market">Browse marketplace</button></div>
+          <h2 class="title title-sm">Nothing booked</h2>
+          <p class="muted" id="emptyCopy">You're online, so an assignment can land any moment. Until then there's work on the marketplace.</p>
+          <div class="btn-row"><button class="btn btn-primary" data-go="market">Browse the marketplace</button></div>
         </div>
       </div>
 
-      <div id="homeOffline" hidden>
-        <div class="empty">
-          <h2 class="title">You're offline</h2>
-          <p class="muted">No new rides will be assigned to you. Marketplace postings are still open to claim.</p>
-        </div>
-      </div>
+      <button class="row row-quiet" style="margin-top:var(--s3)" data-go="earnings">
+        <span>
+          <span class="muted" style="display:block">Today so far</span>
+          <span style="font-family:'PPMori-SemiBold',sans-serif;font-size:var(--text-lg)">₹2,070 · 3 rides</span>
+        </span>
+        <span class="chev" aria-hidden="true">›</span>
+      </button>
 
-      <hr style="border:0;border-top:1px solid rgba(255,255,255,.08);margin:var(--s6) 0 var(--s5)">
+      <hr class="divider">
+
       <p class="eyebrow">Marketplace · 3 open</p>
       <div class="card">
-        <div class="route" style="margin-top:0"><span>Ghaziabad</span><span class="arrow">→</span><span>Agra</span></div>
+        <div class="route"><span>Ghaziabad</span><span class="arrow">→</span><span>Agra</span></div>
         <p class="meta">Tomorrow 6:00 AM · Ertiga · posted by Anil</p>
         <dl style="margin:var(--s3) 0 0">
           <div class="split"><dt>Customer pays you</dt><dd>₹4,200</dd></div>
@@ -390,92 +670,106 @@ input:focus-visible{outline:2px solid var(--primary-light);outline-offset:1px}
       <div class="btn-row"><button class="btn btn-ghost" data-go="market">See all postings</button></div>
     </section>
 
-    <!-- ── ride detail ─────────────────────────────────────── -->
+    <!-- ══ rides ══════════════════════════════════════════════ -->
+    <section class="screen" data-screen="rides">
+      <p class="eyebrow">Rides</p>
+      <h2 class="title">Today</h2>
+      <div id="ridesList"></div>
+      <p class="muted" style="margin-top:var(--s5)">Round-trip legs sit next to each other because they're one commitment — you can't hand back only the return.</p>
+      <div class="btn-row"><button class="btn btn-ghost" data-go="earnings">Past rides and earnings</button></div>
+    </section>
+
+    <!-- ══ ride detail ════════════════════════════════════════ -->
     <section class="screen" data-screen="ride">
       <p class="eyebrow">Assigned ride</p>
       <span class="money-in">₹1,450</span>
-      <p class="muted" style="margin-top:var(--s1)">Collect in cash · ₹145 commission deducted from your weekly payout</p>
+      <p class="muted" style="margin-top:var(--s1)">Collect in cash · ₹145 commission comes off your weekly settlement</p>
 
       <div class="card" style="margin-top:var(--s5)">
-        <p class="eyebrow" style="margin-bottom:var(--s2)">Pickup</p>
-        <p style="margin:0">SNU Gate 2, Shiv Nadar University</p>
-        <p class="meta">Today 4:15 PM</p>
-        <p class="eyebrow" style="margin:var(--s4) 0 var(--s2)">Drop</p>
-        <p style="margin:0">IGI Airport Terminal 3, Delhi</p>
-        <p class="meta">61.4 km</p>
+        <div class="leg">
+          <div class="leg-row">
+            <span class="label">Pickup · 4:15 PM</span>
+            <p class="body">SNU Gate 2, Shiv Nadar University</p>
+          </div>
+          <div class="leg-row">
+            <span class="label">Drop · 61.4 km</span>
+            <p class="body">IGI Airport Terminal 3, Delhi</p>
+          </div>
+        </div>
       </div>
 
       <div class="card">
         <div class="split"><dt>Rider</dt><dd>Ananya M.</dd></div>
         <div class="split"><dt>Vehicle class</dt><dd>Sedan</dd></div>
         <div class="split"><dt>Carrier</dt><dd>Required</dd></div>
-        <div class="split"><dt>Safer route</dt><dd style="color:var(--primary-light)">Requested</dd></div>
+        <div class="split"><dt>Safer route</dt><dd class="pos">Requested</dd></div>
       </div>
 
       <div class="card card-quiet">
-        <p class="muted" style="margin:0">The rider gave a safer-route preference, so your navigation runs via the waypoint rather than the fastest line. Don't override it.</p>
+        <p class="muted">The rider asked for the safer route, so navigation runs via the waypoint rather than the fastest line. Don't override it.</p>
       </div>
 
       <div class="btn-row">
         <button class="btn btn-primary" data-go="active">Start ride</button>
-        <button class="btn btn-ghost" onclick="alert('Opens the dialler with the rider’s number.')">Call</button>
+        <button class="btn btn-ghost" data-alert="Opens the dialler with the rider's number.">Call</button>
       </div>
-      <div class="btn-row"><button class="btn btn-danger" data-go="home">Decline this ride</button></div>
+      <div class="btn-row"><button class="btn btn-danger" id="declineBtn">Decline this ride</button></div>
+      <p class="muted" style="margin-top:var(--s2);text-align:center">Declining sends it back to Raju to reassign.</p>
     </section>
 
-    <!-- ── active ride ─────────────────────────────────────── -->
+    <!-- ══ active ride ════════════════════════════════════════ -->
     <section class="screen" data-screen="active">
-      <p class="eyebrow">In progress</p>
+      <p class="eyebrow" id="activeEyebrow">In progress</p>
       <h2 class="title" id="activeHeading">Head to pickup</h2>
       <p class="muted">SNU Gate 2 → IGI Terminal 3 · Ananya M.</p>
 
       <div class="rail-wrap">
         <ol class="rail" id="rail">
-          <li data-step="assigned"><span class="pip">✓</span><span class="step">Assigned</span><span class="when">4:02 PM</span></li>
-          <li data-step="en_route"><span class="pip"></span><span class="step">On the way to pickup</span><span class="when">location shared every 4s</span></li>
-          <li data-step="reached"><span class="pip"></span><span class="step">Reached pickup</span><span class="when">rider is notified</span></li>
-          <li data-step="started"><span class="pip"></span><span class="step">Ride started</span><span class="when">needs the rider's 4-digit code</span></li>
-          <li data-step="completed"><span class="pip"></span><span class="step">Completed</span><span class="when">collect ₹1,450 in cash</span></li>
+          <li><span class="pip">✓</span><span class="step">Assigned</span><span class="when">4:02 PM</span></li>
+          <li><span class="pip"></span><span class="step">On the way to pickup</span><span class="when">location shared every 4s</span></li>
+          <li><span class="pip"></span><span class="step">Reached pickup</span><span class="when">rider is notified</span></li>
+          <li><span class="pip"></span><span class="step">Ride started</span><span class="when">needs the rider's 4-digit code</span></li>
+          <li><span class="pip"></span><span class="step">Completed</span><span class="when">collect ₹1,450 in cash</span></li>
         </ol>
         <div class="rail-fill" id="railFill" style="height:0"></div>
       </div>
 
-      <div class="btn-row"><button class="btn btn-primary" id="advance">Start driving</button></div>
+      <div class="btn-row"><button class="btn btn-ghost" data-alert="Hands off to Google Maps for turn-by-turn.">Open in Maps</button></div>
       <div class="btn-row"><button class="btn btn-ghost" data-go="ride">Ride details</button></div>
+      <div class="btn-row"><button class="btn btn-ghost" data-alert="Opens the dialler with the rider's number.">Call Ananya</button></div>
     </section>
 
-    <!-- ── OTP ─────────────────────────────────────────────── -->
+    <!-- ══ OTP ════════════════════════════════════════════════ -->
     <section class="screen" data-screen="otp">
       <p class="eyebrow">Verify the rider</p>
       <h2 class="title">Ask Ananya for her code</h2>
       <p class="muted">Four digits, shown in her app. The ride can't start without it — this is what proves you picked up the right person.</p>
 
-      <div class="otp" id="otpBoxes">
+      <div class="otp" id="otpBoxes" data-bad="0">
         <span data-filled="0"></span><span data-filled="0"></span><span data-filled="0"></span><span data-filled="0"></span>
       </div>
-      <p class="hint" id="otpHint">Try 4913.</p>
+      <p class="hint" id="otpHint" style="text-align:center">Try 4913.</p>
 
       <div class="keypad" id="keypad">
         <button>1</button><button>2</button><button>3</button>
         <button>4</button><button>5</button><button>6</button>
         <button>7</button><button>8</button><button>9</button>
-        <button data-key="clear" style="font-size:var(--text-sm)">Clear</button>
+        <button class="key-alt" data-key="clear">Clear</button>
         <button>0</button>
-        <button data-key="back" style="font-size:var(--text-sm)">Back</button>
+        <button class="key-alt" data-key="back">Back</button>
       </div>
 
       <div class="btn-row"><button class="btn btn-ghost" data-go="active">Rider isn't here yet</button></div>
     </section>
 
-    <!-- ── marketplace ─────────────────────────────────────── -->
+    <!-- ══ marketplace ════════════════════════════════════════ -->
     <section class="screen" data-screen="market">
-      <div class="topbar">
-        <div><p class="eyebrow" style="margin:0">Marketplace</p><h2 class="title" style="margin:0">3 open postings</h2></div>
-      </div>
-      <p class="muted">Rides other drivers can't take. You pay the poster a deposit to claim one; the customer still pays you the fare directly, in cash, as always.</p>
+      <p class="eyebrow">Marketplace</p>
+      <h2 class="title">3 open postings</h2>
+      <p class="muted">Rides other captains can't take. You pay the poster a deposit to claim one; the customer still pays you the fare directly, in cash, as always.</p>
 
       <div class="card" style="margin-top:var(--s5)">
-        <div class="route" style="margin-top:0"><span>Ghaziabad</span><span class="arrow">→</span><span>Agra</span></div>
+        <div class="route"><span>Ghaziabad</span><span class="arrow">→</span><span>Agra</span></div>
         <p class="meta">Tomorrow 6:00 AM · Ertiga · posted by Anil</p>
         <dl style="margin:var(--s3) 0 0"><div class="split"><dt>Customer pays you</dt><dd>₹4,200</dd></div></dl>
         <p class="muted" style="margin-top:var(--s3)">Deposit to claim</p>
@@ -484,7 +778,7 @@ input:focus-visible{outline:2px solid var(--primary-light);outline-offset:1px}
       </div>
 
       <div class="card">
-        <div class="route" style="margin-top:0"><span>SNU</span><span class="arrow">→</span><span>Jaipur</span></div>
+        <div class="route"><span>SNU</span><span class="arrow">→</span><span>Jaipur</span></div>
         <p class="meta">Sat 5:30 AM · Innova · posted by Vikram</p>
         <dl style="margin:var(--s3) 0 0"><div class="split"><dt>Customer pays you</dt><dd>₹7,800</dd></div></dl>
         <p class="muted" style="margin-top:var(--s3)">Deposit to claim</p>
@@ -493,7 +787,7 @@ input:focus-visible{outline:2px solid var(--primary-light);outline-offset:1px}
       </div>
 
       <div class="card">
-        <div class="route" style="margin-top:0"><span>Noida S-62</span><span class="arrow">→</span><span>Haridwar</span></div>
+        <div class="route"><span>Noida S-62</span><span class="arrow">→</span><span>Haridwar</span></div>
         <p class="meta">Sun 7:00 AM · Wagon R · posted by Sunil</p>
         <dl style="margin:var(--s3) 0 0"><div class="split"><dt>Customer pays you</dt><dd>₹3,100</dd></div></dl>
         <p class="muted" style="margin-top:var(--s3)">Deposit to claim</p>
@@ -504,38 +798,38 @@ input:focus-visible{outline:2px solid var(--primary-light);outline-offset:1px}
       <div class="btn-row"><button class="btn btn-ghost" data-go="post">Post a ride you can't take</button></div>
     </section>
 
-    <!-- ── claim ───────────────────────────────────────────── -->
+    <!-- ══ claim ══════════════════════════════════════════════ -->
     <section class="screen" data-screen="claim">
       <p class="eyebrow">Claim · Ghaziabad → Agra</p>
       <h2 class="title">You're paying ₹400 to take this job</h2>
 
-      <div class="card" style="border-color:rgba(185,28,28,.4)">
-        <p class="muted" style="margin:0 0 var(--s2)">You pay Anil, by UPI, now</p>
-        <span class="money-out">₹400</span>
-        <p style="margin:var(--s3) 0 0;font-size:var(--text-sm);line-height:var(--lh-sm)">
-          This is not a hold. It does not come back to you when the ride finishes — it's what you're paying Anil for the job.
+      <div class="card card-warn" style="margin-top:var(--s4)">
+        <p class="muted">You pay Anil, by UPI, now</p>
+        <span class="money-out" style="margin-top:var(--s2)">₹400</span>
+        <p class="body" style="margin-top:var(--s3)">
+          This is not a hold. It does not come back when the ride finishes — it's what you're paying Anil for the job.
         </p>
       </div>
 
       <div class="card">
         <div class="split"><dt>Customer pays you, in cash</dt><dd>₹4,200</dd></div>
-        <div class="split"><dt>You pay Anil</dt><dd style="color:var(--negative-light)">−₹400</dd></div>
-        <div class="split"><dt style="color:var(--foreground)">You keep</dt><dd>₹3,800</dd></div>
+        <div class="split"><dt>You pay Anil</dt><dd class="neg">−₹400</dd></div>
+        <div class="split"><dt style="color:var(--ink)">You keep</dt><dd>₹3,800</dd></div>
       </div>
 
       <div class="card card-quiet">
-        <p class="muted" style="margin:0">Cancel after claiming and you forfeit ₹48 — the platform fee. The remaining ₹352 comes back.</p>
+        <p class="muted">Cancel after claiming and you forfeit ₹48, the platform fee. The remaining ₹352 comes back.</p>
       </div>
 
-      <div class="btn-row"><button class="btn btn-primary" onclick="alert('Opens a UPI intent for ₹400 to Anil.')">Pay ₹400 by UPI</button></div>
+      <div class="btn-row"><button class="btn btn-primary" data-alert="Opens a UPI intent for ₹400 to Anil.">Pay ₹400 by UPI</button></div>
       <div class="btn-row"><button class="btn btn-ghost" data-go="market">Back to postings</button></div>
     </section>
 
-    <!-- ── post ────────────────────────────────────────────── -->
+    <!-- ══ post ═══════════════════════════════════════════════ -->
     <section class="screen" data-screen="post">
       <p class="eyebrow">Marketplace</p>
       <h2 class="title">Post a ride you can't take</h2>
-      <p class="muted">Another driver pays you a deposit to take it over. The customer keeps paying that driver directly — nothing about the fare changes.</p>
+      <p class="muted">Another captain pays you a deposit to take it over. The customer keeps paying that captain directly — nothing about the fare changes.</p>
 
       <label for="pFrom">Pickup</label>
       <input id="pFrom" type="text" value="Ghaziabad" autocomplete="off">
@@ -549,14 +843,14 @@ input:focus-visible{outline:2px solid var(--primary-light);outline-offset:1px}
 
       <div class="card" style="margin-top:var(--s5)">
         <div class="split"><dt>Deposit</dt><dd id="sumDep">₹400</dd></div>
-        <div class="split"><dt>Platform fee (12%)</dt><dd id="sumFee" style="color:var(--negative-light)">−₹48</dd></div>
-        <div class="split"><dt style="color:var(--foreground)">You receive on completion</dt><dd id="sumNet">₹352</dd></div>
+        <div class="split"><dt>Platform fee (12%)</dt><dd id="sumFee" class="neg">−₹48</dd></div>
+        <div class="split"><dt style="color:var(--ink)">You receive on completion</dt><dd id="sumNet">₹352</dd></div>
       </div>
 
       <div class="btn-row"><button class="btn btn-primary" id="postBtn">Post this ride</button></div>
     </section>
 
-    <!-- ── earnings ────────────────────────────────────────── -->
+    <!-- ══ earnings ═══════════════════════════════════════════ -->
     <section class="screen" data-screen="earnings">
       <p class="eyebrow">This week</p>
       <span class="money-in">₹18,240</span>
@@ -564,8 +858,14 @@ input:focus-visible{outline:2px solid var(--primary-light);outline-offset:1px}
 
       <div class="card" style="margin-top:var(--s5)">
         <div class="split"><dt>Cash you collected</dt><dd>₹20,270</dd></div>
-        <div class="split"><dt>Commission owed to RCS</dt><dd style="color:var(--negative-light)">−₹2,030</dd></div>
-        <div class="split"><dt style="color:var(--foreground)">Settle by Monday</dt><dd>₹2,030</dd></div>
+        <div class="split"><dt>Commission owed to RCS</dt><dd class="neg">−₹2,030</dd></div>
+      </div>
+
+      <div class="card card-warn">
+        <p class="muted">Settle by Monday</p>
+        <span class="money-out" style="margin-top:var(--s2)">₹2,030</span>
+        <p class="body" style="margin-top:var(--s3)">You're holding RCS's share of the cash. Pay it in and the week closes.</p>
+        <div class="btn-row"><button class="btn btn-primary" data-alert="Opens a UPI intent for ₹2,030 to RCS Travels.">Settle by UPI</button></div>
       </div>
 
       <p class="eyebrow" style="margin-top:var(--s6)">Recent</p>
@@ -575,64 +875,165 @@ input:focus-visible{outline:2px solid var(--primary-light);outline-offset:1px}
         <div class="split"><dt>Greater Noida → SNU · Thu</dt><dd>₹480</dd></div>
         <div class="split"><dt>SNU → Agra · Thu</dt><dd>₹4,100</dd></div>
       </div>
-      <div class="btn-row"><button class="btn btn-ghost" data-go="history">Full history</button></div>
     </section>
 
-    <!-- ── history ─────────────────────────────────────────── -->
-    <section class="screen" data-screen="history">
-      <p class="eyebrow">Rides</p>
-      <h2 class="title">Later today</h2>
-      <div class="card">
-        <div class="route" style="margin-top:0"><span>SNU Gate 2</span><span class="arrow">→</span><span>IGI T3</span></div>
-        <p class="meta">4:15 PM · Sedan</p>
-        <span class="tag tag-live">Next</span>
-      </div>
-      <div class="card">
-        <div class="route" style="margin-top:0"><span>IGI T3</span><span class="arrow">→</span><span>SNU</span></div>
-        <p class="meta">9:40 PM · Sedan · return leg</p>
-        <span class="tag">Assigned</span>
-      </div>
-      <div class="card">
-        <div class="route" style="margin-top:0"><span>SNU</span><span class="arrow">→</span><span>Noida S-62</span></div>
-        <p class="meta">11:15 PM · Sedan · shared</p>
-        <span class="tag">Assigned</span>
-      </div>
-      <p class="muted" style="margin-top:var(--s5)">Round-trip legs sit next to each other because they're one commitment — you can't hand back only the return.</p>
+    <!-- ══ notifications ══════════════════════════════════════ -->
+    <section class="screen" data-screen="notifications">
+      <p class="eyebrow">Notifications</p>
+      <h2 class="title">Recent</h2>
+      <button class="row" data-go="ride">
+        <span>
+          <span class="tag tag-live"><span class="pulse"></span>New ride</span>
+          <span class="body" style="display:block;margin-top:var(--s2)">SNU Gate 2 → IGI T3, today 4:15 PM</span>
+          <span class="muted" style="display:block">Raju assigned this to you · 4:02 PM</span>
+        </span>
+        <span class="chev" aria-hidden="true">›</span>
+      </button>
+      <button class="row" data-go="account">
+        <span>
+          <span class="tag tag-warn">Documents</span>
+          <span class="body" style="display:block;margin-top:var(--s2)">Your insurance expires in 19 days</span>
+          <span class="muted" style="display:block">Yesterday</span>
+        </span>
+        <span class="chev" aria-hidden="true">›</span>
+      </button>
+      <button class="row" data-go="earnings">
+        <span>
+          <span class="tag">Settlement</span>
+          <span class="body" style="display:block;margin-top:var(--s2)">₹2,030 due to RCS by Monday</span>
+          <span class="muted" style="display:block">Mon 28 Jul</span>
+        </span>
+        <span class="chev" aria-hidden="true">›</span>
+      </button>
     </section>
 
-    <!-- ── profile ─────────────────────────────────────────── -->
-    <section class="screen" data-screen="profile">
-      <div class="topbar">
-        <div><p class="eyebrow" style="margin:0">Driver</p><h2 class="title" style="margin:0">Raju Kumar</h2></div>
-        <div class="avatar" aria-hidden="true">R</div>
-      </div>
+    <!-- ══ account ════════════════════════════════════════════ -->
+    <section class="screen" data-screen="account">
+      <p class="eyebrow">Captain</p>
+      <h2 class="title">Raju Kumar</h2>
       <p class="muted">Approved · driving with RCS since March 2026</p>
 
+      <!-- The plate cut earns its keep here: a string of characters
+           that has to be read one glyph at a time, not as a word. -->
       <div class="card" style="margin-top:var(--s5)">
         <p class="eyebrow" style="margin-bottom:var(--s2)">Vehicle</p>
-        <span class="money-out" style="color:var(--foreground)">UP 16 CJ 4471</span>
-        <p class="meta" style="margin-top:var(--s2)">Maruti Dzire · Sedan · 4 seats · carrier fitted</p>
+        <span class="money-out" style="color:var(--ink)">UP 16 CJ 4471</span>
+        <p class="meta">Maruti Dzire · Sedan · 4 seats · carrier fitted</p>
       </div>
 
       <div class="card">
-        <div class="split"><dt>Licence</dt><dd style="color:var(--primary-light)">Valid to 2031</dd></div>
-        <div class="split"><dt>Registration certificate</dt><dd style="color:var(--primary-light)">Valid to 2029</dd></div>
-        <div class="split"><dt>Insurance</dt><dd class="tag tag-warn">Expires in 19 days</dd></div>
+        <div class="split"><dt>Licence</dt><dd class="pos">Valid to 2031</dd></div>
+        <div class="split"><dt>Registration certificate</dt><dd class="pos">Valid to 2029</dd></div>
+        <div class="split"><dt>Insurance</dt><dd><span class="tag tag-warn">19 days left</span></dd></div>
       </div>
 
-      <div class="btn-row"><button class="btn btn-ghost" onclick="alert('Opens the camera to photograph the new policy.')">Update insurance</button></div>
-      <div class="btn-row"><button class="btn btn-ghost" data-go="post">Post a ride to the marketplace</button></div>
+      <div class="btn-row"><button class="btn btn-ghost" data-alert="Opens the camera to photograph the new policy.">Update insurance</button></div>
+      <div class="btn-row"><button class="btn btn-ghost" data-go="earnings">Earnings and settlement</button></div>
       <div class="btn-row"><button class="btn btn-danger" id="goOffline">Go offline</button></div>
-      <p class="muted" style="margin-top:var(--s3)">You can't go offline while a ride is in progress.</p>
+      <p class="muted" style="margin-top:var(--s2);text-align:center">You can't go offline while a ride is in progress.</p>
+    </section>
+
+    <!-- ══ verification pending ═══════════════════════════════ -->
+    <section class="screen" data-screen="pending">
+      <p class="eyebrow">Account</p>
+      <h2 class="title">We're checking your documents</h2>
+      <p class="muted">Raju usually clears this within a day. You'll get a notification the moment it's done — nothing to do until then.</p>
+      <div class="card" style="margin-top:var(--s5)">
+        <div class="split"><dt>Licence</dt><dd class="pos">Received</dd></div>
+        <div class="split"><dt>Registration certificate</dt><dd class="pos">Received</dd></div>
+        <div class="split"><dt>Insurance</dt><dd style="color:var(--ink-muted)">Not uploaded</dd></div>
+      </div>
+      <div class="btn-row"><button class="btn btn-primary" data-go="account">Upload insurance</button></div>
+      <p class="muted" style="margin-top:var(--s5)">Rides and the marketplace open up once you're approved.</p>
+    </section>
+
+    <!-- ══ verification rejected ══════════════════════════════ -->
+    <section class="screen" data-screen="rejected">
+      <p class="eyebrow">Account</p>
+      <h2 class="title">Your application needs a fix</h2>
+      <div class="card card-warn" style="margin-top:var(--s4)">
+        <span class="tag tag-warn">Rejected</span>
+        <p class="body" style="margin-top:var(--s3)">
+          The registration certificate photo is cut off at the bottom — the expiry date isn't readable. Upload the full page and we'll look again.
+        </p>
+      </div>
+      <p class="muted" style="margin-top:var(--s4)">This is the exact text Raju wrote, shown verbatim. Fix the one thing named and resubmit.</p>
+      <div class="btn-row"><button class="btn btn-primary" data-go="account">Re-upload document</button></div>
     </section>
 
   </div>
 
-  <nav class="tabs" id="tabs" aria-label="Main">
-    <button data-go="home" data-tab="home"><span class="glyph" aria-hidden="true">◎</span>Rides</button>
-    <button data-go="market" data-tab="market"><span class="glyph" aria-hidden="true">⇄</span>Market</button>
-    <button data-go="earnings" data-tab="earnings"><span class="glyph" aria-hidden="true">₹</span>Earnings</button>
-    <button data-go="profile" data-tab="profile"><span class="glyph" aria-hidden="true">◍</span>Profile</button>
+  <div class="fade fade-bot"></div>
+
+  <!-- ── the pinned ride action, shown only on the ride ────── -->
+  <div class="actionbar" id="actionbar" hidden>
+    <div id="advanceWrap">
+      <button class="btn btn-primary" id="advance">Start driving</button>
+    </div>
+
+    <div id="sliderWrap" hidden>
+      <div class="slider" id="completeSlider">
+        <span class="slider-label" id="sliderLabel">Slide to complete · ₹1,450 cash</span>
+        <button class="slider-knob" id="sliderKnob" aria-label="Slide to complete the ride">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M5 12h13M13 7l5 5-5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </div>
+      <p class="slider-hint">Collects the cash and closes the ride. Can't be undone.</p>
+    </div>
+  </div>
+
+  <!-- ── the active-ride dock ──────────────────────────────── -->
+  <button class="dock" id="dock" hidden>
+    <span class="dock-body">
+      <span class="dock-step"><span class="pulse" style="width:6px;height:6px;border-radius:50%;background:currentColor;display:inline-block"></span><span id="dockStep">On the way</span></span>
+      <span class="dock-route" id="dockRoute">SNU Gate 2 → IGI T3</span>
+    </span>
+    <span class="dock-cta">Resume</span>
+  </button>
+
+  <!-- ── tab bar — AppBar.tsx ──────────────────────────────── -->
+  <nav class="appbar" id="appbar" aria-label="Main">
+    <button data-go="home" data-tab="home">
+      <span class="icon-stack">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3.5 10.6 12 3.6l8.5 7V20a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+        <svg class="fillicon" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 10.6 12 3.6l8.5 7V20a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1z" fill="currentColor"/></svg>
+      </span>
+      <span class="tab-label">Home</span>
+    </button>
+
+    <button data-go="rides" data-tab="rides">
+      <span class="icon-stack">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 3h14v18l-2.3-1.6L14.3 21l-2.3-1.6L9.7 21l-2.4-1.6L5 21z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M8.5 9h7M8.5 13h4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        <svg class="fillicon" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h14v18l-2.3-1.6L14.3 21l-2.3-1.6L9.7 21l-2.4-1.6L5 21z" fill="currentColor"/></svg>
+      </span>
+      <span class="tab-label">Rides</span>
+    </button>
+
+    <!-- Post is an action, not a place: different shape, no label,
+         and it never lights up as the current tab. -->
+    <button class="fab-btn" data-go="post" aria-label="Post a ride">
+      <span class="fab">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+      </span>
+    </button>
+
+    <button data-go="market" data-tab="market">
+      <span class="icon-stack">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 9.5h16V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M3 9.5 4.6 4h14.8L21 9.5" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+        <svg class="fillicon" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10.8h16V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z" fill="currentColor"/><path d="M2.8 9.3 4.6 4h14.8l1.8 5.3z" fill="currentColor"/></svg>
+      </span>
+      <span class="tab-label">Market</span>
+    </button>
+
+    <button data-go="account" data-tab="account">
+      <span class="icon-stack">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="8" r="3.6" stroke="currentColor" stroke-width="1.6"/><path d="M4.5 20.5a7.5 7.5 0 0 1 15 0" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        <svg class="fillicon" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.6" fill="currentColor"/><path d="M4.5 20.5a7.5 7.5 0 0 1 15 0z" fill="currentColor"/></svg>
+      </span>
+      <span class="tab-label">Account</span>
+    </button>
   </nav>
 </div>
 
@@ -640,16 +1041,56 @@ input:focus-visible{outline:2px solid var(--primary-light);outline-offset:1px}
 (() => {
   "use strict";
 
+  const $  = id => document.getElementById(id);
   const screens = [...document.querySelectorAll("[data-screen]")];
-  const viewport = document.getElementById("viewport");
+  const viewport = $("viewport");
+  const rupees = n => "₹" + Math.round(n).toLocaleString("en-IN");
 
   const LABELS = {
-    pending:"Pending", rejected:"Rejected", home:"Home", ride:"Ride detail",
-    active:"Active ride", otp:"Rider code", market:"Marketplace", claim:"Claim",
-    post:"Post a ride", earnings:"Earnings", history:"Ride list", profile:"Profile",
+    home:"Home", rides:"Rides", ride:"Ride detail", active:"Active ride",
+    otp:"Rider code", market:"Marketplace", claim:"Claim", post:"Post a ride",
+    earnings:"Earnings", notifications:"Notifications", account:"Account",
+    pending:"Pending", rejected:"Rejected",
   };
 
-  /* ── navigation ─────────────────────────────────────────── */
+  /* Which tab owns a screen that isn't itself a tab. Post is absent
+     on purpose — it's an action, so it never holds the lit state. */
+  const OWNER = {
+    ride:"home", active:"home", otp:"home", notifications:"home",
+    claim:"market", earnings:"account", pending:"account", rejected:"account",
+  };
+
+  /* ── the model ───────────────────────────────────────────────
+     A queue, not a boolean. hasRide could only ever answer "is
+     there a ride", which is why Home used to empty out while the
+     ride list still showed two more. */
+  const RIDES = {
+    igi: {from:"SNU Gate 2", to:"IGI T3", at:"4:15 PM", fare:1450, cls:"Sedan", note:"Carrier needed", inMin:12},
+    ret: {from:"IGI T3",     to:"SNU",    at:"9:40 PM", fare:1380, cls:"Sedan", note:"Return leg",     inMin:325},
+    n62: {from:"SNU",        to:"Noida S-62", at:"11:15 PM", fare:640, cls:"Sedan", note:"Shared",     inMin:420},
+  };
+
+  // Same order the backend enforces in RIDE_TRANSITIONS.
+  const STEPS = ["assigned","en_route","reached","started","completed"];
+  const HEADING = {
+    assigned:"Head to pickup", en_route:"On the way", reached:"Waiting at pickup",
+    started:"Ride in progress", completed:"Ride complete",
+  };
+  const SHORT = {
+    assigned:"Assigned", en_route:"On the way", reached:"At pickup",
+    started:"Ride in progress", completed:"Complete",
+  };
+  const NEXT_LABEL = {
+    assigned:"Start driving", en_route:"I've reached pickup",
+    reached:"Start ride", started:"", completed:"Back to Home",
+  };
+
+  const state = { online:true, queue:["igi","ret","n62"], step:0 };
+  // A ride counts as live once en_route has been reported to the
+  // server — the same threshold PATCH /driver/online refuses on.
+  const isLive = () => state.step > 0 && state.step < 4;
+
+  /* ── navigation ─────────────────────────────────────────────── */
   let current = "home";
 
   function show(name){
@@ -658,122 +1099,315 @@ input:focus-visible{outline:2px solid var(--primary-light);outline-offset:1px}
     screens.forEach(s => s.classList.toggle("is-active", s.dataset.screen === name));
     viewport.scrollTop = 0;
 
-    // The rail measures itself, which only works once it has a layout.
-    if (name === "active") paintRide();
+    if (name === "active") paintRide();   // the rail can only measure itself once laid out
+    if (name === "notifications") $("bellDot").hidden = true;
+
+    // The pinned action belongs to the ride and travels with it.
+    $("actionbar").hidden = name !== "active";
+
+    $("bellBtn").setAttribute("aria-current", name === "notifications" ? "page" : "false");
 
     document.querySelectorAll("#jump button").forEach(b =>
       b.setAttribute("aria-current", String(b.dataset.go === name)));
 
-    // A tab stays lit for the screens that live under it.
-    const owner = {ride:"home", active:"home", otp:"home", history:"home",
-                   claim:"market", post:"market"}[name] || name;
-    document.querySelectorAll("#tabs button").forEach(b => {
-      if (b.dataset.tab === owner) b.setAttribute("aria-current", "page");
+    const owner = OWNER[name] || name;
+    document.querySelectorAll("#appbar button").forEach(b => {
+      if (b.dataset.tab && b.dataset.tab === owner) b.setAttribute("aria-current","page");
       else b.removeAttribute("aria-current");
     });
+
+    paintDock();
   }
 
-  // Build the jump bar from the screens themselves, so it can't drift.
-  const jump = document.getElementById("jump");
+  // Both nav bars are built from the screens themselves, so they
+  // can't drift out of step with what exists.
   screens.forEach(s => {
     const b = document.createElement("button");
     b.textContent = LABELS[s.dataset.screen] || s.dataset.screen;
     b.dataset.go = s.dataset.screen;
-    jump.append(b);
+    $("jump").append(b);
   });
 
   document.addEventListener("click", e => {
-    const t = e.target.closest("[data-go]");
-    if (t) show(t.dataset.go);
+    const go = e.target.closest("[data-go]");
+    if (go){ show(go.dataset.go); return; }
+    const say = e.target.closest("[data-alert]");
+    if (say) alert(say.dataset.alert);
   });
 
-  /* ── online toggle ──────────────────────────────────────── */
-  const toggle = document.getElementById("onlineToggle");
-  const onlineLabel = document.getElementById("onlineLabel");
-  const commitment = document.getElementById("homeCommitment");
-  const emptyBlock = document.getElementById("homeEmpty");
-  const offlineBlock = document.getElementById("homeOffline");
+  /* ── scenarios ──────────────────────────────────────────────── */
+  const SCENARIOS = {
+    "Before the ride": () => Object.assign(state, {online:true, queue:["igi","ret","n62"], step:0}),
+    "Ride live":       () => Object.assign(state, {online:true, queue:["igi","ret","n62"], step:1}),
+    // A return leg pulled forward until it collides with the airport
+    // run in slot 1 — the case that justifies slot 2 existing at all.
+    "Tight gap":       () => { Object.assign(state, {online:true, queue:["igi","ret"], step:1});
+                               Object.assign(RIDES.ret, {inMin:38, at:"4:41 PM"}); },
+    "Nothing booked":  () => Object.assign(state, {online:true, queue:[], step:0}),
+    "Offline":         () => Object.assign(state, {online:false, queue:["igi","ret","n62"], step:0}),
+  };
+  let scenario = "Before the ride";
 
-  let online = true;
-  let hasRide = true;
+  Object.keys(SCENARIOS).forEach(name => {
+    const b = document.createElement("button");
+    b.textContent = name;
+    b.setAttribute("aria-pressed", String(name === scenario));
+    b.addEventListener("click", () => {
+      scenario = name;
+      Object.assign(RIDES.ret, {inMin:325, at:"9:40 PM"});  // undo "Tight gap"
+      SCENARIOS[name]();
+      document.querySelectorAll("#scenarios button").forEach(x =>
+        x.setAttribute("aria-pressed", String(x.textContent === name)));
+      paintAll();
+      show("home");
+    });
+    $("scenarios").append(b);
+  });
 
-  function paintHome(){
-    onlineLabel.textContent = online ? "Online" : "Offline";
-    toggle.setAttribute("aria-pressed", String(online));
-    commitment.hidden  = !(online && hasRide);
-    emptyBlock.hidden  = !(online && !hasRide);
-    offlineBlock.hidden = online;
+  /* ── online switch ──────────────────────────────────────────── */
+  function paintOnline(){
+    $("onlineLabel").textContent = state.online ? "Online" : "Offline";
+    $("onlineSwitch").setAttribute("aria-checked", String(state.online));
   }
 
-  toggle.addEventListener("click", () => {
-    // Mirrors PATCH /driver/online: the server refuses to take you offline
-    // while a ride is still running, so the UI refuses in the same place.
-    if (online && rideStep > 0 && rideStep < 4){
+  function tryToggleOnline(){
+    // Mirrors PATCH /driver/online: the server refuses while a ride
+    // is running, so the UI refuses in the same place rather than
+    // letting the request go and reverting on the error.
+    if (state.online && isLive()){
       alert("Finish your active ride before going offline.");
       return;
     }
-    online = !online;
-    paintHome();
+    state.online = !state.online;
+    paintAll();
+  }
+  $("onlineSwitch").addEventListener("click", tryToggleOnline);
+  $("goOffline").addEventListener("click", () => {
+    if (isLive()){ alert("Finish your active ride before going offline."); return; }
+    state.online = false; paintAll(); show("home");
   });
 
-  document.getElementById("goOffline").addEventListener("click", () => {
-    if (rideStep > 0 && rideStep < 4){
-      alert("Finish your active ride before going offline.");
+  /* ── home: two slots ────────────────────────────────────────── */
+  function gapText(min){
+    if (min < 60) return "in " + min + " min";
+    const h = Math.floor(min / 60), m = min % 60;
+    return "in " + h + "h" + (m ? " " + m + "m" : "");
+  }
+
+  function paintHome(){
+    const slot1 = $("slot1"), slot2 = $("slot2"), empty = $("homeEmpty");
+    const [firstId, secondId] = state.queue;
+    const first = RIDES[firstId], second = RIDES[secondId];
+
+    slot1.innerHTML = ""; slot2.innerHTML = "";
+    empty.hidden = Boolean(first);
+
+    if (!first){
+      $("emptyCopy").textContent = state.online
+        ? "You're online, so an assignment can land any moment. Until then there's work on the marketplace."
+        : "You're offline, so nothing will be assigned to you. Marketplace postings are still open to claim.";
       return;
     }
-    online = false; paintHome(); show("home");
-  });
 
-  /* ── the ride state machine ─────────────────────────────── */
-  // Same order the backend enforces in RIDE_TRANSITIONS.
-  const STEPS = ["assigned","en_route","reached","started","completed"];
-  const HEADING = {
-    assigned:"Head to pickup", en_route:"On the way", reached:"Waiting at pickup",
-    started:"Ride in progress", completed:"Ride complete",
-  };
-  const NEXT_LABEL = {
-    assigned:"Start driving", en_route:"I've reached pickup",
-    reached:"Start ride", started:"Complete ride", completed:"Back to rides",
-  };
+    /* Slot 1 — one card, one meaning, decided by the ride's state
+       and nothing else. This is the fix for a Home that used to say
+       "Start ride" at a captain who was already driving it. */
+    const live = isLive();
+    const eyebrow = live
+      ? '<span class="tag tag-live"><span class="pulse"></span>' + SHORT[STEPS[state.step]] + '</span>'
+      : '<p class="eyebrow">Next ride · ' + gapText(first.inMin) + '</p>';
 
-  let rideStep = 0;
-  const rail = document.getElementById("rail");
-  const railFill = document.getElementById("railFill");
-  const advance = document.getElementById("advance");
-  const heading = document.getElementById("activeHeading");
+    const actions = live
+      ? '<div class="btn-row"><button class="btn btn-primary" data-go="active">Resume ride</button></div>'
+      : '<div class="btn-row">' +
+          '<button class="btn btn-primary" data-go="active">Start ride</button>' +
+          '<button class="btn btn-ghost" data-go="ride">Details</button>' +
+        '</div>';
+
+    slot1.innerHTML =
+      (live ? '<div style="margin-bottom:var(--s3)">' + eyebrow + '</div>' : eyebrow) +
+      '<div class="card-now">' +
+        '<span class="money-in">' + rupees(first.fare) + '</span>' +
+        '<div class="route" style="margin-top:var(--s3)"><span>' + first.from + '</span>' +
+          '<span class="arrow">→</span><span>' + first.to + '</span></div>' +
+        '<p class="meta">' + first.at + ' · ' + first.cls + ' · ' + first.note + '</p>' +
+        actions +
+      '</div>';
+
+    /* Slot 2 — quiet, and no start action, ever. A captain can't be
+       started on two rides at once; a second primary button here
+       would be offering something the server would reject. The
+       countdown is the point of the slot: it's where a schedule
+       collision becomes visible while there's still time to call. */
+    if (!second) return;
+
+    const tight = second.inMin < 90;
+    slot2.innerHTML =
+      '<button class="row" style="margin-top:var(--s3)" data-go="rides">' +
+        '<span style="min-width:0">' +
+          '<span class="muted" style="display:block">Then</span>' +
+          '<span class="route" style="font-size:var(--text-base)"><span>' + second.from +
+            '</span><span class="arrow">→</span><span>' + second.to + '</span></span>' +
+          '<span class="meta" style="display:block">' + second.at + ' · ' + second.note + '</span>' +
+        '</span>' +
+        '<span class="tag ' + (tight ? "tag-warn" : "") + '">' + gapText(second.inMin) + '</span>' +
+      '</button>' +
+      (tight
+        ? '<p class="muted" style="margin-top:var(--s2)">That’s tight for an airport run. Call Raju if you can’t make it.</p>'
+        : "");
+  }
+
+  /* ── rides list ─────────────────────────────────────────────── */
+  function paintRides(){
+    const list = $("ridesList");
+    if (!state.queue.length){
+      list.innerHTML = '<div class="empty"><h2 class="title title-sm">Nothing booked today</h2>' +
+                       '<p class="muted">Assigned rides show up here the moment Raju sends them.</p></div>';
+      return;
+    }
+    list.innerHTML = state.queue.map((id, i) => {
+      const r = RIDES[id];
+      const tag = i === 0
+        ? (isLive() ? '<span class="tag tag-live"><span class="pulse"></span>Now</span>' : '<span class="tag tag-live">Next</span>')
+        : '<span class="tag">Assigned</span>';
+      return '<button class="row" data-go="' + (i === 0 ? (isLive() ? "active" : "ride") : "ride") + '">' +
+        '<span style="min-width:0">' +
+          '<span class="route" style="font-size:var(--text-base)"><span>' + r.from +
+            '</span><span class="arrow">→</span><span>' + r.to + '</span></span>' +
+          '<span class="meta" style="display:block">' + r.at + ' · ' + r.cls + ' · ' + rupees(r.fare) + '</span>' +
+        '</span>' + tag + '</button>';
+    }).join("");
+  }
+
+  /* ── the dock ───────────────────────────────────────────────── */
+  let dockWasHidden = true;
+  function paintDock(){
+    const dock = $("dock");
+    // Not on the ride's own screens — you don't need a shortcut to
+    // where you already are. Not on Home either: slot 1 *is* the
+    // ride there, and two Resume buttons on one screen is one too
+    // many. The dock is for everywhere the ride isn't visible.
+    const wanted = isLive() && !["active","otp","home"].includes(current);
+    dock.hidden = !wanted;
+    // Either bar occupies the same slot above the tab bar, and both
+    // need the scroll to make room. Never both at once.
+    document.querySelector(".device").dataset.pinned =
+      (wanted || current === "active") ? "1" : "0";
+    if (!wanted){ dockWasHidden = true; return; }
+
+    const r = RIDES[state.queue[0]];
+    $("dockStep").textContent = SHORT[STEPS[state.step]];
+    $("dockRoute").textContent = r.from + " → " + r.to;
+    if (dockWasHidden){
+      dock.classList.remove("is-entering");
+      void dock.offsetWidth;                 // restart the entrance
+      dock.classList.add("is-entering");
+      dockWasHidden = false;
+    }
+  }
+  $("dock").addEventListener("click", () => show("active"));
+
+  /* ── the ride state machine ─────────────────────────────────── */
+  const rail = $("rail"), railFill = $("railFill"), advance = $("advance");
 
   function paintRide(){
     const items = [...rail.querySelectorAll("li")];
     items.forEach((li,i) => {
-      li.dataset.state = i < rideStep ? "done" : i === rideStep ? "now" : "";
-      li.querySelector(".pip").textContent = i < rideStep ? "✓" : "";
+      li.dataset.state = i < state.step ? "done" : i === state.step ? "now" : "";
+      li.querySelector(".pip").textContent = i < state.step ? "✓" : "";
     });
-    // Measured off the pips rather than a percentage: the last row has no
-    // padding-bottom, so an even 25%-per-step would drift low by the end.
-    // offsetTop reads 0 while the screen is display:none, hence the guard —
-    // show() re-runs this once the screen is actually laid out.
+    // Measured off the pips, not a flat 25% per step: the last row
+    // has no padding-bottom, so an even split drifts low by the end.
+    // offsetTop reads 0 while display:none, hence the guard — show()
+    // re-runs this once the screen actually has a layout.
     if (rail.offsetHeight){
-      railFill.style.height = (items[rideStep].offsetTop - items[0].offsetTop) + "px";
+      railFill.style.height = (items[state.step].offsetTop - items[0].offsetTop) + "px";
     }
-    heading.textContent = HEADING[STEPS[rideStep]];
-    advance.textContent = NEXT_LABEL[STEPS[rideStep]];
+    $("activeHeading").textContent = HEADING[STEPS[state.step]];
+    $("activeEyebrow").textContent = state.step === 4 ? "Done" : "In progress";
+
+    // started → completed is the one transition that takes money and
+    // can't be walked back, so it's the one that gets the slider.
+    const sliding = STEPS[state.step] === "started";
+    $("sliderWrap").hidden = !sliding;
+    $("advanceWrap").hidden = sliding;
+    if (!sliding) advance.textContent = NEXT_LABEL[STEPS[state.step]];
+    resetSlider();
   }
 
   advance.addEventListener("click", () => {
-    // reached → started is the one transition the driver can't make alone.
-    if (STEPS[rideStep] === "reached"){ otp = ""; paintOtp(); show("otp"); return; }
-    if (STEPS[rideStep] === "completed"){
-      rideStep = 0; hasRide = false; paintRide(); paintHome(); show("home"); return;
+    // reached → started is the one transition the captain can't make
+    // alone: it needs the rider's code.
+    if (STEPS[state.step] === "reached"){ otp = ""; paintOtp(); show("otp"); return; }
+    if (STEPS[state.step] === "completed"){
+      state.queue.shift();               // the next leg is promoted, not emptied
+      state.step = 0;
+      paintAll();
+      show(state.queue.length ? "home" : "home");
+      return;
     }
-    rideStep = Math.min(rideStep + 1, STEPS.length - 1);
-    paintRide();
+    state.step = Math.min(state.step + 1, STEPS.length - 1);
+    paintAll();
   });
 
-  /* ── OTP ────────────────────────────────────────────────── */
+  $("declineBtn").addEventListener("click", () => {
+    if (!confirm("Send this ride back to Raju to reassign?")) return;
+    state.queue.shift(); state.step = 0; paintAll(); show("home");
+  });
+
+  /* ── slide to complete ──────────────────────────────────────── */
+  const slider = $("completeSlider"), knob = $("sliderKnob"), sliderLabel = $("sliderLabel");
+  let dragging = false, startX = 0, offset = 0;
+  const travel = () => slider.clientWidth - knob.offsetWidth - 8;
+
+  function setOffset(px){
+    offset = Math.max(0, Math.min(travel(), px));
+    knob.style.transform = "translateX(" + offset + "px)";
+    sliderLabel.style.opacity = String(1 - (offset / travel()) * 1.4);
+  }
+  function resetSlider(){
+    slider.dataset.settling = "1";
+    setOffset(0);
+    setTimeout(() => { slider.dataset.settling = "0"; }, 320);
+  }
+  function completeRide(){
+    state.step = 4;
+    paintAll();
+    alert("Ride completed. Collect ₹1,450 in cash.");
+    state.queue.shift(); state.step = 0;
+    paintAll(); show("home");
+  }
+  function release(){
+    if (!dragging) return;
+    dragging = false;
+    slider.dataset.settling = "1";
+    if (offset > travel() * 0.9) completeRide(); else setOffset(0);
+    setTimeout(() => { slider.dataset.settling = "0"; }, 320);
+  }
+
+  knob.addEventListener("pointerdown", e => {
+    dragging = true; startX = e.clientX - offset;
+    slider.dataset.settling = "0";
+    knob.setPointerCapture(e.pointerId);
+  });
+  knob.addEventListener("pointermove", e => { if (dragging) setOffset(e.clientX - startX); });
+  knob.addEventListener("pointerup", release);
+  knob.addEventListener("pointercancel", release);
+  // A slider that only responds to dragging is a slider nobody on a
+  // switch or a keyboard can finish. Same gate, different input.
+  knob.addEventListener("keydown", e => {
+    if (e.key === "Enter" || e.key === " "){
+      e.preventDefault();
+      if (confirm("Complete the ride and collect ₹1,450 in cash?")) completeRide();
+    }
+    if (e.key === "ArrowRight"){ e.preventDefault(); setOffset(offset + 24); }
+    if (e.key === "ArrowLeft"){ e.preventDefault(); setOffset(offset - 24); }
+  });
+
+  /* ── OTP ────────────────────────────────────────────────────── */
   const CODE = "4913";
   let otp = "";
   const boxes = [...document.querySelectorAll("#otpBoxes span")];
-  const otpHint = document.getElementById("otpHint");
 
   function paintOtp(){
     boxes.forEach((b,i) => {
@@ -782,41 +1416,38 @@ input:focus-visible{outline:2px solid var(--primary-light);outline-offset:1px}
     });
   }
 
-  document.getElementById("keypad").addEventListener("click", e => {
+  $("keypad").addEventListener("click", e => {
     const b = e.target.closest("button");
     if (!b) return;
 
-    if (b.dataset.key === "clear"){ otp = ""; }
-    else if (b.dataset.key === "back"){ otp = otp.slice(0,-1); }
-    else if (otp.length < 4){ otp += b.textContent.trim(); }
+    if (b.dataset.key === "clear") otp = "";
+    else if (b.dataset.key === "back") otp = otp.slice(0,-1);
+    else if (otp.length < 4) otp += b.textContent.trim();
 
-    otpHint.dataset.bad = "0";
-    otpHint.textContent = "Try 4913.";
+    const hint = $("otpHint");
+    hint.dataset.bad = "0"; hint.textContent = "Try 4913.";
+    $("otpBoxes").dataset.bad = "0";
     paintOtp();
 
     if (otp.length === 4){
       if (otp === CODE){
-        rideStep = 3; paintRide(); show("active");
+        state.step = 3; paintAll(); show("active");
       } else {
-        otpHint.dataset.bad = "1";
-        otpHint.textContent = "That code doesn't match. Check with the rider.";
-        otp = ""; setTimeout(paintOtp, 550);
+        hint.dataset.bad = "1";
+        hint.textContent = "That code doesn't match. Check with the rider.";
+        $("otpBoxes").dataset.bad = "1";
+        otp = ""; setTimeout(() => { paintOtp(); $("otpBoxes").dataset.bad = "0"; }, 500);
       }
     }
   });
 
-  /* ── post form ──────────────────────────────────────────── */
-  const fare = document.getElementById("pFare");
-  const dep = document.getElementById("pDep");
-  const depHint = document.getElementById("depHint");
-  const postBtn = document.getElementById("postBtn");
-  const rupees = n => "₹" + Math.round(n).toLocaleString("en-IN");
+  /* ── post form ──────────────────────────────────────────────── */
+  const fare = $("pFare"), dep = $("pDep"), depHint = $("depHint"), postBtn = $("postBtn");
 
   function paintPost(){
     const f = Number(fare.value) || 0;
     const d = Number(dep.value) || 0;
     let bad = "";
-
     if (d < 100) bad = "The minimum deposit is ₹100.";
     else if (d >= f) bad = "The deposit has to be less than the fare, or nobody will take it.";
 
@@ -825,16 +1456,17 @@ input:focus-visible{outline:2px solid var(--primary-light);outline-offset:1px}
     postBtn.disabled = Boolean(bad);
 
     const fee = d * 0.12;
-    document.getElementById("sumDep").textContent = rupees(d);
-    document.getElementById("sumFee").textContent = "−" + rupees(fee);
-    document.getElementById("sumNet").textContent = rupees(d - fee);
+    $("sumDep").textContent = rupees(d);
+    $("sumFee").textContent = "−" + rupees(fee);
+    $("sumNet").textContent = rupees(d - fee);
   }
-
   fare.addEventListener("input", paintPost);
   dep.addEventListener("input", paintPost);
-  postBtn.addEventListener("click", () => { alert("Posted. Other drivers can claim it now."); show("market"); });
+  postBtn.addEventListener("click", () => { alert("Posted. Other captains can claim it now."); show("market"); });
 
-  /* ── go ─────────────────────────────────────────────────── */
-  paintHome(); paintRide(); paintOtp(); paintPost(); show("home");
+  /* ── paint everything from one place ────────────────────────── */
+  function paintAll(){ paintOnline(); paintHome(); paintRides(); paintRide(); paintDock(); }
+
+  paintAll(); paintOtp(); paintPost(); show("home");
 })();
 </script>

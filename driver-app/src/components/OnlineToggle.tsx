@@ -3,38 +3,56 @@ import { BellIcon } from "phosphor-react-native";
 import { useState } from "react";
 import { Pressable, View } from "react-native";
 import Animated, { useAnimatedStyle, withTiming } from "react-native-reanimated";
-import { useNavigate } from "react-router-native";
+import { useLocation, useNavigate } from "react-router-native";
 import AppText from "./AppText";
+import { useApi } from "../hooks/useApi";
+
 
 const Bell = cssInterop(BellIcon, {
     className: { target: false, nativeStyleToProp: { color: true } },
 });
 
-interface PropsTypes {
-    visible: boolean;
-}
-
 const KNOB_OFF = 20;   // web: left-5
 const KNOB_ON = -8;    // web: -left-2
 
-const OnlineToggle = (prop: PropsTypes) => {
+const OnlineToggle = () => {
     const [online, setOnline] = useState(false);
+    const [error, setError] = useState<string | null>(null)
     const navigate = useNavigate();
+    const { pathname } = useLocation();
+    const onNotifications = pathname === "/notifications";
+
+    const api = useApi()
 
     const knob = useAnimatedStyle(() => ({
         transform: [{
-            translateX: withTiming(online ? KNOB_ON : KNOB_OFF, { duration: 300 }),
+            translateX: withTiming(online && !error ? KNOB_ON : KNOB_OFF, { duration: 300 }),
         }],
     }));
 
+    async function toggleOnline() {
+        const newOnline = !online
+        setOnline(newOnline)
+        setError(null)
+        try {
+            await api.setOnline(newOnline)
+        } catch (e: unknown) {
+            if (e instanceof Error) {
+                setError(e.message);
+            } else {
+                setError("Something went wrong");
+            }
+        }
+    }
+
     return (
-        <View className={`absolute ${prop.visible ? "flex" : "hidden"} flex-col justify-center items-center top-10 items-center w-[92%]`}>
+        <View className="absolute flex flex-col justify-center items-center top-10 w-[92%]">
             <View className="flex flex-row gap-1 justify-center my-3 items-center">
-                <AppText className="text-[var(--background)] font-semibold text-xl">RCS</AppText>
-                <AppText className="text-[var(--background)] text-xl">Captains</AppText>
+                <AppText className="text-[var(--background-primary)] font-semibold text-xl">RCS</AppText>
+                <AppText className="text-[var(--background-primary)] text-xl">Captains</AppText>
             </View>
             <View className="flex flex-row w-full justify-between items-center">
-                <View className="flex-row items-center gap-3 rounded-2xl bg-[var(--background)] p-3 border border-[var(--background-muted)]">
+                <View className="flex-row items-center gap-3 rounded-2xl bg-[var(--background-primary)] p-3 border border-[var(--background-muted)]">
                     <Pressable
                         role="button"
                         aria-label="Notifications"
@@ -42,24 +60,27 @@ const OnlineToggle = (prop: PropsTypes) => {
                         className="w-[22px] h-[22px] items-center justify-center"
                     >
                         <Bell size={22} weight="regular" className="text-[var(--foreground)]" />
+                        <View className={`absolute transition-opacity duration-200 ${onNotifications ? "opacity-100" : "opacity-0"}`}>
+                            <Bell size={22} weight="fill" className="text-[var(--foreground)]" />
+                        </View>
                     </Pressable>
                 </View>
 
-                <View className="flex-row items-center justify-between w-fit rounded-2xl bg-[var(--background)] p-3 px-4 pr-6 border border-[var(--background-muted)]">
+                <View className="flex-row items-center justify-between w-fit rounded-2xl bg-[var(--background-primary)] p-3 px-4 pr-6 border border-[var(--background-muted)]">
                     <AppText
                         numberOfLines={1}
                         className="w-[74px] text-xl text-[var(--foreground)] font-semibold"
                     >
-                        {online ? "Online" : "Offline"}
+                        {online && !error ? "Online" : "Offline"}
                     </AppText>
 
                     <Pressable
                         role="switch"
                         aria-checked={online}
-                        onPress={() => setOnline((v) => !v)}
+                        onPress={() => toggleOnline()}
                         className="w-[50px] h-[22px] items-center justify-center"
                     >
-                        <View className={`w-[50px] h-[14px] rounded-full ${online ? "bg-green-500" : "bg-gray-500"}`} />
+                        <View className={`w-[50px] h-[14px] rounded-full ${online && !error ? "bg-green-500" : "bg-gray-500"}`} />
                         <Animated.View
                             style={[
                                 {
