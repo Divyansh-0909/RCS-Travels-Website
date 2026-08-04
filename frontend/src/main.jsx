@@ -17,6 +17,7 @@ import SettingsPage from './pages/SettingsPage';
 import SafetyPage from './pages/SafetyPage';
 import AdminDashboard from './pages/AdminDashboard';
 import HelpPage from './pages/HelpPage';
+import Outstation from './pages/Outstation';
 import RideCancelledToast from './components/ui/RideCancelledToast';
 import RefreshNotice from './components/ui/RefreshNotice';
 import DevPreview from './pages/DevPreview';
@@ -58,12 +59,12 @@ const router = createBrowserRouter([{
     element: <ProtectedRoute><VehicleSelect /></ProtectedRoute>,
   },
   {
-    // !! Pinned to a literal while TrackingPage reads its booking from the store
-    // rather than the URL. VehicleSelect navigates here hard-coded too, so the real
-    // `/booking/:id` can't be reached — restore both together, or a booking opened
-    // from a link (or a reload) has no id to fetch.
-    // path: "/booking/:id",
-    path: "/booking/test",
+    // The id in the URL is what makes a ride reachable from a link, from ride
+    // history, or after a reload — the store's bookingId is not persisted, so it
+    // is gone by the time either of those lands. TrackingPage takes the param as
+    // its source of truth and falls back to the store only where there is no
+    // param (the /dev previews).
+    path: "/booking/:id",
     element: <ProtectedRoute><TrackingPage /></ProtectedRoute>,
   },
   {
@@ -77,6 +78,12 @@ const router = createBrowserRouter([{
   {
     path: "/help",
     element: <HelpPage />,
+  },
+  // Public and indexable: it's the only page describing a product that isn't in
+  // the booking form, so search is the main way anyone finds it.
+  {
+    path: "/outstation",
+    element: <Outstation />,
   },
   {
     path: "/safety",

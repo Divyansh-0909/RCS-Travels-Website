@@ -2,6 +2,7 @@ import mobileBackgroundIllustration from "../assets/Mobile.webp";
 import laptopBackgroundIllustration from "../assets/Laptop.webp";
 import Button from "../components/ui/Button";
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import Icon from "@mdi/react";
 import {
   mdiClockTimeFourOutline,
@@ -201,7 +202,7 @@ const SuggestionDropdown = ({ anim, items, onSelect, above = false, error = null
       <div
         onMouseDown={(e) => e.preventDefault()}
         className={`${anim.closing ? "animate-dropdown-out" : "animate-dropdown"
-          } absolute z-10 ${above ? "bottom-13 sm:bottom-15 origin-bottom" : "top-13 sm:top-15"} sm:ml-7 scale-[1] sm:scale-[1.3]
+          } absolute z-10 ${above ? "bottom-13 sm:bottom-15 origin-bottom sm:origin-bottom-left" : "top-13 sm:top-15 sm:origin-top-left"} scale-[1] sm:scale-[1.3]
           max-sm:w-full sm:w-[290px] max-w-full border border-[var(--foreground)]/15 bg-[var(--background-muted)]
           rounded-[16px] shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)]`}
       >
@@ -223,7 +224,7 @@ const SuggestionDropdown = ({ anim, items, onSelect, above = false, error = null
       ref={panelRef}
       onMouseDown={(e) => e.preventDefault()}
       className={`${anim.closing ? "animate-dropdown-out" : "animate-dropdown"
-        } absolute z-10 ${above ? "bottom-13 sm:bottom-15 origin-bottom" : "top-13 sm:top-15"} sm:ml-7 scale-[1] sm:scale-[1.3]
+        } absolute z-10 ${above ? "bottom-13 sm:bottom-15 origin-bottom sm:origin-bottom-left" : "top-13 sm:top-15 sm:origin-top-left"} scale-[1] sm:scale-[1.3]
         max-sm:w-full sm:w-[290px] max-w-full max-h-[200px] overflow-y-auto scrollbar-inset
         border border-[var(--foreground)]/15 bg-[var(--background-muted)]
         rounded-[16px] shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)]`}
@@ -303,6 +304,7 @@ const OnBoarding = () => {
   // Guards the active-booking hydration (and its retry) against landing after
   // this page is gone.
   const hydrationCancelledRef = useRef(false);
+  const [isRoundTrip, setIsRoundTrip] = useState(false)
 
   // Copy the active booking into the shared tracking fields and open tracking.
   function openActiveBooking() {
@@ -322,7 +324,7 @@ const OnBoarding = () => {
     // was displaying, so tracking opens on it directly. A skeleton here would
     // hide a status they had already read and flash a panel past on the way to
     // the same answer; the poll on the other side refreshes it either way.
-    navigate("/booking/test", { state: { freshStatus: true } });
+    navigate(`/booking/${activeBooking.id}`, { state: { freshStatus: true } });
   }
 
   const timingDropdown = useExitAnim(expand, 220);
@@ -401,6 +403,39 @@ const OnBoarding = () => {
   const dropAutocomplete = useAddressSuggestions(dropLocation, setDrop, setDropCoords, api, suggestionCloserRef, closeTimingPanels)
   const isMobile = useIsMobile();
 
+  // The calendar panel is portalled to the body (see its comment at the render
+  // site), so it can no longer be anchored by CSS — it shares no positioned
+  // ancestor with its button. From sm up it reads the button's right edge and
+  // opens to the right of it; on phones it stays centred, where there is no
+  // room to sit beside anything. Re-read on resize because the form's own left
+  // edge moves with the breakpoint: centred at sm/md, left-aligned once lg
+  // splits the layout against the illustration.
+  const calendarBtnRef = useRef(null);
+  const [calendarAnchor, setCalendarAnchor] = useState(null);
+
+  // Keyed on `mounted`, not on expandCalendar: the panel outlives the flag by
+  // the length of its exit animation, and dropping the anchor early would send
+  // it back to the centred branch to play that exit from the middle of the
+  // screen.
+  useEffect(() => {
+    if (!calendarDropdown.mounted || isMobile) {
+      setCalendarAnchor(null);
+      return;
+    }
+    const update = () => {
+      const rect = calendarBtnRef.current?.getBoundingClientRect();
+      // Only the left edge is measured: the panel opens to the right of the
+      // button, one gap clear of it, and takes its vertical position from the
+      // viewport rather than the button. origin-left keeps the gap exact — the
+      // 1.2 scale grows rightward, away from the button, instead of straddling
+      // it as a centre origin would.
+      if (rect) setCalendarAnchor({ left: rect.right + 12 });
+    };
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, [calendarDropdown.mounted, isMobile]);
+
   async function handleSubmit(e) {
     e.preventDefault();
 
@@ -470,8 +505,6 @@ const OnBoarding = () => {
     <div className="relative flex flex-col sm:flex-row h-[100dvh] sm:px-[9%] md:px-[5%] xl:px-[13%] sm:pt-16 sm:justify-center lg:justify-between items-center bg-[var(--background-primary)]">
       <div className="relative z-10 py-8 flex flex-col items-center lg:items-start w-full max-w-[500px] h-[inherit] sm:h-fit justify-end sm:justify-center">
         {(activeBooking && authed && !activeBooking.scheduledAt)
-          // one rhythm down the whole card: heading block → route panel → CTA
-          // all sit one TRIP_STEP apart
           ? <div className={`flex flex-col justify-center items-center w-full lg:items-start ${TRIP_STEP}`}>
             <div className={`flex flex-col items-center lg:items-start ${PAIR} ${COL}`}>
               <h1 className={`w-full text-center lg:text-left ${TITLE}`}>Current Trip</h1>
@@ -491,27 +524,20 @@ const OnBoarding = () => {
                   </div>
                 )}
               </RoutePanel>
-              {/* my-0! cancels Button's own my-1 so the gap under the panel is
-                  the container's GROUP, same as the gap above it */}
               <Button onClick={openActiveBooking} className="my-0!" prop={{ variant: "", width: "100%" }}>
                 <span className="text-base sm:text-lg">Track Ride</span>
               </Button>
             </div>
           </div>
           : <div className="flex flex-col text-center lg:text-left justify-center items-center lg:items-start gap-1 sm:gap-5">
-            {/* no sm:mb — the container's gap-5 already separates the heading
-                from the form; the extra margin stacked on top of it */}
             <div className="flex flex-col items-center lg:items-start gap-0 mb-2 sm:mb-0">
-              <h2 className="sm:text-2xl text-xl font-normal leading-tight text-[var(--text-muted)]">
+              <h2 className="sm:text-3xl text-xl font-normal leading-tight text-[var(--text-muted)]">
                 Hello {username?.split(" ")[0] || user?.firstName || "there"}!
               </h2>
-              <h1 className="font-bold text-3xl sm:text-5xl leading-tight">Where you off to?</h1>
+              <h1 className="font-bold text-4xl sm:text-6xl lg:text-5xl xl:text-6xl leading-tight">Where you off to?</h1>
             </div>
 
             {activeBooking && authed && activeBooking.scheduledAt && !showForm
-              // Same card pattern as Current Trip above — the ride states itself, so
-              // it needs no sentence introducing it. Every value comes from
-              // activeBooking, which the getMyBookings effect already hydrates.
               ? <div className={`flex flex-col justify-center items-center lg:items-start mt-3 sm:mt-0 ${TRIP_STEP}`}>
                 <div className={`flex flex-col items-stretch text-left ${GROUP} ${COL}`}>
                   <RoutePanel size="sm" pickup={activeBooking.pickupAddress} drop={activeBooking.dropAddress}>
@@ -534,9 +560,6 @@ const OnBoarding = () => {
                       </div>
                     )}
                   </RoutePanel>
-
-                  {/* "Confirmed" alone reads as done rather than waiting, so the
-                      pre-assignment state says what is actually pending. */}
                   <p className="text-xs sm:text-sm text-[var(--text-muted)] leading-snug">
                     {activeBooking.status === "confirmed"
                       ? "Driver assigned closer to your pickup time."
@@ -555,21 +578,132 @@ const OnBoarding = () => {
 
             {(!(activeBooking && authed && activeBooking.scheduledAt) || showForm) && (<>
               <form
-                className="flex flex-col sm:pl-3 justify-center items-start gap-0.5 sm:gap-5 mt-1 sm:mt-1"
+                className="flex flex-col justify-center items-start gap-0.5 sm:gap-5 mt-1 sm:mt-1 sm:w-[377px]"
                 noValidate
                 onSubmit={handleSubmit}
               >
                 {error && (
-                  <p className={`${error ? "opacity-[1]" : "opacity-[0]"} relative text-red-400 left-1/2 -translate-x-1/2 sm:-left-2 sm:translate-x-0 text-sm`}>
+                  <p className={`${error ? "opacity-[1]" : "opacity-[0]"} relative text-red-400 left-1/2 -translate-x-1/2 sm:left-0 sm:translate-x-0 text-sm`}>
                     {error}
                   </p>
                 )}
+                <div className="flex bg-[var(--background-muted)] mb-1 sm:mb-0 outline outline-[var(--foreground)]/40 rounded-full gap-1 sm:gap-2 p-1.5 sm:p-2 [&>*]:text-base [&>*]:sm:text-xl [&>*]:py-1 [&>*]:px-3 [&>*]:sm:py-2 [&>*]:sm:px-3 [&>*]:cursor-pointer [&>*]:rounded-full">
+                  <h3 onClick={()=>setIsRoundTrip(false)} className={`transition-color duration-300 text-[var(--text)] ${isRoundTrip ? "" : "bg-primary"}`}>
+                    One way
+                  </h3>
+                  <h3 onClick={()=>setIsRoundTrip(true)} className={`transition-color duration-300 text-[var(--text)] ${isRoundTrip ? "bg-primary" : ""}`}>
+                    Round trip
+                  </h3>
+                </div>
+                <div className="relative">
+                  <Input
+                    prop={{
+                      type: "text",
+                      id: "pickup-location",
+                      name: "pickup-location",
+                      placeholder: "Pickup Location",
+                      value: pickupLocation,
+                      onChangeFn: (value) => {
+                        setPickup(value);
+                        if (error === "No Pickup Location") {
+                          setError(null);
+                        }
+                      },
+                      error: error === "No Pickup Location",
+                      bg: "var(--background-muted)",
+                      autoComplete: "off",
+                      onFocusFn: pickupAutocomplete.onFocus,
+                      onBlurFn: pickupAutocomplete.onBlur,
+                    }}
+                    className={`scale-[1] sm:scale-[1.3] sm:origin-left ${FORM_W}`}
+                    leading={
+                      <div className="w-3 h-3 rounded-full bg-[var(--foreground)]" />
+                    }
+                    trailing={
+                      pickupLocation?.trim() ? (
+                        <button
+                          type="button"
+                          aria-label="Clear pickup location"
+                          onClick={() => setPickup("")}
+                          className="flex items-center justify-center cursor-pointer rounded-full
+                            text-[var(--text-muted)] hover:text-[var(--text)] active:opacity-70
+                            outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]/70"
+                        >
+                          <Icon path={mdiClose} size={0.7} />
+                        </button>
+                      ) : undefined
+                    }
+                  />
+
+                  <SuggestionDropdown
+                    anim={pickupAutocomplete.dropdown}
+                    items={pickupAutocomplete.items}
+                    onSelect={pickupAutocomplete.select}
+                    above={isMobile}
+                    error={pickupAutocomplete.lookupError}
+                    typed={pickupAutocomplete.typed}
+                  />
+                </div>
+
+
+                <div className="relative">
+                  <Input
+                    prop={{
+                      type: "text",
+                      id: "drop-location",
+                      name: "drop-location",
+                      placeholder: "Drop Location",
+                      value: dropLocation,
+                      onChangeFn: (value) => {
+                        setDrop(value);
+                        if (error === "No Drop Location") {
+                          setError(null);
+                        }
+                      },
+                      error: error === "No Drop Location",
+                      bg: "var(--background-muted)",
+                      autoComplete: "off",
+                      onFocusFn: dropAutocomplete.onFocus,
+                      onBlurFn: dropAutocomplete.onBlur,
+                    }}
+                    className={`scale-[1] sm:scale-[1.3] sm:origin-left ${FORM_W}`}
+                    leading={
+                      <div className="w-3 h-3 rounded-full bg-primary relative">
+                        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-[var(--background)]" />
+                      </div>
+                    }
+                    trailing={
+                      dropLocation?.trim() ? (
+                        <button
+                          type="button"
+                          aria-label="Clear drop location"
+                          onClick={() => setDrop("")}
+                          className="flex items-center justify-center cursor-pointer rounded-full
+                            text-[var(--text-muted)] hover:text-[var(--text)] active:opacity-70
+                            outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]/70"
+                        >
+                          <Icon path={mdiClose} size={0.7} />
+                        </button>
+                      ) : undefined
+                    }
+                  />
+
+                  <SuggestionDropdown
+                    anim={dropAutocomplete.dropdown}
+                    items={dropAutocomplete.items}
+                    onSelect={dropAutocomplete.select}
+                    above
+                    error={dropAutocomplete.lookupError}
+                    typed={dropAutocomplete.typed}
+                  />
+                </div>
+
                 <div className="flex flex-col relative">
-                  <div className="flex scale-[1] sm:scale-[1.3] lg:ml-7 justify-start gap-2 sm:gap-3 justify-center items-center max-sm:w-[82vw] max-sm:max-w-full sm:w-[290px]">
+                  <div className="flex scale-[1] sm:scale-[1.3] sm:origin-left justify-start gap-2 sm:gap-3 justify-center items-center max-sm:w-[82vw] max-sm:max-w-full sm:w-[290px]">
                     <Button
                       prop={{
                         variant: "input",
-                        bg: "var(--background-primary)",
+                        bg: expand ? "var(--background-primary)" : "var(--background-muted)",
                       }}
                       className="relative px-3"
                     >
@@ -621,6 +755,7 @@ const OnBoarding = () => {
                     </Button>
 
                     <Button
+                      containerRef={calendarBtnRef}
                       onClick={() => {
                         closeSuggestions();
                         setExpand(false)
@@ -630,7 +765,7 @@ const OnBoarding = () => {
                       prop={{
                         variant: "input",
                         width: "47px",
-                        bg: "var(--background-primary)",
+                        bg: expandCalendar ? "var(--background-primary)" : "var(--background-muted)",
                         error: error === "No Scheduled Time",
                       }}
                       className={`relative px-3 ${timing === "Schedule" ? "block" : "hidden"
@@ -656,7 +791,7 @@ const OnBoarding = () => {
                         width: "170px",
                       }}
                       className={`block ${timingDropdown.closing ? "animate-dropdown-out" : "animate-dropdown"
-                        } absolute z-10 scale-[1] sm:scale-[1.2] top-12 active:opacity-[1] hover:opacity-[1]`}
+                        } absolute z-10 scale-[1] sm:scale-[1.2] bottom-13 origin-bottom sm:bottom-auto sm:top-15 sm:origin-top-left active:opacity-[1] hover:opacity-[1]`}
                     >
                       <div className="flex flex-col items-start">
                         <div
@@ -692,15 +827,24 @@ const OnBoarding = () => {
                     </Button>
                   )}
 
-                  {/* Calendar dropdown */}
-                  {calendarDropdown.mounted && (
+                  {/* Calendar dropdown. Portalled to the body: the column at the
+                      top of this page is `relative z-10`, which opens a stacking
+                      context its descendants can't paint out of — inside it no
+                      z-index reaches over the fixed z-100 nav rail. Position
+                      comes from calendarAnchor: beside the button from sm up,
+                      centred on the viewport on phones. */}
+                  {calendarDropdown.mounted && createPortal(
                     <Button
                       prop={{
                         variant: "dropdown",
                         width: "250px",
                       }}
                       className={`block ${calendarDropdown.closing ? "animate-datetime-out" : "animate-datetime"
-                        } absolute scale-[1] sm:scale-[1.2] z-20 -top-75 sm:top-15 left-1/2 -translate-x-1/2 sm:-translate-y-1/2 sm:left-107 active:opacity-[1] hover:opacity-[1]`}
+                        } fixed scale-[1] sm:scale-[1.2] z-[105] top-1/2 -translate-y-1/2 ${calendarAnchor
+                          ? "origin-left"
+                          : "left-1/2 -translate-x-1/2"
+                        } active:opacity-[1] hover:opacity-[1]`}
+                      style={calendarAnchor ? { left: calendarAnchor.left } : undefined}
                     >
                       <div
                         className="flex flex-col w-full items-start"
@@ -718,111 +862,9 @@ const OnBoarding = () => {
                           onConfirm={() => setExpandCalendar(false)}
                         />
                       </div>
-                    </Button>
+                    </Button>,
+                    document.body,
                   )}
-                </div>
-
-                <div className="relative">
-                  <Input
-                    prop={{
-                      type: "text",
-                      id: "pickup-location",
-                      name: "pickup-location",
-                      placeholder: "Pickup Location",
-                      value: pickupLocation,
-                      onChangeFn: (value) => {
-                        setPickup(value);
-                        if (error === "No Pickup Location") {
-                          setError(null);
-                        }
-                      },
-                      error: error === "No Pickup Location",
-                      bg: "var(--background-muted)",
-                      autoComplete: "off",
-                      onFocusFn: pickupAutocomplete.onFocus,
-                      onBlurFn: pickupAutocomplete.onBlur,
-                    }}
-                    className={`scale-[1] sm:scale-[1.3] lg:ml-7 ${FORM_W}`}
-                    leading={
-                      <div className="w-3 h-3 rounded-full bg-[var(--foreground)]" />
-                    }
-                    trailing={
-                      pickupLocation?.trim() ? (
-                        <button
-                          type="button"
-                          aria-label="Clear pickup location"
-                          onClick={() => setPickup("")}
-                          className="flex items-center justify-center cursor-pointer rounded-full
-                            text-[var(--text-muted)] hover:text-[var(--text)] active:opacity-70
-                            outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]/70"
-                        >
-                          <Icon path={mdiClose} size={0.7} />
-                        </button>
-                      ) : undefined
-                    }
-                  />
-
-                  <SuggestionDropdown
-                    anim={pickupAutocomplete.dropdown}
-                    items={pickupAutocomplete.items}
-                    onSelect={pickupAutocomplete.select}
-                    above={isMobile}
-                    error={pickupAutocomplete.lookupError}
-                    typed={pickupAutocomplete.typed}
-                  />
-                </div>
-
-
-                <div className="relative">
-                  <Input
-                    prop={{
-                      type: "text",
-                      id: "drop-location",
-                      name: "drop-location",
-                      placeholder: "Drop Location",
-                      value: dropLocation,
-                      onChangeFn: (value) => {
-                        setDrop(value);
-                        if (error === "No Drop Location") {
-                          setError(null);
-                        }
-                      },
-                      error: error === "No Drop Location",
-                      bg: "var(--background-muted)",
-                      autoComplete: "off",
-                      onFocusFn: dropAutocomplete.onFocus,
-                      onBlurFn: dropAutocomplete.onBlur,
-                    }}
-                    className={`scale-[1] sm:scale-[1.3] lg:ml-7 ${FORM_W}`}
-                    leading={
-                      <div className="w-3 h-3 rounded-full bg-primary relative">
-                        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-[var(--background)]" />
-                      </div>
-                    }
-                    trailing={
-                      dropLocation?.trim() ? (
-                        <button
-                          type="button"
-                          aria-label="Clear drop location"
-                          onClick={() => setDrop("")}
-                          className="flex items-center justify-center cursor-pointer rounded-full
-                            text-[var(--text-muted)] hover:text-[var(--text)] active:opacity-70
-                            outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]/70"
-                        >
-                          <Icon path={mdiClose} size={0.7} />
-                        </button>
-                      ) : undefined
-                    }
-                  />
-
-                  <SuggestionDropdown
-                    anim={dropAutocomplete.dropdown}
-                    items={dropAutocomplete.items}
-                    onSelect={dropAutocomplete.select}
-                    above
-                    error={dropAutocomplete.lookupError}
-                    typed={dropAutocomplete.typed}
-                  />
                 </div>
 
                 <Button
@@ -833,7 +875,7 @@ const OnBoarding = () => {
                       !pickupLocation?.trim() ||
                       !dropLocation?.trim(),
                   }}
-                  className={`scale-[1] sm:scale-[1.3] lg:ml-7 ${FORM_W}`}
+                  className={`scale-[1] sm:scale-[1.3] sm:origin-left ${FORM_W}`}
                 >
                   {loading ? "Loading..." : "See prices"}
                 </Button>
@@ -860,7 +902,7 @@ const OnBoarding = () => {
       <img
         src={laptopBackgroundIllustration}
         alt="background-illustration"
-        className="lg:w-[500px] lg:h-[430px] xl:w-[600px] xl:h-[450px] object-cover lg:block hidden rounded-lg"
+        className="lg:w-[500px] lg:h-[430px] xl:w-[560px] xl:h-[440px] object-cover lg:block hidden rounded-lg"
       />
     </div>
   );

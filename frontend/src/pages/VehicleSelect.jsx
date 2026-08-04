@@ -378,7 +378,7 @@ const VehicleSelect = ()=>{
                 if (LIVE_STATUSES.includes(data.status)) {
                     // freshStatus: the store status was set a line ago from this same
                     // response, so TrackingPage can render it without a skeleton.
-                    navigate(`/booking/test`, { state: { freshStatus: true } });
+                    navigate(`/booking/${bookingId}`, { state: { freshStatus: true } });
                     return;
                 }
             }
@@ -655,10 +655,9 @@ const VehicleSelect = ()=>{
 
             if(scheduledTime) setPanelState("confirmed")
             else if (data.status === "assigned") {
-                // navigate(`/booking/${data.bookingId}`)
                 // freshStatus: the store status was set a line ago from this same
                 // response, so TrackingPage can render it without a skeleton.
-                navigate(`/booking/test`, { state: { freshStatus: true } })
+                navigate(`/booking/${data.bookingId}`, { state: { freshStatus: true } })
                 return
             }
             else setStep("searching")

@@ -5,7 +5,7 @@
      http://localhost:1574/login            LoginPage
      http://localhost:1574/signup           SignUpPage
      http://localhost:1574/book             VehicleSelect            (auth)
-     http://localhost:1574/booking/test     TrackingPage             (auth)
+     http://localhost:1574/booking/<id>     TrackingPage             (auth)
      http://localhost:1574/manage-account   ManageAccount            (auth)
      http://localhost:1574/settings         SettingsPage             (auth)
      http://localhost:1574/safety           SafetyPage               (auth)

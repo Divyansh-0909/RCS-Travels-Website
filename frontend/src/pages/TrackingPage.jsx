@@ -5,7 +5,7 @@ import { useIsMobile } from "../hooks/useIsMobile";
 import { useData } from "../hooks/useData";
 import { useApi } from "../hooks/useApi";
 import { useState, useEffect, useRef } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useParams } from "react-router-dom";
 import ErrorMark from "../components/illustrations/ErrorMark";
 import SuccessCheck from "../components/illustrations/SuccessCheck";
 import { useViewNavigate } from "../hooks/useViewNavigate";
@@ -85,8 +85,14 @@ const TrackingPage = () => {
     const setVehicleClass = useData(state => state.setVehicleClass);
     const sharing = useData(state => state.sharing);
     const setSharing = useData(state => state.setSharing);
-    const bookingId = useData(state => state.bookingId);
+    const storeBookingId = useData(state => state.bookingId);
     const setBookingId = useData(state => state.setBookingId);
+    // /booking/:id. The URL wins: bookingId is not persisted, so a reload or a
+    // link opened from ride history arrives with an empty store and the param is
+    // the only thing that says which ride this is. The /dev previews render this
+    // page without a param and keep driving it from the store.
+    const { id: routeBookingId } = useParams();
+    const bookingId = routeBookingId ?? storeBookingId;
     const bookingCode = useData(state => state.bookingCode);
     const setBookingCode = useData(state => state.setBookingCode);
     const status = useData(state => state.status);
@@ -129,6 +135,14 @@ const TrackingPage = () => {
     useEffect(() => {
         if (arrivedFresh.current) window.history.replaceState({}, "");
     }, []);
+
+    // Copy the URL's id into the store, which is where everything outside this
+    // component reads it from — the cancel call in RideDetails, and the navbar's
+    // current-trip card. Without this a ride opened by link would poll correctly
+    // here and still be uncancellable.
+    useEffect(() => {
+        if (routeBookingId && routeBookingId !== storeBookingId) setBookingId(routeBookingId);
+    }, [routeBookingId, storeBookingId]);
     const isMobile = useIsMobile();
     // { name, phone, vehicleNumber, latitude, longitude, bearing } from the
     // status endpoint; its coords drive the driver marker. Dev-only:
