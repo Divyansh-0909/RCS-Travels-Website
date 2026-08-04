@@ -1,5 +1,6 @@
 import { prisma } from '../db/prisma.js'
 import { seatsOf } from '../constants/vehicles.js'
+import { normalizePhone } from '../lib/phone.js'
 
 // Only the two base classes are stored. Sedan and premium SUV are derived from
 // their sibling in rideEstimate (DERIVED_CLASS), so a destination gains both
@@ -51,11 +52,16 @@ const SEED_CLERK_ID = process.env.SEED_CLERK_ID || 'user_3FdlhBI7SlbMclO523ek4cX
 // missing a class means every booking of it goes unassigned. vehicleCapacity is
 // seeded to the class's full seat count so solo rides pass the
 // `capacity < seatsOf(class)` skip check.
+//
+// Phones are the bare 10 digits, like the test user's above and like every
+// other phone in the app — see lib/phone.js. They were E.164 here until
+// 4 Aug 2026, which no account lookup could match; scripts/normalize-driver-
+// phones.js migrated the rows that already existed.
 const drivers = [
-  { name: 'Ramesh Kumar', phone: '+919810000001', vehicleClass: 'hatchback',   vehicleNumber: 'DL01AB1234' },
-  { name: 'Suresh Yadav', phone: '+919810000002', vehicleClass: 'suv',         vehicleNumber: 'DL02CD5678' },
-  { name: 'Anil Sharma',  phone: '+919810000003', vehicleClass: 'sedan',       vehicleNumber: 'DL03EF9012' },
-  { name: 'Vikram Singh', phone: '+919810000004', vehicleClass: 'suv_premium', vehicleNumber: 'DL04GH3456' },
+  { name: 'Ramesh Kumar', phone: '9810000001', vehicleClass: 'hatchback',   vehicleNumber: 'DL01AB1234' },
+  { name: 'Suresh Yadav', phone: '9810000002', vehicleClass: 'suv',         vehicleNumber: 'DL02CD5678' },
+  { name: 'Anil Sharma',  phone: '9810000003', vehicleClass: 'sedan',       vehicleNumber: 'DL03EF9012' },
+  { name: 'Vikram Singh', phone: '9810000004', vehicleClass: 'suv_premium', vehicleNumber: 'DL04GH3456' },
 ]
 
 async function seedFares() {
@@ -89,25 +95,31 @@ async function seedTestData() {
   console.log('Seeding drivers + locations...')
   const createdDrivers = []
   for (const d of drivers) {
+    // Through the normalizer rather than straight from the literal, so a future
+    // edit that pastes a number back in E.164 self-corrects instead of seeding
+    // another row nothing can log into.
+    const phone = normalizePhone(d.phone)
+    if (!phone) throw new Error(`Driver "${d.name}" has an unusable phone: ${d.phone}`)
+
     const driver = await prisma.driver.upsert({
-      where:  { phone: d.phone },
+      where:  { phone },
       update: {
         isActive:           true,
         isOnline:           true,
         verificationStatus: 'approved',
         vehicleCapacity:    seatsOf(d.vehicleClass),
-        fcmToken:           `test-fcm-${d.phone}`,
+        fcmToken:           `test-fcm-${phone}`,
       },
       create: {
         name:               d.name,
-        phone:              d.phone,
+        phone:              phone,
         vehicleClass:       d.vehicleClass,
         vehicleCapacity:    seatsOf(d.vehicleClass),
         vehicleNumber:      d.vehicleNumber,
         isActive:           true,
         isOnline:           true,
         verificationStatus: 'approved',
-        fcmToken:           `test-fcm-${d.phone}`,
+        fcmToken:           `test-fcm-${phone}`,
       },
     })
 
