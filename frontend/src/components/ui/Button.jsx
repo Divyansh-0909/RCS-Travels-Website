@@ -15,8 +15,13 @@
  * @param {string} [props.className]
  * @param {import("react").ReactNode} [props.children]
  * @param {() => void} [props.onClick]
+ * @param {import("react").Ref<HTMLDivElement>} [props.containerRef] - the outer
+ *   box, for callers that need to measure or anchor to this control
+ * @param {import("react").CSSProperties} [props.style] - merged over the box's
+ *   own inline style, for values only the caller can compute (e.g. a measured
+ *   position); the caller wins on conflict
  */
-const Button = ({ prop, className, children, onClick }) => {
+const Button = ({ prop, className, children, onClick, containerRef, style }) => {
   const isDropdown = prop.variant === "dropdown";
   const isInput = prop.variant === "input";
   const isNegative = prop.variant === "negative";
@@ -41,6 +46,7 @@ const Button = ({ prop, className, children, onClick }) => {
 
   return (
     <div
+      ref={containerRef}
       className={`
         ${className}
         ${isInput && !width ? "w-fit" : ""}
@@ -66,6 +72,7 @@ const Button = ({ prop, className, children, onClick }) => {
         borderRadius: prop.rounded ?? (isDropdown ? "16px" : "12px"),
         paddingLeft: prop.paddingX,
         paddingRight: prop.paddingX,
+        ...style,
       }}
     >
       <button

@@ -1,4 +1,4 @@
-import { useLayoutEffect } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { ScrollSmoother } from "gsap/ScrollSmoother";
@@ -29,6 +29,67 @@ export function useSmoothScroll() {
         });
         return () => ctx.revert();
     }, []);
+}
+
+// Tone of the section currently passing under the fixed navbar, so the bar can
+// invert itself against it. The landing page alternates dark and light bands
+// four times on the way down, so this can't be one threshold: every section
+// declares its own tone with data-bar-tone and the bar takes whichever section
+// is crossing it.
+//
+// ScrollTrigger rather than IntersectionObserver or a scrollY calculation:
+// ScrollSmoother transforms the content, so the real scroll position and what
+// is visually under the bar disagree for the whole 1.2s catch-up, and the bar
+// would flip early on every fast scroll. ScrollTrigger resolves against the
+// smoother, and still works on the reduced-motion path where no smoother is
+// created at all.
+export function useSectionTone(railRef, initial = "dark") {
+    const [tone, setTone] = useState(initial);
+    // Mirrors `tone` for the scroll callback to compare against, so setTone only
+    // ever runs on a real crossing. Reading the state itself would re-render the
+    // page on every frame of every scroll.
+    const toneRef = useRef(initial);
+
+    useEffect(() => {
+        const sections = gsap.utils.toArray("[data-bar-tone]");
+        if (!sections.length) return;
+
+        // Positions are read live rather than cached as ScrollTrigger start/end
+        // values, which are measured once per refresh. OnBoarding is h-[100dvh]
+        // and on phones dvh grows as the address bar collapses — during the
+        // first scroll gesture, which is exactly when the first flip is due. A
+        // cached boundary is stale by the height of the toolbar from then on,
+        // and decoding illustrations shift the rest. Eight rect reads per scroll
+        // frame cost little and cannot drift.
+        const sync = () => {
+            const rail = railRef.current;
+            if (!rail) return;
+            const bar = rail.getBoundingClientRect();
+            // The bar's own centre line: the section edge bisects the bar as it
+            // passes, so neither half sits over the wrong tone for long. Move
+            // this to bar.bottom to flip only once the bar is fully clear.
+            const line = bar.top + bar.height / 2;
+
+            const under = sections.find(section => {
+                const rect = section.getBoundingClientRect();
+                return rect.top <= line && rect.bottom > line;
+            });
+            // No match means the line is in a gap or past the last section;
+            // holding the current tone beats flashing back to the default.
+            if (!under || under.dataset.barTone === toneRef.current) return;
+            toneRef.current = under.dataset.barTone;
+            setTone(toneRef.current);
+        };
+
+        // One ScrollTrigger spanning the page rather than one per section: its
+        // onUpdate runs after the smoother has written the frame's transform, so
+        // the reads see what the eye sees instead of lagging a frame behind.
+        const driver = ScrollTrigger.create({ start: 0, end: "max", onUpdate: sync, onRefresh: sync });
+        sync();
+        return () => driver.kill();
+    }, []);
+
+    return tone;
 }
 
 // Both helpers live here so every caller resolves the same smoother instance.

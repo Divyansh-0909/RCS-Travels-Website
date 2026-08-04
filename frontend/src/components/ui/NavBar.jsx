@@ -22,8 +22,8 @@ import ErrorPanel from './ErrorPanel';
 
 // The initial-in-a-circle, at whatever size the surface needs.
 const Avatar = ({ invert, initial, box, text }) => (
-    <div className={`${invert ? "bg-[var(--foreground)]" : "bg-[var(--background-primary)]"} flex items-center justify-center rounded-full ${box}`}>
-        <h3 className={`font-semibold ${text} ${invert ? "text-[var(--text-foreground)]" : "text-[var(--text)]"}`}>
+    <div className={`${invert ? "bg-[var(--foreground)]" : "bg-[var(--background-primary)]"} flex items-center justify-center rounded-full transition-colors duration-300 motion-reduce:transition-none ${box}`}>
+        <h3 className={`font-semibold ${text} transition-colors duration-300 motion-reduce:transition-none ${invert ? "text-[var(--text-foreground)]" : "text-[var(--text)]"}`}>
             {initial}
         </h3>
     </div>
@@ -131,6 +131,7 @@ const NavBar = ({ invert = false, hideExpanded = false, className = "" }) => {
     // admin conditions can't drift apart.
     const navLinks = [
         ["About", () => goToSection('about')],
+        ["Outstation", () => navigate('/outstation')],
         ["Help", () => navigate('/help')],
         ...(isSignedIn ? [["Ride History", () => navigate('/manage-account', { state: { tab: "Ride History" } })]] : []),
         ...(clerkUser?.publicMetadata?.role === "admin" ? [["Dashboard", () => navigate('/dashboard')]] : []),
@@ -241,12 +242,12 @@ const NavBar = ({ invert = false, hideExpanded = false, className = "" }) => {
     )
 
     return (
-        <div className={`${className} flex flex-col justify-center items-center ${invert ? "bg-[var(--background-primary)]" : "bg-[var(--foreground)]"} max-sm:w-[min(86vw,100%)] sm:w-[700px] h-[40px] sm:h-[50px] gap-1 px-2 py-6 rounded-xl shadow-[8px_10px_0_rgba(0,0,0,0.25)] outline-1 outline-gray-400`}>
-            <div className={`flex justify-between items-center ${invert ? "text-[var(--text)]" : "text-[var(--text-foreground)]"} [&>*]:select-none w-full sm:gap-24 px-1`}>
+        <div className={`${className} flex flex-col justify-center items-center ${invert ? "bg-[var(--background-primary)]" : "bg-[var(--foreground)]"} max-sm:w-[min(86vw,100%)] sm:w-[740px] h-[40px] sm:h-[50px] gap-1 px-2.5 py-6.5 rounded-full outline-1 outline-[var(--background)]/50 transition-colors duration-300 motion-reduce:transition-none`}>
+            <div className={`flex justify-between items-center ${invert ? "text-[var(--text)]" : "text-[var(--text-foreground)]"} transition-colors duration-300 motion-reduce:transition-none [&>*]:select-none w-full sm:gap-10 px-1`}>
                 <h3 onClick={() => navigate('/')} className={`cursor-pointer pl-1 sm:opacity-[0.85] transition-opacity duration-300 opacity-[1] hover:opacity-[1]`}><span className='font-semibold'>RCS</span> travels</h3>
 
                 <div className='sm:block hidden'>
-                    <ul className={`flex gap-2 [&>li]:cursor-pointer [&>li]:text-sm [&>li]:transition-all [&>li]:duration-300 [&>*]:px-2 [&>*]:py-1.5 [&>*]:rounded-lg ${invert ? "[&>*]:text-[var(--text)]/80 [&>*]:hover:text-[var(--text)] [&>*]:bg-[var(--background-primary)] [&>*]:hover:bg-[var(--foreground)]/10" : "[&>*]:text-[var(--text-foreground)]/80 [&>*]:hover:text-[var(--text-foreground)] [&>*]:bg-[var(--foreground)] [&>*]:hover:bg-[var(--background-primary)]/10"}`}>
+                    <ul className={`flex gap-1 [&>li]:cursor-pointer [&>li]:text-sm [&>li]:transition-all [&>li]:duration-300 [&>*]:px-2.5 [&>*]:py-1.5 [&>*]:rounded-full ${invert ? "[&>*]:text-[var(--text)]/80 [&>*]:hover:text-[var(--text)] [&>*]:bg-[var(--background-primary)] [&>*]:hover:bg-[var(--foreground)]/10" : "[&>*]:text-[var(--text-foreground)]/80 [&>*]:hover:text-[var(--text-foreground)] [&>*]:bg-[var(--foreground)] [&>*]:hover:bg-[var(--background-primary)]/10"}`}>
                         {navLinks.map(([label, action], i) => (
                             <li key={i} onClick={action}>{label}</li>
                         ))}
@@ -256,7 +257,7 @@ const NavBar = ({ invert = false, hideExpanded = false, className = "" }) => {
                 <div className='flex relative justify-center -mr-1.5 items-center gap-3 sm:block hidden '>
                     {isSignedIn
                         ?
-                        <div onClick={() => setExpand(!expand)} className={`flex ${invert ? "text-[var(--text)] bg-[var(--background-primary)] hover:bg-[var(--foreground)]/10" : "text-[var(--text-foreground)] bg-[var(--foreground)] hover:bg-[var(--background-primary)]/10"} jusityf-center items-center px-1 py-1 rounded-3xl justify-center items-center gap-1 cursor-pointer transition-color duration-300`}>
+                        <div onClick={() => setExpand(!expand)} className={`flex ${invert ? "text-[var(--text)] bg-[var(--background-primary)] hover:bg-[var(--foreground)]/10" : "text-[var(--text-foreground)] bg-[var(--foreground)] hover:bg-[var(--background-primary)]/10"} jusityf-center items-center px-1 py-1 rounded-3xl justify-center items-center gap-1 cursor-pointer transition-colors duration-300 motion-reduce:transition-none`}>
                             <Avatar invert={invert} initial={user?.name?.charAt(0)} box='w-8 h-8' text='' />
                             <Icon path={mdiChevronDown} style={{
                                 transform: expand
@@ -266,8 +267,11 @@ const NavBar = ({ invert = false, hideExpanded = false, className = "" }) => {
                         </div>
                         :
                         <div className='flex gap-1 justify-center items-center [&>*]:opacity-[1] [&>*]:hover:opacity-[0.8] [&>*]:cursor-pointer [&>*]:transition-all [&>*]:duration-300'>
-                            <h4 onClick={() => navigate('/login')} className='text-base font-medium hover:bg-[var(--background-primary)]/10 px-3 py-2 rounded-lg'>Log in</h4>
-                            <h4 onClick={() => navigate('/signup')} className='text-base font-medium text-[var(--text)] bg-[var(--background-primary)] px-3 py-2 rounded-lg'>Sign up</h4>
+                            {/* Both follow the bar rather than the theme: the
+                                Sign up chip used to be dark unconditionally,
+                                which is invisible once the bar itself is dark. */}
+                            <h4 onClick={() => navigate('/login')} className={`text-base font-medium px-3 py-2 rounded-lg ${invert ? "hover:bg-[var(--foreground)]/10" : "hover:bg-[var(--background-primary)]/10"}`}>Log in</h4>
+                            <h4 onClick={() => navigate('/signup')} className={`text-base font-medium px-3 py-2 rounded-lg ${invert ? "text-[var(--text-foreground)] bg-[var(--foreground)]" : "text-[var(--text)] bg-[var(--background-primary)]"}`}>Sign up</h4>
                         </div>
                     }
                     {menuMounted && !isMobile &&
@@ -329,7 +333,7 @@ const NavBar = ({ invert = false, hideExpanded = false, className = "" }) => {
             {/* {!hideExpanded && bookingId && isSignedIn &&
                 <div className='w-full animate-dropdown'>
                     <div
-                        onClick={() => navigate('/booking/test')}
+                        onClick={() => navigate(`/booking/${bookingId}`)}
                         style={{
                             background: 'radial-gradient(130% 120% at 92% 50%, rgba(36,58,251,0.30) 0%, rgba(11,11,153,0.18) 35%, transparent 62%), linear-gradient(135deg, #1b1936 0%, #121220 55%, #0c0c16 100%)',
                             boxShadow: 'inset 0 1px 0 rgba(122,148,255,0.18)',
