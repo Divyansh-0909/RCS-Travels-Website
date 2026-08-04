@@ -8,6 +8,64 @@ IMPORTANT:
 - remove the dummy bookings and drivers data from the production DB before launch
   (backend/prisma/clean-bookings.js clears non-seed bookings; drivers need a
   similar pass — and the seed rows themselves must go too)
+- !! NO CAPTAIN CAN USE THE DRIVER APP AT ALL — nothing links a Driver row to a
+  Clerk identity. driver.ts resolves every request with
+  prisma.driver.findUnique({ where: { clerkId: userId } }) — /me, /online,
+  /location, /rides, all of it — but `clerkId` is never WRITTEN anywhere in the
+  backend. Grep it: the only writes are User.clerkId in users.js. The one place
+  a Driver row is created is prisma/seed.js, which leaves clerkId null, so
+  /api/driver/me answers 404 to a captain who signed in perfectly. The signup
+  half is missing too — there is no POST /api/driver and no admin create-driver
+  route, so the driver app's Login 404s an unknown number, flips its button to
+  "Sign Up", and routes to a page with no endpoint behind it.
+    1. DECIDE THE ONBOARDING SHAPE FIRST; the endpoint falls out of it. Driver
+       requires name, vehicleClass, vehicleCapacity and vehicleNumber, all
+       non-nullable, verificationStatus defaults to pending, and the documents
+       are a separate table with their own upload flow. So either a captain
+       self-registers and types all of that before a row can exist, or an admin
+       creates the row from the dashboard and the app only ever logs in against
+       it. The second is closer to how Raju actually recruits — he knows the
+       driver and the car before they ever open the app — and needs no upload
+       flow on day one.
+    2. THE LINK IS THE PART THAT CANNOT BE SKIPPED, whichever shape wins.
+       Something has to set Driver.clerkId exactly once. The natural place is a
+       first-login claim: verify-otp has already proved the phone, so the app's
+       first authed call can match the row BY PHONE and write clerkId if it is
+       still null. Derive the phone from the session (the fake email encodes it,
+       see hybridAuth.js) and never from the request body, and refuse if the row
+       already carries a different clerkId — that case is a stolen account, not
+       a re-login.
+    3. THE AUDIENCE GATE ONLY WORKS ONCE ROWS EXIST. hybridAuth.js checks
+       prisma.driver when audience is 'driver' (added 4 Aug 2026), so right now
+       every captain login 404s at send-otp — correctly, since there are no
+       drivers. That gate is the only thing stopping a rider's number signing
+       into the captain app. Do NOT loosen it to unblock testing; seed a Driver
+       row instead.
+- POINT THE DRIVER APP AT RENDER BEFORE ANY BUILD THAT LEAVES THIS LAPTOP. Only the
+  `development` EAS environment has variables (pushed 4 Aug 2026); `preview` and
+  `production` are EMPTY. A build on either compiles cleanly and then dies on
+  launch — src/main.tsx throws "Missing Clerk Publishable Key" and src/api/api.js
+  throws "Missing EXPO_PUBLIC_API_BASE_URL", both at module scope, so the app
+  never renders a frame. Nothing in CI catches this; the build goes green.
+    - Set per environment with `eas env:create` (or `eas env:push --environment
+      preview`). driver-app/.env is NOT a fallback and never will be: EAS
+      archives from the repo root, so the root .gitignore's `.env` / `.env.*`
+      exclude it, and a negation in driver-app/.easignore cannot beat a parent
+      rule. Verified with `eas build:inspect --stage archive` — .env.example
+      ships, .env does not. GOOGLE_SERVICES_JSON already works this way.
+    - EXPO_PUBLIC_API_BASE_URL must be https://rcs-travels-api.onrender.com for
+      preview and production. Development points at a LAN IP, which is both
+      machine-specific and DHCP-assigned, so it is worthless in any build someone
+      else installs.
+    - The https matters beyond tidiness: Android 9+ refuses cleartext HTTP in
+      release builds. A preview APK carrying an http:// base URL fails every
+      request with a network error that looks nothing like a config problem.
+      Debug builds allow cleartext, which is exactly why development gets away
+      with it and preview will not.
+    - Confirm which Clerk instance ships. Development uses the pk_test_ key the
+      website uses; going live needs the pk_live_ key for whichever instance the
+      backend's CLERK_SECRET_KEY is paired with, or every sign-in ticket is
+      minted against a Clerk that does not know the app.
 - !! GO THROUGH THE WHOLE RATE CARD WITH RAJU AGAIN, PROPERLY — zone by zone, class
   by class. Not another round of "aur X ka kitna?": read him the number the app
   will actually quote and get a yes or no on each one. Everything below is a place
