@@ -274,16 +274,28 @@ const ManageAccount = () => {
         ["DOB", dob]
     ]
 
-    const field = expanded && expanded[0]
+    // The panel outlives `expanded` by the length of its exit animation — it has
+    // to, or it would vanish the instant it started leaving and strand the dim
+    // behind it. So what it renders comes from the last row opened, not from the
+    // live state.
+    const fieldPanel = useExitAnim(!!expanded, 300)
+    const lastExpanded = useRef(null)
+    if (expanded) lastExpanded.current = expanded
+    const panel = expanded ?? lastExpanded.current
+    const field = panel && panel[0]
     const isLocked = lockedFields.includes(field)
 
+    // Keyed on `expanded` rather than `field`, since `field` now survives the
+    // close: this has to run on every open, so reopening the same row clears
+    // what was typed into it last time.
     useEffect(() => {
+        if (!expanded) return
         setError(null)
         setConfirmText("")
         if (field === "Gender") setGenderSelected(gender || "Not Selected")
         else if (field === "Emergency Contact") setFieldValue(emergencyContact || "")
         else if (field === "DOB") setFieldValue(dob || "")
-    }, [field, gender, emergencyContact, dob])
+    }, [expanded, gender, emergencyContact, dob])
 
     // The account-deletion panel only unlocks once the person types the exact word.
     const deactivateReady = confirmText.trim().toLowerCase() === "deactivate"
@@ -415,9 +427,18 @@ const ManageAccount = () => {
     )
 
     return (
-        <AccountLayout items={items} selected={selected} onSelect={(i) => { setSelected(i); setRideScrolled(false) }} title="Manage Account" startOnContent={items.includes(requestedTab)}>
+        <AccountLayout
+            items={items}
+            selected={selected}
+            onSelect={(i) => { setSelected(i); setRideScrolled(false) }}
+            title="Manage Account"
+            startOnContent={items.includes(requestedTab)}
+            panelOpen={!!expanded || rideFilterExpand}
+            onPanelClose={() => { setExpanded(null); setRideFilterExpand(false) }}
+        >
+                    {fieldPanel.mounted && (
                     <Button
-                        className={`${expanded ? "block animate-datetime" : "hidden animate-datetime-out"} z-200 py-6 flex flex-col justify-center items-center fixed left-1/2 top-1/2 -translate-x-1/2 mt-10 -translate-y-1/2 hover:opacity-[1]`}
+                        className={`block ${fieldPanel.closing ? "animate-datetime-out pointer-events-none" : "animate-datetime"} z-200 py-6 flex flex-col justify-center items-center fixed left-1/2 top-1/2 -translate-x-1/2 mt-10 -translate-y-1/2 hover:opacity-[1]`}
                         prop={{ variant: "dropdown", width: "310px" }}
                     >
                         <Icon onClick={() => setExpanded(null)} className="text-[var(--foreground)] w-full right-4 top-4 absolute opacity-[0.8] transition-opacity duration-300 hover:opacity-[1]" path={mdiClose} size={1} />
@@ -425,15 +446,15 @@ const ManageAccount = () => {
                         {isLocked
                             ? <div className="flex flex-col justify-center px-3 w-full items-center text-center">
                                 <ErrorMark className="mb-2" size={140} />
-                                <h2 className="text-2xl">{expanded[2]}</h2>
-                                <p className="mt-1 text-sm text-[var(--foreground-muted)]/70">{expanded[3]}</p>
+                                <h2 className="text-2xl">{panel[2]}</h2>
+                                <p className="mt-1 text-sm text-[var(--foreground-muted)]/70">{panel[3]}</p>
                             </div>
                             : <div className="flex flex-col gap-3 w-full justify-center px-3 pt-3 items-center text-center">
-                                <h2 className="text-2xl">{expanded === "deactivate" ? "Before you deactivate" : expanded === "drivers" ? "What your driver sees" : `${field}`}</h2>
-                                <p className="-mt-2 mb-5 text-sm text-[var(--foreground-muted)]/70">{expanded === "deactivate" ? "This can't be undone." : expanded === "drivers" ? "The details shared with a driver when they accept your ride." : `${fieldDescriptions[field]}`}</p>
+                                <h2 className="text-2xl">{panel === "deactivate" ? "Before you deactivate" : panel === "drivers" ? "What your driver sees" : `${field}`}</h2>
+                                <p className="-mt-2 mb-5 text-sm text-[var(--foreground-muted)]/70">{panel === "deactivate" ? "This can't be undone." : panel === "drivers" ? "The details shared with a driver when they accept your ride." : `${fieldDescriptions[field]}`}</p>
 
                                 {/* PLACEHOLDER — reconcile with the real driver route once it exists (see ROADMAP IMP) */}
-                                {expanded === "drivers" && (
+                                {panel === "drivers" && (
                                     <div className="w-full flex flex-col gap-4 mb-1 text-left">
                                         <div className="flex flex-col gap-2">
                                             <p className="text-xs uppercase tracking-wide text-[var(--foreground-muted)]/50">Shared with your driver</p>
@@ -453,7 +474,7 @@ const ManageAccount = () => {
                                         </div>
                                     </div>
                                 )}
-                                {expanded === "deactivate" && (
+                                {panel === "deactivate" && (
                                     <div className="w-full flex flex-col gap-4 mb-1">
                                         <ul className="list-disc pl-5 flex flex-col gap-2 text-left text-sm text-[var(--foreground-muted)]/70 marker:text-[var(--foreground-muted)]/40">
                                             <li>Your personal details are erased: name, gender, DOB, emergency contact, and saved places.</li>
@@ -534,7 +555,7 @@ const ManageAccount = () => {
                                     <p className="-mt-1 text-sm text-[rgba(239,68,68,0.9)]">{error}</p>
                                 )}
 
-                                <Button className={`${expanded === 'deactivate' || expanded === 'drivers' ? "hidden" : "block"}`} onClick={handleUpdate}
+                                <Button className={`${panel === 'deactivate' || panel === 'drivers' ? "hidden" : "block"}`} onClick={handleUpdate}
                                     prop={{
                                         variant: "",
                                         width: "240px",
@@ -543,7 +564,7 @@ const ManageAccount = () => {
                                 >
                                     {loading ? "Saving…" : "Update"}
                                 </Button>
-                                <Button className={`${expanded === 'deactivate' ? "block" : "hidden"}`} onClick={handleDeactivate}
+                                <Button className={`${panel === 'deactivate' ? "block" : "hidden"}`} onClick={handleDeactivate}
                                     prop={{
                                         variant: "negative",
                                         width: "240px",
@@ -554,6 +575,7 @@ const ManageAccount = () => {
                                 </Button>
                             </div>}
                     </Button>
+                    )}
             {/* "Copied to clipboard" pill for the ride history tab */}
             <div
                 className={`${copied ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"} flex justify-center items-center w-[230px] fixed z-100 left-1/2 -translate-x-1/2 bottom-8 sm:bottom-10 bg-primary text-[var(--foreground)] text-sm font-semibold px-5 py-3 rounded-full shadow-[0_8px_24px_rgba(0,0,0,0.25)] gap-2 transition-[opacity,transform] duration-300`}
@@ -572,7 +594,7 @@ const ManageAccount = () => {
                                 paddingX: "0px",
                                 innerClassName: "justify-start max-sm:w-full! max-sm:h-full!",
                             }}
-                            className={`block ${rideFilterDropdown.closing ? "animate-datetime-out" : "animate-datetime"} z-20 max-sm:fixed max-sm:inset-0 max-sm:my-0 max-sm:w-screen! max-sm:h-dvh! max-sm:rounded-none! sm:absolute sm:scale-[1.1] sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 active:opacity-[1] hover:opacity-[1]`}
+                            className={`block ${rideFilterDropdown.closing ? "animate-datetime-out" : "animate-datetime"} z-200 max-sm:fixed max-sm:inset-0 max-sm:my-0 max-sm:w-screen! max-sm:h-dvh! max-sm:rounded-none! sm:absolute sm:scale-[1.1] sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 active:opacity-[1] hover:opacity-[1]`}
                         >
                             <div
                                 className="flex flex-col w-full py-3 text-left max-sm:h-full"

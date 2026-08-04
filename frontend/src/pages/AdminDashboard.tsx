@@ -337,7 +337,14 @@ const AdminDashboard = () => {
     )
 
     return (
-        <AccountLayout items={items} selected={selected} onSelect={(i : number) => { setSelected(i); setPage(1); setFilterSection(0); setListScrolled(false) }} title="Admin Dashboard">
+        <AccountLayout
+            items={items}
+            selected={selected}
+            onSelect={(i : number) => { setSelected(i); setPage(1); setFilterSection(0); setListScrolled(false) }}
+            title="Admin Dashboard"
+            panelOpen={expanded}
+            onPanelClose={() => setExpanded(false)}
+        >
             {selected === FARES_TAB ? (
                 <Suspense
                     fallback={
@@ -358,7 +365,7 @@ const AdminDashboard = () => {
                         paddingX: "0px",
                         innerClassName: "justify-start max-sm:w-full! max-sm:h-full!",
                     }}
-                    className={`block ${filterDropdown.closing ? "animate-datetime-out" : "animate-datetime"} z-20 max-sm:fixed max-sm:inset-0 max-sm:my-0 max-sm:w-screen! max-sm:h-dvh! max-sm:rounded-none! sm:absolute sm:scale-[1.1] sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 active:opacity-[1] hover:opacity-[1]`}
+                    className={`block ${filterDropdown.closing ? "animate-datetime-out" : "animate-datetime"} z-200 max-sm:fixed max-sm:inset-0 max-sm:my-0 max-sm:w-screen! max-sm:h-dvh! max-sm:rounded-none! sm:absolute sm:scale-[1.1] sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 active:opacity-[1] hover:opacity-[1]`}
                 >
                     <div
                         className="flex flex-col w-full py-3 text-left max-sm:h-full"
