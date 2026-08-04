@@ -37,6 +37,11 @@ export const pageMeta = {
         description:
             "Questions about fares, drivers, or cancelling a booking? The answers are here, or message us on WhatsApp and we'll pick it up.",
     },
+    "/outstation": {
+        title: "Outstation Trips | RCS Travels",
+        description:
+            "Travelling out of the city? Outstation trips are priced by the day with the return included, and booked with us directly. Here's how they work.",
+    },
     "/login": {
         title: "Log In | RCS Travels",
         description:

@@ -1,3 +1,4 @@
+import { useLocation } from "react-router-dom";
 import { useViewNavigate } from "../hooks/useViewNavigate";
 import { scrollToSection, scrollToTop } from "../hooks/useSmoothScroll";
 import { callSupport, emailSupport, openSupportWhatsApp } from "../constants/support";
@@ -6,16 +7,29 @@ const linkClass = "text-left text-[var(--text)]/90 hover:text-[var(--text)] acti
 
 const Footer = () => {
     const navigate = useViewNavigate();
+    // The footer also sits on routes that don't have the home page's sections
+    // (Outstation). Scrolling to an id that isn't in the document is a dead
+    // link, so off the home route these navigate there and let App's scrollTo
+    // effect finish the job.
+    const onHome = useLocation().pathname === "/";
+    const goToSection = (id) => () => {
+        if (onHome) scrollToSection(id);
+        else navigate("/", { state: { scrollTo: id } });
+    };
 
     const columns = [
         {
             heading: "Pages",
             links: [
-                { label: "Book a ride", onClick: scrollToTop },
-                { label: "How it works", onClick: () => scrollToSection("how-it-works") },
-                { label: "Services", onClick: () => scrollToSection("services") },
-                { label: "Why us", onClick: () => scrollToSection("why-us") },
-                { label: "About", onClick: () => scrollToSection("about") },
+                { label: "Book a ride", onClick: () => (onHome ? scrollToTop() : navigate("/")) },
+                { label: "How it works", onClick: goToSection("how-it-works") },
+                { label: "Services", onClick: goToSection("services") },
+                // A route, not a section — the only entry here that leaves the
+                // page, because outstation is the one product with nowhere on
+                // the home page to scroll to.
+                { label: "Outstation", onClick: () => navigate("/outstation") },
+                { label: "Why us", onClick: goToSection("why-us") },
+                { label: "About", onClick: goToSection("about") },
             ],
         },
         {
@@ -62,7 +76,7 @@ const Footer = () => {
                 <div className="w-full mt-6 sm:mt-8 grid grid-cols-2 sm:grid-cols-4 gap-x-8 gap-y-12 sm:gap-x-20">
                     {columns.map((col) => (
                         <div key={col.heading} className="flex flex-col gap-8">
-                            <h4 className="font-semibold">{col.heading}</h4>
+                            <h4 className="text-base sm:text-lg font-semibold">{col.heading}</h4>
                             <ul className="flex flex-col gap-5">
                                 {col.links.map((link) => (
                                     <li key={link.label}>
@@ -82,7 +96,7 @@ const Footer = () => {
                 </div>
 
                 {/* Copyright */}
-                <p className="text-[var(--text-muted)]/50 leading-relaxed text-center">
+                <p className="text-sm sm:text-base text-[var(--text-muted)]/50 leading-relaxed text-center">
                     © copyright RCS Travels {new Date().getFullYear()}. All rights reserved.
                 </p>
             </div>

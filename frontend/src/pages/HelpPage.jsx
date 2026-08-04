@@ -27,7 +27,7 @@ const faqs = [
     },
     {
         q: "Do you offer outstation or shared rides?",
-        a: "Yes, both. Book an outstation trip when you're travelling out of the city, or choose sharing to split the fare with co-riders on the same route. Both options are available while booking.",
+        a: "Yes, both. Sharing is an option in the booking form — split the fare with co-riders on the same route. Outstation trips are priced by the day rather than by the route, so they're arranged with us directly; see the Outstation page for how they work.",
     },
     {
         q: "How do I track my ride?",
