@@ -25,21 +25,41 @@ const generateOTP = () => String(crypto.randomInt(100000, 1000000))
 // 'signup' is treated as login: the default must be the path that can't create.
 // (This makes send-otp confirm which numbers have accounts; every consumer app
 // leaks the same, and the auth limiter throttles anyone harvesting it.)
-async function intentMismatch(phone, intent) {
-  const account = await prisma.user.findUnique({ where: { phone }, select: { id: true } })
+//
+// `audience` says which account the intent is about. Riders and captains are
+// separate tables sharing one Clerk instance, so a phone can be in either, both
+// or neither — "has an account" means nothing without naming an account of what.
+// Checking users for everyone let any rider's number into the captain app, and
+// shut out every captain who had never booked a cab as a passenger. The website
+// sends no audience, so rider is the default: same rule as intent's, the default
+// has to be the side that already existed.
+//
+// Existence only, deliberately. A captain pending verification, or one an admin
+// has deactivated, still has to get in to see documents and status — locking the
+// door on verificationStatus would strand them with nowhere to fix it.
+async function accountFor(phone, audience) {
+  return audience === 'driver'
+    ? prisma.driver.findUnique({ where: { phone }, select: { id: true } })
+    : prisma.user.findUnique({ where: { phone }, select: { id: true } })
+}
+
+async function intentMismatch(phone, intent, audience) {
+  const account = await accountFor(phone, audience)
+  const noun = audience === 'driver' ? 'a captain account' : 'an account'
+
   if (intent === 'signup')
-    return account ? { status: 409, error: 'This number already has an account' } : null
-  return account ? null : { status: 404, error: 'No account found with this number' }
+    return account ? { status: 409, error: `This number already has ${noun}` } : null
+  return account ? null : { status: 404, error: `No ${noun} found with this number` }
 }
 
 hybridAuthRouter.post('/send-otp', async (req, res) => {
-  const { phone, intent } = req.body
+  const { phone, intent, audience } = req.body
 
   if (!phone || phone.length !== 10) {
     return res.status(400).json({ error: 'Invalid phone number' })
   }
 
-  const mismatch = await intentMismatch(phone, intent)
+  const mismatch = await intentMismatch(phone, intent, audience)
   if (mismatch) return res.status(mismatch.status).json({ error: mismatch.error })
 
   // Per-phone cooldown: expiresAt is always sentAt + 5min, so "sent under 45s
@@ -81,7 +101,7 @@ hybridAuthRouter.post('/send-otp', async (req, res) => {
 })
 
 hybridAuthRouter.post('/verify-otp', async (req, res) => {
-  const { phone, otp, intent } = req.body
+  const { phone, otp, intent, audience } = req.body
 
   if (!phone || !otp) {
     return res.status(400).json({ error: 'Phone and OTP are required' })
@@ -97,11 +117,12 @@ hybridAuthRouter.post('/verify-otp', async (req, res) => {
   if (userHash !== record.otpHash)    return res.status(400).json({ error: 'Invalid OTP' })
 
   // Re-checked here because send-otp's answer isn't binding — anyone can call
-  // this route directly. After the hash check but before the burn: the OTP
-  // itself is intent-less, so a code declined here stays valid and the other
-  // page can verify it (its send-otp will 429 on the cooldown, which the
-  // frontend already reads as "previous code still good, go to the OTP step").
-  const mismatch = await intentMismatch(phone, intent)
+  // this route directly. After the hash check but before the burn: the OTP is
+  // both intent-less and audience-less (otp_verifications is keyed by phone
+  // alone), so a code declined here stays valid and the other page can verify
+  // it — its send-otp will 429 on the cooldown, which the frontend already
+  // reads as "previous code still good, go to the OTP step".
+  const mismatch = await intentMismatch(phone, intent, audience)
   if (mismatch) return res.status(mismatch.status).json({ error: mismatch.error })
 
   // Burn it before minting the ticket, so a replayed request can't get a second one.
@@ -111,6 +132,13 @@ hybridAuthRouter.post('/verify-otp', async (req, res) => {
 
   // With the gate above, the create branch is only reachable from signup; for
   // login it is a self-heal for a DB user whose Clerk twin somehow vanished.
+  //
+  // The email is derived from the phone alone, so the Clerk identity is per
+  // person, not per audience: a captain who also books rides is one Clerk user
+  // with a row in each table. Audience decides who may sign in, never who they
+  // are — which is why the routes authorize by looking their own record up from
+  // the session (driver.ts resolves prisma.driver by clerkId), rather than
+  // trusting that a valid session came from the matching app.
   const existing = await clerkClient.users.getUserList({ emailAddress: [userEmail] })
 
   const clerkUser = existing.data.length > 0
