@@ -11,7 +11,7 @@ import { useBottomSheet } from "../../hooks/useBottomSheet"
 // Without it nothing about the panel changes; with it, nothing changes from sm
 // up either — the hook is inert unless useIsMobile() is true, so the desktop
 // side panel keeps its layout, animation and scrolling exactly as before.
-const BackgroundPanel = ({ show = true, duration = 250, className, children, sheet = false, initialSnap = "collapsed", bottomInset = 0, contentKey, onSnapChange }) => {
+const BackgroundPanel = ({ show = true, duration = 250, className, children, sheet = false, initialSnap = "collapsed", bottomInset = 0, contentKey, dismissible = false, onDismiss, onSnapChange }) => {
     const [mounted, setMounted] = useState(show)
     const [closing, setClosing] = useState(false)
     const isMobile = useIsMobile()
@@ -26,6 +26,10 @@ const BackgroundPanel = ({ show = true, duration = 250, className, children, she
         // Re-measure trigger for sheets whose height follows their content — the
         // tracking panels swap rows as the ride's status moves.
         contentKey,
+        // Open or gone, with no stops in between: a throw downwards closes it
+        // and the owner is told, rather than the sheet resting half-shown.
+        dismissible,
+        onDismiss,
         onSnapChange,
     })
 

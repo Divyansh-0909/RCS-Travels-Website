@@ -63,7 +63,7 @@ const prefersReducedMotion = () =>
  * The sheet is flush with the bottom at translateY 0, so hiding
  * `height - fraction*vh` of it leaves exactly `fraction` on screen.
  */
-export function sheetStops(viewportHeight, bottomInset = 0, naturalHeight = 0) {
+export function sheetStops(viewportHeight, bottomInset = 0, naturalHeight = 0, dismissible = false) {
     // A panel can pin an action bar below the sheet (the vehicle screen keeps its
     // Book button on screen at every stop). The sheet then owns everything above
     // that bar, and the fractions are of THAT space — measured against the full
@@ -82,17 +82,25 @@ export function sheetStops(viewportHeight, bottomInset = 0, naturalHeight = 0) {
     // It collapses onto expanded instead, which is the honest answer — there is
     // no more content to reveal.
     const yFor = (fraction) => Math.max(0, height - fraction * available);
+    // Clear of the bar as well as its own box, so a closing sheet doesn't slide
+    // across the bar on its way out.
+    const hiddenY = height + bottomInset;
     return {
         height,
-        // Clear of the bar as well as its own box, so a closing sheet doesn't
-        // slide across the bar on its way out.
-        hiddenY: height + bottomInset,
-        stops: {
-            // The sheet's own height IS the expanded state, so it rests at 0.
-            expanded: 0,
-            half: yFor(SHEET_SNAPS.half),
-            collapsed: yFor(SHEET_SNAPS.collapsed),
-        },
+        hiddenY,
+        // A dismissible sheet has two states, not four: it holds a handful of
+        // rows that are the whole reason it opened, so a stop that shows 28% of
+        // them is a stop nobody wants to rest at. Off-screen becomes a stop
+        // instead, which is what makes a throw downwards close it — the release
+        // resolves to it like any other, and the owner is told (`onDismiss`).
+        stops: dismissible
+            ? { expanded: 0, dismissed: hiddenY }
+            : {
+                // The sheet's own height IS the expanded state, so it rests at 0.
+                expanded: 0,
+                half: yFor(SHEET_SNAPS.half),
+                collapsed: yFor(SHEET_SNAPS.collapsed),
+            },
     };
 }
 
@@ -123,9 +131,12 @@ export const isAtRest = (y, velocity, target) =>
 /**
  * The drag range. The sheet is a fixed-height surface between two fixed edges —
  * the pill clearance above, and the action bar below when a panel pins one — so
- * there is no overshoot that doesn't tear it away from one of them.
+ * there is no overshoot that doesn't tear it away from one of them. The lowest
+ * stop is the floor: off-screen on a dismissible sheet, which is how it can be
+ * dragged all the way out, and `collapsed` on every other one.
  */
-export const clampToStops = (y, stops) => Math.min(Math.max(y, stops.expanded), stops.collapsed);
+export const clampToStops = (y, stops) =>
+    Math.min(Math.max(y, stops.expanded), stops.dismissed ?? stops.collapsed);
 
 /**
  * Which stop a release was heading for: project the throw forward, then take the
@@ -156,9 +167,14 @@ export function resolveSnap(y, velocity, stops) {
  * @param {unknown} [options.contentKey] Changes when the panel swaps its content, so a sheet
  *                                       sized to that content can be re-measured. Not a render
  *                                       key — it only triggers a re-measure.
+ * @param {boolean} [options.dismissible] Drops the intermediate stops and lets a downward throw
+ *                                        take the sheet off-screen. For sheets that are open or
+ *                                        gone rather than resizable.
+ * @param {() => void} [options.onDismiss] Fired when such a throw lands. The owner is what
+ *                                         actually closes the sheet — this only reports it.
  * @param {(snap: typeof SNAP_NAMES[number]) => void} [options.onSnapChange] Fired on settle, not per frame.
  */
-export function useBottomSheet({ enabled, open = true, initialSnap = "collapsed", bottomInset = 0, contentKey, onSnapChange }) {
+export function useBottomSheet({ enabled, open = true, initialSnap = "collapsed", bottomInset = 0, contentKey, dismissible = false, onDismiss, onSnapChange }) {
     const sheetRef = useRef(null);
     const grabberRef = useRef(null);
 
@@ -174,6 +190,8 @@ export function useBottomSheet({ enabled, open = true, initialSnap = "collapsed"
     const dragRef = useRef(null);
     const onSnapChangeRef = useRef(onSnapChange);
     onSnapChangeRef.current = onSnapChange;
+    const onDismissRef = useRef(onDismiss);
+    onDismissRef.current = onDismiss;
 
     // Viewport-dependent numbers, recomputed on resize rather than read per
     // frame — layout reads inside the rAF loop are what turn a smooth drag into
@@ -241,9 +259,9 @@ export function useBottomSheet({ enabled, open = true, initialSnap = "collapsed"
     const measure = useCallback(() => {
         const vh = window.innerHeight;
         const inset = bottomInsetRef.current;
-        geometryRef.current = { vh, bottomInset: inset, ...sheetStops(vh, inset, measureContent()) };
+        geometryRef.current = { vh, bottomInset: inset, ...sheetStops(vh, inset, measureContent(), dismissible) };
         return geometryRef.current;
-    }, [measureContent]);
+    }, [measureContent, dismissible]);
 
     const paint = useCallback((y) => {
         // Expanded rests at 0 and nothing sits above it, so a negative value can
@@ -423,6 +441,18 @@ export function useBottomSheet({ enabled, open = true, initialSnap = "collapsed"
             }
 
             const snap = resolveSnap(yRef.current, drag.velocity, geometryRef.current.stops);
+
+            // Thrown out rather than to a stop. The spring carries it the rest
+            // of the way off-screen while the owner reacts — it unmounts the
+            // panel, and until it does there is nothing left on screen to see.
+            // snapRef is left where it was, so a sheet whose owner declines to
+            // close still has a stop to return to.
+            if (snap === "dismissed") {
+                springTo(geometryRef.current.stops.dismissed, drag.velocity);
+                onDismissRef.current?.();
+                return;
+            }
+
             const changed = snapRef.current !== snap;
             snapRef.current = snap;
             syncScrollability(snap);

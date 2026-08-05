@@ -18,6 +18,7 @@ import BackgroundPanel from "../components/ui/BackgroundPanel";
 import NoticePill from "../components/ui/NoticePill";
 import { openSupportWhatsApp } from "../constants/support";
 import RideDetails from "../components/RideDetails";
+import { RideOptionsTrigger, RideOptionsPopover, RideOptionsSheet } from "../components/RideOptions";
 import { CARRIER_CHARGE, CANCELLATION_CHARGE_PCT, SAFE_ROUTE_SURCHARGE, isDistancePriced } from "../constants/fares";
 import Skeleton from "../components/ui/Skeleton";
 import EmptyState from "../components/ui/EmptyState";
@@ -79,56 +80,6 @@ const SUBTITLE = "text-lg sm:text-2xl font-normal leading-snug text-[var(--text-
 const STACK = "gap-6 sm:gap-8";
 const GROUP = "gap-2 sm:gap-3";
 const PAIR = "gap-0.5 sm:gap-1";
-
-// The panel's switch: a white pill riding over a coloured bar. Extracted when
-// this markup was pasted inline four times; one options row owns it now.
-const SliderToggle = ({ on, onClick, className = "" }) => (
-    <div
-        onClick={onClick}
-        role="switch"
-        aria-checked={on}
-        className={`relative w-[50px] h-[22px] scale-[0.9] sm:scale-[1] flex items-center justify-center ${className}`}
-    >
-        <div className={`absolute inset-0 ${on ? "-left-2" : "left-5"} border-b-2 border-[rgba(255,255,255,0.05)] bg-white scale-[1] hover:scale-[1.1] cursor-pointer [transition:all_300ms,transform_300ms_150ms] bg-[linear-gradient(to_top,transparent_50%,rgba(146,146,139,0.25)_100%)] shadow-[inset_0px_2px_2px_1px_rgba(255,255,255,0.4),0px_0px_10px_rgba(0,0,0,0.6)] w-[40px] rounded-full h-[inherit]`} />
-        <div className={`${on ? "bg-green-500" : "bg-gray-500"} rounded-full w-[inherit] h-[14px]`} />
-    </div>
-);
-
-// One column of the options row: the question, what it does to the fare
-// underneath, and the switch. Same markup at both breakpoints — the desktop card
-// of full-width rows it replaced is gone.
-//
-// `dense` is the three-column case, which is the safer route's routes only. It
-// decides both the type scale and the shape:
-//   two columns  → switch beside the text, one row, as the rider reads it
-//   three columns→ switch stacked under the text, and the type steps down. A
-//                  360px phone gives each column ~90px once the dividers are
-//                  paid for; "Roof carrier?" doesn't fit that at 16px, let alone
-//                  with a 50px switch beside it.
-// nowrap on both lines either way, so a narrow device clips rather than reflows:
-// two rows of heading here would push the columns out of alignment with each
-// other. The group is centred in the column it occupies but hangs off one left
-// edge inside, so the note reads as a caption under the label.
-const BarPref = ({ label, note, on, onClick, dense = false }) => (
-    <div className="flex-1 min-w-0 flex justify-center">
-        {/* Shrink-wrapped to its content, so items-start is the label's own
-            left edge and not the column's — the column is flex-1 and wider. */}
-        <div className={`flex min-w-0 ${dense ? "flex-col items-start gap-2.5" : "flex-row items-center gap-2 sm:gap-3"}`}>
-            <div className="flex flex-col gap-0.5 text-left min-w-0">
-                <h4 className={`${dense ? "text-sm" : "text-sm sm:text-base"} font-medium leading-tight whitespace-nowrap text-[var(--text)]`}>{label}</h4>
-                <p className={`${dense ? "text-xs" : "text-xs sm:text-sm"} leading-snug whitespace-nowrap text-[var(--text-muted)]`}>{note}</p>
-            </div>
-            {/* The switch's layout box is 50×22, but on phones it is painted at
-                0.9 and a transform doesn't shrink what layout reserves. Stacked,
-                that 5px is invisible slack; beside the label it is 5px the label
-                needs, so the box states the painted size and the switch scales
-                from its top-left corner into it (same trick as Illustration). */}
-            <div className="shrink-0 w-[45px] h-[20px] sm:w-[50px] sm:h-[22px]">
-                <SliderToggle on={on} onClick={onClick} className="origin-top-left" />
-            </div>
-        </div>
-    </div>
-);
 
 // The three searching illustrations are a fixed 290×200 canvas whose internals
 // are positioned in px, so they can't reflow — on phones they're scaled as
@@ -225,6 +176,14 @@ const VehicleSelect = ()=>{
     const [confirmTarget, setConfirmTarget] = useState("pickup"); // "pickup" | "drop"
     const [bookAfterConfirm, setBookAfterConfirm] = useState(false);
     const [detialsVisibility, setDetialsVisibility] = useState(false)
+    // The three fare-changing settings, now behind one line above the CTA
+    // rather than laid out permanently across it — see RideOptions.
+    // Dev-only: ?options=1 opens it on mount. The panel is a click away in the
+    // app, and a screenshot can't click. null in prod, so this is false there.
+    const [optionsOpen, setOptionsOpen] = useState(devParams?.get("options") === "1");
+    // Anchors the desktop popover: it opens out of this control, and a click on
+    // it must not count as a click outside the panel.
+    const optionsTriggerRef = useRef(null);
     const [msgIndex, setMsgIndex] = useState(0);
     const [illusIndex, setIllusIndex] = useState(0);
     const navigate = useViewNavigate();
@@ -274,7 +233,20 @@ const VehicleSelect = ()=>{
             setRoutePolyline(data.polyline ?? null);
             // ?safe= wins over the server's answer, same as ?fare= below: the
             // preview is forcing an offer this route wouldn't produce.
-            setSafeRouteInfo(devSafeRoute ?? data.safeRoute ?? null);
+            const safeRouteVerdict = devSafeRoute ?? data.safeRoute ?? null;
+            setSafeRouteInfo(safeRouteVerdict);
+            // The store carries the last trip's answer, and this trip may have
+            // no safer route to carry it to. Left alone, `safeRoute: true` went
+            // on being sent with the estimate and into createBooking for a
+            // destination the server never offered one on. Cleared here, where
+            // the verdict is: the fare just returned already priced the trip
+            // without a surcharge, so nothing needs re-pricing — which is why
+            // the ref moves with it, or the effect below would fire a second
+            // estimate for a decision the server has already made.
+            if (!safeRouteVerdict?.available && safeRoute) {
+                setSafeRoute(false);
+                rideOptionsRef.current = { ...rideOptionsRef.current, safeRoute: false };
+            }
             // ?fare= wins over the server's answer — previews force a pricing
             // source the real route wouldn't produce. null in prod.
             setFareSource(devParams?.get("fare") ?? data.fareSource ?? null);
@@ -740,7 +712,12 @@ const VehicleSelect = ()=>{
     // entrance at initialSnap — silently, since only a settle reports a stop.
     // Without this the bar would come back collapsed under a half-open sheet.
     useEffect(() => {
-        if (step !== "vehicleType") setSheetSnap(SHEET_INITIAL_SNAP);
+        if (step !== "vehicleType") {
+            setSheetSnap(SHEET_INITIAL_SNAP);
+            // The options belong to this step's cards. Leaving it — Book ride,
+            // or a marker tap into the confirm screen — takes them with it.
+            setOptionsOpen(false);
+        }
     }, [step]);
 
     // Collapsed means the rider is looking at the map, not at the fare list —
@@ -754,10 +731,64 @@ const VehicleSelect = ()=>{
     // inside the form, under the cards it qualifies — is never affected.
     const barCollapsed = pinBookBar && sheetSnap === "collapsed";
 
-    // Three columns instead of two in the options row, which is what makes the
-    // type step down — see BarPref's `dense`. It matters at both breakpoints:
-    // the desktop column is 377px, so three columns get ~120px each.
-    const barDense = !!safeRouteInfo?.available;
+    // The three settings the rider can change about this ride, in the order
+    // they matter to the fare. `short` is the lowercase name the trigger line
+    // lists them by; `note` is what each one does to the price.
+    const safeRouteAvailable = !!safeRouteInfo?.available;
+    const safeRouteDetour = [
+        safeRouteInfo?.extraKm != null && `${safeRouteInfo.extraKm} km`,
+        safeRouteInfo?.extraMin != null && `${safeRouteInfo.extraMin} min`,
+    ].filter(Boolean).join(", ");
+    const rideOptions = [
+        {
+            key: "sharing",
+            label: "Share ride",
+            short: "sharing",
+            note: "Reduces your fare.",
+            on: sharing,
+            onToggle: () => setSharing(!sharing),
+        },
+        {
+            key: "carrier",
+            label: "Roof carrier",
+            short: "roof carrier",
+            // Never promise a charge that isn't made: the provider throws the
+            // carrier in above a threshold, and the estimate is what knows
+            // whether this route is over it.
+            note: selectedFare?.carrierWaived ? "Free on this route." : `Adds ₹${CARRIER_CHARGE}.`,
+            on: needsCarrier,
+            onToggle: () => setNeedsCarrier(!needsCarrier),
+        },
+        {
+            key: "safeRoute",
+            label: "Safer route",
+            short: "safer route",
+            // The fee is the server's, not a constant here: it's priced per
+            // route from the detour it actually needs. The detour itself is
+            // named now that there is a full row to say it in — it costs time
+            // as well as money, and the columns this replaced had room for
+            // neither.
+            note: safeRouteAvailable
+                ? `Adds ₹${safeRouteInfo.fee}.${safeRouteDetour ? ` ${safeRouteDetour} longer.` : ""}`
+                : "This route has no safer alternative.",
+            // Whether one exists at all is Google's answer, not the rider's:
+            // most destinations never cross a shady zone. Shown either way and
+            // switched off where there is nothing to switch on, so the option
+            // reads as considered-and-unavailable rather than as missing.
+            disabled: !safeRouteAvailable,
+            // Guarded, not just `safeRoute`: the store keeps the last trip's
+            // answer, so an unavailable route must not paint the switch on.
+            on: safeRoute && safeRouteAvailable,
+            onToggle: () => setSafeRoute(!safeRoute),
+        },
+    ];
+
+    // Closing returns the keyboard to the line that opened the panel, so a
+    // dismissal doesn't drop focus back at the top of the screen.
+    function closeRideOptions() {
+        setOptionsOpen(false);
+        optionsTriggerRef.current?.focus();
+    }
 
     // Rendered inside the form on desktop and in the pinned bar on phones, so
     // there is one definition of the CTA rather than two that can drift. The
@@ -765,53 +796,40 @@ const VehicleSelect = ()=>{
     // in — see Button's pass-through.
     const bookAction = (
         <div className="w-full flex flex-col gap-2 sm:mt-3">
-            {/* Every option that changes the fare, immediately above the button
-                that commits to it. One layout at both breakpoints: the columns
-                started as the phone bar, and the desktop card that used to hold
-                these rows was a second control for the same three settings.
+            {/* The way into every option that changes the fare, immediately
+                above the button that commits to it. One line rather than the
+                two or three columns this used to be: at 377px those columns had
+                to drop a type step and stack each switch under its own label,
+                and the three settings still couldn't say what they cost.
 
-                The safer route is a third column only on the routes that have
-                one — most destinations never cross a shady zone, and an empty
-                column there would be an offer of nothing.
+                The line carries the state, so what is already on is readable
+                without opening anything.
 
-                Hidden with the sheet collapsed: these re-price the cards, and
-                at that stop there are no cards on screen to re-price. */}
+                Hidden with the sheet collapsed, for the same reason the
+                columns were: these re-price the cards, and at that stop there
+                are no cards on screen to re-price. */}
             {!barCollapsed && (
-            <div className="flex w-full items-center gap-2 pt-1 pb-3">
-                <BarPref
-                    label="Share ride?"
-                    note="Reduces fare"
-                    on={sharing}
-                    onClick={() => setSharing(!sharing)}
-                    dense={barDense}
-                />
-                <div className="w-px self-stretch bg-[var(--foreground)]/20" />
-                <BarPref
-                    label="Roof carrier?"
-                    // Never promise a charge that isn't made: the provider
-                    // throws the carrier in above a threshold, and the
-                    // estimate is what knows whether this route is over it.
-                    note={selectedFare?.carrierWaived ? "Free on this route." : `Adds ₹${CARRIER_CHARGE}.`}
-                    on={needsCarrier}
-                    onClick={() => setNeedsCarrier(!needsCarrier)}
-                    dense={barDense}
-                />
-                {barDense && (
-                    <>
-                        <div className="w-px self-stretch bg-[var(--foreground)]/20" />
-                        <BarPref
-                            label="Safer route?"
-                            // The fee is the server's, not a constant here:
-                            // it's priced per route from the detour it
-                            // actually needs.
-                            note={`Adds ₹${safeRouteInfo.fee}.`}
-                            on={safeRoute}
-                            onClick={() => setSafeRoute(!safeRoute)}
-                            dense
+                <div className="relative w-full pt-1 pb-2">
+                    <RideOptionsTrigger
+                        options={rideOptions}
+                        open={optionsOpen}
+                        buttonRef={optionsTriggerRef}
+                        onClick={() => (optionsOpen ? closeRideOptions() : setOptionsOpen(true))}
+                    />
+                    {/* Desktop only — the popover opens out of the line above,
+                        over the cards it re-prices. Phones get a sheet of their
+                        own at page level, which can't be nested here: this
+                        renders inside the pinned Book bar, and a sheet
+                        positioned against that bar would sit inside it. */}
+                    {!isMobile && (
+                        <RideOptionsPopover
+                            options={rideOptions}
+                            open={optionsOpen}
+                            anchorRef={optionsTriggerRef}
+                            onClose={closeRideOptions}
                         />
-                    </>
-                )}
-            </div>
+                    )}
+                </div>
             )}
 
             <Button
@@ -1385,6 +1403,19 @@ const VehicleSelect = ()=>{
                         >
                             <div className={COL}>{bookAction}</div>
                         </div>
+                    )}
+
+                    {/* The options sheet, phones only — a page-level surface
+                        over the fare sheet and the Book bar both, which is why
+                        it is mounted here rather than beside the line that
+                        opens it. Kept mounted with the bar so its exit spring
+                        can play; `open` is what shows it. */}
+                    {pinBookBar && (
+                        <RideOptionsSheet
+                            options={rideOptions}
+                            open={optionsOpen}
+                            onClose={closeRideOptions}
+                        />
                     )}
                 </>
         </div>

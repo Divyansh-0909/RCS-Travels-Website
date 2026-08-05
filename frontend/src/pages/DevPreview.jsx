@@ -37,7 +37,10 @@
 
    ?safe=1 is the one variant that is not purely a store seed: on /dev/vehicle the
    row only exists if the SERVER said this route has a safer alternative, so
-   VehicleSelect fakes that verdict from the same param (see DEV_SAFE_ROUTE). */
+   VehicleSelect fakes that verdict from the same param (see DEV_SAFE_ROUTE).
+
+   ?options=1 opens the ride-options panel on /dev/vehicle. It is a click away in
+   the app, and a screenshot can't click. */
 
 import { useEffect, useState } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
@@ -86,7 +89,9 @@ const PREVIEWS = [
     ["/dev/home", "OnBoarding: fresh booking form"],
     ["/dev/vehicle", "VehicleSelect: choose a ride"],
     ["/dev/vehicle?fare=formula", "VehicleSelect: choose a ride, per-km (tolls pill)"],
-    ["/dev/vehicle?safe=1", "VehicleSelect: safer route offered, off (3-column phone bar)"],
+    ["/dev/vehicle?safe=1", "VehicleSelect: safer route offered, off"],
+    ["/dev/vehicle?options=1", "VehicleSelect: ride options open (popover / sheet)"],
+    ["/dev/vehicle?safe=1&options=1", "VehicleSelect: ride options open, all three offered"],
     ["/dev/vehicle?step=confirmLocation", "VehicleSelect: confirm pickup point"],
     ["/dev/vehicle?step=searching", "VehicleSelect: requesting a ride"],
     ["/dev/vehicle?panel=noDriver", "VehicleSelect: no drivers nearby"],
