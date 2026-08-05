@@ -40,7 +40,7 @@ const TRIP_STEP = "gap-4 sm:gap-5";
 // The booking form sits just inside the page rail on phones. Marked important:
 // it has to beat the 86vw default Button and Input carry for every other
 // screen. sm+ is untouched — the components keep their fixed widths there.
-const FORM_W = "max-sm:w-[82vw]!";
+const FORM_W = "max-sm:w-[78vw]!";
 
 
 // Autocomplete state for one address field: debounced Google matches at 3+
@@ -578,7 +578,7 @@ const OnBoarding = () => {
 
             {(!(activeBooking && authed && activeBooking.scheduledAt) || showForm) && (<>
               <form
-                className="flex flex-col justify-center items-start gap-0.5 sm:gap-5 mt-1 sm:mt-1 sm:w-[377px]"
+                className="flex flex-col justify-center items-start gap-1 sm:gap-5 mt-1 sm:mt-1 sm:w-[377px]"
                 noValidate
                 onSubmit={handleSubmit}
               >
@@ -588,10 +588,10 @@ const OnBoarding = () => {
                   </p>
                 )}
                 <div className="flex bg-[var(--background-muted)] mb-1 sm:mb-0 outline outline-[var(--foreground)]/40 rounded-full gap-1 sm:gap-2 p-1.5 sm:p-2 [&>*]:text-base [&>*]:sm:text-xl [&>*]:py-1 [&>*]:px-3 [&>*]:sm:py-2 [&>*]:sm:px-3 [&>*]:cursor-pointer [&>*]:rounded-full">
-                  <h3 onClick={()=>setIsRoundTrip(false)} className={`transition-color duration-300 text-[var(--text)] ${isRoundTrip ? "" : "bg-primary"}`}>
+                  <h3 onClick={() => setIsRoundTrip(false)} className={`transition-color duration-300 text-[var(--text)] ${isRoundTrip ? "" : "bg-primary"}`}>
                     One way
                   </h3>
-                  <h3 onClick={()=>setIsRoundTrip(true)} className={`transition-color duration-300 text-[var(--text)] ${isRoundTrip ? "bg-primary" : ""}`}>
+                  <h3 onClick={() => setIsRoundTrip(true)} className={`transition-color duration-300 text-[var(--text)] ${isRoundTrip ? "bg-primary" : ""}`}>
                     Round trip
                   </h3>
                 </div>
@@ -699,26 +699,27 @@ const OnBoarding = () => {
                 </div>
 
                 <div className="flex flex-col relative">
-                  <div className="flex scale-[1] sm:scale-[1.3] sm:origin-left justify-start gap-2 sm:gap-3 justify-center items-center max-sm:w-[82vw] max-sm:max-w-full sm:w-[290px]">
+                  <div className={`flex scale-[1] sm:scale-[1.3] sm:origin-left justify-start gap-2 justify-center items-center max-sm:max-w-full sm:w-[290px] ${FORM_W}`}>
                     <Button
+                      onClick={() => {
+                        closeSuggestions();
+                        setExpandCalendar(false);
+                        setExpand(!expand);
+                      }}
                       prop={{
                         variant: "input",
                         bg: expand ? "var(--background-primary)" : "var(--background-muted)",
                       }}
-                      className="relative px-3"
+                      className="relative px-2"
                     >
                       <div
-                        onClick={() => {
-                          closeSuggestions();
-                          setExpandCalendar(false);
-                          setExpand(!expand);
-                        }}
-                        className="w-full flex justify-between items-center gap-2"
+
+                        className="w-full flex justify-between items-center gap-1"
                       >
-                        <div className="flex justify-center items-center gap-2">
+                        <div className="flex justify-center items-center gap-1">
                           {scheduledTime && timing === "Schedule" ? (
 
-                            <span className="flex justify-center items-center gap-2 whitespace-nowrap uppercase">
+                            <span className="flex justify-center items-center gap-1 whitespace-nowrap uppercase">
                               <Icon
                                 path={mdiClockTimeFourOutline}
                                 size={0.9}
@@ -730,27 +731,38 @@ const OnBoarding = () => {
                                 day: "numeric",
                                 month: "numeric",
                               })}
+                              <Icon 
+                                path={mdiClose}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  e.preventDefault(); 
+                                  setScheduledTime(null);
+                                }}
+                                size={0.7} 
+                                className="mx-1 ml-1.5 transition-opcaity duration-300 opacity-[0.7] hover:opacity-[1]" />
                             </span>
                           ) : (
-                            <div className="flex justify-center items-center gap-2">
+                            <div className="flex justify-center items-center gap-1">
                               <Icon
                                 path={mdiClockTimeFourOutline}
                                 size={0.9}
                               />
                               {timing}
+                              <Icon
+                                className="transition-opacity duration-300 opacity-[0.7] hover:opacity-[1]"
+                                path={mdiChevronDown}
+                                size={0.9}
+                                style={{
+                                  transform: expand
+                                    ? "rotate(180deg)"
+                                    : "rotate(0deg)",
+                                }}
+                              />
                             </div>
                           )}
                         </div>
 
-                        <Icon
-                          path={mdiChevronDown}
-                          size={0.9}
-                          style={{
-                            transform: expand
-                              ? "rotate(180deg)"
-                              : "rotate(0deg)",
-                          }}
-                        />
+
                       </div>
                     </Button>
 
@@ -764,21 +776,36 @@ const OnBoarding = () => {
                       }
                       prop={{
                         variant: "input",
-                        width: "47px",
                         bg: expandCalendar ? "var(--background-primary)" : "var(--background-muted)",
                         error: error === "No Scheduled Time",
                       }}
-                      className={`relative px-3 ${timing === "Schedule" ? "block" : "hidden"
+                      className={`relative px-2 pr-3 ${timing === "Schedule" ? "block" : "hidden"
                         }`}
                     >
                       <div
 
-                        className="w-full flex justify-center gap-2 items-center"
+                        className="w-full flex justify-between items-center gap-2"
                       >
-                        <Icon
-                          path={mdiCalendarMonthOutline}
-                          size={0.9}
-                        />
+                        <div className="flex justify-center items-center gap-2">
+                          {scheduledTime && timing === "Schedule" ? (
+
+                            <span className="flex justify-center items-center gap-1 whitespace-nowrap">
+                              <Icon
+                                path={mdiCalendarMonthOutline}
+                                size={0.9}
+                              />
+                              Edit
+                            </span>
+                          ) : (
+                            <div className="flex justify-center items-center gap-1">
+                              <Icon
+                                path={mdiCalendarMonthOutline}
+                                size={0.9}
+                              />
+                              When
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </Button>
                   </div>
@@ -788,7 +815,7 @@ const OnBoarding = () => {
                     <Button
                       prop={{
                         variant: "dropdown",
-                        width: "170px",
+                        width: "155px",
                       }}
                       className={`block ${timingDropdown.closing ? "animate-dropdown-out" : "animate-dropdown"
                         } absolute z-10 scale-[1] sm:scale-[1.2] bottom-13 origin-bottom sm:bottom-auto sm:top-15 sm:origin-top-left active:opacity-[1] hover:opacity-[1]`}
@@ -800,7 +827,7 @@ const OnBoarding = () => {
                             setExpandCalendar(false)
                             setExpand(false);
                           }}
-                          className={`w-full flex items-center gap-2 py-3 ${timing === "Schedule"
+                          className={`w-full flex items-center gap-2 py-1 pb-2 border-b-1 border-[var(--foreground)]/40 ${timing === "Schedule"
                             ? "text-white-muted"
                             : "text-white"
                             }`}
@@ -816,7 +843,7 @@ const OnBoarding = () => {
                             setExpandCalendar(false);
                             setScheduledTime(null);
                           }}
-                          className={`w-full flex items-center gap-2 py-3 ${timing === "Now"
+                          className={`w-full flex items-center gap-2 py-1 pt-2 ${timing === "Now"
                             ? "text-white-muted"
                             : "text-white"
                             }`}
@@ -891,12 +918,12 @@ const OnBoarding = () => {
         }
       </div>
 
-      <div className="block sm:hidden absolute z-5 inset-x-0 top-0 h-[100dvh] bg-[linear-gradient(to_top,var(--background)_5%,var(--background-primary)_40%,transparent_100%)]" />
+      <div className="block sm:hidden absolute z-5 inset-x-0 top-0 h-[100dvh] bg-[linear-gradient(to_top,var(--background)_30%,var(--background-primary)_45%,transparent_90%)]" />
 
       <img
         src={mobileBackgroundIllustration}
         alt="background-illustration"
-        className="absolute block sm:hidden z-0 w-full h-full object-top -top-8 object-cover bg-gradient"
+        className="absolute block sm:hidden z-0 w-full h-full object-top -top-20 object-cover bg-gradient"
       />
 
       <img

@@ -33,10 +33,10 @@ const WhyUs = () => {
         <div className="bg-[var(--foreground)] text-[var(--text-foreground)] gap-15 py-15 sm:py-20 flex flex-col items-center justify-center">
             <div className="text-left flex flex-col w-[82%] md:w-[90%] xl:w-[74%] justify-center gap-8 sm:gap-12 items-start">
                 <h1 className="font-bold text-3xl sm:text-5xl">Reasons to ride with us</h1>
-                <ul className="w-full flex flex-col items-start justify-center gap-10">
+                <ul className="w-full flex flex-col items-start justify-center gap-8 sm:gap-10">
                     {data.map((item, index) => {
                         return (
-                            <li key={index} className="w-full border-b-2 pb-10 flex flex-col items-start justify-center gap-0 border-dashed">
+                            <li key={index} className="w-full border-b-2 pb-8 sm:pb-10 flex flex-col items-start justify-center gap-0 border-dashed">
                                 <button
                                     type="button"
                                     aria-expanded={openIndex === index}

@@ -242,7 +242,7 @@ const NavBar = ({ invert = false, hideExpanded = false, className = "" }) => {
     )
 
     return (
-        <div className={`${className} flex flex-col justify-center items-center ${invert ? "bg-[var(--background-primary)]" : "bg-[var(--foreground)]"} max-sm:w-[min(86vw,100%)] sm:w-[740px] h-[40px] sm:h-[50px] gap-1 px-2.5 py-6.5 rounded-full outline-1 outline-[var(--background)]/50 transition-colors duration-300 motion-reduce:transition-none`}>
+        <div className={`${className} flex flex-col justify-center items-center ${invert ? "bg-[var(--background-primary)]" : "bg-[var(--foreground)]"} max-sm:w-[min(86vw,100%)] sm:w-[740px] h-[40px] sm:h-[50px] gap-1 px-2.5 py-5.5 sm:py-6.5 rounded-full outline-1 outline-[var(--background)]/50 transition-colors duration-300 motion-reduce:transition-none`}>
             <div className={`flex justify-between items-center ${invert ? "text-[var(--text)]" : "text-[var(--text-foreground)]"} transition-colors duration-300 motion-reduce:transition-none [&>*]:select-none w-full sm:gap-10 px-1`}>
                 <h3 onClick={() => navigate('/')} className={`cursor-pointer pl-1 sm:opacity-[0.85] transition-opacity duration-300 opacity-[1] hover:opacity-[1]`}><span className='font-semibold'>RCS</span> travels</h3>
 
@@ -270,8 +270,8 @@ const NavBar = ({ invert = false, hideExpanded = false, className = "" }) => {
                             {/* Both follow the bar rather than the theme: the
                                 Sign up chip used to be dark unconditionally,
                                 which is invisible once the bar itself is dark. */}
-                            <h4 onClick={() => navigate('/login')} className={`text-base font-medium px-3 py-2 rounded-lg ${invert ? "hover:bg-[var(--foreground)]/10" : "hover:bg-[var(--background-primary)]/10"}`}>Log in</h4>
-                            <h4 onClick={() => navigate('/signup')} className={`text-base font-medium px-3 py-2 rounded-lg ${invert ? "text-[var(--text-foreground)] bg-[var(--foreground)]" : "text-[var(--text)] bg-[var(--background-primary)]"}`}>Sign up</h4>
+                            <h4 onClick={() => navigate('/login')} className={`text-base font-medium px-3 py-2 rounded-full ${invert ? "hover:bg-[var(--foreground)]/10" : "hover:bg-[var(--background-primary)]/10"}`}>Log in</h4>
+                            <h4 onClick={() => navigate('/signup')} className={`text-base font-medium px-3 py-2 rounded-full ${invert ? "text-[var(--text-foreground)] bg-[var(--foreground)]" : "text-[var(--text)] bg-[var(--background-primary)]"}`}>Sign up</h4>
                         </div>
                     }
                     {menuMounted && !isMobile &&
