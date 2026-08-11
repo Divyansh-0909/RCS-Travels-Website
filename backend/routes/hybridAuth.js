@@ -45,10 +45,15 @@ async function accountFor(phone, audience) {
 
 async function intentMismatch(phone, intent, audience) {
   const account = await accountFor(phone, audience)
-  const noun = audience === 'driver' ? 'a captain account' : 'an account'
+
+  // Article kept apart from the noun: "No" takes the bare noun, "already has"
+  // takes the article, and folding the two into one string gave users "No a
+  // captain account found with this number".
+  const noun = audience === 'driver' ? 'captain account' : 'account'
+  const article = audience === 'driver' ? 'a' : 'an'
 
   if (intent === 'signup')
-    return account ? { status: 409, error: `This number already has ${noun}` } : null
+    return account ? { status: 409, error: `This number already has ${article} ${noun}` } : null
   return account ? null : { status: 404, error: `No ${noun} found with this number` }
 }
 

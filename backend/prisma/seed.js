@@ -1,6 +1,7 @@
 import { prisma } from '../db/prisma.js'
 import { seatsOf } from '../constants/vehicles.js'
 import { normalizePhone } from '../lib/phone.js'
+import { ensurePrimaryVehicle } from '../services/driverVehicles.js'
 
 // Only the two base classes are stored. Sedan and premium SUV are derived from
 // their sibling in rideEstimate (DERIVED_CLASS), so a destination gains both
@@ -123,6 +124,14 @@ async function seedTestData() {
       },
     })
 
+    // The Vehicle row behind those four columns. Seeded drivers own exactly one
+    // car — the multi-car case is worth exercising by hand rather than baking a
+    // second Innova into every developer's database.
+    await ensurePrimaryVehicle(driver.id, {
+      vehicleClass:  d.vehicleClass,
+      vehicleNumber: d.vehicleNumber,
+    })
+
     // Jitter each driver a few hundred metres off the anchor so they don't stack.
     const jitter = () => (Math.random() - 0.5) * 0.01
     await prisma.driverLocation.upsert({
@@ -142,19 +151,25 @@ async function seedTestData() {
 }
 
 // Finished rides so Ride History has content. Idempotent via upsert on fixed ids.
+//
+// `reference` is fixed here for the same reason the ids are: a re-run has to land on
+// the same rows. Real bookings get a random one from lib/bookingReference.js, but a
+// fixture cannot — a fresh reference every run would upsert the row and leave the
+// previous code orphaned on nothing. The 9-block is reserved for fixtures so a seeded
+// ride is recognisable as one on sight.
 function pastBookings(user, drivers) {
   const daysAgo = (n) => new Date(Date.now() - n * 24 * 60 * 60 * 1000)
 
   return [
     {
-      id: '00000000-0000-0000-0000-000000000001', userId: user.id, driverId: drivers[0]?.id ?? null,
+      id: '00000000-0000-4000-8000-000000000001', reference: 'RCS9000001', userId: user.id, driverId: drivers[0]?.id ?? null,
       customerPhone: user.phone, vehicleClass: 'hatchback', fare: 850, distanceKm: 32.4,
       pickupAddress: 'Connaught Place, New Delhi', pickupLat: 28.6315, pickupLng: 77.2167,
       dropAddress: 'Cyber Hub, Gurugram',          dropLat: 28.4951, dropLng: 77.0890,
       status: 'completed', confirmedAt: daysAgo(5), createdAt: daysAgo(5), completedAt: daysAgo(5),
     },
     {
-      id: '00000000-0000-0000-0000-000000000002', userId: user.id, driverId: drivers[1]?.id ?? null,
+      id: '00000000-0000-4000-8000-000000000002', reference: 'RCS9000002', userId: user.id, driverId: drivers[1]?.id ?? null,
       customerPhone: user.phone, vehicleClass: 'suv', fare: 1200, distanceKm: 41.0,
       rideFare: 1200, commissionPct: 5, commissionAmt: 60,
       pickupAddress: 'IGI Airport T3, New Delhi', pickupLat: 28.5562, pickupLng: 77.1000,
@@ -162,7 +177,7 @@ function pastBookings(user, drivers) {
       status: 'completed', confirmedAt: daysAgo(3), createdAt: daysAgo(3), completedAt: daysAgo(3),
     },
     {
-      id: '00000000-0000-0000-0000-000000000003', userId: user.id, driverId: null,
+      id: '00000000-0000-4000-8000-000000000003', reference: 'RCS9000003', userId: user.id, driverId: null,
       customerPhone: user.phone, vehicleClass: 'hatchback', fare: 420, distanceKm: 18.7,
       pickupAddress: 'Karol Bagh, New Delhi', pickupLat: 28.6519, pickupLng: 77.1909,
       dropAddress: 'Saket, New Delhi',        dropLat: 28.5245, dropLng: 77.2066,

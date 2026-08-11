@@ -6,18 +6,17 @@ datasource db {
   provider = "postgresql"
 }
 
-// ─── Enums ───────────────────────────────────────────────────────────────────
 
 enum BookingStatus {
   pending
-  confirmed   // scheduled ride accepted, driver assigned closer to pickup time
+  confirmed // scheduled ride accepted, driver assigned closer to pickup time
   assigned
   en_route
   reached
   started
   completed
   cancelled
-  no_driver   // search finished (or timed out) without reaching a driver — terminal, not active
+  no_driver // search finished (or timed out) without reaching a driver — terminal, not active
 }
 
 enum BookingSource {
@@ -33,17 +32,20 @@ enum CancelledBy {
 }
 
 enum VerificationStatus {
+  notUploaded
+  uploading
+  scanning
   pending
   approved
   rejected
 }
 
-// The provider's document checklist, in his own order — see
-// constants/driverDocuments.js for which are compulsory and which only exist for
-// some cars. Everything but the licence is about the VEHICLE: these are
-// owner-drivers, and what gets checked is that the car is road-legal and insured.
-// There is no police_verification member on purpose; it was dropped from the list.
 enum DriverDocumentType {
+  // The captain's own face, and the one document here that is not paperwork.
+  // It goes through the same pipeline as the rest — sniffed, re-encoded,
+  // reviewed — because it is the one file a RIDER is shown, which makes it the
+  // only one an attacker has an audience for.
+  profile_photo
   dl
   rc
   insurance
@@ -56,10 +58,78 @@ enum DriverDocumentType {
   car_photo_back
 }
 
-// Replaced the old `vehicleType Int` (4 | 6 | 1). A seat count could not
-// distinguish a sedan from a hatchback — both carry four — so the class is the
-// stored identity and seats are derived from it (constants/vehicles.js). The old
-// `1` ("book any") is gone with it: every ride now names the car it booked.
+enum DriverGroup {
+  admin
+  rcs
+  partner
+}
+
+// The MACHINE's verdict on an uploaded file, kept apart from DriverDocument.status
+// — which is the ADMIN's verdict on the document. They answer different questions
+// and can disagree: a perfectly valid insurance certificate can be a file this
+// server refuses to hand to a browser, and a clean file can be the wrong document.
+// Folded into one column, an outage in the scanner would read as a rejection by
+// the provider, and a driver would be told his papers were refused when nobody
+// had looked at them.
+enum ScanStatus {
+  // Uploaded, not yet examined. The admin screen must not serve a file in this
+  // state — it is the default, so a row that never got scanned fails closed.
+  pending
+  // Claimed by a scanner and being worked on. This state is what makes the
+  // scanner safe to run in more than one process: claiming is a conditional
+  // UPDATE from `pending` to `scanning`, so of two workers reaching the same row
+  // at the same instant exactly one gets a row count of 1 and the other gets 0
+  // and moves on. An in-memory lock cannot do that across Render instances.
+  //
+  // Also a crash marker: a row left here past the stale window is one whose
+  // worker died mid-scan, and the sweep reclaims it.
+  scanning
+  // Bytes match the declared type, and (images) the file has been re-encoded
+  // from a decoded pixel buffer, or (PDFs) carries none of the active content a
+  // scanned document has no reason to contain.
+  clean
+  // Refused. `scanReason` says why, and it is written to be shown to the driver.
+  rejected
+  // The scanner itself failed — Storage unreachable, sharp threw, process
+  // restarted mid-scan. DELIBERATELY NOT `rejected`: nothing is known about the
+  // file, and the sweep retries these. An admin seeing this is looking at an
+  // infrastructure problem, not at a suspect document.
+  failed
+}
+
+enum WalletEntryType {
+  // Taken when a driver accepts and is shown the rider's details; returned by
+  // `deposit_refund` on completion. PERCENTAGE IS STILL RAJU'S TO SET, and so is
+  // whether it applies below the ₹800 commission floor — see ROADMAP block 10.
+  deposit_hold
+  deposit_refund
+  // The ₹100 the platform owes the driver for a coupon the rider spent.
+  coupon_reimbursement
+  // Upheld overcharge flags. AMOUNT STILL RAJU'S TO SET (ROADMAP block 11).
+  fine
+  // The 5% cut on rides ≥ ₹800, when it is settled from the wallet rather than
+  // collected in cash.
+  commission
+  // Money actually paid out to the driver, closing the balance.
+  payout
+  // Admin correction. Always carries a note — an unexplained adjustment is
+  // indistinguishable from a bug.
+  adjustment
+}
+
+enum PaymentMethod {
+  wallet
+  cash
+  upi
+}
+
+enum OfferStatus {
+  pending
+  accepted
+  rejected
+  withdrawn
+}
+
 enum VehicleClass {
   hatchback
   sedan
@@ -67,24 +137,26 @@ enum VehicleClass {
   suv_premium
 }
 
-// ─── Models ──────────────────────────────────────────────────────────────────
 
 model User {
-  id             String    @id @default(uuid())
-  clerkId        String    @unique @map("clerk_id")
-  phone          String    @unique
-  name           String?
-  gender         String?
-  dob            String?
-  emergencyContact  String?
+  id               String    @id @default(uuid())
+  clerkId          String    @unique @map("clerk_id")
+  phone            String    @unique
+  name             String?
+  gender           String?
+  dob              String?
+  emergencyContact String?
   // Stable 4-digit code generated once at signup.
-  bookingCode    String    @unique @map("booking_code")
-  whatsappNumber String?   @map("whatsapp_number")
-  createdAt      DateTime  @default(now()) @map("created_at")
-  deletedAt      DateTime? @map("deleted_at")
+  bookingCode      String    @unique @map("booking_code")
+  whatsappNumber   String?   @map("whatsapp_number")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  deletedAt        DateTime? @map("deleted_at")
 
-  bookings    Booking[]
-  savedPlaces SavedPlace[]
+  bookings        Booking[]
+  savedPlaces     SavedPlace[]
+  reviews         DriverReview[]
+  overchargeFlags OverchargeFlag[]
+  coupons         Coupon[]
 
   // Admin user list sorts by createdAt desc; its filters (name/phone/gender)
   // are all `contains`, which no btree can serve anyway.
@@ -92,10 +164,6 @@ model User {
   @@map("users")
 }
 
-// Account-level addresses (Home / Work / custom) managed from Settings and
-// offered first in the booking form's suggestions. Coords are nullable: the
-// address is typed free-text in Settings, so they're only filled when known.
-// No [userId, label] unique — every custom row shares the "Saved place" label.
 model SavedPlace {
   id        String   @id @default(uuid())
   userId    String   @map("user_id")
@@ -113,32 +181,304 @@ model SavedPlace {
 }
 
 model Driver {
-  id            String      @id @default(uuid())
-  clerkId       String?     @unique @map("clerk_id")
-  name          String
-  phone         String      @unique
-  vehicleClass  VehicleClass @map("vehicle_class")
-  vehicleCapacity     Int         @map("vehicle_capacity")
-  vehicleNumber String         @map("vehicle_number")
-  isActive      Boolean     @default(true) @map("is_active")
-  isOnline      Boolean     @default(false) @map("is_online")
-  fcmToken            String?            @map("fcm_token")
-  pfpUrl              String?            @map("profile_picture_url")
-  createdAt           DateTime           @default(now()) @map("created_at")
+  id                 String             @id @default(uuid())
+  clerkId            String?            @unique @map("clerk_id")
+  name               String
+  phone              String             @unique
+  // THE FOUR COLUMNS BELOW ARE A CACHE OF `activeVehicle`, not the fleet.
+  //
+  // A captain may own several cars and drives one at a time (a Dzire and an
+  // Innova, whichever the booking needs). The cars themselves live in Vehicle;
+  // these four stay here because dispatch cannot afford the join — vehicleClass
+  // is the fourth column of the eligibility index below, which every assignment
+  // scan hits, and moving it to Vehicle turns every scan into a join against a
+  // table Postgres would have to visit per candidate.
+  //
+  // Same bargain as walletBalance and verificationStatus further down: the other
+  // table is the source of truth, this is the read path, and BOTH ARE WRITTEN IN
+  // ONE TRANSACTION — see switchActiveVehicle in services/driverVehicles.js,
+  // which is the only supported way to move them.
+  vehicleClass       VehicleClass       @map("vehicle_class")
+  // LIVE REMAINING SEATS, not the size of the car. It is decremented as riders board
+  // a shared ride and reset to seatsOf(vehicleClass) on completion, so it is only
+  // ever the answer to "can another rider fit right now". Never show it to anyone as
+  // the vehicle's capacity — mid-ride that reads as a captain's Innova having shrunk.
+  //
+  // Belongs to the driver-in-a-car rather than to the car: it is guarded inside
+  // claimBookingForDriver's transaction, and a switch resets it to the new car's
+  // seat count.
+  vehicleCapacity    Int                @map("vehicle_capacity")
+  vehicleNumber      String             @map("vehicle_number")
+  vehicleModel       String?            @map("vehicle_model")
+  // Which of his cars he is driving right now. Nullable only for the instant
+  // between the driver row and his first vehicle being created, and for a
+  // captain whose last car was deleted.
+  activeVehicleId    String?            @unique @map("active_vehicle_id")
+  isActive           Boolean            @default(true) @map("is_active")
+  isOnline           Boolean            @default(false) @map("is_online")
+  fcmToken           String?            @map("fcm_token")
+  pfpUrl             String?            @map("profile_picture_url")
+  createdAt          DateTime           @default(now()) @map("created_at")
   // Kept as a stored column rather than derived from `documents` on read: it is
   // the fourth column of the eligibility index below, which every assignment scan
   // hits. Recompute it whenever a document is approved, rejected or lapses.
-  verificationStatus  VerificationStatus @default(pending) @map("verification_status")
-  rejectionReason String?
-  reviewedAt   DateTime?
+  //
+  // IT IS ABOUT THE PERSON PLUS THE ACTIVE CAR, AND NOTHING ELSE. His licence and
+  // his photograph, ANDed with the paperwork of the car named by activeVehicleId.
+  // A rejected fitness certificate on the Innova parked at home says nothing here
+  // while he is out in the Dzire — that car's verdict lives on its own Vehicle
+  // row. Widen this to "any of his cars" and one lapsed document on a car he is
+  // not driving takes him off the road.
+  verificationStatus VerificationStatus @default(notUploaded) @map("verification_status")
+  rejectionReason    String?
+  reviewedAt         DateTime?
+  group DriverGroup @default(partner)
 
-  location  DriverLocation?
-  documents DriverDocument[]
-  bookings  Booking[]
+  // Suspension is NOT isActive. isActive is "this driver is deactivated";
+  // suspendedAt is "this driver was stopped, for a reason we can name and an
+  // admin has to undo". Collapsing them loses the reason and makes the two
+  // indistinguishable to an admin looking at why a driver vanished.
+  //
+  // Nullable rather than a boolean so the row carries WHEN, which is what a
+  // disputed suspension is defended with. A suspended driver cannot go online,
+  // receives no offers, and loses the scheduled offers he already holds.
+  suspendedAt      DateTime? @map("suspended_at")
+  suspensionReason String?   @map("suspension_reason")
 
-  @@index([isOnline, isActive, verificationStatus, vehicleClass])
+  // Denormalised cache of `sum(walletEntries.amount)`. The LEDGER IS THE SOURCE
+  // OF TRUTH — this column exists because the go-online check reads the balance
+  // on every toggle and a negative balance is what blocks it. Write it in the
+  // same transaction as the entry that moves it, never on its own, or the two
+  // drift and the drift is money.
+  //
+  // Goes NEGATIVE on purpose: an unpaid fine larger than the credit on hand is
+  // the state that blocks going online until it clears.
+  walletBalance Float @default(0) @map("wallet_balance")
+
+  location        DriverLocation?
+  documents       DriverDocument[]
+  documentHistory DriverDocumentArchive[]
+  bookings        Booking[]
+  reviews         DriverReview[]
+  overchargeFlags OverchargeFlag[]
+  walletEntries   WalletEntry[]
+  offers          RideOffer[]
+  vehicles        Vehicle[]              @relation("DriverVehicles")
+  // SetNull rather than Cascade: deleting a car must not delete its owner. The
+  // captain is left with no active car, which every route already treats as
+  // "not dispatchable" — the same state he is in between signing up and adding
+  // his first vehicle.
+  activeVehicle   Vehicle?               @relation("ActiveVehicle", fields: [activeVehicleId], references: [id], onDelete: SetNull)
+
+  // Every assignment scan filters all five by equality, so group appends to the
+  // existing four rather than forming an index of its own.
+  @@index([isOnline, isActive, verificationStatus, vehicleClass, group])
   @@index([createdAt])
   @@map("drivers")
+}
+
+// One car. A captain owns one or several and drives ONE AT A TIME — see
+// Driver.activeVehicleId, which names it, and the four cached columns on Driver
+// that carry its class and plate into the dispatch index.
+//
+// WHY THIS IS NOT JUST MORE COLUMNS ON DRIVER. Nine of the eleven document types
+// are about the CAR, not the man (constants/driverDocuments.js says which). A
+// second car is a second RC, a second insurance policy, a second fitness
+// certificate — each with its own expiry and its own admin verdict. Without a row
+// to hang them on, switching cars would mean re-uploading nine documents and
+// waiting for review every time, which is not a feature anybody would use.
+model Vehicle {
+  id        String       @id @default(uuid())
+  driverId  String       @map("driver_id")
+  class     VehicleClass
+  number    String
+  model     String?
+  createdAt DateTime     @default(now()) @map("created_at")
+
+  // THIS car's paperwork, and only this car's — the nine vehicle-owned types.
+  // Deliberately separate from Driver.verificationStatus, which additionally
+  // requires the man's own licence and photograph and only ever speaks about the
+  // ACTIVE car. An admin approving the Innova's insurance moves this; it moves
+  // the driver's copy only when the Innova is the one he is driving.
+  verificationStatus VerificationStatus @default(notUploaded) @map("verification_status")
+
+  driver    Driver           @relation("DriverVehicles", fields: [driverId], references: [id], onDelete: Cascade)
+  activeFor Driver?          @relation("ActiveVehicle")
+  documents DriverDocument[]
+  // No `documentHistory` here on purpose — DriverDocumentArchive.vehicleId is a
+  // plain column, not an FK, so that the history of a sold car outlives the car.
+
+  // The same plate twice under one captain is a mistake every time — he is
+  // adding a car he already has, and the second row would split its documents
+  // across two identities. Scoped to the driver rather than global: a plate
+  // legitimately moves between owners when a car is sold.
+  @@unique([driverId, number])
+  // "This captain's cars", which is the only read, and it covers the FK.
+  @@index([driverId])
+  @@map("vehicles")
+}
+
+// One row per completed ride, at most. `bookingId` is unique because a ride is
+// rated once — the rating belongs to the trip, not to the pair, and a driver
+// cannot accumulate five ratings from one journey.
+//
+// The driver's average, total and recent reviews are DERIVED from this table
+// rather than cached on Driver: nothing indexes a rating, the profile screen is
+// not a hot path, and a denormalised average that drifts is worse than a sum.
+model DriverReview {
+  id        String   @id @default(uuid())
+  bookingId String   @unique @map("booking_id")
+  driverId  String   @map("driver_id")
+  userId    String   @map("user_id")
+  // 1-5. Enforced in the route — Prisma has no check constraint, so a raw SQL
+  // check belongs in the migration if this is ever written outside the API.
+  rating    Int
+  comment   String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  driver  Driver  @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // The driver profile reads "this driver's reviews, newest first", and this
+  // covers the driver FK for parent deletes.
+  @@index([driverId, createdAt])
+  @@map("driver_reviews")
+}
+
+// The rider pressing "Driver overcharged" on a completed ride.
+//
+// Unique on bookingId: one ride can produce one flag. Without it a single
+// annoyed rider could tap five times and suspend a driver from one trip, which
+// is the cheapest possible abuse of the whole system.
+//
+// `fareAtFlag` snapshots what the rider was quoted, because Booking.fare can
+// still move (a changed drop, an added stop) and the flag has to be reviewable
+// against the number the rider actually saw.
+model OverchargeFlag {
+  id         String   @id @default(uuid())
+  bookingId  String   @unique @map("booking_id")
+  driverId   String   @map("driver_id")
+  userId     String   @map("user_id")
+  fareAtFlag Float    @map("fare_at_flag")
+  // Free text from the rider. Kept nullable — a required field here would cost
+  // reports from exactly the riders least likely to file one.
+  note       String?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  driver  Driver  @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // The count that decides fine-vs-suspend: "how many flags does this driver
+  // have", and createdAt is there for the rolling window if one is ever added.
+  @@index([driverId, createdAt])
+  @@map("overcharge_flags")
+}
+
+// Money the platform owes a driver, or has taken from him. Append-only: nothing
+// here is ever updated or deleted, because this ledger is the audit trail the
+// spec asks for ("admin can always see how platform fees were paid").
+//
+// `amount` is SIGNED — credit positive, debit negative — so the balance is a
+// plain sum and no row needs a direction flag that can contradict its own type.
+model WalletEntry {
+  id        String          @id @default(uuid())
+  driverId  String          @map("driver_id")
+  amount    Float
+  type      WalletEntryType
+  // How the money actually moved, when it moved outside the wallet. Null for
+  // entries that are purely internal (a deposit hold, a fine debited from
+  // credit). This is the "wallet / cash / UPI" column the spec requires.
+  method    PaymentMethod?
+  // The ride this entry belongs to, when there is one. Not unique: one booking
+  // can produce a deposit hold, its refund, and a commission debit.
+  bookingId String?         @map("booking_id")
+  note      String?
+  createdAt DateTime        @default(now()) @map("created_at")
+
+  driver  Driver   @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  booking Booking? @relation(fields: [bookingId], references: [id])
+
+  // The driver's statement: his entries, newest first. Covers the driver FK.
+  @@index([driverId, createdAt])
+  @@index([bookingId])
+  @@map("wallet_entries")
+}
+
+// One scheduled ride offered to one driver, and whether he has answered.
+//
+// WHY THIS EXISTS. Ride-now offers are synchronous: getDriver awaits each FCM as
+// the accept/reject and moves to the next driver. That cannot work for a
+// scheduled ride, which may be a day away and is offered to drivers who are
+// OFFLINE at the time — the spec requires them to receive it and accept later,
+// once they come online. A blocking send has nowhere to put "I haven't decided
+// yet", so the offer has to outlive the request that created it.
+//
+// UNANSWERED OFFERS ARE THE NORMAL CASE, not an error state. They sit `pending`
+// on the driver's notification page until he answers or the ride is taken.
+//
+// Scheduled offers go out to a whole priority group at once rather than one
+// driver at a time: first to accept wins through the same status-guarded
+// claimBookingForDriver the ride-now path uses, and every other pending offer for
+// that booking is withdrawn in the same transaction. A day-away ride cannot afford a
+// per-driver timeout chain, and the spec's "notification disappears when another
+// driver gets it" only makes sense if several people can hold one at once.
+
+// QUESTION HOW LONG DOES EACH PRIORITY GET BEFORE MOVED TO THE NEXT GROUP?
+
+model RideOffer {
+  id          String      @id @default(uuid())
+  bookingId   String      @map("booking_id")
+  driverId    String      @map("driver_id")
+  status      OfferStatus @default(pending)
+  // Which group this offer went out to. Recorded rather than re-derived, because
+  // Driver.group can change between the offer and the answer, and "who was this
+  // offered to at the time" is what makes the escalation auditable.
+  group       DriverGroup
+  createdAt   DateTime    @default(now()) @map("created_at")
+  respondedAt DateTime?   @map("responded_at")
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  driver  Driver  @relation(fields: [driverId], references: [id], onDelete: Cascade)
+
+  // One offer per driver per booking — the 5-minute sweep re-runs forever and
+  // must not stack duplicates on the same driver's notification page. This is
+  // also what makes the sweep idempotent, which the overlapping-interval defect
+  // (see ROADMAP) otherwise breaks.
+  @@unique([bookingId, driverId])
+  // The notification page: "my pending offers", newest first.
+  @@index([driverId, status, createdAt])
+  // Escalation asks "does this booking still have unanswered offers in the
+  // current group", and withdrawal sweeps every pending offer for a booking.
+  @@index([bookingId, status])
+  @@map("ride_offers")
+}
+
+// ₹100 issued after 6 completed rides in the same calendar month.
+//
+// A row per issued coupon rather than a counter on User, because the coupon
+// outlives the month that earned it ("usable on any future ride") and because
+// redemption has to be atomic — `redeemedAt` + the unique `bookingId` are what
+// stop the same ₹100 being spent on two bookings racing each other.
+model Coupon {
+  id         String    @id @default(uuid())
+  userId     String    @map("user_id")
+  amount     Float     @default(100)
+  // The month whose 6 rides earned this coupon, "YYYY-MM". Unique per user, so
+  // one month can never issue two coupons however many times the job runs.
+  earnedFor  String    @map("earned_for")
+  issuedAt   DateTime  @default(now()) @map("issued_at")
+  redeemedAt DateTime? @map("redeemed_at")
+  bookingId  String?   @unique @map("booking_id")
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  booking Booking? @relation(fields: [bookingId], references: [id])
+
+  @@unique([userId, earnedFor])
+  // "This user's unredeemed coupons" — the only read the booking flow makes.
+  @@index([userId, redeemedAt])
+  @@map("coupons")
 }
 
 // One row per driver per document type. This is a table rather than a column per
@@ -147,49 +487,173 @@ model Driver {
 // pull the driver offline by itself. A `*_doc_url` column can hold the file but
 // never the date, the number, or why an admin rejected it.
 //
-// The row is the upload, so re-uploading a renewed document overwrites it (the
-// unique key below) and sends it back through review — an expired file has no
-// value once its replacement is in.
+// TWO live rows per type, not one — see `isReplacement`. A renewal used to
+// overwrite the row it renewed, which meant a driver with valid approved
+// insurance who uploaded next year's copy a week early went straight back to
+// `pending` and off the road until an admin got to it. He is penalised for being
+// early, which is the opposite of what the reminder is for.
 model DriverDocument {
-  id       String             @id @default(uuid())
-  driverId String             @map("driver_id")
-  type     DriverDocumentType
+  id              String             @id @default(uuid())
+  driverId        String             @map("driver_id")
+  // The car this document is about, for the nine vehicle-owned types. NULL for
+  // the two that belong to the man himself — his licence and his photograph,
+  // which follow him from car to car and are uploaded once.
+  vehicleId       String?            @map("vehicle_id")
+  // WHAT OWNS THIS ROW: `vehicleId ?? driverId`. A denormalised column with one
+  // job — being the first member of the unique key below.
+  //
+  // The obvious shape is @@unique([driverId, vehicleId, type, isReplacement]),
+  // and it does not work. Prisma types every member of a compound-unique `where`
+  // input as NON-nullable, because SQL unique constraints do not match on NULL —
+  // so the upsert in routes/ts (the only way a document is ever written) would
+  // have no way to address a row whose vehicleId is null, and the two
+  // person-owned types would become unaddressable. The alternative, a partial
+  // unique index, is the thing DriverDocumentArchive below already rejects by
+  // name: Prisma cannot express it and drops it on the next `migrate dev`.
+  //
+  // So the discriminator is collapsed into one non-null column and the key stays
+  // plain and total. WRITE IT ONLY VIA ownerIdFor() in services/driverDocuments.js
+  // — a row whose ownerId disagrees with its own vehicleId is a row the unique
+  // key is no longer protecting.
+  ownerId         String             @map("owner_id")
+  type            DriverDocumentType
+  // false = the document in force. true = a renewal waiting on the scan and on
+  // review, sitting alongside it and affecting nothing until it is approved.
+  //
+  // On approval the replacement is promoted: the row it replaces moves to
+  // DriverDocumentArchive and this one flips to false, in one transaction. Two
+  // rows is the whole ladder — a driver cannot queue three insurance
+  // certificates, and the unique key below is what stops him.
+  isReplacement   Boolean            @default(false) @map("is_replacement")
   // Private Supabase Storage object; served to admins as a short-lived signed URL,
   // never public — these are a driver's identity papers.
-  fileUrl  String             @map("file_url")
+  fileUrl         String             @map("file_url")
+  // SHA-256 of the bytes as finally stored — for images that is the re-encoded
+  // copy, not what was uploaded. Written by the scanner, so it is null until the
+  // scan succeeds and null forever on anything that failed.
+  //
+  // NOT a security control and never consulted by one: it cannot tell a clean
+  // file from a dirty one. It answers questions the scan cannot — did this
+  // driver upload the same photograph for the front and the back of his car, is
+  // this "renewal" byte-identical to the document it claims to renew, has this
+  // exact file been rejected before under another account.
+  fileHash        String?            @map("file_hash")
   // As printed on the document: policy number, permit number, licence number. Null
   // for the car photos, which have no number to carry.
-  number   String?
+  number          String?
   // Null only for the types that cannot lapse (the two car photos). For every other
   // type this is what the nightly sweep reads to suspend a driver whose paperwork
   // has run out, so an upload without it is incomplete.
-  expiresAt DateTime?         @map("expires_at")
-  status    VerificationStatus @default(pending)
-  rejectionReason String?     @map("rejection_reason")
-  reviewedAt      DateTime?   @map("reviewed_at")
-  uploadedAt      DateTime    @default(now()) @map("uploaded_at")
+  expiresAt       DateTime?          @map("expires_at")
+  status          VerificationStatus @default(pending)
+  rejectionReason String?            @map("rejection_reason")
+  reviewedAt      DateTime?          @map("reviewed_at")
+  uploadedAt      DateTime           @default(now()) @map("uploaded_at")
 
-  driver Driver @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  // The file-level check (services/documentScan.js), separate from `status`
+  // above — see the ScanStatus enum for why the two are not one column. Defaults
+  // to `pending`, so a row written before the scan finishes, or by a process
+  // that died before it ran, is one the admin screen refuses to open.
+  scanStatus      ScanStatus         @default(pending) @map("scan_status")
+  // The TECHNICAL reason, for an admin and for the logs: "input image exceeds
+  // pixel limit", "object missing from storage", "sharp: unsupported image
+  // format". Deliberately not what the driver is shown — routes/driver.ts maps
+  // every failure to one sentence, because telling an uploader which check he
+  // tripped is telling him which check to aim at next.
+  scanReason      String?            @map("scan_reason")
+  // When a scanner claimed the row. Its only job is spotting a worker that died
+  // mid-scan: a row `scanning` for longer than the stale window is reclaimable.
+  scanStartedAt   DateTime?          @map("scan_started_at")
+  scannedAt       DateTime?          @map("scanned_at")
 
-  // One live row per document per driver: the renewal replaces the old file rather
-  // than accumulating a history nobody reads. Also covers the driver FK, and serves
-  // the admin review screen's "all of this driver's documents".
-  @@unique([driverId, type])
+  driver  Driver   @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  // Cascade: retiring a car takes its paperwork with it. The archive rows survive
+  // (they carry no FK to Vehicle) so the audit trail outlives the car.
+  vehicle Vehicle? @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  // At most one current row and one pending replacement per type PER OWNER —
+  // per car for the nine vehicle types, per driver for his licence and photo.
+  // Archived rows are not here at all — they move to DriverDocumentArchive on
+  // promotion, which is what keeps this two-row constraint expressible as a plain
+  // unique key rather than a partial index Prisma cannot describe.
+  @@unique([ownerId, type, isReplacement])
+  // Covers the driver FK for parent deletes, which the unique key above used to
+  // do back when it led with driverId. Also serves "everything this captain
+  // holds", which the admin screen and remainingRequired both ask for.
+  @@index([driverId])
+  // Covers the vehicle FK, and serves the checklist's "this car's documents".
+  @@index([vehicleId])
   // The lapse sweep asks one question — "which documents expire before now" —
   // across every driver, and the answer is almost always a handful of rows.
   @@index([expiresAt])
+  // The scan sweep's only query: rows stuck at `pending` or left at `failed`,
+  // ordered by when they were uploaded. Almost always empty, which is exactly
+  // the shape an index earns its keep on — without one this is a sequential
+  // scan of every document ever uploaded, every few minutes, forever.
+  @@index([scanStatus, uploadedAt])
+  // "Has this exact file been seen before" — the duplicate check on upload, and
+  // the question an admin asks when the same rejected scan reappears under a
+  // second account. Nullable column, so the index only holds scanned rows.
+  @@index([fileHash])
   @@map("driver_documents")
+}
+
+// What a document looked like before it was replaced.
+//
+// A separate table rather than an `archivedAt` column on DriverDocument, for one
+// concrete reason: the live table's whole correctness rests on "at most one
+// current and one pending replacement per type", and that is a plain unique key
+// only while retired rows are somewhere else. As a flag on the same table it
+// would need a partial unique index, which Prisma cannot express and would
+// therefore drop on the next `migrate dev`.
+//
+// Nothing reads this to make a decision. It answers questions after the fact —
+// which certificate was in force on the day of a ride, what an admin approved
+// before the renewal, whether a driver has quietly been running on a document
+// somebody rejected. The Storage object is deliberately NOT deleted with it.
+model DriverDocumentArchive {
+  id              String             @id @default(uuid())
+  // The id the row carried while it was live, so an approval recorded in a log
+  // still resolves to something.
+  documentId      String             @map("document_id")
+  driverId        String             @map("driver_id")
+  // Which car it was about, copied from the row being retired. NOT a foreign key
+  // and deliberately so: the archive answers "what was in force on the day of
+  // that ride" long after the car itself has been sold and its row deleted, and
+  // an FK would either take the history with it or refuse the delete.
+  vehicleId       String?            @map("vehicle_id")
+  type            DriverDocumentType
+  fileUrl         String             @map("file_url")
+  fileHash        String?            @map("file_hash")
+  number          String?
+  expiresAt       DateTime?          @map("expires_at")
+  // The verdict it retired under — usually `approved`, since that is what makes
+  // a document worth keeping a record of.
+  status          VerificationStatus
+  rejectionReason String?            @map("rejection_reason")
+  reviewedAt      DateTime?          @map("reviewed_at")
+  uploadedAt      DateTime           @map("uploaded_at")
+  archivedAt      DateTime           @default(now()) @map("archived_at")
+  // The row that took its place. Null only if it was retired without a
+  // replacement, which today nothing does.
+  replacedById    String?            @map("replaced_by_id")
+
+  driver Driver @relation(fields: [driverId], references: [id], onDelete: Cascade)
+
+  // The only read: this driver's history, newest first.
+  @@index([driverId, type, archivedAt])
+  @@map("driver_document_archive")
 }
 
 // One row per driver — upserted every 4 seconds when driver is online
 // bearing + speedKmh enable dead reckoning on the client between polling intervals
 model DriverLocation {
-  driverId   String   @id @map("driver_id")
-  latitude   Float
-  longitude  Float
-  bearing    Float?   // degrees 0–360, null until second update available
-  speedKmh   Float?   // km/h, null until second update available
-  updatedAt  DateTime @updatedAt @map("updated_at")
+  driverId  String   @id @map("driver_id")
+  latitude  Float
+  longitude Float
+  bearing   Float? // degrees 0–360, null until second update available
+  speedKmh  Float? // km/h, null until second update available
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   driver Driver @relation(fields: [driverId], references: [id], onDelete: Cascade)
 
@@ -202,32 +666,56 @@ model DriverLocation {
 }
 
 model Booking {
-  id                 String        @id @default(uuid())
-  userId             String        @map("user_id")
-  driverId           String?       @map("driver_id")
-  customerPhone      String        @map("customer_phone")
-  pickupAddress      String        @map("pickup_address")
-  pickupLat          Float         @map("pickup_lat")
-  pickupLng          Float         @map("pickup_lng")
-  dropAddress        String        @map("drop_address")
-  dropLat            Float         @map("drop_lat")
-  dropLng            Float         @map("drop_lng")
-  vehicleClass       VehicleClass  @map("vehicle_class")
-  scheduledAt        DateTime?     @map("scheduled_at")
-  isOutstation       Boolean       @default(false) @map("is_outstation")
-  preferSafeRoute    Boolean       @default(false) @map("prefer_safe_route")
-  safeWaypointLat    Float?        @map("safe_waypoint_lat")
-  safeWaypointLng    Float?        @map("safe_waypoint_lng")
-  needsCarrier       Boolean       @default(false) @map("needs_carrier")
-  distanceKm         Float?        @map("distance_km")  
-  fare               Float         @map("fare")
+  id                  String        @id @default(uuid())
+  // The ride's human-readable name, "RCS4831902" — what a rider reads down a
+  // phone line and what support searches on. `id` stays the key everything joins
+  // on; this is never a foreign key, only ever a lookup and a display value.
+  //
+  // Not to be confused with User.bookingCode above, which is a different thing on
+  // a different table: that one is per-ACCOUNT, stable for life, and doubles as
+  // the OTP the driver checks before starting a ride (routes/driver.ts). This one
+  // is per-RIDE and identifies nothing about the person.
+  //
+  // No @default — Prisma cannot express the generator, so lib/bookingReference.js
+  // owns allocation and the collision retry, and createBooking() there is the only
+  // supported way to insert a row here.
+  reference           String        @unique
+  userId              String        @map("user_id")
+  driverId            String?       @map("driver_id")
+  customerPhone       String        @map("customer_phone")
+  pickupAddress       String        @map("pickup_address")
+  pickupLat           Float         @map("pickup_lat")
+  pickupLng           Float         @map("pickup_lng")
+  dropAddress         String        @map("drop_address")
+  dropLat             Float         @map("drop_lat")
+  dropLng             Float         @map("drop_lng")
+  vehicleClass        VehicleClass  @map("vehicle_class")
+  // THE CAR THAT ACTUALLY CAME, snapshotted when a driver claims the ride.
+  //
+  // Not read through `driver` on demand, because a captain owns several cars and
+  // switches between them: a live read makes every ride in a rider's history
+  // retroactively show whichever car the man is sitting in today. A rider
+  // disputing "the car that picked me up was DL01AB1234" is disputing this
+  // column, and it has to still say what it said on the day.
+  //
+  // Nullable because a booking exists long before anybody is assigned to it, and
+  // null forever on the rides that never found a driver.
+  vehicleNumber       String?       @map("vehicle_number")
+  scheduledAt         DateTime?     @map("scheduled_at")
+  isOutstation        Boolean       @default(false) @map("is_outstation")
+  preferSafeRoute     Boolean       @default(false) @map("prefer_safe_route")
+  safeWaypointLat     Float?        @map("safe_waypoint_lat")
+  safeWaypointLng     Float?        @map("safe_waypoint_lng")
+  needsCarrier        Boolean       @default(false) @map("needs_carrier")
+  distanceKm          Float?        @map("distance_km")
+  fare                Float         @map("fare")
   // `fare` minus the pass-through charges (toll, parking, airport access, roof
   // carrier). Commission is a percentage of THIS, so storing it makes the cut
   // auditable from the row alone — and fare - rideFare recovers the add-ons.
-  rideFare           Float?        @map("ride_fare")
-  commissionPct      Float         @default(0) @map("commission_pct")
-  commissionAmt      Float         @default(0) @map("commission_amt")
-  status             BookingStatus @default(pending)
+  rideFare            Float?        @map("ride_fare")
+  commissionPct       Float         @default(0) @map("commission_pct")
+  commissionAmt       Float         @default(0) @map("commission_amt")
+  status              BookingStatus @default(pending)
   // `status` is a current-state field: every transition overwrites the last, so once
   // a ride is cancelled or completed nothing records that it ever passed through
   // `reached`. That state is what decides the 35% cancellation charge
@@ -235,8 +723,8 @@ model Booking {
   // destroyed by the transition that acts on it. These stamps are what a disputed
   // charge is defended with, and they cannot be backfilled — a column added later is
   // null for every ride taken before it existed.
-  startedAt          DateTime?     @map("started_at")
-  reachedAt          DateTime?     @map("reached_at")
+  startedAt           DateTime?     @map("started_at")
+  reachedAt           DateTime?     @map("reached_at")
   // How far the driver actually was from the pickup / drop when he marked arrival and
   // completion, in km, measured server-side against the position his app reported.
   // "The driver says he arrived" and "the driver was there" are different claims, and
@@ -246,20 +734,31 @@ model Booking {
   // required column here would make every prisma.booking.create supply a distance for
   // a trip that has not happened. Null also covers a transition sent with no position,
   // which is the normal case when the OEM has killed the location service.
-  reachedDistanceKm   Float?       @map("reached_distance_km")
-  createdAt          DateTime      @default(now()) @map("created_at")
-  completedAt        DateTime?     @map("completed_at")
-  completedDistanceKm Float?       @map("completed_distance_km")
-  confirmedAt        DateTime?     @map("confirmed_at")
-  cancelledBy        CancelledBy?  @map("cancelled_by")
-  cancellationCharge Float?        @map("cancellation_charge")
-  source             BookingSource @default(website)
-  sharing            Boolean       @default(false)
-  shareGroupId       String?       @map("share_group_id")
-  pickupOrder        Int?          @map("pickup_order")
+  reachedDistanceKm   Float?        @map("reached_distance_km")
+  createdAt           DateTime      @default(now()) @map("created_at")
+  completedAt         DateTime?     @map("completed_at")
+  completedDistanceKm Float?        @map("completed_distance_km")
+  confirmedAt         DateTime?     @map("confirmed_at")
+  cancelledBy         CancelledBy?  @map("cancelled_by")
+  cancellationCharge  Float?        @map("cancellation_charge")
+  source              BookingSource @default(website)
+  sharing             Boolean       @default(false)
+  shareGroupId        String?       @map("share_group_id")
+  pickupOrder         Int?          @map("pickup_order")
 
   user   User    @relation(fields: [userId], references: [id])
   driver Driver? @relation(fields: [driverId], references: [id])
+
+  // Set once, the first time the T−1h "nobody has accepted" WhatsApp goes to
+  // Raju. Without it the 5-minute sweep re-sends that message every 5 minutes
+  // for the last hour — twelve identical messages, each one billed.
+  adminAlertedAt DateTime? @map("admin_alerted_at")
+
+  review         DriverReview?
+  overchargeFlag OverchargeFlag?
+  walletEntries  WalletEntry[]
+  coupon         Coupon?
+  offers         RideOffer[]
 
   // Postgres does not index foreign keys automatically, and every index below is
   // driven by a real call site rather than by guesswork.
@@ -324,8 +823,8 @@ model FareTable {
 // Tracks monthly usage of external APIs to enforce call limits
 model ApiUsage {
   service String
-  month   String  // "YYYY-MM"
-  count   Int     @default(0)
+  month   String // "YYYY-MM"
+  count   Int    @default(0)
 
   @@id([service, month])
   @@map("api_usage")

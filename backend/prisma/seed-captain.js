@@ -2,6 +2,7 @@ import 'dotenv/config'
 import { clerkClient } from '@clerk/express'
 import { prisma } from '../db/prisma.js'
 import { isVehicleClass, seatsOf } from '../constants/vehicles.js'
+import { ensurePrimaryVehicle } from '../services/driverVehicles.js'
 
 // A captain you can actually sign into the driver app as.
 //
@@ -25,6 +26,16 @@ import { isVehicleClass, seatsOf } from '../constants/vehicles.js'
 
 const PHONE = process.env.CAPTAIN_PHONE || '9800000001'
 const VEHICLE_CLASS = process.env.CAPTAIN_CLASS || 'suv'
+
+// A plausible car per class, so the Account screen has a real model to render rather
+// than falling back to the class label. Fixture data only — nothing in the app may
+// branch on vehicleModel, which is exactly why a made-up name here is harmless.
+const MODEL_FOR = {
+  hatchback:   'Maruti Suzuki Swift',
+  sedan:       'Honda City',
+  suv:         'Toyota Innova Crysta',
+  suv_premium: 'Toyota Fortuner',
+}
 
 // Same anchor seed.js uses (Connaught Place), so this captain sits inside the
 // 20km assignment box with the rest of the test fleet.
@@ -58,6 +69,10 @@ async function main() {
       clerkId:            clerkUser.id,
       isActive:           true,
       verificationStatus: 'approved',
+      // In the update branch as well as the create one, so a captain seeded before
+      // the column existed picks the model up on a re-run instead of keeping the
+      // NULL that makes the Account screen fall back to "SUV".
+      vehicleModel:       MODEL_FOR[VEHICLE_CLASS] ?? null,
     },
     create: {
       clerkId:            clerkUser.id,
@@ -66,12 +81,22 @@ async function main() {
       vehicleClass:       VEHICLE_CLASS,
       vehicleCapacity:    seatsOf(VEHICLE_CLASS),
       vehicleNumber:      'DL09TEST01',
+      vehicleModel:       MODEL_FOR[VEHICLE_CLASS] ?? null,
       isActive:           true,
       // Offline on purpose: going online is the first thing the app's toggle
       // does, and a captain seeded online makes that button a no-op.
       isOnline:           false,
       verificationStatus: 'approved',
     },
+  })
+
+  // The Vehicle row the four columns above are a cache of. Also re-points the
+  // cache, which is what makes changing VEHICLE_CLASS at the top of this file and
+  // re-running it do the right thing rather than leaving the car behind.
+  await ensurePrimaryVehicle(driver.id, {
+    vehicleClass:  VEHICLE_CLASS,
+    vehicleNumber: 'DL09TEST01',
+    vehicleModel:  MODEL_FOR[VEHICLE_CLASS] ?? null,
   })
 
   await prisma.driverLocation.upsert({

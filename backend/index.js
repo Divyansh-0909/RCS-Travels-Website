@@ -9,6 +9,8 @@ import fareRouter from './routes/fare.js'
 import bookingsRouter from './routes/bookings.js'
 import driverRouter from './routes/driver.js'
 import startAssignmentJob from './services/assignScheduledRides.js'
+import { startDocumentScanJob } from './services/documentScan.js'
+import { startDocumentExpiryJob } from './services/driverDocuments.js'
 import { initFareZones } from './services/fareZones.js'
 import usersRouter from './routes/users.js'
 import hybridAuthRouter from './routes/hybridAuth.js'
@@ -83,6 +85,17 @@ const server = app.listen(PORT, async () => {
   // quotes fares while the database is unreachable.
   await initFareZones()
   startAssignmentJob()
+  // Picks up documents no verdict was ever recorded for — rows written before
+  // the scan existed, and rows whose scan a restart interrupted. Without it
+  // `pending` would be a trap rather than a safe default: the admin screen
+  // refuses to serve those files and nothing else would ever move them out of
+  // it. Runs once now and every five minutes after.
+  startDocumentScanJob()
+  // The lapse sweep. A licence or an insurance certificate expires on a date,
+  // and "expired" has to become true during that day — a driver whose insurance
+  // ran out this morning must not still be taking rides tonight because the job
+  // runs at 02:00. Recomputes his verification, which is what takes him offline.
+  startDocumentExpiryJob()
   console.log(`Server running on port ${PORT}`)
 })
 

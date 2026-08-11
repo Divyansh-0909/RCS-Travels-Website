@@ -7,6 +7,8 @@ import { commissionOn, rideFareOf } from '../services/commission.js'
 import { verifyQuote } from '../services/fareQuote.js'
 import { myBookingsQuerySchema } from '../types.ts'
 import { VEHICLE_CLASS_NAMES, isVehicleClass, seatsOf } from '../constants/vehicles.js'
+import { createBooking, normalizeReference } from '../lib/bookingReference.js'
+import { signedRiderPhotoUrl } from '../services/driverPhoto.js'
 
 const bookingsRouter = Router()
 
@@ -192,15 +194,11 @@ bookingsRouter.post('/', protect, async (req, res) => {
     }
 
     if (scheduledAt) {
-        const booking = await prisma.booking.create({
-        data: { ...bookingData, status: 'confirmed', confirmedAt: new Date() },
-        })
-        return res.json({ bookingId: booking.id, bookingCode, status: 'confirmed' })
+        const booking = await createBooking({ ...bookingData, status: 'confirmed', confirmedAt: new Date() })
+        return res.json({ bookingId: booking.id, reference: booking.reference, bookingCode, status: 'confirmed' })
     }
 
-    const booking = await prisma.booking.create({
-        data: { ...bookingData, status: 'pending', confirmedAt: null },
-    })
+    const booking = await createBooking({ ...bookingData, status: 'pending', confirmedAt: null })
 
     // Assignment runs detached — it can take minutes, and the client needs a
     // booking id now so it can show "Requesting a ride" and poll for the
@@ -208,7 +206,7 @@ bookingsRouter.post('/', protect, async (req, res) => {
     // an ACTIVE_STATUS, so the rider can immediately try again.
     startAssignment(booking.id)
 
-    return res.json({ bookingId: booking.id, bookingCode, status: 'pending' })
+    return res.json({ bookingId: booking.id, reference: booking.reference, bookingCode, status: 'pending' })
 })
 
 bookingsRouter.get('/:id/status', protect, async (req, res) => {
@@ -234,17 +232,33 @@ bookingsRouter.get('/:id/status', protect, async (req, res) => {
 
   const cancellationCharge = cancellationChargeFor({ ...booking, status })
 
-  if (!booking.driverId) return res.json({ bookingId: booking.id, bookingCode: user.bookingCode, status, cancellationCharge, driver: null })
+  if (!booking.driverId) return res.json({ bookingId: booking.id, reference: booking.reference, bookingCode: user.bookingCode, status, cancellationCharge, driver: null })
 
   return res.json({
     bookingId:   booking.id,
+    reference:   booking.reference,
     bookingCode: user.bookingCode,
     status,
     cancellationCharge,
     driver: {
       name:          booking.driver.name,
       phone:         booking.driver.phone,
-      vehicleNumber: booking.driver.vehicleNumber,
+      // THE PLATE SNAPSHOTTED ON THIS BOOKING, not the one on the driver row.
+      // A captain may own several cars and switch between them, so reading it
+      // through the relation makes every past ride show whichever car he is in
+      // today — and a rider disputing "the car that picked me up was DL01AB1234"
+      // would be arguing against a value that had quietly changed under him.
+      //
+      // The fallback covers rides assigned before the column existed. It is the
+      // old, wrong behaviour by construction, which is exactly why it is a
+      // fallback and not the first choice.
+      vehicleNumber: booking.vehicleNumber ?? booking.driver.vehicleNumber,
+      // The captain's face, so a rider standing on a road at night can tell
+      // whether the man who pulled up is the man the app sent. A signed URL
+      // minted for this response and dead in fifteen minutes — never the stored
+      // path, and never a public one. Null until his photo is approved, which is
+      // the only thing that writes Driver.pfpUrl.
+      photoUrl:      await signedRiderPhotoUrl(booking.driver),
       latitude:      booking.driver.location?.latitude,
       longitude:     booking.driver.location?.longitude,
       bearing:       booking.driver.location?.bearing,
@@ -278,25 +292,42 @@ bookingsRouter.post('/cancel', protect, async (req, res) => {
             },
         })
 
-        if (booking.driver) {
+        // Take the ride off every driver's notification page. Inside the same
+        // transaction as the cancel: a scheduled ride that is cancelled but still
+        // showing as a live offer is one a driver can tap accept on, and the
+        // status guard would then reject him for a ride he was still being shown.
+        await tx.rideOffer.updateMany({
+            where: { bookingId: booking.id, status: 'pending' },
+            data: { status: 'withdrawn', respondedAt: new Date() },
+        })
+
+        const seats = booking.driver ? seatsOf(booking.driver.vehicleClass) : null
+
+        // seats === null means an unrecognised class, and there is no full mark to
+        // restore to — leave the counter alone rather than write a null into it.
+        if (booking.driver && seats !== null) {
             if (booking.sharing) {
-                // Sharing ride freed a single seat — give it back (capped at full).
-                if (booking.driver.vehicleCapacity < seatsOf(booking.driver.vehicleClass)) {
-                    await tx.driver.update({
-                        where: { id: booking.driver.id },
-                        data: {
-                            vehicleCapacity: {
-                                increment: 1,
-                            },
+                // Sharing ride freed a single seat — give it back, capped at full.
+                // The cap is a WHERE rather than an `if` over the row we read
+                // before the transaction: two rides ending on the same vehicle at
+                // once would both read the same capacity, both find it under the
+                // cap, and both increment past it. Re-checked against the live row
+                // here, the second one simply matches nothing.
+                await tx.driver.updateMany({
+                    where: { id: booking.driver.id, vehicleCapacity: { lt: seats } },
+                    data: {
+                        vehicleCapacity: {
+                            increment: 1,
                         },
-                    })
-                }
+                    },
+                })
             } else {
                 // Solo ride had the whole vehicle — restore it to full capacity.
+                // Absolute, so it needs no guard and cannot overshoot.
                 await tx.driver.update({
                     where: { id: booking.driver.id },
                     data: {
-                        vehicleCapacity: seatsOf(booking.driver.vehicleClass),
+                        vehicleCapacity: seats,
                     },
                 })
             }
@@ -304,9 +335,14 @@ bookingsRouter.post('/cancel', protect, async (req, res) => {
     })
 
     if (booking.driver) {
+        // The ride's reference, not the rider's bookingCode. This line is trying to
+        // say WHICH ride was cancelled, and bookingCode cannot: it is per-account and
+        // constant, so a driver holding two rides for the same rider got the same
+        // value for both. It is also that rider's start-ride OTP (routes/driver.ts),
+        // which a cancellation notice has no reason to put on a driver's phone.
         sendWhatsApp(booking.driver.phone,
             `A ride you were assigned has been cancelled by the customer.
-            \nBooking Code: ${user.bookingCode}
+            \nRide ID: ${booking.reference}
             \nPickup Location: ${booking.pickupAddress}
             \nDrop Location: ${booking.dropAddress}`
         )
@@ -328,11 +364,17 @@ bookingsRouter.get('/my-bookings', protect, async (req, res) => {
     const where = { userId: user.id }
     if (search) {
         const compact = search.replace(/[\s+\-()]/g, '')
-        if (/^\d+$/.test(compact)) {
+        const reference = normalizeReference(search)
+        if (reference) {
+            // Exact, not a prefix: a whole reference was typed, and equality is
+            // what the unique index can actually answer.
+            where.reference = reference
+        } else if (/^\d+$/.test(compact)) {
             where.driver = { phone: { contains: compact } }
         } else {
             where.OR = [
                 { id: { startsWith: search } },
+                { reference: { startsWith: compact.toUpperCase() } },
                 { driver: { name: { contains: search, mode: 'insensitive' } } },
                 { pickupAddress: { contains: search, mode: 'insensitive' } },
                 { dropAddress: { contains: search, mode: 'insensitive' } },

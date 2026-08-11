@@ -47,40 +47,67 @@ function getBoundingBox(lat, lng, radiusKm) {
   }
 }
 
-// Assignment is only legal from these. A booking expired to `no_driver`,
-// cancelled, or already assigned must never be claimed by a search still in
-// flight — see claimBooking.
-//
-// Annotated for the same reason as ACTIVE_STATUSES in routes/bookings.js: the
-// typed driver route imports it and needs BookingStatus[], not string[].
 /** @type {import('@prisma/client').BookingStatus[]} */
 export const ASSIGNABLE_STATUSES = ['pending', 'confirmed']
+const GROUP_RANK = { admin: 0, rcs: 1, partner: 2 }
+const rankOf = (group) => GROUP_RANK[group] ?? GROUP_RANK.partner
 
-// Atomically take the booking for this driver. Returns false if it moved on
-// while we were notifying, in which case the caller abandons the search. Done
-// before the capacity decrement so a lost claim can't strand a seat.
-//
-// Shared with PATCH /driver/rides/:id/accept: the driver app takes the same
-// transition, and the guard has to be the same one.
-/** @type {(bookingId: string, driverId: string, confirmedAt: Date) => Promise<boolean>} */
-export async function claimBooking(bookingId, driverId, confirmedAt) {
-  const { count } = await prisma.booking.updateMany({
-    where: { id: bookingId, status: { in: ASSIGNABLE_STATUSES } },
-    data: { status: 'assigned', driverId, confirmedAt },
-  })
-  return count > 0
+class ClaimFailure extends Error {
+  constructor(reason) {
+    super(reason)
+    this.reason = reason
+  }
 }
 
-// Finds a driver and assigns the booking, or returns null if nobody takes it.
-//
-// Widens a bounding box around the pickup in 10 km steps from 20 to 80 km, and
-// inside each ring offers the ride to candidates one at a time, nearest first,
-// ties broken by driver seniority. Each offer blocks on the driver's answer, so a
-// ring of ten candidates can take minutes — which is why callers run this detached
-// (see startAssignment) rather than inside a request.
-//
-// Sharing rides get a first pass that tries to join them to a driver already
-// carrying a compatible trip; everything else takes the second pass.
+/**
+ * @param {{ id: string, sharing: boolean }} booking
+ * @param {{ id: string, vehicleClass: string, vehicleNumber?: string }} driver
+ * @param {Date} confirmedAt
+ * @param {(tx: import('@prisma/client').Prisma.TransactionClient) => Promise<void>} [onClaimed]
+ * @returns {Promise<'claimed' | 'booking_taken' | 'no_room'>}
+ */
+export async function claimBookingForDriver(booking, driver, confirmedAt, onClaimed) {
+  const seats = seatsOf(driver.vehicleClass)
+  if (!booking.sharing && seats === null) return 'no_room'
+
+  try {
+    return await prisma.$transaction(async (tx) => {
+      const claimed = await tx.booking.updateMany({
+        where: { id: booking.id, status: { in: ASSIGNABLE_STATUSES } },
+        // THE PLATE IS SNAPSHOTTED HERE, in the same statement that assigns the
+        // ride. A captain owns several cars and switches between them, so reading
+        // it back through the `driver` relation later would show every past ride
+        // as having been done in whichever car he is sitting in today — and a
+        // rider disputing "the car that picked me up was DL01AB1234" would be
+        // arguing against a column that had quietly changed under him.
+        data: {
+          status: 'assigned',
+          driverId: driver.id,
+          vehicleNumber: driver.vehicleNumber ?? null,
+          confirmedAt,
+        },
+      })
+      if (claimed.count === 0) throw new ClaimFailure('booking_taken')
+
+      const seated = await tx.driver.updateMany({
+        where: {
+          id: driver.id,
+          vehicleCapacity: booking.sharing ? { gt: 0 } : { gte: seats },
+        },
+        data: { vehicleCapacity: booking.sharing ? { decrement: 1 } : 0 },
+      })
+      if (seated.count === 0) throw new ClaimFailure('no_room')
+
+      if (onClaimed) await onClaimed(tx)
+
+      return 'claimed'
+    })
+  } catch (err) {
+    if (err instanceof ClaimFailure) return err.reason
+    throw err
+  }
+}
+
 export async function getDriver(bookingId) {
   let assignedDriver = null
 
@@ -110,9 +137,7 @@ export async function getDriver(bookingId) {
           isActive:           true,
           isOnline:           true,
           verificationStatus: 'approved',
-          // Matched exactly, never widened: a rider who picked and was quoted for
-          // a sedan must not be sent a hatchback, and the premium SUV is a
-          // different price from the plain one.
+          suspendedAt:        null,
           vehicleClass: row.vehicleClass,
         },
       },
@@ -132,11 +157,16 @@ export async function getDriver(bookingId) {
       .filter(loc => !triedDriverIds.has(loc.driverId))
       .map((loc) => ({ ...loc, distanceKm: haversineDistance(row.pickupLat, row.pickupLng, loc.latitude, loc.longitude) }))
       .filter((loc) => loc.distanceKm <= 20 + i)
-      .sort((a, b) =>
-        a.distanceKm !== b.distanceKm
+      .sort((a, b) => {
+        // Group first — see GROUP_RANK. Both passes below iterate this array, so
+        // sorting here is what makes the sharing pass respect priority too.
+        const byGroup = rankOf(a.driver.group) - rankOf(b.driver.group)
+        if (byGroup !== 0) return byGroup
+
+        return a.distanceKm !== b.distanceKm
           ? a.distanceKm - b.distanceKm
           : new Date(a.driver.createdAt) - new Date(b.driver.createdAt)
-      )
+      })
     
     const pickupTimeLabel = row.scheduledAt
       ? new Date(row.scheduledAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'medium', timeStyle: 'short' })
@@ -167,8 +197,11 @@ export async function getDriver(bookingId) {
       for (const x of sortedSharing) {
         triedDriverIds.add(x.driverId)
 
+        // Cheap early-out on a read that is already stale — skip the 30s offer to
+        // a van we can see is full. claimBookingForDriver re-checks this against
+        // the live row and is the check that actually decides.
         if(x.driver.vehicleCapacity <= 0) continue;
-        
+
         const response =
           await sendFCM(x.driver.fcmToken, {
             notification: {
@@ -192,16 +225,16 @@ export async function getDriver(bookingId) {
 
         if (response === true ) {
           // on-spot rides have no confirmedAt yet
-          if (!await claimBooking(bookingId, x.driverId, row.confirmedAt ?? new Date())) return null
+          const claim = await claimBookingForDriver(row, x.driver, row.confirmedAt ?? new Date())
+
+          // The booking moved on while this ring was pinging — cancelled,
+          // expired, or taken through the driver app. Nothing left to search for.
+          if (claim === 'booking_taken') return null
+          // His last seat went to another ride between the offer and the answer.
+          // Only this candidate is out; the next one may still fit.
+          if (claim === 'no_room') continue
 
           assignedDriver = x.driverId
-
-          await prisma.driver.update({
-            where: {id: assignedDriver},
-            data: {
-              vehicleCapacity: x.driver.vehicleCapacity - 1
-            }
-          })
 
           sendWhatsApp(x.driver.phone,
             `You have been assigned a sharing ride.
@@ -224,6 +257,9 @@ export async function getDriver(bookingId) {
       // starts a fresh shared trip and needs just one free seat. "Fully free" is
       // measured against the vehicle's own seat count, which now comes from its
       // class rather than from the column that used to hold both.
+      //
+      // Same early-out as pass 1: worth skipping a 30s offer over, not trusted to
+      // still be true by the time he answers. claimBookingForDriver decides.
       if (row.sharing ? x.driver.vehicleCapacity <= 0 : x.driver.vehicleCapacity < seatsOf(x.driver.vehicleClass)) continue
 
       const response =
@@ -248,18 +284,14 @@ export async function getDriver(bookingId) {
         })
 
       if (response === true ) {
-        // on-spot rides have no confirmedAt yet
-        if (!await claimBooking(bookingId, x.driverId, row.confirmedAt ?? new Date())) return null
+        // on-spot rides have no confirmedAt yet. The claim also takes the seats:
+        // a solo ride the whole vehicle, a fresh sharing ride one seat.
+        const claim = await claimBookingForDriver(row, x.driver, row.confirmedAt ?? new Date())
+
+        if (claim === 'booking_taken') return null
+        if (claim === 'no_room') continue
 
         assignedDriver = x.driverId
-
-          await prisma.driver.update({
-            where: {id: assignedDriver},
-            data: {
-              // Solo ride takes the whole vehicle; a fresh sharing ride consumes one seat.
-              vehicleCapacity: row.sharing ? x.driver.vehicleCapacity - 1 : 0
-            }
-          })
 
         sendWhatsApp(x.driver.phone,
           `You have been assigned a ride.
