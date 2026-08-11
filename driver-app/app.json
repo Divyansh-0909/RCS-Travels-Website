@@ -52,6 +52,13 @@
           "defaultChannel": "default"
         }
       ],
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "RCS Captains uses your camera to photograph your licence, RC, insurance and the car itself.",
+          "photosPermission": "RCS Captains needs your photos so you can attach documents you have already photographed."
+        }
+      ],
       "expo-font",
       "expo-secure-store"
     ],

@@ -3,12 +3,16 @@ import { cssInterop } from "nativewind";
 import { CaretRightIcon } from "phosphor-react-native";
 import AppText from "../components/AppText";
 import RideCard from "../components/ui/RideCard";
+import ScheduledRide from "../components/ui/ScheduledRide";
+import MarketPromo from "../components/ui/MarketPromo";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-native";
 import { useApi } from "../hooks/useApi";
 import { UpcomingBooking } from "../types/enums";
 import { ACTIVE_RIDE_STATUSES } from "../constants/booking";
 
+// Phosphor takes a colour prop, not a class. cssInterop is how AppBar and
+// OnlineToggle colour theirs, so the caret reads its blue from the same token.
 const Caret = cssInterop(CaretRightIcon, {
     className: { target: false, nativeStyleToProp: { color: true } },
 });
@@ -19,25 +23,24 @@ type ApiError = {
     code?: string;
 };
 
-type GetUpcomingRideResponse =
-    | {
-        booking: UpcomingBooking | null;
-    }
-    | ApiError;
-
-// /rides selects the same columns as /upcoming-ride and differs only in which
-// statuses it returns, so both panels read the one booking shape.
 type GetRidesResponse =
     | {
         bookings: UpcomingBooking[];
     }
     | ApiError;
 
+const MAX_ROWS = 2;
+
+// The floating AppBar and the scrim behind it own the bottom of every screen, so the
+// last card needs its own clearance to be readable at all. Same number the Rides and
+// Account boards reserve. Without it the Market promo ends up under the bar and, now
+// that the scrim is there, faded halfway to white before it gets there.
+const BAR_CLEARANCE = 132;
+
 const Home = () => {
     const api = useApi()
     const navigate = useNavigate()
-    const [upcoming, setUpcoming] = useState<UpcomingBooking | null>(null)
-    const [active, setActive] = useState<UpcomingBooking | null>(null)
+    const [rides, setRides] = useState<UpcomingBooking[]>([])
     const [error, setError] = useState<string | null>(null)
 
     const latestRequest = useRef(0)
@@ -47,24 +50,15 @@ const Home = () => {
         const requestId = ++latestRequest.current;
         setError(null)
         try {
-            const [upcomingData, ridesData] = await Promise.all([
-                api.getUpcomingRide() as Promise<GetUpcomingRideResponse>,
-                api.getRides() as Promise<GetRidesResponse>,
-            ]);
+            const data = await api.getRides() as GetRidesResponse;
             if (requestId !== latestRequest.current) return;
 
-            if ("error" in upcomingData) {
-                setError(upcomingData.error);
+            if ("error" in data) {
+                setError(data.error);
                 return;
             }
 
-            if ("error" in ridesData) {
-                setError(ridesData.error);
-                return;
-            }
-
-            setUpcoming(upcomingData.booking);
-            setActive(ridesData.bookings.find((ride) => ACTIVE_RIDE_STATUSES.includes(ride.status)) ?? null);
+            setRides(data.bookings);
         } catch (e: unknown) {
             if (requestId !== latestRequest.current) return;
 
@@ -86,9 +80,13 @@ const Home = () => {
         return () => subscription.remove();
     }, [refresh]);
 
+    const active = rides.find((ride) => ACTIVE_RIDE_STATUSES.includes(ride.status)) ?? null;
+    const scheduled = rides.filter((ride) => ride.status === "assigned");
 
     return (
-        <View className="w-[92%] relative flex flex-col justify-center items-center gap-4">
+        <View
+            style={{ flex: 1, width: '92%', gap: 16, paddingTop: 8, paddingBottom: BAR_CLEARANCE }}
+        >
             {error && (
                 <View className="w-full flex-row items-center justify-between gap-4">
                     <AppText numberOfLines={2} className="flex-1 text-sm text-red-600">{error}</AppText>
@@ -102,21 +100,46 @@ const Home = () => {
                 </View>
             )}
 
-            {active && <RideCard booking={active} variant="active" />}
+            {active && (
+                <>
+                    <RideCard booking={active} onPress={() => navigate(`/rides/${active.id}`)} />
+                </>
+            )}
 
-            <RideCard booking={upcoming} variant="upcoming" />
+            <View className="w-full gap-2">
+                <View className="flex-row items-center justify-between gap-3 px-1">
+                    <AppText className="text-xs font-semibold uppercase tracking-wide text-gray-600">
+                        Next rides
+                    </AppText>
+                    <Pressable
+                        role="link"
+                        onPress={() => navigate("/rides")}
+                        style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
+                    >
+                        <View className="flex-row items-center gap-1">
+                            <AppText className="text-sm font-semibold text-primary">Schedule</AppText>
+                            <Caret size={14} weight="bold" className="text-primary" />
+                        </View>
+                    </Pressable>
+                </View>
 
-            <Pressable
-                role="link"
-                onPress={() => navigate("/rides")}
-                className="flex-row items-center justify-center gap-1 py-1"
-                style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
-            >
-                <AppText className="text-sm font-semibold text-[var(--background-primary)]">
-                    See full ride schedule
-                </AppText>
-                <Caret size={14} weight="bold" className="text-[var(--background-primary)]" />
-            </Pressable>
+                {scheduled.length === 0 ? (
+                    <View className="w-full rounded-2xl p-4 gap-0.5" style={{ backgroundColor: '#f3f3f3' }}>
+                        <AppText className="font-semibold text-[var(--background-primary)]">No ride scheduled</AppText>
+                        <AppText className="text-xs text-gray-600">Your next assigned ride shows up here.</AppText>
+                    </View>
+                ) : (
+                    scheduled.slice(0, MAX_ROWS).map((ride) => (
+                        <ScheduledRide
+                            key={ride.id}
+                            booking={ride}
+                            onPress={() => navigate(`/rides/${ride.id}`)}
+                        />
+                    ))
+                )}
+            </View>
+
+            <MarketPromo />
         </View>
     )
 }

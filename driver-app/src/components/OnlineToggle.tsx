@@ -15,12 +15,19 @@ const Bell = cssInterop(BellIcon, {
 const KNOB_OFF = 20;   // web: left-5
 const KNOB_ON = -8;    // web: -left-2
 
+const TITLE_TRACKING = { letterSpacing: -0.72 };
+
 const OnlineToggle = () => {
     const [online, setOnline] = useState(false);
     const [error, setError] = useState<string | null>(null)
     const navigate = useNavigate();
     const { pathname } = useLocation();
     const onNotifications = pathname === "/notifications";
+
+    // The whole header is Home's, not the shell's: going online is a decision a
+    // captain makes from the ride list, and neither the wordmark nor the bell says
+    // anything about Account or Post. Home is the index route, so it answers to "/".
+    const onHome = pathname === "/";
 
     const api = useApi()
 
@@ -45,31 +52,35 @@ const OnlineToggle = () => {
         }
     }
 
+    if (!onHome) return null;
+
     return (
-        <View className="absolute flex flex-col justify-center items-center top-10 w-[92%]">
-            <View className="flex flex-row gap-1 justify-center my-3 items-center">
-                <AppText className="text-[var(--background-primary)] font-semibold text-xl">RCS</AppText>
-                <AppText className="text-[var(--background-primary)] text-xl">Captains</AppText>
-            </View>
+        <View className="absolute z-50 flex flex-col justify-center items-center top-10 w-[92%]">
+            <AppText className="text-xl bg-[var(--foreground)] my-1 py-1 px-3 rounded-full text-[var(--text-foreground)] flex flex-row justify-center items-center font-semibold text-center" style={TITLE_TRACKING}>
+                RCS{" "}
+                <AppText className="text-[var(--text-foreground)]">
+                    Travels
+                </AppText>
+            </AppText>
             <View className="flex flex-row w-full justify-between items-center">
-                <View className="flex-row items-center gap-3 rounded-2xl bg-[var(--background-primary)] p-3 border border-[var(--background-muted)]">
+                <View className="flex-row items-center gap-3 rounded-full bg-[var(--background-primary)] p-3 border border-[var(--background-muted)]">
                     <Pressable
                         role="button"
                         aria-label="Notifications"
                         onPress={() => navigate("/notifications")}
                         className="w-[22px] h-[22px] items-center justify-center"
                     >
-                        <Bell size={22} weight="regular" className="text-[var(--foreground)]" />
+                        <Bell size={20} weight="regular" className="text-[var(--foreground)]" />
                         <View className={`absolute transition-opacity duration-200 ${onNotifications ? "opacity-100" : "opacity-0"}`}>
-                            <Bell size={22} weight="fill" className="text-[var(--foreground)]" />
+                            <Bell size={20} weight="fill" className="text-[var(--foreground)]" />
                         </View>
                     </Pressable>
                 </View>
 
-                <View className="flex-row items-center justify-between w-fit rounded-2xl bg-[var(--background-primary)] p-3 px-4 pr-6 border border-[var(--background-muted)]">
+                <View className="flex-row items-center justify-between w-fit rounded-full bg-[var(--background-primary)] p-3 px-4 pr-6 border border-[var(--background-muted)]">
                     <AppText
                         numberOfLines={1}
-                        className="w-[74px] text-xl text-[var(--foreground)] font-semibold"
+                        className="w-[70px] text-lg text-[var(--foreground)] font-semibold"
                     >
                         {online && !error ? "Online" : "Offline"}
                     </AppText>

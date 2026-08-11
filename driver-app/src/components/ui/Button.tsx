@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { useState } from 'react';
 import { Pressable, type ViewStyle } from 'react-native';
 import AppText from '../AppText';
 
@@ -32,6 +33,13 @@ interface Props {
 }
 
 const Button = ({ prop = {}, className = '', children, onPress }: Props) => {
+    // Pressable's style-as-a-function never runs here. className routes through
+    // NativeWind, which merges the inline style into its own computation and
+    // only understands objects and arrays — a function is collected, applied,
+    // and yields nothing, so every value in it is dropped silently. Input holds
+    // its focus state for the same reason.
+    const [pressed, setPressed] = useState(false);
+
     const isDropdown = prop.variant === 'dropdown';
     const isInput = prop.variant === 'input';
     const isNegative = prop.variant === 'negative';
@@ -41,7 +49,7 @@ const Button = ({ prop = {}, className = '', children, onPress }: Props) => {
 
     const width = prop.width ?? (isInput || isDropdown ? undefined : '100%');
 
-    const surface = (pressed: boolean): ViewStyle => {
+    const surface = (): ViewStyle => {
         if (isSolid) {
             return {
                 backgroundColor: isNegative ? NEGATIVE : PRIMARY,
@@ -76,17 +84,19 @@ const Button = ({ prop = {}, className = '', children, onPress }: Props) => {
     return (
         <Pressable
             onPress={onPress}
+            onPressIn={() => setPressed(true)}
+            onPressOut={() => setPressed(false)}
             disabled={isDisabled}
             role="button"
             aria-disabled={isDisabled}
             className={`${className} flex-row items-center my-1 py-3 ${isDropdown ? 'justify-start px-4' : 'justify-center'}`}
-            style={({ pressed }) => [
+            style={[
                 {
                     width,
                     borderRadius: prop.rounded ?? (isDropdown ? 16 : 12),
                     paddingHorizontal: prop.paddingX,
                 },
-                surface(pressed),
+                surface(),
             ]}
         >
             {typeof children === 'string' || typeof children === 'number' ? (

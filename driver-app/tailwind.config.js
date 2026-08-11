@@ -38,6 +38,21 @@ module.exports = {
         extend: {
             colors: tokens.colors,
 
+            // v3 ships 35 spacing steps and thins out fast above 12 — 14, 16, then
+            // fours to 64. An off-scale class is not a smaller value, it is no
+            // class: Tailwind emits nothing and NativeWind drops it without a
+            // warning, so pt-38 reads at a glance like padding that silently
+            // vanished. v4 computes these on demand; this fills the gaps so the
+            // same class names work here.
+            //
+            // Extended rather than overridden, unlike fontWeight and letterSpacing
+            // above. Those had to be blanked because two generators competed for
+            // one namespace; nothing else emits p-*/m-*/top-*, so adding to this
+            // scale cannot collide — it only ever fills in missing steps.
+            spacing: Object.fromEntries(
+                Array.from({ length: 97 }, (_, step) => [step, `${step * 0.25}rem`]),
+            ),
+
             // Tailwind v3 takes a size as [size, { lineHeight }]; tokens.cjs stores
             // the object form the v4 generator reads, so the shapes are converted
             // here rather than duplicated there.

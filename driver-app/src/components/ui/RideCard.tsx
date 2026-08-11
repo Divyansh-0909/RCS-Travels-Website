@@ -1,101 +1,96 @@
-import { View } from 'react-native';
+import { Linking, Pressable, View } from 'react-native';
+import { cssInterop } from 'nativewind';
+import { PhoneIcon } from 'phosphor-react-native';
 import AppText from '../AppText';
 import { UpcomingBooking } from '../../types/enums';
-import { formatDateTime, rideStatusLabel, splitAddress, vehicleLabel } from '../../constants/booking';
+import { activeLeg, initials, splitAddress } from '../../constants/booking';
 
-// The website writes these as /10 and /25 suffixes on a token. There is no
-// color-mix on native, so the steps are resolved by hand — same as Button.tsx.
-const CARD = '#f3f3f3';                      // --foreground-muted
-const INK = '#121220';                       // --background-primary
-const PRIMARY = '#243AFB';
-const PRIMARY_TINT = 'rgba(36,58,251,0.1)';
-const PRIMARY_EDGE = 'rgba(36,58,251,0.25)';
-const HAIRLINE = 'rgba(18,18,32,0.1)';
+const Phone = cssInterop(PhoneIcon, {
+    className: { target: false, nativeStyleToProp: { color: true } },
+});
 
-// Solid dot for pickup, ring for drop — the website's ride history marks the two
-// ends the same way.
-const Stop = ({ address, isDrop }: { address: string; isDrop?: boolean }) => {
-    const { main, rest } = splitAddress(address);
-
-    return (
-        <View className="flex-row items-start gap-3">
-            <View
-                className="w-3 h-3 mt-1.5 rounded-full items-center justify-center"
-                style={{ backgroundColor: isDrop ? PRIMARY : INK }}
-            >
-                {isDrop && <View className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: CARD }} />}
-            </View>
-            <View className="flex-1">
-                <AppText numberOfLines={1} className="font-semibold text-[var(--background-primary)]">
-                    {main}
-                </AppText>
-                {rest ? (
-                    <AppText numberOfLines={1} className="text-sm text-gray-500">
-                        {rest}
-                    </AppText>
-                ) : null}
-            </View>
-        </View>
-    );
-};
+const ON_PRIMARY = 'rgba(255,255,255,0.2)';
+const MUTED = 'text-[rgba(255,255,255,0.8)]';
+const EYEBROW = `text-base font-semibold uppercase tracking-wide ${MUTED}`;
 
 type Props = {
-    booking: UpcomingBooking | null;
-    variant: 'active' | 'upcoming';
+    booking: UpcomingBooking;
+    onPress?: () => void;
 };
 
-// The active ride is the only thing on Home allowed brand blue — a tinted chip and
-// a hairline edge — so which of the two panels is live reads before either is.
-const RideCard = ({ booking, variant }: Props) => {
-    const isActive = variant === 'active';
+const RideCard = ({ booking, onPress }: Props) => {
+    const leg = activeLeg(booking.status);
+    const address = leg.endpoint === 'drop' ? booking.dropAddress : booking.pickupAddress;
+    const { main, rest } = splitAddress(address);
 
-    if (!booking) {
-        return (
-            <View className="w-full rounded-2xl p-5 gap-1" style={{ backgroundColor: CARD }}>
-                <AppText className="font-semibold text-[var(--background-primary)]">No ride scheduled</AppText>
-                <AppText className="text-sm text-gray-500">Your next assigned ride shows up here.</AppText>
-            </View>
-        );
-    }
-
-    const meta = [
-        booking.scheduledAt ? formatDateTime(booking.scheduledAt) : 'Immediate pickup',
-        vehicleLabel(booking.vehicleClass),
-        booking.sharing ? 'Sharing' : null,
-        booking.isOutstation ? 'Outstation' : null,
-    ].filter(Boolean).join('  •  ');
+    // Handing the maps app an address rather than a coordinate pair: it is what the
+    // list endpoint already returns, and it is the string the captain would have
+    // typed anyway. Coordinates would be a second reason for /rides to widen.
+    const navigate = () => {
+        const destination = encodeURIComponent(address);
+        Linking.openURL(`https://www.google.com/maps/dir/?api=1&destination=${destination}`);
+    };
 
     return (
-        <View
-            className="w-full rounded-2xl p-5 gap-4"
-            style={{
-                backgroundColor: CARD,
-                borderWidth: 1,
-                borderColor: isActive ? PRIMARY_EDGE : 'transparent',
-            }}
+        <Pressable
+            role="button"
+            onPress={onPress}
+            disabled={!onPress}
+            style={({ pressed }) => ({ width: '100%', opacity: pressed ? 0.92 : 1 })}
         >
-            <View className="flex-row justify-between items-center gap-4">
-                {isActive ? (
-                    <View className="rounded-full px-2.5 py-1" style={{ backgroundColor: PRIMARY_TINT }}>
-                        <AppText className="text-xs font-semibold text-primary">
-                            {rideStatusLabel(booking.status)}
+            <View className="w-full rounded-3xl bg-primary p-5 gap-3">
+                <View className="gap-0.5">
+                    <View className="flex-row items-center justify-between gap-3">
+                        <AppText className={EYEBROW}>{leg.label}</AppText>
+                        <AppText className={`text-xl font-semibold ${MUTED}`}>
+                            ₹{booking.fare}
                         </AppText>
                     </View>
-                ) : (
-                    <AppText className="text-sm text-gray-500">Next ride</AppText>
-                )}
-                <AppText className="font-semibold text-[var(--background-primary)]">₹{booking.fare}</AppText>
+                    <AppText numberOfLines={1} className="text-3xl font-semibold tracking-[-0.6px] text-white">
+                        {main}
+                    </AppText>
+                    {rest ? (
+                        <AppText numberOfLines={1} className={`text-sm ${MUTED}`}>{rest}</AppText>
+                    ) : null}
+                </View>
+                <View className="flex-row items-center gap-2 border border-[rgba(255,255,255,0.2)] p-3 rounded-2xl">
+                    <View
+                        className="w-12 h-12 rounded-full items-center justify-center"
+                        style={{ backgroundColor: ON_PRIMARY }}
+                    >
+                        <AppText className="text-xl font-semibold text-white">
+                            {initials(booking.user?.name ?? null)}
+                        </AppText>
+                    </View>
+                    <AppText numberOfLines={1} className="flex-1 text-xl font-semibold text-white">
+                        {booking.user?.name ?? 'Rider'}
+                    </AppText>
+                    <Pressable
+                        role="button"
+                        aria-label={`Call ${booking.user?.name ?? 'the rider'}`}
+                        onPress={() => Linking.openURL(`tel:${booking.customerPhone}`)}
+                        style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+                    >
+                        <View
+                            className="w-12 h-12 rounded-xl items-center justify-center"
+                            style={{ backgroundColor: ON_PRIMARY }}
+                        >
+                            <Phone size={22} weight="fill" className="text-[var(--foreground)]" />
+                        </View>
+                    </Pressable>
+                </View>
+
+                <Pressable
+                    role="button"
+                    onPress={navigate}
+                    style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
+                >
+                    <View className="w-full rounded-2xl bg-[var(--background-primary)] py-3.5 items-center">
+                        <AppText className="text-base font-semibold text-[var(--foreground)]">Navigate</AppText>
+                    </View>
+                </Pressable>
             </View>
-
-            <View className="gap-3">
-                <Stop address={booking.pickupAddress} />
-                <Stop address={booking.dropAddress} isDrop />
-            </View>
-
-            <View className="w-full h-px" style={{ backgroundColor: HAIRLINE }} />
-
-            <AppText numberOfLines={1} className="text-sm text-gray-500">{meta}</AppText>
-        </View>
+        </Pressable>
     );
 };
 

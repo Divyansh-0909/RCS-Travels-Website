@@ -22,24 +22,27 @@ interface Props {
     size?: number;
     color?: string;
     strokeWidth?: number;
+    /** Same as CheckMarkOutline's: held back this long before anything starts.
+        It stacks with the 200ms the second stroke already waits on the first. */
+    delay?: number;
 }
 
-const CrossOutline = ({ size = 72, color = '#FFFFFF', strokeWidth = 6 }: Props) => {
+const CrossOutline = ({ size = 72, color = '#FFFFFF', strokeWidth = 6, delay = 0 }: Props) => {
     const first = useSharedValue(LINE_LENGTH);
     const second = useSharedValue(LINE_LENGTH);
 
     useEffect(() => {
         const easing = Easing.bezier(0.65, 0, 0.35, 1);
-        first.value = withTiming(0, { duration: 250, easing });
-        second.value = withDelay(200, withTiming(0, { duration: 250, easing }));
-    }, [first, second]);
+        first.value = withDelay(delay, withTiming(0, { duration: 250, easing }));
+        second.value = withDelay(delay + 200, withTiming(0, { duration: 250, easing }));
+    }, [first, second, delay]);
 
     const strokeOne = useAnimatedProps(() => ({ strokeDashoffset: first.value }));
     const strokeTwo = useAnimatedProps(() => ({ strokeDashoffset: second.value }));
 
     return (
         <Animated.View
-            entering={ZoomIn.duration(400)}
+            entering={ZoomIn.duration(400).delay(delay)}
             accessibilityRole="image"
             accessibilityLabel="Error"
         >
