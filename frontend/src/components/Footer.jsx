@@ -11,23 +11,32 @@ const Footer = () => {
     // (Outstation). Scrolling to an id that isn't in the document is a dead
     // link, so off the home route these navigate there and let App's scrollTo
     // effect finish the job.
-    const onHome = useLocation().pathname === "/";
+    const { pathname } = useLocation();
+    const onHome = pathname === "/";
     const goToSection = (id) => () => {
         if (onHome) scrollToSection(id);
         else navigate("/", { state: { scrollTo: id } });
+    };
+
+    // A link to the top of a page: the route change lands there by itself
+    // (PageMeta resets the scroll), but on the page it names it has to scroll.
+    // This footer is on Outstation too, where that's the "Outstation" link.
+    const goToTopOf = (path) => {
+        if (pathname === path) scrollToTop();
+        else navigate(path);
     };
 
     const columns = [
         {
             heading: "Pages",
             links: [
-                { label: "Book a ride", onClick: () => (onHome ? scrollToTop() : navigate("/")) },
+                { label: "Book a ride", onClick: () => goToTopOf("/") },
                 { label: "How it works", onClick: goToSection("how-it-works") },
                 { label: "Services", onClick: goToSection("services") },
                 // A route, not a section — the only entry here that leaves the
                 // page, because outstation is the one product with nowhere on
                 // the home page to scroll to.
-                { label: "Outstation", onClick: () => navigate("/outstation") },
+                { label: "Outstation", onClick: () => goToTopOf("/outstation") },
                 { label: "Why us", onClick: goToSection("why-us") },
                 { label: "About", onClick: goToSection("about") },
             ],

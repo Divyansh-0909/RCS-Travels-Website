@@ -9,10 +9,16 @@ const CrossOutline = ({
     color = "#FFFFFF",   // white
     strokeWidth = 6,
     loop = false,
+    /* Held back this long (ms) before the pop and the strokes all start, for
+       callers that need something else to settle first. The second stroke keeps
+       its 0.2s stagger behind the first. */
+    delay = 0,
     className = "",
     style,
 }) => {
     const iterations = loop ? "infinite" : 1;
+    const wait = `${delay}ms`;
+    const waitSecond = `${delay + 200}ms`;
 
     return (
         <span
@@ -31,16 +37,16 @@ const CrossOutline = ({
                 .cro-line-1 {
                     stroke-dasharray: ${LINE_LENGTH};
                     stroke-dashoffset: ${LINE_LENGTH};
-                    animation: cro-line 0.25s cubic-bezier(0.65, 0, 0.35, 1) 0s forwards ${iterations};
+                    animation: cro-line 0.25s cubic-bezier(0.65, 0, 0.35, 1) ${wait} forwards ${iterations};
                 }
                 .cro-line-2 {
                     stroke-dasharray: ${LINE_LENGTH};
                     stroke-dashoffset: ${LINE_LENGTH};
-                    animation: cro-line 0.25s cubic-bezier(0.65, 0, 0.35, 1) 0.2s forwards ${iterations};
+                    animation: cro-line 0.25s cubic-bezier(0.65, 0, 0.35, 1) ${waitSecond} forwards ${iterations};
                 }
                 .cro-svg {
                     transform-origin: center;
-                    animation: cro-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) 0s both ${iterations};
+                    animation: cro-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) ${wait} both ${iterations};
                 }
                 @media (prefers-reduced-motion: reduce) {
                     .cro-line-1, .cro-line-2 { animation: none; stroke-dashoffset: 0; }

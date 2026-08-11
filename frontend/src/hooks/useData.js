@@ -1,5 +1,50 @@
 import {create} from 'zustand'
-import {persist, createJSONStorage} from 'zustand/middleware'
+import {persist} from 'zustand/middleware'
+
+// The ride form belongs to the trip in front of the rider, not to the browser,
+// so it rides in sessionStorage: a reload or a back-out of /vehicle keeps the
+// addresses, but a new tab — or reopening the site tomorrow — starts blank.
+// Everything else in partialize (phone, language, places) stays in localStorage.
+const SESSION_KEYS = [
+    'pickupLocation', 'dropLocation', 'pickupCoords', 'dropCoords',
+    'distanceKm', 'durationMin', 'routePolyline',
+    'fareSource', 'fareToll', 'fareCarrier', 'fareAirport',
+]
+
+const read = (store, name) => {
+    try { return JSON.parse(store.getItem(name)) } catch { return null }
+}
+
+// Splits the one persisted blob across the two stores by key. Passed to persist
+// raw rather than through createJSONStorage — that wrapper is for string-backed
+// stores, and the serialising happens here.
+const splitStorage = {
+    getItem: (name) => {
+        const local = read(localStorage, name)
+        const session = read(sessionStorage, name)
+        if (!local && !session) return null
+        // Strip the ride form out of whatever localStorage still holds, so the
+        // blob written before this split can't leak addresses into a new tab.
+        const persistent = { ...(local?.state ?? {}) }
+        for (const key of SESSION_KEYS) delete persistent[key]
+        return {
+            version: local?.version ?? session?.version,
+            state: { ...persistent, ...(session?.state ?? {}) },
+        }
+    },
+    setItem: (name, value) => {
+        const persistent = {}, perTab = {}
+        for (const [key, val] of Object.entries(value.state)) {
+            (SESSION_KEYS.includes(key) ? perTab : persistent)[key] = val
+        }
+        localStorage.setItem(name, JSON.stringify({ ...value, state: persistent }))
+        sessionStorage.setItem(name, JSON.stringify({ ...value, state: perTab }))
+    },
+    removeItem: (name) => {
+        localStorage.removeItem(name)
+        sessionStorage.removeItem(name)
+    },
+}
 
 export const useData = create (persist (set =>({
     phone: "",
@@ -179,12 +224,13 @@ export const useData = create (persist (set =>({
 }),
 {
     name: 'rcs-data',
-    storage: createJSONStorage(() => localStorage),
+    storage: splitStorage,
     // Persisted: phone (pre-fills login), language, recent places, and the
     // ride form (addresses + their coords — they must travel together or a
     // reload would rebook from the fallback anchors) plus its route metrics,
     // so tracking still draws the real road route after a reload. /book wipes
     // the metrics on mount, so a new booking can't inherit the old route.
+    // SESSION_KEYS above decides which of these outlive the tab.
     partialize: (state) => ({
         phone: state.phone, language: state.language, recentPlaces: state.recentPlaces,
         savedPlaces: state.savedPlaces,

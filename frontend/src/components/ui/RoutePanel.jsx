@@ -1,5 +1,6 @@
 // Shared pickup → drop route summary. First comma segment is the stop title,
-// the rest a muted subtitle. Children render below a divider (meta rows).
+// the rest a muted subtitle. `header` renders above the route behind its own
+// divider (ride status); children render below one (meta rows).
 // The 12px rail aligns each marker with its title line, not the block center.
 const splitAddress = (address) => {
     const [title, ...rest] = (address ?? "").split(",");
@@ -20,12 +21,18 @@ const Address = ({ title, subtitle, size }) => (
     </div>
 );
 
-const RoutePanel = ({ pickup, drop, className = "", size = "md", children }) => {
+const RoutePanel = ({ pickup, drop, className = "", size = "md", header, children }) => {
     const from = splitAddress(pickup);
     const to = splitAddress(drop);
     const dotOffset = SIZES[size].dot;
     return (
         <div className={`${className} w-full rounded-xl border border-[var(--foreground)]/30 bg-[var(--background-muted)] px-4 py-4 text-left`}>
+            {header && (
+                <>
+                    <div className="w-full">{header}</div>
+                    <div className="w-full h-px bg-[var(--foreground)]/10 my-3 sm:my-4" />
+                </>
+            )}
             <div className="grid grid-cols-[12px_1fr] gap-x-3 w-full">
                 <div className={`${dotOffset} w-3 h-3 rounded-full bg-[var(--foreground)] shrink-0`} />
                 <div className="pb-3">

@@ -8,6 +8,7 @@ import { useApi } from "../hooks/useApi";
 import Icon from '@mdi/react';
 import { mdiKeyboardBackspace } from '@mdi/js';
 import { useData } from "../hooks/useData";
+import { useOtpClipboard } from "../hooks/useOtpClipboard";
 import CheckMarkOutline from "../components/illustrations/CheckMarkOutline";
 import CrossOutline from "../components/illustrations/CrossOutline";
 
@@ -30,6 +31,7 @@ const SignUpPage = () => {
   // Username is collected FIRST so the DB user is created in the same step as OTP
   // verification — no post-OTP name screen to abandon into a profile-less session.
   const [step, setStep] = useState("username"); // "username" | "phone" | "otp"
+  const [verdict, setVerdict] = useState(null); // null | "pass" | "fail"
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
@@ -126,11 +128,15 @@ const SignUpPage = () => {
 
       try {
         setError(null);
+        setVerdict(null);
         setLoading(true);
         await verifyOtp()
       } catch (err) {
         console.error(err);
         setError("Something went wrong");
+        // A throw after the code was accepted leaves the verdict on "pass", which
+        // would sit a tick above the error message.
+        setVerdict("fail");
       } finally {
         setLoading(false);
       }
@@ -191,13 +197,23 @@ const SignUpPage = () => {
     const data = await api.verifyOtp(phone, otp, "signup");
     if (data.error) {
       setError(data.error);
+      setVerdict("fail");
       await new Promise((resolve) => setTimeout(resolve, 2000));
       setOtp("");
       return;
     }
 
+    setVerdict("pass");
+
+    // Everything past this point runs behind a tick, because the code itself was
+    // right — but a failure here still has to correct that, or an error message
+    // ends up sitting under a success mark.
     const result = await signIn.create({ strategy: "ticket", ticket: data.ticket });
-    if (result.status !== "complete") { setError("Verification failed. Please try again."); return; }
+    if (result.status !== "complete") {
+      setError("Verification failed. Please try again.");
+      setVerdict("fail");
+      return;
+    }
 
     // Activate the session so the createMe request below is authenticated.
     await setActive({ session: result.createdSessionId });
@@ -208,6 +224,7 @@ const SignUpPage = () => {
       // Don't leave a session without a profile — sign out and retry from the name step.
       await api.logout();
       setError(created.error);
+      setVerdict("fail");
       setStep("username");
       return;
     }
@@ -219,6 +236,12 @@ const SignUpPage = () => {
   const isPhone = step === "phone";
   const isOtp = step === "otp";
   const busy = loading;
+
+  // The collapse reports an answer, so it waits for one. busy alone starts on the
+  // press, which would have the boxes merging over a request that might still
+  // come back rejected. Both halves are needed: verdict outlives the request it
+  // came from, and without busy the mark would stay up after the row reopens.
+  const settled = busy && Boolean(verdict);
 
   const formatMMSS = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 
@@ -254,12 +277,6 @@ const SignUpPage = () => {
   const handleOtpDigit = (i, value) => {
     const digits = value.replace(/\D/g, "");
     if (!digits) return;
-
-    // Phone keyboards paste through onChange, not onPaste — Gboard's clipboard
-    // chip and iOS's from-messages autofill insert the whole code as one change
-    // event. More than one digit therefore means a paste: fill from the first
-    // box, same as handleOtpPaste. This is also why the boxes have no maxLength
-    // — it would truncate the insert before this handler ever sees it.
     if (digits.length > 1) {
       const pasted = digits.slice(0, OTP_LENGTH);
       setOtp(pasted);
@@ -303,6 +320,19 @@ const SignUpPage = () => {
     clearOtpError();
     focusBox(Math.min(digits.length, OTP_LENGTH - 1));
   };
+
+  // The OTP comes over WhatsApp, whose "Copy code" button is the only way it
+  // reaches the browser — SMS autofill can't see it. Only while the boxes are
+  // empty: a code already typed or already filled is not one to overwrite.
+  const { supported: canPasteOtp, paste: pasteOtp } = useOtpClipboard({
+    enabled: isOtp && !busy && otp.length === 0,
+    length: OTP_LENGTH,
+    onCode: (code) => {
+      setOtp(code);
+      clearOtpError();
+      focusBox(OTP_LENGTH - 1);
+    },
+  });
 
   return (
     <div className="relative bg-transparent text-center flex justify-center items-center w-[100vw] h-[100dvh] bg-panel-gradient">
@@ -381,9 +411,9 @@ const SignUpPage = () => {
                         style={{ "--i": i }}
                         className={`
                         relative flex justify-center text-center items-center font-medium text-2xl sm:text-3xl my-1
-                        ${busy ? "text-transparent placeholder-transparent" : "text-white"}
+                        ${settled ? "text-transparent placeholder-transparent" : "text-white"}
                         py-2 w-[42px] h-[42px] sm:w-[55px] sm:h-[55px] rounded-xl transition-all duration-600 ease-in-out
-                        ${busy && `animate-otp-box-in ${i === 0 && `${otpError ? "bg-red-600!" : "bg-green-600!"}`}`}
+                        ${settled && `animate-otp-box-in ${i === 0 && `${verdict === "fail" ? "bg-red-600!" : "bg-green-600!"}`}`}
                         ${otpError
                             ? "border border-negative/50 bg-negative/10 focus:border-negative/80"
                             : "border border-[var(--foreground)]/30 bg-[var(--background-muted)] hover:border-[var(--foreground)]/50 focus:border-[var(--foreground)]/60 focus:bg-[var(--foreground)]/5"
@@ -394,11 +424,16 @@ const SignUpPage = () => {
                       />
                     );
                   })}
-                    {busy && (
+                    {/* Held until the boxes have finished converging, so the mark
+                        lands on the stack rather than over six moving boxes — the
+                        delay matches .animate-otp-badge's. Keyed off the verdict,
+                        never off error: error is null for the whole round trip,
+                        which is not the same thing as the code being right. */}
+                    {settled && (
                       <span className="animate-otp-badge absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
-                        {error
-                          ? <CrossOutline size={38} />
-                          : <CheckMarkOutline size={38} />}
+                        {verdict === "fail"
+                          ? <CrossOutline size={38} delay={450} />
+                          : <CheckMarkOutline size={38} delay={450} />}
                       </span>
                     )}
                   </div>
@@ -406,6 +441,20 @@ const SignUpPage = () => {
                     {expiresIn > 0
                       ? <>Code expires in <span className="tabular-nums text-[var(--text)]">{formatMMSS(expiresIn)}</span></>
                       : "Your code has expired."}
+                    {/* Chrome fills the boxes on its own once the clipboard
+                        permission is granted; this is where that gets granted,
+                        and it stays for the browsers that never grant it. Not
+                        offered on an expired code, which pastes to nothing. */}
+                    {canPasteOtp && expiresIn > 0 && (
+                      <>
+                        {" · "}
+                        <button
+                          type="button"
+                          onClick={pasteOtp}
+                          className="cursor-pointer text-[var(--text)] underline underline-offset-4 decoration-[var(--foreground)]/40 hover:decoration-[var(--foreground)] transition-colors duration-300 rounded-sm outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]/70"
+                        >Paste code</button>
+                      </>
+                    )}
                   </p>
                 </div>
                 : <Input

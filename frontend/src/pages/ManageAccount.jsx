@@ -771,8 +771,11 @@ const ManageAccount = () => {
                                                 </div>
 
                                                 <div className="flex flex-row gap-2 h-fit justify-start items-start sm:items-center">
-                                                    <p className="text-gray-500 text-sm">Ride ID: {booking.id?.slice(0, 8)}....</p>
-                                                    <CopyBtn value={booking?.id} onCopy={copyRideId} />
+                                                    {/* The reference, whole — this is the value support asks for,
+                                                        and a truncated uuid could not be read back over a phone
+                                                        or pasted into the search box above. */}
+                                                    <p className="text-gray-500 text-sm">Ride ID: {booking.reference}</p>
+                                                    <CopyBtn value={booking?.reference} onCopy={copyRideId} />
                                                 </div>
 
                                                 <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">

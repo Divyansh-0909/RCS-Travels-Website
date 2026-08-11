@@ -111,3 +111,13 @@ export function scrollToTop() {
     if (smoother) smoother.scrollTo(0, true);
     else window.scrollTo({ top: 0, behavior: "smooth" });
 }
+
+// Same thing without the animation, for landing on a route rather than moving
+// within one: the page you arrive at has nothing above its top to scroll past,
+// so an animated trip up from the previous page's offset would only look like
+// the new page had loaded scrolled and then corrected itself.
+export function jumpToTop() {
+    const smoother = ScrollSmoother.get();
+    if (smoother) smoother.scrollTo(0, false);
+    else window.scrollTo(0, 0);
+}

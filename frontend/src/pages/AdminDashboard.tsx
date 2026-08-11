@@ -34,6 +34,9 @@ const bookingStatuses: BookingStatus[] = ["pending", "confirmed", "assigned", "e
 // Shapes returned by the admin API (backend/routes/admin.ts); DateTimes arrive as ISO strings.
 type Booking = {
     id: string
+    // The readable ride name, "RCS4831902" — what the row displays and what the
+    // search box above accepts. `id` is still the uuid every request is keyed on.
+    reference: string
     fare: number
     status: BookingStatus
     scheduledAt: string | null
@@ -579,8 +582,11 @@ const AdminDashboard = () => {
                                                     </div>
 
                                                     <div className="flex flex-row gap-2 h-fit justify-center items-start sm:items-center">
-                                                        <p className="text-gray-500 text-sm">Ride ID: {booking.id?.slice(0, 8)}....</p>
-                                                        <CopyBtn value={booking?.id} onCopy={copyId} />
+                                                        {/* The reference, whole. It replaces a first-eight-and-an-ellipsis
+                                                            of the uuid, which was unreadable down a phone line and could
+                                                            not be pasted back into this search box as shown. */}
+                                                        <p className="text-gray-500 text-sm">Ride ID: {booking.reference}</p>
+                                                        <CopyBtn value={booking?.reference} onCopy={copyId} />
                                                     </div>
                                                 </div>
                                             </div>

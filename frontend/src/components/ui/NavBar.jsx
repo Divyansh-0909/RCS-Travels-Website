@@ -9,7 +9,8 @@ import Button from './Button';
 import { useData } from '../../hooks/useData';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { useExitAnim } from '../../hooks/useExitAnim';
-import { scrollToSection } from '../../hooks/useSmoothScroll';
+import { scrollToSection, scrollToTop } from '../../hooks/useSmoothScroll';
+import { useLocation } from 'react-router-dom';
 import pfpPlaceholder from "../../assets/pfp-placeholder.webp"
 import FourSeaterSide from "../../assets/4-seater-bottom-left.webp"
 // Two car illustrations for four classes: the art is per seat count, so a sedan
@@ -35,6 +36,7 @@ const NavBar = ({ invert = false, hideExpanded = false, className = "" }) => {
     const { signIn } = useSignIn();
     const { isSignedIn } = useAuth();
     const isMobile = useIsMobile();
+    const { pathname } = useLocation();
     const scheduledTime = useData(state => state.scheduledTime);
     const bookingId = useData(state => state.bookingId);
     const bookingCode = useData(state => state.bookingCode);
@@ -120,6 +122,18 @@ const NavBar = ({ invert = false, hideExpanded = false, className = "" }) => {
         if (!scrollToSection(id)) navigate('/', { state: { scrollTo: id } });
     }
 
+    // Links that mean the top of a page rather than the route as such — the
+    // logo means the booking form, Outstation its hero. Arriving from another
+    // route PageMeta puts you at the top; already on the route a navigate() is
+    // a no-op, so scrolled down the link would do nothing and has to scroll
+    // instead. Same split the footer's "Book a ride" makes.
+    const goToTopOf = (path) => {
+        if (pathname === path) scrollToTop();
+        else navigate(path);
+    }
+
+    const goHome = () => goToTopOf('/')
+
     // Close first, act on the next task — the scroll lock has to be released
     // before goToSection's smooth scroll can move the page.
     const go = (fn) => {
@@ -131,7 +145,7 @@ const NavBar = ({ invert = false, hideExpanded = false, className = "" }) => {
     // admin conditions can't drift apart.
     const navLinks = [
         ["About", () => goToSection('about')],
-        ["Outstation", () => navigate('/outstation')],
+        ["Outstation", () => goToTopOf('/outstation')],
         ["Help", () => navigate('/help')],
         ...(isSignedIn ? [["Ride History", () => navigate('/manage-account', { state: { tab: "Ride History" } })]] : []),
         ...(clerkUser?.publicMetadata?.role === "admin" ? [["Dashboard", () => navigate('/dashboard')]] : []),
@@ -170,7 +184,12 @@ const NavBar = ({ invert = false, hideExpanded = false, className = "" }) => {
                                 <Avatar invert={invert} initial={user?.name?.charAt(0)} box='w-12 h-12 shrink-0' text='text-2xl' />
                                 <h3 className='truncate text-xl font-semibold'>{displayName}</h3>
                             </div>
-                        : <h3><span className='font-semibold'>RCS</span> travels</h3>
+                        : <h3
+                            onClick={() => go(goHome)}
+                            className='cursor-pointer opacity-100 hover:opacity-70 active:opacity-60 transition-opacity duration-300'
+                        >
+                            <span className='font-semibold'>RCS</span> travels
+                        </h3>
                     }
                     <Icon
                         path={mdiClose}
@@ -244,7 +263,7 @@ const NavBar = ({ invert = false, hideExpanded = false, className = "" }) => {
     return (
         <div className={`${className} flex flex-col justify-center items-center ${invert ? "bg-[var(--background-primary)]" : "bg-[var(--foreground)]"} max-sm:w-[min(86vw,100%)] sm:w-[740px] h-[40px] sm:h-[50px] gap-1 px-2.5 py-5.5 sm:py-6.5 rounded-full outline-1 outline-[var(--background)]/50 transition-colors duration-300 motion-reduce:transition-none`}>
             <div className={`flex justify-between items-center ${invert ? "text-[var(--text)]" : "text-[var(--text-foreground)]"} transition-colors duration-300 motion-reduce:transition-none [&>*]:select-none w-full sm:gap-10 px-1`}>
-                <h3 onClick={() => navigate('/')} className={`cursor-pointer pl-1 sm:opacity-[0.85] transition-opacity duration-300 opacity-[1] hover:opacity-[1]`}><span className='font-semibold'>RCS</span> travels</h3>
+                <h3 onClick={goHome} className={`cursor-pointer pl-1 sm:opacity-[0.85] transition-opacity duration-300 opacity-[1] hover:opacity-[1]`}><span className='font-semibold'>RCS</span> travels</h3>
 
                 <div className='sm:block hidden'>
                     <ul className={`flex gap-1 [&>li]:cursor-pointer [&>li]:text-sm [&>li]:transition-all [&>li]:duration-300 [&>*]:px-2.5 [&>*]:py-1.5 [&>*]:rounded-full ${invert ? "[&>*]:text-[var(--text)]/80 [&>*]:hover:text-[var(--text)] [&>*]:bg-[var(--background-primary)] [&>*]:hover:bg-[var(--foreground)]/10" : "[&>*]:text-[var(--text-foreground)]/80 [&>*]:hover:text-[var(--text-foreground)] [&>*]:bg-[var(--foreground)] [&>*]:hover:bg-[var(--background-primary)]/10"}`}>

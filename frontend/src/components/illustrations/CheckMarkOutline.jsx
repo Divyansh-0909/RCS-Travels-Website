@@ -9,10 +9,16 @@ const CheckMarkOutline = ({
     color = "#FFFFFF",   // white
     strokeWidth = 6,
     loop = false,
+    /* Held back this long (ms) before the pop and the draw both start, for
+       callers that need something else to settle first. Without it a caller
+       that fades the mark in late gets a check that drew itself behind the
+       fade and lands already finished. */
+    delay = 0,
     className = "",
     style,
 }) => {
     const iterations = loop ? "infinite" : 1;
+    const wait = `${delay}ms`;
 
     return (
         <span
@@ -31,11 +37,11 @@ const CheckMarkOutline = ({
                 .cmo-check {
                     stroke-dasharray: ${CHECK_LENGTH};
                     stroke-dashoffset: ${CHECK_LENGTH};
-                    animation: cmo-check 0.35s cubic-bezier(0.65, 0, 0.35, 1) 0s forwards ${iterations};
+                    animation: cmo-check 0.35s cubic-bezier(0.65, 0, 0.35, 1) ${wait} forwards ${iterations};
                 }
                 .cmo-svg {
                     transform-origin: center;
-                    animation: cmo-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) 0s both ${iterations};
+                    animation: cmo-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) ${wait} both ${iterations};
                 }
                 @media (prefers-reduced-motion: reduce) {
                     .cmo-check { animation: none; stroke-dashoffset: 0; }

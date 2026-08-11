@@ -540,7 +540,27 @@ const OnBoarding = () => {
             {activeBooking && authed && activeBooking.scheduledAt && !showForm
               ? <div className={`flex flex-col justify-center items-center lg:items-start mt-3 sm:mt-0 ${TRIP_STEP}`}>
                 <div className={`flex flex-col items-stretch text-left ${GROUP} ${COL}`}>
-                  <RoutePanel size="sm" pickup={activeBooking.pickupAddress} drop={activeBooking.dropAddress}>
+                  <RoutePanel
+                    size="sm"
+                    pickup={activeBooking.pickupAddress}
+                    drop={activeBooking.dropAddress}
+                    header={
+                      // Status leads the card: it outranks the addresses and the
+                      // meta rows, so the state of the ride is the first thing
+                      // read. The confirmed caveat drops to a muted note beneath
+                      // rather than competing at that size.
+                      <>
+                        <h3 className="text-xl sm:text-2xl font-semibold leading-tight">
+                          {statusLabels[activeBooking.status] || activeBooking.status}
+                        </h3>
+                        {activeBooking.status === "confirmed" && (
+                          <p className="mt-0.5 text-xs sm:text-sm text-[var(--text-muted)] leading-snug">
+                            Driver assigned closer to your pickup time.
+                          </p>
+                        )}
+                      </>
+                    }
+                  >
                     <div className="flex items-center justify-between w-full">
                       <h4 className={`${META} text-[var(--text-muted)]`}>Scheduled</h4>
                       <h4 className={META}>
@@ -553,18 +573,7 @@ const OnBoarding = () => {
                       <h4 className={`${META} text-[var(--text-muted)]`}>Fare</h4>
                       <h4 className={META}>₹{activeBooking.fare}</h4>
                     </div>
-                    {activeBooking.code && (
-                      <div className="flex items-center justify-between w-full">
-                        <h4 className={`${META} text-[var(--text-muted)]`}>Booking code</h4>
-                        <h4 className={`${META} tracking-[0.25em] -mr-[0.25em]`}>{activeBooking.code}</h4>
-                      </div>
-                    )}
                   </RoutePanel>
-                  <p className="text-xs sm:text-sm text-[var(--text-muted)] leading-snug">
-                    {activeBooking.status === "confirmed"
-                      ? "Driver assigned closer to your pickup time."
-                      : statusLabels[activeBooking.status] || activeBooking.status}
-                  </p>
 
                   <Button onClick={openActiveBooking} className="my-0!" prop={{ variant: "", width: "100%" }}>
                     <span className="text-base sm:text-lg">See Ride Details</span>
