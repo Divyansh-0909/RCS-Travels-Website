@@ -2,6 +2,13 @@ RCS TRAVELS — PROJECT ROADMAP
 ===============================
 
 IMPORTANT:
+-@@unique([driverId, type]) plus "renewal replaces the old file" means an approved captain who renews his insurance three weeks early destroys his own approved document and drops to pending — offline until an admin gets to him. The 30-day expiring warning you already surface actively encourages exactly that. Options: add nullable pendingFileUrl/pendingExpiresAt to the row, or relax the unique to a plain index and read "latest approved by uploadedAt". The schema comment argues against history rows, but history also gives you the audit trail for a disputed suspension — I'd relax the unique. Either way it's a decision to make before the upload endpoint, not after.
+- if the user pays through cash give driver a pop up saying did user pay with cash? untill that is sorted driver can't continue same for user
+- check all thing like race conditions and all.
+- add gst billing
+- Add big panel for upcoming scheduled ride if no active ride on the home screen app
+- add the market place advert at the bottom and also only show the next 2 upcoming rides
+- Rides page should have two sections ride history and upcoming rides
 - add the ability in AdminDashboard to change the fare of zones or outstation
 - add the ability to scroll background panel on mobile
 - add the ability to remove a driver or verify a driver in the dashboard
@@ -970,8 +977,15 @@ each numbered block unblocks the ones after it. Outstation is PARKED (see bottom
    by mandate, and the deposit is poster-chosen rather than tied to the fare,
    so revenue is no longer a predictable function of ride volume. Don't
    assume this feature funds anything now — track it separately.
-   NO DRIVER WALLET (still decided) — this is collect-and-settle per ride, on
-   UPI throughout, not a maintained balance.
+   NO DRIVER WALLET IN THE MARKETPLACE — this is collect-and-settle per ride,
+   on UPI throughout, not a maintained balance. THE BLANKET "no driver wallet"
+   RULE IS SUPERSEDED (8 Aug 2026, block 10): the platform DOES now have a
+   driver wallet. It just isn't used here — marketplace money still moves
+   claimer -> platform -> poster by UPI and never rests in a balance, because
+   that is fare money and holding it is the licensing problem this block was
+   built to dodge. Two deposits now exist in the driver app with OPPOSITE
+   semantics — this one is never refunded to the claimer, block 10's is — so
+   they must never share a name or a screen in the UI.
    RESOLVED (was open, Raju's direction closes it): yes, the poster gets paid.
 
 8. AIRPORT TERMINALS
@@ -985,6 +999,262 @@ each numbered block unblocks the ones after it. Outstation is PARKED (see bottom
    airport surcharge, NO marketFare. Telling T2 from T3 needs the Places
    address string, not a radius. Still open with Raju: is toll/parking inside
    those prices?
+
+9. ASSIGNMENT ENGINE — THREE PRIORITY GROUPS
+   PRIORITY GROUPS DONE 8 Aug 2026 (schema + engine, migrated).
+   MIGRATION 20260807222544_driver_groups_offers_wallet_reviews IS APPLIED — it
+   carries everything in blocks 9-12: DriverGroup, the wider eligibility index,
+   suspension, the wallet ledger, RideOffer, reviews, flags and coupons. Purely
+   additive; the one dropped index is replaced by its five-column successor in
+   the same file.
+   Driver.group (DriverGroup enum, defaults to `partner`) is in schema.prisma and
+   the eligibility index is now
+   @@index([isOnline, isActive, verificationStatus, vehicleClass, group]).
+   driverAssignment.js sorts candidates by GROUP_RANK before distance, WITHIN a
+   radius ring rather than across the whole 20→80 km sweep — walking all three
+   groups out to 80 km first would send a ride 60 km to Raju instead of 5 km to a
+   partner, which is a priority rule turning into a worse ride. Both passes
+   (sharing and normal) iterate the same sorted array, so both respect priority.
+   The scan also now filters `suspendedAt: null`.
+   PERSISTED OFFERS DONE 8 Aug 2026 (schema + service + endpoints, migrated).
+   Scheduled rides no longer go through the synchronous getDriver
+   path at all — that one stays for ride-now, where a rider is watching a spinner
+   and needs an answer in seconds.
+     - RideOffer (+ OfferStatus: pending | accepted | rejected | withdrawn),
+       unique on [bookingId, driverId] so the forever-running 5-minute sweep can
+       never stack duplicates on one driver's page.
+     - services/scheduledOffers.js — offerScheduledRide (creates the rows, pushes
+       FCM fire-and-forget), withdrawOtherOffers, withdrawOffersForDriver.
+     - GET /driver/offers (the notification page), PATCH /driver/offers/:id/accept,
+       PATCH /driver/offers/:id/reject.
+   ONLINE STATUS IS NOT IN THE OFFER QUERY — offline drivers receive scheduled
+   offers, exactly as specified. The accept endpoint is what refuses them, with
+   code OFFLINE, so the app can show "Go Online to Accept" instead of hiding the
+   ride. REJECT WORKS OFFLINE ON PURPOSE: a driver who knows he cannot do
+   Tuesday's 6am should not have to go online to say so, and the sooner he says
+   it the sooner the ride escalates.
+   OFFERS GO TO A WHOLE GROUP AT ONCE, not one driver at a time. First to accept
+   wins through the same status-guarded claimBooking, and every other pending
+   offer is withdrawn in the same breath — which is what makes the spec's
+   "notification disappears when another driver gets it" mean anything. A ride a
+   day out cannot afford a per-driver timeout chain.
+   ESCALATION rcs -> partner happens when every rcs offer has come back REJECTED,
+   not on a timer. An unanswered offer is NOT a rejection: the spec leaves it
+   sitting on the driver's page, so escalating past it on a clock would hand the
+   ride away while he is still deciding. See eligibleGroup() in dispatch.js.
+   Booking.adminAlertedAt added and stamped BEFORE the send, guarded on still
+   being null: the T−1h WhatsApp used to re-fire every 5 minutes for the last
+   hour — twelve identical billed messages per unfilled ride.
+   Sweep horizon cut 12 h -> 6 h (ASSIGNMENT_HORIZON_H) and the overlapping-run
+   defect is fixed with a `running` guard. Both were called out below as known
+   defects; they are no longer.
+   Cancelling a booking now withdraws its pending offers in the SAME transaction
+   (routes/bookings.js) — a cancelled ride left on a driver's page is one he can
+   tap accept on.
+   requireApprovedDriver now refuses a suspended driver, with the reason, which
+   covers going online, accepting and every ride transition in one gate.
+   STILL TO DO HERE: seed Raju's driver row as `admin` and his fleet as `rcs`
+   (nothing sets a non-default group yet, so every driver is `partner` and the
+   ordering is a no-op until one is set), the availability calculus (ride
+   duration + travel time + traffic buffer + nextCommitmentAt), and calling
+   withdrawOffersForDriver from the suspension mutation once that exists.
+   SOURCE: driver-assignment.txt, Raju's own dispatch spec. It currently lives
+   at d:\Downloads\driver-assignment.txt — OUTSIDE THE REPO. Copy it into
+   docs/ before it gets lost; everything below is the summary, not the file.
+   It EXTENDS block 3, it does not replace it.
+   ONE ENGINE — assignDriver(bookingId) — serves ride-now, scheduled, retry
+   after timeout, and reassignment. Only the trigger differs.
+   THREE DRIVER GROUPS, always tried in this order:
+     admin (Raju)  ->  rcs (own drivers)  ->  partner
+   IDENTIFYING RAJU (8 Aug 2026) — THERE ARE THREE ADMINS, AND ONLY ONE OF THEM
+   IS THE ADMIN DRIVER. Raju logs in on phone 8586088085. These are two
+   different identities and the code currently has neither:
+     - "admin" the DASHBOARD ROLE — Clerk session metadata.role === 'admin',
+       checked by protectAdmin (middleware/auth.ts). FLAT: all three admins are
+       identical to it. This is NOT a dispatch concept.
+     - "admin" the DRIVER GROUP — a property of Raju's DRIVER row, which is
+       what the priority window actually offers rides to. He is a driver who
+       also happens to hold the dashboard role, not an admin who drives.
+   SO: put the group on Driver (Driver.group = admin | rcs | partner) and let
+   the engine read THAT. The phone number is only how you find/seed his row —
+   the assignment hot path must never string-compare a phone.
+   THE NUMBER IS ALREADY PUBLIC AND ALREADY IN THE REPO — it is the business's
+   published support line, not a private number: frontend/constants/support.js
+   (tel: targets), frontend/constants/legal.js ("By phone: 8586088085" in the
+   privacy policy), driver-app/constants/support.ts, and the built bundle in
+   frontend/dist that ships to every visitor. So there is nothing to redact
+   here. The env-var argument is about COUPLING, not secrecy.
+   !! ONE NUMBER IS DOING THREE JOBS: public support line, ADMIN_PHONE (the
+   T−1h WhatsApp escalation, services/assignScheduledRides.js:31 — its only
+   use), and Raju's own login. Hand the support line to a support person one
+   day and you silently move dispatch priority and admin escalations with it.
+   Keep them separable: ADMIN_PHONE stays its OWN env var rather than importing
+   the support constant, and dispatch priority reads Driver.group, never a
+   phone number.
+   !! STILL OPEN: block 11 says only an admin can lift a suspension, and
+   protectAdmin gives all three admins that power equally. Confirm whether
+   lifting a suspension is Raju-only or any-admin.
+   !! Driver HAS NO GROUP COLUMN TODAY. Adding one means revisiting
+   @@index([isOnline, isActive, verificationStatus, vehicleClass]) — the group
+   has to go INSIDE that index, or every radius ring of every assignment scans
+   all drivers and filters in memory. Same for the suspension flag (block 11).
+   RIDE NOW: radius-bounded, drivers notified ONE BY ONE, accept/reject/
+   timeout, then walk down the groups. Every eligible driver tried ->
+   "Couldn't find a driver. Please contact support." (status no_driver).
+   THERE IS NO MANUAL ASSIGNMENT FOR RIDE-NOW — deliberate.
+   SCHEDULED: admin priority window first, only Raju is notified.
+   HOLD LENGTH ANSWERED 8 Aug 2026: 15 min if pickup is within 2 h, 45 min if
+   further. This SUPERSEDES BOTH earlier figures — the 15/30 in
+   driver-assignment.txt and the 15/60 in block 3 — and closes open question (g).
+   Lives in constants/dispatch.js (OWNER_HOLD_NEAR_MIN / OWNER_HOLD_FAR_MIN),
+   one constant each. Do not restore either old number.
+   Then RCS drivers, where ONLINE STATUS DOES NOT MATTER: the filter is
+   approved + active + free at pickup + no conflicting ride + enough travel
+   time + traffic buffer. AVAILABILITY IS NOT A PICKUP-TIME CHECK — it is
+   ride duration + travel time + traffic buffer against the driver's next
+   booking. (His example: ride ends 11:45, 20 min hop, 10 min buffer, arrival
+   12:15 for a 12:20 pickup = valid; arrival 12:25 = rejected.)
+   OFFLINE DRIVERS DO receive scheduled offers but cannot accept one — the
+   card shows "Go Online to Accept". On accept, re-verify server-side (ride
+   still available, driver still free, not assigned elsewhere) with a
+   status-guarded updateMany, same shape as claimBooking — NOT the unguarded
+   update driver.ts accept still has.
+   OFFER LIFETIME: a scheduled offer stays on the driver's notification page
+   until he accepts, rejects, or it is assigned to someone else — at which
+   point it disappears on its own.
+   RETRY every 5 min until T−1h. At T−1h WhatsApp Raju ("No driver has
+   accepted Booking #123, pickup 6:00 PM") and KEEP RETRYING every 5 min until
+   someone accepts or the pickup time arrives. TELLING THE ADMIN DOES NOT STOP
+   THE ENGINE — that is the part most likely to get built wrong.
+   REASSIGNMENT: driver presses "Request Reassignment" (breakdown, emergency,
+   sick leave). Ride returns to the pool and the engine restarts from the top.
+
+10. DRIVER WALLET + RIDE ACCEPTANCE DEPOSIT
+   SCHEMA DONE AND MIGRATED 8 Aug 2026. NO CODE WRITES IT YET.
+   WalletEntry (append-only ledger, SIGNED amount so the balance is a plain sum),
+   WalletEntryType (deposit_hold, deposit_refund, coupon_reimbursement, fine,
+   commission, payout, adjustment), PaymentMethod (wallet | cash | upi — the
+   "how was this fee settled" column his spec requires), and Driver.walletBalance
+   as a CACHE of sum(entries). Write the cache in the SAME TRANSACTION as the
+   entry or the two drift, and the drift is money. Balance goes negative on
+   purpose — that is the state that blocks going online.
+   The deposit percentage is not encoded anywhere yet, on purpose: it is Raju's
+   number and so is whether it applies below the ₹800 floor (asked 8 Aug).
+   THE DEPOSIT: before a driver is shown the rider's details, he pays a
+   PERCENTAGE OF THE FARE. On ride completion that money is returned to his
+   DRIVER WALLET. This is Raju's/the user's decision, taken after the
+   trade-offs below were put to them — it is not an open question.
+   PERCENTAGE STILL OPEN (Raju's number). Deposit is per-ride, not standing.
+   THE WALLET is a maintained balance and pays for:
+     - the ride acceptance deposit
+     - future platform charges (commission, fines — block 11)
+     - receiving coupon reimbursement (block 12)
+   Every movement is recorded with HOW it was paid — wallet / cash / UPI — so
+   an admin can always see how a platform fee was settled. That audit trail is
+   part of the spec, not a nice-to-have.
+   !! THE DEPOSIT DOES NOT, BY ITSELF, DETER OVERCHARGING. It refunds on
+   COMPLETION, and a driver who demands ₹200 extra at the drop still completes
+   the ride and still gets it back. What it actually deters is accept-then-
+   vanish. The overcharging lever is block 11, and the two are independent —
+   do not let "we have the deposit" stand in for shipping block 11.
+   !! FLOAT COST IS REAL. 10% of ₹500 across ~10 rides/day locks ~₹500 of an
+   owner-driver's working capital at any moment. These are Raju's own drivers,
+   not a surplus pool. If drivers start refusing rides or pushing riders
+   off-app, this is the first thing to look at — that is the failure mode, and
+   it will not announce itself as one.
+   !! ACCEPT-FLOW LATENCY. A UPI collect inside accept turns a 2-second tap
+   into 20-40 seconds, inside a ring-based radius scan that assumes fast
+   accepts. If dispatch gets slow after this ships, this is why. The cheap
+   mitigation if it bites: accrue the deposit as a LEDGER CHARGE on accept and
+   settle it against wallet balance, so no payment step sits in the hot path.
+   !! REGULATORY LINE — DO NOT CROSS IT. The wallet is safe as an
+   accounts-payable ledger: the PLATFORM credits it (coupon reimbursement,
+   deposit refunds), the DRIVER spends it (fees) or withdraws it. The moment a
+   driver can TOP IT UP with his own UPI to hold a balance, it becomes a
+   prepaid payment instrument under RBI PPI rules and inherits exactly the
+   licensing exposure block 7 was designed to avoid. NO TOP-UP. Credit in,
+   spend or withdraw out.
+
+11. OVERCHARGE FLAG -> STRIKES -> FINE -> SUSPENSION
+   SCHEMA DONE AND MIGRATED 8 Aug 2026. NO CODE WRITES IT YET.
+   OverchargeFlag is UNIQUE ON bookingId — one ride, one flag. Without that a
+   single annoyed rider taps five times and suspends a driver off one trip, which
+   is the cheapest possible abuse of the whole system. It snapshots `fareAtFlag`
+   because Booking.fare can still move (changed drop, added stop) and the flag
+   has to be reviewable against the number the rider actually saw.
+   Driver.suspendedAt + suspensionReason are separate from isActive, as specified,
+   and driverAssignment.js now filters `suspendedAt: null`.
+   THRESHOLD CHANGED 8 Aug: the message sent to Raju says 3 complaints -> fine
+   (not "more than 3"), 5 -> suspend. That also closes the strike-3 gap flagged
+   below. Nothing enforces either number yet — the fine amount is still his.
+   The rider gets a "Driver overcharged" button on a completed ride. Pressing
+   it FLAGS the driver.
+     - more than 3 flags  ->  the driver is FINED
+     - 5 flags            ->  the account is SUSPENDED, and ONLY AN ADMIN can
+                              lift the suspension
+   FINE AMOUNT STILL OPEN (Raju's number).
+   SUSPENDED DRIVERS (his spec, block 9's source file): cannot go online,
+   cannot receive ride-now, cannot receive scheduled offers, and LOSE ALL
+   PENDING SCHEDULED OFFERS — those bookings immediately restart assignment.
+   His full suspension grounds are wider than this feature: asking extra
+   money, fraud, unsafe driving, misbehaviour, fake trips.
+   !! SUSPENSION NEEDS ITS OWN COLUMN. Do not reuse isActive — you lose the
+   reason and cannot tell "suspended for overcharging" from "deactivated". And
+   whatever gets added must go into the eligibility index (block 9), or
+   suspended drivers keep getting scanned on every ring.
+   !! FINES LAND IN THE WALLET, and this is the elegant part: debit the fine
+   from wallet credit; if the balance is short it goes NEGATIVE, and a
+   negative balance blocks going online until it is cleared. No gateway, no
+   collections, no chasing — and the coupon reimbursements he is owed pay it
+   down automatically.
+   TRADE-OFFS PUT TO THE USER AND KNOWINGLY ACCEPTED — these are recorded so
+   they are not re-argued, and so the symptoms are recognisable if they show:
+     - RAW FLAGS, NOT UPHELD ONES. A free rider-side button where 5 presses
+       end a driver's income can be abused, and the honest false positive is
+       common: a rider charged the 35% cancellation fee genuinely believes he
+       was overcharged. Recommended and NOT adopted: admin review between flag
+       and strike, and deduping repeat flags from the same rider.
+     - NO DECAY WINDOW. 5 flags across two years counts the same as 5 in a
+       week. Recommended and not adopted: a rolling 90-day window.
+     - STRIKE 3 IS UNDEFINED by the rule as written ("more than 3" fines at 4,
+       suspension at 5).
+     - FLAG IS A BOOLEAN, not an amount. Capturing "asked for ₹200 extra"
+       would make an admin review take five seconds against the stored fare /
+       rideFare, and let a fine scale to the offence. Worth revisiting if
+       reviewing flags turns out to be slow.
+   If any of these turn into real problems in practice, THAT is the trigger to
+   revisit — not a hunch beforehand.
+
+12. CUSTOMER COUPONS + DRIVER RATINGS
+   SCHEMA DONE AND MIGRATED 8 Aug 2026. NO CODE WRITES IT YET.
+   DriverReview: unique on bookingId (a ride is rated once — a driver cannot
+   collect five ratings from one journey), rating 1-5 enforced in the route since
+   Prisma has no check constraint. Average / total / recent are DERIVED from the
+   table, NOT cached on Driver: nothing indexes a rating, the profile is not a hot
+   path, and an average that drifts is worse than a sum.
+   Coupon: a ROW per issued coupon, not a counter on User — the coupon outlives
+   the month that earned it, and redemption has to be atomic. `@@unique([userId,
+   earnedFor])` stops one month issuing two coupons however many times the job
+   runs; the unique `bookingId` stops the same ₹100 being spent on two bookings
+   racing each other.
+   STILL TO DO: the 6-rides-in-a-month issuing job, redemption inside the SIGNED
+   FARE QUOTE (see the !! below — this is the trap), the wallet credit on
+   redemption, and the review endpoints.
+   COUPON: ₹100 after 6 completed rides within the SAME MONTH, usable on any
+   future ride. Customer pays fare − coupon in cash (₹400 fare, ₹100 coupon,
+   ₹300 collected). The DRIVER WALLET IS CREDITED 100% OF THE COUPON VALUE
+   IMMEDIATELY on use — the driver is never out of pocket for the discount.
+   This is the reason the wallet has to exist at all, independent of block 10.
+   !! COUPONS ARE MONEY-BEARING, SO THE COUPON MUST GO INSIDE THE SIGNED FARE
+   QUOTE (see SERVER-SIDE FARE RECOMPUTATION below, which already says every
+   new money-bearing field must). A coupon applied beside the quote instead of
+   inside it is a discount anyone can forge in the request body. This is the
+   trap in this feature.
+   DRIVER'S RIDE CARD must break the money out in full: ride fare / coupon
+   applied / customer pays / wallet credit. His principle, verbatim: every
+   financial transaction is visible to the driver.
+   RATINGS: 1-5 plus written review after every completed ride. Driver profile
+   shows average rating, total reviews, completed rides, recent reviews.
 
 SERVER-SIDE FARE RECOMPUTATION — DONE 31 Jul 2026, as a signed estimate.
    /api/fare/estimate now returns `quote` alongside `fares`: the same numbers
@@ -1009,12 +1279,24 @@ OUTSTATION — PARKED until the driver app exists. When it returns: per-day
    classes; plain-vs-hills via Elevation API (outstation only, cached by
    destination, counted in ApiUsage). isOutstation stays on Booking meanwhile.
 
-OPEN QUESTIONS LOG (as of 30 Jul 2026)
+OPEN QUESTIONS LOG (as of 8 Aug 2026)
    For Raju: (a) 5% commission / ₹800 floor redistribution vs his ₹25-₹100
    sheet — confirm; (b) inter-terminal prices: toll/parking included?;
    (c) premium SUV x3.2 (= 2x the SUV) is our number, not his — confirm;
    (d) outstation, whenever it comes back: Wagon R rate, the >250 km/day rate,
-   calendar day vs 24h, and the plain/hills split.
+   calendar day vs 24h, and the plain/hills split;
+   (e) NEW 8 Aug — ride acceptance deposit: what percentage of the fare?
+   (block 10); (f) NEW 8 Aug — overcharge fine: how much? (block 11);
+   For us: (h) NEW 8 Aug — is lifting a driver's suspension Raju-only, or any
+   of the three admins? protectAdmin cannot tell them apart today (block 9).
+   ANSWERED 8 Aug: (g) scheduled-ride admin hold is 15 min / 45 min, superseding
+   both the 15/30 and the 15/60. Driver groups: `admin` is Raju's OWN driver row
+   and nobody else's; his drivers are `rcs`; "works for RCS Travels?" IS the
+   rcs-vs-partner split and needs no separate boolean.
+   ANSWERED 8 Aug: driver wallet — YES, the platform has one now (block 10,
+   supersedes the blanket "no driver wallet" line in block 7). Ride acceptance
+   deposit refunds to that wallet on completion. Overcharge flag thresholds:
+   >3 fine, 5 suspend, admin-only reinstate.
    ANSWERED 30 Jul: driver documents — his list, police verification dropped
    (block 6). Marketplace: yes, the posting driver is paid (block 7).
    For us: round-trip toggle UX on OnBoarding; scheduler mechanism; payment
