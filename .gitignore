@@ -137,6 +137,23 @@ ds-bundle/
 /screenshot.mjs
 temporary screenshots/
 
+# Design notes written up after a piece of work: what was built, which
+# alternatives were rejected and why. Useful to read back, but they are a
+# NARRATIVE ABOUT the code rather than an input to it — the reasons that have to
+# survive are already in the comments beside the thing they explain, which is
+# where somebody changing that line will actually look. Kept out of the repo so
+# there is no second copy to go stale against the first.
+#
+# The durable planning record stays tracked: ROADMAP.txt, CONTEXT.md, COSTS.md,
+# System-Design.txt.
+/decisions/
+
+# Throwaway scripts run against the database or the API to check something once
+# — row counts before a migration, a backfill's output afterwards. Written to be
+# deleted; this catches the ones that outlive the check.
+/_*.mjs
+/_*.js
+
 # =========================
 # Owner fare-zone editor
 # =========================
