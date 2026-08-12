@@ -2,6 +2,35 @@ RCS TRAVELS — PROJECT ROADMAP
 ===============================
 
 IMPORTANT:
+- !! EVERY SEEDED TEST NUMBER IS A PLAUSIBLE REAL INDIAN MOBILE, AND SOME OF THEM HAVE
+  ROWS IN THE PRODUCTION DATABASE. Nothing breaks while this is wrong, which is exactly
+  why it needs writing down.
+  The seeds use 9800000001, 9810000001, 9810000002, 9810000003, 9810000004 and
+  9876543210 (prisma/seed.js, prisma/seed-captain.js). EVERY ALLOCATED INDIAN MOBILE
+  STARTS 6, 7, 8 OR 9 — so all six are numbers a real person can be issued, and
+  9876543210 is one somebody certainly owns. Rows for several of them are live today.
+  WHY IT MATTERS: the real owner who tries to sign up is told "this number already has
+  an account" and cannot register, against a row he has never seen. He has no way to
+  report it and we have no way to tell his signup from a duplicate.
+  FIX, both halves:
+    1. Delete the fake User / Driver rows and their OtpVerification rows from
+       production. clean-bookings.js and clean-seed-data.js do not cover identities,
+       so this needs a targeted delete.
+    2. Re-seed in a range that CANNOT be allocated. Numbers starting 0-5 are not valid
+       Indian mobile subscriber numbers (0 is the trunk prefix), and
+       routes/hybridAuth.js validates only `phone.length === 10` — so 0000000001
+       upward passes every check in the system and can never collide with a real
+       person. Change prisma/seed.js and seed-captain.js to match, or the same problem
+       walks straight back in on the next db:seed.
+  THE TRADE-OFF, recorded so it is not rediscovered as a bug: a fake number cannot
+  receive a WhatsApp OTP, so it cannot complete a login on a deployed environment —
+  Meta accepts the send, answers 200, and silently drops it. Testing auth against Cloud
+  Run therefore needs a REAL handset. A "log the code for these numbers" bypass was
+  built for exactly this on 12 Aug 2026 and DELIBERATELY REVERTED THE SAME DAY: a code
+  on stdout is a working login for anyone holding roles/logging.viewer, and that precise
+  defect had already reached production once before. DO NOT REINTRODUCE IT. Use a real
+  number, or point the frontend at a local backend for the auth step only, where
+  NODE_ENV is unset and the code is printed by design.
 - ROTATE EVERY PRODUCTION CREDENTIAL ONCE THE CLOUD RUN MIGRATION IS FINISHED.
   On 12 Aug 2026, while assembling backend/.env.production to load Secret Manager,
   the plaintext values of the whole production set were surfaced into an assistant
