@@ -8,7 +8,7 @@ import { ACTIVE_STATUSES } from './bookings.js'
 import { ASSIGNABLE_STATUSES, claimBookingForDriver } from '../services/driverAssignment.js'
 import { withdrawOtherOffers } from '../services/scheduledOffers.js'
 import { seatsOf } from '../constants/vehicles.js'
-import { supabase, DRIVER_DOCUMENTS_BUCKET } from '../lib/supabase.js'
+import { isStorageConfigured, signedUploadUrl, stat, remove } from '../lib/storage.js'
 import { sniffUpload, scanDocument, discardUpload, DRIVER_SCAN_MESSAGE } from '../services/documentScan.js'
 import { signedDriverPhotoUrl } from '../services/driverPhoto.js'
 import { notifyDocumentsSubmitted } from '../services/documentNotifications.js'
@@ -446,10 +446,9 @@ async function resolveUploadVehicle(
 }
 
 driverRouter.post('/me/documents/upload-url', protect, async (req, res) => {
-    if (!supabase) {
+    if (!isStorageConfigured()) {
         return res.status(503).json({ error: 'Document uploads are not configured on this server' })
     }
-    const bucket = supabase.storage.from(DRIVER_DOCUMENTS_BUCKET)
 
     const { userId } = getAuth(req)
     if (!userId) return res.status(401).json({ error: 'Not signed in' })
@@ -486,16 +485,9 @@ driverRouter.post('/me/documents/upload-url', protect, async (req, res) => {
             // hands out a path the next one refuses.
             const prefix = uploadPrefix({ driverId: driver.id, vehicleId: vehicle?.id, type })
             const path = `${prefix}${crypto.randomUUID()}.${extension}`
-            const { data, error } = await bucket.createSignedUploadUrl(path, { upsert: true })
+            const signed = await signedUploadUrl(path)
 
-            if (error) throw error
-
-            return {
-                type,
-                path: data.path,
-                uploadUrl: data.signedUrl,
-                token: data.token,
-            }
+            return { type, path: signed.path, uploadUrl: signed.uploadUrl }
         })
     )
 
@@ -510,7 +502,7 @@ driverRouter.post('/me/documents/upload-url', protect, async (req, res) => {
 })
 
 driverRouter.post('/me/documents', protect, async (req, res) => {
-    if (!supabase) {
+    if (!isStorageConfigured()) {
         return res.status(503).json({ error: 'Document uploads are not configured on this server' })
     }
 
@@ -527,8 +519,6 @@ driverRouter.post('/me/documents', protect, async (req, res) => {
 
     const vehicle = await resolveUploadVehicle(driver, parsed.data, res)
     if (vehicle === undefined) return
-
-    const bucket = supabase.storage.from(DRIVER_DOCUMENTS_BUCKET)
 
     // Validated before anything is written, and all of it before any of it: a
     // captain who submits six documents with one bad expiry date should be told
@@ -592,8 +582,10 @@ driverRouter.post('/me/documents', protect, async (req, res) => {
             })
         }
 
-        const { data: info, error } = await bucket.info(path)
-        if (error || !info) {
+        let info: { size: number | null, contentType: string | null }
+        try {
+            info = await stat(path)
+        } catch {
             return res.status(409).json({
                 error: `${documentLabelOf(type)} was not uploaded — try again`,
                 type,
@@ -803,8 +795,15 @@ driverRouter.post('/me/documents', protect, async (req, res) => {
         .map((row) => row.fileUrl)
 
     if (orphaned.length) {
-        const { error } = await bucket.remove(orphaned)
-        if (error) console.error('documents: could not remove replaced objects', orphaned, error)
+        // Swallowed, as before. The rows are committed and the captain is
+        // unblocked; what is left behind is a few hundred kilobytes nothing
+        // points at, and failing the request over it would make him re-upload
+        // documents that are already saved.
+        try {
+            await remove(orphaned)
+        } catch (err) {
+            console.error('documents: could not remove replaced objects', orphaned, (err as Error).message)
+        }
     }
 
     // Which required documents are still missing, so the app can render the rest

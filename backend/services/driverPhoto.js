@@ -1,4 +1,4 @@
-import { supabase, DRIVER_DOCUMENTS_BUCKET } from '../lib/supabase.js'
+import { isStorageConfigured, signedReadUrl } from '../lib/storage.js'
 
 // The captain's photograph, as a rider sees it.
 //
@@ -31,20 +31,17 @@ const RIDER_URL_TTL_SECONDS = 15 * 60
 const SELF_URL_TTL_SECONDS = 60 * 60
 
 async function sign(path, expiresIn) {
-  if (!path || !supabase) return null
+  if (!path || !isStorageConfigured()) return null
 
-  const { data, error } = await supabase.storage
-    .from(DRIVER_DOCUMENTS_BUCKET)
-    .createSignedUrl(path, expiresIn)
-
-  if (error || !data) {
+  try {
+    return await signedReadUrl(path, expiresIn)
+  } catch (err) {
     // Never throws. A missing avatar is a cosmetic problem on every screen that
     // renders one, and failing a booking response over it would turn that into
     // a rider who cannot see his ride at all.
-    console.error(`driverPhoto: could not sign ${path}:`, error?.message)
+    console.error(`driverPhoto: could not sign ${path}:`, err.message)
     return null
   }
-  return data.signedUrl
 }
 
 /**

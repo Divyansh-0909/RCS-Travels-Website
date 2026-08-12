@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto'
 import sharp from 'sharp'
 import { prisma } from '../db/prisma.js'
-import { supabase, DRIVER_DOCUMENTS_BUCKET } from '../lib/supabase.js'
+import { isStorageConfigured, readRange, read, write, remove, signedReadUrl } from '../lib/storage.js'
 import { maxBytesFor, MAX_DOCUMENT_BYTES } from '../constants/driverDocuments.js'
 import { notifyScanFailed } from './documentNotifications.js'
 import { recomputeAfterDocumentChange } from './driverDocuments.js'
@@ -82,28 +82,17 @@ export function magicContentType(bytes) {
   return null
 }
 
-const bucketOf = () => {
-  if (!supabase) throw new Error('Supabase is not configured')
-  return supabase.storage.from(DRIVER_DOCUMENTS_BUCKET)
-}
-
 /**
  * What the file at `path` actually is, by its first bytes. Returns the matching
  * content type, or null for anything not on the list above.
+ *
+ * Sixteen bytes, not a download. lib/storage.js owns how that is achieved —
+ * Supabase has no range read and needs a signed URL plus an HTTP Range request,
+ * where GCS and S3 read the range directly — and this function is deliberately
+ * unaware of which.
  */
-async function sniffContentType(bucket, path) {
-  const { data, error } = await bucket.createSignedUrl(path, 60)
-  if (error || !data) throw error ?? new Error('object missing from storage')
-
-  const response = await fetch(data.signedUrl, {
-    headers: { Range: `bytes=0-${SNIFF_BYTES - 1}` },
-  })
-  // 206 is the expected answer; 200 means the range was ignored and the whole
-  // object is coming, which is fine for a file this small but not for a 10 MB
-  // PDF. Either way the first bytes are the first bytes.
-  if (!response.ok) throw new Error(`could not read the object (${response.status})`)
-
-  return magicContentType(new Uint8Array(await response.arrayBuffer()))
+async function sniffContentType(path) {
+  return magicContentType(await readRange(path, 0, SNIFF_BYTES - 1))
 }
 
 /**
@@ -116,13 +105,13 @@ async function sniffContentType(bucket, path) {
  * DriverDocument row exists pointing at the object.
  */
 export async function sniffUpload(path) {
-  return sniffContentType(bucketOf(), path)
+  return sniffContentType(path)
 }
 
 /** Best-effort removal of an object no row will ever point at. */
 export async function discardUpload(path) {
   try {
-    await bucketOf().remove([path])
+    await remove([path])
   } catch (err) {
     console.error(`documentScan: could not discard ${path}:`, err.message)
   }
@@ -202,17 +191,12 @@ const sha256 = (buffer) => createHash('sha256').update(buffer).digest('hex')
  * decide whether trying again could possibly help.
  */
 export async function verifyDocument(path) {
-  const bucket = bucketOf()
-
-  const contentType = await sniffContentType(bucket, path)
+  const contentType = await sniffContentType(path)
   if (!contentType) {
     return { scanStatus: 'failed', scanReason: 'file signature matches no accepted format', fileHash: null }
   }
 
-  const { data: blob, error } = await bucket.download(path)
-  if (error || !blob) throw error ?? new Error('object missing from storage')
-
-  const buffer = Buffer.from(await blob.arrayBuffer())
+  const buffer = await read(path)
 
   // The first point at which the real byte count is known rather than declared.
   // Per-type, because an image has already been through the app's compression
@@ -268,11 +252,7 @@ export async function verifyDocument(path) {
   // contentType is set HERE, by this server, from what the bytes actually were.
   // From this point the object's declared type is the only one in the system
   // that was not chosen by whoever uploaded it.
-  const { error: uploadError } = await bucket.upload(path, reencoded, {
-    contentType: 'image/jpeg',
-    upsert: true,
-  })
-  if (uploadError) throw uploadError
+  await write(path, reencoded, 'image/jpeg')
 
   // Hashed AFTER re-encoding, so it fingerprints what is actually stored. Two
   // drivers uploading the same photograph land on the same hash; a file whose
@@ -437,7 +417,7 @@ export async function scanDocument(id, options) {
  * always had one.
  */
 export async function sweepDocumentScans() {
-  if (!supabase) return
+  if (!isStorageConfigured()) return
 
   const now = Date.now()
 
@@ -484,8 +464,8 @@ export async function sweepDocumentScans() {
 }
 
 export function startDocumentScanJob() {
-  if (!supabase) {
-    console.warn('documentScan: Supabase not configured — the scan sweep will not run.')
+  if (!isStorageConfigured()) {
+    console.warn('documentScan: storage not configured — the scan sweep will not run.')
     return
   }
 
@@ -521,14 +501,18 @@ export async function signedDocumentUrl(document, expiresInSeconds = 120) {
   // dependency being healthy, which is not what "fails closed" means.
   if (!document || document.scanStatus !== 'clean') return null
 
-  if (!supabase) throw new Error('Supabase is not configured')
+  // Still a throw, and still separate from the failure below. "Storage is not
+  // configured" is a deployment fault the operator has to see; a signing error
+  // on a correctly configured bucket is a transient the admin screen can render
+  // as a missing link. Collapsing the two would hide the first behind the second.
+  if (!isStorageConfigured()) throw new Error('Storage is not configured')
 
-  const { data, error } = await supabase.storage
-    .from(DRIVER_DOCUMENTS_BUCKET)
-    .createSignedUrl(document.fileUrl, expiresInSeconds, { download: true })
-
-  if (error || !data) return null
-  return data.signedUrl
+  try {
+    return await signedReadUrl(document.fileUrl, expiresInSeconds, { download: true })
+  } catch (err) {
+    console.error(`documentScan: could not sign ${document.fileUrl}:`, err.message)
+    return null
+  }
 }
 
 export { MAX_IMAGE_PIXELS, MAX_DOCUMENT_BYTES, PDF_REJECT, PDF_FLAG, scanPdf, sha256 }
