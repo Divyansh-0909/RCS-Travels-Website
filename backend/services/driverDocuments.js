@@ -5,7 +5,7 @@ import {
   isVehicleDocument,
 } from '../constants/driverDocuments.js'
 import { ACTIVE_STATUSES } from '../routes/bookings.js'
-import { notifyDocumentExpired, notifyParkedCarDocumentExpired } from './documentNotifications.js'
+import { notifyDocumentExpired, notifyDocumentExpiring, notifyParkedCarDocumentExpired } from './documentNotifications.js'
 
 // The document LIFECYCLE: what a set of documents says about a driver, what
 // happens when a renewal is approved, and what happens when one lapses.
@@ -529,20 +529,219 @@ export async function sweepExpiredDocuments() {
   return changed
 }
 
+// When a captain is told his paperwork is running out, counted in days before the
+// date printed on it. Largest first — the loop below takes the first one a
+// document has crossed.
+//
+// Three rather than one because they answer different questions. Thirty days is
+// "start the renewal", which for an insurance policy means ringing an agent.
+// Seven is "this is now urgent". One is "tomorrow you cannot work", which is the
+// only one worth a same-day interruption.
+const REMINDER_DAYS = [30, 7, 1]
+
+// The NARROWEST threshold this document has crossed, or undefined if it is still
+// outside all of them.
+//
+// Narrowest, not widest, and the distinction is the whole ladder. `find` on the
+// descending list above returns 30 for a document with seven days left — it is
+// the first entry seven is less than — and the dedup would then read
+// `expiryWarnedDays === 30` against a threshold of 30 and stay silent. The 7-day
+// and 1-day messages would never have fired at all, and nothing would have
+// looked wrong: the 30-day reminder went out, and the log would show it.
+//
+// filter keeps the descending order, so the last survivor is the smallest.
+const thresholdFor = (days) => REMINDER_DAYS.filter((t) => days <= t).at(-1)
+
+// IST, fixed at +05:30 with no DST — the same shift the ride summaries use, and
+// for the same reason: an expiry is a date on a piece of paper in India, not an
+// instant on a server that could be anywhere.
+const IST_OFFSET_MS = 330 * 60 * 1000
+
+// Reminders are HELD outside these hours, not dropped. Nothing here is urgent
+// enough to wake somebody — a document with thirty days left still has thirty at
+// eight in the morning — and a fleet is exactly the audience that turns
+// notifications off wholesale after being pinged once at 3am.
+//
+// The LAPSE notification is deliberately exempt. That one says "you cannot work
+// right now", and a captain about to start a shift needs it whenever it is true.
+const QUIET_FROM_HOUR = 22
+const QUIET_UNTIL_HOUR = 7
+
+const inQuietHours = (now) => {
+  const istHour = new Date(now.getTime() + IST_OFFSET_MS).getUTCHours()
+  return istHour >= QUIET_FROM_HOUR || istHour < QUIET_UNTIL_HOUR
+}
+
+// Whole days from today to the expiry date, both taken at IST midnight.
+//
+// Counted in DATES rather than elapsed milliseconds, because an expiry is a date.
+// Measured from the instant, a captain reading "1 day left" at 11pm would read
+// "expired" ninety minutes later with nothing having happened to the document in
+// between. This is the same arithmetic the app's own expiryLabel uses, so the
+// screen and the notification cannot disagree about what day it is.
+function daysUntil(expiresAt, now) {
+  const istMidnight = (d) => {
+    const ist = new Date(d.getTime() + IST_OFFSET_MS)
+    return Date.UTC(ist.getUTCFullYear(), ist.getUTCMonth(), ist.getUTCDate())
+  }
+  return Math.round((istMidnight(expiresAt) - istMidnight(now)) / 86_400_000)
+}
+
+/**
+ * The reminder sweep: documents that have NOT expired yet but are about to.
+ *
+ * The counterpart to sweepExpiredDocuments, and the half that actually saves a
+ * captain money. That one runs after the fact and takes him off the road; this
+ * one runs before, and gives him the chance never to go off it — which is the
+ * entire point of the replacement slot, since a renewal uploaded while the
+ * current certificate is still valid never interrupts him for a day.
+ *
+ * IDEMPOTENT BY CONSTRUCTION. `expiryWarnedDays` holds the smallest threshold
+ * already sent, and a threshold only fires when it is smaller than that. So this
+ * can run hourly, twice at once, or catch up after a day of downtime without
+ * repeating a message — which is what lets it share the lapse sweep's timer
+ * instead of needing a daily one that a restart could silently skip.
+ */
+export async function sweepExpiringDocuments() {
+  const now = new Date()
+  if (inQuietHours(now)) return 0
+
+  const horizon = new Date(now.getTime() + REMINDER_DAYS[0] * 86_400_000)
+
+  // Not lapsed yet, inside the widest threshold, and approved — an unreviewed
+  // document is not one he is relying on, and telling him to renew something the
+  // office has not accepted is noise.
+  //
+  // ALL expiring types, not only the required ones. The lapse sweep filters to
+  // required because only those can take a man off the road; a reminder is a
+  // nudge, and an optional CNG certificate running out still makes the car
+  // illegal to drive with. Nothing else in the system would ever mention it.
+  const soon = await prisma.driverDocument.findMany({
+    where: {
+      isReplacement: false,
+      status: 'approved',
+      expiresAt: { gt: now, lte: horizon },
+    },
+    select: {
+      id: true,
+      driverId: true,
+      vehicleId: true,
+      type: true,
+      expiresAt: true,
+      expiryWarnedDays: true,
+      vehicle: { select: { number: true } },
+    },
+  })
+
+  if (!soon.length) return 0
+
+  // Owners who already have a renewal in flight. He has done the thing the
+  // reminder would ask of him, and being chased for it anyway is how a captain
+  // decides these messages are not worth reading.
+  const owners = [...new Set(soon.map((d) => d.vehicleId ?? d.driverId))]
+  const renewals = await prisma.driverDocument.findMany({
+    where: { isReplacement: true, ownerId: { in: owners } },
+    select: { ownerId: true, type: true },
+  })
+  const renewing = new Set(renewals.map((r) => `${r.ownerId}:${r.type}`))
+
+  // How many cars each captain has, so a message only names a plate when the
+  // plate distinguishes something. "Your insurance expires in 30 days" is exact
+  // for a man with one car and ambiguous for a man with three.
+  const fleetSizes = new Map(
+    (await prisma.vehicle.groupBy({
+      by: ['driverId'],
+      where: { driverId: { in: [...new Set(soon.map((d) => d.driverId))] } },
+      _count: { _all: true },
+    })).map((row) => [row.driverId, row._count._all]),
+  )
+
+  let sent = 0
+
+  for (const document of soon) {
+    try {
+      const ownerId = document.vehicleId ?? document.driverId
+      if (renewing.has(`${ownerId}:${document.type}`)) continue
+
+      const days = daysUntil(document.expiresAt, now)
+      // A row first seen with 6 days left gets the 7-day message once, not the
+      // 30 then the 7 in the same pass.
+      const threshold = thresholdFor(days)
+      if (threshold === undefined) continue
+
+      // Already told at this threshold or a tighter one. This is the whole dedup.
+      if (document.expiryWarnedDays !== null && document.expiryWarnedDays <= threshold) continue
+
+      // Marked BEFORE the push, guarded on the value just read. Two workers
+      // reaching the same row send one message between them, and a push that
+      // throws does not leave the row eligible again next pass — an un-sent
+      // reminder is a far smaller failure than the same one every hour for a
+      // week.
+      const { count } = await prisma.driverDocument.updateMany({
+        where: { id: document.id, expiryWarnedDays: document.expiryWarnedDays },
+        data: { expiryWarnedDays: threshold, expiryWarnedAt: now },
+      })
+      if (count === 0) continue
+
+      const multipleCars = (fleetSizes.get(document.driverId) ?? 0) > 1
+      await notifyDocumentExpiring(
+        document.driverId,
+        document.type,
+        days,
+        multipleCars ? document.vehicle?.number ?? null : null,
+      )
+      sent += 1
+    } catch (err) {
+      console.error(`driverDocuments: could not remind about ${document.id}:`, err.message)
+    }
+  }
+
+  if (sent) console.log(`driverDocuments: sent ${sent} expiry reminder(s)`)
+  return sent
+}
+
 // Hourly, not nightly. A document expires on a date, but "expired" has to become
 // true at some point during that day — a nightly job at 02:00 leaves a driver
 // carrying a lapsed certificate for up to a day, and the cost of checking is one
 // indexed query against a table this small.
+//
+// The reminder sweep rides the same timer. It is idempotent, so cadence cannot
+// make it chatty, and hourly catches a threshold crossing within the hour rather
+// than up to a day late — while a daily job would lose a whole round of
+// reminders to a restart at the wrong minute.
 const EXPIRY_SWEEP_INTERVAL_MS = 60 * 60 * 1000
 
-export function startDocumentExpiryJob() {
-  const run = () => {
-    sweepExpiredDocuments().catch((err) =>
-      console.error('driverDocuments expiry sweep:', err.message),
-    )
-  }
+/**
+ * Both expiry passes, in the order they have to run.
+ *
+ * Split out from the timer below so Cloud Scheduler can drive the same body over
+ * HTTP where a setInterval cannot run — see lib/jobs.js. Each half keeps its own
+ * .catch, so one failing sweep never costs the other: a Storage or WhatsApp
+ * problem in the reminder pass must not stop lapsed documents taking a driver
+ * off the road, which is the half with a legal consequence behind it.
+ *
+ * Therefore never throws, and the HTTP trigger answers 200 even on a bad pass.
+ * Correct here: the next run is an hour away, nothing in it is urgent to the
+ * minute, and a scheduler retry would only repeat the same failure sooner.
+ */
+export async function sweepDocumentExpiry() {
+  // Lapsed first. If a document crossed both lines since the last pass — which
+  // a day of downtime is enough for — he should hear that he is off the road,
+  // not be reminded to renew something that has already gone.
+  await sweepExpiredDocuments().catch((err) =>
+    console.error('driverDocuments expiry sweep:', err.message),
+  )
+  await sweepExpiringDocuments().catch((err) =>
+    console.error('driverDocuments reminder sweep:', err.message),
+  )
+}
 
-  run()
-  const timer = setInterval(run, EXPIRY_SWEEP_INTERVAL_MS)
+export function startDocumentExpiryJob() {
+  // Once on boot, then hourly. The boot run is deliberate — a deploy at 09:05
+  // should not leave a licence that lapsed at midnight unnoticed until 10:00 —
+  // and it is why the scheduler-mode equivalent needs no special first tick:
+  // Cloud Scheduler's own cadence covers it.
+  sweepDocumentExpiry()
+  const timer = setInterval(sweepDocumentExpiry, EXPIRY_SWEEP_INTERVAL_MS)
   timer.unref?.()
 }

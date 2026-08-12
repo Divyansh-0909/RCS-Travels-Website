@@ -16,14 +16,17 @@ import usersRouter from './routes/users.js'
 import hybridAuthRouter from './routes/hybridAuth.js'
 import adminRouter from './routes/admin.js'
 import googleRouter from './routes/googleAPI.js'
+import internalRouter from './routes/internal.js'
+import { JOBS_MODE } from './lib/jobs.js'
 
 const app = express()
 const PORT = process.env.PORT || 5000
 
-// Render terminates TLS at a proxy, so without this every request appears to
-// come from the load balancer and the rate limiters below would treat the whole
-// internet as one client. `1` = trust exactly one hop; never `true`, which lets
-// a caller spoof X-Forwarded-For and slip the limit entirely.
+// Render terminates TLS at a proxy, and so does Cloud Run's front end — without
+// this every request appears to come from the load balancer and the rate
+// limiters below would treat the whole internet as one client. `1` = trust
+// exactly one hop, which is correct on both; never `true`, which lets a caller
+// spoof X-Forwarded-For and slip the limit entirely.
 app.set('trust proxy', 1)
 
 // Comma-separated allowlist, e.g. "https://rcstravels.vercel.app". Defaults to
@@ -44,6 +47,14 @@ app.use(cors({
   credentials: true,
 }))
 app.use(express.json())
+
+// BEFORE clerkAuth, and that ordering is the point. These endpoints carry a
+// Google-signed OIDC token in the Authorization header, not a Clerk session, and
+// clerkMiddleware reads that header — so mounting them after it would hand Clerk
+// a token it has no business parsing. They authenticate themselves; see
+// middleware/internalAuth.js.
+app.use('/internal', internalRouter)
+
 app.use(clerkAuth)
 
 // Both of these proxy billed Google APIs and cannot require auth — a rider sees
@@ -84,18 +95,36 @@ const server = app.listen(PORT, async () => {
   // a failure here leaves the zones.geojson rates loaded, so the server still
   // quotes fares while the database is unreachable.
   await initFareZones()
-  startAssignmentJob()
-  // Picks up documents no verdict was ever recorded for — rows written before
-  // the scan existed, and rows whose scan a restart interrupted. Without it
-  // `pending` would be a trap rather than a safe default: the admin screen
-  // refuses to serve those files and nothing else would ever move them out of
-  // it. Runs once now and every five minutes after.
-  startDocumentScanJob()
-  // The lapse sweep. A licence or an insurance certificate expires on a date,
-  // and "expired" has to become true during that day — a driver whose insurance
-  // ran out this morning must not still be taking rides tonight because the job
-  // runs at 02:00. Recomputes his verification, which is what takes him offline.
-  startDocumentExpiryJob()
+
+  // The three background sweeps, started here only when this process is the one
+  // holding the clock. On Cloud Run it is not: with min-instances=0 the CPU is
+  // throttled between requests and a setInterval never fires, so the cadence
+  // lives in Cloud Scheduler and arrives as POST /internal/jobs/:name instead.
+  // lib/jobs.js has the full reasoning and validates the mode at import, so an
+  // unrecognised JOBS_MODE has already thrown by the time we get here.
+  if (JOBS_MODE === 'interval') {
+    startAssignmentJob()
+    // Picks up documents no verdict was ever recorded for — rows written before
+    // the scan existed, and rows whose scan a restart interrupted. Without it
+    // `pending` would be a trap rather than a safe default: the admin screen
+    // refuses to serve those files and nothing else would ever move them out of
+    // it. Runs once now and every five minutes after.
+    startDocumentScanJob()
+    // The lapse sweep. A licence or an insurance certificate expires on a date,
+    // and "expired" has to become true during that day — a driver whose insurance
+    // ran out this morning must not still be taking rides tonight because the job
+    // runs at 02:00. Recomputes his verification, which is what takes him offline.
+    startDocumentExpiryJob()
+  }
+
+  // Logged at boot, loudly, on both paths. A service in `scheduler` mode with
+  // nothing pointed at it runs no sweeps at all and looks perfectly healthy from
+  // outside — this line is the only place that distinction is visible.
+  console.log(
+    JOBS_MODE === 'interval'
+      ? 'jobs: dispatch, document-scan and document-expiry running on in-process timers'
+      : 'jobs: timers OFF — expecting Cloud Scheduler to POST /internal/jobs/:name',
+  )
   console.log(`Server running on port ${PORT}`)
 })
 

@@ -428,8 +428,15 @@ export async function scanDocument(id, options) {
  * admin screen refuses to serve those files, and nothing would ever move them
  * out, so one restart at the wrong moment would strand a captain's onboarding
  * with no error visible anywhere.
+ *
+ * Exported so Cloud Scheduler can drive it over HTTP where a setInterval cannot
+ * run (see lib/jobs.js). Unlike the other two sweeps this one is allowed to
+ * throw: a Storage outage mid-sweep is worth a 500 and a scheduler retry,
+ * because the documents it did not reach are captains sitting on a "Checking…"
+ * screen. The timer path below keeps its own .catch for the same reason it
+ * always had one.
  */
-async function sweep() {
+export async function sweepDocumentScans() {
   if (!supabase) return
 
   const now = Date.now()
@@ -484,7 +491,7 @@ export function startDocumentScanJob() {
 
   // Never awaited and never allowed to throw: this is a timer, and an unhandled
   // rejection inside one takes the whole server with it.
-  const run = () => { sweep().catch((err) => console.error('documentScan sweep:', err.message)) }
+  const run = () => { sweepDocumentScans().catch((err) => console.error('documentScan sweep:', err.message)) }
 
   run()
   const timer = setInterval(run, SWEEP_INTERVAL_MS)
