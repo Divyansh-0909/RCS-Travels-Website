@@ -48,7 +48,7 @@ const HowItWorks = () => {
     `;
 
     return (
-        <div className="bg-[var(--foreground)] text-[var(--text-foreground)] gap-15 pt-15 sm:pt-20 flex flex-col items-center justify-center">
+        <div className="bg-[var(--foreground)] text-[var(--text-foreground)] gap-10 pt-15 sm:pt-30 flex flex-col items-center justify-center">
             <div className="text-left flex flex-col w-[82%] md:w-[90%] xl:w-[74%] justify-center gap-2 items-start">
                 <h1 className="font-bold text-3xl sm:text-5xl">Book a ride in four simple steps</h1>
             </div>
@@ -69,9 +69,9 @@ const HowItWorks = () => {
                             <li
                                 key={step.number}
                                 aria-hidden={index !== current}
-                                className={`flex flex-col sm:flex-row ${index % 2 === 0 ? "sm:flex-row-reverse" : ""} w-full shrink-0 px-1 sm:px-3 pb-3 gap-6 justify-between items-center`}
+                                className={`flex flex-col sm:flex-row ${index % 2 === 0 ? "sm:flex-row-reverse" : ""} w-full shrink-0 px-1 sm:px-3 pb-3 gap-4 justify-between items-center`}
                             >
-                                <img src={step.illustration} alt="illustration" className="md:w-90 lg:w-110 xl:w-130 rounded-xl" />
+                                <img src={step.illustration} alt="illustration" className="md:w-90 lg:w-110 xl:w-120 rounded-xl" />
                                 <div className="lg:w-[48%] flex flex-col justify-center items-start text-left gap-4 sm:gap-6">
                                     <h1 className="relative text-3xl sm:text-4xl font-semibold text-[var(--text-foreground)] flex flex-col sm:items-start justify-center">
                                         <span className="w-fit z-1 relative text-[var(--text)] bg-[var(--background)] px-4 py-2 rounded-xl shadow-[4px_6px_0_rgba(0,0,0,0.25)] sm:shadow-[8px_10px_0_rgba(0,0,0,0.25)] ">{step.number}</span>
@@ -88,7 +88,7 @@ const HowItWorks = () => {
                 </ul>
             </div>
 
-            <div className="-mt-8 flex items-center justify-center gap-6">
+            <div className="-mt-7 sm:mt-0 flex items-center justify-center gap-6">
                 <button
                     type="button"
                     onClick={() => setCurrent((c) => c - 1)}

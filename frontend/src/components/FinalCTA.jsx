@@ -5,11 +5,6 @@ const FinalCTA = () => {
     
     const data = [
         {
-            title: "Sign up to book a ride",
-            description: "Click here to",
-
-        },
-        {
             title: "Drive for us",
             description: "Scan the QR to download the drivers app",
         }
