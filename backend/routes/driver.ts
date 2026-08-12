@@ -10,6 +10,7 @@ import { withdrawOtherOffers } from '../services/scheduledOffers.js'
 import { seatsOf } from '../constants/vehicles.js'
 import { isStorageConfigured, signedUploadUrl, stat, remove } from '../lib/storage.js'
 import { sniffUpload, scanDocument, discardUpload, DRIVER_SCAN_MESSAGE } from '../services/documentScan.js'
+import { enqueueDocumentScan } from '../lib/tasks.js'
 import { signedDriverPhotoUrl } from '../services/driverPhoto.js'
 import { notifyDocumentsSubmitted } from '../services/documentNotifications.js'
 import {
@@ -832,21 +833,39 @@ driverRouter.post('/me/documents', protect, async (req, res) => {
     const heldTypes = new Set<string>(held.map((d) => d.type))
 
     // The heavy half of the check — re-encoding each image from its decoded
-    // pixels, reading each PDF for active content — after the response and
-    // never awaited. A captain who has just uploaded six documents should not
-    // hold a spinner through six downloads and six JPEG encodes on a 512 MB
-    // instance, and none of it changes what this endpoint has to say.
+    // pixels, reading each PDF for active content — happens somewhere else, so a
+    // captain who has just uploaded six documents does not hold a spinner through
+    // six downloads and six JPEG encodes. None of it changes what this endpoint
+    // has to say.
     //
-    // Sequential, for the same reason the sweep is: concurrent sharp decodes are
-    // how that instance runs out of memory. scanDocument never throws, and the
-    // sweep in services/documentScan.js re-runs anything a restart interrupts,
-    // so a process that dies here loses nothing but time.
+    // ONE TASK PER DOCUMENT rather than a loop after the response, and the
+    // difference is Cloud Run. `setImmediate` used to run the scans here, which
+    // works on a server that keeps executing after it answers; on Cloud Run the
+    // CPU is throttled once the response is sent, so that work could get a few
+    // milliseconds and then stall until some later request happened to wake the
+    // instance. The five-minute sweep did rescue it — but "rescued in five
+    // minutes" is a captain watching a Checking… screen for five minutes on the
+    // one screen standing between him and being paid.
+    //
+    // Per document, not per batch, because they are independent: a 10 MB PDF
+    // failing to download must not delay the verdict on the licence beside it,
+    // and the queue's own concurrency limit is what keeps two sharp decodes from
+    // landing on one instance at once.
     setImmediate(async () => {
-        // Told first, before the scanning starts. He has just tapped upload and
+        // Told first, before any scanning starts. He has just tapped upload and
         // is watching the screen; a confirmation that arrives after a 10 MB PDF
         // has been downloaded and read is a confirmation he stopped waiting for.
         await notifyDocumentsSubmitted(driver.id, checked.map((d) => d.type))
-        for (const { id } of rows) await scanDocument(id)
+
+        for (const { id } of rows) {
+            const queued = await enqueueDocumentScan(id)
+            // No queue configured (a laptop), or the enqueue failed. Fall back to
+            // scanning inline — which is what this endpoint always did, and is
+            // still right anywhere the process keeps running after it answers.
+            // enqueueDocumentScan never throws, so a queue outage degrades to the
+            // old behaviour rather than losing the scan.
+            if (!queued) await scanDocument(id)
+        }
     })
 
     return res.json({

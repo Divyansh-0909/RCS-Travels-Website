@@ -1,6 +1,7 @@
 import express from 'express'
 import { requireInternalCaller } from '../middleware/internalAuth.js'
 import { runJob, isJobName, JOB_NAMES, JOBS_MODE } from '../lib/jobs.js'
+import { scanDocument } from '../services/documentScan.js'
 
 // The machine-facing half of the API: endpoints nothing human and nothing in a
 // browser ever calls.
@@ -61,6 +62,40 @@ internalRouter.post('/jobs/:name', async (req, res) => {
 
     console.log(`jobs: ${name} -> ${result.status}${result.ms === undefined ? '' : ` in ${result.ms}ms`}`)
     return res.json({ job: name, ...result })
+})
+
+/**
+ * Scan ONE document now. Delivered by Cloud Tasks, moments after the captain's
+ * upload was confirmed.
+ *
+ * This is the fast path that replaced `setImmediate(() => scanDocument(id))` in
+ * the confirm endpoint. On a server that keeps running after it answers, that was
+ * correct; on Cloud Run the CPU is throttled once the response is sent, so work
+ * scheduled for "after the response" may never get the cycles to finish. A task
+ * is a request, and a request is what Cloud Run wakes up for.
+ *
+ * ALWAYS 200, EXCEPT WHEN A RETRY WOULD HELP. scanDocument swallows its own
+ * errors and records its own verdict — a file it cannot read is `failed` with a
+ * reason, which is a result and not a delivery failure. Answering non-2xx for
+ * that would make Cloud Tasks redeliver a task whose work is already done, five
+ * times, with backoff. The only thing worth a retry is this handler itself
+ * throwing, which falls through to errorHandler and its 500.
+ *
+ * Safe to deliver twice: claimDocument's conditional UPDATE means the second
+ * caller finds nothing to claim and returns without doing any work.
+ */
+internalRouter.post('/scan/:id', async (req, res) => {
+    const { id } = req.params
+
+    const startedAt = Date.now()
+    // `allowStale` deliberately absent: this is the normal path for a document
+    // that has just been written as `pending`. Reclaiming one already marked
+    // `scanning` is the sweep's job, and it decides that on age rather than on
+    // being asked.
+    await scanDocument(id)
+
+    console.log(`tasks: scan ${id} handled in ${Date.now() - startedAt}ms`)
+    return res.json({ document: id, status: 'handled', ms: Date.now() - startedAt })
 })
 
 export default internalRouter

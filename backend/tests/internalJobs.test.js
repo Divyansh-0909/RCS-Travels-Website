@@ -87,6 +87,17 @@ describe('the gate on /internal', () => {
     assert.equal((await response.json()).code, 'INTERNAL_AUTH_REQUIRED')
   })
 
+  test('gates the per-document scan route too', async () => {
+    // The router applies requireInternalCaller once, for everything under it —
+    // this asserts that adding a route cannot accidentally add an open one. It
+    // matters more here than on /jobs: this endpoint takes an id from the URL and
+    // does real work with it, so an unauthenticated caller could drive scans for
+    // any document in the system.
+    const response = await post('/internal/scan/some-document-id')
+    assert.equal(response.status, 401)
+    assert.equal((await response.json()).code, 'INTERNAL_AUTH_REQUIRED')
+  })
+
   test('refuses a bearer token that is not the secret', async () => {
     const response = await post('/internal/jobs/dispatch', { authorization: 'Bearer wrong' })
     // Falls through the dev-secret branch to the OIDC one, which has nothing
