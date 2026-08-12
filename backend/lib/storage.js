@@ -1,139 +1,172 @@
-import { supabase, DRIVER_DOCUMENTS_BUCKET } from './supabase.js'
+import 'dotenv/config'
+import { Storage } from '@google-cloud/storage'
 
 // Object storage, in this application's terms rather than a vendor's.
 //
 // WHY THIS EXISTS. Every driver document — a licence, an insurance certificate,
-// a photograph of a captain's face — lives in object storage, and until now the
-// vendor's own client was called directly from four places: the upload-url and
-// confirm endpoints, the scanner, and the rider-facing photo URL. That is fine
-// while there is one vendor. It stops being fine the moment there are two,
-// because "move to Google Cloud Storage" then means edits scattered across a
-// route file, a scanner and a notification helper, each with its own error
-// handling, and no single place to be sure they all agree.
-//
-// So this is the seam. Everything above it speaks in paths and buffers;
-// everything below it is one vendor's SDK. Swapping Supabase Storage for GCS
-// becomes a rewrite of this file and nothing else.
+// a photograph of a captain's face — lives in object storage, and it used to be
+// reached by calling the vendor's client directly from four places: the
+// upload-url and confirm endpoints, the scanner, and the rider-facing photo URL.
+// Eighteen call sites, each with its own error handling. This is the seam that
+// replaced them: above it nothing knows the vendor, below it is one SDK. It is
+// what made swapping Supabase Storage for Google Cloud Storage a rewrite of this
+// file and nothing else.
 //
 // WHAT THIS IS NOT: a general-purpose storage wrapper. There are exactly seven
 // operations because the application performs exactly seven, and each signature
-// is shaped by its one caller. A thin pass-through of the vendor's API would
-// have moved the coupling rather than removed it — `readRange` is the clearest
-// case, see its comment.
+// is shaped by its one caller.
 //
-// ERRORS ARE THROWN, uniformly. The vendor returns `{ data, error }` tuples and
-// the callers each want something different from a failure: the scanner treats
-// an unreachable object as retryable, the rider's avatar degrades to no picture,
-// a discarded upload is best-effort. Encoding those policies here would bury
-// them; throwing keeps each decision at the call site that owns it.
+// ERRORS ARE THROWN, uniformly. The callers each want something different from a
+// failure — the scanner treats an unreachable object as retryable, the rider's
+// avatar degrades to no picture, a discarded upload is best-effort — and
+// encoding those policies here would bury them.
+//
+// WHY GCS RATHER THAN SUPABASE STORAGE. Two reasons, neither of them "it is
+// newer". The credential model: Supabase Storage is reached with a service_role
+// key, a single long-lived string that bypasses RLS and can read every object in
+// every bucket, which has to be stored somewhere and can leak. Cloud Run holds no
+// key at all — it authenticates as an attached service account whose credentials
+// are short-lived and rotated by the platform, scoped by IAM to this one bucket.
+// And availability: a paused Supabase project takes storage down with the
+// database, so a captain's onboarding and a rider's view of his driver's face
+// both fail for a reason that has nothing to do with either.
+//
+// WHAT WE GAVE UP, recorded because it was a real control and is now gone.
+// Supabase buckets carry `allowedMimeTypes` and `fileSizeLimit`, enforced by the
+// storage service itself — the one check a caller holding a signed URL could not
+// talk his way past. GCS has no equivalent. Partially replaced by binding the
+// content type into the signature below (a signed URL now only accepts the type
+// it was minted for); the rest of the defence is the confirm endpoint reading the
+// object's REAL size and first bytes, and the scanner re-encoding it.
+
+// Which bucket, and the switch that says whether storage is usable at all.
+// Absent in a checkout without cloud access, exactly as SUPABASE_URL used to be:
+// the document routes answer 503 rather than throwing, so every other route still
+// works on a laptop with no Google credentials.
+const BUCKET = process.env.GCS_BUCKET
+
+// One client for the process. Credentials come from Application Default
+// Credentials — the attached service account on Cloud Run, `gcloud auth
+// application-default login` on a developer machine. THERE IS NO KEY FILE AND
+// THERE MUST NEVER BE ONE: a service-account JSON in the repo or an env var is
+// the long-lived secret this migration existed to get rid of.
+const storage = BUCKET ? new Storage() : null
 
 /**
  * Is object storage usable at all in this process?
  *
- * Development runs without keys — lib/supabase.js hands back a null client
- * rather than refusing to boot, so every route that does not touch documents
+ * Development runs without it, so every route that does not touch documents
  * still works. The endpoints that do need it answer 503 off this.
  */
-export const isStorageConfigured = () => supabase !== null
+export const isStorageConfigured = () => storage !== null
 
 function bucket() {
-  // The same sentence lib/supabase.js documents at length: production cannot
-  // reach here (it throws at import without keys), so this is the development
-  // path, and a clear message beats a TypeError about reading `storage` of null.
-  if (!supabase) throw new Error('Storage is not configured')
-  return supabase.storage.from(DRIVER_DOCUMENTS_BUCKET)
+  if (!storage) throw new Error('Storage is not configured (GCS_BUCKET is unset)')
+  return storage.bucket(BUCKET)
 }
 
-/** Fail with the vendor's message where there is one, and a usable one where there isn't. */
-const fail = (what, error) => {
-  throw error instanceof Error ? error : new Error(`${what}: ${error?.message ?? 'unknown storage error'}`)
-}
+// How long a signed upload URL lives. Long enough for a captain to photograph six
+// documents at a taxi stand on 4G and still be uploading; short enough that a URL
+// captured from a phone is dead before it is useful. Matches what the endpoint
+// reports back to the app as `expiresInSeconds`.
+const UPLOAD_URL_TTL_MS = 2 * 60 * 60 * 1000
 
 /**
- * A URL the holder may PUT one object to, once.
+ * A URL the holder may PUT one object to.
  *
  * The path is composed server-side by the caller (services/driverDocuments.js,
  * uploadPrefix) and never by the uploader — that is the property the whole
  * document security model rests on, and it lives there rather than here because
  * it is about driver identity, not about storage.
  *
+ * `contentType` IS BOUND INTO THE SIGNATURE. The client must then send exactly
+ * that header or Google rejects the PUT, which means this URL can no longer be
+ * used to upload a PDF where a photograph was asked for. It is the nearest thing
+ * GCS offers to the bucket-level mime allowlist Supabase enforced, and it is why
+ * this signature takes an argument the Supabase implementation did not need.
+ *
+ * SIGNING ON CLOUD RUN WORKS WITHOUT A PRIVATE KEY, and this is the one piece of
+ * setup that is not obvious: the runtime service account has no key to sign with,
+ * so the library signs through the IAM credentials API instead. That requires the
+ * account to hold roles/iam.serviceAccountTokenCreator ON ITSELF. Without it this
+ * call fails with a permission error that says nothing about signing.
+ *
  * @returns {Promise<{ path: string, uploadUrl: string }>}
  */
-export async function signedUploadUrl(path) {
-  const { data, error } = await bucket().createSignedUploadUrl(path, { upsert: true })
-  if (error || !data) fail(`could not sign an upload for ${path}`, error)
-
-  // `token` is deliberately dropped. Supabase returns it alongside the URL and
-  // it is already embedded IN that URL; the captain app has never read it
-  // (src/lib/uploadDocuments.ts takes path and uploadUrl only), and a signed PUT
-  // on any other vendor has no such concept. Returning it would put a
-  // Supabase-shaped field into an interface meant to outlive Supabase.
-  return { path: data.path, uploadUrl: data.signedUrl }
+export async function signedUploadUrl(path, contentType) {
+  const [uploadUrl] = await bucket().file(path).getSignedUrl({
+    version: 'v4',
+    action: 'write',
+    expires: Date.now() + UPLOAD_URL_TTL_MS,
+    contentType,
+  })
+  return { path, uploadUrl }
 }
 
 /**
  * A short-lived URL for READING one object.
  *
- * `download` sets Content-Disposition: attachment, which is what turns a file
- * that survived the scanner into something a browser saves rather than renders —
- * see the comment on signedDocumentUrl for why that matters on the admin
- * dashboard specifically.
+ * `download` sets Content-Disposition: attachment, so whatever the file turns out
+ * to be the browser saves it instead of rendering it in a tab — which is what
+ * turns a surviving HTML-in-a-JPEG into an inert file rather than script running
+ * on the dashboard that administers the whole fleet.
  */
 export async function signedReadUrl(path, expiresInSeconds, { download = false } = {}) {
-  const { data, error } = await bucket().createSignedUrl(path, expiresInSeconds, { download })
-  if (error || !data) fail(`could not sign a read for ${path}`, error)
-  return data.signedUrl
+  const [url] = await bucket().file(path).getSignedUrl({
+    version: 'v4',
+    action: 'read',
+    expires: Date.now() + expiresInSeconds * 1000,
+    ...(download ? { responseDisposition: 'attachment' } : {}),
+  })
+  return url
 }
 
 /**
  * What storage BELIEVES about an object: its declared size and content type.
  *
  * "Believes" is the operative word and the caller must treat it that way. The
- * content type is the header the uploader sent — Supabase stores that string and
- * never inspects the bytes — so this is a claim, not a fact. The real check is
- * readRange plus magic bytes, in services/documentScan.js.
+ * content type is what was declared at upload — the service stores that string
+ * and never inspects the bytes — so this is a claim, not a fact. The real check
+ * is readRange plus magic bytes, in services/documentScan.js.
  *
  * @returns {Promise<{ size: number | null, contentType: string | null }>}
  */
 export async function stat(path) {
-  const { data, error } = await bucket().info(path)
-  if (error || !data) fail(`could not stat ${path}`, error)
-  return { size: data.size ?? null, contentType: data.contentType ?? null }
+  const [metadata] = await bucket().file(path).getMetadata()
+  return {
+    // GCS reports size as a decimal STRING, not a number. Left uncoerced it
+    // silently breaks every size comparison at the call site — '6000000' > 5242880
+    // is false, because JavaScript compares those as strings.
+    size: metadata.size != null ? Number(metadata.size) : null,
+    contentType: metadata.contentType ?? null,
+  }
 }
 
 /**
  * The first bytes of an object, as a byte range.
  *
- * THE REASON THIS IS AN OPERATION AND NOT A HELPER. Supabase Storage has no
- * range read, so the only way to get sixteen bytes without downloading a 10 MB
- * PDF is to mint a signed URL and issue an HTTP Range request against it — two
- * round trips and an implementation detail of one vendor. Google Cloud Storage
- * does have one (`createReadStream({ start, end })`), and so does S3.
- *
- * Exposing "read this range" rather than "give me a signed URL so I can range it
- * myself" is exactly what stops that vendor quirk leaking upward. The scanner
- * asks for bytes and gets bytes.
+ * A native ranged read. The Supabase implementation had to mint a signed URL and
+ * issue an HTTP Range request against it, because that API has no range read —
+ * two round trips and one vendor's quirk. Exposing "read this range" rather than
+ * "give me a URL so I can range it myself" is exactly what kept that from leaking
+ * upward, and is why this swap changed no caller.
  *
  * @returns {Promise<Uint8Array>}
  */
 export async function readRange(path, start, end) {
-  const url = await signedReadUrl(path, 60)
-
-  const response = await fetch(url, { headers: { Range: `bytes=${start}-${end}` } })
-  // 206 is the expected answer; 200 means the range was ignored and the whole
-  // object is coming, which is affordable for the sixteen bytes this is used for
-  // and would not be for a large file. Either way the first bytes are the first
-  // bytes, so this does not fail on it.
-  if (!response.ok) throw new Error(`could not read ${path} (${response.status})`)
-
-  return new Uint8Array(await response.arrayBuffer())
+  const chunks = []
+  // `end` is inclusive here and in the HTTP Range header, so the caller's
+  // (0, SNIFF_BYTES - 1) means the same thing it always did.
+  for await (const chunk of bucket().file(path).createReadStream({ start, end })) {
+    chunks.push(chunk)
+  }
+  return new Uint8Array(Buffer.concat(chunks))
 }
 
 /** The whole object. @returns {Promise<Buffer>} */
 export async function read(path) {
-  const { data, error } = await bucket().download(path)
-  if (error || !data) fail(`could not download ${path}`, error)
-  return Buffer.from(await data.arrayBuffer())
+  const [buffer] = await bucket().file(path).download()
+  return buffer
 }
 
 /**
@@ -142,14 +175,26 @@ export async function read(path) {
  * `contentType` is set by the SERVER here, from what the bytes were found to
  * actually be — which is what makes the stored object's declared type the only
  * one in the system that the uploader did not choose. See verifyDocument.
+ *
+ * `resumable: false` because every write through this path is a re-encoded image
+ * of a few hundred kilobytes. A resumable upload costs an extra round trip to
+ * open a session and buys nothing below about 10 MB.
  */
 export async function write(path, buffer, contentType) {
-  const { error } = await bucket().upload(path, buffer, { contentType, upsert: true })
-  if (error) fail(`could not write ${path}`, error)
+  await bucket().file(path).save(buffer, { contentType, resumable: false })
 }
 
-/** Delete objects. @param {string[]} paths */
+/**
+ * Delete objects.
+ *
+ * `ignoreNotFound` because both callers are cleaning up rather than asserting:
+ * one discards an upload no row will ever point at, the other collects objects a
+ * renewal has replaced. An object already gone is the desired end state, not an
+ * error worth failing a captain's upload over.
+ *
+ * @param {string[]} paths
+ */
 export async function remove(paths) {
-  const { error } = await bucket().remove(paths)
-  if (error) fail(`could not remove ${paths.join(', ')}`, error)
+  const b = bucket()
+  await Promise.all(paths.map((path) => b.file(path).delete({ ignoreNotFound: true })))
 }

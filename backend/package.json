@@ -17,7 +17,6 @@
     "db:seed": "node prisma/seed.js",
     "db:seed:captain": "node prisma/seed-captain.js",
     "db:seed:captain:rides": "node prisma/seed-captain-rides.js",
-    "storage:setup": "node scripts/setup-storage.js",
     "db:clean": "node prisma/clean-bookings.js",
     "db:clean:seed": "node prisma/clean-seed-data.js"
   },
@@ -25,9 +24,9 @@
     "@aws-sdk/client-s3": "^3.726.1",
     "@aws-sdk/s3-request-presigner": "^3.726.1",
     "@clerk/express": "^1.3.21",
+    "@google-cloud/storage": "^7.22.0",
     "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",
-    "@supabase/supabase-js": "2.112.2",
     "axios": "^1.7.9",
     "cors": "^2.8.5",
     "dotenv": "^16.6.1",

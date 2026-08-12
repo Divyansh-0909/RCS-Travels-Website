@@ -485,7 +485,13 @@ driverRouter.post('/me/documents/upload-url', protect, async (req, res) => {
             // hands out a path the next one refuses.
             const prefix = uploadPrefix({ driverId: driver.id, vehicleId: vehicle?.id, type })
             const path = `${prefix}${crypto.randomUUID()}.${extension}`
-            const signed = await signedUploadUrl(path)
+            // The content type is BOUND INTO THE SIGNATURE, so this URL will only
+            // accept a PUT carrying exactly this header. It is what stops a
+            // caller asking for a JPEG's URL and then pushing a PDF through it —
+            // the check that used to be the bucket's own mime allowlist. The
+            // captain app already sends it (uploadDocuments.ts), so nothing on
+            // the phone changes.
+            const signed = await signedUploadUrl(path, contentType)
 
             return { type, path: signed.path, uploadUrl: signed.uploadUrl }
         })
