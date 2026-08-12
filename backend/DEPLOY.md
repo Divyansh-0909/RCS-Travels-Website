@@ -77,6 +77,44 @@ Resulting identities:
 
 ---
 
+## 2b. The document bucket — DONE
+
+Driver documents live in Google Cloud Storage. Private, and it must stay that way:
+these are captains' licences, insurance certificates and photographs of their
+faces.
+
+```powershell
+gcloud storage buckets create gs://rcs-travels-driver-documents `
+  --location=$REGION --uniform-bucket-level-access --public-access-prevention
+
+# Scoped to this ONE bucket, not the project.
+gcloud storage buckets add-iam-policy-binding gs://rcs-travels-driver-documents `
+  --member="serviceAccount:rcs-api@$PROJECT.iam.gserviceaccount.com" `
+  --role="roles/storage.objectAdmin"
+```
+
+### The grant everybody forgets
+
+```powershell
+gcloud iam service-accounts add-iam-policy-binding `
+  rcs-api@$PROJECT.iam.gserviceaccount.com `
+  --member="serviceAccount:rcs-api@$PROJECT.iam.gserviceaccount.com" `
+  --role="roles/iam.serviceAccountTokenCreator"
+```
+
+The service account granting a role **to itself** looks like a mistake and is not.
+Cloud Run holds no private key, so the library cannot sign a V4 URL locally — it
+signs through the IAM `signBlob` API instead, which requires the caller to be a
+token creator for the identity it is signing as. Without this, every
+`signedUploadUrl` and `signedReadUrl` fails with a permission error that mentions
+nothing about signing, and the only visible symptom is that captains cannot
+upload documents and admins cannot open them.
+
+`GCS_BUCKET` is a plain environment variable, not a secret — a bucket name is not
+a credential, and there is deliberately no key to store.
+
+---
+
 ## 3. Secrets
 
 Never in the image, never in `--set-env-vars`. Environment variables set at
@@ -85,11 +123,12 @@ service YAML; Secret Manager values are not, and are versioned.
 
 ### Source the values from Render, not from your laptop
 
-`backend/.env` is a **development** config. `FARE_QUOTE_SECRET`, `SUPABASE_URL`
-and `SUPABASE_SECRET_KEY` are all empty in it, and the first two make the server
-refuse to boot when `NODE_ENV=production` — which the Dockerfile sets. The
-authoritative production values live in the Render dashboard under
-**Service → Environment**.
+`backend/.env` is a **development** config — its Clerk keys are `sk_test_`/`pk_test_`,
+which point at a completely separate user pool containing none of your real riders
+or captains. Push those and Cloud Run authenticates happily against an empty
+instance. The authoritative production values live in the Render dashboard under
+**Service → Environment** (until Render is retired; after that, Secret Manager is
+the only copy).
 
 Copy them into `backend/.env.production` (already gitignored by the `.env.*`
 rule), then:
@@ -106,7 +145,7 @@ file, hands gcloud `--data-file`, and deletes it in a `finally`. Re-running afte
 rotating a key adds a new version rather than failing.
 
 It exits non-zero if any boot-critical secret is missing — `DATABASE_URL`,
-`CLERK_SECRET_KEY`, `FARE_QUOTE_SECRET`, `SUPABASE_URL`, `SUPABASE_SECRET_KEY` —
+`CLERK_SECRET_KEY`, `FARE_QUOTE_SECRET` —
 so a missing one is caught here rather than as a Cloud Run crash loop.
 
 **`DATABASE_URL` must be the Supabase session pooler URI.** Direct connections
@@ -160,7 +199,8 @@ gcloud run deploy $SERVICE `
   --concurrency 40 `
   --allow-unauthenticated `
   --set-env-vars "CORS_ORIGINS=https://rcstravels.vercel.app" `
-  --set-secrets "DATABASE_URL=DATABASE_URL:latest,CLERK_SECRET_KEY=CLERK_SECRET_KEY:latest,CLERK_PUBLISHABLE_KEY=CLERK_PUBLISHABLE_KEY:latest,FARE_QUOTE_SECRET=FARE_QUOTE_SECRET:latest,GOOGLE_MAPS_API_KEY=GOOGLE_MAPS_API_KEY:latest,SUPABASE_URL=SUPABASE_URL:latest,SUPABASE_SECRET_KEY=SUPABASE_SECRET_KEY:latest,FIREBASE_SERVICE_ACCOUNT_BASE64=FIREBASE_SERVICE_ACCOUNT_BASE64:latest,WHATSAPP_ACCESS_TOKEN=WHATSAPP_ACCESS_TOKEN:latest,WHATSAPP_PHONE_NUMBER_ID=WHATSAPP_PHONE_NUMBER_ID:latest,WHATSAPP_VERIFY_TOKEN=WHATSAPP_VERIFY_TOKEN:latest,MSG91_AUTH_KEY=MSG91_AUTH_KEY:latest,MSG91_TEMPLATE_ID=MSG91_TEMPLATE_ID:latest,ADMIN_PHONE=ADMIN_PHONE:latest"
+  --set-env-vars "GCS_BUCKET=rcs-travels-driver-documents" `
+  --set-secrets "DATABASE_URL=DATABASE_URL:latest,CLERK_SECRET_KEY=CLERK_SECRET_KEY:latest,CLERK_PUBLISHABLE_KEY=CLERK_PUBLISHABLE_KEY:latest,FARE_QUOTE_SECRET=FARE_QUOTE_SECRET:latest,GOOGLE_MAPS_API_KEY=GOOGLE_MAPS_API_KEY:latest,FIREBASE_SERVICE_ACCOUNT_BASE64=FIREBASE_SERVICE_ACCOUNT_BASE64:latest,WHATSAPP_ACCESS_TOKEN=WHATSAPP_ACCESS_TOKEN:latest,WHATSAPP_PHONE_NUMBER_ID=WHATSAPP_PHONE_NUMBER_ID:latest,ADMIN_PHONE=ADMIN_PHONE:latest"
 ```
 
 Why these numbers:

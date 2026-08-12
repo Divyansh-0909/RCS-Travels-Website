@@ -7,11 +7,16 @@
 #   .\scripts\push-secrets.ps1 -DryRun             # show what WOULD be pushed
 #
 # SOURCE THE VALUES FROM RENDER, NOT FROM YOUR LAPTOP. backend/.env is a
-# development config: FARE_QUOTE_SECRET, SUPABASE_URL and SUPABASE_SECRET_KEY are
-# all empty in it, and the first two of those make the server refuse to boot when
-# NODE_ENV=production. The authoritative production values are in the Render
-# dashboard under Service -> Environment. Copy them into .env.production, which
-# .gitignore already excludes via `.env.*`.
+# development config — its Clerk keys are sk_test_/pk_test_, which point at a
+# separate user pool holding none of the real riders or captains, so pushing them
+# would give Cloud Run a Clerk instance that works perfectly and has no users.
+# The authoritative production values are in the Render dashboard under
+# Service -> Environment. Copy them into .env.production, which .gitignore already
+# excludes via `.env.*`.
+#
+# Object storage is NOT here any more. Driver documents moved to Google Cloud
+# Storage, which has no key to push: the runtime authenticates as its attached
+# service account and GCS_BUCKET is a plain env var on the service.
 #
 # NO VALUE IS EVER PRINTED, and none is ever passed as a command-line argument —
 # arguments are visible to any other process on the machine via the process list,
@@ -47,8 +52,6 @@ $SECRET_KEYS = @(
     "CLERK_PUBLISHABLE_KEY",
     "FARE_QUOTE_SECRET",
     "GOOGLE_MAPS_API_KEY",
-    "SUPABASE_URL",
-    "SUPABASE_SECRET_KEY",
     "FIREBASE_SERVICE_ACCOUNT_BASE64",
     "WHATSAPP_PHONE_NUMBER_ID",
     "WHATSAPP_ACCESS_TOKEN",
@@ -66,7 +69,7 @@ $SECRET_KEYS = @(
 # services/fareQuote.js, both of which throw at import when NODE_ENV=production.
 # Called out separately so a missing one is an obvious failure here rather than a
 # crash loop in Cloud Run twenty minutes later.
-$BOOT_CRITICAL = @("DATABASE_URL", "CLERK_SECRET_KEY", "FARE_QUOTE_SECRET", "SUPABASE_URL", "SUPABASE_SECRET_KEY")
+$BOOT_CRITICAL = @("DATABASE_URL", "CLERK_SECRET_KEY", "FARE_QUOTE_SECRET")
 
 if (-not (Test-Path $File)) {
     Write-Output "No such file: $File"

@@ -72,8 +72,11 @@ files and 13 backend endpoints — but **no real captain can log into it yet**; 
   capped at `DATABASE_POOL_MAX` (default 5) because on Cloud Run the default 10 is *per
   instance* — see `db/prisma.js`.
 - **PostgreSQL** (Supabase, free tier).
-- **Supabase Storage** for driver documents — one private `driver-documents` bucket, reached
-  only through `lib/storage.js` (see §3). Being migrated to Google Cloud Storage.
+- **Google Cloud Storage** for driver documents — one private bucket
+  (`rcs-travels-driver-documents`, `asia-south1`, uniform access, public-access prevention
+  enforced), reached only through `lib/storage.js` (see §3). **There is no storage key**:
+  credentials come from the attached service account, scoped by IAM to that one bucket.
+  Migrated off Supabase Storage on 12 Aug 2026, while the bucket was still empty.
 - **Clerk** (`@clerk/express`) — `clerkMiddleware()` globally, `protect` on protected routes,
   `protectAdmin` for the dashboard.
 - **zod** for query-parameter validation on the list endpoints (`types.ts`).
@@ -130,8 +133,7 @@ RCS-Travels-Website/
 │   │   └── errorHandler.js
 │   ├── db/prisma.js , lib/prisma.js    Prisma client (pg adapter, pool capped)
 │   ├── lib/
-│   │   ├── storage.js                  THE object-storage seam — 7 ops, no vendor above it
-│   │   ├── supabase.js                 the Storage client behind storage.js (server-only key)
+│   │   ├── storage.js                  THE object-storage seam — 7 ops over GCS, no vendor above
 │   │   ├── jobs.js                     job registry + JOBS_MODE (timers vs Cloud Scheduler)
 │   │   ├── firebase.js                 messaging() for sendPush
 │   │   └── bookingReference.js , phone.js
@@ -274,14 +276,24 @@ accepted | rejected | withdrawn), `VehicleClass` (hatchback | sedan | suv | suv_
 - **ApiUsage** — monthly external-call counter (`service`, `month` "YYYY-MM", `count`).
 - **OtpVerification** — one row per phone: `otpHash`, `expiresAt`, `used`.
 
-### Schema-only — migrated, but no code reads or writes them
+### Read-only — something queries them, nothing writes them
 
 - **DriverReview** — unique on `bookingId`, rating 1-5 (enforced in the route, not the DB).
-  Averages are derived rather than cached on `Driver`.
+  Averages are derived rather than cached on `Driver`, and `GET /api/driver/me` genuinely
+  aggregates them (`driver.ts`, `prisma.driverReview.aggregate`). **But no route ever creates a
+  review**, so the aggregate is over an empty set and every captain's rating is null forever.
+  The read half is finished; the write half does not exist.
+
+### Schema-only — migrated, but no code reads or writes them
+
 - **OverchargeFlag** — unique on `bookingId`, snapshots `fareAtFlag` because `Booking.fare`
   can still move.
 - **WalletEntry** — append-only ledger with a **signed** `amount`, so the balance is a plain
-  sum. `Driver.walletBalance` is a cache of it and must be written in the same transaction.
+  sum. `Driver.walletBalance` is meant to be a cache of it, written in the same transaction.
+  **Nothing writes either.** `walletBalance` *is* returned by `GET /api/driver/me` and rendered
+  by the app's `WalletCard`, so a captain sees a wallet that will read ₹0 for as long as the
+  ledger is unbuilt — the one place this gap is visible to a real person rather than only in
+  the schema.
 - **Coupon** — a row per issued coupon. `@@unique([userId, earnedFor])` stops one month
   issuing two; the unique `bookingId` stops the same ₹100 being spent twice.
 - **WhatsappSession** — booking-bot conversation state.
