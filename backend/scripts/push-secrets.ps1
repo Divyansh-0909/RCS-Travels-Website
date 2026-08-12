@@ -52,11 +52,15 @@ $SECRET_KEYS = @(
     "FIREBASE_SERVICE_ACCOUNT_BASE64",
     "WHATSAPP_PHONE_NUMBER_ID",
     "WHATSAPP_ACCESS_TOKEN",
-    "WHATSAPP_VERIFY_TOKEN",
-    "MSG91_AUTH_KEY",
-    "MSG91_TEMPLATE_ID",
     "ADMIN_PHONE"
 )
+
+# DELIBERATELY ABSENT: WHATSAPP_VERIFY_TOKEN, MSG91_AUTH_KEY, MSG91_TEMPLATE_ID.
+# Checked against the source — nothing in routes/, services/, lib/ or middleware/
+# reads any of them. MSG91 was an SMS provider the OTP flow no longer uses, and
+# the verify token belongs to a webhook that was never wired up. Pushing them
+# would create Secret Manager entries nobody reads, which later look like
+# something that matters. Add them back when there is code behind them.
 
 # Without these the container does not start at all — see lib/supabase.js and
 # services/fareQuote.js, both of which throw at import when NODE_ENV=production.

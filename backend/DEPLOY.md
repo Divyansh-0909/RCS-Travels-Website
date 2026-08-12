@@ -122,6 +122,31 @@ database credential into the runtime for nothing.
 No local Docker required — Cloud Build builds the Dockerfile in Google's
 infrastructure.
 
+### First, a one-time IAM grant that is not optional
+
+`gcloud run deploy --source` uploads the source to a staging bucket and hands the
+build to **Cloud Build**, which runs as the project's *default compute* service
+account. On projects created after Google tightened defaults, that account has no
+roles at all, so the first deploy fails with:
+
+```
+Error 403: …-compute@developer.gserviceaccount.com does not have
+storage.objects.get access to the Google Cloud Storage object
+```
+
+It is not a problem with the Dockerfile or the service account we created — the
+builder cannot read the zip it was just given. One grant fixes it permanently:
+
+```powershell
+gcloud projects add-iam-policy-binding $PROJECT `
+  --member="serviceAccount:PROJECT_NUMBER-compute@developer.gserviceaccount.com" `
+  --role="roles/cloudbuild.builds.builder" --condition=None
+```
+
+`roles/cloudbuild.builds.builder` is the composite role covering exactly this:
+read the source bucket, push to Artifact Registry, write build logs. The runtime
+identity is still `rcs-api` — the compute account only ever builds.
+
 ```powershell
 gcloud run deploy $SERVICE `
   --source . `
