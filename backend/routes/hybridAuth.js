@@ -87,20 +87,35 @@ hybridAuthRouter.post('/send-otp', async (req, res) => {
     create: { phone, otpHash, expiresAt },
   })
 
-  // !! TESTING ONLY — WhatsApp delivery is commented out and the code is printed
-  // to this server's console instead, so logging in needs no WhatsApp
-  // credentials and costs no messages. Put the block back before anyone outside
-  // this machine uses it: a code on stdout is a login for whoever reads the logs.
+  // WhatsApp in production, the console in development — and the two are
+  // mutually exclusive, keyed on the environment rather than on a commented-out
+  // block somebody has to remember to restore.
   //
-  // Fail loudly if delivery fails — otherwise the user sits on the OTP screen
-  // waiting for a message that will never arrive.
-  // try {
-  //   await sendOtpWhatsApp(phone, otp)
-  // } catch (err) {
-  //   console.error(err)
-  //   return res.status(502).json({ error: 'Could not send OTP, please retry' })
-  // }
-  console.log(`\n  ── OTP for ${phone}: ${otp} ──  (WhatsApp send is commented out)\n`)
+  // THAT IS THE WHOLE POINT OF THE SHAPE. The send used to be commented out with
+  // the console line as the only path, because it made local logins free and
+  // needed no credentials. It shipped that way, and every real rider then sat on
+  // the code screen waiting for a message nothing had sent — send-otp answered
+  // ok, so nothing looked wrong from either end.
+  //
+  // The console line is equally not something to leave switched on out there: a
+  // code on stdout is a working login for anyone who can read the logs, which on
+  // Cloud Run means everybody holding roles/logging.viewer, and the code is only
+  // half a credential away from the account. Hence `else` and not a second
+  // unconditional log.
+  //
+  // Fails loudly. A delivery failure must not answer ok — that is precisely the
+  // silence this block replaces, so a 502 sends the user back to a retry button
+  // instead of a screen that will never fill in.
+  if (process.env.NODE_ENV === 'production') {
+    try {
+      await sendOtpWhatsApp(phone, otp)
+    } catch (err) {
+      console.error(`send-otp: WhatsApp delivery failed for ${phone}:`, err)
+      return res.status(502).json({ error: 'Could not send OTP, please retry' })
+    }
+  } else {
+    console.log(`\n  ── OTP for ${phone}: ${otp} ──  (development; no WhatsApp sent)\n`)
+  }
 
   return res.json({ ok: true })
 })

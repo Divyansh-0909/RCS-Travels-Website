@@ -2,6 +2,42 @@ RCS TRAVELS — PROJECT ROADMAP
 ===============================
 
 IMPORTANT:
+- ROTATE EVERY PRODUCTION CREDENTIAL ONCE THE CLOUD RUN MIGRATION IS FINISHED.
+  On 12 Aug 2026, while assembling backend/.env.production to load Secret Manager,
+  the plaintext values of the whole production set were surfaced into an assistant
+  conversation by the editor's file-change notification. Nothing was published and
+  there is no sign of misuse — but copies now exist outside Render's env store and
+  the local .env, in a form that cannot be audited or retracted, and none of these
+  credentials expires on its own. Deferred deliberately: while Render and Cloud Run
+  both run, every rotation has to land in two places, and in one place afterwards.
+  Do it after cutover, not before. In priority order:
+    1. SUPABASE_SECRET_KEY (service_role) — bypasses RLS entirely: every row in
+       every table, and every object in driver-documents, which is captains'
+       licences, insurance certificates and photographs of their faces. Other
+       people's identity documents, so this one ranks first.
+       Supabase -> Project Settings -> API Keys.
+    2. FIREBASE_SERVICE_ACCOUNT_BASE64 — an RSA private key for
+       firebase-adminsdk-fbsvc@rcs-travels-b0d04, i.e. push to every driver as RCS.
+       Firebase -> Project settings -> Service accounts -> Generate new private key,
+       then DELETE the old key rather than leaving both valid.
+    3. CLERK_SECRET_KEY — the full user-management API over the real rider and
+       captain pool: list, modify, delete, mint sessions. Rotate at a moment when
+       every deployment can be updated within a few minutes; a half-done rotation
+       signs everybody out.
+    4. FARE_QUOTE_SECRET — signs fare quotes, and a forged quote lets the client
+       name its own price (services/fareQuote.js). Trivial to roll, but it
+       invalidates quotes issued in the previous ten minutes (TTL_MS), so pick a
+       quiet hour.
+  NOT GOOGLE_MAPS_API_KEY. It already ships inside the frontend bundle by design
+  (GoogleMap.jsx loads maps/api/js with it in the query string), so it has always
+  been public and nothing here changed that. What IS worth doing is confirming it
+  carries HTTP-referrer restrictions — an unrestricted key is a billing-theft risk
+  independent of any of this.
+  THE PROCEDURE, per key: new value -> Render env (only while Render still exists)
+  -> rebuild a minimal .env.production containing ONLY the rotated keys ->
+  backend/scripts/push-secrets.ps1 (adds a new Secret Manager version, and touches
+  only keys present in the file) -> gcloud run services update rcs-api --region
+  asia-south1 to pick up :latest -> delete .env.production again.
 -@@unique([driverId, type]) plus "renewal replaces the old file" means an approved captain who renews his insurance three weeks early destroys his own approved document and drops to pending — offline until an admin gets to him. The 30-day expiring warning you already surface actively encourages exactly that. Options: add nullable pendingFileUrl/pendingExpiresAt to the row, or relax the unique to a plain index and read "latest approved by uploadedAt". The schema comment argues against history rows, but history also gives you the audit trail for a disputed suspension — I'd relax the unique. Either way it's a decision to make before the upload endpoint, not after.
 - if the user pays through cash give driver a pop up saying did user pay with cash? untill that is sorted driver can't continue same for user
 - check all thing like race conditions and all.
