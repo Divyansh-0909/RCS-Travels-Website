@@ -8,17 +8,32 @@ if (!CONFIGURED_URL) {
     throw new Error('Missing EXPO_PUBLIC_API_BASE_URL');
 }
 
-// In development the API and the Metro bundler run on the same machine, so the
-// host this app already reached to load its own JS is the host the API is on.
-// Reading it back at runtime means a new DHCP lease cannot leave the app calling
-// an address nobody answers on — the env value's IP goes stale, this never does.
-// Scheme and port still come from the env, which stays the only place they live.
+// In development the API and the Metro bundler USUALLY run on the same machine,
+// so the host this app already reached to load its own JS is the host the API is
+// on. Reading it back at runtime means a new DHCP lease cannot leave the app
+// calling an address nobody answers on — the env value's IP goes stale, this
+// never does. Scheme and port still come from the env, which stays the only
+// place they live.
 //
 // hostUri is set by @expo/cli and by nothing else, so a release build takes the
-// env value untouched. A tunnel would resolve to the tunnel's host, which is not
-// where the API is listening; on a tunnel, drop the override.
+// env value untouched.
+//
+// ONLY WHEN THE CONFIGURED API IS ITSELF LOCAL, and that guard is the whole
+// point. The override assumes "dev means the API is on the Metro host", which
+// stops being true the moment the app is pointed at a deployed backend: it would
+// take https://rcs-api-....run.app, rewrite the host to the laptop's LAN IP, and
+// produce https://192.168.0.109 — nothing listens there, so every request dies as
+// "could not reach the server" without a single packet leaving for the real API.
+// The same applies to a tunnel, which the old comment flagged and left to the
+// reader to remember.
+//
+// A hostname that is not an address on this network is a deliberate destination:
+// leave it alone.
+const isLocalHost = (url) =>
+    /^(https?:\/\/)(localhost|127\.0\.0\.1|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(url);
+
 const BASE_URL = (() => {
-    if (!__DEV__) return CONFIGURED_URL;
+    if (!__DEV__ || !isLocalHost(CONFIGURED_URL)) return CONFIGURED_URL;
     const host = Constants.expoConfig?.hostUri?.split(':')[0];
     return host ? CONFIGURED_URL.replace(/\/\/[^/:]+/, `//${host}`) : CONFIGURED_URL;
 })();
