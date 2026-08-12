@@ -126,6 +126,27 @@ const reviewDocumentSchema = z.object({
   path: ['rejectionReason'],
 });
 
+// Stopping a captain, and letting him back on.
+//
+// Two operations behind one shape because they are one decision with a boolean
+// in it, and splitting them into /suspend and /unsuspend would mean a client
+// that can call the second without being able to express the first.
+const suspendDriverSchema = z.object({
+  suspended: z.boolean(),
+  // Required to suspend, for the same reason a rejection needs one: the captain
+  // is SHOWN this. requireApprovedDriver hands it back on every refused request,
+  // so it is the only explanation he ever gets for an app that has stopped
+  // working — "asking riders for extra cash on 12 Aug" rather than a locked door.
+  //
+  // It is also the audit trail. Whether a suspension was fair is a question that
+  // gets asked weeks later, by which time nobody remembers, and `isActive: false`
+  // with no reason is indistinguishable from an admin misclick.
+  reason: z.string().trim().min(3).max(500).optional(),
+}).refine((body) => !body.suspended || Boolean(body.reason), {
+  message: 'A suspension needs a reason — the captain is shown it, and it is the only record of why',
+  path: ['reason'],
+});
+
 const locationSchema = z.object({
   lat: z.number(),
   lng: z.number(),
@@ -257,6 +278,6 @@ const fareZoneCollectionSchema = z.object({
 });
 
 export {locationSchema, bookingListQuerySchema,driverListQuerySchema,myBookingsQuerySchema,userListQuerySchema,fareZoneCollectionSchema}
-export {reviewDocumentSchema}
+export {reviewDocumentSchema, suspendDriverSchema}
 export {rideParamsSchema, driverOnlineSchema, fcmTokenSchema, rideStatusSchema, driverRidesQuerySchema, driverAccountInformationSchema, UploadUrlRequest, ConfirmDocumentsRequest}
 export {addVehicleSchema, activeVehicleSchema}

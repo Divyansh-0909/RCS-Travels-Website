@@ -17,44 +17,6 @@ const hybridAuthRouter = Router()
 
 const generateOTP = () => String(crypto.randomInt(100000, 1000000))
 
-// Numbers whose OTP is printed to the log instead of sent, WHEREVER THIS RUNS.
-//
-// WHY THIS EXISTS. Meta's Cloud API accepts a send to any well-formed number and
-// answers 200; delivery then fails silently if the number has no WhatsApp account
-// or the app is in development mode and the recipient is not on its allowlist. So
-// on a deployed environment there is no way to complete a login with a made-up
-// number, and testing the flow end to end means owning a real handset.
-//
-// A NARROW HOLE ON PURPOSE. The obvious version of this — a flag that logs every
-// code in production — is the defect we just removed: a code on stdout is a
-// working login for anyone holding roles/logging.viewer, and it reached
-// production once already by being convenient. This one is scoped to numbers an
-// operator names explicitly, so a real captain's code is still only ever sent,
-// never printed, and the blast radius is exactly the accounts on this list.
-//
-// Setting NODE_ENV=development would have been the quick way and is far worse: it
-// also disables the FARE_QUOTE_SECRET boot guard and re-opens the
-// INTERNAL_JOBS_SECRET bypass, which turns a static string into a key for the job
-// endpoints.
-//
-// Bare 10-digit numbers, comma-separated. REMOVE THE VARIABLE WHEN TESTING ENDS —
-// the boot warning below is there to make sure somebody notices it is still set.
-const TEST_NUMBERS = new Set(
-  (process.env.OTP_TEST_NUMBERS ?? '')
-    .split(',')
-    .map((n) => n.trim())
-    .filter(Boolean),
-)
-
-const isTestNumber = (phone) => TEST_NUMBERS.has(String(phone).trim())
-
-if (TEST_NUMBERS.size && process.env.NODE_ENV === 'production') {
-  console.warn(
-    `!! OTP_TEST_NUMBERS is set in production (${TEST_NUMBERS.size} number(s)). ` +
-    `Their login codes are being written to the log instead of sent. Unset it when testing ends.`,
-  )
-}
-
 // Login and signup share these routes but must not share outcomes: login used to
 // get-or-create the Clerk user, so any stranger's number became an account the
 // moment they verified. The intent gate splits them — only signup may create,
@@ -144,7 +106,7 @@ hybridAuthRouter.post('/send-otp', async (req, res) => {
   // Fails loudly. A delivery failure must not answer ok — that is precisely the
   // silence this block replaces, so a 502 sends the user back to a retry button
   // instead of a screen that will never fill in.
-  if (process.env.NODE_ENV === 'production' && !isTestNumber(phone)) {
+  if (process.env.NODE_ENV === 'production') {
     try {
       await sendOtpWhatsApp(phone, otp)
     } catch (err) {
@@ -152,7 +114,7 @@ hybridAuthRouter.post('/send-otp', async (req, res) => {
       return res.status(502).json({ error: 'Could not send OTP, please retry' })
     }
   } else {
-    console.log(`\n  ── OTP for ${phone}: ${otp} ──  (not sent; console only)\n`)
+    console.log(`\n  ── OTP for ${phone}: ${otp} ──  (development; no WhatsApp sent)\n`)
   }
 
   return res.json({ ok: true })

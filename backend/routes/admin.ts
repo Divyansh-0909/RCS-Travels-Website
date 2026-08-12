@@ -4,8 +4,11 @@ import type { Prisma } from '@prisma/client'
 import { protect, protectAdmin } from '../middleware/auth.js'
 import { prisma } from '../db/prisma.js'
 import { getFareZones, saveFareZones } from '../services/fareZones.js'
-import { bookingListQuerySchema, driverListQuerySchema, userListQuerySchema, fareZoneCollectionSchema, rideParamsSchema, reviewDocumentSchema } from '../types.ts'
+import { bookingListQuerySchema, driverListQuerySchema, userListQuerySchema, fareZoneCollectionSchema, rideParamsSchema, reviewDocumentSchema, suspendDriverSchema } from '../types.ts'
 import { normalizeReference } from '../lib/bookingReference.js'
+// Already annotated as BookingStatus[] at its definition, which is what lets it be
+// used in a `status: { in: … }` filter from a .ts file — see the comment there.
+import { ACTIVE_STATUSES } from './bookings.js'
 import {
     documentLabelOf,
     PROFILE_PHOTO_TYPE,
@@ -22,10 +25,20 @@ import {
 import { signedDocumentUrl } from '../services/documentScan.js'
 import { promoteReplacement, recomputeAfterDocumentChange } from '../services/driverDocuments.js'
 
-// Read-only, by omission rather than design: three list endpoints and no mutations.
-// The dashboard can therefore show a driver's pending verification but not act on
-// it, and approve/reject/deactivate plus manual booking re-assignment all still need
-// building — they gate the driver app, since only `approved` drivers can go online.
+// Three list endpoints, the fare-zone editor, document review, and suspension.
+//
+// THERE IS NO "APPROVE THIS DRIVER" ENDPOINT, and that is deliberate rather than
+// missing. A captain's verificationStatus is DERIVED — recomputeDriverVerification
+// returns `approved` exactly when every required document is approved and still
+// valid, and it is recomputed on every document review, every renewal and every
+// expiry sweep. A manual override would be a fourth writer of a field the other
+// three keep recomputing, so it would survive until the next sweep and then
+// silently revert. Approving the documents IS approving the captain.
+//
+// Suspension is the opposite case and needs its own column precisely because it is
+// NOT derivable from anything: it is a judgement about conduct, so somebody has to
+// record it, with a reason, and be able to lift it. Manual booking re-assignment is
+// still unbuilt.
 //
 // Every route is behind protectAdmin (metadata.role === 'admin' on the Clerk session).
 const adminRouter = Router()
@@ -198,6 +211,11 @@ adminRouter.get('/driver', protect, protectAdmin, async (req, res) => {
                 vehicleNumber: true,
                 isOnline: true,
                 verificationStatus: true,
+                // Both, not just the timestamp. A suspension the dashboard can
+                // see but not explain is one an admin cannot decide whether to
+                // lift, which is the only action he has.
+                suspendedAt: true,
+                suspensionReason: true,
                 createdAt: true,
             },
             skip: (page - 1) * limit,
@@ -321,6 +339,10 @@ adminRouter.get('/drivers/:id/documents', protect, protectAdmin, async (req, res
         select: {
             id: true, name: true, phone: true, verificationStatus: true,
             isOnline: true, activeVehicleId: true,
+            // A suspension is invisible in verificationStatus by design — his
+            // paperwork is still in order — so without these the review screen
+            // would show a fully approved captain and no hint that he is stopped.
+            suspendedAt: true, suspensionReason: true,
         },
     })
     if (!driver) return res.status(404).json({ error: 'Driver not found' })
@@ -531,6 +553,88 @@ adminRouter.patch('/documents/:id', protect, protectAdmin, async (req, res) => {
         // approval was the last one needed.
         driverVerificationStatus: result.verificationStatus,
     })
+})
+
+/**
+ * Stop a captain driving, or let him back on.
+ *
+ * The only mutation here that is a judgement rather than a derivation. Everything
+ * else about a captain's eligibility falls out of his documents; this is somebody
+ * deciding he asked a rider for extra cash, and it therefore has to be recorded
+ * by hand, with a reason, and be reversible.
+ *
+ * WHAT SUSPENSION DOES, mechanically: `suspendedAt` is read by
+ * requireApprovedDriver, which refuses every driver route with the reason
+ * attached, and by driverAssignment/scheduledOffers, which both filter on
+ * `suspendedAt: null` — so a suspended captain is invisible to dispatch and
+ * cannot accept anything even if an offer were somehow already in his hand.
+ *
+ * IT DOES NOT TOUCH `verificationStatus`. That field means "his paperwork is in
+ * order", which is still true of a suspended captain and will be recomputed back
+ * to `approved` by the next sweep regardless. Conflating the two would make a
+ * suspension look like a document problem to the captain, who would then re-upload
+ * a perfectly good licence trying to fix it.
+ */
+adminRouter.patch('/drivers/:id/suspension', protect, protectAdmin, async (req, res) => {
+    const parsedParams = rideParamsSchema.safeParse(req.params)
+    if (!parsedParams.success) {
+        return res.status(400).json({ error: 'Invalid driver id', issues: parsedParams.error.issues })
+    }
+
+    const parsedBody = suspendDriverSchema.safeParse(req.body)
+    if (!parsedBody.success) {
+        return res.status(400).json({ error: 'Invalid request body', issues: parsedBody.error.issues })
+    }
+    const { suspended, reason } = parsedBody.data
+
+    const driver = await prisma.driver.findUnique({
+        where: { id: parsedParams.data.id },
+        select: { id: true, isOnline: true, suspendedAt: true },
+    })
+    if (!driver) return res.status(404).json({ error: 'Driver not found' })
+
+    // Idempotent by omission rather than by erroring: suspending a suspended
+    // captain is almost always two admins looking at the same screen, and the
+    // useful answer is the current state, not a 409 that makes one of them
+    // wonder whether it worked.
+    if (Boolean(driver.suspendedAt) === suspended) {
+        return res.json({
+            id: driver.id,
+            suspendedAt: driver.suspendedAt,
+            suspensionReason: reason ?? null,
+            changed: false,
+        })
+    }
+
+    // Mid-ride, he stays online — the same rule recomputeDriverVerification
+    // applies when lapsed paperwork takes somebody off the road. Yanking a
+    // captain offline with a rider in the car strands the rider, and the ride
+    // cannot be re-dispatched anyway. He cannot pick up a NEW one: every
+    // assignment path filters on suspendedAt being null, and that is true from
+    // the moment this transaction commits.
+    const midRide = driver.isOnline
+        ? await prisma.booking.count({ where: { driverId: driver.id, status: { in: ACTIVE_STATUSES } } })
+        : 0
+
+    const updated = await prisma.driver.update({
+        where: { id: driver.id },
+        data: {
+            suspendedAt: suspended ? new Date() : null,
+            // Cleared when the suspension is lifted, for the same reason a
+            // rejection reason is cleared on approval: a stale explanation under
+            // an active account is what a screen eventually renders beside a
+            // green tick.
+            suspensionReason: suspended ? reason ?? null : null,
+            ...(suspended && midRide === 0 ? { isOnline: false } : {}),
+        },
+        select: { id: true, name: true, suspendedAt: true, suspensionReason: true, isOnline: true },
+    })
+
+    if (suspended && midRide > 0) {
+        console.log(`admin: suspended ${driver.id} but he is mid-ride — staying online until the ride ends`)
+    }
+
+    return res.json({ ...updated, changed: true, stillOnlineMidRide: suspended && midRide > 0 })
 })
 
 export default adminRouter

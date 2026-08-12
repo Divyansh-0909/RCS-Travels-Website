@@ -5,6 +5,7 @@ import { mdiMagnify, mdiTuneVertical, mdiSortCalendarDescending, mdiContentCopy,
 import { useApi } from "../hooks/useApi";
 import { useExitAnim } from "../hooks/useExitAnim";
 import AdminDashboardSkeleton from "../components/AdminDashboardSkeleton";
+import DriverReview from "../components/DriverReview";
 import { vehicleLabel, statusChip, splitAddress, displayPhone, formatDateTime, CopyBtn } from "../components/ui/bookingDisplay";
 import Button from "../components/ui/Button";
 import EmptyState from "../components/ui/EmptyState";
@@ -59,6 +60,11 @@ type Driver = {
     phone: string
     isOnline: boolean
     verificationStatus: VerificationStatus
+    // Separate from verificationStatus on purpose: a suspended captain's
+    // paperwork is still in order, so his chip stays "approved" while he is
+    // stopped. The two answer different questions and the card shows both.
+    suspendedAt: string | null
+    suspensionReason: string | null
     vehicleClass: VehicleClass
     vehicleNumber: string
     createdAt: string
@@ -135,6 +141,10 @@ const AdminDashboard = () => {
     const [listScrolled, setListScrolled] = useState(false)
     // Booking card whose people/ride-id details are popped open (one at a time).
     const [expandedBooking, setExpandedBooking] = useState<string | null>(null)
+    // One open at a time. Each open panel holds signed URLs that expire in
+    // minutes, so leaving several expanded would mean dead links on the ones the
+    // admin came back to.
+    const [expandedDriver, setExpandedDriver] = useState<string | null>(null)
 
     const copyId = (id: string) => {
         if (!id) return
@@ -621,7 +631,8 @@ const AdminDashboard = () => {
                         )
                     ) : (
                         drivers.map((driver) => (
-                            <div key={driver.id} className="cursor-default bg-[var(--foreground-muted)] py-5 px-5 sm:py-6 sm:px-8 rounded-2xl my-4 sm:my-6 flex flex-col justify-center items-start gap-4">
+                            <div key={driver.id} className="cursor-default bg-[var(--foreground-muted)] py-5 px-5 sm:py-6 sm:px-8 rounded-2xl my-4 sm:my-6 flex flex-col justify-center items-start gap-4"
+                                data-suspended={Boolean(driver.suspendedAt)}>
                                 <div className="flex justify-between items-start gap-4 w-full">
                                     <div className="min-w-0">
                                         <div className="flex items-center gap-2">
@@ -631,7 +642,18 @@ const AdminDashboard = () => {
                                         </div>
                                         <p className="text-gray-500">{displayPhone(driver.phone)} <CopyBtn value={displayPhone(driver.phone)} onCopy={copyId} /></p>
                                     </div>
-                                    <span className={`${verificationChip(driver.verificationStatus)} text-xs font-semibold px-2.5 py-1 rounded-full capitalize shrink-0`}>{driver.verificationStatus}</span>
+                                    <div className="flex flex-col items-end gap-1 shrink-0">
+                                        <span className={`${verificationChip(driver.verificationStatus)} text-xs font-semibold px-2.5 py-1 rounded-full capitalize`}>{driver.verificationStatus}</span>
+                                        {/* Shown alongside, never instead of, the
+                                            verification chip. A suspended captain is
+                                            usually "approved" — his papers are fine
+                                            and he is still stopped — so replacing one
+                                            with the other would hide whichever the
+                                            admin happened to need. */}
+                                        {driver.suspendedAt && (
+                                            <span className="text-xs font-semibold px-2.5 py-1 rounded-full text-red-600 bg-red-500/10">Suspended</span>
+                                        )}
+                                    </div>
                                 </div>
 
                                 <div className="w-full border-t border-[var(--background-primary)]/10"></div>
@@ -639,6 +661,32 @@ const AdminDashboard = () => {
                                 <p className="text-base text-gray-500">
                                     {vehicleLabel(driver.vehicleClass)}  •  {driver.vehicleNumber}  •  Joined {new Date(driver.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
                                 </p>
+
+                                {/* Loaded only when opened. A captain's paperwork is
+                                    eleven rows, a signed URL per document and a
+                                    round trip to storage to mint each one — fetching
+                                    that for every card on the page would be twenty
+                                    of those to show a list. */}
+                                <button
+                                    onClick={() => setExpandedDriver(expandedDriver === driver.id ? null : driver.id)}
+                                    aria-expanded={expandedDriver === driver.id}
+                                    className="w-full text-sm text-center text-[var(--background-primary)] py-2 rounded-xl border border-[var(--background-primary)]/20 hover:bg-[var(--background-primary)]/5 focus-visible:outline-2 focus-visible:outline-offset-2 transition-colors duration-300"
+                                >
+                                    {expandedDriver === driver.id ? "Hide paperwork" : "Review paperwork"}
+                                </button>
+
+                                {expandedDriver === driver.id && (
+                                    <DriverReview
+                                        driverId={driver.id}
+                                        // Patches the chip on this card so an approval
+                                        // that completes his file is visible without
+                                        // re-running the list query and losing the
+                                        // admin's place in it.
+                                        onVerificationChange={(status) => setDrivers(
+                                            drivers.map((d) => d.id === driver.id ? { ...d, verificationStatus: status } : d),
+                                        )}
+                                    />
+                                )}
                             </div>
                         ))
                     )

@@ -61,6 +61,25 @@ export const getUsers          = (filters, getToken)     => request(`/api/admin/
 export const getFareZones      = (getToken)              => request("/api/admin/zones", { getToken });
 export const saveFareZones     = (zones, getToken)       => request("/api/admin/zones", { method: "PUT", body: zones, getToken });
 
+// A captain's paperwork, for review. Each document comes back with a `url` that
+// is null for anything the file check has not cleared — the server fails closed
+// and this client does not second-guess it, so "no link" means "not viewable",
+// never "fetch it another way".
+export const getDriverDocuments = (driverId, getToken)   => request(`/api/admin/drivers/${driverId}/documents`, { getToken });
+
+// `status` is 'approved' or 'rejected'. A rejection needs a reason: the captain
+// is shown it verbatim, and one without a reason is a document he re-uploads
+// unchanged. The server refuses the review outright if the file check has not
+// cleared, so the caller must not offer the buttons for those.
+export const reviewDocument     = (documentId, body, getToken) =>
+    request(`/api/admin/documents/${documentId}`, { method: "PATCH", body, getToken });
+
+// `{ suspended: true, reason }` to stop a captain driving, `{ suspended: false }`
+// to let him back on. Separate from verification, which is derived from his
+// documents and is still "approved" while he is suspended — see routes/admin.ts.
+export const setDriverSuspension = (driverId, body, getToken) =>
+    request(`/api/admin/drivers/${driverId}/suspension`, { method: "PATCH", body, getToken });
+
 // Streams a PDF, so it can't use request() (which parses JSON); fetch a Blob.
 export const downloadMyData = async (getToken) => {
     const token = await getToken();
