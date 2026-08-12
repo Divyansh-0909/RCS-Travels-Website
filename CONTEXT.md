@@ -492,6 +492,30 @@ is really "should a failed pass retry immediately", and the three already disagr
 and expiry swallow (the next tick is soon enough), document-scan throws (a captain is watching
 a "Checking…" screen).
 
+### One document, now (`lib/tasks.js`)
+
+Separate from the sweeps and layered **under** them. When the confirm endpoint commits a
+captain's uploads it enqueues one Cloud Task per document, which POSTs
+`/internal/scan/:id` — the same OIDC shape and the same middleware as the scheduler, because
+`/internal` does not know which Google service called it.
+
+This exists for the same CPU-throttling reason as `JOBS_MODE`: the endpoint used to finish with
+`setImmediate(() => scanDocument(id))`, which stalls on Cloud Run once the response is sent. The
+sweep always rescued those documents, so nothing was lost — but five minutes of "Checking…" on
+the screen between a captain and being paid is not the same as five seconds.
+
+**Two layers, deliberately.** Cloud Tasks is the fast path; the 5-minute sweep is the rescue
+tier for anything the queue never delivered. `enqueueDocumentScan` never throws, and a failed
+enqueue falls back to scanning inline — so no queue configured (a laptop) or a queue outage both
+degrade to the old behaviour rather than losing a scan.
+
+The queue's `maxConcurrentDispatches=2` is now what bounds concurrent `sharp` decodes, the job
+the sequential loop used to do. `maxAttempts=5`. Delivering a task twice is safe: `claimDocument`'s
+conditional UPDATE means the second caller finds nothing to claim.
+
+**The scanner itself is ours, not a Google product.** No antivirus engine and no signature
+database — `clean` means "passed the checks in documentScan.js", never "free of malware".
+
 ### Decided, not built
 
 Ride acceptance deposit, overcharge flags → fines → suspension, coupons, ratings, round trips,
