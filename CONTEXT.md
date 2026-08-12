@@ -219,9 +219,10 @@ additive pass.
 **Enums:** `BookingStatus` (pending, confirmed, assigned, en_route, reached, started,
 completed, cancelled, **no_driver**), `BookingSource` (website | whatsapp | admin),
 `CancelledBy` (user | driver | admin), `VerificationStatus` (pending | approved | rejected),
-`DriverDocumentType` (10 types), `DriverGroup` (admin | rcs | partner), `WalletEntryType`
-(7 types), `PaymentMethod` (wallet | cash | upi), `OfferStatus` (pending | accepted |
-rejected | withdrawn), `VehicleClass` (hatchback | sedan | suv | suv_premium).
+`DriverDocumentType` (11 types), `DriverGroup` (admin | rcs | partner), `ScanStatus` (pending |
+scanning | clean | failed — the FILE verdict, never to be confused with the admin's `status`),
+`WalletEntryType` (7 types), `PaymentMethod` (wallet | cash | upi), `OfferStatus` (pending |
+accepted | rejected | withdrawn), `VehicleClass` (hatchback | sedan | suv | suv_premium).
 
 ### Live — read and written by running code
 
@@ -233,9 +234,28 @@ rejected | withdrawn), `VehicleClass` (hatchback | sedan | suv | suv_premium).
 - **Driver** — `name`, `phone`, `vehicleClass`, `vehicleCapacity` (Int: seats *currently free*,
   the live availability counter), `vehicleNumber`, `vehicleModel`, `isActive`, `isOnline`,
   `fcmToken`, `pfpUrl`, `verificationStatus`, `group` (defaults `partner`), `suspendedAt` +
-  `suspensionReason`, `walletBalance`. Eligibility index is
+  `suspensionReason`, `walletBalance`, `activeVehicleId`, `lastOfferedAt` + `lastAssignedAt`
+  (the ride-now fairness key). Eligibility index is
   `[isOnline, isActive, verificationStatus, vehicleClass, group]`.
-  **`clerkId` is nullable and no route ever writes it** — see §12.
+  `clerkId` is nullable but **is written**, once, by `POST /api/driver/me` from the verified
+  Clerk session. The four `vehicle*` columns are denormalised from the active `Vehicle` — see
+  the schema comment; only signup and `services/driverVehicles.js` write them.
+- **Vehicle** — a captain's cars, one row each: `class`, `number`, `model`, `capacity`,
+  `verificationStatus`. `Driver.activeVehicleId` says which he is driving now. This is what
+  makes "a driver *is* a car" false, and why document ownership splits between the man and the
+  car — see `decisions/multi-vehicle.md`.
+- **DriverDocument** — one row per **owner** per type per slot. `@@unique([ownerId, type,
+  isReplacement])`, where `ownerId` is the car for vehicle-owned types and the driver for his
+  own. **Two live rows per type, not one**: a renewal lands in the replacement slot beside the
+  document it will replace, so an early renewal never takes an approved captain off the road.
+  Carries two independent verdicts — `scanStatus` (the FILE: pending → scanning → clean |
+  failed) and `status` (the ADMIN: pending → approved | rejected). Neither implies the other.
+  Plus `fileUrl` (a storage path, not a URL), `number`, `expiresAt`, `fileHash`,
+  `expiryWarnedDays` + `expiryWarnedAt` (which make the reminder sweep idempotent).
+  `backend/constants/driverDocuments.js` is the single source of the 11 types. No police
+  verification — dropped from the provider's list on purpose.
+- **DriverDocumentArchive** — superseded document rows, kept for the audit trail behind a
+  disputed suspension.
 - **DriverLocation** — one row per driver, `latitude`/`longitude`/`bearing`/`speedKmh`,
   upserted by `POST /api/driver/location`. `bearing` + `speedKmh` exist to allow client-side
   dead reckoning between the customer's 5-second polls; **the customer side does not use them
@@ -256,11 +276,6 @@ rejected | withdrawn), `VehicleClass` (hatchback | sedan | suv | suv_premium).
 
 ### Schema-only — migrated, but no code reads or writes them
 
-- **DriverDocument** — one row per driver per type (`type`, `fileUrl`, `number`, `expiresAt`,
-  `status`, `rejectionReason`), unique on `[driverId, type]` so a renewal replaces the file.
-  A table rather than columns because these **expire**, and a lapsed one must be able to
-  suspend a driver by itself. `backend/constants/driverDocuments.js` is the single source.
-  No police verification, dropped from the list on purpose.
 - **DriverReview** — unique on `bookingId`, rating 1-5 (enforced in the route, not the DB).
   Averages are derived rather than cached on `Driver`.
 - **OverchargeFlag** — unique on `bookingId`, snapshots `fareAtFlag` because `Booking.fare`
@@ -615,7 +630,7 @@ in-process and rate-limited so the API key never reaches the browser.
 
 ### Done
 
-- **Backend foundation** — Express, Clerk middleware, Prisma + Supabase, 16 models with
+- **Backend foundation** — Express, Clerk middleware, Prisma + Supabase, 18 models with
   justified indexes, `/health` (runs `select 1`), per-IP rate limiting, zod-validated lists.
 - **Auth** — WhatsApp-OTP over the real Cloud API → Clerk ticket, profile fields, PDF data
   download, account deletion.

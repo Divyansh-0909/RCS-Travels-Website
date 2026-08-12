@@ -213,8 +213,10 @@ IMPORTANT:
   BUILT INSTEAD — mark the ground, not the road:
     - backend/data/shady-zones.geojson holds POLYGONS around the avoided stretches.
       SEPARATE from zones.geojson on purpose (fare zones are drawn around
-      destinations; these are drawn around roads). EMPTY = feature fully dormant:
-      no alternatives requested, no toggle shown, nothing charged. !! STILL EMPTY.
+      destinations; these are drawn around roads). EMPTY would mean the feature is
+      fully dormant: no alternatives requested, no toggle shown, nothing charged.
+      [NO LONGER EMPTY] Two corridors are drawn and the feature is live — see the
+      "DRAW THE SHADY POLYGONS" item for the one part still dead (no `fallback`).
     - The estimate asks Routes for `computeAlternativeRoutes`, decodes each one and
       measures how far it runs inside a shady polygon (sampled every 50 m, so a
       sparse motorway polyline can't slip through; 400 m inside is the threshold,
@@ -382,10 +384,12 @@ IMPORTANT:
   infrastructure — but it is not worth the complexity until volume justifies it,
   and items 1-4 remove most of the pain for a fraction of the effort. Do NOT start
   here.
-- !! DRAW THE SHADY POLYGONS in backend/data/shady-zones.geojson. Replaces the old
-  "fill in SAFE_WAYPOINT" item — there is no single waypoint any more. While the file
-  has no features the "Safer route?" toggle never renders and nothing is charged, so
-  this is dormant rather than broken, but it also isn't shipped. Draw one on
+- [PARTLY DONE] Two polygons are drawn — "Greater Noida east corridor" and
+  "Dadri - Bisrakh corridor" — so the toggle renders and the feature is live.
+  !! STILL OPEN: NEITHER CARRIES A `fallback`, so the forced-waypoint branch of
+  fetchRouteOptions can never fire. The main path works; that branch is dead until one
+  of them gets a fallback coordinate. Original instructions below still apply for
+  adding more. Draw one on
   geojson.io, set its optional `fallback`, then run
   `node backend/scripts/check-shady-zones.js` to see which destinations actually take
   that road. See the women-safety entry at the top for the full design.
@@ -1161,10 +1165,13 @@ each numbered block unblocks the ones after it. Outstation is PARKED (see bottom
    !! STILL OPEN: block 11 says only an admin can lift a suspension, and
    protectAdmin gives all three admins that power equally. Confirm whether
    lifting a suspension is Raju-only or any-admin.
-   !! Driver HAS NO GROUP COLUMN TODAY. Adding one means revisiting
-   @@index([isOnline, isActive, verificationStatus, vehicleClass]) — the group
-   has to go INSIDE that index, or every radius ring of every assignment scans
-   all drivers and filters in memory. Same for the suspension flag (block 11).
+   [DONE] Driver.group exists (DriverGroup, defaults partner) and went INSIDE the
+   eligibility index exactly as this warned it had to:
+   @@index([isOnline, isActive, verificationStatus, vehicleClass, group]).
+   Suspension likewise got its own columns rather than reusing isActive.
+   STILL TRUE: nothing sets a non-default group, so every driver is `partner` and
+   the priority ordering is a no-op until Raju's row is seeded as `admin` and his
+   fleet as `rcs`.
    RIDE NOW: radius-bounded, drivers notified ONE BY ONE, accept/reject/
    timeout, then walk down the groups. Every eligible driver tried ->
    "Couldn't find a driver. Please contact support." (status no_driver).
@@ -1265,10 +1272,11 @@ each numbered block unblocks the ones after it. Outstation is PARKED (see bottom
    PENDING SCHEDULED OFFERS — those bookings immediately restart assignment.
    His full suspension grounds are wider than this feature: asking extra
    money, fraud, unsafe driving, misbehaviour, fake trips.
-   !! SUSPENSION NEEDS ITS OWN COLUMN. Do not reuse isActive — you lose the
-   reason and cannot tell "suspended for overcharging" from "deactivated". And
-   whatever gets added must go into the eligibility index (block 9), or
-   suspended drivers keep getting scanned on every ring.
+   [DONE] Suspension has its own columns — suspendedAt + suspensionReason — rather
+   than reusing isActive, so "suspended for overcharging" is distinguishable from
+   "deactivated" and the reason survives. requireApprovedDriver refuses a suspended
+   captain WITH that reason. What remains unbuilt is the admin mutation that sets
+   them: nothing can suspend or unsuspend anybody today.
    !! FINES LAND IN THE WALLET, and this is the elegant part: debit the fine
    from wallet credit; if the balance is short it goes NEGATIVE, and a
    negative balance blocks going online until it is cleared. No gateway, no
