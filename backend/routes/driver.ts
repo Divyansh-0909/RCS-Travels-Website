@@ -492,9 +492,16 @@ driverRouter.post('/me/documents/upload-url', protect, async (req, res) => {
             // the check that used to be the bucket's own mime allowlist. The
             // captain app already sends it (uploadDocuments.ts), so nothing on
             // the phone changes.
-            const signed = await signedUploadUrl(path, contentType)
+            // Per content type, not one number: an image has already been
+            // through the app's resize-and-compress step and a PDF has not.
+            // The SAME limit the confirm endpoint and the scanner check against,
+            // read from the same function, so the three can never disagree.
+            const signed = await signedUploadUrl(path, contentType, maxBytesFor(contentType))
 
-            return { type, path: signed.path, uploadUrl: signed.uploadUrl }
+            // `headers` is what the app must send on the PUT, verbatim. Returned
+            // rather than reconstructed on the phone so the limits live in one
+            // place — a second copy in the app is a number that drifts.
+            return { type, path: signed.path, uploadUrl: signed.uploadUrl, headers: signed.headers }
         })
     )
 

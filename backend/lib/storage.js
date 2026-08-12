@@ -72,18 +72,37 @@ function bucket() {
 const UPLOAD_URL_TTL_MS = 2 * 60 * 60 * 1000
 
 /**
- * A URL the holder may PUT one object to.
+ * A URL the holder may PUT one object to, with the type AND the size it is
+ * allowed to be baked into the signature.
  *
  * The path is composed server-side by the caller (services/driverDocuments.js,
  * uploadPrefix) and never by the uploader — that is the property the whole
  * document security model rests on, and it lives there rather than here because
  * it is about driver identity, not about storage.
  *
- * `contentType` IS BOUND INTO THE SIGNATURE. The client must then send exactly
- * that header or Google rejects the PUT, which means this URL can no longer be
- * used to upload a PDF where a photograph was asked for. It is the nearest thing
- * GCS offers to the bucket-level mime allowlist Supabase enforced, and it is why
- * this signature takes an argument the Supabase implementation did not need.
+ * TWO CONSTRAINTS ARE SIGNED, and between them they are what replaced the
+ * bucket-level allowlist Supabase enforced and GCS has no setting for:
+ *
+ *   contentType                 -> the PUT must carry exactly this Content-Type,
+ *                                  so a URL minted for a photograph cannot be
+ *                                  used to upload a PDF.
+ *   x-goog-content-length-range -> GCS itself measures the body and refuses
+ *                                  anything outside the range. Not a header the
+ *                                  server trusts the client about: the client
+ *                                  must ECHO it (it is part of what was signed,
+ *                                  so altering it invalidates the signature) and
+ *                                  Google then enforces it against the real byte
+ *                                  count.
+ *
+ * That second one matters more than it looks. Without it the only size checks
+ * left are the confirm endpoint and the scanner, both of which run AFTER the
+ * bytes have already been paid for and stored — so a caller holding a signed URL
+ * could push a 2 GB file and be refused only once it had arrived. This is the one
+ * check a holder of the URL cannot argue with.
+ *
+ * The client must send both headers back verbatim, so they are returned rather
+ * than left for the app to reconstruct — the app should never hold a second copy
+ * of the size limits.
  *
  * SIGNING ON CLOUD RUN WORKS WITHOUT A PRIVATE KEY, and this is the one piece of
  * setup that is not obvious: the runtime service account has no key to sign with,
@@ -91,16 +110,34 @@ const UPLOAD_URL_TTL_MS = 2 * 60 * 60 * 1000
  * account to hold roles/iam.serviceAccountTokenCreator ON ITSELF. Without it this
  * call fails with a permission error that says nothing about signing.
  *
- * @returns {Promise<{ path: string, uploadUrl: string }>}
+ * @param {string} path
+ * @param {string} contentType
+ * @param {number} maxBytes  the largest this object may be, in bytes
+ * @returns {Promise<{ path: string, uploadUrl: string, headers: Record<string,string> }>}
  */
-export async function signedUploadUrl(path, contentType) {
+export async function signedUploadUrl(path, contentType, maxBytes) {
+  // From zero, not from one. An empty upload is a bad file rather than an
+  // attack, and it is already caught by the magic-byte sniff with a message that
+  // says something useful; refusing it here would surface as an opaque 403 from
+  // Google instead.
+  const lengthRange = `0,${maxBytes}`
+
   const [uploadUrl] = await bucket().file(path).getSignedUrl({
     version: 'v4',
     action: 'write',
     expires: Date.now() + UPLOAD_URL_TTL_MS,
     contentType,
+    extensionHeaders: { 'x-goog-content-length-range': lengthRange },
   })
-  return { path, uploadUrl }
+
+  return {
+    path,
+    uploadUrl,
+    headers: {
+      'Content-Type': contentType,
+      'x-goog-content-length-range': lengthRange,
+    },
+  }
 }
 
 /**

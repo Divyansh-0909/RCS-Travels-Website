@@ -55,7 +55,29 @@ export type UploadProgress = (
   phase: 'signing' | 'uploading' | 'uploaded' | 'registering' | 'done' | 'failed',
 ) => void;
 
-type SignedTarget = { type: DriverDocumentType; path: string; uploadUrl: string };
+type SignedTarget = {
+  type: DriverDocumentType;
+  path: string;
+  uploadUrl: string;
+  /**
+   * Exactly what the PUT must carry, decided and returned by the server.
+   *
+   * These are not advisory. The content type and an allowed size range are baked
+   * into the signature on the URL, so altering or dropping either one makes the
+   * signature invalid and storage refuses the upload outright. That is the point:
+   * it is the one size check a holder of the URL cannot argue with, and the only
+   * one that refuses a 2 GB file before it has been transferred rather than after.
+   *
+   * Sent verbatim and never rebuilt here. The app does hold its own ceilings in
+   * constants/documents.ts, and should — they are what the compression ladder
+   * aims at and what lets it refuse a file BEFORE spending an upload on it. But
+   * that is a local pre-check, not the enforcement, and the header the server
+   * signed is the enforcement. Reconstructing it on the phone from those local
+   * numbers would mean two copies that must agree, and a signature that silently
+   * stops matching the day one of them moves.
+   */
+  headers: Record<string, string>;
+};
 
 // Annotated rather than inferred: without it TS collapses the two arms into one
 // object with both keys optional, and `error` stops being a string.
@@ -132,15 +154,15 @@ export async function uploadDriverDocuments(
         // into JS memory on a phone that may not have it to spare.
         const response = await fetch(target.uploadUrl, {
           method: 'PUT',
-          headers: {
-            // Storage stores whatever this says and serves it back with the same
-            // header. It is also a CLAIM, not a fact — the server re-reads the
-            // actual first bytes and refuses anything that disagrees.
-            'Content-Type': document.contentType,
-            // No x-upsert header: for a signed upload it is ignored, because
-            // upsert is part of what the server signed. The server sets it, so
-            // retrying this exact URL after a dropped connection works.
-          },
+          // Straight from the server, unmodified. They carry the content type
+          // and the permitted size range, both of which are part of what was
+          // signed — so this is not the app asserting anything, it is the app
+          // repeating terms storage will check the bytes against itself.
+          //
+          // The content type is still a CLAIM about the file, and the server
+          // re-reads the actual first bytes and refuses anything that disagrees.
+          // The size range is not a claim: Google measures the body.
+          headers: target.headers,
           body: new File(document.uri),
         });
 

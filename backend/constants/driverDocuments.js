@@ -118,8 +118,14 @@ export const isDriverDocumentType = (type) => Object.hasOwn(DRIVER_DOCUMENTS, ty
 // for a URL — and enforced three separate times, because each of the three can
 // be bypassed on its own:
 //
-//   1. the bucket's own allowedMimeTypes/fileSizeLimit, which is the only one a
-//      caller holding a signed URL cannot talk his way past;
+//   1. THE SIGNATURE ITSELF. The upload URL is minted with the content type and
+//      an x-goog-content-length-range bound into it, and Google measures the
+//      body against both. This is the only one a caller holding the signed URL
+//      cannot talk his way past, and the only one that refuses the bytes BEFORE
+//      they are transferred and stored rather than after. See lib/storage.js.
+//      (It used to be the bucket's own allowedMimeTypes/fileSizeLimit under
+//      Supabase Storage; GCS has no such bucket setting, so the same guarantee
+//      is bought by signing the constraints instead.)
 //   2. the upload-url endpoint, so a bad contentType is refused before a URL for
 //      it exists rather than after the phone has spent the upload;
 //   3. the confirm endpoint, which re-reads the stored object's REAL size and
