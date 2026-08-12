@@ -1,0 +1,24 @@
+# What `gcloud run deploy --source .` uploads to Cloud Build.
+#
+# THIS FILE EXISTS TO STOP GCLOUD GUESSING. With no .gcloudignore, gcloud falls
+# back to .gitignore — and the repository's .gitignore excludes `.*`, which means
+# .dockerignore itself would not be uploaded. The build would then run without
+# it, copy a Windows node_modules into the image, and fail on sharp. The failure
+# would be a mystifying one, so the fix is to be explicit.
+#
+# Deliberately near-identical to .dockerignore. The difference is that this one
+# governs what leaves the laptop, and .dockerignore governs what enters the
+# image; keeping them in step is what makes a local `docker build` and a Cloud
+# Build produce the same thing.
+
+.git
+.gitignore
+node_modules
+npm-debug.log*
+
+.env
+.env.*
+
+tests
+.vscode
+.idea

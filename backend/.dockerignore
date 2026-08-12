@@ -1,0 +1,34 @@
+# What must NOT reach the build context.
+#
+# The first entry is load-bearing rather than a size optimisation. The Dockerfile
+# runs `npm ci --omit=dev` and then `COPY . .`; if node_modules came along, that
+# copy would paste a Windows developer's @img/sharp-win32-x64 over the Linux
+# binaries just installed, and sharp would throw the moment documentScan.js is
+# imported. The same applies to any native module.
+node_modules
+npm-debug.log*
+
+# No secret is ever baked into a layer. Cloud Run gets these from Secret Manager
+# and the environment; an image is a file anybody with pull access can unpack.
+.env
+.env.*
+
+# Not needed at runtime and each one is a reason to rebuild a layer.
+tests
+scripts/free-port.js
+.git
+.gitignore
+.vscode
+.idea
+common-cmds.txt
+DEPLOY.md
+
+# NOTHING ELSE. In particular, these must stay in the image and are listed here
+# only so a future edit does not delete them by accident:
+#
+#   data/           zones.geojson and shady-zones.geojson are read at runtime by
+#                   services/fareZones.js and services/safeRoute.js, resolved
+#                   relative to import.meta.url. Without them the server boots
+#                   and then fails on the first fare quote.
+#   prisma/         schema.prisma is read by the client at import.
+#   tsconfig.json   tsx reads it to resolve the .ts route files.

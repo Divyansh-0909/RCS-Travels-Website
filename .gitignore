@@ -108,6 +108,11 @@ pids
 !.env.example
 !.prettierrc
 !.eslintrc
+# Build inputs, not local config. Without these negations the blanket `.*` above
+# keeps them out of the repository — and a clone that is missing .dockerignore
+# builds an image with a Windows node_modules pasted over the Linux one.
+!.dockerignore
+!.gcloudignore
 # =========================
 # Dev screenshots
 # =========================
