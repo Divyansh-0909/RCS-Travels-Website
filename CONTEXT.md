@@ -63,26 +63,45 @@ files and 13 backend endpoints — but **no real captain can log into it yet**; 
   docs at `https://docs.expo.dev/versions/v55.0.0/` are the only reliable reference.
 
 ### Backend (`backend/`)
-- **Node + Express 5.2** (ES Modules, `type: "module"`). Mixed `.js` and `.ts`, run through
-  **`tsx`** in dev and plain `node` in prod, so TypeScript files are type-checked
-  (`npm run typecheck`) but never separately built.
-- **Prisma 7.8** with the **`@prisma/adapter-pg`** driver adapter over **`pg`**.
+- **Node 24 + Express 5.2** (ES Modules, `type: "module"`). Mixed `.js` and `.ts`, run through
+  **`tsx`** **in every environment including production** — `tsconfig.json` is `noEmit`, so the
+  `.ts` routes are type-stripped at runtime and there is no build output. The container's
+  entrypoint is `node --import tsx index.js`; `npm run typecheck` is the only thing that ever
+  type-checks them.
+- **Prisma 7.8** with the **`@prisma/adapter-pg`** driver adapter over **`pg`**. The pool is
+  capped at `DATABASE_POOL_MAX` (default 5) because on Cloud Run the default 10 is *per
+  instance* — see `db/prisma.js`.
 - **PostgreSQL** (Supabase, free tier).
-- **Clerk** (`@clerk/express`) — `clerkMiddleware()` globally, `requireAuth()` on protected
-  routes, `protectAdmin` for the dashboard.
+- **Supabase Storage** for driver documents — one private `driver-documents` bucket, reached
+  only through `lib/storage.js` (see §3). Being migrated to Google Cloud Storage.
+- **Clerk** (`@clerk/express`) — `clerkMiddleware()` globally, `protect` on protected routes,
+  `protectAdmin` for the dashboard.
 - **zod** for query-parameter validation on the list endpoints (`types.ts`).
 - **express-rate-limit** on the unauthenticated Google-proxy and fare endpoints.
 - **pdfkit** for the account-data download.
-- **firebase-admin** is installed but **unused** — `sendFCM` is still a stub.
+- **sharp** re-encodes every uploaded image from decoded pixels — the scanner's strongest
+  check, because nothing that was not image data survives it.
+- **google-auth-library** verifies the OIDC tokens Cloud Scheduler presents to `/internal`.
+- **firebase-admin** is now **used** — `sendPush` genuinely delivers. `sendFCM` (the
+  driver-accepted-the-ride coin flip) and `sendWhatsApp` remain stubs; see §12.
 - **`multer`** and **`@aws-sdk/client-s3`** are installed and **never imported anywhere**.
-  Document upload was re-decided onto Supabase Storage (ROADMAP block 6), so both are dead
-  dependencies and should be removed.
+  Document upload went to Supabase Storage instead, so both are dead dependencies.
 
 ### Deployment
-- Frontend → **Vercel**. Backend → **Render** (free tier, kept alive by a cron-job.org ping to
-  `/health` every 10 min, which runs `select 1` so Supabase does not pause either).
-  Database → **Supabase PostgreSQL**. Driver app → **Expo EAS**.
-- Live at `https://www.rcstravels.co.in`, API at `https://rcs-travels-api.onrender.com`.
+
+**Mid-migration: Render → Google Cloud Run.** Both are live and serving the same database.
+
+- Frontend → **Vercel**, at `https://www.rcstravels.co.in`.
+- Backend, current production → **Render** (free tier, kept awake by an uptime ping to
+  `/health`, which runs `select 1` so Supabase does not pause either).
+- Backend, migration target → **Google Cloud Run**, `asia-south1` (Mumbai, same city as the
+  Supabase region `aws-1-ap-south-1`). Project `project-0c9e66c4-03f9-4cc0-b53`, service
+  `rcs-api`, `min-instances=0`, `max-instances=4`. Nothing points at it yet.
+- Database → **Supabase PostgreSQL**. Driver app → **Expo EAS**.
+- Secrets live in **Google Secret Manager**, mounted as env vars (`backend/scripts/push-secrets.ps1`).
+  Images build in **Cloud Build** → **Artifact Registry**. The background sweeps are driven by
+  **Cloud Scheduler**, not timers — see §5 and `lib/jobs.js`.
+- The full runbook is `backend/DEPLOY.md`; the reasoning is `decisions/cloud-run-migration.md`.
 
 ---
 
@@ -96,37 +115,58 @@ RCS-Travels-Website/
 ├── System-Design.txt     Phase-2-Approach.txt
 ├── tools/zone-editor.html            browser tool for drawing/pricing fare zones
 ├── shared/theme/                     one theme source, built into web + native CSS
+├── decisions/            walkthroughs of why things are shaped as they are (gitignored)
 ├── backend/
-│   ├── index.js                       Express entry; mounts routers, starts the sweep
+│   ├── index.js                       Express entry; mounts routers, starts jobs in dev
 │   ├── types.ts                       zod query schemas + shared API types
+│   ├── Dockerfile                     two-stage; node:24-slim, CMD node --import tsx
+│   ├── .dockerignore .gcloudignore    correctness files, not size ones — see DEPLOY.md
+│   ├── DEPLOY.md                      the Cloud Run runbook
+│   ├── cleanup-policy.json            Artifact Registry retention (keep 3, drop >30d)
 │   ├── middleware/
 │   │   ├── auth.js                     clerkAuth, protect, protectAdmin
+│   │   ├── internalAuth.js             OIDC verification for /internal — fails closed
 │   │   ├── rateLimit.js                per-IP limits for Google/fare routes
 │   │   └── errorHandler.js
-│   ├── db/prisma.js , lib/prisma.js    Prisma client (pg adapter)
+│   ├── db/prisma.js , lib/prisma.js    Prisma client (pg adapter, pool capped)
+│   ├── lib/
+│   │   ├── storage.js                  THE object-storage seam — 7 ops, no vendor above it
+│   │   ├── supabase.js                 the Storage client behind storage.js (server-only key)
+│   │   ├── jobs.js                     job registry + JOBS_MODE (timers vs Cloud Scheduler)
+│   │   ├── firebase.js                 messaging() for sendPush
+│   │   └── bookingReference.js , phone.js
 │   ├── constants/
 │   │   ├── vehicles.js                 VehicleClass set + seatsOf()
-│   │   ├── driverDocuments.js          the 10 document types, compulsory vs conditional
+│   │   ├── driverDocuments.js          the 11 document types, driver- vs vehicle-owned
 │   │   └── dispatch.js                 owner hold, escalation, sweep horizon
 │   ├── prisma/
-│   │   ├── schema.prisma               16 models, 10 enums
-│   │   ├── migrations/                 28 migrations, all applied
+│   │   ├── schema.prisma               18 models, 11 enums
+│   │   ├── migrations/                 35 migrations, all applied
 │   │   ├── seed.js , seed-captain.js , seed-captain-rides.js
 │   │   └── clean-bookings.js , clean-seed-data.js
 │   ├── data/
 │   │   ├── zones.geojson               45 hand-drawn NCR fare zones + per-class prices
 │   │   └── shady-zones.geojson         2 avoided-road corridors
 │   ├── scripts/
-│   │   ├── free-port.js                frees the port before dev/start
+│   │   ├── free-port.js                frees the port before dev (NOT used in the container)
+│   │   ├── setup-storage.js            creates the private driver-documents bucket
+│   │   ├── push-secrets.ps1            .env.production → Secret Manager, values never printed
+│   │   ├── normalize-driver-phones.js
 │   │   └── check-shady-zones.js        routes campus → every zone, reports crossings
+│   ├── tests/                          node:test — run with `npm test`
+│   │   ├── documentPolicy.test.js      the rules that decide who may drive
+│   │   ├── documentConcurrency.test.js needs Postgres, gated behind an env var
+│   │   ├── documentFile.test.js        magic bytes, re-encode, PDF active content
+│   │   └── internalJobs.test.js        the gate on /internal
 │   ├── routes/
 │   │   ├── hybridAuth.js               POST /api/auth/send-otp, /verify-otp
 │   │   ├── users.js                    me, recent + saved places, gender/DOB/emergency,
 │   │   │                               data download, account delete
 │   │   ├── fare.js                     POST /api/fare/estimate
 │   │   ├── bookings.js                 create / :id/status / cancel / my-bookings
-│   │   ├── driver.ts                   13 endpoints — see §8
-│   │   ├── admin.ts                    booking / driver / user lists + GET|PUT /zones
+│   │   ├── driver.ts                   21 endpoints — see §8
+│   │   ├── admin.ts                    lists + zones + document review — see §8
+│   │   ├── internal.js                 POST /internal/jobs/:name — Cloud Scheduler only
 │   │   └── googleAPI.js                autocomplete / details / reverse-geocode proxies
 │   └── services/
 │       ├── rideEstimate.js             zone → formula, or market; Routes API + usage cap
@@ -134,11 +174,16 @@ RCS-Travels-Website/
 │       ├── fareQuote.js                HMAC-signs each estimate
 │       ├── safeRoute.js                alternative-route classifier over shady polygons
 │       ├── geo.js                      kmBetween, pointInRing, decodePolyline, kmPointToPath
-│       ├── driverAssignment.js         ride-now matching (rings + groups + claim)
+│       ├── driverAssignment.js         ride-now matching (rings + groups + fairness + claim)
 │       ├── scheduledOffers.js          persisted RideOffer creation / withdrawal
-│       ├── assignScheduledRides.js     the 5-minute sweep
+│       ├── assignScheduledRides.js     the dispatch sweep (5 min)
+│       ├── driverVehicles.js           add / remove / switch a captain's cars
+│       ├── driverDocuments.js          document LIFECYCLE — slots, expiry, verification
+│       ├── documentScan.js             document FILE checks — magic bytes, sharp, PDF tokens
+│       ├── documentNotifications.js    submitted / approved / rejected / expiring pushes
+│       ├── driverPhoto.js              signed avatar URLs (rider-facing, short TTL)
 │       ├── commission.js               5% ≥ ₹800, pass-through stripping
-│       └── notification.js             sendOtpWhatsApp REAL; sendFCM + sendWhatsApp STUBS
+│       └── notification.js             sendOtpWhatsApp + sendPush REAL; sendFCM/sendWhatsApp STUBS
 ├── frontend/src/
 │   ├── main.jsx                        router + ClerkProvider + ThemeProvider + boundaries
 │   ├── App.jsx                         "/" → NavBar + OnBoarding + marketing + Footer
@@ -166,7 +211,7 @@ RCS-Travels-Website/
 
 ## 4. Data model (`backend/prisma/schema.prisma`)
 
-**16 models, 10 enums.** 28 migrations, all applied. The 8 Aug migration
+**18 models, 11 enums.** 35 migrations, all applied. The 8 Aug migration
 (`20260807222544_driver_groups_offers_wallet_reviews`) is the large one — it added driver
 groups, suspension, the wallet ledger, offers, reviews, flags and coupons in a single
 additive pass.
@@ -390,12 +435,35 @@ in between — because a push that is never tapped is simply gone, and a row is 
   the sweep runs forever and two sweeps can overlap.
 - FCM is fire-and-forget; a dead token still leaves the row on the driver's page.
 
-### The sweep (`services/assignScheduledRides.js`)
+### The sweeps (`lib/jobs.js`)
 
-Every **5 minutes** (`SWEEP_INTERVAL_MS`), picks `confirmed` bookings with `scheduledAt` inside
-**6 hours** (`ASSIGNMENT_HORIZON_H`) and offers them. A `running` guard stops overlapping runs.
-`Booking.adminAlertedAt` is stamped **before** the send and guarded on still being null, so the
-T−1h WhatsApp to the admin fires **once** rather than twelve times.
+Three of them, and **how they are triggered depends on `JOBS_MODE`**, not on the code:
+
+| Job name | Body | Cadence |
+|---|---|---|
+| `dispatch` | `sweepScheduledRides` — offer unfilled scheduled bookings | 5 min |
+| `document-scan` | `sweepDocumentScans` — settle documents nothing recorded a verdict for | 5 min |
+| `document-expiry` | `sweepDocumentExpiry` — lapse expired papers, send 30/7/1-day reminders | 60 min |
+
+`interval` (the default, and what Render uses) starts them on `setInterval` at boot.
+`scheduler` starts no timers and expects Cloud Scheduler to `POST /internal/jobs/:name`.
+**This exists because a timer cannot work on Cloud Run**: between requests the CPU is throttled
+to near zero, so the event loop stops spinning and the deadline passes unobserved — scheduled
+rides would silently stop being offered with nothing logged and `/health` still green. There is
+one implementation of each sweep and it cannot tell which trigger called it.
+
+`dispatch` picks `confirmed` bookings with `scheduledAt` inside **6 hours**
+(`ASSIGNMENT_HORIZON_H`) and offers them. `Booking.adminAlertedAt` is stamped **before** the
+send and guarded on still being null, so the T−1h WhatsApp to the admin fires **once** rather
+than twelve times. Overlapping runs are refused per process — but the real safety is in the
+database (`claimDocument`'s conditional UPDATE, the unique on `RideOffer`, the `adminAlertedAt`
+guard), which is why Render and Cloud Run can both sweep the same rows during the migration
+without stepping on each other.
+
+`runJob` deliberately does **not** catch. Cloud Scheduler retries on 5xx, so "does this throw"
+is really "should a failed pass retry immediately", and the three already disagree: dispatch
+and expiry swallow (the next tick is soon enough), document-scan throws (a captain is watching
+a "Checking…" screen).
 
 ### Decided, not built
 
@@ -485,16 +553,30 @@ so the browser's View Transitions API animates page changes (CSS in `index.css` 
 
 **Bookings** — `POST /`, `GET /:id/status`, `POST /cancel`, `GET /my-bookings`
 
-**Driver** (13) — `GET /me`, `PATCH /online`, `POST /location`, `POST /fcm-token`,
-`GET /upcoming-ride`, `GET /rides`, `GET /rides/:id`, `PATCH /rides/:id/status`,
-`PATCH /rides/:id/accept`, `PATCH /rides/:id/decline`, `GET /offers`,
-`PATCH /offers/:id/accept`, `PATCH /offers/:id/reject`
+**Driver** (21) —
+*Account:* `POST /me` (**signup — writes `clerkId` from the session; this is what links a
+captain to his Clerk identity**), `GET /me`
+*Vehicles:* `GET|POST /me/vehicles`, `PATCH /me/active-vehicle`, `DELETE /me/vehicles/:id`
+*Documents:* `POST /me/documents/upload-url`, `POST /me/documents` (confirm), `GET /me/documents`
+*Working:* `PATCH /online`, `POST /location`, `POST /fcm-token`, `GET /upcoming-ride`
+*Rides:* `GET /rides`, `GET /rides/:id`, `PATCH /rides/:id/status`, `PATCH /rides/:id/accept`,
+`PATCH /rides/:id/decline`
+*Offers:* `GET /offers`, `PATCH /offers/:id/accept`, `PATCH /offers/:id/reject`
 
-`requireApprovedDriver` gates every one of these except `GET /me`, and refuses a suspended
-driver with the reason — one gate covering going online, accepting, and every ride transition.
+`requireApprovedDriver` gates every one of these except `POST /me`, `GET /me` and the document
+routes — the ones that have to work *before* he is approved, since they are how he becomes
+approved. It refuses a suspended driver with the reason.
 
-**Admin** — `GET /booking`, `GET /driver`, `GET /user` (zod-validated filters),
-`GET|PUT /zones` (the fare-zone editor; the **only** admin mutation that exists)
+**Admin** (7) — `GET /booking`, `GET /driver`, `GET /user` (zod-validated filters),
+`GET|PUT /zones` (the fare-zone editor), `GET /drivers/:id/documents` (short-lived signed URLs,
+**null for anything not `clean`** — `signedDocumentUrl` fails closed), `PATCH /documents/:id`
+(approve / reject with a reason).
+
+**Internal** — `GET /internal/jobs`, `POST /internal/jobs/:name` for
+`dispatch | document-scan | document-expiry`. Mounted **before** `clerkAuth` because the caller
+presents a Google OIDC token, not a Clerk session. Authenticated by
+`middleware/internalAuth.js`, which verifies the token's audience *and* the calling service
+account, and answers 503 rather than allowing anything if either is unconfigured.
 
 **Google proxies** — `GET /autocomplete`, `/details/:placeId`, `/reverse-geocode`, all cached
 in-process and rate-limited so the API key never reaches the browser.
@@ -546,8 +628,23 @@ in-process and rate-limited so the API key never reaches the browser.
 - **Dispatch** — ride-now rings with group priority and guarded claim; persisted scheduled
   offers with group broadcast, first-accept-wins, owner hold and rejection-based escalation;
   the 5-minute sweep with a running guard and a once-only admin alert.
-- **Driver backend** — 13 endpoints including GPS upsert, online toggle, FCM token, the full
-  ride lifecycle and offer accept/reject, all behind an approval + suspension gate.
+- **Driver backend** — 21 endpoints including signup (which writes `clerkId` and so closes the
+  old "no captain can use the app" blocker), multi-vehicle management, GPS upsert, online
+  toggle, FCM token, the full ride lifecycle and offer accept/reject, behind an approval +
+  suspension gate that deliberately lets the pre-approval routes through.
+- **Driver documents, end to end** — signed direct-to-storage upload with server-composed
+  paths, a confirm endpoint that re-reads the object's real first bytes before writing a row,
+  an asynchronous scanner (magic bytes → sharp re-encode → PDF active-content scan) with a
+  bounded retry sweep, admin review with fail-closed signed URLs, replacement slots so an early
+  renewal never takes an approved captain off the road, and expiry + reminder sweeps.
+- **Multi-vehicle captains** — a `Vehicle` table with `activeVehicleId`, document ownership
+  split between the man and each car, and per-car verification.
+- **Dispatch fairness** — `last_offered_at` / `last_assigned_at` so ride-now stops handing every
+  booking to whoever parks nearest the gate.
+- **Cloud Run migration, phases 1–2** — background sweeps moved off `setInterval` onto Cloud
+  Scheduler + authenticated `/internal` endpoints; the backend containerised and deployed to
+  Cloud Run alongside Render, with secrets in Secret Manager. `lib/storage.js` extracted so the
+  Supabase → GCS swap is one file. See `decisions/cloud-run-migration.md`.
 - **Customer frontend** — the whole funnel: OnBoarding, Login/SignUp, VehicleSelect (fare
   cards, solo/share, safer-route toggle, pin-confirm map, searching/confirmed/no-driver
   panels), TrackingPage on `/booking/:id`, RideDetails, ManageAccount, Settings, Safety, Help,
@@ -568,15 +665,21 @@ in-process and rate-limited so the API key never reaches the browser.
 
 ### Left to build, in priority order
 
-1. **Link a captain to a Clerk identity.** The single blocker on the whole driver app — see
-   §12. Design is settled in ROADMAP: match by phone off the verified session, write `clerkId`
-   once if null, refuse if a different one is already there.
-2. **Admin mutations** — approve / reject / deactivate a driver, and manual re-assignment.
-   These gate everything: only `approved` drivers go online, and nothing can approve one.
-3. **Document upload** — the endpoint, Supabase Storage (private bucket, signed URLs, compress
-   on device), the nightly expiry sweep. Schema is ready; nothing writes it.
+1. **Finish the Cloud Run migration** — run the functional checklist against Cloud Run, cut
+   Vercel and the Expo app over, retire Render, then Supabase Storage → GCS and Cloud Tasks
+   for individual scans. Put a custom domain (`api.rcstravels.co.in`) in front of Cloud Run
+   *before* cutting over: `EXPO_PUBLIC_API_BASE_URL` is inlined into the app bundle at build
+   time, so a bare `run.app` URL would make every future move an app release.
+2. **Rotate every production credential** once that is done — see the top of ROADMAP for why
+   and in what order.
+3. **The remaining admin mutations** — approve / reject / deactivate a *driver*, and manual
+   re-assignment. Document review exists (`PATCH /admin/documents/:id`); driver-level
+   approval still does not, so nothing can move a captain to `approved`.
 4. **Real FCM** — `sendFCM` is a coin flip, so every accept path is untested against a real
-   device.
+   device. `sendPush` is real, so the plumbing exists; what is missing is making assignment
+   event-driven rather than waiting 30s for a boolean a push can never return.
+5. **Real `sendWhatsApp`** — still a `console.log`, so the T−1h "nobody accepted this booking"
+   alert to Raju goes nowhere. Needs approved utility templates.
 5. **Live tracking** — the driver marker and dead reckoning on the customer side.
    `POST /driver/location` already stores bearing and speed, so this is client-side work.
 6. **Sharing pool** — see §12; the corridor pass cannot run.
@@ -590,17 +693,29 @@ in-process and rate-limited so the API key never reaches the browser.
 ## 11. Running locally
 
 **Backend** (`backend/`): `.env` needs `DATABASE_URL`, `CLERK_SECRET_KEY`,
-`GOOGLE_MAPS_API_KEY`, `ADMIN_PHONE`, and `FARE_QUOTE_SECRET` in production. Optionally
-`DIRECT_URL` (migrations need a direct connection, not the transaction pooler),
-`CORS_ORIGINS`, `FCM_ALWAYS_ACCEPT`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_ACCESS_TOKEN`.
+`GOOGLE_MAPS_API_KEY`, `ADMIN_PHONE`. Optionally `DIRECT_URL` (migrations need a direct or
+session connection, not the transaction pooler), `CORS_ORIGINS`, `FCM_ALWAYS_ACCEPT`,
+`WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_ACCESS_TOKEN`, `DATABASE_POOL_MAX`.
+
+`SUPABASE_URL` + `SUPABASE_SECRET_KEY` are needed for anything touching documents — without
+them those routes answer 503 in dev, and the server **refuses to boot** in production.
+`FARE_QUOTE_SECRET` is likewise fatal in production and a throwaway per-process key in dev.
+`INTERNAL_JOBS_SECRET` (any long random string) lets you curl `/internal/jobs/:name` locally;
+it is unreachable when `NODE_ENV=production`, enforced in code.
+
+`JOBS_MODE` defaults to `interval` — the in-process timers, which is what you want locally and
+on Render. Only the Cloud Run image sets `scheduler`. An unrecognised value refuses to boot,
+because every forgiving reading of a typo ends at "silently run no sweeps at all".
 
 ```
 npm install
 npm run db:generate
 npm run db:migrate
 npm run db:seed          # npm run db:clean resets bookings to the seed
+npm run storage:setup    # once, after setting SUPABASE_* — creates the private bucket
 npm run dev              # tsx watch → http://localhost:5000 ; GET /health
 npm run typecheck
+npm test                 # node:test; documentConcurrency needs a database
 ```
 
 **Frontend** (`frontend/`): `.env` needs `VITE_CLERK_PUBLISHABLE_KEY`,
@@ -625,11 +740,6 @@ for an index of every booking-flow screen, rendered with a mock booking and no b
 
 ## 12. Known bugs and gotchas
 
-- **!! NO CAPTAIN CAN USE THE DRIVER APP.** `Driver.clerkId` is written **only** by
-  `prisma/seed-captain.js`. No route sets it, and there is no `POST /api/driver` or admin
-  create-driver route. Every endpoint in `driver.ts` resolves the captain with
-  `findUnique({ where: { clerkId } })`, so a driver who signs in perfectly still gets 404 from
-  `/api/driver/me`. The app is otherwise built. This is the top item on the roadmap.
 - **`FareTable` is dead data.** Seeded on every `db:seed`, queried by nothing. CONTEXT's own
   earlier versions and ROADMAP both describe a `zone → FareTable → formula` chain that the code
   does not implement.
@@ -651,8 +761,16 @@ for an index of every booking-flow screen, rendered with a mock booking and no b
 - **`TrackingPage` shows a hardcoded driver** on any booking that reaches the live panel.
 - **`multer` and `@aws-sdk/client-s3` are unused** — document upload moved to Supabase Storage.
   Remove both.
-- **Rate-limiter counters live in process memory**, so Render's free tier resets them on every
-  cold start. The Google Console quota is the real ceiling.
+- **Rate-limiter counters live in process memory**, so a cold start resets them — on Render's
+  free tier and, worse, on Cloud Run, where `min-instances=0` means the counters are per
+  instance *and* per cold start. The Google Console quota is the real ceiling.
+- **The OTP is a login, and it used to be printed.** WhatsApp delivery had been commented out
+  for local convenience with a `console.log` standing in, and that shipped — so for a period
+  `send-otp` answered ok while sending nothing, and the code sat in the server log where anyone
+  with log access could read it. Fixed: production sends and never logs, dev logs and never
+  sends, keyed on `NODE_ENV` rather than on a comment somebody has to remember to restore.
+- **Testing against Cloud Run writes to the production database** with live Clerk keys. There
+  is no staging database. `npm run db:clean` afterwards.
 - **One phone number does three jobs** — public support line, `ADMIN_PHONE` for the T−1h
   escalation, and Raju's own login. Keep `ADMIN_PHONE` its own env var; dispatch priority must
   read `Driver.group` and never a phone number.
@@ -660,6 +778,18 @@ for an index of every booking-flow screen, rendered with a mock booking and no b
   ordering is a no-op until Raju's row is seeded as `admin` and his fleet as `rcs`.
 
 ### Fixed since the last revision of this file
+
+**A captain can now use the driver app.** `POST /api/driver/me` creates the row with
+`clerkId` taken off the verified session, so the linkage this file called "the single blocker
+on the whole driver app" is closed. Signup also creates his first `Vehicle` in the same
+transaction, because a captain row with no car is a state no screen knows how to render.
+
+**An early renewal no longer takes an approved captain off the road.** The unique key is
+`@@unique([ownerId, type, isReplacement])`, so a renewal lands in a second slot beside the
+document it will replace instead of overwriting it. This was the top `IMPORTANT` item in
+ROADMAP and is resolved.
+
+**The OTP is delivered again** — see above.
 
 `/booking/:id` is restored; `ErrorBoundary` is active; the sweep horizon is 6 h rather than 12;
 the overlapping-`setInterval` defect is closed by a `running` guard; the repeating T−1h admin

@@ -38,7 +38,17 @@ IMPORTANT:
   backend/scripts/push-secrets.ps1 (adds a new Secret Manager version, and touches
   only keys present in the file) -> gcloud run services update rcs-api --region
   asia-south1 to pick up :latest -> delete .env.production again.
--@@unique([driverId, type]) plus "renewal replaces the old file" means an approved captain who renews his insurance three weeks early destroys his own approved document and drops to pending — offline until an admin gets to him. The 30-day expiring warning you already surface actively encourages exactly that. Options: add nullable pendingFileUrl/pendingExpiresAt to the row, or relax the unique to a plain index and read "latest approved by uploadedAt". The schema comment argues against history rows, but history also gives you the audit trail for a disputed suspension — I'd relax the unique. Either way it's a decision to make before the upload endpoint, not after.
+- [RESOLVED — 12 Aug 2026] @@unique([driverId, type]) plus "renewal replaces the old file" meant an
+  approved captain who renewed his insurance three weeks early destroyed his own approved document
+  and dropped to pending. Settled a third way, neither of the two options below: the key is now
+  @@unique([ownerId, type, isReplacement]), so a renewal lands in a SECOND slot beside the document
+  it will replace and the current one keeps working until an admin approves the new one. ownerId is
+  the car for vehicle documents and the man for his own, which is what also makes multi-vehicle
+  captains work. See the schema comment on DriverDocument and services/driverDocuments.js
+  (slotForUpload, promoteReplacement). Original note kept below for the reasoning:
+  ~~Options: add nullable pendingFileUrl/pendingExpiresAt to the row, or relax the unique to a plain
+  index and read "latest approved by uploadedAt". The schema comment argues against history rows,
+  but history also gives you the audit trail for a disputed suspension — I'd relax the unique.~~
 - if the user pays through cash give driver a pop up saying did user pay with cash? untill that is sorted driver can't continue same for user
 - check all thing like race conditions and all.
 - add gst billing
@@ -51,8 +61,19 @@ IMPORTANT:
 - remove the dummy bookings and drivers data from the production DB before launch
   (backend/prisma/clean-bookings.js clears non-seed bookings; drivers need a
   similar pass — and the seed rows themselves must go too)
-- !! NO CAPTAIN CAN USE THE DRIVER APP AT ALL — nothing links a Driver row to a
-  Clerk identity. driver.ts resolves every request with
+- [RESOLVED — 12 Aug 2026] A captain CAN now use the driver app. POST /api/driver/me creates the
+  Driver row with clerkId taken off the verified Clerk session (routes/driver.ts, the $transaction
+  around line 257), and creates his first Vehicle in the same transaction — a captain row with no
+  car is a state no screen in the app knows how to render, and a crash between the two writes would
+  strand him there permanently, because signup 403s on the second attempt.
+  Shape chosen: SELF-REGISTRATION, i.e. option 1 of the two below rather than admin-creates-the-row.
+  The audience gate in hybridAuth.js still refuses a rider's number on the captain app, so seeding a
+  Driver row is still the right way to unblock testing — do NOT loosen that gate.
+  NOTE FOR READERS OF THIS FILE: it stayed marked as the top blocker for about two weeks after it was
+  built, and was believed and repeated during the Cloud Run migration. Check the code before trusting
+  a "!!" item here.
+  Original analysis kept below, because the reasoning about the link is still the reasoning:
+  ~~nothing links a Driver row to a Clerk identity. driver.ts resolves every request with
   prisma.driver.findUnique({ where: { clerkId: userId } }) — /me, /online,
   /location, /rides, all of it — but `clerkId` is never WRITTEN anywhere in the
   backend. Grep it: the only writes are User.clerkId in users.js. The one place
@@ -83,8 +104,18 @@ IMPORTANT:
        every captain login 404s at send-otp — correctly, since there are no
        drivers. That gate is the only thing stopping a rider's number signing
        into the captain app. Do NOT loosen it to unblock testing; seed a Driver
-       row instead.
-- POINT THE DRIVER APP AT RENDER BEFORE ANY BUILD THAT LEAVES THIS LAPTOP. Only the
+       row instead.~~
+- !! DECIDE THE API URL BEFORE THE FIRST CAPTAIN BUILD, because it is baked in.
+  EXPO_PUBLIC_* values are INLINED INTO THE JS BUNDLE AT BUILD TIME. So the API URL a build
+  carries is not configuration a captain's phone can be talked out of later — changing it is a
+  rebuild and a redistribution to every driver. That matters right now, because the backend is
+  moving from Render to Cloud Run and the Cloud Run URL
+  (https://rcs-api-197642164526.asia-south1.run.app) is not one to bake into anything.
+  DO THIS FIRST: map a custom domain — api.rcstravels.co.in — in front of Cloud Run, and point
+  both the website and the app at that. Then this migration, and every future one, is a mapping
+  change rather than an app release. No captain is on the app yet, so it will never be cheaper
+  to fix than now.
+- POINT THE DRIVER APP AT THE RIGHT BACKEND BEFORE ANY BUILD THAT LEAVES THIS LAPTOP. Only the
   `development` EAS environment has variables (pushed 4 Aug 2026); `preview` and
   `production` are EMPTY. A build on either compiles cleanly and then dies on
   launch — src/main.tsx throws "Missing Clerk Publishable Key" and src/api/api.js
