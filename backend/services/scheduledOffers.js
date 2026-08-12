@@ -92,6 +92,21 @@ export async function offerScheduledRide(bookingId) {
     skipDuplicates: true,
   })
 
+  // Scheduled offers count towards the same queue the ride-now sort reads, or a
+  // driver who is being fed scheduled work all day would still rank as the
+  // longest-waiting captain the moment somebody books on the spot. Every driver
+  // in `drivers` is receiving a new offer — the query already excluded anyone
+  // holding one for this booking — so they all move together.
+  //
+  // A broadcast marks the whole group at once, which is honest about what this
+  // path does: it offers the ride to everybody and lets them race for it. The
+  // fairness key can record that; it cannot fix it. See the note in
+  // constants/dispatch.js on why the race exists.
+  await prisma.driver.updateMany({
+    where: { id: { in: drivers.map((d) => d.id) } },
+    data: { lastOfferedAt: new Date() },
+  })
+
   const pickupTimeLabel = new Date(booking.scheduledAt).toLocaleString('en-IN', {
     timeZone: 'Asia/Kolkata',
     dateStyle: 'medium',

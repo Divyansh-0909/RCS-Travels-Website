@@ -760,6 +760,12 @@ driverRouter.post('/me/documents', protect, async (req, res) => {
                     scannedAt: null,
                     scanStartedAt: null,
                     fileHash: null,
+                    // A renewal carries its own expiry date and has been warned
+                    // about nothing. Left set, the reminder sweep would read the
+                    // OLD document's "already told him at 7 days" against the NEW
+                    // one's date and stay silent right through next year's window.
+                    expiryWarnedDays: null,
+                    expiryWarnedAt: null,
                 },
                 select: { id: true, fileUrl: true },
             }))

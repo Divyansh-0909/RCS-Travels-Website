@@ -255,6 +255,29 @@ model Driver {
   // the state that blocks going online until it clears.
   walletBalance Float @default(0) @map("wallet_balance")
 
+  // WHOSE TURN IT IS. Dispatch used to rank candidates on distance alone, which
+  // at low volume is not a tiebreak at all: the fleet parks in a handful of fixed
+  // spots, every ride starts from roughly the same gate, so whoever waits nearest
+  // it is first in line on EVERY booking and the rest never get one. The thing
+  // that normally spreads load — a claimed vehicle dropping to zero free seats —
+  // only fires when two rides overlap, which at low volume never happens.
+  //
+  // So the ride-now sort buckets distance into tiers and orders within a tier by
+  // `lastOfferedAt`, oldest first. See FAIRNESS_TIER_KM in driverAssignment.js.
+  //
+  // OFFERED, NOT ASSIGNED, is the fairness key on purpose. Ranking by assignment
+  // would leave a driver who rejects everything permanently at the head of the
+  // queue, so every booking would pay for his refusal before reaching somebody
+  // who wants it. A rejection is his choice; the platform's job is to hand out
+  // the CHANCE evenly. `lastAssignedAt` is kept alongside it because "offered
+  // ten, took none" and "offered ten, took ten" are the same row otherwise, and
+  // telling those two apart is the whole of any future acceptance-rate work.
+  //
+  // Neither is indexed: the ride-now sort runs in JS over candidates already
+  // loaded by the geo scan, and nothing else orders by them yet.
+  lastOfferedAt  DateTime? @map("last_offered_at")
+  lastAssignedAt DateTime? @map("last_assigned_at")
+
   location        DriverLocation?
   documents       DriverDocument[]
   documentHistory DriverDocumentArchive[]
@@ -565,6 +588,24 @@ model DriverDocument {
   // mid-scan: a row `scanning` for longer than the stale window is reclaimable.
   scanStartedAt   DateTime?          @map("scan_started_at")
   scannedAt       DateTime?          @map("scanned_at")
+
+  // THE SMALLEST REMINDER THRESHOLD ALREADY SENT for this document, in days —
+  // 30, then 7, then 1. Not a boolean and not a timestamp, because neither can
+  // answer the question the sweep actually asks.
+  //
+  // The rule is one comparison: send the reminder for threshold T only when
+  // `expiryWarnedDays` is null or greater than T. That makes each of the three
+  // fire exactly once and in order, and makes the sweep idempotent — it can run
+  // every hour, or twice, or catch up after an outage, without ever repeating a
+  // message. A boolean could not distinguish "told him at 30 days" from "told
+  // him at 7"; a bare timestamp would need the thresholds recomputed from it.
+  //
+  // Cleared on re-upload with the rest of the per-file state: a renewal has its
+  // own expiry and has been warned about nothing.
+  expiryWarnedDays Int?              @map("expiry_warned_days")
+  // When that last reminder went out. Nothing reads it — it is here for the
+  // office, for the conversation that starts "nobody told me".
+  expiryWarnedAt   DateTime?         @map("expiry_warned_at")
 
   driver  Driver   @relation(fields: [driverId], references: [id], onDelete: Cascade)
   // Cascade: retiring a car takes its paperwork with it. The archive rows survive

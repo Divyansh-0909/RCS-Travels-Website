@@ -176,14 +176,24 @@ export async function notifyParkedCarDocumentExpired(driverId, vehicleNumber, ty
  * the renewal while the current one is still valid and never goes off the road
  * at all.
  */
-export async function notifyDocumentExpiring(driverId, type, days) {
+export async function notifyDocumentExpiring(driverId, type, days, vehicleNumber = null) {
   const driver = await driverFor(driverId)
   if (!driver) return
 
+  // The plate only when it distinguishes something — the sweep passes null for a
+  // captain with one car, where "your insurance" is already exact. For a man with
+  // three, a message that does not name the car sends him to check all of them.
+  const car = vehicleNumber ? ` (${vehicleNumber})` : ''
+
   await send(driver, {
-    title: `${documentLabelOf(type)} expires in ${days} days`,
+    title: days <= 1
+      ? `${documentLabelOf(type)}${car} expires ${days === 1 ? 'tomorrow' : 'today'}`
+      : `${documentLabelOf(type)}${car} expires in ${days} days`,
+    // The sentence that makes the replacement slot worth having. He is not being
+    // told to stop — he is being told he can renew WITHOUT stopping, which is the
+    // whole reason to do it now rather than on the day.
     body: 'Upload the renewal now and you can keep driving while we review it.',
-    data: { kind: 'document_expiring', type, screen: 'documents' },
+    data: { kind: 'document_expiring', type, days: days, screen: 'documents' },
   })
 }
 

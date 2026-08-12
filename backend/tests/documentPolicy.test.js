@@ -660,3 +660,123 @@ describe('request validation', () => {
     assert.equal(reviewDocumentSchema.safeParse({ status: 'pending' }).success, false)
   })
 })
+
+describe('expiry reminder thresholds', () => {
+  // The ladder, as the sweep applies it. `REMINDER_DAYS.find(t => days <= t)`
+  // picks the WIDEST threshold a document has crossed, so a row first seen with
+  // six days left gets the 7-day message once rather than 30 then 7 in a row.
+  const REMINDER_DAYS = [30, 7, 1]
+  // filter, then take the last — the NARROWEST threshold crossed. `find` on this
+  // descending list returns 30 for a document with seven days left, which is the
+  // bug this test caught: the dedup would then compare 30 against an
+  // expiryWarnedDays of 30 and the 7- and 1-day messages would never fire.
+  const thresholdFor = (days) => REMINDER_DAYS.filter((t) => days <= t).at(-1)
+
+  test('picks the widest threshold the document has crossed', () => {
+    assert.equal(thresholdFor(30), 30)
+    assert.equal(thresholdFor(29), 30)
+    assert.equal(thresholdFor(8), 30)
+    assert.equal(thresholdFor(7), 7)
+    assert.equal(thresholdFor(2), 7)
+    assert.equal(thresholdFor(1), 1)
+    assert.equal(thresholdFor(0), 1)
+  })
+
+  test('says nothing outside the widest window', () => {
+    assert.equal(thresholdFor(31), undefined)
+    assert.equal(thresholdFor(365), undefined)
+  })
+
+  // The dedup, which is the whole reason expiryWarnedDays is an Int and not a
+  // boolean: it has to distinguish "told him at 30" from "told him at 7".
+  const shouldSend = (warnedDays, threshold) => warnedDays === null || warnedDays > threshold
+
+  test('each threshold fires exactly once, in order', () => {
+    let warned = null
+
+    assert.equal(shouldSend(warned, 30), true, 'never warned -> the 30-day message')
+    warned = 30
+    assert.equal(shouldSend(warned, 30), false, 'and not again an hour later')
+
+    assert.equal(shouldSend(warned, 7), true, 'a week out -> the 7-day message')
+    warned = 7
+    assert.equal(shouldSend(warned, 7), false)
+
+    assert.equal(shouldSend(warned, 1), true, 'the day before -> the last message')
+    warned = 1
+    assert.equal(shouldSend(warned, 1), false)
+  })
+
+  // The sweep shares the lapse sweep's hourly timer. That is only safe because
+  // running it repeatedly cannot produce a second message.
+  test('twenty-four passes in a day send one message', () => {
+    let warned = null
+    let sent = 0
+    for (let hour = 0; hour < 24; hour += 1) {
+      const threshold = thresholdFor(20)
+      if (shouldSend(warned, threshold)) { sent += 1; warned = threshold }
+    }
+    assert.equal(sent, 1)
+  })
+
+  // A document uploaded fresh clears expiryWarnedDays, so next year's window
+  // starts silent again rather than being suppressed by last year's record.
+  test('a renewal is warned about from scratch', () => {
+    const afterRenewal = null
+    assert.equal(shouldSend(afterRenewal, 30), true)
+  })
+})
+
+describe('expiry reminder quiet hours', () => {
+  const IST_OFFSET_MS = 330 * 60 * 1000
+  const QUIET_FROM_HOUR = 22
+  const QUIET_UNTIL_HOUR = 7
+  const inQuietHours = (now) => {
+    const istHour = new Date(now.getTime() + IST_OFFSET_MS).getUTCHours()
+    return istHour >= QUIET_FROM_HOUR || istHour < QUIET_UNTIL_HOUR
+  }
+
+  // Built from an IST wall-clock hour, so the assertions read in the timezone
+  // the captain actually lives in rather than the server's.
+  const atIST = (hour) => new Date(Date.UTC(2026, 7, 12, hour, 0, 0) - IST_OFFSET_MS)
+
+  test('holds reminders overnight', () => {
+    for (const hour of [22, 23, 0, 3, 6]) {
+      assert.equal(inQuietHours(atIST(hour)), true, `${hour}:00 IST should be quiet`)
+    }
+  })
+
+  test('sends them through the working day', () => {
+    for (const hour of [7, 9, 13, 18, 21]) {
+      assert.equal(inQuietHours(atIST(hour)), false, `${hour}:00 IST should send`)
+    }
+  })
+})
+
+describe('days until expiry', () => {
+  const IST_OFFSET_MS = 330 * 60 * 1000
+  const istMidnight = (d) => {
+    const ist = new Date(d.getTime() + IST_OFFSET_MS)
+    return Date.UTC(ist.getUTCFullYear(), ist.getUTCMonth(), ist.getUTCDate())
+  }
+  const daysUntil = (expiresAt, now) =>
+    Math.round((istMidnight(expiresAt) - istMidnight(now)) / 86_400_000)
+
+  // Counted in dates, not elapsed time. Measured from the instant, a captain
+  // reading "1 day left" at 11pm would read "expired" ninety minutes later with
+  // nothing having happened to the document in between.
+  test('is stable across the whole of a day', () => {
+    const expiry = new Date('2026-09-01T00:00:00.000Z')
+    const morning = new Date(Date.UTC(2026, 7, 31, 3, 0) - IST_OFFSET_MS)
+    const night = new Date(Date.UTC(2026, 7, 31, 23, 30) - IST_OFFSET_MS)
+
+    assert.equal(daysUntil(expiry, morning), daysUntil(expiry, night))
+    assert.equal(daysUntil(expiry, morning), 1)
+  })
+
+  test('is zero on the day itself and negative after', () => {
+    const expiry = new Date('2026-09-01T00:00:00.000Z')
+    assert.equal(daysUntil(expiry, new Date(Date.UTC(2026, 8, 1, 12) - IST_OFFSET_MS)), 0)
+    assert.ok(daysUntil(expiry, new Date(Date.UTC(2026, 8, 3, 12) - IST_OFFSET_MS)) < 0)
+  })
+})

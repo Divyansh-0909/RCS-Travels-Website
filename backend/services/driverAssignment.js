@@ -52,6 +52,57 @@ export const ASSIGNABLE_STATUSES = ['pending', 'confirmed']
 const GROUP_RANK = { admin: 0, rcs: 1, partner: 2 }
 const rankOf = (group) => GROUP_RANK[group] ?? GROUP_RANK.partner
 
+/**
+ * How close two drivers have to be before the fairness key outranks distance.
+ *
+ * Sorting on raw distance concentrates every ride on one driver — see the
+ * comment on Driver.lastOfferedAt. Sorting on fairness alone is the opposite
+ * mistake: it would send a rider the driver 18 km away because it was his turn.
+ * The tier is the compromise. Inside one 3 km band the difference is a couple of
+ * minutes of approach and the queue decides; across bands distance still wins
+ * outright, so a driver at 2 km always beats one at 9 km however long he has
+ * been waiting.
+ *
+ * 3 km is roughly campus-and-its-immediate-surroundings, which is the radius the
+ * whole fleet actually sits in. Widen it and genuinely distant drivers start
+ * winning rides; narrow it and the bands stop containing more than one driver,
+ * which is just the old behaviour with extra arithmetic.
+ */
+export const FAIRNESS_TIER_KM = 3
+const tierOf = (km) => Math.floor(km / FAIRNESS_TIER_KM)
+
+/**
+ * Position in the queue: least-recently-offered first. A driver who has never
+ * been offered anything goes to the very front, which is what makes a new
+ * captain's first ride arrive quickly instead of after the incumbents have had
+ * their turn.
+ */
+const turnKey = (driver) => (driver.lastOfferedAt ? new Date(driver.lastOfferedAt).getTime() : 0)
+
+/**
+ * Record that this driver has had his turn, whatever he does with it.
+ *
+ * CALLED BEFORE THE PUSH, NOT AFTER. sendFCM waits 30 seconds for an answer, and
+ * two bookings created inside that window run their searches concurrently: if the
+ * mark landed after the answer, both would sort the same driver to the front and
+ * offer him both rides while the queue still showed him as waiting. Writing it
+ * first costs nothing and closes that window.
+ *
+ * A rejection and a silence both count as a turn taken. They are the same event
+ * from here — sendFCM's boolean cannot tell "no thanks" from "phone in a pocket"
+ * — and treating silence as no turn at all would let an unresponsive driver sit
+ * at the head of the queue forever, delaying every ride by one dead offer.
+ */
+async function markOffered(driverId, at = new Date()) {
+  try {
+    await prisma.driver.update({ where: { id: driverId }, data: { lastOfferedAt: at } })
+  } catch (err) {
+    // Never fail a dispatch over bookkeeping — a rider waiting on a spinner
+    // cares more about getting a car than about the queue staying tidy.
+    console.error(`could not mark driver ${driverId} as offered:`, err)
+  }
+}
+
 class ClaimFailure extends Error {
   constructor(reason) {
     super(reason)
@@ -69,6 +120,8 @@ class ClaimFailure extends Error {
 export async function claimBookingForDriver(booking, driver, confirmedAt, onClaimed) {
   const seats = seatsOf(driver.vehicleClass)
   if (!booking.sharing && seats === null) return 'no_room'
+
+  const now = new Date()
 
   try {
     return await prisma.$transaction(async (tx) => {
@@ -94,7 +147,25 @@ export async function claimBookingForDriver(booking, driver, confirmedAt, onClai
           id: driver.id,
           vehicleCapacity: booking.sharing ? { gt: 0 } : { gte: seats },
         },
-        data: { vehicleCapacity: booking.sharing ? { decrement: 1 } : 0 },
+        data: {
+          vehicleCapacity: booking.sharing ? { decrement: 1 } : 0,
+          // The fairness stamps ride along in the same statement that takes the
+          // seats, because this function is the ONLY way a booking is ever
+          // assigned — ride-now and the scheduled accept endpoint both come
+          // through here. Anywhere else and one of the two paths would quietly
+          // stop counting.
+          //
+          // `now` rather than `confirmedAt`: a scheduled ride carries a
+          // confirmation stamped when the RIDER booked it, possibly a day ago,
+          // and dating the driver's turn from that would rank him as though he
+          // had been waiting since then.
+          lastAssignedAt: now,
+          // An assignment implies the offer that produced it. The ride-now path
+          // has already stamped this, but the accept endpoint has not — its
+          // offer was written by the scheduled sweep, and a driver who takes a
+          // ride has unquestionably had his turn.
+          lastOfferedAt: now,
+        },
       })
       if (seated.count === 0) throw new ClaimFailure('no_room')
 
@@ -163,6 +234,19 @@ export async function getDriver(bookingId) {
         const byGroup = rankOf(a.driver.group) - rankOf(b.driver.group)
         if (byGroup !== 0) return byGroup
 
+        // Then distance, but in 3 km bands rather than metre by metre, and then
+        // whose turn it is within the band. Raw distance was the whole problem:
+        // it is a stable ranking over a fleet that parks in fixed spots, so the
+        // nearest driver to the gate won every booking forever. See
+        // FAIRNESS_TIER_KM.
+        const byTier = tierOf(a.distanceKm) - tierOf(b.distanceKm)
+        if (byTier !== 0) return byTier
+
+        const byTurn = turnKey(a.driver) - turnKey(b.driver)
+        if (byTurn !== 0) return byTurn
+
+        // Both waiting exactly as long — two drivers who have never been offered
+        // anything, in practice. Distance and seniority settle it as before.
         return a.distanceKm !== b.distanceKm
           ? a.distanceKm - b.distanceKm
           : new Date(a.driver.createdAt) - new Date(b.driver.createdAt)
@@ -201,6 +285,9 @@ export async function getDriver(bookingId) {
         // a van we can see is full. claimBookingForDriver re-checks this against
         // the live row and is the check that actually decides.
         if(x.driver.vehicleCapacity <= 0) continue;
+
+        // His turn is spent here, before the push rather than after the answer.
+        await markOffered(x.driverId)
 
         const response =
           await sendFCM(x.driver.fcmToken, {
@@ -261,6 +348,10 @@ export async function getDriver(bookingId) {
       // Same early-out as pass 1: worth skipping a 30s offer over, not trusted to
       // still be true by the time he answers. claimBookingForDriver decides.
       if (row.sharing ? x.driver.vehicleCapacity <= 0 : x.driver.vehicleCapacity < seatsOf(x.driver.vehicleClass)) continue
+
+      // Same as pass 1: the turn is spent when the offer goes out, not when it
+      // is answered. See markOffered.
+      await markOffered(x.driverId)
 
       const response =
         await sendFCM(x.driver.fcmToken, {
