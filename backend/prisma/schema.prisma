@@ -696,13 +696,33 @@ model DriverLocation {
   speedKmh  Float? // km/h, null until second update available
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  // The PostGIS point form of latitude/longitude, and the column the dispatch
+  // scan actually searches. DERIVED, not written: it is GENERATED ALWAYS ...
+  // STORED, so the database recomputes it on every upsert above and no write
+  // path exists that could let the two representations disagree.
+  //
+  // `Unsupported` means Prisma leaves it out of the client entirely — it cannot
+  // be selected, created or updated from JS, which for a generated column is
+  // exactly right. services/driverAssignment.js reaches it through $queryRaw.
+  //
+  // TWO THINGS PRISMA DOES NOT KNOW ABOUT THIS COLUMN: that it is generated, and
+  // that the type lives in the `extensions` schema. Both are stated only in
+  // 20260813150000_driver_location_postgis. So this model must not be migrated
+  // by an auto-generated diff — `prisma migrate dev --create-only`, then read the
+  // SQL, as with every other migration here. A generated diff can emit an ALTER
+  // that drops the GENERATED clause, which does not fail and does not warn; it
+  // just freezes every driver at the position he held when it ran.
+  geog Unsupported("geography(Point, 4326)")?
+
   driver Driver @relation(fields: [driverId], references: [id], onDelete: Cascade)
 
-  // driverAssignment scans this by lat/lng bounding box on every ring of every
-  // assignment — the hotspot flagged in ROADMAP. A btree can only range-scan the
-  // leading column, so this narrows by latitude then filters longitude; still far
-  // better than a seq scan. Proper fix is PostGIS + GiST, which is a bigger change.
-  @@index([latitude, longitude])
+  // "Every driver within N km of this pickup", once per ring of every assignment
+  // — the hotspot flagged in ROADMAP. This replaced an @@index([latitude,
+  // longitude]), which a btree could only range-scan by latitude before filtering
+  // longitude row by row, and which forced the caller to ask for a bounding box
+  // and then discard the ~21% of the square that lies outside the circle. GiST
+  // answers the circle directly, in metres, via ST_DWithin.
+  @@index([geog], type: Gist)
   @@map("driver_locations")
 }
 

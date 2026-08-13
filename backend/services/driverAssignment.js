@@ -1,8 +1,7 @@
 import { prisma } from '../db/prisma.js'
+import { Prisma } from '@prisma/client'
 import {sendFCM, sendWhatsApp} from './notification.js'
 import { seatsOf } from '../constants/vehicles.js'
-
-const EARTH_RADIUS_KM = 6371
 
 function bearingDeg(lat1, lng1, lat2, lng2) {
   const toRad = (d) => (d * Math.PI) / 180
@@ -21,30 +20,85 @@ export function inSameDirectionCorridor(pickupLat, pickupLng, drop1Lat, drop1Lng
   return (diff > 180 ? 360 - diff : diff) <= thresholdDeg
 }
 
-function haversineDistance(lat1, lng1, lat2, lng2) {
-  const toRad = (deg) => (deg * Math.PI) / 180
+// THE ONE PLACE A { lat, lng } PAIR BECOMES A POSTGIS VALUE.
+//
+// ST_MakePoint takes (x, y) — LONGITUDE FIRST. That is the same disagreement
+// services/geo.js has a header comment about, and it is silent when written
+// backwards: a pickup in NCR is lat 28, lng 77, and both are legal latitudes, so
+// a reversed pair does not error. It searches empty ocean off Somalia and every
+// booking comes back `no_driver`. Building the value here, once, is that file's
+// defence applied to SQL — no query below states an order, so none can state it
+// wrong.
+//
+// Every PostGIS name is schema-qualified because that is where Supabase installs
+// the extension. Unqualified calls would resolve in production, where Supabase
+// puts `extensions` on the role's search_path, and then fail on a plain local
+// Postgres where it is not.
+const geographyOf = (lat, lng) =>
+  Prisma.sql`extensions.ST_SetSRID(extensions.ST_MakePoint(${lng}::float8, ${lat}::float8), 4326)::extensions.geography`
 
-  const dLat = toRad(lat2 - lat1)
-  const dLng = toRad(lng2 - lng1)
+/**
+ * Every dispatchable driver within `radiusKm` of the booking's pickup, each
+ * carrying the distance that ranks him and the active bookings the sharing pass
+ * reads. Drivers already offered this ride are excluded.
+ *
+ * WHY THIS IS TWO QUERIES. The first is the geography one and has to be raw:
+ * `geog` is `Unsupported` in the Prisma schema, so ST_DWithin — the whole point
+ * of the GiST index — is unreachable through the query builder. It returns ids
+ * and distances only. The second is an ordinary Prisma read that hydrates those
+ * ids with their relations, which keeps the nested `bookings` include typed and
+ * keeps a hand-written join out of a function that would otherwise have to
+ * reassemble one driver's rows from many.
+ *
+ * The radius filter is now the DATABASE's. It used to be a bounding box here
+ * plus a haversine re-measure in JS, which had to over-fetch: a square around a
+ * circle is ~27% larger than the circle, and every row in the corners was loaded
+ * with all its relations only to be dropped. ST_DWithin asks for the circle.
+ */
+async function candidatesWithin(row, radiusKm, triedDriverIds) {
+  const origin = geographyOf(row.pickupLat, row.pickupLng)
 
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2
+  // `use_spheroid = false` on both calls, and not only because the sphere is the
+  // cheaper of the two. It is what the haversine this replaced computed, so the
+  // numbers below land in the same FAIRNESS_TIER_KM bands they used to — a
+  // switch to spheroid distances would silently re-rank every driver sitting
+  // near a 3 km boundary.
+  const near = await prisma.$queryRaw`
+    SELECT dl."driver_id" AS "driverId",
+           dl."latitude"  AS "latitude",
+           dl."longitude" AS "longitude",
+           extensions.ST_Distance(dl."geog", ${origin}, false) / 1000 AS "distanceKm"
+    FROM "driver_locations" dl
+    JOIN "drivers" d ON d."id" = dl."driver_id"
+    WHERE extensions.ST_DWithin(dl."geog", ${origin}, ${radiusKm * 1000}::float8, false)
+      AND d."is_online"
+      AND d."is_active"
+      AND d."suspended_at" IS NULL
+      AND d."verification_status" = 'approved'
+      AND d."vehicle_class" = ${row.vehicleClass}::"VehicleClass"
+      AND NOT (dl."driver_id" = ANY(${[...triedDriverIds]}::text[]))
+  `
 
-  return 2 * EARTH_RADIUS_KM * Math.asin(Math.sqrt(a))
-}
+  if (near.length === 0) return []
 
+  const drivers = await prisma.driver.findMany({
+    where: { id: { in: near.map((n) => n.driverId) } },
+    include: {
+      bookings: {
+        where: { status: { in: ['assigned', 'en_route', 'reached', 'started'] } },
+        select: { id: true, dropLat: true, dropLng: true },
+      },
+    },
+  })
+  const byId = new Map(drivers.map((d) => [d.id, d]))
 
-function getBoundingBox(lat, lng, radiusKm) {
-  const latDelta = radiusKm / 111                          // 1 deg lat = 111 km
-  const lngDelta = radiusKm / (111 * Math.cos(lat * Math.PI / 180))  // shrinks near poles
-
-  return {
-    minLat: lat - latDelta,
-    maxLat: lat + latDelta,
-    minLng: lng - lngDelta,
-    maxLng: lng + lngDelta,
-  }
+  // No ordering here: the comparator in getDriver ranks by group, then distance
+  // band, then whose turn it is, and would only have to undo one imposed by SQL.
+  // The filter is for the driver deleted between the two queries — a row that
+  // cannot be offered anything and would blow up the sort on `driver.group`.
+  return near
+    .map((n) => ({ ...n, driver: byId.get(n.driverId) }))
+    .filter((c) => c.driver)
 }
 
 /** @type {import('@prisma/client').BookingStatus[]} */
@@ -203,36 +257,9 @@ export async function getDriver(bookingId) {
       if (!current || !ASSIGNABLE_STATUSES.includes(current.status)) return null
     }
 
-    const box = getBoundingBox(row.pickupLat, row.pickupLng, 20+i)
+    const candidates = await candidatesWithin(row, 20 + i, triedDriverIds)
 
-    const locations = await prisma.driverLocation.findMany({
-      where: {
-        latitude:  { gte: box.minLat, lte: box.maxLat },
-        longitude: { gte: box.minLng, lte: box.maxLng },
-        driver: {
-          isActive:           true,
-          isOnline:           true,
-          verificationStatus: 'approved',
-          suspendedAt:        null,
-          vehicleClass: row.vehicleClass,
-        },
-      },
-      include: {
-        driver: {
-          include: {
-            bookings: {
-              where: { status: { in: ['assigned', 'en_route', 'reached', 'started'] } },
-              select: { id: true, dropLat: true, dropLng: true },
-            },
-          },
-        },
-      },
-    })
-
-    const sorted = locations
-      .filter(loc => !triedDriverIds.has(loc.driverId))
-      .map((loc) => ({ ...loc, distanceKm: haversineDistance(row.pickupLat, row.pickupLng, loc.latitude, loc.longitude) }))
-      .filter((loc) => loc.distanceKm <= 20 + i)
+    const sorted = candidates
       .sort((a, b) => {
         // Group first — see GROUP_RANK. Both passes below iterate this array, so
         // sorting here is what makes the sharing pass respect priority too.

@@ -497,9 +497,17 @@ Order: FINISH PAGES + RIDE LIFECYCLE  →  LINK REAL APIS  →  OPTIMIZE LAST.
      rewritten.
    - DB/query tuning + React profiler ("react doctor") need real volume to be
      meaningful; at zero traffic there's nothing to measure, correctness > speed.
-   - Watch-later hotspot: the geo bounding-box findMany in driverAssignment.js runs
-     every assignment loop (lat/lng ranges + nested filters). Index/tune only once
-     there are many drivers/bookings.
+   - [RESOLVED — 13 Aug 2026] Watch-later hotspot: the geo bounding-box findMany in
+     driverAssignment.js runs every assignment loop (lat/lng ranges + nested filters).
+     driver_locations now carries a PostGIS `geog` point — GENERATED ALWAYS from the
+     existing latitude/longitude, so no writer changed and the two cannot drift — under
+     a GiST index, and candidatesWithin() asks ST_DWithin for the circle instead of a
+     box for the square around it. Migration 20260813150000_driver_location_postgis.
+     DONE AHEAD OF THE "measure first" rule ON PURPOSE, and the reason is worth keeping:
+     at today's fleet size the seq scan was already microseconds, so this bought no
+     latency. What it bought is the access path being right before the volume arrives,
+     and real metre distances to build zone containment on later — geo.js still ray-casts
+     fare zones in JS, which is the same query PostGIS answers with ST_Contains.
 
 
 X PHASE 1 — Foundation (Day 1-2)
