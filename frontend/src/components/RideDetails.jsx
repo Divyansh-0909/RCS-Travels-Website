@@ -48,18 +48,25 @@ const RideDetails = ({ prop }) => {
     const airport = useData(state => state.fareAirport);
     const baseFare = fare != null ? fare - surcharge - toll - carrier - airport : null;
 
+    // One id for both the guard and the call. The two sources disagree in each
+    // direction: the searching panel mounts this without the prop while the
+    // store holds the id, and /booking/:id after a reload has the prop but no
+    // store id (it isn't persisted). Guarding on one and sending the other
+    // refused a cancellable ride on the first and sent `undefined` on the second.
+    const cancelId = prop.bookingId ?? bookingId;
+
     async function handleCancel(e) {
         e.preventDefault();
 
         try {
             prop.setError(null);
             prop.setLoading(true);
-            if (!prop.bookingId) {
+            if (!cancelId) {
                 prop.setError("No active ride to cancel")
                 return
             }
 
-            const data = await api.cancelBooking(bookingId)
+            const data = await api.cancelBooking(cancelId)
 
             if (data?.error) {
                 prop.setError("Can't cancel ride")

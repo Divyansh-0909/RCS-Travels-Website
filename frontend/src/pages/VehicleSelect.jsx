@@ -1039,7 +1039,7 @@ const VehicleSelect = ()=>{
                         {!isMobile && detialsVisibility && (
                             <GoogleMap center={pickupPoint} zoom={12} onMapReady={setMapApi} className={MAP_CLASSES} />
                         )}
-                        <RideDetails prop={{setLoading,setError,setDetialsVisibility}}/>
+                        <RideDetails prop={{bookingId, setLoading, setError, setDetialsVisibility}}/>
                     </BackgroundPanel>
                     
                     <div className={`${panelState === "noDriver" || (panelState === "confirmed" && scheduledTime) || step === "searching" ? "block" : "hidden" } absolute z-2 sm:z-1 bottom-0 bg-black/40 w-[100vw] h-[100dvh]`}/>
