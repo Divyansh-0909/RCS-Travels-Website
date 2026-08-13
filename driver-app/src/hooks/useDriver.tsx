@@ -12,6 +12,19 @@ type OnboardingState = {
   blockedBy: 'notUploaded' | 'uploading' | 'scanning' | 'pending' | 'rejected' | 'suspended' | 'inactive' | null;
   suspendedAt: string | null;
   suspensionReason: string | null;
+  /**
+   * Rides he was given and has not finished — assigned, en route, reached or
+   * started.
+   *
+   * SEPARATE FROM canDrive, and the pair is what routes a suspended captain.
+   * canDrive answers "may he take NEW work" and is false throughout a
+   * suspension; this answers "does he still owe somebody a ride from before
+   * it", and both can be true at once. The server lets him finish those rides
+   * (requireDriverForAssignedWork), so an app that read only canDrive would
+   * strand a rider by putting the captain on the status screen with no route
+   * to the ride.
+   */
+  assignedRides: number;
 };
 
 type DriverContextValue = {

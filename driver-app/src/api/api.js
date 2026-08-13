@@ -141,6 +141,21 @@ const toQuery = (filters = {}) => {
     return qs ? `?${qs}` : "";
 };
 
+// The notification page, and the offer card that floats over the app.
+//
+// `canAccept` comes back beside the list and is the SERVER's answer to "may he
+// take one of these right now" — today that is driver.isOnline, and the accept
+// endpoint enforces the same rule. Read it; do not recompute it from the
+// profile. Two places deciding the same thing is how the button ends up enabled
+// on a screen the request is about to refuse.
+//
+// Offers are deliberately returned to an OFFLINE captain too. They are rows, not
+// pushes, so they wait for him — the app shows "Go online to accept" rather than
+// hiding a ride he is still entitled to take.
+export const getOffers         = (getToken)              => request("/api/driver/offers", { getToken });
+export const acceptOffer       = (id, getToken)          => request(`/api/driver/offers/${encodeURIComponent(id)}/accept`, { method: "PATCH", getToken });
+export const rejectOffer       = (id, getToken)          => request(`/api/driver/offers/${encodeURIComponent(id)}/reject`, { method: "PATCH", getToken });
+
 export const getRides          = (filters, getToken)     => request(`/api/driver/rides${toQuery(filters)}`, { getToken });
 export const getUpcomingRide   = (getToken)              => request(`/api/driver/upcoming-ride`, { getToken });
 export const getRide           = (id, getToken)          => request(`/api/driver/rides/${encodeURIComponent(id)}`, { getToken });

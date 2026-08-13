@@ -84,9 +84,20 @@ IMPORTANT:
 - Add big panel for upcoming scheduled ride if no active ride on the home screen app
 - add the market place advert at the bottom and also only show the next 2 upcoming rides
 - Rides page should have two sections ride history and upcoming rides
-- add the ability in AdminDashboard to change the fare of zones or outstation
+- [PARTLY DONE] add the ability in AdminDashboard to change the fare of zones or outstation.
+  ZONES ARE DONE — EditFares.jsx saves the live GeoJSON rate card to the fare_zone_set row,
+  which takes over from the git file permanently. OUTSTATION IS NOT, and is parked with the
+  rest of outstation. !! EditFares has NO PREMIUM COLUMN — see item 5 of the rate-card block.
 - add the ability to scroll background panel on mobile
-- add the ability to remove a driver or verify a driver in the dashboard
+- [MOSTLY DONE — 13 Aug 2026] add the ability to remove a driver or verify a driver in the
+  dashboard. VERIFY: done, but not as a button — verificationStatus is DERIVED. There is
+  deliberately no "approve driver" endpoint, because recomputeDriverVerification recalculates
+  it on every review, renewal and expiry sweep, and a manual override would be a fourth
+  writer that appears to work and silently reverts at the next sweep. Approving the DOCUMENTS
+  is approving the captain (PATCH /api/admin/documents/:id, plus the DriverReview panel).
+  SUSPEND: done — PATCH /api/admin/drivers/:id/suspension, reason required, shown to him.
+  STILL MISSING: "remove" in the sense of deactivating a captain outright (isActive), and
+  manual booking re-assignment, which is now the last admin mutation that does not exist.
 - remove the dummy bookings and drivers data from the production DB before launch
   (backend/prisma/clean-bookings.js clears non-seed bookings; drivers need a
   similar pass — and the seed rows themselves must go too)
@@ -163,8 +174,11 @@ IMPORTANT:
       exclude it, and a negation in driver-app/.easignore cannot beat a parent
       rule. Verified with `eas build:inspect --stage archive` — .env.example
       ships, .env does not. GOOGLE_SERVICES_JSON already works this way.
-    - EXPO_PUBLIC_API_BASE_URL must be https://rcs-travels-api.onrender.com for
-      preview and production. Development points at a LAN IP, which is both
+    - EXPO_PUBLIC_API_BASE_URL must be https://api.rcstravels.co.in for EVERY
+      environment, development included. [SUPERSEDED 13 Aug 2026 — this line used
+      to say rcs-travels-api.onrender.com; Render is now only the rollback, and a
+      bundle cannot be repointed after it ships. See the api.rcstravels.co.in item
+      above.] Development currently points at a LAN IP, which is both
       machine-specific and DHCP-assigned, so it is worthless in any build someone
       else installs.
     - The https matters beyond tidiness: Android 9+ refuses cleartext HTTP in
@@ -251,16 +265,36 @@ IMPORTANT:
       SEPARATE from zones.geojson on purpose (fare zones are drawn around
       destinations; these are drawn around roads). EMPTY would mean the feature is
       fully dormant: no alternatives requested, no toggle shown, nothing charged.
-      [NO LONGER EMPTY] Two corridors are drawn and the feature is live — see the
-      "DRAW THE SHADY POLYGONS" item for the one part still dead (no `fallback`).
+      [NO LONGER EMPTY] The corridor is drawn and the feature is live. Redrawn 13 Aug
+      2026 — the Dadri-Bisrakh zone was removed and the Greater Noida east corridor
+      reshaped to cover the Dadri Main Rd / GN West Link Rd alternative, which had been
+      testing clean. Every alternative on campus <-> Greater Noida now scores shady,
+      which is what makes the campus gates fire. Zone `fallback` is still null on the
+      remaining zone; the gates cover campus trips instead.
     - The estimate asks Routes for `computeAlternativeRoutes`, decodes each one and
       measures how far it runs inside a shady polygon (sampled every 50 m, so a
       sparse motorway polyline can't slip through; 400 m inside is the threshold,
       so clipping a corner doesn't count). Primary clean -> nothing offered.
       Primary shady -> fastest clean alternative wins. Google finds the Eastern
       Peripheral on its own; no highway is named anywhere in the code.
-    - Only if EVERY alternative is shady does it force a waypoint, from that zone's
-      own optional `fallback` property, and it re-verifies the result is clean.
+    - Only if EVERY alternative is shady does it force a waypoint, and it re-verifies
+      the result is clean before offering it. Two sources, in this order:
+        CAMPUS GATES (safeRoute.js) — a trip with either end inside the campus radius
+          uses a fixed point that puts it on the Eastern Peripheral. DIRECTIONAL: two
+          points 642 m apart, outbound 28.520718,77.600243 and inbound 28.518866,
+          77.594022, because the carriageways are separate. Measured 13 Aug 2026:
+          forcing an OUTBOUND trip through the inbound gate returns 42.25 km / 60 min
+          and STILL crosses the zone, vs 27.57 km / 39 min clean through the right one.
+        ZONE `fallback` — the per-zone property, for trips with neither end on campus.
+          Still null on every zone, so this half remains dead; the gates cover the
+          campus traffic the feature was actually built for.
+      GATED ON primaryShady, NOT on "no clean alternative was found". classifyRoutes
+      returns safe:null for BOTH "the default road is already fine" and "nothing clean
+      was offered", so a caller keying off !safe forces a detour on trips whose road
+      never touched a zone. That shipped briefly and turned the 4.6 km campus->Dadri
+      run into 11.8 km with ₹150 on it. tests/safeRoute.test.js guards the distinction.
+    - AN ENDPOINT INSIDE A ZONE is not offered a detour at all: every route to it must
+      finish inside, so there is nothing to route around. Checked before any call.
     - The chosen route is reduced back to ONE coordinate (the point furthest from
       the primary path — a midpoint sits on shared road and forces nothing) and
       stored on the booking as safeWaypointLat/Lng, because a Maps nav link takes
@@ -273,7 +307,14 @@ IMPORTANT:
   FIXED IN PASSING: the surcharge used to follow the rider's checkbox while the
   routing followed a separate condition, so a trip with no safer route available was
   still billed ₹150 for taking one. Charge and route now come from one flag
-  (`applied`), and the toggle is hidden entirely when there is nothing to offer.
+  (`applied`), and the toggle is shown-but-disabled when there is nothing to offer —
+  "This route has no safer alternative.", so it reads as considered rather than missing.
+
+  AVAILABLE AND APPLIED ARE NOW ANSWERED BY DIFFERENT THINGS, deliberately. `applied`
+  (and so the ₹150) still requires options.safe — a route fetched and verified. But
+  `available` also accepts options.candidate: the waypoint we WOULD force, reported
+  without paying to confirm it. That is what lets an un-ticked estimate cost one call.
+  Nothing is ever billed on a candidate.
 
   !! 1. DRAW AT LEAST ONE POLYGON. Until shady-zones.geojson has a feature, the
         toggle never appears and the feature does nothing — by design, but it is
@@ -302,12 +343,57 @@ IMPORTANT:
   TRADEOFF: highway is longer -> higher distanceKm -> higher fare at the per-km rate,
   and the ₹150 lands ON TOP of that for formula-priced routes. Zone and fixed-table
   fares only take the flat ₹150.
-  WORTH REVISITING NOW THAT THE DATA EXISTS: the estimate returns extraKm/extraMin for
-  the detour it found, so a 2 km diversion and a 15 km one no longer have to cost the
-  same ₹150. Log a week of real bookings before changing anything — how often the
-  default route is even shady is now measurable rather than assumed.
+  WORTH REVISITING — pricing the detour by its size, so a 2 km diversion and a 15 km one
+  don't both cost ₹150. Still doable, but NOT the way this entry used to describe it: the
+  estimate no longer returns extraKm/extraMin (removed 14 Aug 2026 — see below), so the
+  client cannot show them. It does not need to. The fee is a SERVER decision, and the
+  server has both distances in hand at the only moment that matters: a ticked estimate
+  always fetches the detour, so options.safe.distanceKm - options.primary.distanceKm is
+  available on exactly the estimates that charge for it.
+  Log a week of real bookings before changing anything — how often the default route is
+  even shady is now measurable rather than assumed.
+
+  WHY extraKm/extraMin WERE DROPPED (14 Aug 2026): they can only be computed on an
+  estimate that actually fetched the detour, and since verified routes are answered from
+  a cached verdict instead, the same option read "Adds ₹150. 9.2 km, 4 min longer." for
+  the first rider to a destination and "Adds ₹150." for everyone after. Distance alone
+  was cacheable (road topology, not traffic); the minutes were not. So the row quotes the
+  fee only. If detour-scaled pricing lands, price it server-side rather than reinstating
+  these fields.
+
+  VERDICT CACHE (safeRouteCache.js, table safe_route_verdicts, added 14 Aug 2026).
+  Confirming a forced waypoint yields a clean route costs a Routes call; the answer
+  depends on road topology and the polygons, neither of which moves hour to hour. So it
+  is remembered per route and the call is spent once instead of per booking:
+    un-ticked, no verdict yet -> 2 calls (alternatives + verify), writes the verdict
+    un-ticked, verdict known  -> 1 call
+    rider ticks               -> 2 calls, always. Distance and duration are traffic-
+                                 dependent and the fare is computed from them, so the
+                                 route itself is NEVER cached — only the yes/no.
+  Keyed on both endpoints and the waypoint rounded to ~111 m, plus a hash of
+  shady-zones.geojson: REDRAWING A POLYGON INVALIDATES EVERY VERDICT AUTOMATICALLY, with
+  no purge step. Hand-typed addresses have no coords, so they key to nothing and verify
+  every time. A failed read or write is a cache miss, never an error — a fare must not
+  fail over a memo.
+  WATCH THE ApiUsage COUNTER for the first few weeks: cost is front-loaded by design and
+  should fall as the table fills. GOOGLE_ROUTES_MONTHLY_LIMIT is 10,000.
 - Clear the hard coded data in the schema models
-- Make the share location and share drivers details page
+- [DONE — 13 Aug 2026] Make the share location and share drivers details page.
+  Built as "follow my ride": POST /api/bookings/:id/share mints an opaque 128-bit handle,
+  the OS share sheet sends it, and /t/:token opens a read-only trip view for someone with
+  no account. GET /api/share/:token is the ONLY unauthenticated route that reads a booking.
+  WHAT IT REFUSES TO CARRY is the substance of it, and lives in lib/shareLink.js as a PURE
+  function so the omissions can be asserted without a database (tests/shareLink.test.js —
+  if you add a field there, add the assertion too): neither phone number, not bookingCode
+  (the OTP that starts the ride, per-account and permanent), not the fare, no ids.
+  Minting is idempotent while the link is live, so a rider who shares twice has ONE thing
+  to revoke; every link expires (SHARE_TTL_MS, 12 h) and positions stop being served the
+  moment the ride ends. 410 for a lapsed link vs 404 for an unknown one. /t is noindex.
+  !! SET APP_ORIGIN IN PRODUCTION or every link points at localhost:1574 — it cannot be
+  derived from the request, which arrives at the API's own host.
+  STILL OPEN: revocation has no UI. The endpoint works and api.js/useApi.js both expose it
+  as unshareBooking, but no screen calls it — so a rider's only way to end a share is to
+  wait out the 12 hours. A "stop sharing" control on the tracking screen is the missing half.
 - Before deploying whole code to github, verify from claude if that can cause security issue
 - GOOGLE CLOUD CONSOLE — THERE ARE TWO KEYS AND THEY NEED OPPOSITE RESTRICTIONS.
   This is why they must stay separate: a key can only carry ONE application
@@ -370,10 +456,27 @@ IMPORTANT:
 - notification about if a driver needs to be approved by the admin
 - if a not shared ride is not assgined till the end then notify user about it and ask them to make it shared.
 - OPTIMIZE SCHEDULED DRIVER ASSIGNMENT (services/assignScheduledRides.js).
-  Today: setInterval every 5 min -> findMany(status=confirmed, scheduledAt <= now+12h)
-  -> sequential `await getDriver(booking.id)` per booking, one booking at a time.
+  STATUS AS OF 13 Aug 2026 — FOUR OF THE FIVE ARE CLOSED. Read this header before the
+  analysis below, which was written against the old code and is kept for its reasoning:
+    1. WINDOW — DONE. ASSIGNMENT_HORIZON_H is 6, not 12 (constants/dispatch.js).
+    2. SEQUENTIAL NOTIFY — DONE FOR SCHEDULED, still true for ride-now. Scheduled rides no
+       longer go through getDriver at all: services/scheduledOffers.js creates RideOffer
+       ROWS for a whole group at once and the first accept wins (block 9). Ride-now keeps
+       the one-at-a-time ring walk on purpose — a rider is watching a spinner.
+    3. OVERLAPPING setInterval — DONE. lib/jobs.js holds a `running` guard per job and logs
+       the skip, and the real safety is in the database anyway (the unique on RideOffer, the
+       adminAlertedAt guard, claimDocument's conditional UPDATE).
+    4. ATTEMPT TRACKING — HALF DONE. Booking.adminAlertedAt exists and is stamped BEFORE the
+       send, guarded on still being null, so the T−1h WhatsApp fires once instead of twelve
+       times. lastAssignmentAttemptAt and assignmentAttempts were NOT added, so there is
+       still no backoff and every tick retries every eligible booking identically.
+    5. "IT ONLY RUNS WHILE RENDER IS AWAKE" — OBSOLETE, and replaced by a sharper problem.
+       On Cloud Run a timer cannot work AT ALL: between requests the CPU is throttled to
+       near zero, the event loop stops, and the deadline passes unobserved with /health
+       still green. Hence JOBS_MODE — `scheduler` starts no timers and Cloud Scheduler
+       POSTs /internal/jobs/:name instead. See CONTEXT §5.
 
-  WHAT IS ACTUALLY WRONG, ordered by how much it costs:
+  ORIGINAL ANALYSIS (pre-13 Aug), ordered by how much it costs:
 
   1. THE 12-HOUR WINDOW IS THE SINGLE BIGGEST WASTE. A ride booked 12 h ahead enters
      the candidate set immediately and gets a FULL getDriver sweep (20->80 km rings,
@@ -448,11 +551,32 @@ IMPORTANT:
   "driver waits, you settle waiting time with him", no return time is needed and it stays
   on VehicleSelect. Also decide whether sharing + round trip can combine (probably force
   sharing off when round trip is on).
-- TrackingPage renders a HARDCODED driver card (name / UP 16 AB 1234 / photo) that is NOT
-  gated on the driver object, and Call driver next to it. A `pending` booking reached from
-  OnBoarding's trip card falls through to the live panel and shows a driver that does not
-  exist — including the extra-fare pill, which assumes one. Gate the driver card, Call
-  driver and that pill on `driver` being non-null, and give `pending` its own state.
+- [RESOLVED — 13 Aug 2026] TrackingPage rendered a HARDCODED driver card (name /
+  UP 16 AB 1234 / photo), not gated on the driver object, with a Call driver button that did
+  nothing. The driver object the status poll already returned was read for the map puck and
+  nothing else. Now: the card reads its fields, both Call buttons open the dialer, and the
+  card AND the extra-fare pill are gated on `driver` being non-null — the live panel is the
+  fallthrough for every status the scheduled and completed branches do not claim, which
+  includes `pending` and `no_driver`, and it was showing a fabricated plate to a rider with
+  nobody coming.
+  THE PHOTO is a signed URL that dies in 15 minutes. The poll mints a fresh one every tick,
+  so the img is KEYED on it to force a refetch, and onError covers what polling cannot: a
+  completed ride, where the poll has stopped and the rider is still on the screen.
+  THE MODEL came from a new Booking.vehicleModel rather than through the driver relation —
+  a captain owns several cars, so a live read describes whichever he is in today. It is
+  snapshotted in the same claim as the plate, and the two move together. NO BACKFILL and no
+  fallback to the driver row: the plate's column landed one migration earlier, so rides in
+  between carry a correct plate and no model, which are exactly the rows either shortcut
+  would corrupt. They render the booked CLASS instead, which is a fact of the booking.
+  Naming a car is required at every write as of the same day (signup, addVehicle,
+  ensurePrimaryVehicle, the seeds, and the shared zod schema); the COLUMN stays nullable,
+  which is about what is already stored, not about what may be submitted.
+- [RESOLVED — 13 Aug 2026] RideDetails guarded on its `bookingId` prop and then sent the
+  STORE's id, and the two disagree in each direction: the searching panel mounts it without
+  the prop while the store holds the id, so a cancellable ride was refused as "no active
+  ride"; /booking/:id after a reload has the prop but no store id (it is not persisted), so
+  cancel went out with undefined. One resolved id now feeds both, and VehicleSelect passes
+  bookingId through.
 - fetchEstimate (VehicleSelect) has no try/catch, and api.js `request` only converts HTTP
   errors into { error } — a NETWORK failure rejects instead. Both fetchEstimate call sites
   (mount effect, handleConfirmLocation) throw unhandled. confirmBooking already wraps its
@@ -480,8 +604,15 @@ Order: FINISH PAGES + RIDE LIFECYCLE  →  LINK REAL APIS  →  OPTIMIZE LAST.
        is in the field mask, and showRouteView draws the pickup→drop polyline with
        markers alongside the vehicle cards.
      X Map on TrackingPage — phase 1 BUILT (static route map with pickup/drop
-       markers, same polyline). PHASE 2 STILL OPEN, waiting on the driver app:
-       live driver marker fed by the 5s status poll + dead reckoning.
+       markers, same polyline). PHASE 2 MOSTLY BUILT as of 13 Aug 2026: the driver
+       puck is drawn from the 5s status poll and follows it, on its own effect so a
+       position update never redraws or clears the route overlays, and the ETA
+       counts driver->pickup while he is coming and driver->drop once the ride is
+       underway (frontend/src/lib/trip.js, shared with the public shared-trip page).
+       STILL OPEN — DEAD RECKONING. The marker STEPS every 5 seconds instead of
+       moving. POST /api/driver/location already stores bearing and speedKmh for
+       exactly this and nothing reads them, so it is client-side work with the
+       formula already written in PHASE 5 below.
 
 2. LINK GOOGLE / WHATSAPP / FCM  (do second — the "go-live" layer)
    Reason: needed to test with real people, NOT to build. Develop on stubs until then.
@@ -508,6 +639,108 @@ Order: FINISH PAGES + RIDE LIFECYCLE  →  LINK REAL APIS  →  OPTIMIZE LAST.
      latency. What it bought is the access path being right before the volume arrives,
      and real metre distances to build zone containment on later — geo.js still ray-casts
      fare zones in JS, which is the same query PostGIS answers with ST_Contains.
+
+   - [BUILT — 14 Aug 2026] Live driver location, end to end. The pieces existed
+     separately for a while — POST /api/driver/location, api.sendLocation, the geog
+     column, expo-location in app.json — and nothing called any of it, so
+     driver_locations only ever held seed rows and a real ride-now dispatch would
+     have returned no_driver for every booking. Now wired:
+       * lib/locationTask.ts posts the fixes, from a module-scope TaskManager task
+         registered in main.tsx — the OS looks the task up by name and may wake the
+         process with no UI mounted, so it cannot be registered from a component.
+         hooks/useDriverLocation.ts only starts and stops the service and sets its
+         cadence; it is mounted on App.tsx so it outlives every route change.
+       * IT KEEPS REPORTING WITH THE APP OFF SCREEN, via an Android FOREGROUND
+         SERVICE (Location.startLocationUpdatesAsync with foregroundService). The
+         persistent notification is not decoration — it is the contract that
+         exempts the process from Doze and App Standby while he drives with Maps
+         in front. killServiceOnDestroy is false, so swiping the app away does not
+         quietly take him off the map; going offline is what ends a shift.
+       * THE HEADLESS TOKEN PROBLEM WAS SMALLER THAN RECORDED. A task has no
+         useAuth(), but @clerk/clerk-expo exports getClerkInstance() and
+         ClerkProvider itself uses it on native — so the task shares the very same
+         instance and the very same SecureStore token cache, and Clerk refreshes
+         the session JWT itself. No captured token, no device-token table, no
+         migration. The earlier plan for a custom scoped credential is dropped.
+       * OnlineToggle reads driver.isOnline from the server instead of a local
+         useState(false), asks for location permission BEFORE going online, and
+         renders the refusal. It also now reads the api layer's { error } return —
+         the try/catch it had caught nothing, because request() returns failures
+         rather than throwing, so 409 "finish your active ride" was being shown to
+         the captain as success.
+       * candidatesWithin() filters on updated_at, tied to the app's idle heartbeat
+         through LOCATION_STALE_AFTER_MS.
+       * The rider's puck interpolates between fixes (mapOverlays.jsx). It also
+         stopped being destroyed and rebuilt on every poll — the effect in
+         TrackingPage/SharedTrip returned clearDriverMarker as cleanup, which React
+         ran before each re-run.
+
+   - LOCATION AT SCALE — the order to do things in, and the numbers that trigger
+     them. Recorded 14 Aug 2026 after researching how Uber, Ola and Rapido do this,
+     because the answer for them is not the answer for us and the gap is the point.
+     Their published designs (MQTT/gRPC ingestion, Kafka, Redis GEO or H3 in RAM,
+     Postgres kept off the hot path entirely) are correct at five million drivers
+     and 1.25M writes/second. WE ARE AT ROUGHLY 1.7 WRITES/SECOND — fifty captains,
+     five of them on live rides, the rest heartbeating every two minutes. The
+     adaptive cadence is what buys that: a flat 4-second ping for the same fleet
+     would be 12.5/s. Do not import their architecture on the strength of their
+     conclusions; import it when one of these numbers says so.
+
+     1. OEM BATTERY MANAGERS — the one unsolved risk in background location, and
+        it is not solvable in code. Xiaomi, Oppo, Vivo and Realme ship battery
+        managers that kill background apps EVEN WITH A VALID FOREGROUND SERVICE,
+        and between them that is most of the handsets our captains actually own.
+        It is the top source of "why did I stop getting rides" for every Indian
+        driver app, which is why Ola and Rapido both walk drivers through
+        disabling battery optimisation and whitelisting autostart during
+        onboarding. NEEDS AN ONBOARDING SCREEN with per-OEM steps
+        (dontkillmyapp.com documents them), not just a permission prompt.
+        The staleness filter is the backstop when it happens anyway: he drops out
+        of dispatch instead of sitting on the map frozen and unreachable.
+        Also note none of the background path runs in Expo Go — testing it needs a
+        dev build on a real handset.
+     2. WHEN THE ACCEPT FLOW IS BUILT, REFRESH THE DRIVER PROFILE. api.acceptRide,
+        declineRide and setRideStatus exist in the api layer and are called from
+        NOWHERE — ride acceptance is not wired up yet. When it is: the location
+        cadence switches to the fast rate off profile.onboarding.assignedRides,
+        which today only re-reads on app foreground (DriverProvider). Accept
+        without calling the driver context's refresh() and the whole drive to
+        pickup runs at the 20-second idle cadence while a rider watches.
+     3. TRIP WAYPOINTS — also not scaling; a hole in the record. We store where a
+        driver IS and never where he WENT, so a "he took the long way" dispute has
+        nothing behind it. Buffer the path in memory during a ride, bulk INSERT on
+        completion. INSERT-only, so none of the update-churn concern applies.
+        NOTE THE FARES ARE FIXED BY DESTINATION, so unlike a metered operator this
+        does not feed pricing — it is for disputes, payouts and audit only, which
+        is why it sits below background location rather than above it.
+     4. REDIS GEO — only when measured. The research is right that Postgres is the
+        wrong place for this at volume: every UPDATE writes a dead tuple, and geog
+        being indexed means these can never be HOT updates. What makes it a
+        non-issue today is that driver_locations is ONE ROW PER DRIVER — a ~50-row
+        table, vacuumed in milliseconds, with fillfactor 70 and
+        autovacuum_vacuum_scale_factor 0.02 already set for exactly this churn.
+        TRIGGER, do not guess: watch n_dead_tup against n_live_tup —
+          SELECT relname, n_live_tup, n_dead_tup, last_autovacuum
+            FROM pg_stat_user_tables WHERE relname = 'driver_locations';
+        Move when dead tuples climb between autovacuums instead of returning to
+        near zero, or when sustained writes pass a few hundred per second. At that
+        point Redis GEO holds live position and Postgres keeps history only.
+     5. PUSH DELIVERY — last, and probably never as a socket we run. The rider page
+        polls every 5s (TrackingPage, SharedTrip) and that is not the bottleneck:
+        the fix itself is up to 4s old, so pushing it saves ~2.5s on a marker that
+        now interpolates anyway. If it ever does need to be live, use SUPABASE
+        REALTIME on driver_locations — we are already on Supabase, so it costs no
+        socket server on Render and no sticky sessions — with an RLS policy so a
+        rider only sees the driver on their own booking. Note Render free drops
+        every open connection on sleep and on each deploy, which is the other
+        reason polling wins here for now.
+     6. NOT FOR US, recorded so it is not re-proposed: Kafka, H3, gRPC/QUIC, MQTT
+        brokers, a matching microservice. Every one of these is real engineering at
+        Uber/Rapido scale and pure operational cost at ours.
+     THE ONE IDEA WORTH TAKING FROM THEM NOW, and it is already applied in
+     useDriverLocation: sampling rate and transmission rate are different things.
+     Read the GPS often enough that speed and bearing are accurate; touch the
+     network only when the position actually changed or the heartbeat falls due.
 
 
 X PHASE 1 — Foundation (Day 1-2)
@@ -761,12 +994,30 @@ add type annotations incrementally. The codebase is structured so this
 conversion will be straightforward.
 
 
-DEPLOYMENT STACK
+DEPLOYMENT STACK  (updated 13 Aug 2026 — cut over to Google Cloud Run)
 -----------------
-  Frontend  → Vercel
-  Backend   → Render (free tier, kept alive via cron-job.org pinging /health every 10 mins)
-  Database  → Supabase PostgreSQL (free tier — pauses after 7 days idle; daily cron ping keeps it active)
-  Driver app → Expo EAS (later)
+  Frontend   → Vercel, www.rcstravels.co.in
+  Backend    → Cloud Run `rcs-api`, asia-south1, min-instances=0, max-instances=4, behind
+               api.rcstravels.co.in. Firebase Hosting sits in front as a PURE PROXY (no
+               static files, one rewrite of ** to the service) because Cloud Run domain
+               mappings do not exist in asia-south1 and a load balancer is ~$18/mo for the
+               forwarding rule alone. It is a SEPARATE Firebase project from the one that
+               owns FCM — do not enable Cloud Messaging in the Hosting one.
+  Jobs       → Cloud Scheduler POSTs /internal/jobs/:name (a timer cannot work on Cloud Run);
+               Cloud Tasks delivers one document scan to /internal/scan/:id. Both present a
+               Google OIDC token, verified by audience AND service account, failing closed.
+  Storage    → Google Cloud Storage, private bucket rcs-travels-driver-documents. NO KEY —
+               Application Default Credentials only.
+  Secrets    → Google Secret Manager, mounted as env vars (backend/scripts/push-secrets.ps1)
+  Database   → Supabase PostgreSQL (free tier; the /health ping runs `select 1`, so one cron
+               keeps both the API awake and Supabase from pausing). PostGIS enabled.
+  Driver app → Expo EAS (environments not yet pointed at the real API — see the top)
+  Rollback   → Render, same commit, RIDER FLOWS ONLY: it cannot read Cloud Storage, so
+               GCS_BUCKET is unset there and document routes answer 503 by design.
+  Deploys are still MANUAL (`gcloud run deploy --source .` from a laptop), so the running
+  revision is tied to a commit only by discipline. A Cloud Build trigger on main is the fix,
+  worth doing when Render is finally retired so the deploy story changes once.
+  Runbook: backend/DEPLOY.md. Reasoning: decisions/cloud-run-migration.md.
 
 
 GOLDEN RULE
@@ -775,20 +1026,39 @@ Always build the API endpoint first → test in Postman → then build the UI.
 Never build UI before the API exists.
 
 
-CURRENT STATUS
+CURRENT STATUS  (verified against the code, 13 Aug 2026)
 ---------------
   [x] Project folder structure created
   [x] Frontend dependencies installed (React, Vite, Tailwind, Clerk, i18next, Axios)
-  [x] Backend dependencies installed (Express, Prisma, Clerk, Firebase, Multer, S3, etc.)
-  [x] Prisma schema created with all 6 tables
+  [x] Backend dependencies installed (Express, Prisma, Clerk, Firebase, GCS, Cloud Tasks)
+      NOTE: Multer and both @aws-sdk packages are installed and NEVER IMPORTED. Storage
+      went to Supabase and then to GCS; all three are dead weight. Remove them.
+  [x] Prisma schema — 18 models, 11 enums, 38 migrations, all applied
   [x] Phase 1 — Foundation
   [x] Phase 2 — Core Backend APIs
   [x] Phase 3 — Customer Website
-  [~] Phase 4 — Admin Dashboard  (bookings + drivers lists with filters are in;
-      driver approve/reject/remove actions and fare editing are still missing)
-  [ ] Phase 5 — Driver App
-  [ ] Phase 6 — Notifications
-  [ ] Phase 7 — Tracking + Polish
+  [~] Phase 4 — Admin Dashboard  (bookings/drivers/users lists with filters, the zone fare
+      editor, per-document approve/reject with a reason, and suspend/reinstate are all in.
+      Missing: manual booking re-assignment, and deactivating a captain outright.)
+  [~] Phase 5 — Driver App  (59 source files: auth, signup, the HomeGate shell for a captain
+      still waiting, documents per car, vehicles, rides, ride detail, offers, account.
+      NOT SHIPPABLE YET — the EAS environments a build reads still carry the wrong API URL,
+      so no installable build exists. That is distribution, not code.)
+  [~] Phase 6 — Notifications  (WhatsApp OTP is REAL over the Cloud API; sendPush is REAL
+      through firebase-admin. sendFCM is still a 30s coin flip and sendWhatsApp is still a
+      console.log, so ride offers and the T−1h admin alert are both untested against a real
+      device and a real number.)
+  [~] Phase 7 — Tracking + Polish  (tracking screen with the real driver card, route map,
+      cancellation quote and share links; ride history with search/filter/pagination;
+      marketing homepage; legal pages. Missing: the driver marker moving between polls —
+      bearing and speedKmh are stored and nothing reads them — and i18next, which is
+      installed, persists a language setting, and changes nothing.)
+
+  DEPLOYED, and not on this list because it was never a phase: the Cloud Run migration —
+  containerised backend, sweeps on Cloud Scheduler, per-document scans on Cloud Tasks,
+  documents in Cloud Storage, secrets in Secret Manager, api.rcstravels.co.in in front via
+  Firebase Hosting, Vercel cut over 13 Aug 2026. Render is the rollback, for rider flows
+  only — it cannot read Cloud Storage. See decisions/cloud-run-migration.md.
 
 
 IMP — LOCAL-ONLY UI (NOT YET WIRED TO BACKEND)
@@ -810,9 +1080,13 @@ reload and change nothing server-side. Each needs an API endpoint + persistence
   Safety page (pages/SafetyPage.jsx)
     [ ] Live location — "Share my live location" toggle. Local `autoShare` state.
         Needs a preference field + endpoint, and the actual share-on-ride-start
-        behaviour on the tracking side.
-    [ ] Helpline — "RCS Support" number is a PLACEHOLDER (+911800000000).
-        Replace with the real support number.
+        behaviour on the tracking side. THE MANUAL HALF NOW EXISTS (13 Aug 2026):
+        the Share pill on TrackingPage mints a real, expiring, revocable link. What
+        this toggle would add is doing it automatically, to a chosen contact —
+        which needs somewhere to store that contact's number and a channel to send
+        on, so it is blocked on real sendWhatsApp, not on the link.
+    [x] Helpline — DONE. "RCS Support" reads supportTel() rather than the old
+        +911800000000 placeholder, alongside Police (112) and Ambulance (108).
     [x] Emergency contact — already wired to the real updateEmergencyContact
         endpoint (this one persists; listed only for contrast).
 
@@ -944,9 +1218,14 @@ each numbered block unblocks the ones after it. Outstation is PARKED (see bottom
    and rounded back onto that source's own grid: sedan +100 and suv x1.6 are the
    provider's own rate-card rules, so they hold everywhere rather than only where
    a column happens to exist.
-   !! suv_premium x3.2 (= 2x the SUV) is OURS, not Raju's — nothing on the rate
-   card prices a premium SUV and he has not confirmed one. One constant reprices
-   every premium fare on every route.
+   !! suv_premium is x2.75 IN THE CODE, not the x3.2 this block originally
+   specified. [SUPERSEDED Aug 2026] The 3.2 was a placeholder of ours and it
+   quoted every premium fare high; 2.75 is fitted to four Innova Crysta quotes
+   Raju gave (IGI 4000, Connaught Place 3000, Botanical 2200, Advant 2000) —
+   three of them agree at 2.74-2.86 and 2.75 rounds to the same card on the ₹50
+   grid. CP alone implies 2.50 and is probably a rounded "3k", which is the one
+   thing still worth asking him. See item 2 of the rate-card block at the top.
+   Do not restore 3.2 anywhere, including the open-questions log.
 
    Seats are no longer a column: seatsOf(vehicleClass) in constants/vehicles.js
    is the single source, and vehicleCapacity is measured against it — so no
@@ -1019,7 +1298,40 @@ each numbered block unblocks the ones after it. Outstation is PARKED (see bottom
    (~₹0.115/utility) — the free 24h session window only opens when the USER
    messages us.
 
-6. DRIVER DOCUMENTS — SCHEMA DONE (Jul 30 2026, migration not yet applied)
+6. DRIVER DOCUMENTS — BUILT END TO END (12-13 Aug 2026). Read this header first;
+   the block below is the original spec and three of its decisions were reversed.
+   WHAT SHIPPED: signed direct-to-storage upload URLs with server-composed paths,
+   a confirm endpoint that re-reads the object's real first bytes before writing a
+   row, an asynchronous scanner (magic bytes -> sharp re-encode from decoded pixels
+   -> PDF active-content scan) on a Cloud Tasks hop with a 5-minute sweep as the
+   rescue tier, expiry + 30/7/1-day reminder sweeps, admin review with fail-closed
+   signed URLs, and the driver-app screens (per-car panels, per-type number fields,
+   on-device resize before upload).
+   THREE REVERSALS, so this block does not contradict the code:
+     a) STORAGE IS GOOGLE CLOUD STORAGE, not Supabase Storage. Moved 12 Aug 2026
+        while the bucket was still empty, behind lib/storage.js. The point was
+        killing SUPABASE_SECRET_KEY: a long-lived string that bypassed RLS and
+        could read every object in every bucket, and that had to live somewhere.
+        GCS uses Application Default Credentials — there is no key.
+     b) THE UNIQUE KEY IS @@unique([ownerId, type, isReplacement]), not
+        [driverId, type], and "a renewal replaces the file" is gone. A renewal
+        lands in a SECOND slot beside the document it will replace, so an early
+        renewal never takes an approved captain off the road. ownerId is the CAR
+        for vehicle documents and the MAN for his own, which is also what makes
+        multi-vehicle captains work.
+     c) verificationStatus IS DERIVED AFTER ALL, and there is deliberately NO
+        "approve driver" endpoint. recomputeDriverVerification returns approved
+        exactly when every required document is approved and still valid, and
+        recomputes on every review, renewal and expiry sweep. It is still a stored
+        column (the eligibility index needs it) — "derived" is about who writes it.
+        A manual override would be a fourth writer that appears to work and
+        silently reverts at the next sweep.
+   ALSO: ELEVEN types, not ten — profile_photo was added, and it is the only one a
+   RIDER is ever shown, which makes it the only one an attacker has an audience
+   for. It goes through the same pipeline as the paperwork.
+   Original spec below.
+
+   DRIVER DOCUMENTS — SCHEMA DONE (Jul 30 2026, migration not yet applied)
    Raju's list, and it is HIS list — everything but the licence is about the CAR,
    because these are owner-drivers and what he checks is that the vehicle is
    road-legal. POLICE VERIFICATION WAS ON THE EARLIER DRAFT AND HE REMOVED IT;
@@ -1170,9 +1482,38 @@ each numbered block unblocks the ones after it. Outstation is PARKED (see bottom
    covers going online, accepting and every ride transition in one gate.
    STILL TO DO HERE: seed Raju's driver row as `admin` and his fleet as `rcs`
    (nothing sets a non-default group yet, so every driver is `partner` and the
-   ordering is a no-op until one is set), the availability calculus (ride
-   duration + travel time + traffic buffer + nextCommitmentAt), and calling
-   withdrawOffersForDriver from the suspension mutation once that exists.
+   ordering is a no-op until one is set), and the availability calculus (ride
+   duration + travel time + traffic buffer + nextCommitmentAt).
+   [DONE — 13 Aug 2026] withdrawOffersForDriver is called from the suspension
+   mutation, in the SAME TRANSACTION as the suspension write — a captain suspended
+   in a commit that leaves his offers live is the worse of the two halves failing.
+   IT NEEDED A SECOND CHANGE TO ACTUALLY WORK, which is the part worth reading:
+   eligibleGroup escalates rcs -> partner when every rcs offer has been RESOLVED,
+   and `resolved` used to mean `rejected` alone. A withdrawn offer would then have
+   counted as still outstanding, so the booking would have pinned itself to `rcs`
+   permanently — the sweep keeps answering `rcs`, candidatesIn finds nobody new
+   (it excludes anyone already holding a row for this booking, whatever its
+   status), and the ride never reaches a partner driver. Withdrawing the offers
+   without this would have left the booking MORE stuck than leaving them alone.
+   Resolved now means rejected OR withdrawn: a suspended captain is the one driver
+   who is definitively not still deciding. tests/dispatch.test.js covers it.
+   ACCEPTED offers are deliberately NOT withdrawn. Those are assignments — undoing
+   one means restoring vehicle capacity and re-dispatching a booking that already
+   has a driver, which is the manual re-assignment that does not exist yet. So a
+   suspended captain keeps the scheduled rides he has already been given until
+   somebody moves them by hand. Worth closing when re-assignment lands.
+   NOTE on what the mutation DOES do, since it is subtle: a captain suspended
+   MID-RIDE stays online, the same rule recomputeDriverVerification applies when
+   lapsed paperwork takes somebody off the road — yanking him offline with a rider
+   in the car strands the rider, and the ride cannot be re-dispatched anyway. He
+   cannot pick up a NEW one from the moment the transaction commits, because every
+   assignment path filters on suspendedAt.
+   THE DISPATCH SCAN IS POSTGIS AS OF 13 Aug 2026 — driver_locations carries a
+   generated geography point under a GiST index and candidatesWithin() asks
+   ST_DWithin for the circle, replacing the bounding box plus a haversine
+   re-measure in JS. Ranking is unchanged in shape (group, then a 3 km distance
+   TIER, then whose turn it is) and use_spheroid=false keeps the numbers landing
+   in the same FAIRNESS_TIER_KM bands the haversine produced.
    SOURCE: driver-assignment.txt, Raju's own dispatch spec. It currently lives
    at d:\Downloads\driver-assignment.txt — OUTSIDE THE REPO. Copy it into
    docs/ before it gets lost; everything below is the summary, not the file.
@@ -1319,8 +1660,19 @@ each numbered block unblocks the ones after it. Outstation is PARKED (see bottom
    [DONE] Suspension has its own columns — suspendedAt + suspensionReason — rather
    than reusing isActive, so "suspended for overcharging" is distinguishable from
    "deactivated" and the reason survives. requireApprovedDriver refuses a suspended
-   captain WITH that reason. What remains unbuilt is the admin mutation that sets
-   them: nothing can suspend or unsuspend anybody today.
+   captain WITH that reason.
+   [DONE 13 Aug 2026] The admin mutation now exists — PATCH
+   /api/admin/drivers/:id/suspension, a reason required to suspend and shown to
+   him, idempotent by omission rather than by erroring (two admins on the same
+   screen want the current state, not a 409). It deliberately does NOT touch
+   verificationStatus: a suspended captain's paperwork is still in order, and
+   suspension is a judgement about conduct, derivable from nothing.
+   His pending scheduled offers are withdrawn with the suspension as of the same
+   day, and those bookings go back into the pool — see block 9 for why that needed
+   a change to the escalation rule as well.
+   WHAT IS STILL MISSING is everything that would make this AUTOMATIC — the
+   rider's "Driver overcharged" button, the flag rows, the counting, and the fine.
+   Today a human decides and a human clicks.
    !! FINES LAND IN THE WALLET, and this is the elegant part: debit the fine
    from wallet credit; if the balance is short it goes NEGATIVE, and a
    negative balance blocks going online until it is cleared. No gateway, no
@@ -1398,10 +1750,57 @@ OUTSTATION — PARKED until the driver app exists. When it returns: per-day
    classes; plain-vs-hills via Elevation API (outstation only, cached by
    destination, counted in ApiUsage). isOutstation stays on Booking meanwhile.
 
-OPEN QUESTIONS LOG (as of 8 Aug 2026)
+13. RIDE SHARING / POOLING  (backend DONE 14 Aug 2026, UI outstanding)
+   Full design in Sharing-Design.md — rules, constants, sequence algorithm and
+   test list. Only what is LEFT is listed here.
+
+   What now works, so nobody rebuilds it: a second rider can be matched onto a
+   trip already under way (services/ridePooling.js), the server picks the stop
+   order and writes pickupOrder + dropOrder + shareGroupId inside the claim
+   transaction, and an unmatched shared ride is re-priced to soloFare when it
+   completes. Both migrations are applied.
+
+   [ ] DRIVER RIDE-COMPLETE SCREEN — DOES NOT EXIST AT ALL. This is the gap
+       that matters most: the driver app has no end-of-ride screen, so a captain
+       who has just finished a pooled trip is told nothing about what he earned
+       on it. It needs the fare breakdown per rider — each booking's fare, the
+       commission taken (5% above the ₹800 ride-fare floor, so often zero), and
+       what he keeps — and on a shared trip it has to show BOTH riders, because
+       two fares on one drive is the entire reason a captain would accept
+       pooling. Show the 25% sharing discount as its own line so he can see the
+       rider paid less and he still earned twice.
+       Server side is ready: GET /driver/rides already returns fare, rideFare,
+       commissionPct, commissionAmt and sharing per booking.
+
+   [ ] DRIVER NEXT-STOP UI — Home's active panel is findFirst({assigned}) and
+       returns ONE ride, so a captain carrying two riders sees one of them. Needs
+       the pooled sibling and the merged stop list, ordered by pickupOrder /
+       dropOrder, with the next stop emphasised. Sharing-Design.md §8.
+
+   [ ] RIDER "SOMEONE JOINED" NOTICE — nothing tells rider 1 that a co-rider was
+       added or that their arrival moved. Riders are on the web and poll, so this
+       is a field on the tracking response, not a push. Sharing-Design.md §9.
+       The completed-ride half IS done (ManageAccount shows saved-vs-solo-fare).
+
+   [ ] EVALUATE evaluatePool END-TO-END. The pure geometry has 26 tests
+       (tests/ridePooling.test.js); the routing arithmetic on top of it has never
+       run against a real Google response or a real second booking.
+
+   KNOWN LIMITATION (deliberate, documented in joinPool): a host whose earlier
+   co-rider has already been dropped keeps that shareGroupId, so a third rider
+   cannot join him even with a free seat. Fixing it needs either a group holding
+   a completed stranger — who would then show as a co-rider on the admin panel —
+   or the Booking/Trip/Waypoint split. Revisit when MAX_BOOKINGS_PER_VEHICLE
+   moves off 2.
+
+OPEN QUESTIONS LOG (as of 13 Aug 2026)
    For Raju: (a) 5% commission / ₹800 floor redistribution vs his ₹25-₹100
    sheet — confirm; (b) inter-terminal prices: toll/parking included?;
-   (c) premium SUV x3.2 (= 2x the SUV) is our number, not his — confirm;
+   (c) [REVISED Aug 2026 — the number is now x2.75, fitted to his own four Innova
+   quotes, not the x3.2 placeholder] premium SUV: confirm Connaught Place, which
+   is the one quote of the four that disagrees (it implies 2.50 and is probably a
+   rounded "3k"). If it is really 3300 the multiplier is exact and the stored
+   override can go. See item 2 of the rate-card block at the top;
    (d) outstation, whenever it comes back: Wagon R rate, the >250 km/day rate,
    calendar day vs 24h, and the plain/hills split;
    (e) NEW 8 Aug — ride acceptance deposit: what percentage of the fare?

@@ -8,6 +8,7 @@ import { ACTIVE_STATUSES } from './bookings.js'
 import { ASSIGNABLE_STATUSES, claimBookingForDriver } from '../services/driverAssignment.js'
 import { withdrawOtherOffers } from '../services/scheduledOffers.js'
 import { seatsOf } from '../constants/vehicles.js'
+import { commissionOn } from '../services/commission.js'
 import { isStorageConfigured, signedUploadUrl, stat, remove } from '../lib/storage.js'
 import { sniffUpload, scanDocument, discardUpload, DRIVER_SCAN_MESSAGE } from '../services/documentScan.js'
 import { enqueueDocumentScan } from '../lib/tasks.js'
@@ -53,7 +54,20 @@ const driverRouter = Router()
 
 const EARTH_RADIUS_KM = 6371
 
+// `reached` accepts BOTH of the states before it, and that is the design rather
+// than laxity: en_route is an optional step. On an on-spot ride the two moments
+// can be seconds apart, and a captain who taps straight through to Reached must
+// not be blocked over a status he skipped.
+//
+// It is not optional on a SCHEDULED ride, though, which is why it exists. A
+// captain accepts Tuesday's 6am airport run on Sunday afternoon, and the booking
+// is `assigned` for forty hours — so without this, `assigned` would have to mean
+// both "somebody has it, see you Tuesday" and "he is in the car coming to you
+// now". The rider's screen already draws them differently (statusLabels has
+// "Driver on the way", and TrackingPage reveals the OTP from en_route on, so the
+// code is in her hand before he arrives rather than while he waits at the kerb).
 const RIDE_TRANSITIONS = {
+    en_route: ['assigned'],
     reached: ['assigned', 'en_route'],
     started: ['reached'],
     completed: ['started'],
@@ -177,7 +191,15 @@ async function requireDriver(req: Request, res: Response): Promise<Driver | null
     return driver
 }
 
-async function requireApprovedDriver(req: Request, res: Response): Promise<Driver | null> {
+/**
+ * The body of the two gates below.
+ *
+ * `allowSuspended` is a parameter of THIS function and is never exposed as an
+ * options bag on the exported gates: every call site names the gate it means, so
+ * loosening a suspension takes changing a function name in a diff rather than
+ * flipping a boolean nobody reads twice.
+ */
+async function resolveDriver(req: Request, res: Response, allowSuspended: boolean): Promise<Driver | null> {
     const { userId } = getAuth(req)
     if (!userId) {
         res.status(401).json({ error: 'Not signed in' })
@@ -197,7 +219,7 @@ async function requireApprovedDriver(req: Request, res: Response): Promise<Drive
         res.status(403).json({ error: 'Driver not yet approved' })
         return null
     }
-    if (driver.suspendedAt) {
+    if (driver.suspendedAt && !allowSuspended) {
         res.status(403).json({
             error: 'Driver account is suspended',
             reason: driver.suspensionReason,
@@ -207,6 +229,39 @@ async function requireApprovedDriver(req: Request, res: Response): Promise<Drive
     }
 
     return driver
+}
+
+/** Everything that takes on NEW work. A suspended captain is refused, with the reason. */
+async function requireApprovedDriver(req: Request, res: Response): Promise<Driver | null> {
+    return resolveDriver(req, res, false)
+}
+
+/**
+ * Everything that FINISHES work he already holds — a suspended captain passes.
+ *
+ * WHY SUSPENSION CANNOT REFUSE THESE. A captain is suspended for conduct, and the
+ * rides already in his hands do not disappear when he is. If this gate refused
+ * him, a rider would sit watching a tracking map that had stopped moving, for a
+ * driver who could no longer mark himself arrived, on a booking that could never
+ * reach `completed` — and because vehicle capacity is only restored on
+ * completion, his seats would stay spent for good, so a reinstated captain would
+ * come back permanently a seat short. Refusing here does not undo the assignment;
+ * it only strands it.
+ *
+ * WHAT KEEPS THIS SAFE is that it grants no new work. Every assignment path —
+ * candidatesWithin, candidatesIn, both accept endpoints — filters on
+ * `suspendedAt` being null, so a suspended captain can be offered nothing and can
+ * claim nothing. And because those paths filter it, any booking CURRENTLY
+ * assigned to him necessarily predates his suspension: "is this ride his and
+ * still active" is proof enough that he was given it while in good standing, and
+ * no `assignedAt` column is needed to establish it.
+ *
+ * The per-booking routes below still check `booking.driverId === driver.id`
+ * themselves. That check is what makes this gate specific rather than a blanket
+ * reopening — it is doing real work here, so do not remove it as redundant.
+ */
+async function requireDriverForAssignedWork(req: Request, res: Response): Promise<Driver | null> {
+    return resolveDriver(req, res, true)
 }
 
 
@@ -1033,7 +1088,7 @@ driverRouter.get('/me', protect, async (req, res) => {
     // board totals, computed the same way so the two screens cannot disagree; and the
     // expiring count moves with the clock rather than with a write, so there is no
     // moment at which a cached copy of it could be refreshed.
-    const [rating, month, expiring, renewing] = await Promise.all([
+    const [rating, month, expiring, renewing, heldRides] = await Promise.all([
         prisma.driverReview.aggregate({
             where: { driverId: driver.id },
             _avg: { rating: true },
@@ -1072,11 +1127,42 @@ driverRouter.get('/me', protect, async (req, res) => {
             },
             select: { type: true },
         }),
+        // Rides he has been given and not yet finished. ACTIVE_STATUSES is wider
+        // than this on purpose — it includes `pending` and `confirmed`, which are
+        // states a booking holds before anyone is assigned to it, and neither can
+        // carry his driverId anyway. These four are the ones he is actually
+        // holding.
+        //
+        // The rows rather than a count(), because two different questions come out
+        // of the same handful of records and a second query for the other one
+        // would be a round trip to learn something already in hand. A captain
+        // holds a few rides at most, so this is the same read either way.
+        prisma.booking.findMany({
+            where: {
+                driverId: driver.id,
+                status: { in: ['assigned', 'en_route', 'reached', 'started'] },
+            },
+            select: { id: true, status: true },
+        }),
     ])
 
     // Expiring, minus the ones he has already sent a renewal for.
     const renewingTypes = new Set<string>(renewing.map((d) => d.type))
     const expiringDocuments = expiring.filter((d) => !renewingTypes.has(d.type)).length
+
+    const assignedRides = heldRides.length
+
+    // THE RIDE HE IS ACTUALLY DRIVING, which is a different question from how many
+    // he holds — and the app cannot answer it from assignedRides, because that
+    // counts `assigned` too. A captain who took Tuesday's airport run on Sunday
+    // holds a ride all week without being on one, and treating that as "in
+    // progress" would strip his navigation for three days.
+    //
+    // Sent because the shell reads it: the tab bar and the online switch both come
+    // off the screen while a rider is in the car. It rides on /me rather than
+    // getting an endpoint of its own since every screen already has this profile
+    // and refreshes it on foreground.
+    const activeRide = heldRides.find((r) => r.status !== 'assigned') ?? null
 
     const {
         id, verificationStatus, rejectionReason, isOnline,
@@ -1122,10 +1208,31 @@ driverRouter.get('/me', protect, async (req, res) => {
                             : verificationStatus,
             suspendedAt: driver.suspendedAt,
             suspensionReason: driver.suspensionReason,
+            // RIDES HE STILL OWES, and the reason this is not folded into
+            // canDrive. The two answer different questions: canDrive is "may he
+            // take NEW work" and stays false throughout a suspension, while this
+            // is "does he still owe somebody a ride he was given before it" — and
+            // a suspended captain can be false on the first and true on the
+            // second at the same time.
+            //
+            // The app needs both or it cannot route him: with only canDrive it
+            // puts a captain who has a rider waiting on the application-status
+            // screen, with no way to reach the ride the server would happily let
+            // him finish (see requireDriverForAssignedWork). Non-zero here is what
+            // opens the Rides tab for him.
+            //
+            // Always computed, not just while suspended — a number that only
+            // appears in one state is a number every reader has to remember to
+            // guard, and a captain in good standing simply has canDrive true too.
+            assignedRides,
         },
         // The dispatch group, sent as the enum key. The app picks the captain's words
         // for it; the server does not, because the same three keys have to read as
         // priority tiers on an admin screen and as an affiliation on his own.
+        // { id, status } while a rider is in the car or he is driving to one, null
+        // otherwise. The shell strips itself down to nothing but the bell on the
+        // strength of this — see useOnActiveRide in the app.
+        activeRide,
         group,
         // Signed, and negative is a real state — an unpaid fine larger than the credit
         // on hand is what blocks going online. The app renders the sign.
@@ -1150,7 +1257,7 @@ driverRouter.get('/me', protect, async (req, res) => {
 })
 
 driverRouter.patch('/online', protect, async (req, res) => {
-    const driver = await requireApprovedDriver(req, res)
+    const driver = await requireDriverForAssignedWork(req, res)
     if (!driver) return
 
     const parsed = driverOnlineSchema.safeParse(req.body)
@@ -1175,7 +1282,7 @@ driverRouter.patch('/online', protect, async (req, res) => {
 })
 
 driverRouter.post('/location', protect, async (req, res) => {
-    const driver = await requireApprovedDriver(req, res)
+    const driver = await requireDriverForAssignedWork(req, res)
     if (!driver) return
     if (!driver.isOnline) return res.status(403).json({ error: 'Driver is not online' })
 
@@ -1212,7 +1319,7 @@ driverRouter.post('/location', protect, async (req, res) => {
 })
 
 driverRouter.post('/fcm-token', protect, async (req, res) => {
-    const driver = await requireApprovedDriver(req, res)
+    const driver = await requireDriverForAssignedWork(req, res)
     if (!driver) return
 
     const parsed = fcmTokenSchema.safeParse(req.body)
@@ -1230,7 +1337,7 @@ driverRouter.post('/fcm-token', protect, async (req, res) => {
 })
 
 driverRouter.get('/upcoming-ride', protect, async (req, res) => {
-    const driver = await requireApprovedDriver(req, res)
+    const driver = await requireDriverForAssignedWork(req, res)
     if (!driver) return
 
     const booking = await prisma.booking.findFirst({
@@ -1257,7 +1364,7 @@ driverRouter.get('/upcoming-ride', protect, async (req, res) => {
 })
 
 driverRouter.get('/rides', protect, async (req, res) => {
-    const driver = await requireApprovedDriver(req, res)
+    const driver = await requireDriverForAssignedWork(req, res)
     if (!driver) return
 
     const parsed = driverRidesQuerySchema.safeParse(req.query)
@@ -1359,7 +1466,7 @@ driverRouter.get('/rides', protect, async (req, res) => {
 })
 
 driverRouter.get('/rides/:id', protect, async (req, res) => {
-    const driver = await requireApprovedDriver(req, res)
+    const driver = await requireDriverForAssignedWork(req, res)
     if (!driver) return
 
     const parsed = rideParamsSchema.safeParse(req.params)
@@ -1428,7 +1535,7 @@ driverRouter.get('/rides/:id', protect, async (req, res) => {
 })
 
 driverRouter.patch('/rides/:id/status', protect, async (req, res) => {
-    const driver = await requireApprovedDriver(req, res)
+    const driver = await requireDriverForAssignedWork(req, res)
     if (!driver) return
 
     const parsedParams = rideParamsSchema.safeParse(req.params)
@@ -1450,6 +1557,13 @@ driverRouter.patch('/rides/:id/status', protect, async (req, res) => {
             status: true,
             driverId: true,
             sharing: true,
+            // The four the unmatched-fare switch below reads. `shareGroupId` is
+            // the whole test — it is written only when somebody actually joined,
+            // so null on a shared ride that has reached its drop means nobody did.
+            shareGroupId: true,
+            soloFare: true,
+            fare: true,
+            rideFare: true,
             pickupLat: true,
             pickupLng: true,
             dropLat: true,
@@ -1484,11 +1598,64 @@ driverRouter.patch('/rides/:id/status', protect, async (req, res) => {
         }
     }
 
+    // EVERY TRANSITION NEEDS ITS OWN ARM HERE. The last one is a catch-all, not a
+    // test for 'completed' — so a status added to the schema and the table above
+    // and forgotten here does not error, it falls through and stamps completedAt
+    // on a ride that has barely begun. The row then reads as finished to
+    // everything that goes by timestamps while its status says otherwise, and
+    // nothing anywhere complains.
+    //
+    // en_route carries no timestamp because there is no column for one. An
+    // `enRouteAt` would be worth a migration if the accept-to-set-off lag is ever
+    // worth measuring — it is the number that says whether captains sit on rides
+    // they have accepted — but the status works without it.
     const now = new Date()
-    const data =
-        to === 'reached' ? { status: to, reachedAt: now, reachedDistanceKm: distanceKm } :
-            to === 'started' ? { status: to, startedAt: now } :
-                { status: to, completedAt: now, completedDistanceKm: distanceKm }
+    const data: Record<string, unknown> =
+        to === 'en_route' ? { status: to } :
+            to === 'reached' ? { status: to, reachedAt: now, reachedDistanceKm: distanceKm } :
+                to === 'started' ? { status: to, startedAt: now } :
+                    { status: to, completedAt: now, completedDistanceKm: distanceKm }
+
+    // THE UNMATCHED-SHARE FARE SWITCH.
+    //
+    // A rider who chose sharing was quoted two prices and shown both: the
+    // discounted one if somebody joins, the solo one if nobody does. This is
+    // where the second one is applied. `shareGroupId` is the test and the only
+    // one needed — it is written solely by a successful join, so a shared ride
+    // arriving at `completed` without one was driven alone.
+    //
+    // COMPLETION IS THE EARLIEST HONEST MOMENT, not merely a convenient one. A
+    // joiner can be added right up until the host's drop (rule B), so any earlier
+    // switch would charge a rider the solo fare for a ride that then went on to
+    // be shared.
+    //
+    // A joiner who matched and then cancelled leaves shareGroupId set, and the
+    // discount stands. That is deliberate: the rider did nothing wrong, and the
+    // rule stays a single column test rather than an audit of who cancelled when.
+    if (
+        to === 'completed' &&
+        booking.sharing &&
+        !booking.shareGroupId &&
+        booking.soloFare != null &&
+        booking.rideFare != null
+    ) {
+        // The pass-through charges are identical under both prices — one toll
+        // barrier, one roof carrier — so the gap between fare and rideFare
+        // carries across unchanged and the solo ride fare needs no re-itemising.
+        const extras = booking.fare - booking.rideFare
+        const soloRideFare = Math.max(0, booking.soloFare - extras)
+
+        // Recomputed, never scaled. Commission only applies above
+        // COMMISSION_MIN_FARE, so a shared fare under the floor pays nothing
+        // while the solo fare above it pays 5% — scaling the stored amount would
+        // keep a zero at zero and quietly hand the cut away.
+        const { pct, amt } = commissionOn(soloRideFare)
+
+        data.fare = booking.soloFare
+        data.rideFare = soloRideFare
+        data.commissionPct = pct
+        data.commissionAmt = amt
+    }
 
     const seats = seatsOf(driver.vehicleClass)
 
@@ -1573,6 +1740,14 @@ driverRouter.get('/offers', protect, async (req, res) => {
                     dropAddress: true, dropLat: true, dropLng: true,
                     fare: true, vehicleClass: true, scheduledAt: true,
                     sharing: true, needsCarrier: true, status: true,
+                    // What the offer card shows beyond the route and the fare.
+                    // Each of these changes whether a captain wants the ride at
+                    // all: how far he will actually drive, whether it takes him
+                    // out of the city for the day, and whether it runs the longer
+                    // safer way. He is deciding in a few seconds, so anything he
+                    // would otherwise have to accept the ride to discover belongs
+                    // in this list.
+                    distanceKm: true, isOutstation: true, preferSafeRoute: true,
                 },
             },
         },
@@ -1596,6 +1771,24 @@ driverRouter.get('/offers', protect, async (req, res) => {
                 fare: o.booking.fare,
                 vehicleClass: o.booking.vehicleClass,
                 pickupTime: formatPickupTime(o.booking.scheduledAt),
+                // THE RAW DATE AS WELL AS THE LABEL, and the null is the point.
+                // formatPickupTime answers with prose — a locale stamp, or the
+                // words 'IMMEDIATE PICKUP' — which is right for a notification
+                // body and useless to a screen: the app cannot restyle it, cannot
+                // say "in 3 days", and would have to STRING-MATCH those two words
+                // to tell a scheduled ride from an on-spot one. scheduledAt is
+                // null for immediate, so the same question is a null check.
+                scheduledAt: o.booking.scheduledAt,
+                // Nullable by design — a booking exists before its route has been
+                // priced — so the card needs a dash, not a number, when it is
+                // missing. This is the trip length; how far away the PICKUP is
+                // gets measured in the app against its own last GPS fix.
+                distanceKm: o.booking.distanceKm,
+                isOutstation: o.booking.isOutstation,
+                // The rider asked for the safer way. It is his request rather than
+                // the computed detour (safeWaypointLat/Lng hold that) — what the
+                // captain needs to know is that the route is not the short one.
+                safeRoute: o.booking.preferSafeRoute,
                 sharing: o.booking.sharing,
                 needsCarrier: o.booking.needsCarrier,
             })),

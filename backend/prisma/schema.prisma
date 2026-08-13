@@ -805,6 +805,21 @@ model Booking {
   // carrier). Commission is a percentage of THIS, so storing it makes the cut
   // auditable from the row alone — and fare - rideFare recovers the add-ons.
   rideFare            Float?        @map("ride_fare")
+  // WHAT THIS RIDE COSTS IF NOBODY EVER SHARES IT — the solo price off the same
+  // signed quote the shared price came from, set only on sharing bookings and
+  // null on every solo one.
+  //
+  // Stored rather than recomputed, and it has to be. Re-pricing at completion
+  // means a second Routes call against traffic that has moved since, so the
+  // rider would be charged a number they were never shown. Deriving it from the
+  // shared fare does not work either: the sharing price is rounded to the
+  // nearest ₹10 (rideEstimate.js), so undoing the 25% does not land back on the
+  // original — a ₹1000 solo and a ₹1010 solo both round to a ₹750 share.
+  //
+  // Read once, at completion, by the transition that settles the ride: a shared
+  // booking that reaches `completed` with no shareGroupId was never joined, and
+  // is re-priced to this. See the fare-switch block in routes/driver.ts.
+  soloFare            Float?        @map("solo_fare")
   commissionPct       Float         @default(0) @map("commission_pct")
   commissionAmt       Float         @default(0) @map("commission_amt")
   status              BookingStatus @default(pending)
@@ -836,7 +851,31 @@ model Booking {
   source              BookingSource @default(website)
   sharing             Boolean       @default(false)
   shareGroupId        String?       @map("share_group_id")
+  // THE STOP SEQUENCE OF A POOLED TRIP, and they are two numbers rather than one
+  // because the orders genuinely differ: nearest-drop-first means the rider
+  // collected first is often the one dropped second. `pickupOrder` alone cannot
+  // say that, which is why it sat unwritten for as long as it was alone.
+  //
+  // Both are null on every solo ride and on a shared ride nobody has joined —
+  // a lone rider has no sequence, only a trip. services/ridePooling.js is the
+  // only thing that computes them, and driverAssignment writes them inside the
+  // claim transaction so a half-ordered pool cannot exist.
   pickupOrder         Int?          @map("pickup_order")
+  dropOrder           Int?          @map("drop_order")
+  // How long Google said this trip would take when it was priced, in minutes.
+  //
+  // Already computed on every estimate (marketFare prices off it) and previously
+  // thrown away, which left the tracking page estimating arrival in the browser
+  // from a straight line. Null on bookings made before this column existed, and
+  // on any whose quote predates it — treat a null as "unknown", never as zero.
+  durationMin         Int?          @map("duration_min")
+  // The encoded road path Google returned for this trip, as the polyline.
+  //
+  // Read by the pooling matcher: "is this new pickup ON the road this driver is
+  // already driving" is a question about the path, not about bearings, and
+  // geo.js can answer it directly from these vertices. Also already computed and
+  // discarded before this column.
+  routePolyline       String?       @map("route_polyline")
 
   user   User    @relation(fields: [userId], references: [id])
   driver Driver? @relation(fields: [driverId], references: [id])
@@ -920,6 +959,25 @@ model ApiUsage {
 
   @@id([service, month])
   @@map("api_usage")
+}
+
+// Whether forcing a given waypoint between two points yields a route clear of
+// every shady zone. Cached because that answer depends on road topology and on
+// the polygons — neither of which moves hour to hour — so it can be reused for
+// weeks. The DISTANCE and DURATION of that route depend on traffic and are
+// deliberately not stored: they are re-fetched whenever a fare is quoted on them.
+//
+// One row per route, overwritten rather than accumulated. `zonesVersion` is a
+// hash of shady-zones.geojson; a row whose hash no longer matches is treated as
+// a miss and re-checked, so redrawing a corridor invalidates the cache with no
+// purge step.
+model SafeRouteVerdict {
+  routeKey     String   @id @map("route_key") // "lat,lng|lat,lng|waypointLat,waypointLng"
+  zonesVersion String   @map("zones_version")
+  clean        Boolean
+  checkedAt    DateTime @default(now()) @map("checked_at")
+
+  @@map("safe_route_verdicts")
 }
 
 // Temporary OTP store for WhatsApp OTP auth — one row per phone, upserted on each request

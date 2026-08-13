@@ -101,7 +101,11 @@ export function decodePolyline(encoded) {
 // nearest vertex to a point beside the middle of such a run can be far away even
 // though the road is right there. That overestimate is exactly what picks the
 // wrong divergence waypoint, so the projection is worth the ten lines.
-export function kmPointToSegment(p, a, b) {
+// Where a point lands on one segment: how far off it sits, how far along it
+// projects (`t`, 0..1), and how long the segment is. The two public functions
+// below are both this one plus bookkeeping, so there is a single projection in
+// this file rather than two that can drift apart.
+function projectOntoSegment(p, a, b) {
   const kx = kmPerDegLng(a.lat)
   const px = (p.lng - a.lng) * kx
   const py = (p.lat - a.lat) * KM_PER_DEG_LAT
@@ -109,21 +113,52 @@ export function kmPointToSegment(p, a, b) {
   const by = (b.lat - a.lat) * KM_PER_DEG_LAT
 
   const len2 = bx * bx + by * by
-  if (len2 === 0) return Math.hypot(px, py)
+  if (len2 === 0) return { offRouteKm: Math.hypot(px, py), t: 0, segmentKm: 0 }
 
   // Clamped so the projection can't run off either end of the segment.
   const t = Math.max(0, Math.min(1, (px * bx + py * by) / len2))
-  return Math.hypot(px - t * bx, py - t * by)
+  return { offRouteKm: Math.hypot(px - t * bx, py - t * by), t, segmentKm: Math.sqrt(len2) }
+}
+
+export function kmPointToSegment(p, a, b) {
+  return projectOntoSegment(p, a, b).offRouteKm
+}
+
+/**
+ * Where a point sits relative to a whole path: its perpendicular distance from
+ * the nearest segment, and how far along the path that nearest point lies.
+ *
+ * `alongKm` is what makes "is this pickup AHEAD of the car" answerable. Project
+ * both the car and the pickup onto the driver's route and compare: the larger
+ * `alongKm` is further down the road. That is a stronger test than comparing
+ * compass bearings, because it is measured against the road actually being
+ * driven — a point on the far carriageway of a divided highway bears correctly
+ * and is still a U-turn away, and only the projection can tell.
+ *
+ * A path of fewer than two points has nothing to project onto: `offRouteKm` is
+ * Infinity, which fails every tolerance a caller might apply, and `alongKm` is
+ * 0. Callers should treat a missing polyline as "cannot answer", never as "at
+ * the start of the route".
+ *
+ * @returns {{ offRouteKm: number, alongKm: number }}
+ */
+export function projectOntoPath(p, path) {
+  let best = { offRouteKm: Infinity, alongKm: 0 }
+  let travelled = 0
+
+  for (let i = 1; i < path.length; i++) {
+    const seg = projectOntoSegment(p, path[i - 1], path[i])
+    if (seg.offRouteKm < best.offRouteKm)
+      best = { offRouteKm: seg.offRouteKm, alongKm: travelled + seg.t * seg.segmentKm }
+    travelled += seg.segmentKm
+  }
+
+  return best
 }
 
 // How far a point sits from a path, as the shortest distance to any of its
 // segments. Used to score how much a candidate route actually departs from the
 // one the driver would otherwise take.
 export function kmPointToPath(p, path) {
-  let best = Infinity
-  for (let i = 1; i < path.length; i++) {
-    const d = kmPointToSegment(p, path[i - 1], path[i])
-    if (d < best) best = d
-  }
-  return best
+  return projectOntoPath(p, path).offRouteKm
 }

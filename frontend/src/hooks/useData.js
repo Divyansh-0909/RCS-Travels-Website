@@ -9,6 +9,7 @@ const SESSION_KEYS = [
     'pickupLocation', 'dropLocation', 'pickupCoords', 'dropCoords',
     'distanceKm', 'durationMin', 'routePolyline',
     'fareSource', 'fareToll', 'fareCarrier', 'fareAirport',
+    'timing',
 ]
 
 const read = (store, name) => {
@@ -164,6 +165,10 @@ export const useData = create (persist (set =>({
     savedPlaces: [],
     setSavedPlaces: (places)=> set (() => ({savedPlaces: places ?? []})),
 
+    // Deliberately not persisted, unlike the timing choice beside it. A Date
+    // does not survive JSON, and a restored slot can have aged past the 30-min
+    // lead the picker enforces — so a reload would hand back a time the rider
+    // can no longer book. Re-picking from the calendar is the honest reset.
     scheduledTime: null,
     setScheduledTime: (time)=> set(state=> ({scheduledTime: time})),
 
@@ -230,10 +235,12 @@ export const useData = create (persist (set =>({
     // reload would rebook from the fallback anchors) plus its route metrics,
     // so tracking still draws the real road route after a reload. /book wipes
     // the metrics on mount, so a new booking can't inherit the old route.
-    // SESSION_KEYS above decides which of these outlive the tab.
+    // `timing` rides along so backing out of /book returns the rider to the
+    // Now/Schedule choice they made, not to the default. SESSION_KEYS above
+    // decides which of these outlive the tab.
     partialize: (state) => ({
         phone: state.phone, language: state.language, recentPlaces: state.recentPlaces,
-        savedPlaces: state.savedPlaces,
+        savedPlaces: state.savedPlaces, timing: state.timing,
         pickupLocation: state.pickupLocation, dropLocation: state.dropLocation,
         pickupCoords: state.pickupCoords, dropCoords: state.dropCoords,
         distanceKm: state.distanceKm, durationMin: state.durationMin,

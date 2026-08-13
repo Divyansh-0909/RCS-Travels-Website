@@ -229,7 +229,10 @@ const fcmTokenSchema = z.object({
 });
 
 const rideStatusSchema = z.object({
-  to: z.enum(['reached', 'started', 'completed']),
+  // Must stay in step with RIDE_TRANSITIONS in routes/driver.ts — that table is
+  // what decides which of these is legal from where, and a value accepted here
+  // with no entry there reaches `legalFrom.includes(...)` as undefined.
+  to: z.enum(['en_route', 'reached', 'started', 'completed']),
   otp: z.string().trim().optional(),
   lat: z.number().min(-90).max(90).optional(),
   lng: z.number().min(-180).max(180).optional(),

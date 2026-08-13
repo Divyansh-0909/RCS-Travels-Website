@@ -84,6 +84,13 @@ export type DriverProfile = {
   // to switch between — a picker with one entry is a control that does nothing.
   vehicleCount: number;
 
+  // THE RIDE HE IS DRIVING RIGHT NOW — en_route, reached or started — and null
+  // whenever he is not on one. Deliberately not derivable from
+  // onboarding.assignedRides, which counts `assigned` as well: a captain who
+  // accepted Tuesday's airport run on Sunday holds a ride for days without being
+  // on one. The shell reads this to take itself apart while he drives.
+  activeRide: { id: string; status: string } | null;
+
   group: DriverGroup;
   // Signed. Negative is not a bug — an unpaid fine bigger than the credit on hand
   // is exactly the state that stops him going online, so the screen has to say so.

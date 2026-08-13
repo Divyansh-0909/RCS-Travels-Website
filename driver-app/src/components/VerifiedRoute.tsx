@@ -52,4 +52,45 @@ const VerifiedRoute = () => {
   return <Outlet />;
 };
 
+/**
+ * The same gate, one exception: a captain who still owes somebody a ride.
+ *
+ * The ride screens sit behind THIS rather than VerifiedRoute, because suspension
+ * does not cancel the rides a captain was already given. The server agrees —
+ * requireDriverForAssignedWork lets a suspended captain read, navigate and
+ * complete a booking already assigned to him, while every path that would hand
+ * him a NEW one still refuses. Sending him to the status screen here would leave
+ * a rider waiting on a car whose driver had no way to say he had arrived.
+ *
+ * `assignedRides` rather than `blockedBy === 'suspended'`: the question is
+ * whether he owes anyone a ride, not why he is blocked. A captain whose papers
+ * lapsed mid-shift is in exactly the same position and should finish the same way.
+ *
+ * Not a security boundary, for the same reason VerifiedRoute is not: the server
+ * checks `booking.driverId === driver.id` on each of these routes independently.
+ */
+export const AssignedWorkRoute = () => {
+  const { profile, loading, notRegistered } = useDriver();
+  const location = useLocation();
+
+  if (loading) {
+    return (
+      <View className="flex-1 items-center justify-center">
+        <ActivityIndicator />
+      </View>
+    );
+  }
+
+  if (notRegistered) {
+    return <Navigate to="/signup" replace />;
+  }
+
+  const onboarding = profile?.onboarding;
+  if (!onboarding?.canDrive && !(onboarding?.assignedRides ?? 0)) {
+    return <Navigate to="/" replace state={{ from: location.pathname }} />;
+  }
+
+  return <Outlet />;
+};
+
 export default VerifiedRoute;

@@ -768,6 +768,26 @@ const ManageAccount = () => {
                                                                 : ""}
                                                         </h4>
                                                     </div>
+                                                    {/* WHAT SHARING ACTUALLY DID TO THIS FARE — the other half of the
+                                                        two prices the booking screen showed. Without it a rider who
+                                                        chose sharing and was never matched sees only the higher number
+                                                        and nothing saying why, which is the one outcome guaranteed to
+                                                        generate a support call.
+
+                                                        `shareGroupId` is the whole test, exactly as on the server: it
+                                                        is written only by a successful join. Same labelled-block shape
+                                                        as Driver and Trip above rather than a callout — this is one
+                                                        more fact about the ride, not an alert. */}
+                                                    {booking.sharing && booking.soloFare != null && (
+                                                        <div>
+                                                            <p className="text-xs uppercase tracking-wide text-gray-500 mb-0.5">Sharing</p>
+                                                            {booking.shareGroupId
+                                                                ? <h4 className="text-[var(--background-primary)]">Saved ₹{Math.round(booking.soloFare - booking.fare)} <span className="text-gray-500">• someone shared this ride</span></h4>
+                                                                : booking.status === "completed"
+                                                                    ? <h4 className="text-[var(--background-primary)]">Solo fare <span className="text-gray-500">• no one shared this ride</span></h4>
+                                                                    : <h4 className="text-gray-500">₹{booking.fare} if someone shares · ₹{booking.soloFare} if not</h4>}
+                                                        </div>
+                                                    )}
                                                 </div>
 
                                                 <div className="flex flex-row gap-2 h-fit justify-start items-start sm:items-center">

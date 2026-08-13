@@ -1,5 +1,12 @@
 import '../global.css';
 
+// FOR THE SIDE EFFECT, and it has to be up here. The module registers the
+// background location task by name, and the OS looks that name up when it wakes
+// the process — which can happen with no UI mounted and no route matched at all.
+// Registered from inside a component instead, the task would not exist at the
+// one moment Android goes looking for it.
+import './lib/locationTask';
+
 import { ClerkProvider , useAuth } from '@clerk/clerk-expo';
 import { tokenCache } from '@clerk/clerk-expo/token-cache';
 import { useFonts } from 'expo-font';
@@ -9,8 +16,9 @@ import App from './App';
 import AuthLayout from './AuthLayout';
 import ErrorBoundary from './components/ErrorBoundary';
 import HomeGate from './components/HomeGate';
-import VerifiedRoute from './components/VerifiedRoute';
+import VerifiedRoute, { AssignedWorkRoute } from './components/VerifiedRoute';
 import { DriverProvider } from './hooks/useDriver';
+import { OfferProvider } from './hooks/useOffers';
 import Account from './pages/Account';
 import Documents from './pages/Documents';
 import Vehicles from './pages/Vehicles';
@@ -41,6 +49,11 @@ const AppRoutes = () => {
         <NativeRouter>
             <StatusBar style="auto" />
             <DriverProvider>
+            {/* Inside DriverProvider, not beside it: the offer list is gated on
+                onboarding.canDrive (GET /offers is behind requireApprovedDriver)
+                and refreshes the profile after an accept, so it needs the driver
+                context to already exist above it. */}
+            <OfferProvider>
             <Routes>
                 {isSignedIn ? (
                     <>
@@ -56,9 +69,14 @@ const AppRoutes = () => {
                         <Route element={<VerifiedRoute />}>
                             <Route path="available" element={<Available />} />
                             <Route path="post" element={<Post />} />
+                            <Route path="notifications" element={<Notifications />} />
+                        </Route>
+                        {/* The ride screens take the looser gate: a suspended
+                            captain keeps the rides he was already given, and the
+                            server lets him finish them. See VerifiedRoute. */}
+                        <Route element={<AssignedWorkRoute />}>
                             <Route path="rides" element={<Rides />} />
                             <Route path="rides/:id" element={<RideDetail />} />
-                            <Route path="notifications" element={<Notifications />} />
                         </Route>
                         {/* The status screen moved to "/". Sign-up still sends a new
                             captain here, and so may a push payload sent before it did,
@@ -79,6 +97,7 @@ const AppRoutes = () => {
                 )}
                 <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
+            </OfferProvider>
             </DriverProvider>
         </NativeRouter>
     )

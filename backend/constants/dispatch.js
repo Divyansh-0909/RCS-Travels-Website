@@ -30,13 +30,25 @@ export function ownerHoldMinutes(scheduledAt, from = new Date()) {
  * Which priority group a scheduled booking may be offered to right now.
  *
  * The hold is the ONLY time-based gate. After it expires the ride opens to the
- * fleet, and it reaches partner drivers when every `rcs` offer has come back
- * rejected — not on a second timer. An unanswered offer is not a rejection: the
- * spec keeps it sitting on the driver's notification page, so escalating past it
- * on a clock would hand the ride away while a driver is still deciding.
+ * fleet, and it reaches partner drivers when every `rcs` offer has been RESOLVED
+ * — not on a second timer. An unanswered offer is not a rejection: the spec keeps
+ * it sitting on the driver's notification page, so escalating past it on a clock
+ * would hand the ride away while a driver is still deciding.
+ *
+ * RESOLVED MEANS REJECTED *OR* WITHDRAWN, and the second half is not a detail.
+ * The only thing that withdraws a live offer without settling the booking is a
+ * captain being suspended, and he is the one driver who is definitively not still
+ * deciding — he can never answer, because every accept path refuses him. Counting
+ * his row as outstanding would hold the booking at `rcs` for good: the sweep
+ * would keep returning `rcs`, candidatesIn would find nobody new (it excludes
+ * anyone already holding a row for this booking, whatever its status), and the
+ * ride would never reach a partner driver. It would fail silently, as an
+ * unfilled booking rather than an error.
  *
  * @param {{ confirmedAt: Date | null, scheduledAt: Date }} booking
- * @param {{ rcsOffered: number, rcsRejected: number }} offers
+ * @param {{ rcsOffered: number, rcsResolved: number }} offers rcsOffered counts
+ *        every `rcs` offer whatever its status; rcsResolved counts the ones that
+ *        can no longer become an acceptance.
  * @returns {'admin' | 'rcs' | 'partner'}
  */
 export function eligibleGroup(booking, offers, now = new Date()) {
@@ -45,8 +57,8 @@ export function eligibleGroup(booking, offers, now = new Date()) {
 
   if (now < holdEndsAt) return 'admin'
 
-  // Nobody in the fleet has been asked yet, or somebody asked is still thinking.
-  if (offers.rcsOffered === 0 || offers.rcsRejected < offers.rcsOffered) return 'rcs'
+  // Nobody in the fleet has been asked yet, or somebody asked can still say yes.
+  if (offers.rcsOffered === 0 || offers.rcsResolved < offers.rcsOffered) return 'rcs'
 
   return 'partner'
 }
@@ -67,3 +79,26 @@ export const SWEEP_INTERVAL_MS = 5 * 60 * 1000
 
 /** When to WhatsApp Raju that a booking is still unfilled. Once, not per sweep. */
 export const ADMIN_ALERT_LEAD_MS = 60 * 60 * 1000
+
+/**
+ * How old a driver's last GPS fix may be before dispatch stops believing it.
+ *
+ * `is_online` is a flag he sets, not a fact about his phone. It survives a dead
+ * battery, a basement car park, a revoked location permission and an app the OS
+ * killed — in every one of those the row in driver_locations simply stops
+ * changing, and without this filter dispatch keeps offering rides to a captain
+ * frozen at the last place he was seen. He cannot answer, the offer times out,
+ * and the rider waits out a ring for nobody.
+ *
+ * MUST STAY LARGER THAN THE APP'S IDLE HEARTBEAT, which is the reason for the
+ * arithmetic rather than a bare number. A parked captain is still available, and
+ * he only transmits every IDLE_HEARTBEAT_MS (hooks/useDriverLocation.ts) because
+ * a stationary car has nothing new to say. Set this below that and the fleet
+ * disappears from dispatch between heartbeats; set it just above and one dropped
+ * packet does the same. Three heartbeats is the slack for a 4G handover.
+ *
+ * The app is the other half of this contract. Changing the heartbeat there
+ * without changing the multiplier here is what makes drivers vanish.
+ */
+export const LOCATION_IDLE_HEARTBEAT_MS = 2 * 60 * 1000
+export const LOCATION_STALE_AFTER_MS = 3 * LOCATION_IDLE_HEARTBEAT_MS

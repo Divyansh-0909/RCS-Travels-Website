@@ -1,5 +1,5 @@
 import { prisma } from '../db/prisma.js'
-import { sendFCM } from './notification.js'
+import { sendPush } from './notification.js'
 import { seatsOf } from '../constants/vehicles.js'
 import { eligibleGroup } from '../constants/dispatch.js'
 
@@ -78,9 +78,15 @@ export async function offerScheduledRide(bookingId) {
     _count: true,
   })
   const rcsOffered = offers.reduce((n, row) => n + row._count, 0)
-  const rcsRejected = offers.find((row) => row.status === 'rejected')?._count ?? 0
+  // Withdrawn counts with rejected: both are offers that can never turn into an
+  // acceptance, which is the only question the escalation test is asking. See
+  // eligibleGroup — treating a suspended captain's withdrawn row as outstanding
+  // pins the booking to `rcs` permanently.
+  const rcsResolved = offers
+    .filter((row) => row.status === 'rejected' || row.status === 'withdrawn')
+    .reduce((n, row) => n + row._count, 0)
 
-  const group = eligibleGroup(booking, { rcsOffered, rcsRejected })
+  const group = eligibleGroup(booking, { rcsOffered, rcsResolved })
 
   const drivers = (await candidatesIn(booking, group)).filter((d) => hasRoom(d, booking))
   if (drivers.length === 0) return 0
@@ -117,23 +123,27 @@ export async function offerScheduledRide(bookingId) {
   // nudge towards it. A driver with a dead FCM token still sees this on his
   // notification page, which is exactly what the persisted offer is for — so a
   // failed send must never block or fail the sweep.
+  //
+  // sendPush, NOT sendFCM. sendFCM is the stub whose boolean means "the driver
+  // accepted", and it delivers nothing — every scheduled offer since this sweep
+  // was written has gone out as a console.log. sendPush is the real one: it
+  // takes the driver row rather than the token, puts title and body at the top
+  // level, stringifies `data` itself, and clears the token when Firebase says
+  // the install is gone. driverAssignment.js keeps sendFCM, because that path
+  // still reads the answer out of the return value.
   for (const d of drivers) {
-    sendFCM(d.fcmToken, {
-      notification: {
-        title: `New Scheduled Ride — ${pickupTimeLabel}`,
-        body: `\n${booking.pickupAddress} → ${booking.dropAddress} \n₹${booking.fare}`,
-      },
-      data: {
-        bookingId: booking.id,
-        pickupAddress: booking.pickupAddress,
-        dropAddress: booking.dropAddress,
-        fare: String(booking.fare),
-        vehicleClass: booking.vehicleClass,
-        pickupTime: pickupTimeLabel,
-        // NO customerPhone. The rider's number is released on accept, by the
-        // accept endpoint — an offer is not an assignment.
-      },
-    })?.catch?.(() => {})
+    sendPush(d, {
+      title: `New scheduled ride — ${pickupTimeLabel}`,
+      body: `${booking.pickupAddress} → ${booking.dropAddress} · ₹${booking.fare}`,
+      // ROUTING ONLY, not a copy of the booking. The app refetches GET /offers
+      // when this lands, so anything duplicated here is a second version of the
+      // same ride that can disagree with the list — and `screen` is what
+      // usePushRegistration reads to decide where a tap goes. Without it the
+      // notification opens the app and drops him wherever he was.
+      data: { screen: 'notifications', bookingId: booking.id },
+      // Still no customerPhone. The rider's number is released on accept, by the
+      // accept endpoint — an offer is not an assignment.
+    }).catch(() => {})
   }
 
   return count
@@ -172,11 +182,28 @@ export async function withdrawOtherOffers(bookingId, keepDriverId = null, client
  * offers and those rides immediately restart assignment.
  *
  * Restarting is implicit rather than a call — the next sweep finds the booking
- * still `confirmed` and unassigned, and the withdrawn row no longer blocks
- * re-offering it to somebody else.
+ * still `confirmed` and unassigned, and offerScheduledRide re-reads the board.
+ * What makes that actually reach somebody is that a `withdrawn` offer counts as
+ * RESOLVED in the escalation test above: left as an unanswered `pending` row it
+ * would hold the booking at `rcs` forever, because an unanswered offer is
+ * deliberately not a rejection. A suspended captain is not still deciding.
+ *
+ * NOT UNDONE when the suspension is lifted, and it must not be: by then the ride
+ * has been offered to other drivers, and restoring his row would put a second
+ * live claim on a booking somebody else may already hold. He is eligible again
+ * from the next sweep, which is the right amount of "back on the road".
+ *
+ * ONLY `pending` OFFERS. An offer he already ACCEPTED is an assignment, and
+ * unpicking that means restoring vehicle capacity and re-dispatching a booking
+ * that has a driver — see the note in routes/admin.ts.
+ *
+ * @param {string} driverId
+ * @param {typeof prisma | import('@prisma/client').Prisma.TransactionClient} [client]
+ *        the suspension path passes its transaction, so a captain is never
+ *        suspended in a commit that leaves his offers live.
  */
-export async function withdrawOffersForDriver(driverId) {
-  const { count } = await prisma.rideOffer.updateMany({
+export async function withdrawOffersForDriver(driverId, client = prisma) {
+  const { count } = await client.rideOffer.updateMany({
     where: { driverId, status: 'pending' },
     data: { status: 'withdrawn', respondedAt: new Date() },
   })

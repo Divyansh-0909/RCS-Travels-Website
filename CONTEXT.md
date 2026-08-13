@@ -2,7 +2,7 @@
 
 > A single source of truth for understanding this codebase. Read this first.
 > For the phased build plan and future ideas, see [ROADMAP.txt](ROADMAP.txt).
-> Status reflects the **actual code** as of 9 August 2026, verified against the
+> Status reflects the **actual code** as of 13 August 2026, verified against the
 > source rather than against intentions. Where something is specified but not
 > built, it says so.
 
@@ -27,9 +27,12 @@ region. It is **not** a generic Uber clone — it is built around a specific ope
 - **Solo vs. sharing.** A rider books a whole vehicle or a single seat.
 
 Three apps exist. The **customer website** and its backend are built and deployed. The
-**admin dashboard** lives inside the same React app and is read-only apart from the fare-zone
-editor. The **driver app** (Expo / React Native) is substantially built — around 40 source
-files and 13 backend endpoints — but **no real captain can log into it yet**; see §12.
+**admin dashboard** lives inside the same React app; it is read-only apart from the fare-zone
+editor, document review and suspension. The **driver app** (Expo / React Native) is
+substantially built — 59 source files against 21 backend endpoints — and a captain can now
+sign up, upload his papers, add cars and wait out approval inside it. What still blocks a real
+captain is **distribution, not code**: the EAS environments a build reads still carry the wrong
+API URL, so no installable build exists yet. See §10 and §12.
 
 ---
 
@@ -71,7 +74,11 @@ files and 13 backend endpoints — but **no real captain can log into it yet**; 
 - **Prisma 7.8** with the **`@prisma/adapter-pg`** driver adapter over **`pg`**. The pool is
   capped at `DATABASE_POOL_MAX` (default 5) because on Cloud Run the default 10 is *per
   instance* — see `db/prisma.js`.
-- **PostgreSQL** (Supabase, free tier).
+- **PostgreSQL** (Supabase, free tier), with **PostGIS** enabled in the `extensions` schema.
+  One table uses it: `driver_locations.geog`, a generated `geography(Point, 4326)` under a GiST
+  index, which is how dispatch asks "who is within N km" (see §5). Every PostGIS name in the
+  code is schema-qualified, because Supabase puts the extension on the role's `search_path`
+  and a plain local Postgres does not.
 - **Google Cloud Storage** for driver documents — one private bucket
   (`rcs-travels-driver-documents`, `asia-south1`, uniform access, public-access prevention
   enforced), reached only through `lib/storage.js` (see §3). **There is no storage key**:
@@ -161,6 +168,8 @@ RCS-Travels-Website/
 │   ├── lib/
 │   │   ├── storage.js                  THE object-storage seam — 7 ops over GCS, no vendor above
 │   │   ├── jobs.js                     job registry + JOBS_MODE (timers vs Cloud Scheduler)
+│   │   ├── tasks.js                    Cloud Tasks enqueue for one document scan
+│   │   ├── shareLink.js                token, TTL, and the public payload's allow-list
 │   │   ├── firebase.js                 messaging() for sendPush
 │   │   └── bookingReference.js , phone.js
 │   ├── constants/
@@ -169,7 +178,7 @@ RCS-Travels-Website/
 │   │   └── dispatch.js                 owner hold, escalation, sweep horizon
 │   ├── prisma/
 │   │   ├── schema.prisma               18 models, 11 enums
-│   │   ├── migrations/                 35 migrations, all applied
+│   │   ├── migrations/                 38 migrations, all applied
 │   │   ├── seed.js , seed-captain.js , seed-captain-rides.js
 │   │   └── clean-bookings.js , clean-seed-data.js
 │   ├── data/
@@ -177,7 +186,6 @@ RCS-Travels-Website/
 │   │   └── shady-zones.geojson         2 avoided-road corridors
 │   ├── scripts/
 │   │   ├── free-port.js                frees the port before dev (NOT used in the container)
-│   │   ├── setup-storage.js            creates the private driver-documents bucket
 │   │   ├── push-secrets.ps1            .env.production → Secret Manager, values never printed
 │   │   ├── normalize-driver-phones.js
 │   │   └── check-shady-zones.js        routes campus → every zone, reports crossings
@@ -185,13 +193,16 @@ RCS-Travels-Website/
 │   │   ├── documentPolicy.test.js      the rules that decide who may drive
 │   │   ├── documentConcurrency.test.js needs Postgres, gated behind an env var
 │   │   ├── documentFile.test.js        magic bytes, re-encode, PDF active content
+│   │   ├── dispatch.test.js            the owner hold, and when a ride escalates
+│   │   ├── shareLink.test.js           asserts what a public share payload OMITS
 │   │   └── internalJobs.test.js        the gate on /internal
 │   ├── routes/
 │   │   ├── hybridAuth.js               POST /api/auth/send-otp, /verify-otp
 │   │   ├── users.js                    me, recent + saved places, gender/DOB/emergency,
 │   │   │                               data download, account delete
 │   │   ├── fare.js                     POST /api/fare/estimate
-│   │   ├── bookings.js                 create / :id/status / cancel / my-bookings
+│   │   ├── bookings.js                 create / :id/status / cancel / my-bookings / share
+│   │   ├── share.js                    GET /api/share/:token — the ONLY unauthenticated read
 │   │   ├── driver.ts                   21 endpoints — see §8
 │   │   ├── admin.ts                    lists + zones + document review — see §8
 │   │   ├── internal.js                 POST /internal/jobs/:name — Cloud Scheduler only
@@ -202,7 +213,7 @@ RCS-Travels-Website/
 │       ├── fareQuote.js                HMAC-signs each estimate
 │       ├── safeRoute.js                alternative-route classifier over shady polygons
 │       ├── geo.js                      kmBetween, pointInRing, decodePolyline, kmPointToPath
-│       ├── driverAssignment.js         ride-now matching (rings + groups + fairness + claim)
+│       ├── driverAssignment.js         ride-now matching (PostGIS rings + groups + fairness + claim)
 │       ├── scheduledOffers.js          persisted RideOffer creation / withdrawal
 │       ├── assignScheduledRides.js     the dispatch sweep (5 min)
 │       ├── driverVehicles.js           add / remove / switch a captain's cars
@@ -217,37 +228,49 @@ RCS-Travels-Website/
 │   ├── App.jsx                         "/" → NavBar + OnBoarding + marketing + Footer
 │   ├── api/api.js                      thin fetch wrapper, one fn per endpoint
 │   ├── constants/                      fares, statusLabels, support, legal, pageMeta
+│   ├── lib/trip.js                     ETA, plate formatting, LIVE_STATUSES — shared by the
+│   │                                   rider's tracking screen and the public shared one
 │   ├── hooks/                          useData, useApi, useViewNavigate, useIsMobile,
-│   │                                   useExitAnim, useRefreshNotice
+│   │                                   useExitAnim, useRefreshNotice, useOtpClipboard
 │   ├── components/                     ProtectedRoute, ErrorBoundary, PageMeta, RideDetails,
 │   │                                   DriverReview (admin: documents + suspension),
 │   │                                   skeletons, illustrations, ui/
-│   └── pages/                          OnBoarding, VehicleSelect, TrackingPage, Login,
-│                                       SignUp, ManageAccount, Settings, Safety, Help,
+│   └── pages/                          OnBoarding, VehicleSelect, TrackingPage, SharedTrip,
+│                                       Login, SignUp, ManageAccount, Settings, Safety, Help,
 │                                       Legal, Outstation, AdminDashboard, EditFares,
 │                                       NotFound, DevPreview, marketing sections
 └── driver-app/src/
     ├── App.tsx , AuthLayout.tsx , main.tsx
-    ├── components/                     AppBar (+Scrim, +Visibility), OnlineToggle, AppText,
-    │                                   ui/ (RideCard, RideRow, EarningsPanel, WalletCard,
-    │                                   MonthEarningsCard, ScheduledRide, JoinFleetCard,
-    │                                   MarketPromo, AccountRow, Button, Input)
-    └── pages/                          Login, Signup, OnBoarding, Home, Rides, RideDetail,
-                                        Notifications, Account, Available, Post
+    ├── components/                     AppBar (+Scrim, +Visibility), HomeGate, VerifiedRoute,
+    │                                   OnlineToggle, AppText, ErrorBoundary,
+    │                                   ui/ (RideCard, RideRow, DocumentRow,
+    │                                   DocumentSourceSheet, DocumentDetailsSheet,
+    │                                   EarningsPanel, WalletCard, MonthEarningsCard,
+    │                                   ScheduledRide, JoinFleetCard, MarketPromo,
+    │                                   AccountRow, Button, Input, ErrorState, skeletons)
+    ├── constants/                      documents.ts (labels, per-type NUMBER fields, size
+    │                                   and resize ladders), booking, driver, support
+    ├── lib/                            documentFile, documentState, uploadDocuments
+    └── pages/                          Login, Signup, OnBoarding, OnboardingStatus, Home,
+                                        Rides, RideDetail, Notifications, Account, Documents,
+                                        Vehicles, Available, Post
 ```
 
 ---
 
 ## 4. Data model (`backend/prisma/schema.prisma`)
 
-**18 models, 11 enums.** 35 migrations, all applied. The 8 Aug migration
+**18 models, 11 enums.** 38 migrations, all applied. The 8 Aug migration
 (`20260807222544_driver_groups_offers_wallet_reviews`) is the large one — it added driver
 groups, suspension, the wallet ledger, offers, reviews, flags and coupons in a single
-additive pass.
+additive pass. The three most recent are all 13 Aug: `add_booking_vehicle_model`,
+`driver_location_postgis` and `add_booking_share_link`.
 
 **Enums:** `BookingStatus` (pending, confirmed, assigned, en_route, reached, started,
 completed, cancelled, **no_driver**), `BookingSource` (website | whatsapp | admin),
-`CancelledBy` (user | driver | admin), `VerificationStatus` (pending | approved | rejected),
+`CancelledBy` (user | driver | admin), `VerificationStatus` (notUploaded | uploading |
+scanning | pending | approved | rejected — six, not three: the first three are onboarding
+progress the captain's own screen renders, the last three are the admin's verdict),
 `DriverDocumentType` (11 types), `DriverGroup` (admin | rcs | partner), `ScanStatus` (pending |
 scanning | clean | failed — the FILE verdict, never to be confused with the admin's `status`),
 `WalletEntryType` (7 types), `PaymentMethod` (wallet | cash | upi), `OfferStatus` (pending |
@@ -269,10 +292,14 @@ accepted | rejected | withdrawn), `VehicleClass` (hatchback | sedan | suv | suv_
   `clerkId` is nullable but **is written**, once, by `POST /api/driver/me` from the verified
   Clerk session. The four `vehicle*` columns are denormalised from the active `Vehicle` — see
   the schema comment; only signup and `services/driverVehicles.js` write them.
-- **Vehicle** — a captain's cars, one row each: `class`, `number`, `model`, `capacity`,
-  `verificationStatus`. `Driver.activeVehicleId` says which he is driving now. This is what
-  makes "a driver *is* a car" false, and why document ownership splits between the man and the
-  car — see `decisions/multi-vehicle.md`.
+- **Vehicle** — a captain's cars, one row each: `class`, `number`, `model`,
+  `verificationStatus`, unique on `[driverId, number]`. `Driver.activeVehicleId` says which he
+  is driving now. This is what makes "a driver *is* a car" false, and why document ownership
+  splits between the man and the car — see `decisions/multi-vehicle.md`. **`model` is required
+  at every place a car is added** (signup, `addVehicle`, `ensurePrimaryVehicle`, and the shared
+  zod schema) because it is what a rider reads to find the car at a kerb; the **column stays
+  nullable**, which is a statement about rows added before 13 Aug 2026, not about what may be
+  submitted.
 - **DriverDocument** — one row per **owner** per type per slot. `@@unique([ownerId, type,
   isReplacement])`, where `ownerId` is the car for vehicle-owned types and the driver for his
   own. **Two live rows per type, not one**: a renewal lands in the replacement slot beside the
@@ -286,15 +313,32 @@ accepted | rejected | withdrawn), `VehicleClass` (hatchback | sedan | suv | suv_
 - **DriverDocumentArchive** — superseded document rows, kept for the audit trail behind a
   disputed suspension.
 - **DriverLocation** — one row per driver, `latitude`/`longitude`/`bearing`/`speedKmh`,
-  upserted by `POST /api/driver/location`. `bearing` + `speedKmh` exist to allow client-side
-  dead reckoning between the customer's 5-second polls; **the customer side does not use them
-  yet.**
+  upserted by `POST /api/driver/location`, plus **`geog`**: a
+  `geography(Point, 4326)` **generated always** from that lat/lng pair, under a GiST index.
+  It is `Unsupported` in the Prisma schema, so the client cannot select, create or update it —
+  which for a generated column is the point, and is why no writer had to change and the two
+  representations cannot drift. **This model must never be migrated by an auto-generated
+  diff**: Prisma knows neither that the column is generated nor that the type lives in the
+  `extensions` schema, and a generated `ALTER` can silently drop the `GENERATED` clause, which
+  freezes every driver at the position he held when it ran. `bearing` + `speedKmh` exist to
+  allow client-side dead reckoning between the customer's 5-second polls; **the customer side
+  does not use them yet** — it draws the last known point.
 - **Booking** — the core record: `userId`, optional `driverId`, pickup/drop address + coords,
   `vehicleClass`, `scheduledAt` (null = on-spot), `isOutstation`, `preferSafeRoute` +
   `safeWaypointLat`/`Lng`, `needsCarrier`, `distanceKm`, `fare`, `rideFare`,
   `commissionPct`/`commissionAmt`, `status`, the lifecycle stamps (`confirmedAt`, `reachedAt`,
   `startedAt`, `completedAt` and their distances), cancellation fields, `source`, `sharing`,
-  `shareGroupId`, `pickupOrder`, `adminAlertedAt`.
+  `shareGroupId`, `pickupOrder`, `adminAlertedAt`, and:
+  - **`vehicleNumber` + `vehicleModel`** — the car as it was **at the moment of the claim**,
+    both written by `claimBookingForDriver`. A captain owns several cars, so reading the model
+    through the driver relation would describe whichever car he is in *today*. The two move
+    together deliberately: a pair where only half is frozen eventually reads
+    "DL01AB1234 · Innova Crysta" about a ride done in the Dzire. There was **no backfill and
+    no fallback to the driver row** — rides between the two migrations carry a correct plate
+    and a null model, and those are precisely the rows either shortcut would corrupt. Readers
+    fall back to the **booked class**, which is a fact of the booking and cannot go stale.
+  - **`shareToken` (unique) + `shareExpiresAt`** — the "follow my ride" handle. Null on a ride
+    nobody shared, and cleared outright when the rider revokes. See §5.
 - **RideOffer** — one scheduled-ride offer to one driver. `@@unique([bookingId, driverId])` is
   what makes the forever-running 5-minute sweep idempotent. `group` records which priority
   band it went out to.
@@ -449,13 +493,26 @@ one buys a longer drive, which is the driver's own work.
 
 ### Driver assignment — ride-now (`services/driverAssignment.js`)
 
-- Expanding **bounding-box → Haversine** search, radius 20→80 km in 10 km steps, re-checking
-  booking status between rings so an expired or cancelled ride stops paging drivers.
+- Expanding **PostGIS `ST_DWithin`** search, radius 20→80 km in 10 km steps, re-checking
+  booking status between rings so an expired or cancelled ride stops paging drivers. **The
+  radius filter is the database's**, as of 13 Aug 2026: it used to be a lat/lng bounding box
+  plus a Haversine re-measure in JS, which had to over-fetch a square around the circle and
+  throw ~21% of it away with all its relations loaded. `candidatesWithin()` is deliberately
+  **two queries** — a raw one for the geography (unreachable through the query builder, since
+  `geog` is `Unsupported`) returning ids and distances, then an ordinary Prisma read that
+  hydrates them with relations. `use_spheroid = false` on both calls, because that is what the
+  Haversine computed and a switch would silently re-rank every driver near a tier boundary.
+  `geographyOf()` is **the one place a `{lat, lng}` pair becomes a PostGIS value**: `ST_MakePoint`
+  takes longitude first, and a reversed pair does not error — it searches the sea off Somalia
+  and every booking comes back `no_driver`.
 - Filters on `isActive`, `isOnline`, `verificationStatus = approved`, `suspendedAt: null`, and
   `vehicleClass` matched **exactly** — never widened, since the rider was quoted for that car.
-- Sorted by **`GROUP_RANK` (admin → rcs → partner) first, then distance**, ties to the senior
-  driver. Ranking happens **within a ring**, not across the whole sweep — walking all three
-  groups out to 80 km first would send a ride 60 km to Raju instead of 5 km to a partner.
+- Sorted by **`GROUP_RANK` (admin → rcs → partner), then distance TIER, then whose turn it
+  is** — `FAIRNESS_TIER_KM` is 3 km, so inside one band `lastOfferedAt` decides and across
+  bands distance still wins outright. Ranking happens **within a ring**, not across the whole
+  sweep — walking all three groups out to 80 km first would send a ride 60 km to Raju instead
+  of 5 km to a partner. A driver's turn is spent **before the push, not after the answer**,
+  because `sendFCM` waits 30 seconds and two concurrent searches would otherwise both pick him.
 - Offers are **sequential** — one FCM per candidate, awaiting each answer — which is why one
   ring can take minutes and why the search runs detached.
 - `claimBookingForDriver` is the **only** way a booking gets assigned — every accept path calls
@@ -482,8 +539,13 @@ in between — because a push that is never tapped is simply gone, and a row is 
   knows he can't do Tuesday 6am shouldn't have to go online to say so.
 - **Owner hold:** Raju alone is offered the ride for **15 min** if pickup is within 2 h, else
   **45 min**, measured from confirmation (`ownerHoldMinutes`).
-- **Escalation rcs → partner happens when every rcs offer has come back rejected**, not on a
-  timer. An unanswered offer is not a rejection.
+- **Escalation rcs → partner happens when every rcs offer is resolved**, not on a timer. An
+  unanswered offer is not a rejection. **Resolved means rejected *or* withdrawn** — the only
+  thing that withdraws a live offer without settling the booking is a captain being suspended,
+  and he is the one driver who can never answer. Counting his row as outstanding would pin the
+  booking to `rcs` for good: the sweep keeps answering `rcs` and `candidatesIn` finds nobody
+  new, since it excludes anyone already holding a row for this booking whatever its status.
+  `tests/dispatch.test.js` covers the rule.
 - Idempotent by construction: `@@unique([bookingId, driverId])` plus an
   `offers: { none: { bookingId } }` filter mean a re-run creates nothing, which matters because
   the sweep runs forever and two sweeps can overlap.
@@ -543,6 +605,41 @@ conditional UPDATE means the second caller finds nothing to claim.
 **The scanner itself is ours, not a Google product.** No antivirus engine and no signature
 database — `clean` means "passed the checks in documentScan.js", never "free of malware".
 
+### Follow my ride (`lib/shareLink.js`, `routes/share.js`) — **live**
+
+A rider taps Share on the tracking screen, the server mints an opaque handle, and the OS share
+sheet sends it to whoever they choose. `/t/:token` opens a read-only view of the trip for
+someone with **no account**: where the car is, who is driving, where it is going.
+
+- **The token is 128 bits from the CSPRNG, base64url — never the booking id.** That id is in
+  the rider's own URL, goes to support and rides in the WhatsApp templates, so a share built on
+  it could not be revoked without breaking all of them, and anyone who had ever seen one would
+  hold a permanent key.
+- **Minting is idempotent while the link is live.** Tapping Share twice, or sharing with two
+  people, yields ONE handle to revoke. A fresh token per tap would leave earlier ones answering
+  with nobody able to name them.
+- **Only `confirmed`/`assigned`/`en_route`/`reached`/`started` can be shared** — `pending` is
+  out, because that search may still end in `no_driver` and a link that never resolves into
+  anything is worse than no link.
+- **`SHARE_TTL_MS` is 12 h**, a ceiling rather than the whole rule: the route stops serving
+  positions the moment the ride reaches a terminal status, so a finished trip's remaining hours
+  show an outcome and never a live car. `DELETE /:id/share` clears the **token**, not just the
+  expiry, so the handle stops existing.
+- **`sharedTripView()` is pure, and separate from the route on purpose** — what it omits is a
+  security property, so it is asserted in `tests/shareLink.test.js`, which needs no database.
+  It refuses to carry: **either phone number** (the rider's is what the link protects; the
+  driver's is his own, which he never agreed to have forwarded around a group chat),
+  **`bookingCode`** (the OTP that starts the ride — per-account, permanent, and unchangeable by
+  the rider), **the fare**, and **any id**. A completed ride keeps who drove and drops where he
+  is now; a cancelled one names nobody; the rider is a first name only.
+- The route is behind its own limiter, being the only unauthenticated way to read a booking,
+  and answers **410 for a lapsed link against 404 for an unknown one** — the difference between
+  a page that can say "ask them to share again" and one that cannot. `/t` is **noindex**, and
+  its description gives nothing away, because a link preview naming the rider or the
+  destination would leak the trip to every group it passed through before anyone opened it.
+- Links are built from **`APP_ORIGIN`**, never from the request: that request arrives at the
+  API's own host, and a link built from it would point a rider's friend at the API.
+
 ### Decided, not built
 
 Ride acceptance deposit, overcharge flags → fines → suspension, coupons, ratings, round trips,
@@ -600,6 +697,7 @@ swallows throws from its own routes, so this is the boundary that actually fires
 | `/login`, `/signup` | `LoginPage`, `SignUpPage` | public |
 | `/help` | `HelpPage` | public |
 | `/outstation` | `Outstation` | public, indexable |
+| **`/t/:token`** | `SharedTrip` | **public, unauthenticated, `noindex`** |
 | legal paths (`constants/legal.js`) | `LegalPage` | public, one route per document |
 | `/book` | `VehicleSelect` | `ProtectedRoute` |
 | **`/booking/:id`** | `TrackingPage` | `ProtectedRoute` |
@@ -629,7 +727,11 @@ so the browser's View Transitions API animates page changes (CSS in `index.css` 
 
 **Fare** — `POST /api/fare/estimate`
 
-**Bookings** — `POST /`, `GET /:id/status`, `POST /cancel`, `GET /my-bookings`
+**Bookings** (6) — `POST /`, `GET /:id/status`, `POST /cancel`, `GET /my-bookings`,
+`POST /:id/share` (mint or return the live handle), `DELETE /:id/share` (revoke)
+
+**Share** — `GET /api/share/:token`. **Unauthenticated, and the only route in the codebase
+that reads a booking without a session.** Mounted with its own rate limiter. See §5.
 
 **Driver** (21) —
 *Account:* `POST /me` (**signup — writes `clerkId` from the session; this is what links a
@@ -649,7 +751,9 @@ approved. It refuses a suspended driver with the reason.
 `GET|PUT /zones` (the fare-zone editor), `GET /drivers/:id/documents` (short-lived signed URLs,
 **null for anything not `clean`** — `signedDocumentUrl` fails closed), `PATCH /documents/:id`
 (approve / reject with a reason), `PATCH /drivers/:id/suspension` (stop a captain driving, or
-let him back on; a reason is required to suspend and the captain is shown it).
+let him back on; a reason is required to suspend and the captain is shown it, and suspending
+withdraws his pending scheduled offers in the same transaction so those bookings go back into
+the pool — his **accepted** rides are left alone, since undoing one is a re-assignment).
 
 **There is deliberately no "approve driver" endpoint.** `verificationStatus` is DERIVED —
 `recomputeDriverVerification` returns `approved` exactly when every required document is
@@ -729,7 +833,34 @@ in-process and rate-limited so the API key never reaches the browser.
 - **Multi-vehicle captains** — a `Vehicle` table with `activeVehicleId`, document ownership
   split between the man and each car, and per-car verification.
 - **Dispatch fairness** — `last_offered_at` / `last_assigned_at` so ride-now stops handing every
-  booking to whoever parks nearest the gate.
+  booking to whoever parks nearest the gate, banded by `FAIRNESS_TIER_KM`.
+- **The dispatch radius scan on PostGIS** — a generated `geography` point under a GiST index,
+  and `ST_DWithin` asking for the circle instead of a bounding box for the square around it.
+  Done ahead of the "measure first" rule on purpose: at today's fleet size it bought no
+  latency, it bought the access path being right before the volume arrives.
+- **Follow my ride** — share pills on the tracking screen mint a revocable, expiring, opaque
+  handle; `/t/:token` renders it for someone with no account; the payload's omissions are
+  asserted in a test. See §5.
+- **The real driver on the tracking screen** — the card reads the driver object the status poll
+  was already returning (name, plate, model, signed photo), both Call buttons open the dialer,
+  and the whole card plus the extra-fare notice are gated on `driver` being non-null so a
+  `pending` or `no_driver` booking no longer shows a fabricated plate to a rider with nobody
+  coming. The photo URL expires in 15 minutes, so the `img` is keyed on it to force a refetch
+  each poll, with an `onError` for the case polling cannot cover — a completed ride the rider
+  is still sitting on past the expiry.
+- **A captain's cars, end to end** — the Documents screen renders one panel per car and asks
+  per car, only for a panel that is opened (`GET /me/vehicles` already carries each car's
+  outstanding list, which is all a closed panel has to say). Uploads are keyed by **car AND
+  type**, because keyed on type alone the Innova's RC row carried the progress of an upload
+  filed against the Dzire. Vehicles is a drill-down with a working add-a-car form.
+- **A usable shell for a captain who is still waiting** — `/` is answered by `HomeGate`, which
+  renders the ride board or the application status depending on `onboarding.canDrive`, so the
+  address he lands on is the one he keeps after approval and approval needs no navigation at
+  all. The AppBar drops Market, Post and Rides while he waits and holds its height; the online
+  toggle goes with them, since the switch would 403.
+- **Per-document number fields** — one "Number on the document" heading stood in for eight
+  different papers; `DOCUMENT_NUMBER_FIELDS` names each one, with placeholders that show a
+  format only where one is standard and recognisable.
 - **The Cloud Run migration, all of it** — sweeps off `setInterval` onto Cloud Scheduler +
   authenticated `/internal` endpoints; the backend containerised; secrets in Secret Manager;
   driver documents moved from Supabase Storage to Cloud Storage behind the `lib/storage.js`
@@ -742,20 +873,22 @@ in-process and rate-limited so the API key never reaches the browser.
   document the file check has not cleared, because the server refuses to serve a URL for one.
 - **Customer frontend** — the whole funnel: OnBoarding, Login/SignUp, VehicleSelect (fare
   cards, solo/share, safer-route toggle, pin-confirm map, searching/confirmed/no-driver
-  panels), TrackingPage on `/booking/:id`, RideDetails, ManageAccount, Settings, Safety, Help,
-  Legal, Outstation, the marketing homepage, and `DevPreview`.
-- **Admin** — bookings/drivers/users tables with filters and skeletons, plus `EditFares` saving
-  the live zone rate card to the database.
+  panels), TrackingPage on `/booking/:id` with a live driver card and a working Share,
+  `SharedTrip` on `/t/:token`, RideDetails, ManageAccount, Settings, Safety, Help, Legal,
+  Outstation, the marketing homepage, and `DevPreview`.
+- **Admin** — bookings/drivers/users tables with filters and skeletons, `EditFares` saving the
+  live zone rate card to the database, and per-captain document review + suspension.
 - **Driver app** — Expo shell, auth screens, AppBar with scrim and visibility, online toggle,
-  Home, Rides, RideDetail, Notifications, Account, and marketplace screens (Available, Post).
+  Home, Rides, RideDetail, Notifications, Account, Documents (per car), Vehicles,
+  OnboardingStatus behind `HomeGate`, and marketplace screens (Available, Post).
 
 ### Partial
 
-- **`TrackingPage` driver card** — polls correctly, but `driverCard` and `driverRow` still
-  render hardcoded text ("Driver name", "UP 16 AB 1234"), and aren't gated on `driver` being
-  non-null, so an unassigned booking shows a driver who doesn't exist.
 - **`ThemeToggle.jsx`** renders `null` by design; the site follows the OS theme.
 - **Driver marketplace screens** exist in the app with **no backend at all**.
+- **Live tracking** — the map draws the driver's **last known point** from the 5-second poll.
+  `POST /driver/location` stores `bearing` and `speedKmh` for dead reckoning between polls and
+  nothing reads them yet, so the marker steps rather than moves.
 - **Local-only UI** — see §13.
 
 ### Left to build, in priority order
@@ -766,20 +899,21 @@ in-process and rate-limited so the API key never reaches the browser.
 2. **Point the EAS environments at `api.rcstravels.co.in`.** The local `.env` files are right;
    the EAS-stored `development` value is still a laptop LAN address, and that is what a BUILD
    reads. `preview` and `production` are still empty, so a build on either dies at launch.
-3. **Manual booking re-assignment** — the last admin mutation that does not exist. Document
+   **This, not code, is what stands between a real captain and the app.**
+3. **Set `APP_ORIGIN` in production**, or every shared link points at `localhost:1574`.
+4. **Manual booking re-assignment** — the last admin mutation that does not exist. Document
    review and suspension both do now.
-4. **Real FCM** — `sendFCM` is a coin flip, so every accept path is untested against a real
+5. **Real FCM** — `sendFCM` is a coin flip, so every accept path is untested against a real
    device. `sendPush` is real, so the plumbing exists; what is missing is making assignment
    event-driven rather than waiting 30s for a boolean a push can never return.
-5. **Real `sendWhatsApp`** — still a `console.log`, so the T−1h "nobody accepted this booking"
+6. **Real `sendWhatsApp`** — still a `console.log`, so the T−1h "nobody accepted this booking"
    alert to Raju goes nowhere. Needs approved utility templates.
-5. **Live tracking** — the driver marker and dead reckoning on the customer side.
-   `POST /driver/location` already stores bearing and speed, so this is client-side work.
-6. **Sharing pool** — see §12; the corridor pass cannot run.
-7. **The accountability layer** — wallet, deposit, flags, fines, suspension mutations,
-   coupons, ratings. Schema migrated, no code.
-8. **Round trips**, then the marketplace backend, payments, outstation.
-9. **Polish** — i18next Hindi wiring, and the optimizations in ROADMAP.
+7. **Dead reckoning** on the customer side — the columns are already written.
+8. **Sharing pool** — see §12; the corridor pass cannot run.
+9. **The accountability layer** — wallet, deposit, flags, fines, coupons, ratings. Schema
+   migrated, no code.
+10. **Round trips**, then the marketplace backend, payments, outstation.
+11. **Polish** — i18next Hindi wiring, and the optimizations in ROADMAP.
 
 ---
 
@@ -787,14 +921,23 @@ in-process and rate-limited so the API key never reaches the browser.
 
 **Backend** (`backend/`): `.env` needs `DATABASE_URL`, `CLERK_SECRET_KEY`,
 `GOOGLE_MAPS_API_KEY`, `ADMIN_PHONE`. Optionally `DIRECT_URL` (migrations need a direct or
-session connection, not the transaction pooler), `CORS_ORIGINS`, `FCM_ALWAYS_ACCEPT`,
-`WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_ACCESS_TOKEN`, `DATABASE_POOL_MAX`.
+session connection, not the transaction pooler), `CORS_ORIGINS`, `APP_ORIGIN`,
+`FCM_ALWAYS_ACCEPT`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_ACCESS_TOKEN`, `DATABASE_POOL_MAX`.
+`.env.example` is annotated and is the authority on all of them.
 
-`SUPABASE_URL` + `SUPABASE_SECRET_KEY` are needed for anything touching documents — without
-them those routes answer 503 in dev, and the server **refuses to boot** in production.
-`FARE_QUOTE_SECRET` is likewise fatal in production and a throwaway per-process key in dev.
+`GCS_BUCKET` is what documents need — **and there is no key beside it**; credentials come from
+Application Default Credentials (`gcloud auth application-default login` on a laptop, the
+attached service account on Cloud Run). Leave it blank and the document routes answer 503 while
+every other route still runs. `APP_ORIGIN` is where share links point; it defaults to the local
+Vite port, so dev needs nothing and **production needs it set**.
+`FARE_QUOTE_SECRET` is fatal in production and a throwaway per-process key in dev.
 `INTERNAL_JOBS_SECRET` (any long random string) lets you curl `/internal/jobs/:name` locally;
 it is unreachable when `NODE_ENV=production`, enforced in code.
+
+The database needs **PostGIS** in the `extensions` schema — Supabase has it, and
+`20260813150000_driver_location_postgis` enables it there. A plain local Postgres needs
+`CREATE EXTENSION postgis SCHEMA extensions` or every dispatch query fails on an unqualified
+name it cannot resolve.
 
 `JOBS_MODE` defaults to `interval` — the in-process timers, which is what you want locally and
 on Render. Only the Cloud Run image sets `scheduler`. An unrecognised value refuses to boot,
@@ -805,7 +948,7 @@ npm install
 npm run db:generate
 npm run db:migrate
 npm run db:seed          # npm run db:clean resets bookings to the seed
-npm run storage:setup    # once, after setting SUPABASE_* — creates the private bucket
+npm run db:seed:captain  # a verified captain, his cars and his papers
 npm run dev              # tsx watch → http://localhost:5000 ; GET /health
 npm run typecheck
 npm test                 # node:test; documentConcurrency needs a database
@@ -851,9 +994,22 @@ for an index of every booking-flow screen, rendered with a mock booking and no b
   So in dev, driver assignment "succeeds" randomly.
 - **Neither drawn shady corridor has a `fallback`**, so the forced-waypoint branch of
   `fetchRouteOptions` can never fire. The main path works.
-- **`TrackingPage` shows a hardcoded driver** on any booking that reaches the live panel.
-- **`multer` and `@aws-sdk/client-s3` are unused** — document upload moved to Supabase Storage.
-  Remove both.
+- **`multer`, `@aws-sdk/client-s3` and `@aws-sdk/s3-request-presigner` are unused** — document
+  upload went to Supabase Storage and then to GCS, and none of the three was ever imported.
+  Remove all three.
+- **`DriverLocation` must not be migrated by an auto-generated Prisma diff.** Prisma knows
+  neither that `geog` is `GENERATED ALWAYS` nor that its type lives in the `extensions` schema,
+  so a generated `ALTER` can drop the `GENERATED` clause without failing or warning — and every
+  driver then freezes at the position he held when it ran. Use `migrate dev --create-only` and
+  read the SQL, as with every migration here.
+- **A dev machine needs PostGIS now.** `npm run dev` against a plain local Postgres without
+  `postgis` in the `extensions` schema boots fine and then fails every dispatch query.
+- **`driver-app/src/constants/documents.ts` tells you to re-run `npm run storage:setup`.**
+  That script and its npm entry were deleted with the move to GCS; the bucket is created by
+  hand per `backend/DEPLOY.md`. The comment is stale, the limit it describes is not.
+- **Bookings created between the two 13 Aug migrations carry a plate and no model**, by
+  choice — see `Booking.vehicleModel` in §4. They render the booked class instead. Do not
+  "fix" this with a fallback to the driver row: that pairs a historic plate with today's car.
 - **Rate-limiter counters live in process memory**, so a cold start resets them — on Render's
   free tier and, worse, on Cloud Run, where `min-instances=0` means the counters are per
   instance *and* per cold start. The Google Console quota is the real ceiling.
@@ -886,6 +1042,21 @@ for an index of every booking-flow screen, rendered with a mock booking and no b
   ordering is a no-op until Raju's row is seeded as `admin` and his fleet as `rcs`.
 
 ### Fixed since the last revision of this file
+
+**The tracking screen shows the real driver.** The card was literals — "Driver name",
+"UP 16 AB 1234", a placeholder face — and both Call buttons did nothing, while the driver
+object the poll already returned was read for the map puck alone. It now reads its fields, the
+calls open the dialer, and the card is gated on `driver` being non-null so a search that ended
+in `no_driver` no longer shows a fabricated plate.
+
+**Cancel acts on the ride the screen is showing.** `RideDetails` guarded on its prop and then
+sent the store's id, and the two disagree in both directions: the searching panel mounts it
+without the prop while the store holds the id, so a cancellable ride was refused as "no active
+ride"; `/booking/:id` after a reload has the prop but no store id, since it is not persisted,
+so the call went out with `undefined`. One id resolves both.
+
+**The Documents checklist covers every car.** It showed one, so a captain who added a second
+was told he was done while nine documents were missing.
 
 **A captain can now use the driver app.** `POST /api/driver/me` creates the row with
 `clerkId` taken off the verified session, so the linkage this file called "the single blocker
@@ -927,8 +1098,10 @@ nothing server-side.
 
 **Safety** (`pages/SafetyPage.jsx`)
 - [ ] "Share my live location" — local `autoShare` state. Needs a preference field and the
-      actual share-on-start behaviour.
-- [ ] Helpline number is a placeholder.
+      actual share-on-start behaviour. Note that the *manual* half of this now exists as the
+      share link on `TrackingPage` (§5); what is missing is doing it automatically on start.
+- [x] Helplines — no longer a placeholder: RCS Support reads `supportTel()`, and Police (112)
+      and Ambulance (108) are the real national numbers.
 - [x] Emergency contact — genuinely wired to `updateEmergencyContact`.
 
 **Manage Account** (`pages/ManageAccount.jsx`)

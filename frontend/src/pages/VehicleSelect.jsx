@@ -41,14 +41,12 @@ const ETA_MIN = { hatchback: 3, sedan: 4, suv: 5, suv_premium: 8, any: 3 };
 // Whether the option exists at all is the SERVER's verdict — Google's
 // alternatives decided it — so unlike every other preview state this one cannot
 // be reached by seeding the store. The preview has to answer the question
-// itself. Numbers are a plausible detour, not a measured one; the fee is the
-// real constant so the copy can't quote a price the backend wouldn't charge.
+// itself. The fee is the real constant so the copy can't quote a price the
+// backend wouldn't charge.
 const DEV_SAFE_ROUTE = {
     available: true,
     applied: false,
     fee: SAFE_ROUTE_SURCHARGE,
-    extraKm: 3.2,
-    extraMin: 7,
     waypoint: null,
 };
 
@@ -161,7 +159,7 @@ const VehicleSelect = ()=>{
     const devSafeRoute = devParams?.get("safe") === "1" ? DEV_SAFE_ROUTE : null;
 
     // The server's verdict on whether THIS trip has a safer route at all:
-    // { available, applied, fee, extraKm, extraMin, waypoint }, or null before
+    // { available, applied, fee, waypoint }, or null before
     // the first estimate lands. Google's alternatives decide it, so it changes
     // with the route rather than with anything the rider set.
     const [safeRouteInfo, setSafeRouteInfo] = useState(devSafeRoute);
@@ -643,6 +641,18 @@ const VehicleSelect = ()=>{
     }
 
     // Selected pricing mode carries the emphasis; the other drops to fine print.
+    //
+    // Only the FINE-PRINT line is labelled — whichever price is large is the one
+    // being bought and needs no naming. Each label therefore renders in exactly
+    // one state, which is why the two read asymmetrically down in the card:
+    //
+    //   sharing off → "Sharing: ₹300"    the price you could switch to
+    //   sharing on  → "Not shared: ₹400" the price you pay if nobody joins
+    //
+    // The second is deliberately not "Solo:". Solo names a mode the rider did not
+    // pick, so it read as a comparison; with an unmatched shared ride now
+    // re-priced to it on completion (routes/driver.ts), this number is not a
+    // comparison at all — it is the other half of what they are agreeing to.
     let solo = sharing ? "text-xs sm:text-sm text-[var(--text-muted)]" : "font-semibold text-lg sm:text-2xl text-[var(--text)]"
     let share = sharing ? "font-semibold text-lg sm:text-2xl text-[var(--text)]" : "text-xs sm:text-sm text-[var(--text-muted)]"
     let soloVisiblity = sharing? "block" : "hidden"
@@ -662,9 +672,26 @@ const VehicleSelect = ()=>{
     // toll on top it is now inside the price — said out loud, because "₹1600 to
     // the airport" is worth more than ₹1600 with a surprise attached. The per-km
     // formula still prices the drive alone and leaves tolls with the driver.
+    //
+    // The safer route earns a line of its own once it's switched on: it is the
+    // only option that changes what the quoted number covers, and "Adds ₹150"
+    // under its own switch doesn't say whether the longer road is inside that
+    // ₹150 or on top of it. Which promise it can make depends on how the trip
+    // is priced — a rate-card fare is fixed and all-in, so the detour and
+    // whatever it crosses cost the fee and nothing more; a per-km fare is
+    // computed from the safer route's own distance, so the longer drive is
+    // charged beside the fee and must never be described as covered by it.
+    //
+    // The detour's length stays out of it on purpose: the estimate only knows
+    // it when it actually fetched the detour, and verified routes answer from a
+    // cached verdict instead — see the note beside `note` below.
     const selectedFare = serverFares?.[vehicleClass];
     const selectedSource = selectedFare?.source ?? fareSource;
+    const safeRouteAvailable = !!safeRouteInfo?.available;
     const fareNotices = [
+        safeRoute && safeRouteAvailable && (isDistancePriced(selectedSource)
+            ? `₹${safeRouteInfo.fee} safer route, plus the longer drive`
+            : `₹${safeRouteInfo.fee} safer route, detour and tolls included`),
         isDistancePriced(selectedSource) && "Tolls payable to driver separately",
         selectedFare?.toll > 0 && `Includes the ₹${selectedFare.toll} highway toll`,
         selectedFare?.airport > 0 && `Includes the ₹${selectedFare.airport} airport pickup charge`,
@@ -733,18 +760,30 @@ const VehicleSelect = ()=>{
 
     // The three settings the rider can change about this ride, in the order
     // they matter to the fare. `short` is the lowercase name the trigger line
-    // lists them by; `note` is what each one does to the price.
-    const safeRouteAvailable = !!safeRouteInfo?.available;
-    const safeRouteDetour = [
-        safeRouteInfo?.extraKm != null && `${safeRouteInfo.extraKm} km`,
-        safeRouteInfo?.extraMin != null && `${safeRouteInfo.extraMin} min`,
-    ].filter(Boolean).join(", ");
+    // lists them by; `note` is what each one does to the price. Availability is
+    // resolved up with the fare notices, which need it first.
+    // BOTH PRICES, NOT A PROMISE OF ONE. Sharing only discounts the ride if
+    // somebody actually joins it; a ride nobody joins is re-priced to the solo
+    // fare when it completes (routes/driver.ts). "Reduces your fare." said one
+    // half of that and left the rider to discover the other half on the receipt.
+    //
+    // A price pair rather than a warning sentence, because the two numbers ARE
+    // the explanation — a caveat underneath a single price is read as fine print,
+    // where two prices side by side is just what the option costs. Falls back to
+    // a plain conditional when the route has not been priced yet, which is still
+    // true where the old copy was not.
+    const sharePrice = fareOf(vehicleClass, "sharing");
+    const soloPrice = fareOf(vehicleClass, "solo");
+    const sharingNote = sharePrice != null && soloPrice != null
+        ? `₹${sharePrice} if someone shares your ride · ₹${soloPrice} if not`
+        : "Cheaper if someone shares your ride.";
+
     const rideOptions = [
         {
             key: "sharing",
             label: "Share ride",
             short: "sharing",
-            note: "Reduces your fare.",
+            note: sharingNote,
             on: sharing,
             onToggle: () => setSharing(!sharing),
         },
@@ -764,12 +803,16 @@ const VehicleSelect = ()=>{
             label: "Safer route",
             short: "safer route",
             // The fee is the server's, not a constant here: it's priced per
-            // route from the detour it actually needs. The detour itself is
-            // named now that there is a full row to say it in — it costs time
-            // as well as money, and the columns this replaced had room for
-            // neither.
+            // route from the detour it actually needs.
+            //
+            // The detour's own length is deliberately NOT quoted. It is only
+            // known on the estimate that actually fetched the detour, and since
+            // verified routes are answered from a cached verdict instead, most
+            // riders would see the fee alone while the first rider to a given
+            // destination saw "9.2 km, 4 min longer" — the same option described
+            // two different ways depending on who got there first.
             note: safeRouteAvailable
-                ? `Adds ₹${safeRouteInfo.fee}.${safeRouteDetour ? ` ${safeRouteDetour} longer.` : ""}`
+                ? `Adds ₹${safeRouteInfo.fee}.`
                 : "This route has no safer alternative.",
             // Whether one exists at all is Google's answer, not the rider's:
             // most destinations never cross a shady zone. Shown either way and
@@ -904,7 +947,7 @@ const VehicleSelect = ()=>{
                     </div>
                 ) : (
                     <div key={sharing ? "share" : "solo"} className="animate-fade-swap text-right flex flex-col justify-center items-end gap-1.5">
-                        <span className={`flex gap-1 leading-tight ${solo}`}> <span className={`${soloVisiblity}`}>Solo: </span>{priceSolo}</span>
+                        <span className={`flex gap-1 leading-tight ${solo}`}> <span className={`${soloVisiblity}`}>Not shared: </span>{priceSolo}</span>
                         <span className={`flex gap-1 leading-tight ${share}`}> <span className={`${shareVisiblity}`}>Sharing: </span>{priceSharing}</span>
                     </div>
                 )}

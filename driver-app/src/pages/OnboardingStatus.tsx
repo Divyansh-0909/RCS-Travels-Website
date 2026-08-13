@@ -130,6 +130,7 @@ const OnboardingStatus = () => {
   const navigate = useNavigate();
 
   const blockedBy = profile?.onboarding?.blockedBy ?? 'notUploaded';
+  const owedRides = profile?.onboarding?.assignedRides ?? 0;
 
   // No approved case to handle here any more. This screen only ever renders as
   // Home's unapproved face, so the moment canDrive flips, HomeGate stops
@@ -203,6 +204,25 @@ const OnboardingStatus = () => {
             <AppText className={`text-sm ${MUTED}`}>
               {profile.onboarding.suspensionReason}
             </AppText>
+          </View>
+        ) : null}
+
+        {/* Rides he was given before this screen appeared, and still has to do.
+            The body copy above says he cannot take rides, which is true of NEW
+            ones and would read as "walk away from the pickup you agreed to" to a
+            captain holding one. He can reach them from the Rides tab either way;
+            this is what tells him they are still his, on the screen that just
+            told him he is blocked. */}
+        {owedRides > 0 ? (
+          <View className="w-full rounded-2xl p-4 gap-3" style={{ backgroundColor: CARD }}>
+            <AppText className={`text-sm ${MUTED}`}>
+              {owedRides === 1
+                ? 'You still have one ride to finish. Please complete it as normal — someone is waiting for it.'
+                : `You still have ${owedRides} rides to finish. Please complete them as normal — people are waiting for them.`}
+            </AppText>
+            <Button prop={{ variant: 'secondary' }} onPress={() => navigate('/rides')}>
+              {owedRides === 1 ? 'Go to my ride' : 'Go to my rides'}
+            </Button>
           </View>
         ) : null}
       </View>

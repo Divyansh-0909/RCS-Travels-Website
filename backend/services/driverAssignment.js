@@ -1,24 +1,20 @@
 import { prisma } from '../db/prisma.js'
 import { Prisma } from '@prisma/client'
+import { randomUUID } from 'node:crypto'
 import {sendFCM, sendWhatsApp} from './notification.js'
 import { seatsOf } from '../constants/vehicles.js'
+import { LOCATION_STALE_AFTER_MS } from '../constants/dispatch.js'
+import {
+  evaluatePool, hostBookingOf, HOST_ACTIVE_STATUSES, POOLABLE_HOST_STATUSES, POOL_RADIUS_KM,
+} from './ridePooling.js'
 
-function bearingDeg(lat1, lng1, lat2, lng2) {
-  const toRad = (d) => (d * Math.PI) / 180
-  const φ1 = toRad(lat1), φ2 = toRad(lat2), Δλ = toRad(lng2 - lng1)
-  const y = Math.sin(Δλ) * Math.cos(φ2)
-  const x = Math.cos(φ1) * Math.sin(φ2) - Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ)
-  return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360
-}
-
-// Whether two drops sit in the same direction from a shared pickup, within a
-// tolerance. Cheap stand-in for "is this detour acceptable" when pooling rides.
-export function inSameDirectionCorridor(pickupLat, pickupLng, drop1Lat, drop1Lng, drop2Lat, drop2Lng, thresholdDeg = 45) {
-  const b1 = bearingDeg(pickupLat, pickupLng, drop1Lat, drop1Lng)
-  const b2 = bearingDeg(pickupLat, pickupLng, drop2Lat, drop2Lng)
-  const diff = Math.abs(b1 - b2)
-  return (diff > 180 ? 360 - diff : diff) <= thresholdDeg
-}
+// `bearingDeg` and `inSameDirectionCorridor` were removed here. They were the
+// old pooling test — do two drops leave the pickup within 45° of each other —
+// and they only ever fed the pass that never ran. Two drops can share a bearing
+// with a divided carriageway, a river or a one-way system between them, so the
+// test is replaced rather than repaired: services/ridePooling.js projects points
+// onto the road the driver is actually on (geo.js `projectOntoPath`) and then
+// prices the detour in minutes against the routing API.
 
 // THE ONE PLACE A { lat, lng } PAIR BECOMES A POSTGIS VALUE.
 //
@@ -54,6 +50,14 @@ const geographyOf = (lat, lng) =>
  * plus a haversine re-measure in JS, which had to over-fetch: a square around a
  * circle is ~27% larger than the circle, and every row in the corners was loaded
  * with all its relations only to be dropped. ST_DWithin asks for the circle.
+ *
+ * `updated_at` is checked alongside `is_online` because the two make different
+ * claims. Online is a switch he flipped; the timestamp is the last time his
+ * phone actually said where it was. A captain whose battery died, who parked
+ * under a building, or whose app the OS killed stays online forever and stays
+ * frozen at his last fix — near the pickup, ranked first, and unable to answer.
+ * See LOCATION_STALE_AFTER_MS: the cutoff is tied to the app's idle heartbeat
+ * and neither number can move on its own.
  */
 async function candidatesWithin(row, radiusKm, triedDriverIds) {
   const origin = geographyOf(row.pickupLat, row.pickupLng)
@@ -71,6 +75,7 @@ async function candidatesWithin(row, radiusKm, triedDriverIds) {
     FROM "driver_locations" dl
     JOIN "drivers" d ON d."id" = dl."driver_id"
     WHERE extensions.ST_DWithin(dl."geog", ${origin}, ${radiusKm * 1000}::float8, false)
+      AND dl."updated_at" > ${new Date(Date.now() - LOCATION_STALE_AFTER_MS)}
       AND d."is_online"
       AND d."is_active"
       AND d."suspended_at" IS NULL
@@ -85,8 +90,18 @@ async function candidatesWithin(row, radiusKm, triedDriverIds) {
     where: { id: { in: near.map((n) => n.driverId) } },
     include: {
       bookings: {
-        where: { status: { in: ['assigned', 'en_route', 'reached', 'started'] } },
-        select: { id: true, dropLat: true, dropLng: true },
+        where: { status: { in: HOST_ACTIVE_STATUSES } },
+        // Everything services/ridePooling.js needs to judge a host, loaded here
+        // because the alternative is a query per candidate inside the ranking
+        // loop. `sharing` and `status` decide whether he can host at all;
+        // `routePolyline` is the road a joiner's pickup is measured against; the
+        // four coordinates build the stop sequence.
+        select: {
+          id: true, status: true, sharing: true,
+          pickupLat: true, pickupLng: true,
+          dropLat: true, dropLng: true,
+          routePolyline: true,
+        },
       },
     },
   })
@@ -169,7 +184,11 @@ class ClaimFailure extends Error {
  * @param {{ id: string, vehicleClass: string, vehicleNumber?: string, vehicleModel?: string | null }} driver
  * @param {Date} confirmedAt
  * @param {(tx: import('@prisma/client').Prisma.TransactionClient) => Promise<void>} [onClaimed]
- * @returns {Promise<'claimed' | 'booking_taken' | 'no_room'>}
+ * @returns {Promise<'claimed' | 'booking_taken' | 'no_room' | 'host_moved_on'>}
+ *
+ * `host_moved_on` can only come back when `onClaimed` is the pooling hook — it
+ * is that hook's ClaimFailure surfacing through the same catch as the other two.
+ * Callers that pass no hook, or a hook that never throws, will never see it.
  */
 export async function claimBookingForDriver(booking, driver, confirmedAt, onClaimed) {
   const seats = seatsOf(driver.vehicleClass)
@@ -238,6 +257,69 @@ export async function claimBookingForDriver(booking, driver, confirmedAt, onClai
   }
 }
 
+/**
+ * Bind a joiner to its host: one share group, and the stop order on both rows.
+ *
+ * RUNS INSIDE claimBookingForDriver'S TRANSACTION, via its onClaimed hook, so
+ * the assignment and the sequence land together or not at all. A booking
+ * assigned to a pooling driver but carrying no orders would be a rider the
+ * driver app cannot place in the trip.
+ *
+ * THE RACE THIS EXISTS FOR. Between evaluatePool routing the sequence and this
+ * running, the host can finish, be cancelled, or be joined by a different rider
+ * — several seconds pass, most of them waiting on Google and on a push. The
+ * sequence computed upstream describes a car that may no longer be in that
+ * state, so every assumption it rested on is re-asserted here against live rows,
+ * as conditional writes rather than as reads followed by decisions.
+ *
+ * The group is minted ON JOIN, not at booking time. A shared ride nobody joins
+ * never gets an id, which is what keeps `shareGroupId IS NOT NULL` meaning
+ * "actually pooled" rather than "asked to be".
+ */
+async function joinPool(tx, { host, joiner, orders }) {
+  const live = await tx.booking.findUnique({
+    where: { id: host.id },
+    select: { status: true, shareGroupId: true },
+  })
+
+  // He finished, was cancelled, or reached the kerb while we were deciding.
+  if (!live || !POOLABLE_HOST_STATUSES.includes(live.status)) throw new ClaimFailure('host_moved_on')
+
+  // Already carrying a group id means somebody else got there first — the seat
+  // arithmetic would also catch that, but only after this row had been written.
+  //
+  // KNOWN LIMITATION, and it is this branch: a host whose earlier co-rider has
+  // since been dropped still carries that group id, so a third rider cannot join
+  // him even though the car has room. Fixing it means either re-using a group
+  // that contains a completed stranger — who would then show up as a co-rider on
+  // the admin panel — or moving to a Trip entity. Refusing is the honest
+  // behaviour until MAX_BOOKINGS_PER_VEHICLE moves off 2.
+  if (live.shareGroupId) throw new ClaimFailure('host_moved_on')
+
+  const groupId = randomUUID()
+
+  // Guarded on the id still being null rather than trusting the read above: two
+  // joiners reaching this line concurrently must not mint two groups for one car.
+  const { count } = await tx.booking.updateMany({
+    where: { id: host.id, shareGroupId: null },
+    data: {
+      shareGroupId: groupId,
+      pickupOrder: orders.host.pickupOrder,
+      dropOrder: orders.host.dropOrder,
+    },
+  })
+  if (count === 0) throw new ClaimFailure('host_moved_on')
+
+  await tx.booking.update({
+    where: { id: joiner.id },
+    data: {
+      shareGroupId: groupId,
+      pickupOrder: orders.joiner.pickupOrder,
+      dropOrder: orders.joiner.dropOrder,
+    },
+  })
+}
+
 export async function getDriver(bookingId) {
   let assignedDriver = null
 
@@ -289,34 +371,52 @@ export async function getDriver(bookingId) {
       : 'IMMEDIATE PICKUP'
     
 
-    // Pass 1 — join an existing shared trip: a driver already carrying a ride whose
-    // drop lies in the same 45° bearing corridor, so the detour stays small.
+    // PASS 1 — join a trip somebody is already on.
     //
-    // !! THIS PASS IS DEAD. DriverLocation has no `sharing` column, so the filter
-    // below reads `undefined === true` on every row and sortedSharing is always
-    // empty — the corridor check never runs. Sharing riders fall through to pass 2
-    // and each start a fresh shared trip instead of pooling. The flag lives on
-    // Booking, so the test likely belongs on the driver's active booking.
-    if(row.sharing){
-      const sortedSharing = sorted
-        .filter((loc) => loc.sharing === true)
-        .filter((loc) => {
-          const activeBooking = loc.driver.bookings?.[0]
-          if (!activeBooking) return true
-          return inSameDirectionCorridor(
-            row.pickupLat, row.pickupLng,
-            activeBooking.dropLat, activeBooking.dropLng,
-            row.dropLat, row.dropLng,
-          )
-        })
-      
-      for (const x of sortedSharing) {
-        triedDriverIds.add(x.driverId)
+    // The two passes iterate DISJOINT sets: a driver either holds a poolable
+    // active booking (hostBookingOf returns it) or he does not (he is fresh).
+    // That is what guarantees the property the old code could not — no driver is
+    // ever pushed the same booking twice — and it holds by construction rather
+    // than by remembering to filter, which is why the partition is worth more
+    // than sorting a pool flag to the front of one list.
+    //
+    // This replaces a pass that never ran: it filtered on `loc.sharing`, a column
+    // DriverLocation does not have, so it read `undefined === true` on every row
+    // and matched nobody. Every sharing rider fell through to pass 2 and started
+    // a fresh shared trip, which is why no two riders have ever pooled.
+    const hosts = row.sharing
+      ? sorted
+          .filter((x) => x.distanceKm <= POOL_RADIUS_KM)
+          .map((x) => ({ x, host: hostBookingOf(x.driver) }))
+          .filter((c) => c.host)
+      : []
 
-        // Cheap early-out on a read that is already stale — skip the 30s offer to
-        // a van we can see is full. claimBookingForDriver re-checks this against
-        // the live row and is the check that actually decides.
-        if(x.driver.vehicleCapacity <= 0) continue;
+    for (const { x, host } of hosts) {
+      // Deliberately NOT marked as tried here. Pass 2 iterates the complement of
+      // this set, so it cannot reach him anyway, and a candidate rejected by the
+      // geometry below was never offered anything — spending his turn on an
+      // offer that was never sent would push him down the queue for nothing.
+      if (x.driver.vehicleCapacity <= 0) continue
+
+      // The expensive half: baseline plus one routing call per legal stop order,
+      // constraints applied before any optimisation. Sharing-Design.md §4.
+      let match
+      try {
+        match = await evaluatePool({
+          driverPos: { lat: x.latitude, lng: x.longitude },
+          host,
+          joiner: row,
+        })
+      } catch (err) {
+        // Routing is a network call to somebody else's service. A pool that
+        // cannot be evaluated is simply not offered; the rider still gets a car
+        // from pass 2.
+        console.error(`pool evaluation failed for driver ${x.driverId}:`, err.message)
+        continue
+      }
+      if (!match.ok) continue
+
+      triedDriverIds.add(x.driverId)
 
         // His turn is spent here, before the push rather than after the answer.
         await markOffered(x.driverId)
@@ -344,7 +444,10 @@ export async function getDriver(bookingId) {
 
         if (response === true ) {
           // on-spot rides have no confirmedAt yet
-          const claim = await claimBookingForDriver(row, x.driver, row.confirmedAt ?? new Date())
+          const claim = await claimBookingForDriver(
+            row, x.driver, row.confirmedAt ?? new Date(),
+            (tx) => joinPool(tx, { host, joiner: row, orders: match.orders }),
+          )
 
           // The booking moved on while this ring was pinging — cancelled,
           // expired, or taken through the driver app. Nothing left to search for.
@@ -352,6 +455,10 @@ export async function getDriver(bookingId) {
           // His last seat went to another ride between the offer and the answer.
           // Only this candidate is out; the next one may still fit.
           if (claim === 'no_room') continue
+          // The trip he was going to join ended, or was itself joined by
+          // somebody else, between the routing call and the claim. The sequence
+          // computed above describes a car that no longer exists.
+          if (claim === 'host_moved_on') continue
 
           assignedDriver = x.driverId
 
@@ -365,11 +472,23 @@ export async function getDriver(bookingId) {
           return assignedDriver
         }
       }
-    }
     
      
-    // Pass 2 — start a new trip on an idle-enough vehicle.
-    for (const x of sorted) {
+    // PASS 2 — seed a new trip on an idle vehicle.
+    //
+    // Idle means carrying NOTHING, which is stricter than "has a free seat" and
+    // deliberately so. A driver already carrying a shared rider can only take
+    // this booking through pass 1, where a stop sequence is computed for him;
+    // reaching him here would hand him a second rider with no sequence at all,
+    // which is precisely the bug the dead pass left behind. It also correctly
+    // excludes a host whose geometry failed above, and one sitting at `reached`.
+    //
+    // Nothing changes for solo bookings: those already required a fully free
+    // vehicle, and a fully free vehicle is one with no active bookings.
+    //
+    // This is also what makes the two passes disjoint, so no driver is pushed
+    // the same booking twice.
+    for (const x of sorted.filter((c) => (c.driver.bookings ?? []).length === 0)) {
       triedDriverIds.add(x.driverId)
 
       // Solo rides need a fully-free vehicle; a sharing ride falling through here

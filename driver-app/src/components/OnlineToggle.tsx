@@ -7,6 +7,9 @@ import { useLocation, useNavigate } from "react-router-native";
 import AppText from "./AppText";
 import { useApi } from "../hooks/useApi";
 import { useDriver } from "../hooks/useDriver";
+import { ensureLocationPermission } from "../hooks/useDriverLocation";
+import { useShellHidden } from "./AppBarVisibility";
+import { RideMenuButton } from "./RideMenu";
 
 
 const Bell = cssInterop(BellIcon, {
@@ -19,7 +22,6 @@ const KNOB_ON = -8;    // web: -left-2
 const TITLE_TRACKING = { letterSpacing: -0.72 };
 
 const OnlineToggle = () => {
-    const [online, setOnline] = useState(false);
     const [error, setError] = useState<string | null>(null)
     const navigate = useNavigate();
     const { pathname } = useLocation();
@@ -31,7 +33,20 @@ const OnlineToggle = () => {
     const onHome = pathname === "/";
 
     const api = useApi()
-    const { profile } = useDriver();
+    const { profile, refresh } = useDriver();
+    const { onActiveRide } = useShellHidden();
+
+    // THE SERVER OWNS THIS, not a useState seeded false. The flag lives on the
+    // driver row, so a captain who was online when he last closed the app is
+    // still online now — a local default would have shown him "Offline" while
+    // dispatch was busy offering him rides. It is also what useDriverLocation
+    // reads to decide whether to transmit, and two copies of "am I online" is
+    // exactly how the switch and the GPS end up disagreeing.
+    const serverOnline = profile?.isOnline ?? false;
+    // Optimistic override so the knob moves under the thumb rather than after a
+    // round trip. Cleared once the refresh below has re-read the truth.
+    const [pending, setPending] = useState<boolean | null>(null);
+    const online = pending ?? serverOnline;
 
     // "/" is the application status until he is approved, and none of this header
     // belongs on it: the switch would 403, and offering to go online is the one
@@ -41,35 +56,82 @@ const OnlineToggle = () => {
 
     const knob = useAnimatedStyle(() => ({
         transform: [{
-            translateX: withTiming(online && !error ? KNOB_ON : KNOB_OFF, { duration: 300 }),
+            translateX: withTiming(online ? KNOB_ON : KNOB_OFF, { duration: 300 }),
         }],
     }));
 
     async function toggleOnline() {
-        const newOnline = !online
-        setOnline(newOnline)
+        const next = !online
         setError(null)
-        try {
-            await api.setOnline(newOnline)
-        } catch (e: unknown) {
-            if (e instanceof Error) {
-                setError(e.message);
-            } else {
-                setError("Something went wrong");
+        setPending(next)
+
+        // BEFORE the server is told, because going online without it is worse
+        // than not going online at all: the switch would read Online, dispatch
+        // would never find him — the radius search reads driver_locations, which
+        // would have no row — and he would sit through a shift wondering why the
+        // rides stopped, with nothing on screen admitting why.
+        //
+        // The two denials get different words on purpose. "Allow all the time"
+        // is a setting he has to change in Settings rather than in a prompt, and
+        // telling a captain who has ALREADY allowed location to allow location
+        // sends him round in a circle looking for a switch he has flipped.
+        if (next) {
+            const permission = await ensureLocationPermission()
+            if (permission !== "granted") {
+                setPending(null)
+                setError(permission === "deniedBackground"
+                    ? "Set location to \"Allow all the time\" so rides reach you while you drive"
+                    : "Allow location access to go online")
+                return
             }
         }
+
+        // The api layer RETURNS its failures rather than throwing them — a 409
+        // "finish your active ride" arrives as { error }, not as an exception.
+        // The try/catch that used to be here caught nothing and let every
+        // refusal through as success, leaving the switch claiming a state the
+        // server had declined.
+        const res = await api.setOnline(next)
+        if (res?.error) {
+            setPending(null)
+            setError(res.error)
+            return
+        }
+
+        // Re-read rather than assume: this is what publishes the new state to
+        // useDriverLocation, which starts or stops the GPS off the same field.
+        await refresh()
+        setPending(null)
     }
 
     if (!onHome || !canDrive) return null;
 
     return (
         <View className="absolute z-50 flex flex-col justify-center items-center top-10 w-[92%]">
-            <AppText className="text-xl bg-[var(--foreground)] my-1 py-1 px-3 rounded-full text-[var(--text-foreground)] flex flex-row justify-center items-center font-semibold text-center" style={TITLE_TRACKING}>
-                RCS{" "}
-                <AppText className="text-[var(--text-foreground)]">
-                    Travels
+            {/* Both gone while he is driving. The switch is not merely out of
+                place there — it is a control that CANNOT WORK: PATCH /driver/online
+                refuses to take a captain offline with a ride in progress
+                ("Finish your active ride before going offline"), so leaving it on
+                screen offers him an action the server will decline. The wordmark
+                goes with it because it was the switch's header, and a title strip
+                alone over a map is furniture.
+
+                The bell stays. Offers keep arriving while he drives — they are
+                rows waiting on his notification page either way — and the one
+                thing he still needs from this header is to see that they have. */}
+            {!onActiveRide && (
+                <AppText className="text-xl bg-[var(--foreground)] my-1 py-1 px-3 rounded-full text-[var(--text-foreground)] flex flex-row justify-center items-center font-semibold text-center" style={TITLE_TRACKING}>
+                    RCS{" "}
+                    <AppText className="text-[var(--text-foreground)]">
+                        Travels
+                    </AppText>
                 </AppText>
-            </AppText>
+            )}
+            {/* justify-between either way: the bell holds the left edge it always
+                has, and the hamburger takes the exact spot the switch vacates. So
+                nothing on this row moves when a ride starts — one control is
+                swapped for another in place, which reads as the same header doing
+                a different job rather than as a different header. */}
             <View className="flex flex-row w-full justify-between items-center">
                 <View className="flex-row items-center gap-3 rounded-full bg-[var(--background-primary)] p-3 border border-[var(--background-muted)]">
                     <Pressable
@@ -85,12 +147,13 @@ const OnlineToggle = () => {
                     </Pressable>
                 </View>
 
+                {onActiveRide ? <RideMenuButton /> : (
                 <View className="flex-row items-center justify-between w-fit rounded-full bg-[var(--background-primary)] p-3 px-4 pr-6 border border-[var(--background-muted)]">
                     <AppText
                         numberOfLines={1}
                         className="w-[70px] text-lg text-[var(--foreground)] font-semibold"
                     >
-                        {online && !error ? "Online" : "Offline"}
+                        {online ? "Online" : "Offline"}
                     </AppText>
 
                     <Pressable
@@ -99,7 +162,7 @@ const OnlineToggle = () => {
                         onPress={() => toggleOnline()}
                         className="w-[50px] h-[22px] items-center justify-center"
                     >
-                        <View className={`w-[50px] h-[14px] rounded-full ${online && !error ? "bg-green-500" : "bg-gray-500"}`} />
+                        <View className={`w-[50px] h-[14px] rounded-full ${online ? "bg-green-500" : "bg-gray-500"}`} />
                         <Animated.View
                             style={[
                                 {
@@ -119,7 +182,20 @@ const OnlineToggle = () => {
                         />
                     </Pressable>
                 </View>
+                )}
             </View>
+
+            {/* The refusal, in the captain's line of sight. Every failure here is
+                one he can act on — grant the permission, finish the ride he is
+                holding, find signal — and until now none of them were rendered at
+                all, so the switch simply snapped back with no explanation. */}
+            {error && (
+                <View className="mt-2 self-end rounded-full bg-[var(--background-primary)] px-4 py-2 border border-[var(--background-muted)]">
+                    <AppText className="text-sm font-medium text-red-400">
+                        {error}
+                    </AppText>
+                </View>
+            )}
 
         </View>
     );

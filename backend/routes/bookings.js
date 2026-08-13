@@ -136,6 +136,12 @@ bookingsRouter.post('/', protect, async (req, res) => {
     const safeWaypoint = preferSafeRoute ? quote.safeRoute.waypoint : null
     const needsCarrier = quote.needsCarrier === true
     const distanceKm = quote.distanceKm
+    // Out of the quote for the same reason as the distance: the client does not
+    // get to describe the route. The polyline in particular is what the pooling
+    // matcher measures a second rider's pickup against, so a client-supplied one
+    // would let a rider draw the road their own match is judged on.
+    const durationMin = quote.durationMin
+    const routePolyline = quote.polyline
 
     if (scheduledAt) {
         const scheduled = new Date(scheduledAt)
@@ -185,6 +191,16 @@ bookingsRouter.post('/', protect, async (req, res) => {
         pickupAddress, pickupLat, pickupLng,
         dropAddress, dropLat, dropLng,
         fare, rideFare, distanceKm: distanceKm ?? null,
+        // Only on a shared booking: it is the price this ride reverts to if
+        // nobody joins, and a solo ride has nothing to revert to. Taken from the
+        // same priced card as `fare`, so both numbers came out of one quote and
+        // the rider was shown both before booking.
+        soloFare: sharing === true ? (pricedClass.solo ?? null) : null,
+        // Both nullable and both genuinely absent sometimes: a Routes failure
+        // still prices zone and fixed-table trips, and those quotes carry no
+        // route at all. A booking without a polyline simply cannot host a pool.
+        durationMin: durationMin != null ? Math.round(durationMin) : null,
+        routePolyline: routePolyline ?? null,
         isOutstation: isOutstation ?? false,
         preferSafeRoute,
         // Only kept when the rider actually took the safer route — and it is the

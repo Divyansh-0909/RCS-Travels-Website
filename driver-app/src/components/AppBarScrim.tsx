@@ -1,7 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { useAnimatedStyle, withTiming } from 'react-native-reanimated';
-import { useLocation } from 'react-router-native';
-import { HIDE, isDrillDown, useAppBarVisibility } from './AppBarVisibility';
+import { HIDE, useAppBarVisibility, useShellHidden } from './AppBarVisibility';
 
 /**
  * The white fade every page's content runs out through at the bottom edge.
@@ -63,7 +62,7 @@ const SOLID_AT = 0.7;
 
 const AppBarScrim = () => {
   const { hidden } = useAppBarVisibility();
-  const { pathname } = useLocation();
+  const { hidden: shellHidden } = useShellHidden();
 
   // Leaves with the bar, on the bar's own curve. Once the bar has gone the scrim is
   // veiling content for nothing — the whole point of the bar sliding off is to hand
@@ -79,7 +78,9 @@ const AppBarScrim = () => {
   //
   // Below the hook, so the animated style is created on every render this component
   // has — see the same note in AppBar.
-  if (isDrillDown(pathname)) return null;
+  // And on an active ride, where it would be a white haze across the bottom of a
+  // map with no bar underneath it to justify itself.
+  if (shellHidden) return null;
 
   return (
     // pointerEvents="none" is load-bearing: this covers the bottom 160px of every

@@ -1,6 +1,10 @@
 import { prisma } from '../db/prisma.js'
 import { matchZone, isNearCampus, isAirportPickup } from './fareZones.js'
-import { classifyRoutes, hasShadyZones, isClean, decodePolyline } from './safeRoute.js'
+import {
+  classifyRoutes, hasShadyZones, isClean, decodePolyline,
+  campusGateFor, inAnyShadyZone, anyEndpointInShadyZone,
+} from './safeRoute.js'
+import { verdictKey, readVerdict, writeVerdict } from './safeRouteCache.js'
 import { signQuote } from './fareQuote.js'
 import { VEHICLE_CLASS_NAMES } from '../constants/vehicles.js'
 
@@ -134,8 +138,11 @@ function formulaFare(distanceKm) {
 
 // How the safer route is chosen lives in safeRoute.js. The short version: we ask
 // Google for its alternatives, throw away the ones crossing a shady zone, and
-// offer the best of what's left. The single hardcoded waypoint that used to sit
-// here could only ever be right for one corridor.
+// offer the best of what's left. When nothing clean comes back we state a road
+// instead — the campus gates, which are directional. The single hardcoded
+// waypoint that used to sit here could only ever be right for one corridor;
+// the gates are conditional on the default route ACTUALLY being shady, which is
+// what stops them turning a short eastward run into a 10 km detour.
 
 // Flat add-on, mirrored in frontend constants/fares.js (SAFE_ROUTE_SURCHARGE).
 // Charged ONLY when a safer route was actually found and taken — see the
@@ -228,40 +235,177 @@ async function fetchRoutes(pickupAddress, dropAddress, pickupCoords, dropCoords,
   }))
 }
 
+// Seconds as Google writes them — "1234s" — in minutes. Kept unrounded because
+// the pooling caps subtract these from each other, and two independently rounded
+// minutes can differ by one purely from where they fell.
+const minutesOf = (duration) => (duration ? parseInt(duration, 10) / 60 : null)
+
+const atLatLng = (p) => ({ location: { latLng: { latitude: p.lat, longitude: p.lng } } })
+
+/**
+ * Drive a fixed list of stops in the given order and report each leg.
+ *
+ * THE OTHER ROUTES MODE, and deliberately not `fetchRoutes` with more arguments.
+ * That one sends `via: true`, which makes an intermediate a pass-through point
+ * so the driver's navigation does not announce a spot on a highway as a
+ * destination. Here every intermediate IS a destination — somebody is collected
+ * or set down at it — so `via` is left off, and it is precisely that difference
+ * that makes Google return per-leg times at all. Legs are the whole point: "when
+ * does this car reach D1" is unanswerable from a total.
+ *
+ * Order is honoured exactly as given. `optimizeWaypointOrder` is not used and
+ * must not be: it cannot be told that a pickup has to precede its own drop, so
+ * it would happily return a sequence that sets a rider down before collecting
+ * them. services/ridePooling.js enumerates the legal orders itself and asks this
+ * for a time on each.
+ *
+ * @param {{lat:number,lng:number}[]} stops origin first, destination last
+ * @returns {Promise<{ totalMin: number, legs: { min: number, km: number }[] }>}
+ */
+export async function routeSequence(stops) {
+  if (!Array.isArray(stops) || stops.length < 2)
+    throw new Error('routeSequence needs at least an origin and a destination')
+
+  await checkAndIncrementRoutesUsage()
+
+  const origin = stops[0]
+  const destination = stops[stops.length - 1]
+  const intermediates = stops.slice(1, -1)
+
+  const result = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Goog-Api-Key': process.env.GOOGLE_MAPS_API_KEY,
+      'X-Goog-FieldMask': 'routes.duration,routes.distanceMeters,routes.legs.duration,routes.legs.distanceMeters',
+    },
+    body: JSON.stringify({
+      origin: atLatLng(origin),
+      destination: atLatLng(destination),
+      ...(intermediates.length ? { intermediates: intermediates.map(atLatLng) } : {}),
+      travelMode: 'DRIVE',
+    }),
+  })
+
+  const data = await result.json()
+  const route = data.routes?.[0]
+  if (!route?.legs?.length) throw new Error('No route found for the given stop sequence')
+
+  const legs = route.legs.map((leg) => ({
+    min: minutesOf(leg.duration) ?? 0,
+    km: (leg.distanceMeters ?? 0) / 1000,
+  }))
+
+  return {
+    // Summed from the legs rather than read off `route.duration`, so the total
+    // and the per-leg arrival times can never disagree by a rounding step — the
+    // caps are applied to both.
+    totalMin: legs.reduce((sum, leg) => sum + leg.min, 0),
+    legs,
+  }
+}
+
 // Resolve what this trip can be driven on: the route the driver takes by default,
 // and a safer one if any exists.
 //
-// The second call is deliberately rare. It only fires when the default crosses a
-// shady zone AND none of Google's own alternatives miss it AND that zone names a
-// fallback highway point — the case where we have to state a road rather than
-// choose between the ones offered.
-async function fetchRouteOptions(pickupAddress, dropAddress, pickupCoords, dropCoords) {
+// TWO different questions are answered here, and they cost different amounts:
+//
+//   "is there a safer route to OFFER?"  — answerable from the first call alone,
+//                                         and needed on every estimate, because
+//                                         it decides whether the toggle renders.
+//   "what exactly IS that route?"       — needs a second Routes call, and is
+//                                         only needed once the rider says yes.
+//
+// So the second call is gated on `preferSafeRoute`. When the rider has not asked
+// for it we return the point we WOULD force as `candidate` and stop there; the
+// caller reports the option as available without having paid to confirm it. The
+// alternative is spending a second call on every campus estimate for an option
+// most riders never take.
+async function fetchRouteOptions({ pickupAddress, dropAddress, pickupCoords, dropCoords, pickupOnCampus, dropOnCampus, preferSafeRoute }) {
   const routes = await fetchRoutes(pickupAddress, dropAddress, pickupCoords, dropCoords, null)
-  const { primary, safe, waypoint, fallback } = classifyRoutes(routes)
 
-  if (safe) return { primary, safe, waypoint }
-  if (!fallback) return { primary, safe: null, waypoint: null }
+  // Both endpoints are the rider's, not ours to move. One of them sitting inside
+  // a zone means every possible route finishes inside it, so there is nothing to
+  // search for and nothing honest to offer.
+  if (anyEndpointInShadyZone(pickupCoords, dropCoords))
+    return { primary: routes[0], safe: null, waypoint: null, candidate: null }
+
+  const { primary, primaryShady, safe, waypoint, fallback } = classifyRoutes(routes)
+
+  // A clean route Google offered anyway is already paid for and is usually
+  // shorter than the forced detour, so it still wins whenever one exists.
+  if (safe) return { primary, safe, waypoint, candidate: null }
+
+  // `primaryShady`, NOT `!safe`: the two are different questions and only this
+  // one means "the road the driver would take is a problem". A campus trip whose
+  // default route never touches a zone has nothing to detour around, and forcing
+  // the gate on it turns the 4 km run to Dadri into an 11 km one.
+  if (!primaryShady) return { primary, safe: null, waypoint: null, candidate: null }
+
+  // Nothing clean came back, so the road has to be stated rather than chosen.
+  // The campus gate knows which way this trip runs; the per-zone fallback is
+  // what is left for a trip with neither end on campus.
+  const forcedPoint = campusGateFor(pickupOnCampus, dropOnCampus) ?? fallback
+
+  // Forcing a point inside a zone would drive the car through the exact stretch
+  // this is meant to avoid. divergenceWaypoint guards its own choice this way; a
+  // hand-placed constant is not guarded anywhere, and the failure would be a
+  // silent detour INTO the corridor.
+  if (!forcedPoint || inAnyShadyZone(forcedPoint))
+    return { primary, safe: null, waypoint: null, candidate: null }
+
+  const key = verdictKey(pickupCoords, dropCoords, forcedPoint)
+
+  // The rider has not asked for the detour yet, so its distance is not needed —
+  // only whether one exists at all. A verdict already learned answers that for
+  // free, and the second call is not spent.
+  if (!preferSafeRoute) {
+    const known = await readVerdict(key)
+    if (known === true) return { primary, safe: null, waypoint: null, candidate: forcedPoint }
+    if (known === false) return { primary, safe: null, waypoint: null, candidate: null }
+
+    // `null` means nobody has established this route yet. Fall through and find
+    // out NOW rather than offering on a guess: the option is only shown once it
+    // is known to be real, and the call is spent once per route rather than once
+    // per booking. This front-loads the bill deliberately — early months are
+    // expensive and the cost falls as the table fills, which is the trade chosen
+    // over never verifying at all.
+    //
+    // A trip with no coords to key on (hand-typed addresses) has no verdict to
+    // read or write, so it lands here every time and is verified every time.
+  }
 
   try {
-    const [forced] = await fetchRoutes(pickupAddress, dropAddress, pickupCoords, dropCoords, fallback)
+    const [forced] = await fetchRoutes(pickupAddress, dropAddress, pickupCoords, dropCoords, forcedPoint)
     // The forced point is not a promise that the result is clean — Google may
     // route back through the zone on either side of it. Verify before offering.
-    if (forced && isClean(forced.points)) return { primary, safe: forced, waypoint: fallback }
+    const clean = Boolean(forced && isClean(forced.points))
+    await writeVerdict(key, clean)
+    // Returned as `safe` even when the rider hasn't ticked: we already paid for
+    // this route, so handing it back costs nothing and lets the toggle quote a
+    // real detour instead of "Adds ₹150." on its own. `applied` still gates the
+    // charge on preferSafeRoute, so nothing is billed for it.
+    if (clean) return { primary, safe: forced, waypoint: forcedPoint, candidate: null }
   } catch (err) {
-    console.error('safe-route fallback unavailable:', err.message)
+    // Deliberately NOT written as a verdict: a network failure says nothing
+    // about the road, and caching it would suppress the option for 30 days.
+    console.error('safe-route detour unavailable:', err.message)
   }
-  return { primary, safe: null, waypoint: null }
+  // Deliberately no candidate on this path. The answer was no; reporting a
+  // candidate here would keep the option `available` with nothing priced behind
+  // it. VehicleSelect un-ticks itself on `available: false`.
+  return { primary, safe: null, waypoint: null, candidate: null }
 }
 
 // Distance is display-only for zone and fixed-table fares but mandatory for the
 // per-km formula, so a Routes failure drops the types that need it rather than
 // failing the whole estimate. getRideEstimate throws only if nothing can be priced.
-async function bestEffortRouteOptions(pickupAddress, dropAddress, pickupCoords, dropCoords) {
+async function bestEffortRouteOptions(args) {
   try {
-    return await fetchRouteOptions(pickupAddress, dropAddress, pickupCoords, dropCoords)
+    return await fetchRouteOptions(args)
   } catch (err) {
     console.error('route metrics unavailable:', err.message)
-    return { primary: null, safe: null, waypoint: null }
+    return { primary: null, safe: null, waypoint: null, candidate: null }
   }
 }
 
@@ -284,9 +428,11 @@ export async function getRideEstimate({ pickupAddress, dropAddress, vehicleClass
   // Coords are what prove it, so a route with no coords on either end is priced
   // by the formula too. In practice both ends come from Places or the pin-confirm
   // screen; hand-typed addresses lose zone pricing rather than guess at it.
-  const campusAnchored = Boolean(
-    (pickupCoords && isNearCampus(pickupCoords)) || (dropCoords && isNearCampus(dropCoords))
-  )
+  // Kept as two, not one: pricing only asks whether EITHER end is campus, but
+  // the safer-route gate is directional and has to know WHICH.
+  const pickupOnCampus = Boolean(pickupCoords && isNearCampus(pickupCoords))
+  const dropOnCampus   = Boolean(dropCoords && isNearCampus(dropCoords))
+  const campusAnchored = pickupOnCampus || dropOnCampus
 
   // Zones price the endpoint away from campus, so reverse trips (Delhi → SNU)
   // match on the pickup instead. Coords are optional pin-confirm refinements —
@@ -297,7 +443,10 @@ export async function getRideEstimate({ pickupAddress, dropAddress, vehicleClass
     null
   const zone = matchZone(zoneCoords)
 
-  const options = await bestEffortRouteOptions(pickupAddress, dropAddress, pickupCoords, dropCoords)
+  const options = await bestEffortRouteOptions({
+    pickupAddress, dropAddress, pickupCoords, dropCoords,
+    pickupOnCampus, dropOnCampus, preferSafeRoute,
+  })
 
   // Whether the road actually changes and whether the rider pays are now the same
   // question, deliberately. Previously they were two: `safeRoute` gated the routing
@@ -312,23 +461,32 @@ export async function getRideEstimate({ pickupAddress, dropAddress, vehicleClass
   const metrics = metricsOf(applied ? options.safe : options.primary)
 
   // What the booking screen needs to decide whether to show the option at all.
-  // `available: false` means no toggle is rendered — the rider is never offered a
-  // detour around a road their trip doesn't use.
-  const safeRouteInfo = options.safe
+  // `available: false` disables the row — the rider is never offered a detour
+  // around a road their trip doesn't use.
+  //
+  // Availability and applicability are now answered by different things, because
+  // they cost different amounts. `safe` is a route we fetched and verified;
+  // `candidate` is the point we would force if asked, reported WITHOUT spending
+  // that call. Either is enough to offer the option. Only `safe` is ever enough
+  // to charge for it — see `applied` above, which is unchanged.
+  // No extraKm/extraMin. They can only be computed on an estimate that actually
+  // fetched the detour, and most estimates answer from a cached verdict instead
+  // — so quoting them made the same option read "Adds ₹150. 9.2 km, 4 min
+  // longer." for the first rider to a destination and "Adds ₹150." for everyone
+  // after. Distance alone could be cached (it is road topology, not traffic),
+  // but the minutes genuinely cannot, so the row quotes the fee only.
+  const safeRouteInfo = options.safe || options.candidate
     ? {
         available: true,
         applied,
         fee: SAFE_ROUTE_SURCHARGE,
-        extraKm:  Math.round((options.safe.distanceKm - options.primary.distanceKm) * 10) / 10,
-        extraMin: options.safe.durationMin != null && options.primary.durationMin != null
-          ? options.safe.durationMin - options.primary.durationMin
-          : null,
         // Stored on the booking and handed to the driver's navigation later. The
         // fare and the road must come from ONE decision — recomputing at pickup
-        // time could route him differently than the rider was quoted.
+        // time could route him differently than the rider was quoted. Null while
+        // this is only a candidate: nothing is booked on an unconfirmed road.
         waypoint: options.waypoint,
       }
-    : { available: false, applied: false, fee: 0, extraKm: 0, extraMin: null, waypoint: null }
+    : { available: false, applied: false, fee: 0, waypoint: null }
 
   // Only off-corridor fares carry it — see the constant. Resolved once, not per
   // class, because it is a property of where the car starts.
@@ -426,6 +584,14 @@ export async function getRideEstimate({ pickupAddress, dropAddress, vehicleClass
     drop:   { address: dropAddress,   coords: dropCoords ?? null },
     fares,
     distanceKm: metrics.distanceKm,
+    // Signed alongside the distance because both are stored on the booking, and
+    // for the same reason every money-bearing field is: the client must not get
+    // to name them. Neither prices anything by itself — duration feeds the
+    // tracking page's arrival estimate, the polyline feeds the pooling matcher —
+    // but a client-supplied route would let a rider claim a path their driver
+    // was never quoted for, which is exactly what pooling would then match on.
+    durationMin: metrics.durationMin,
+    polyline: metrics.polyline,
     // `applied`, not the rider's toggle: it is the one that decided whether the
     // ₹150 is in those fares and whether the driver gets sent the long way.
     safeRoute: { applied, waypoint: safeRouteInfo.waypoint },

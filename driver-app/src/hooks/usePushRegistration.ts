@@ -4,13 +4,25 @@ import * as Notifications from 'expo-notifications';
 import { useNavigate } from 'react-router-native';
 import { useApi } from './useApi';
 
+// Only consulted while the app is FOREGROUNDED — a backgrounded phone shows the
+// notification the ordinary way, which is the whole point of sending one.
+//
+// So the offer case is a duplicate and nothing else: OfferPanel is already
+// drawing that ride as a card over the app, and a banner sliding down on top of
+// it announces the same ride twice, in two different shapes, with two different
+// ways to act on it. The sound stays — the card is easy to miss on a screen he
+// was already reading.
 Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
+  handleNotification: async (notification) => {
+    const isOffer = notification.request.content.data?.screen === 'notifications';
+
+    return {
+      shouldShowBanner: !isOffer,
+      shouldShowList: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+    };
+  },
 });
 
 async function ensureChannel() {

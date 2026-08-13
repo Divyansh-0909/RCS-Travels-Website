@@ -122,11 +122,16 @@ const SharedTrip = () => {
         return clearRouteView;
     }, [mapApi, mapVisible, isMobile, pickupPoint?.lat, pickupPoint?.lng, dropPoint?.lat, dropPoint?.lng]);
 
+    // Same split as TrackingPage: updating the position and removing the marker
+    // have different lifetimes. Cleaning up on every re-run rebuilt the puck at
+    // its new coordinates once per poll, which both flickered and left
+    // setDriverPosition nothing to interpolate from.
     useEffect(() => {
         if (!mapApi || !mapVisible || !driverPoint) return;
         setDriverPosition(mapApi, driverPoint);
-        return clearDriverMarker;
     }, [mapApi, mapVisible, driverPoint?.lat, driverPoint?.lng]);
+
+    useEffect(() => clearDriverMarker, []);
 
     const who = trip?.riderName;
     const pickupTime = minsLabel(etaMinutes(driverPoint, pickupPoint));

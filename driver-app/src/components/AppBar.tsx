@@ -1,41 +1,14 @@
-    import { HouseIcon, PlusIcon, ReceiptIcon, StorefrontIcon, UserIcon } from "phosphor-react-native";
-    import { cssInterop } from "nativewind";
     import { View, Pressable, FlatList, type LayoutChangeEvent } from "react-native"
     import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
     import { useLocation, useNavigate } from "react-router-native";
     import AppText from "./AppText"
-    import { HIDE, isDrillDown, useAppBarVisibility } from "./AppBarVisibility"
+    import { HIDE, useAppBarVisibility, useShellHidden } from "./AppBarVisibility"
+    import { tabsFor } from "./ui/tabs"
     import { useDriver } from "../hooks/useDriver"
 
-    const asThemed = { className: { target: false, nativeStyleToProp: { color: true } } } as const;
-
-    const HomeIcon = cssInterop(HouseIcon, asThemed);
-    const RidesIcon = cssInterop(ReceiptIcon, asThemed);
-    const PostIcon = cssInterop(PlusIcon, asThemed);
-    const MarketIcon = cssInterop(StorefrontIcon, asThemed);
-    const ProfileIcon = cssInterop(UserIcon, asThemed);
-
-    type Tab = { name: string; path: string; Icon: typeof HomeIcon };
-
-    const Data: Tab[] = [
-        { name: "Home", path: "/", Icon: HomeIcon },
-        { name: "Market", path: "/available", Icon: MarketIcon },
-        { name: "Post", path: "/post", Icon: PostIcon },
-        { name: "Rides", path: "/rides", Icon: RidesIcon },
-        { name: "Account", path: "/account", Icon: ProfileIcon },
-    ]
-
-
-    // The bar an unapproved captain gets. Market, Post and Rides all 403 at the
-    // server until his documents are approved, so a tab that opens a screen with
-    // nothing in it — or bounces him straight back — is worse than no tab. What is
-    // left is the two screens that can move him forward: Home, which is his
-    // application status while he waits, and Account, which is where the documents
-    // themselves live.
-    //
-    // Names rather than a second array, so a tab added to Data above cannot quietly
-    // appear here as well.
-    const ONBOARDING_TABS = ["Home", "Account"];
+    // The list and the permission rule both live in ui/tabs now, because the side
+    // menu that replaces this bar during a ride draws the same destinations from
+    // the same gate. See the note there.
 
     // Was bottom-6 in the className. It is a number now because the slide has to
     // clear the gap as well as the pill, and a worklet cannot read a class.
@@ -55,6 +28,7 @@
         const navigate = useNavigate();
         const { pathname } = useLocation();
         const { hidden } = useAppBarVisibility();
+        const { hidden: shellHidden } = useShellHidden();
         const { profile } = useDriver();
 
         const height = useSharedValue(BAR_HEIGHT);
@@ -64,13 +38,17 @@
         // where the other way round he taps Post on the strength of a bar drawn
         // before the answer arrived.
         const canDrive = profile?.onboarding?.canDrive ?? false;
-        const tabs = canDrive ? Data : Data.filter((tab) => ONBOARDING_TABS.includes(tab.name));
+        // Same safer guess as canDrive: absent a profile, assume he owes nothing.
+        const owesRides = (profile?.onboarding?.assignedRides ?? 0) > 0;
+
+        const tabs = tabsFor(canDrive, owesRides);
 
         // The pill shrinks to its contents; the tabs inside it do not grow to fill it.
         // Two 14vw tabs and a gap come to 28vw, and 38% leaves them the same ~5vw of
         // shoulder either side that the five-tab bar has — so the short bar reads as
         // the same object with fewer things in it, rather than as a different one.
-        const barWidth = canDrive ? "87%" : "38%";
+        // The third tab is one more 14vw on the same ~10vw of shoulder, hence 52.
+        const barWidth = canDrive ? "87%" : owesRides ? "52%" : "38%";
 
         // Off the bottom edge rather than under a fade alone: the bar is opaque
         // and sits over the list, so anything short of leaving the screen would
@@ -83,7 +61,11 @@
         // Below every hook on purpose, the way OnlineToggle does it: the shared value
         // and the animated style have to be created on every render this component has,
         // or the hook order changes the first time a captain opens a ride.
-        if (isDrillDown(pathname)) return null;
+        //
+        // Gone entirely on an active ride, not just slid down: the slide is the
+        // scroll behaviour and it comes back on the next upward drag. This is the
+        // shell standing aside for the duration.
+        if (shellHidden) return null;
 
         return (
             <Animated.View
@@ -104,7 +86,7 @@
                         horizontal
                         data={tabs}
                         keyExtractor={(item) => item.name}
-                        extraData={`${pathname}:${canDrive}`}
+                        extraData={`${pathname}:${canDrive}:${owesRides}`}
                         contentContainerClassName="gap-1.5"
                         renderItem={({ item }) => {
                             const isPost = item.name === "Post";

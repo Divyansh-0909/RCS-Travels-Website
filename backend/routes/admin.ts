@@ -24,6 +24,7 @@ import {
 } from '../services/documentNotifications.js'
 import { signedDocumentUrl } from '../services/documentScan.js'
 import { promoteReplacement, recomputeAfterDocumentChange } from '../services/driverDocuments.js'
+import { withdrawOffersForDriver } from '../services/scheduledOffers.js'
 
 // Three list endpoints, the fare-zone editor, document review, and suspension.
 //
@@ -623,25 +624,55 @@ adminRouter.patch('/drivers/:id/suspension', protect, protectAdmin, async (req, 
         ? await prisma.booking.count({ where: { driverId: driver.id, status: { in: ACTIVE_STATUSES } } })
         : 0
 
-    const updated = await prisma.driver.update({
-        where: { id: driver.id },
-        data: {
-            suspendedAt: suspended ? new Date() : null,
-            // Cleared when the suspension is lifted, for the same reason a
-            // rejection reason is cleared on approval: a stale explanation under
-            // an active account is what a screen eventually renders beside a
-            // green tick.
-            suspensionReason: suspended ? reason ?? null : null,
-            ...(suspended && midRide === 0 ? { isOnline: false } : {}),
-        },
-        select: { id: true, name: true, suspendedAt: true, suspensionReason: true, isOnline: true },
+    // One transaction, because a captain suspended with his offers still live is
+    // the worse of the two halves failing: his notification page keeps showing
+    // rides he cannot accept, and the bookings behind them sit held at `rcs`
+    // waiting on an answer that can never come.
+    const { updated, withdrawnOffers } = await prisma.$transaction(async (tx) => {
+        const updated = await tx.driver.update({
+            where: { id: driver.id },
+            data: {
+                suspendedAt: suspended ? new Date() : null,
+                // Cleared when the suspension is lifted, for the same reason a
+                // rejection reason is cleared on approval: a stale explanation under
+                // an active account is what a screen eventually renders beside a
+                // green tick.
+                suspensionReason: suspended ? reason ?? null : null,
+                ...(suspended && midRide === 0 ? { isOnline: false } : {}),
+            },
+            select: { id: true, name: true, suspendedAt: true, suspensionReason: true, isOnline: true },
+        })
+
+        // His spec: a suspended captain loses every pending scheduled offer, and
+        // those rides restart assignment. Only on the way IN — lifting a
+        // suspension must not restore them, because by then the sweep has offered
+        // them to other drivers.
+        //
+        // Accepted offers are deliberately untouched. Those are assignments, not
+        // offers: unpicking one means restoring vehicle capacity and re-dispatching
+        // a booking that already has a driver, and doing it here would take a
+        // scheduled ride off a captain hours before pickup with nothing arranged in
+        // its place. A suspended captain keeps the rides he has already been given
+        // until somebody moves them by hand — which is the manual re-assignment
+        // that does not exist yet.
+        const withdrawnOffers = suspended ? await withdrawOffersForDriver(driver.id, tx) : 0
+
+        return { updated, withdrawnOffers }
     })
 
     if (suspended && midRide > 0) {
         console.log(`admin: suspended ${driver.id} but he is mid-ride — staying online until the ride ends`)
     }
+    if (withdrawnOffers > 0) {
+        console.log(`admin: withdrew ${withdrawnOffers} pending offer(s) from suspended driver ${driver.id}`)
+    }
 
-    return res.json({ ...updated, changed: true, stillOnlineMidRide: suspended && midRide > 0 })
+    return res.json({
+        ...updated,
+        changed: true,
+        stillOnlineMidRide: suspended && midRide > 0,
+        withdrawnOffers,
+    })
 })
 
 export default adminRouter

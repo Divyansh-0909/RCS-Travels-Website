@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, type ReactNode } from "react";
 import { Easing, useAnimatedScrollHandler, useSharedValue, type SharedValue } from "react-native-reanimated";
 import { useLocation } from "react-router-native";
+import { useDriver } from "../hooks/useDriver";
 
 // The bar lives in the shell and the scrolling lives in the routes, so the two
 // can only meet through context. A shared value rather than state on purpose:
@@ -49,6 +50,44 @@ export const isDrillDown = (pathname: string) =>
     /^\/rides\/.+/.test(pathname)
     || pathname === '/account/documents'
     || pathname === '/account/vehicles';
+
+/**
+ * Whether the shell should get out of the way entirely.
+ *
+ * TWO REASONS, ONE ANSWER, and they are read by three components — the bar, the
+ * scrim behind it, and the header on Home. A rule that decided this in each of
+ * them would drift, and the failure is visible: a scrim with no bar to back is a
+ * white ramp across the bottom of the screen, over a map, hiding whatever the
+ * page pinned under it.
+ *
+ * The drill-down half is a route: a screen with a back arrow owns the whole
+ * screen. The active-ride half is a STATE, and it is the stronger of the two.
+ * While a rider is in the car the captain is not browsing the app, he is
+ * driving — everything the bar offers him is somewhere he should not be going,
+ * and the panel he actually needs wants the bottom of the screen the bar is
+ * floating in.
+ *
+ * `assigned` is not enough to trigger this. He can hold a scheduled ride for
+ * days; only en_route, reached and started mean he is out on the road, which is
+ * why the server answers with the ride rather than with a count.
+ *
+ * ON THE RIDE SCREEN ONLY, AND THAT PART IS NOT A REFINEMENT — it is what keeps
+ * the app escapable. Hiding the bar everywhere for the length of a ride would
+ * strand him: the bell is the one control left on the ride screen, it opens
+ * /notifications, and a Notifications page with no bar and no back arrow is a
+ * screen with no way out of it. The ride owns "/"; every other route keeps the
+ * bar that gets him home.
+ */
+export const useShellHidden = () => {
+    const { pathname } = useLocation();
+    const { profile } = useDriver();
+
+    // "/" is where HomeGate puts the ride screen, so this is "he is driving AND
+    // he is looking at the ride".
+    const onRideScreen = Boolean(profile?.activeRide) && pathname === '/';
+
+    return { hidden: isDrillDown(pathname) || onRideScreen, onActiveRide: onRideScreen };
+};
 
 export const AppBarVisibilityProvider = ({ children }: { children: ReactNode }) => {
     const hidden = useSharedValue(0);

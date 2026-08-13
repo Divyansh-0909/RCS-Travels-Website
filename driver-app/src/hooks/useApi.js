@@ -34,6 +34,10 @@ export function useApi() {
     getDocumentUploadUrls: (documents, vehicleId)  => api.getDocumentUploadUrls(documents, vehicleId, getToken),
     confirmDocuments:      (documents, vehicleId)  => api.confirmDocuments(documents, vehicleId, getToken),
 
+    getOffers:     ()                   => api.getOffers(getToken),
+    acceptOffer:   (id)                 => api.acceptOffer(id, getToken),
+    rejectOffer:   (id)                 => api.rejectOffer(id, getToken),
+
     getRides:      (filters)            => api.getRides(filters, getToken),
     getUpcomingRide:      ()            => api.getUpcomingRide(getToken),
     getRide:       (id)                 => api.getRide(id, getToken),

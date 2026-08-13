@@ -226,11 +226,21 @@ const TrackingPage = () => {
 
     // Driver puck follows each poll; separate from the route overlays so
     // position updates don't redraw (or get cleared with) the route.
+    //
+    // NO CLEANUP HERE, and that is the fix rather than an omission. Returning
+    // clearDriverMarker ran it before every re-run, so each poll destroyed the
+    // marker and built a new one at the new coordinates — which is why the puck
+    // teleported, and why it could not be interpolated: a marker created at its
+    // destination has nowhere to glide from. Removal is a separate concern with
+    // a separate lifetime, below.
     useEffect(() => {
         if (!mapApi || !mapVisible || !driverPoint) return;
         setDriverPosition(mapApi, driverPoint);
-        return clearDriverMarker;
     }, [mapApi, mapVisible, driverPoint?.lat, driverPoint?.lng]);
+
+    // Leaving the page takes the puck with it. Empty deps, so this is the only
+    // thing that ever removes it.
+    useEffect(() => clearDriverMarker, []);
 
     // Driver -> pickup while they're coming to you; driver -> drop once the ride
     // is underway, so the number counts down instead of restating the trip length.
@@ -765,7 +775,7 @@ const TrackingPage = () => {
                             sheet={mapVisible}
                             initialSnap="half"
                             duration={420}
-                            // The OTP card appears at en_route and the headline
+                            // The OTP row appears at en_route and the headline
                             // grows a line with it, so the sheet's own height moves
                             // with the status.
                             contentKey={`${status}-${bookingLoading}`}
@@ -801,7 +811,7 @@ const TrackingPage = () => {
                             <div className="w-full flex-1 min-h-0 flex flex-col items-center sm:contents">
                             {/* gap-4 on phones rather than STACK's gap-6: the ETA
                                 headline is the whole of the collapsed sheet, and
-                                24px under it cost the OTP card its place at half. */}
+                                24px under it cost the OTP row its place at half. */}
                             <div className={`relative z-10 sm:order-1 flex flex-col justify-end sm:justify-center items-center sm:items-start w-full sm:w-auto flex-1 min-h-0 sm:flex-initial sm:h-auto gap-4 sm:gap-8`}>
                                 <div className={`flex flex-col justify-center items-center sm:items-start ${PAIR} ${COL}`}>
                                     {/* The headline reads off status and the driver's
@@ -848,18 +858,37 @@ const TrackingPage = () => {
                                 <div className={`flex flex-col justify-center items-start gap-3 max-sm:pb-6 ${COL}`}>
                                     {/* OTP leads once there is one: from en_route on
                                         it is the thing the rider has to act on, and
-                                        it reads out before the plate is checked. It
-                                        earns the only card here, rendered
-                                        conditionally so the border never shows
-                                        around an empty box. Before that (assigned)
-                                        the driver card leads instead. */}
+                                        it reads out before the plate is checked.
+                                        Before that (assigned) the driver card leads
+                                        instead.
+
+                                        No card around the pair — the digits carry
+                                        their own boxes, one each, which is how a
+                                        code meant to be read aloud a character at a
+                                        time wants to be set. The label sits bare on
+                                        the sheet beside them. */}
                                     {(status === "en_route" || status === "reached") && (
-                                        <div className="w-full rounded-xl border border-[var(--foreground)]/30 bg-[var(--background-muted)] px-3.5 sm:px-4 text-left">
-                                            <div className="flex items-center justify-between w-full py-3">
-                                                <h3 className={`${META} text-[var(--text-muted)]`}>OTP</h3>
-                                                {bookingCode
-                                                    ? <h3 className="text-xl sm:text-3xl font-semibold tracking-[0.25em] -mr-[0.25em]">{bookingCode}</h3>
-                                                    : <Skeleton className="h-[26px] sm:h-[38px] w-24" />}
+                                        // max-sm:mt-2 only: on phones this row is the
+                                        // first thing under the ETA headline and the
+                                        // container's gap-4 alone read as cramped.
+                                        // From sm up the column is gap-8 already.
+                                        <div className="flex items-center justify-between w-full gap-2.5 sm:gap-3 max-sm:mt-2 text-left">
+                                            <h3 className={`${META} text-[var(--text-muted)]`}>OTP</h3>
+                                            {/* Boxed even while empty: the row is the
+                                                same shape loaded or not, so nothing
+                                                shifts under the rider's thumb when the
+                                                code lands. */}
+                                            <div className="flex gap-2">
+                                                {(bookingCode ? String(bookingCode).split("") : [null, null, null, null]).map((digit, i) => (
+                                                    <div
+                                                        key={i}
+                                                        className="w-8 h-8 sm:w-10 sm:h-10 shrink-0 rounded-lg border border-[var(--foreground)]/30 bg-[var(--background-muted)] flex items-center justify-center"
+                                                    >
+                                                        {digit
+                                                            ? <span className="text-base sm:text-xl font-semibold leading-none">{digit}</span>
+                                                            : <Skeleton className="h-[16px] sm:h-[20px] w-3 sm:w-3.5" />}
+                                                    </div>
+                                                ))}
                                             </div>
                                         </div>
                                     )}
