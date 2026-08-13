@@ -1,0 +1,22 @@
+-- The name of the car that actually came ("Maruti Swift Dzire"), snapshotted onto
+-- the booking beside the plate that is already snapshotted there.
+--
+-- Both columns exist for the same reason: a captain owns several cars and switches
+-- between them, so anything read back through the `driver` relation describes the
+-- car he is sitting in TODAY, not the one that did this ride. The plate was moved
+-- onto the booking for that reason already; the model has to follow it, because the
+-- rider's receipt prints the two together and a live model next to a snapshotted
+-- plate would eventually name two different cars in one line.
+--
+-- NO BACKFILL. The obvious one — copy drivers.vehicle_model onto every past
+-- booking of that driver — is exactly the wrong thing to do: for any captain who
+-- has since switched cars it would write today's model onto rides done in a
+-- different one, and the wrong answer is indistinguishable from the right one
+-- afterwards. Old rows stay NULL and readers fall back to the booked vehicle class,
+-- which is a fact of the booking and cannot be wrong.
+--
+-- Note that bookings.vehicle_number landed one migration earlier
+-- (20260812090000_driver_multi_vehicle), so the rows in between carry a correct
+-- plate and no model. Those are precisely the rows a backfill would corrupt, by
+-- writing today's model next to a plate that is already right.
+ALTER TABLE "bookings" ADD COLUMN "vehicle_model" TEXT;

@@ -58,11 +58,16 @@ const SEED_CLERK_ID = process.env.SEED_CLERK_ID || 'user_3FdlhBI7SlbMclO523ek4cX
 // other phone in the app — see lib/phone.js. They were E.164 here until
 // 4 Aug 2026, which no account lookup could match; scripts/normalize-driver-
 // phones.js migrated the rows that already existed.
+//
+// vehicleModel is not decoration: naming the car is required of a real captain,
+// so a fixture without one is a row the app can no longer produce — and the
+// rider's tracking screen would be exercised on its fallback rather than on the
+// path every live ride takes.
 const drivers = [
-  { name: 'Ramesh Kumar', phone: '9810000001', vehicleClass: 'hatchback',   vehicleNumber: 'DL01AB1234' },
-  { name: 'Suresh Yadav', phone: '9810000002', vehicleClass: 'suv',         vehicleNumber: 'DL02CD5678' },
-  { name: 'Anil Sharma',  phone: '9810000003', vehicleClass: 'sedan',       vehicleNumber: 'DL03EF9012' },
-  { name: 'Vikram Singh', phone: '9810000004', vehicleClass: 'suv_premium', vehicleNumber: 'DL04GH3456' },
+  { name: 'Ramesh Kumar', phone: '9810000001', vehicleClass: 'hatchback',   vehicleNumber: 'DL01AB1234', vehicleModel: 'Maruti Suzuki Swift' },
+  { name: 'Suresh Yadav', phone: '9810000002', vehicleClass: 'suv',         vehicleNumber: 'DL02CD5678', vehicleModel: 'Toyota Innova Crysta' },
+  { name: 'Anil Sharma',  phone: '9810000003', vehicleClass: 'sedan',       vehicleNumber: 'DL03EF9012', vehicleModel: 'Honda City' },
+  { name: 'Vikram Singh', phone: '9810000004', vehicleClass: 'suv_premium', vehicleNumber: 'DL04GH3456', vehicleModel: 'Toyota Fortuner' },
 ]
 
 async function seedFares() {
@@ -130,6 +135,7 @@ async function seedTestData() {
     await ensurePrimaryVehicle(driver.id, {
       vehicleClass:  d.vehicleClass,
       vehicleNumber: d.vehicleNumber,
+      vehicleModel:  d.vehicleModel,
     })
 
     // Jitter each driver a few hundred metres off the anchor so they don't stack.

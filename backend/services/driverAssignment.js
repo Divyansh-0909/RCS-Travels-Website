@@ -112,7 +112,7 @@ class ClaimFailure extends Error {
 
 /**
  * @param {{ id: string, sharing: boolean }} booking
- * @param {{ id: string, vehicleClass: string, vehicleNumber?: string }} driver
+ * @param {{ id: string, vehicleClass: string, vehicleNumber?: string, vehicleModel?: string | null }} driver
  * @param {Date} confirmedAt
  * @param {(tx: import('@prisma/client').Prisma.TransactionClient) => Promise<void>} [onClaimed]
  * @returns {Promise<'claimed' | 'booking_taken' | 'no_room'>}
@@ -127,16 +127,21 @@ export async function claimBookingForDriver(booking, driver, confirmedAt, onClai
     return await prisma.$transaction(async (tx) => {
       const claimed = await tx.booking.updateMany({
         where: { id: booking.id, status: { in: ASSIGNABLE_STATUSES } },
-        // THE PLATE IS SNAPSHOTTED HERE, in the same statement that assigns the
+        // THE CAR IS SNAPSHOTTED HERE, in the same statement that assigns the
         // ride. A captain owns several cars and switches between them, so reading
         // it back through the `driver` relation later would show every past ride
         // as having been done in whichever car he is sitting in today — and a
         // rider disputing "the car that picked me up was DL01AB1234" would be
         // arguing against a column that had quietly changed under him.
+        //
+        // Plate AND model together, never one without the other: they are printed
+        // as one line on the rider's receipt, and a pair where only half is frozen
+        // would eventually read "DL01AB1234 · Innova Crysta" about a Dzire.
         data: {
           status: 'assigned',
           driverId: driver.id,
           vehicleNumber: driver.vehicleNumber ?? null,
+          vehicleModel: driver.vehicleModel ?? null,
           confirmedAt,
         },
       })

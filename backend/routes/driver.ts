@@ -264,7 +264,11 @@ driverRouter.post('/me', protect, async (req, res) => {
                 vehicleClass,
                 vehicleCapacity: seats,
                 vehicleNumber: number,
-                vehicleModel: vehicleModel?.trim() || null,
+                // No `|| null` on either write: driverAccountInformationSchema
+                // requires a model of at least two characters, so by here there
+                // is always one. A null branch would be unreachable code that
+                // reads as though a captain may still skip the field.
+                vehicleModel: vehicleModel.trim(),
             }
         })
 
@@ -273,7 +277,7 @@ driverRouter.post('/me', protect, async (req, res) => {
                 driverId: created.id,
                 class: vehicleClass,
                 number,
-                model: vehicleModel?.trim() || null,
+                model: vehicleModel.trim(),
             }
         })
 

@@ -26,6 +26,7 @@ import pfpPlaceholder from "../assets/pfp-placeholder.webp"
 import RideDetails from "../components/RideDetails";
 import Skeleton from "../components/ui/Skeleton";
 import { SAFE_ROUTE_SURCHARGE, isDistancePriced } from "../constants/fares";
+import { labelOf } from "../constants/vehicles";
 
 // Statuses where a driver exists and may be moving — the only ones that poll.
 const LIVE_STATUSES = ["assigned", "en_route", "reached", "started"];
@@ -52,6 +53,17 @@ const etaMinutes = (from, to) =>
     from && to ? Math.max(1, Math.round((haversineKm(from, to) / AVG_SPEED_KMH) * 60)) : null;
 
 const minsLabel = (n) => (n == null ? "—" : `${n} min${n === 1 ? "" : "s"}`);
+
+// Plates are stored exactly as the captain typed them, upper-cased — "UP16AB1234"
+// as often as "UP 16 AB 1234". A rider matching a plate against a car reads it in
+// groups, so an unspaced one gets grouped; anything that isn't the standard
+// state-district-series-number shape is printed untouched rather than guessed at,
+// because a mangled plate is worse than a dense one.
+const PLATE = /^([A-Z]{2})(\d{1,2})([A-Z]{1,3})(\d{4})$/;
+const formatPlate = (n) => {
+    const m = n && PLATE.exec(n.replace(/\s+/g, ""));
+    return m ? `${m[1]} ${m[2]} ${m[3]} ${m[4]}` : n;
+};
 
 // ---- Shared layout + type scale -------------------------------------------
 // The desktop content column is 377px — OnBoarding's effective control width
@@ -144,13 +156,27 @@ const TrackingPage = () => {
         if (routeBookingId && routeBookingId !== storeBookingId) setBookingId(routeBookingId);
     }, [routeBookingId, storeBookingId]);
     const isMobile = useIsMobile();
-    // { name, phone, vehicleNumber, latitude, longitude, bearing } from the
-    // status endpoint; its coords drive the driver marker. Dev-only:
-    // /dev/tracking?driver=1 seeds a mock puck (no backend, no driver app).
+    // { name, phone, vehicleNumber, vehicleModel, photoUrl, latitude, longitude,
+    // bearing } from the status endpoint — the whole driver card, plus the coords
+    // that drive the map marker. null until the first poll lands, and null for
+    // good on a ride nobody has been assigned to.
+    //
+    // Dev-only seed: the /dev/tracking previews set no bookingId, so nothing polls
+    // and every one of them would render a driverless screen. Any preview gets the
+    // card's fields; ?driver=1 additionally gives him a position, which is what
+    // puts a puck on the map. A real /booking/:id carries no query string, so it
+    // still starts null even in dev.
     const devParams = import.meta.env.DEV ? new URLSearchParams(window.location.search) : null;
-    const [driver, setDriver] = useState(() => devParams?.get("driver")
-        ? { name: "Dev Driver", latitude: 28.6042, longitude: 77.2712 }
-        : null);
+    const [driver, setDriver] = useState(() => {
+        if (!devParams?.get("status") && !devParams?.get("driver")) return null;
+        return {
+            name: "Ramesh Kumar",
+            phone: "+919876543210",
+            vehicleNumber: "UP16AB1234",
+            vehicleModel: "Maruti Swift Dzire",
+            ...(devParams.get("driver") ? { latitude: 28.6042, longitude: 77.2712 } : {}),
+        };
+    });
     const [mapApi, setMapApi] = useState(null);
 
     useEffect(() => {
@@ -311,17 +337,32 @@ const TrackingPage = () => {
         <NoticePill>Tolls payable to driver separately</NoticePill>
     );
 
+    // Puts the call in the OS dialer rather than dialling anything itself, the
+    // same way callSupport does. Guarded because the button stays on screen (and
+    // disabled) on a ride with nobody to call, so its layout doesn't move.
+    const callDriver = () => {
+        if (driver?.phone) window.location.href = `tel:${driver.phone}`;
+    };
+
     // One driver card for every state that shows one, so its type scale and
     // padding can't drift between the scheduled / live / completed screens.
     //
-    // !! Still placeholder content. The name, plate and photo below are literals —
-    // the `driver` object the status poll fills in is only read for the map puck.
-    // Wire these up and gate the card on driver !== null; a booking that reaches
-    // this screen unassigned currently shows a driver who doesn't exist.
     // The driver is the one thing here that only the status fetch can supply, so
     // the card keeps its border, fill and size throughout and swaps just the
     // photo and the three text lines for placeholders. Sized to the live lines
     // so nothing reflows when they land.
+    //
+    // Every field is read through `driver?.` even though the callers only render
+    // this once a driver exists: the JSX is built on every render regardless of
+    // whether it is used, so a bare `driver.name` here throws on the driverless
+    // states rather than being skipped by them.
+    //
+    // photoUrl is signed and expires in fifteen minutes. The poll mints a fresh
+    // one every five seconds, and the key remounts the <img> when it rotates so
+    // the browser actually refetches; onError catches the case the poll can't —
+    // a completed ride, where polling has stopped and the rider sits on the
+    // screen long enough for the URL to die — and falls back to the placeholder,
+    // which is also where a captain with no approved photo (null) lands.
     const driverCard = (
         <Button
             className={`w-full ${bookingLoading ? "pointer-events-none" : ""}`}
@@ -331,7 +372,13 @@ const TrackingPage = () => {
                 <Skeleton rounded="rounded-full" className="w-16 h-16 sm:w-20 sm:h-20 shrink-0" />
             ) : (
                 <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden shrink-0">
-                    <img src={pfpPlaceholder} alt="placeholder" className="w-full h-full object-cover" />
+                    <img
+                        key={driver?.photoUrl ?? "placeholder"}
+                        src={driver?.photoUrl || pfpPlaceholder}
+                        onError={(e) => { e.currentTarget.src = pfpPlaceholder; }}
+                        alt={driver?.name ? `${driver.name}, your driver` : ""}
+                        className="w-full h-full object-cover"
+                    />
                 </div>
             )}
             {bookingLoading ? (
@@ -342,9 +389,15 @@ const TrackingPage = () => {
                 </div>
             ) : (
                 <div className="flex flex-col text-right justify-center gap-0.5">
-                    <h4 className="text-sm sm:text-base text-[var(--text-muted)] leading-tight">Driver name</h4>
-                    <h3 className="text-lg sm:text-2xl font-medium leading-tight">UP 16 AB 1234</h3>
-                    <h4 className="text-sm sm:text-base text-[var(--text-muted)] leading-tight">Car name</h4>
+                    <h4 className="text-sm sm:text-base text-[var(--text-muted)] leading-tight">{driver?.name}</h4>
+                    <h3 className="text-lg sm:text-2xl font-medium leading-tight">{formatPlate(driver?.vehicleNumber)}</h3>
+                    {/* The model is what a rider picks a car out of traffic with,
+                        so it leads. Naming a car is required of a captain now, so
+                        the class below is a fallback for old data only — a ride
+                        booked before the model was snapshotted, or a car added
+                        before the name was asked for — and it still says which
+                        size of car to look for. */}
+                    <h4 className="text-sm sm:text-base text-[var(--text-muted)] leading-tight">{driver?.vehicleModel ?? labelOf(vehicleClass)}</h4>
                 </div>
             )}
         </Button>
@@ -367,15 +420,30 @@ const TrackingPage = () => {
     // Compact variant for the completed receipt, where the driver sits inside the
     // card rather than beside it: the ride is over, so the plate is a record of who
     // drove rather than something to identify at the kerb. No border of its own —
-    // the receipt card already provides one. Placeholder content, same as driverCard.
-    const driverRow = (
+    // the receipt card already provides one.
+    //
+    // Plate and model are BOTH snapshotted onto the booking when a driver claims
+    // it, so the pair still names one car however many times the captain swaps
+    // his since. Naming a car is required of him now, so on any ride taken from
+    // here on both halves are there; the class covers the older rows the model
+    // never reached, and unlike a live read it cannot become wrong.
+    const driverRow = driver && (
         <div className="flex items-center gap-3 w-full">
             <div className="w-10 h-10 rounded-full overflow-hidden shrink-0">
-                <img src={pfpPlaceholder} alt="" className="w-full h-full object-cover" />
+                <img
+                    key={driver.photoUrl ?? "placeholder"}
+                    src={driver.photoUrl || pfpPlaceholder}
+                    onError={(e) => { e.currentTarget.src = pfpPlaceholder; }}
+                    alt=""
+                    className="w-full h-full object-cover"
+                />
             </div>
             <div className="flex flex-col min-w-0 text-left">
-                <h4 className="text-base sm:text-lg font-medium leading-tight">UP 16 AB 1234</h4>
-                <p className="text-xs sm:text-sm text-[var(--text-muted)] leading-tight truncate">Driver name · Car name</p>
+                <h4 className="text-base sm:text-lg font-medium leading-tight">{formatPlate(driver.vehicleNumber)}</h4>
+                <p className="text-xs sm:text-sm text-[var(--text-muted)] leading-tight truncate">
+                    {[driver.name, driver.vehicleModel ?? (vehicleClass ? labelOf(vehicleClass) : null)]
+                        .filter(Boolean).join(" · ")}
+                </p>
             </div>
         </div>
     );
@@ -496,12 +564,14 @@ const TrackingPage = () => {
             {scheduledTime !== null && (status === "confirmed" || status === "assigned")
                     // contentKey: this panel drops the driver card before a driver
                     // exists, so its height changes with the status — and the sheet
-                    // is sized to that height.
+                    // is sized to that height. bookingLoading is in the key for the
+                    // same reason: the card is skeleton-then-real, and a booking
+                    // that loads without a driver loses it entirely.
                     ? <BackgroundPanel
                         sheet={mapVisible}
                         initialSnap="half"
                         duration={420}
-                        contentKey={status}
+                        contentKey={`${status}-${bookingLoading}`}
                         className={"py-6 max-sm:pb-0 sm:overflow-hidden justify-center items-center text-left sm:px-[9%] md:px-[5%] xl:px-[13%] flex flex-col sm:flex-row sm:justify-center lg:justify-between"}
                     >
                         {backArrow}
@@ -535,7 +605,11 @@ const TrackingPage = () => {
                                 className="w-full min-h-0 flex-1 flex flex-col items-center gap-6 overscroll-contain sm:contents"
                             >
                             <div className={`flex flex-col justify-center items-start gap-3 ${COL}`}>
-                                {status === "assigned" && driverCard}
+                                {/* bookingLoading, not just driver: the store can
+                                    already say "assigned" while the fetch that
+                                    carries the driver is still in flight, and the
+                                    card's own skeleton is what covers that gap. */}
+                                {status === "assigned" && (bookingLoading || driver) && driverCard}
 
                                 {/* Same row as the live screen: where you're going,
                                     with the details behind the pill. Route, fare
@@ -544,10 +618,10 @@ const TrackingPage = () => {
                                     enough to sit on the surface. */}
                                 {dropSummary}
 
-                                {(tollNotice || status === "assigned") && (
+                                {(tollNotice || driver) && (
                                     <div className="w-full flex flex-col gap-2">
                                         {tollNotice}
-                                        {status === "assigned" && extraFareNotice}
+                                        {driver && extraFareNotice}
                                     </div>
                                 )}
                             </div>
@@ -565,9 +639,14 @@ const TrackingPage = () => {
                                         Talk to Support
                                     </span>
                                 </Button>
+                                {/* Shown for the whole of `assigned` and merely
+                                    disabled until the phone number lands, so the
+                                    column doesn't reflow under the rider's thumb
+                                    the moment a poll returns. */}
                                 <Button
+                                    onClick={callDriver}
                                     className={`${status === 'assigned' ? "block" : "hidden"} w-full`}
-                                    prop={{ variant: "", width: "100%", innerClassName: "flex gap-2 items-center justify-center text-base sm:text-lg" }}
+                                    prop={{ variant: "", width: "100%", disabled: !driver?.phone, innerClassName: "flex gap-2 items-center justify-center text-base sm:text-lg" }}
                                 >
                                     <Icon path={mdiPhone} size={0.8} />
                                     Call driver
@@ -643,8 +722,16 @@ const TrackingPage = () => {
                                             <h3 className={`${META} font-semibold`}>₹{fare}</h3>
                                         </div>
 
-                                        <div className="w-full h-px bg-[var(--foreground)]/10 my-1" />
-                                        {driverRow}
+                                        {/* Rule and row together: with no driver
+                                            on the booking the rule would be a
+                                            divider under the last line, dividing
+                                            the total from nothing. */}
+                                        {driverRow && (
+                                            <>
+                                                <div className="w-full h-px bg-[var(--foreground)]/10 my-1" />
+                                                {driverRow}
+                                            </>
+                                        )}
                                     </div>
 
                                     {/* flex-wrap, not a plain row: the notice pill
@@ -653,7 +740,7 @@ const TrackingPage = () => {
                                         overflowing the column. */}
                                     <div className="w-full flex flex-wrap items-center gap-2">
                                         {rideDetailsPill}
-                                        {extraFareNotice}
+                                        {driver && extraFareNotice}
                                     </div>
 
                                     <div className="flex sm:hidden w-full flex-col gap-2 mt-2">{completedActions}</div>
@@ -753,7 +840,14 @@ const TrackingPage = () => {
                                         </div>
                                     )}
 
-                                    {driverCard}
+                                    {/* This branch is the fallthrough for every
+                                        status the two above don't claim, which
+                                        includes the driverless ones — pending, and
+                                        a search that ended in no_driver. Showing
+                                        the card there put a driver who does not
+                                        exist, with a plate to match a car against,
+                                        in front of a rider who has nobody coming. */}
+                                    {(bookingLoading || driver) && driverCard}
 
                                     {/* where you're going sits straight on the sheet */}
                                     {dropSummary}
@@ -761,10 +855,12 @@ const TrackingPage = () => {
                                     {/* extra top margin: with the drop row now on
                                         the bare sheet, the container gap alone
                                         let the notices crowd it */}
-                                    <div className="w-full flex flex-col gap-2 mt-4">
-                                        {tollNotice}
-                                        {extraFareNotice}
-                                    </div>
+                                    {(tollNotice || driver) && (
+                                        <div className="w-full flex flex-col gap-2 mt-4">
+                                            {tollNotice}
+                                            {driver && extraFareNotice}
+                                        </div>
+                                    )}
 
                                     <div className="flex justify-between w-full gap-2 items-center mt-1">
                                         <Button
@@ -778,8 +874,9 @@ const TrackingPage = () => {
                                             </span>
                                         </Button>
                                         <Button
+                                            onClick={callDriver}
                                             className="flex-1"
-                                            prop={{ variant: "", width: "100%", innerClassName: "flex gap-2 items-center justify-center text-base sm:text-lg" }}
+                                            prop={{ variant: "", width: "100%", disabled: !driver?.phone, innerClassName: "flex gap-2 items-center justify-center text-base sm:text-lg" }}
                                         >
                                             <Icon path={mdiPhone} size={0.8} />
                                             Call driver

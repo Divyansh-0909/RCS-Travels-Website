@@ -156,7 +156,7 @@ export async function switchActiveVehicle(driverId, vehicleId) {
  * with a ride attached to it, and it goes through switchActiveVehicle's guards.
  *
  * @param {string} driverId
- * @param {{ vehicleClass: string, vehicleNumber: string, vehicleModel?: string | null }} input
+ * @param {{ vehicleClass: string, vehicleNumber: string, vehicleModel: string }} input
  * @returns {Promise<VehicleRefusal | { vehicle: import('@prisma/client').Vehicle, verificationStatus: string | null, madeActive: boolean }>}
  */
 export async function addVehicle(driverId, { vehicleClass, vehicleNumber, vehicleModel }) {
@@ -176,7 +176,10 @@ export async function addVehicle(driverId, { vehicleClass, vehicleNumber, vehicl
 
   return prisma.$transaction(async (tx) => {
     const vehicle = await tx.vehicle.create({
-      data: { driverId, class: vehicleClass, number, model: vehicleModel?.trim() || null },
+      // Its only caller is the route behind addVehicleSchema, which requires a
+      // model — so no null branch here either. Vehicle.model stays nullable for
+      // the cars added before that rule, not for the ones added through here.
+      data: { driverId, class: vehicleClass, number, model: vehicleModel.trim() },
     })
 
     const driver = await tx.driver.findUnique({
@@ -216,19 +219,30 @@ export async function addVehicle(driverId, { vehicleClass, vehicleNumber, vehicl
  * same state rather than a second row or a 409, which is what separates it from
  * addVehicle.
  *
+ * Required here as well as on the API, even though nothing validates a seed: a
+ * fixture that may omit the model puts rows in every developer's database that
+ * the app can no longer produce, and the fallback path becomes the one that gets
+ * tested while the real one does not.
+ *
  * @param {string} driverId
- * @param {{ vehicleClass: string, vehicleNumber: string, vehicleModel?: string | null }} input
+ * @param {{ vehicleClass: string, vehicleNumber: string, vehicleModel: string }} input
  */
 export async function ensurePrimaryVehicle(driverId, { vehicleClass, vehicleNumber, vehicleModel }) {
   const seats = seatsOf(vehicleClass)
   if (seats === null) throw new Error(`Unknown vehicle class "${vehicleClass}"`)
 
+  if (!vehicleModel?.trim()) throw new Error(`Vehicle "${vehicleNumber}" needs a model`)
+
   const number = vehicleNumber.trim().toUpperCase()
+  const model = vehicleModel.trim()
 
   const vehicle = await prisma.vehicle.upsert({
     where: { driverId_number: { driverId, number } },
-    update: { class: vehicleClass, model: vehicleModel ?? null },
-    create: { driverId, class: vehicleClass, number, model: vehicleModel ?? null },
+    // model in the update branch too, so a car seeded before the name was asked
+    // for picks one up on the next run instead of keeping the NULL that sends
+    // every screen to the class label.
+    update: { class: vehicleClass, model },
+    create: { driverId, class: vehicleClass, number, model },
   })
 
   // The cache moves with it, in the same shape switchActiveVehicle writes — a

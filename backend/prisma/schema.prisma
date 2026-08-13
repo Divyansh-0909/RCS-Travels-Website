@@ -742,6 +742,19 @@ model Booking {
   // Nullable because a booking exists long before anybody is assigned to it, and
   // null forever on the rides that never found a driver.
   vehicleNumber       String?       @map("vehicle_number")
+  // The name of that car, "Maruti Swift Dzire", snapshotted in the same write
+  // for the same reason: a rider's receipt shows the plate and the model side by
+  // side, and read live through the relation the model would drift onto whatever
+  // the captain drives today while the plate beside it stayed put. The two would
+  // then be describing different cars — worse than showing neither.
+  //
+  // Nullable for the same two reasons as the plate — no assignment yet, and the
+  // rides that never found a driver — plus one more it does not share: the cars
+  // added before naming became required (vehicleInputSchema in types.ts) have a
+  // null Driver.vehicleModel and so nothing to snapshot. Readers fall back to
+  // the booked class rather than to the driver row; see the status endpoint in
+  // routes/bookings.js for why the plate's fallback cannot be copied here.
+  vehicleModel        String?       @map("vehicle_model")
   scheduledAt         DateTime?     @map("scheduled_at")
   isOutstation        Boolean       @default(false) @map("is_outstation")
   preferSafeRoute     Boolean       @default(false) @map("prefer_safe_route")

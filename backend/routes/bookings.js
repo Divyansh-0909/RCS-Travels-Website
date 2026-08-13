@@ -243,16 +243,33 @@ bookingsRouter.get('/:id/status', protect, async (req, res) => {
     driver: {
       name:          booking.driver.name,
       phone:         booking.driver.phone,
-      // THE PLATE SNAPSHOTTED ON THIS BOOKING, not the one on the driver row.
+      // THE CAR SNAPSHOTTED ON THIS BOOKING, not the one on the driver row.
       // A captain may own several cars and switch between them, so reading it
       // through the relation makes every past ride show whichever car he is in
       // today — and a rider disputing "the car that picked me up was DL01AB1234"
       // would be arguing against a value that had quietly changed under him.
       //
-      // The fallback covers rides assigned before the column existed. It is the
-      // old, wrong behaviour by construction, which is exactly why it is a
+      // Both halves or neither: the rider's screen prints "DL01AB1234 · Swift
+      // Dzire" as one line, so a snapshotted plate beside a live model would
+      // eventually describe two different cars.
+      //
+      // The plate's fallback covers rides assigned before its column existed. It
+      // is the old, wrong behaviour by construction, which is exactly why it is a
       // fallback and not the first choice.
+      //
+      // THE MODEL GETS NO SUCH FALLBACK, and the reason is that the two columns
+      // landed a day apart: the plate on 2026-08-12, the model on 2026-08-13. So
+      // there is a band of bookings carrying a CORRECT snapshotted plate and no
+      // model at all, and for exactly those a fallback would pair the right
+      // historic plate with today's car — "UP16AB1234 · Innova Crysta" about a
+      // ride done in the Dzire. That is the one output worse than either column
+      // being empty, and it is what the snapshot was added to prevent.
+      //
+      // Their nulls will never line up, so they cannot share a fallback. Null
+      // goes to the client and the rider app shows the booked class beside the
+      // plate instead — a fact of this booking, and one that cannot go stale.
       vehicleNumber: booking.vehicleNumber ?? booking.driver.vehicleNumber,
+      vehicleModel:  booking.vehicleModel,
       // The captain's face, so a rider standing on a road at night can tell
       // whether the man who pulled up is the man the app sent. A signed URL
       // minted for this response and dead in fifteen minutes — never the stored

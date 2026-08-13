@@ -27,9 +27,14 @@ import { ensurePrimaryVehicle } from '../services/driverVehicles.js'
 const PHONE = process.env.CAPTAIN_PHONE || '9800000001'
 const VEHICLE_CLASS = process.env.CAPTAIN_CLASS || 'suv'
 
-// A plausible car per class, so the Account screen has a real model to render rather
-// than falling back to the class label. Fixture data only — nothing in the app may
-// branch on vehicleModel, which is exactly why a made-up name here is harmless.
+// A plausible car per class, so the Account screen and the rider's tracking screen
+// both have a real model to render rather than falling back to the class label.
+// Fixture data only — nothing in the app BRANCHES on vehicleModel, it is only ever
+// displayed, which is what makes a made-up name here harmless.
+//
+// Covers every class, and main() rejects an unknown CAPTAIN_CLASS before this is
+// read, so the lookup cannot miss — naming the car is required, and a seed that
+// could quietly produce an unnamed one would be a fixture the app can't create.
 const MODEL_FOR = {
   hatchback:   'Maruti Suzuki Swift',
   sedan:       'Honda City',
@@ -72,7 +77,7 @@ async function main() {
       // In the update branch as well as the create one, so a captain seeded before
       // the column existed picks the model up on a re-run instead of keeping the
       // NULL that makes the Account screen fall back to "SUV".
-      vehicleModel:       MODEL_FOR[VEHICLE_CLASS] ?? null,
+      vehicleModel:       MODEL_FOR[VEHICLE_CLASS],
     },
     create: {
       clerkId:            clerkUser.id,
@@ -81,7 +86,7 @@ async function main() {
       vehicleClass:       VEHICLE_CLASS,
       vehicleCapacity:    seatsOf(VEHICLE_CLASS),
       vehicleNumber:      'DL09TEST01',
-      vehicleModel:       MODEL_FOR[VEHICLE_CLASS] ?? null,
+      vehicleModel:       MODEL_FOR[VEHICLE_CLASS],
       isActive:           true,
       // Offline on purpose: going online is the first thing the app's toggle
       // does, and a captain seeded online makes that button a no-op.
@@ -96,7 +101,7 @@ async function main() {
   await ensurePrimaryVehicle(driver.id, {
     vehicleClass:  VEHICLE_CLASS,
     vehicleNumber: 'DL09TEST01',
-    vehicleModel:  MODEL_FOR[VEHICLE_CLASS] ?? null,
+    vehicleModel:  MODEL_FOR[VEHICLE_CLASS],
   })
 
   await prisma.driverLocation.upsert({
