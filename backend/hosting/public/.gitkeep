@@ -1,0 +1,2 @@
+# Deliberately empty. Any file here would shadow the rewrite for that path
+# and be served instead of reaching Cloud Run. See ../README.md.

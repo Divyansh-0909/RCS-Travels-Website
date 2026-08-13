@@ -113,6 +113,15 @@ pids
 # builds an image with a Windows node_modules pasted over the Linux one.
 !.dockerignore
 !.gcloudignore
+# Which Firebase project `firebase deploy` targets. Not a secret, and a clone
+# without it deploys to whatever project happens to be selected — or nothing.
+!.firebaserc
+# The only thing making backend/hosting/public exist. Git cannot track an empty
+# directory, and firebase deploy fails outright if the public folder is missing —
+# so without this negation a fresh clone cannot deploy Hosting at all. It stays a
+# DOTFILE deliberately: firebase.json ignores `**/.*`, so it is never uploaded,
+# where any normal filename would be served and would shadow that path's rewrite.
+!.gitkeep
 # =========================
 # Dev screenshots
 # =========================

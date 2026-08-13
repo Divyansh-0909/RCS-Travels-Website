@@ -1,0 +1,18 @@
+{
+  "hosting": {
+    "public": "backend/hosting/public",
+    "ignore": [
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "run": {
+          "serviceId": "rcs-api",
+          "region": "asia-south1"
+        }
+      }
+    ]
+  }
+}
