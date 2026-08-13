@@ -77,6 +77,47 @@ export type DriverDocumentType = keyof typeof DRIVER_DOCUMENTS;
 
 export type DocumentOwner = 'driver' | 'vehicle';
 
+// What the number field calls itself, per document.
+//
+// It used to be one heading — "Number on the document" — for eight different
+// documents, which left the captain doing the translation: he is holding an
+// insurance certificate with a POLICY number printed on it and being asked for
+// "the number". Naming the thing in his hand is the difference between reading
+// the field and guessing at it.
+//
+// Only the numbered types are here. The three photographs have nothing written on
+// them and never open this sheet — see NUMBERED_DRIVER_DOCUMENTS on the server,
+// which derives that set from `expires`.
+//
+// The placeholders split on purpose. Where a format is standard and recognisable
+// — a licence, a plate, a policy — it shows one, because a captain matching the
+// shape of his own number against it knows instantly he is in the right field.
+// Where it is not (a tax receipt, a fitness certificate, a permit all vary by
+// RTO), it says WHERE TO LOOK instead. Inventing a plausible format for those
+// would be worse than saying nothing: it would tell a man holding a perfectly
+// valid number that his does not look right.
+export const DOCUMENT_NUMBER_FIELDS: Partial<
+  Record<DriverDocumentType, { label: string; placeholder: string }>
+> = {
+  dl: { label: 'Driving licence number', placeholder: 'e.g. UP16 20110149646' },
+  rc: { label: 'Registration number', placeholder: 'e.g. UP16 AB 1234' },
+  insurance: { label: 'Policy number', placeholder: 'e.g. 3001/1234567/00/000' },
+  tax: { label: 'Road tax receipt number', placeholder: 'As printed on the receipt' },
+  fitness: { label: 'Fitness certificate number', placeholder: 'As printed on the certificate' },
+  permit_all_india: { label: 'Permit number', placeholder: 'As printed on the permit' },
+  permit_one_year: { label: 'Permit number', placeholder: 'As printed on the permit' },
+  cng_test: { label: 'Test certificate number', placeholder: 'As printed on the certificate' },
+};
+
+/** The generic pair, for a numbered type added on the server before it is named here. */
+const FALLBACK_NUMBER_FIELD = {
+  label: 'Number on the document',
+  placeholder: 'As printed on the document',
+};
+
+export const numberFieldFor = (type: DriverDocumentType) =>
+  DOCUMENT_NUMBER_FIELDS[type] ?? FALLBACK_NUMBER_FIELD;
+
 export const DRIVER_DOCUMENT_TYPES = Object.keys(DRIVER_DOCUMENTS) as DriverDocumentType[];
 
 export const documentLabelOf = (type: DriverDocumentType) => DRIVER_DOCUMENTS[type].label;
