@@ -14,9 +14,14 @@ const vehicleInputSchema = z.object({
   // than any regex worth maintaining, and the admin reviewing the RC is the
   // check that actually matters.
   vehicleNumber: z.string().trim().min(4).max(16),
-  // The model is display only: it is what a rider reads to spot the car. Blank
-  // is allowed and stored as null rather than as an empty string.
-  vehicleModel: z.string().trim().max(60).optional(),
+  // What a rider reads to spot the car at the kerb, which is why it is asked for
+  // rather than offered: "a white Innova Crysta" picks a car out of a queue of
+  // six and "a white SUV" does not.
+  //
+  // The COLUMN stays nullable. Every car added before this was required has a
+  // null model and must keep working — this is a rule about what a captain may
+  // submit from here on, not a claim about what is already stored.
+  vehicleModel: z.string().trim().min(2).max(60),
 })
 
 const driverAccountInformationSchema = vehicleInputSchema.extend({

@@ -14,8 +14,21 @@ const BG_ERROR = 'rgba(185,28,28,0.1)';
 const BG_DROPDOWN = '#121220';
 const BG_PRESSED = 'rgba(255,255,255,0.15)';
 
+// The outline variant's own pair, and the reason it exists as a variant at all:
+// every border above is rgba WHITE, tuned for the dark auth shell, and drawing one
+// of those on a light page is a button with no edge. These two are the light
+// shell's --background-primary and the 10% hairline the account screens rule with.
+const INK_SECONDARY = '#121220';
+const BORDER_SECONDARY = 'rgba(18,18,32,0.1)';
+const BG_SECONDARY = '#ffffff';
+
 interface ButtonProp {
-    variant?: 'negative' | 'input' | 'dropdown';
+    /**
+     * `secondary` is the outline for LIGHT surfaces: ink label, hairline edge,
+     * white fill. Same width, radius and padding as the solid — the fill is the
+     * only thing ranking them, which is what lets the two stack as a pair.
+     */
+    variant?: 'negative' | 'secondary' | 'input' | 'dropdown';
     width?: ViewStyle['width'];
     rounded?: number;
     paddingX?: number;
@@ -43,6 +56,7 @@ const Button = ({ prop = {}, className = '', children, onPress }: Props) => {
     const isDropdown = prop.variant === 'dropdown';
     const isInput = prop.variant === 'input';
     const isNegative = prop.variant === 'negative';
+    const isSecondary = prop.variant === 'secondary';
     const hasError = prop.error === true && !isDropdown;
     const isDisabled = prop.disabled === true;
     const isSolid = !prop.variant || isNegative;
@@ -54,6 +68,14 @@ const Button = ({ prop = {}, className = '', children, onPress }: Props) => {
             return {
                 backgroundColor: isNegative ? NEGATIVE : PRIMARY,
                 opacity: isDisabled ? 0.4 : pressed ? 0.8 : 1,
+            };
+        }
+        if (isSecondary) {
+            return {
+                backgroundColor: BG_SECONDARY,
+                borderWidth: 1,
+                borderColor: BORDER_SECONDARY,
+                opacity: isDisabled ? 0.4 : pressed ? 0.6 : 1,
             };
         }
         if (isDropdown) {
@@ -100,7 +122,12 @@ const Button = ({ prop = {}, className = '', children, onPress }: Props) => {
             ]}
         >
             {typeof children === 'string' || typeof children === 'number' ? (
-                <AppText className={`text-base ${isSolid ? 'font-semibold' : 'font-medium'}`}>
+                // The colour is spelled out for the outline only. AppText falls back
+                // to --text, which is #ffffff — right on a solid fill and on the dark
+                // shell the other variants live on, invisible on this one's white.
+                <AppText
+                    className={`text-base ${isSolid || isSecondary ? 'font-semibold' : 'font-medium'} ${isSecondary ? 'text-[var(--background-primary)]' : ''}`}
+                >
                     {children}
                 </AppText>
             ) : (

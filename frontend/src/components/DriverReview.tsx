@@ -3,6 +3,7 @@ import Icon from "@mdi/react"
 import { mdiOpenInNew, mdiAlertCircleOutline, mdiCheck, mdiClose } from "@mdi/js"
 import { useAuth } from "@clerk/clerk-react"
 import { getDriverDocuments, reviewDocument, setDriverSuspension } from "../api/api"
+import { labelOf } from "../constants/vehicles"
 import { VerificationStatus } from "../types/enums"
 
 // Reviewing one captain's paperwork, and stopping him driving.
@@ -284,6 +285,8 @@ const DriverReview = ({ driverId, onVerificationChange }: {
         )
     }
 
+    // Already labels when they arrive — the admin endpoint maps them, because a
+    // list nothing branches on has no reason to cross the wire as type slugs.
     const missingNote = (missing: string[]) => missing.length > 0 && (
         <p className="text-sm text-amber-700 mt-2">Still to upload: {missing.join(", ")}</p>
     )
@@ -307,7 +310,10 @@ const DriverReview = ({ driverId, onVerificationChange }: {
             {data.vehicles.map((vehicle) => (
                 <section key={vehicle.id} className="w-full mt-5">
                     <h4 className="text-xs uppercase tracking-wide text-gray-500 mb-1">
-                        {vehicle.number} · {vehicle.model || vehicle.class}
+                        {/* labelOf, not the raw class. Cars added before the model
+                            was required have none, and the fallback was printing
+                            the wire value — "suv_premium" — into a heading. */}
+                        {vehicle.number} · {vehicle.model || labelOf(vehicle.class)}
                         {vehicle.isActive && <span className="ml-2 normal-case text-green-700">driving this one</span>}
                     </h4>
                     {forVehicle(vehicle.id).length === 0

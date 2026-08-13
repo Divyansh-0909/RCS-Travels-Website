@@ -423,16 +423,23 @@ adminRouter.get('/drivers/:id/documents', protect, protectAdmin, async (req, res
         vehicles: vehicles.map((vehicle) => ({
             ...vehicle,
             isActive: vehicle.id === driver.activeVehicleId,
-            missing: REQUIRED_VEHICLE_OWNED_DOCUMENTS.filter(
-                (type: string) => !hasCurrent(type, vehicle.id),
-            ),
+            // LABELS, not type slugs. This list is printed straight onto the
+            // review screen and nothing branches on it — an admin reading "Still
+            // to upload: rc, permit_all_india" is being handed column names. The
+            // captain app's own /me endpoints still send types, because that app
+            // matches them against its checklist rows.
+            missing: REQUIRED_VEHICLE_OWNED_DOCUMENTS
+                .filter((type: string) => !hasCurrent(type, vehicle.id))
+                .map(documentLabelOf),
         })),
         documents: withUrls,
         history,
         // The man's own two. The per-car lists live on `vehicles` above — a single
         // flat `missing` cannot mean anything for a captain with two cars, since
         // the same type is simultaneously present on one and absent on the other.
-        missing: REQUIRED_DRIVER_OWNED_DOCUMENTS.filter((type: string) => !hasCurrent(type, null)),
+        missing: REQUIRED_DRIVER_OWNED_DOCUMENTS
+            .filter((type: string) => !hasCurrent(type, null))
+            .map(documentLabelOf),
     })
 })
 

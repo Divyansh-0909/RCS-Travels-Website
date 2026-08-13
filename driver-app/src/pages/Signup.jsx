@@ -303,6 +303,10 @@ const Signup = () => {
     const handleVehicleSubmit = async () => {
         if (!vehicleClass) { setError("Pick the kind of car you drive"); return; }
         if (vehicleNumber.trim().length < 4) { setError("Enter the number on the plate"); return; }
+        // Required, like the plate. A rider meeting this car at a gate is looking
+        // for "the white Innova Crysta" — the class alone does not pick it out of
+        // a queue, and this is the one moment the captain is already typing.
+        if (vehicleModel.trim().length < 2) { setError("Enter the car's model"); return; }
 
         try {
             setError(null);
@@ -312,8 +316,6 @@ const Signup = () => {
                 name: username.trim(),
                 vehicleClass,
                 vehicleNumber: vehicleNumber.trim().toUpperCase(),
-                // Sent as a string because the schema wants one; the column is
-                // nullable and an empty model is a car nobody named, not an error.
                 vehicleModel: vehicleModel.trim(),
             });
 
@@ -496,7 +498,7 @@ const Signup = () => {
                                 {isUsername
                                     ? "Make it yours."
                                     : isPhone
-                                        ? "Looks like {` `} you're new here."
+                                        ? "Looks like you're new here."
                                         : isOtp
                                             ? "One code away."
                                             : "Now the car."}
@@ -654,10 +656,11 @@ const Signup = () => {
                                         <Input
                                             prop={{
                                                 type: "text",
-                                                placeholder: "Model (optional)",
+                                                placeholder: "Model",
                                                 value: vehicleModel,
                                                 onChangeFn: setVehicleModel,
                                                 maxLength: 60,
+                                                error: error === "Enter the car's model",
                                                 bg: BOX_BG,
                                             }}
                                         />
@@ -697,8 +700,8 @@ const Signup = () => {
                                         : isUsername
                                             ? username.trim().length < 2
                                             // Validated on press rather than
-                                            // disabled: three fields with one
-                                            // optional makes a dead button that
+                                            // disabled: three fields behind one
+                                            // button makes a dead control that
                                             // never says which is the problem.
                                             : isVehicle
                                                 ? loading

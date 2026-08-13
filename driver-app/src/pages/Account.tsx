@@ -5,6 +5,7 @@ import { cssInterop } from 'nativewind';
 import {
   BankIcon,
   CarIcon,
+  CaretRightIcon,
   FileTextIcon,
   GearIcon,
   InfoIcon,
@@ -25,7 +26,7 @@ import { TILE_GAP } from '../components/ui/tile';
 import JoinFleetCard from '../components/ui/JoinFleetCard';
 import WalletCard from '../components/ui/WalletCard';
 import { useApi } from '../hooks/useApi';
-import { initials, vehicleLabel } from '../constants/booking';
+import { initials } from '../constants/booking';
 import { canJoinFleet, formatPhone, formatRating, groupLabel, isFleet, verificationLabel } from '../constants/driver';
 import { openSupportWhatsApp, supportPhoneDisplay } from '../constants/support';
 import type { DriverProfile } from '../types/enums';
@@ -33,6 +34,7 @@ import type { DriverProfile } from '../types/enums';
 const asThemed = { className: { target: false, nativeStyleToProp: { color: true } } } as const;
 const Star = cssInterop(StarIcon, asThemed);
 const Car = cssInterop(CarIcon, asThemed);
+const Caret = cssInterop(CaretRightIcon, asThemed);
 const SignOut = cssInterop(SignOutIcon, asThemed);
 
 const CARD = '#f3f3f3';                          // --foreground-muted
@@ -326,8 +328,8 @@ const Account = () => {
               ) : (
                 <Chip
                   label={verificationLabel(profile.verificationStatus)}
-                  text={CHIPS[profile.verificationStatus].text}
-                  fill={CHIPS[profile.verificationStatus].fill}
+                  text={CHIPS[profile.verificationStatus]?.text}
+                  fill={CHIPS[profile.verificationStatus]?.fill}
                 />
               )}
             </View>
@@ -369,45 +371,49 @@ const Account = () => {
               </View>
             )}
 
-            {/* The car, as a plate rather than a model name — the fleet stores a
-                registration and a class, and there is no column holding "Innova
-                Crysta" to print. Not pressable: there is no vehicle screen behind
-                it, and a caret that goes nowhere is a worse card than a flat one.
+            {/* His cars, as a card rather than as a line in the menu below.
 
                 Directly under the identity panel, because it is the rest of the same
                 answer: who is driving and what he is driving are one fact about a
-                captain, and the money below is a different subject entirely. */}
-            <View
-              className="w-full flex-row items-center gap-3 rounded-2xl px-4 py-3.5"
-              style={{ backgroundColor: CARD }}
-            >
-              {/* No well behind it. The card is already a surface, and a second one
-                  under a single glyph gave the row a box inside a box for no fact
-                  that needed separating. */}
-              <Car size={26} weight="fill" className={INK} />
-              {/* The car's name on top, its papers underneath. The model is the line
-                  a captain recognises his own vehicle by; the plate, class and seats
-                  are the details that identify it to everyone else.
+                captain, and the money below is a different subject entirely. That
+                placement is what earns it a surface — the menu rows are ways out of
+                the page, and this is a fact about him that happens to open one.
 
-                  Falls back to the class label when no model is on file, which is
-                  every row created before the column existed — "SUV" over the plate
-                  is a worse heading than "Toyota Innova Crysta" but a much better one
-                  than an empty line. */}
-              <View className="flex-1">
-                <AppText numberOfLines={1} className={`font-semibold ${INK}`}>
-                  {profile.vehicleModel ?? vehicleLabel(profile.vehicleClass)}
-                </AppText>
-                <AppText numberOfLines={1} className={`text-xs ${MUTED}`}>
-                  {[
-                    profile.vehicleNumber,
-                    vehicleLabel(profile.vehicleClass),
-                    profile.vehicleSeats == null ? null : `${profile.vehicleSeats} seats`,
-                  ]
-                    .filter(Boolean)
-                    .join(' · ')}
-                </AppText>
+                The plate is the value, not the count, because the plate is what a
+                captain with two cars actually wants to check here: which one is the
+                app going to send riders to. The count follows it only when there IS
+                more than one — "1 car" tells him something he can see from the
+                windscreen. */}
+            <Pressable
+              role="button"
+              aria-label={`Your cars, ${profile.vehicleNumber}`}
+              onPress={() => navigate('/account/vehicles')}
+              style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
+            >
+              <View
+                className="w-full flex-row items-center gap-3 rounded-2xl px-4 py-3.5"
+                style={{ backgroundColor: CARD }}
+              >
+                {/* No well behind it. The card is already a surface, and a second one
+                    under a single glyph gave the row a box inside a box for no fact
+                    that needed separating. */}
+                <Car size={26} weight="fill" className={INK} />
+                <View className="flex-1">
+                  <AppText numberOfLines={1} className={`font-semibold ${INK}`}>
+                    Your cars
+                  </AppText>
+                  <AppText numberOfLines={1} className={`text-xs ${MUTED}`}>
+                    {profile.vehicleCount > 1
+                      ? `${profile.vehicleNumber} · ${profile.vehicleCount} cars`
+                      : profile.vehicleNumber}
+                  </AppText>
+                </View>
+                {/* Earned now, unlike the flat panel this replaces: the tap goes to a
+                    screen inside the app, so the caret is keeping a promise rather
+                    than making one nothing answers. */}
+                <Caret size={16} weight="bold" className={MUTED} />
               </View>
-            </View>
+            </Pressable>
 
             {/* One row, two tiles, equal halves. Money held and money earned are the
                 same question asked twice, and stacking them full-width made the
@@ -455,21 +461,6 @@ const Account = () => {
                 }
                 warn={profile.expiringDocuments > 0}
                 onPress={() => navigate('/account/documents')}
-              />
-              {/* The plate is the value, not the count, because the plate is what a
-                  captain with two cars actually wants to check here: which one is
-                  the app going to send riders to. The count follows it only when
-                  there IS more than one — "1 car" is a row telling him something
-                  he can see from the windscreen. */}
-              <AccountRow
-                label="Your cars"
-                Icon={CarIcon}
-                value={
-                  profile.vehicleCount > 1
-                    ? `${profile.vehicleNumber} · ${profile.vehicleCount} cars`
-                    : profile.vehicleNumber
-                }
-                onPress={() => navigate('/account/vehicles')}
               />
               {/* Feedback only. The rating already has a home — the star pill beside
                   his name — and a row repeating the same number two inches below it

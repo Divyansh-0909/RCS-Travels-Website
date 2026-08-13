@@ -10,6 +10,17 @@ const BORDER_ERROR_FOCUS = 'rgba(185,28,28,0.8)';
 const BG_ERROR = 'rgba(185,28,28,0.1)';
 const PLACEHOLDER = 'rgba(243,243,243,0.5)';
 
+// The light-surface set. Everything above is tuned for the dark auth shell — white
+// borders, a translucent white fill and #ffffff text — so a field dropped onto a
+// white or --foreground-muted card had an invisible edge, an invisible placeholder
+// and, worst of the three, invisible typing: the captain filled it in correctly and
+// watched nothing appear. These are --background-primary and the hairline the
+// account screens rule with.
+const INK_LIGHT = 'rgba(18,18,32,0.12)';
+const INK_LIGHT_FOCUS = 'rgba(18,18,32,0.45)';
+const BG_LIGHT = '#ffffff';
+const PLACEHOLDER_LIGHT = 'rgba(18,18,32,0.4)';
+
 type InputType = 'text' | 'email' | 'tel' | 'number' | 'password';
 
 // The web takes one `type` and lets the browser decide the keyboard. Nothing
@@ -21,6 +32,12 @@ const KEYBOARD: Partial<Record<InputType, KeyboardTypeOptions>> = {
 };
 
 interface InputProp {
+    /**
+     * `light` resolves the same field for a white page: ink text, ink placeholder,
+     * hairline edge. Everything the component draws by default assumes the dark
+     * auth shell it was written for.
+     */
+    variant?: 'light';
     value?: string | number;
     onChangeFn: (value: string) => void;
     onFocusFn?: () => void;
@@ -43,16 +60,23 @@ interface Props {
 const Input = ({ prop, className = '', leading, trailing }: Props) => {
     const [focused, setFocused] = useState(false);
     const hasError = prop.error === true;
+    const light = prop.variant === 'light';
     const type = prop.type ?? 'text';
     const plain = type !== 'email' && type !== 'password';
 
+    // The error pair is shared. Both are rgba ink-red, which reads on either shell —
+    // only the resting and focused states had to be resolved twice.
     const borderColor = hasError
         ? focused ? BORDER_ERROR_FOCUS : BORDER_ERROR
-        : focused ? BORDER_FOCUS : BORDER;
+        : light
+            ? focused ? INK_LIGHT_FOCUS : INK_LIGHT
+            : focused ? BORDER_FOCUS : BORDER;
 
     const backgroundColor = hasError
         ? BG_ERROR
-        : focused ? BG_FOCUS : prop.bg ?? 'transparent';
+        : light
+            ? prop.bg ?? BG_LIGHT
+            : focused ? BG_FOCUS : prop.bg ?? 'transparent';
 
     return (
         <View className={`${className} relative w-full my-1`}>
@@ -62,14 +86,14 @@ const Input = ({ prop, className = '', leading, trailing }: Props) => {
                 onFocus={() => { setFocused(true); prop.onFocusFn?.(); }}
                 onBlur={() => { setFocused(false); prop.onBlurFn?.(); }}
                 placeholder={prop.placeholder}
-                placeholderTextColor={PLACEHOLDER}
+                placeholderTextColor={light ? PLACEHOLDER_LIGHT : PLACEHOLDER}
                 autoComplete={prop.autoComplete}
                 autoCapitalize={plain ? 'sentences' : 'none'}
                 autoCorrect={plain}
                 secureTextEntry={type === 'password'}
                 keyboardType={KEYBOARD[type]}
                 maxLength={prop.maxLength}
-                className={`font-sans text-base text-[var(--text)] w-full px-4 py-3 rounded-xl border ${leading ? 'pl-9' : ''} ${trailing ? 'pr-10' : ''}`}
+                className={`font-sans text-base ${light ? 'text-[var(--background-primary)]' : 'text-[var(--text)]'} w-full px-4 py-3 rounded-xl border ${leading ? 'pl-9' : ''} ${trailing ? 'pr-10' : ''}`}
                 style={{ borderColor, backgroundColor }}
             />
 
