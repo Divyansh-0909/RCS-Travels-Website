@@ -108,6 +108,14 @@ pids
 !.env.example
 !.prettierrc
 !.eslintrc
+# Firebase leftovers. Both are already caught by the blanket `.*` and `*.log`
+# rules above, and are named anyway: the negations below un-ignore dotfiles one at
+# a time, and a future `!.firebase*` written slightly too broadly would put the
+# deploy cache — and a debug log that quotes request bodies — into the repository.
+# An explicit ignore cannot be undone by accident.
+.firebase/
+firebase-debug.log
+
 # Build inputs, not local config. Without these negations the blanket `.*` above
 # keeps them out of the repository — and a clone that is missing .dockerignore
 # builds an image with a Windows node_modules pasted over the Linux one.

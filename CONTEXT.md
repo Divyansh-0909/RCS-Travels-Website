@@ -92,18 +92,43 @@ files and 13 backend endpoints — but **no real captain can log into it yet**; 
 
 ### Deployment
 
-**Mid-migration: Render → Google Cloud Run.** Both are live and serving the same database.
+**Cut over to Google Cloud Run on 13 Aug 2026.** Render is retained as a rollback, not retired.
 
-- Frontend → **Vercel**, at `https://www.rcstravels.co.in`.
-- Backend, current production → **Render** (free tier, kept awake by an uptime ping to
-  `/health`, which runs `select 1` so Supabase does not pause either).
-- Backend, migration target → **Google Cloud Run**, `asia-south1` (Mumbai, same city as the
-  Supabase region `aws-1-ap-south-1`). Project `project-0c9e66c4-03f9-4cc0-b53`, service
-  `rcs-api`, `min-instances=0`, `max-instances=4`. Nothing points at it yet.
+```
+Vercel (www.rcstravels.co.in)  ─┐
+Expo captain app               ─┤
+                                └─→ api.rcstravels.co.in
+                                      └─→ Firebase Hosting (proxy only)
+                                            └─→ Cloud Run  rcs-api  asia-south1
+                                                  ├─→ Supabase PostgreSQL (Prisma)
+                                                  └─→ Cloud Storage (documents)
+```
+
+- **API hostname: `https://api.rcstravels.co.in`.** Every client uses it and nothing should
+  ever be given the bare `run.app` URL — `EXPO_PUBLIC_*` is inlined into the captain app's
+  bundle at build time, so a URL that ships in a build cannot be changed without a rebuild and
+  a redistribution to every driver.
+- **Firebase Hosting is a proxy and nothing else** — no static files, one rewrite of `**` to the
+  Cloud Run service. It exists because Cloud Run domain mappings do not work in `asia-south1`
+  and a load balancer costs ~$18/month for the forwarding rule alone. See
+  `backend/hosting/README.md`. It is a SEPARATE Firebase project from `rcs-travels-b0d04`,
+  which owns FCM; do not add an app or enable Cloud Messaging in the Hosting one.
+- **Cloud Run** — `asia-south1` (Mumbai, same city as Supabase's `aws-1-ap-south-1`), project
+  `project-0c9e66c4-03f9-4cc0-b53`, service `rcs-api`, `min-instances=0`, `max-instances=4`.
+- **Render is the rollback**, on the same commit, still awake via an uptime ping to `/health`
+  (which runs `select 1`, so Supabase does not pause either). Rolling back = point Vercel's
+  `VITE_API_BASE_URL` at Render and redeploy; the database is shared so no data moves.
+  **BUT NOT FOR DOCUMENTS.** Render cannot read Cloud Storage — that needs Application Default
+  Credentials, which only exist on Google infrastructure, and handing Render a service-account
+  key is the long-lived credential this migration removed. `GCS_BUCKET` is unset there, so
+  document routes answer 503 by design. It is a rollback for rider flows only.
 - Database → **Supabase PostgreSQL**. Driver app → **Expo EAS**.
 - Secrets live in **Google Secret Manager**, mounted as env vars (`backend/scripts/push-secrets.ps1`).
   Images build in **Cloud Build** → **Artifact Registry**. The background sweeps are driven by
-  **Cloud Scheduler**, not timers — see §5 and `lib/jobs.js`.
+  **Cloud Scheduler**, and individual document scans by **Cloud Tasks** — not timers. See §5.
+- Deploys are still **manual** (`gcloud run deploy --source .` from a laptop), so the running
+  revision is tied to a commit only by discipline. A Cloud Build trigger on `main` is the fix
+  and is worth doing when Render is finally retired, so the deploy story changes once.
 - The full runbook is `backend/DEPLOY.md`; the reasoning is `decisions/cloud-run-migration.md`.
 
 ---
@@ -119,6 +144,7 @@ RCS-Travels-Website/
 ├── tools/zone-editor.html            browser tool for drawing/pricing fare zones
 ├── shared/theme/                     one theme source, built into web + native CSS
 ├── decisions/            walkthroughs of why things are shaped as they are (gitignored)
+├── firebase.json .firebaserc          Hosting as a proxy in front of Cloud Run — no site
 ├── backend/
 │   ├── index.js                       Express entry; mounts routers, starts jobs in dev
 │   ├── types.ts                       zod query schemas + shared API types
@@ -194,6 +220,7 @@ RCS-Travels-Website/
 │   ├── hooks/                          useData, useApi, useViewNavigate, useIsMobile,
 │   │                                   useExitAnim, useRefreshNotice
 │   ├── components/                     ProtectedRoute, ErrorBoundary, PageMeta, RideDetails,
+│   │                                   DriverReview (admin: documents + suspension),
 │   │                                   skeletons, illustrations, ui/
 │   └── pages/                          OnBoarding, VehicleSelect, TrackingPage, Login,
 │                                       SignUp, ManageAccount, Settings, Safety, Help,
@@ -618,14 +645,25 @@ captain to his Clerk identity**), `GET /me`
 routes — the ones that have to work *before* he is approved, since they are how he becomes
 approved. It refuses a suspended driver with the reason.
 
-**Admin** (7) — `GET /booking`, `GET /driver`, `GET /user` (zod-validated filters),
+**Admin** (8) — `GET /booking`, `GET /driver`, `GET /user` (zod-validated filters),
 `GET|PUT /zones` (the fare-zone editor), `GET /drivers/:id/documents` (short-lived signed URLs,
 **null for anything not `clean`** — `signedDocumentUrl` fails closed), `PATCH /documents/:id`
-(approve / reject with a reason).
+(approve / reject with a reason), `PATCH /drivers/:id/suspension` (stop a captain driving, or
+let him back on; a reason is required to suspend and the captain is shown it).
+
+**There is deliberately no "approve driver" endpoint.** `verificationStatus` is DERIVED —
+`recomputeDriverVerification` returns `approved` exactly when every required document is
+approved and still valid, and it recomputes on every review, renewal and expiry sweep. A manual
+override would be a fourth writer of a field the other three keep recalculating: it would
+appear to work and silently revert at the next sweep. Approving the documents IS approving the
+captain. Suspension needs its own column precisely because it is the opposite — a judgement
+about conduct, derivable from nothing, and it does **not** touch `verificationStatus`, because
+a suspended captain's paperwork is still in order.
 
 **Internal** — `GET /internal/jobs`, `POST /internal/jobs/:name` for
-`dispatch | document-scan | document-expiry`. Mounted **before** `clerkAuth` because the caller
-presents a Google OIDC token, not a Clerk session. Authenticated by
+`dispatch | document-scan | document-expiry`, and `POST /internal/scan/:id` for one document
+(delivered by Cloud Tasks moments after an upload is confirmed). Mounted **before** `clerkAuth`
+because the caller presents a Google OIDC token, not a Clerk session. Authenticated by
 `middleware/internalAuth.js`, which verifies the token's audience *and* the calling service
 account, and answers 503 rather than allowing anything if either is unconfigured.
 
@@ -692,10 +730,16 @@ in-process and rate-limited so the API key never reaches the browser.
   split between the man and each car, and per-car verification.
 - **Dispatch fairness** — `last_offered_at` / `last_assigned_at` so ride-now stops handing every
   booking to whoever parks nearest the gate.
-- **Cloud Run migration, phases 1–2** — background sweeps moved off `setInterval` onto Cloud
-  Scheduler + authenticated `/internal` endpoints; the backend containerised and deployed to
-  Cloud Run alongside Render, with secrets in Secret Manager. `lib/storage.js` extracted so the
-  Supabase → GCS swap is one file. See `decisions/cloud-run-migration.md`.
+- **The Cloud Run migration, all of it** — sweeps off `setInterval` onto Cloud Scheduler +
+  authenticated `/internal` endpoints; the backend containerised; secrets in Secret Manager;
+  driver documents moved from Supabase Storage to Cloud Storage behind the `lib/storage.js`
+  seam; per-document scans on Cloud Tasks; `api.rcstravels.co.in` in front via Firebase
+  Hosting; and Vercel cut over on 13 Aug 2026 with every flow verified in production and no
+  5xx. See `decisions/cloud-run-migration.md`.
+- **Admin document review and suspension** — open a captain's papers, approve or reject each
+  with a reason he is shown, and stop him driving or let him back on. The panel renders the
+  file verdict and the admin verdict as two separate chips, and offers no buttons at all for a
+  document the file check has not cleared, because the server refuses to serve a URL for one.
 - **Customer frontend** — the whole funnel: OnBoarding, Login/SignUp, VehicleSelect (fare
   cards, solo/share, safer-route toggle, pin-confirm map, searching/confirmed/no-driver
   panels), TrackingPage on `/booking/:id`, RideDetails, ManageAccount, Settings, Safety, Help,
@@ -716,16 +760,14 @@ in-process and rate-limited so the API key never reaches the browser.
 
 ### Left to build, in priority order
 
-1. **Finish the Cloud Run migration** — run the functional checklist against Cloud Run, cut
-   Vercel and the Expo app over, retire Render, then Supabase Storage → GCS and Cloud Tasks
-   for individual scans. Put a custom domain (`api.rcstravels.co.in`) in front of Cloud Run
-   *before* cutting over: `EXPO_PUBLIC_API_BASE_URL` is inlined into the app bundle at build
-   time, so a bare `run.app` URL would make every future move an app release.
-2. **Rotate every production credential** once that is done — see the top of ROADMAP for why
-   and in what order.
-3. **The remaining admin mutations** — approve / reject / deactivate a *driver*, and manual
-   re-assignment. Document review exists (`PATCH /admin/documents/:id`); driver-level
-   approval still does not, so nothing can move a captain to `approved`.
+1. **Rotate every production credential** — Firebase, Clerk, Supabase and `FARE_QUOTE_SECRET`.
+   See the top of ROADMAP for why and in what order. Each has to land in Render's env *and*
+   Secret Manager while both run.
+2. **Point the EAS environments at `api.rcstravels.co.in`.** The local `.env` files are right;
+   the EAS-stored `development` value is still a laptop LAN address, and that is what a BUILD
+   reads. `preview` and `production` are still empty, so a build on either dies at launch.
+3. **Manual booking re-assignment** — the last admin mutation that does not exist. Document
+   review and suspension both do now.
 4. **Real FCM** — `sendFCM` is a coin flip, so every accept path is untested against a real
    device. `sendPush` is real, so the plumbing exists; what is missing is making assignment
    event-driven rather than waiting 30s for a boolean a push can never return.
@@ -822,6 +864,21 @@ for an index of every booking-flow screen, rendered with a mock booking and no b
   sends, keyed on `NODE_ENV` rather than on a comment somebody has to remember to restore.
 - **Testing against Cloud Run writes to the production database** with live Clerk keys. There
   is no staging database. `npm run db:clean` afterwards.
+- **The publishable key and the secret key must name the SAME Clerk instance.** The backend
+  mints a sign-in ticket with `CLERK_SECRET_KEY` and the client redeems it with the
+  publishable key; a ticket from the live instance is meaningless to the development one, and
+  the symptom is "This ticket is invalid. Make sure you're using a valid ticket generated by
+  Clerk" — which says nothing about instances. It bit both the website and the captain app
+  when they were pointed at Cloud Run while still carrying `pk_test_`.
+- **A fake phone number cannot complete a login on a deployed environment.** Meta accepts a
+  send to any well-formed number and answers 200, then silently drops it if the number has no
+  WhatsApp account. So `send-otp` looks successful and no code ever arrives. Testing auth
+  against Cloud Run needs a real handset; the seeded numbers are useless there.
+- **`driver-app` rewrites its API host in dev** — `src/api/api.js` replaces the configured
+  host with whatever machine served its JS, so a stale LAN address can never strand the app.
+  That is now gated on the configured URL being local; before it was, pointing the app at a
+  deployed backend silently produced `https://192.168.x.x` and every call died as "Could not
+  reach the server" with the env file looking perfectly correct.
 - **One phone number does three jobs** — public support line, `ADMIN_PHONE` for the T−1h
   escalation, and Raju's own login. Keep `ADMIN_PHONE` its own env var; dispatch priority must
   read `Driver.group` and never a phone number.
