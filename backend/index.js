@@ -4,7 +4,7 @@ import cors from 'cors'
 import { prisma } from './db/prisma.js'
 import { clerkAuth } from './middleware/auth.js'
 import { errorHandler } from './middleware/errorHandler.js'
-import { googleApiLimiter, fareLimiter, authLimiter } from './middleware/rateLimit.js'
+import { googleApiLimiter, fareLimiter, authLimiter, shareLimiter } from './middleware/rateLimit.js'
 import fareRouter from './routes/fare.js'
 import bookingsRouter from './routes/bookings.js'
 import driverRouter from './routes/driver.js'
@@ -17,6 +17,7 @@ import hybridAuthRouter from './routes/hybridAuth.js'
 import adminRouter from './routes/admin.js'
 import googleRouter from './routes/googleAPI.js'
 import internalRouter from './routes/internal.js'
+import shareRouter from './routes/share.js'
 import { JOBS_MODE } from './lib/jobs.js'
 
 const app = express()
@@ -59,6 +60,13 @@ app.use(clerkAuth)
 
 // Both of these proxy billed Google APIs and cannot require auth — a rider sees
 // fares and types addresses before logging in.
+// Public by design and by necessity: the person following a shared ride has no
+// account, which is the entire feature. It sits after clerkAuth like everything
+// else — clerkAuth only parses a session it is given, and this route never asks
+// for one — and behind its own limiter, being the only unauthenticated way to
+// read a booking. routes/share.js documents what it will and will not return.
+app.use('/api/share', shareLimiter, shareRouter)
+
 app.use('/api/fare', fareLimiter, fareRouter)
 app.use('/api/bookings', bookingsRouter)
 app.use('/api/driver', driverRouter)

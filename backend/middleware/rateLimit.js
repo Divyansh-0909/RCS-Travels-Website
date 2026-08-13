@@ -34,6 +34,22 @@ export const fareLimiter = rateLimit({
   limit: 150,
 })
 
+// The public share route, which is the only unauthenticated way to read a booking.
+// Its token is 128 random bits, so this is not what stops guessing — nothing gets
+// to guess a keyspace that size. It is here for the two things a limiter can
+// actually do: cap what one address costs us in database round trips, and stop a
+// scripted poll of a link that leaked from running hot forever.
+//
+// Sized off honest use: the page polls every 5s, so one watcher spends 12 requests
+// a minute, 180 over the window. 900 leaves room for a handful of people following
+// the same ride from one home or office NAT — and a phone that reloads a few times
+// — while a script hammering the endpoint still hits the wall inside a minute.
+export const shareLimiter = rateLimit({
+  ...shared,
+  windowMs: 15 * 60 * 1000,
+  limit: 900,
+})
+
 // Login is once per device — Clerk sessions persist — so even a hostel IP rarely
 // produces more than ~10 fresh logins an hour (each ≈ 2 sends + a few verify
 // attempts). 60 absorbs that; the per-phone cooldown in /send-otp is what actually

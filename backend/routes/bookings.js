@@ -9,6 +9,7 @@ import { myBookingsQuerySchema } from '../types.ts'
 import { VEHICLE_CLASS_NAMES, isVehicleClass, seatsOf } from '../constants/vehicles.js'
 import { createBooking, normalizeReference } from '../lib/bookingReference.js'
 import { signedRiderPhotoUrl } from '../services/driverPhoto.js'
+import { newShareToken, shareIsLive, shareUrlFor, SHARE_TTL_MS } from '../lib/shareLink.js'
 
 const bookingsRouter = Router()
 
@@ -22,6 +23,13 @@ export const ACTIVE_STATUSES = ['pending', 'confirmed', 'assigned', 'en_route', 
 // driver turned down other rides and has already spent the fuel. Anything earlier
 // is free, including en_route: the driver is moving but hasn't committed the wait.
 // A ride already underway can't be self-cancelled; that's a support conversation.
+// A ride worth following: one that is going to happen, or is happening. `pending`
+// is out because the search may still end in no_driver, and a link that never
+// resolves into anything is worse than no link. The terminal statuses are out
+// because a share is a window onto a trip in progress — there is nothing left to
+// watch, and the outcome is the rider's to tell.
+const SHAREABLE_STATUSES = ['confirmed', 'assigned', 'en_route', 'reached', 'started']
+
 const CANCELLABLE_STATUSES = ['pending', 'confirmed', 'assigned', 'en_route', 'reached']
 const CHARGEABLE_STATUSES = ['reached']
 export const CANCELLATION_CHARGE_PCT = 35
@@ -207,6 +215,64 @@ bookingsRouter.post('/', protect, async (req, res) => {
     startAssignment(booking.id)
 
     return res.json({ bookingId: booking.id, reference: booking.reference, bookingCode, status: 'pending' })
+})
+
+// Mint (or hand back) this ride's "follow my ride" link.
+//
+// IDEMPOTENT WHILE THE LINK IS LIVE, and that is a safety property rather than a
+// nicety: a rider who taps Share twice, or shares to two people, must end up with
+// ONE handle to revoke. Minting a fresh token per tap would leave the earlier ones
+// answering with nobody able to name them.
+//
+// Only rides that are actually happening. Sharing a completed trip would create a
+// live window onto a finished one, and sharing a `pending` search would hand
+// someone a link that mostly shows nothing — and might never show anything, if the
+// search ends in no_driver.
+bookingsRouter.post('/:id/share', protect, async (req, res) => {
+  const user = await prisma.user.findUnique({ where: { clerkId: req.auth.userId } })
+  if (!user) return res.status(401).json({ error: 'User not found' })
+
+  const booking = await prisma.booking.findUnique({ where: { id: req.params.id } })
+  if (!booking) return res.status(404).json({ error: 'Booking not found' })
+  if (booking.userId !== user.id) return res.status(403).json({ error: 'Forbidden' })
+  if (!SHAREABLE_STATUSES.includes(booking.status)) {
+    return res.status(409).json({ error: `A ${booking.status} ride cannot be shared`, status: booking.status })
+  }
+
+  if (shareIsLive(booking)) {
+    return res.json({
+      url: shareUrlFor(booking.shareToken),
+      expiresAt: booking.shareExpiresAt,
+    })
+  }
+
+  const shareToken = newShareToken()
+  const shareExpiresAt = new Date(Date.now() + SHARE_TTL_MS)
+  await prisma.booking.update({
+    where: { id: booking.id },
+    data: { shareToken, shareExpiresAt },
+  })
+
+  return res.json({ url: shareUrlFor(shareToken), expiresAt: shareExpiresAt })
+})
+
+// Kill the link. Clears the token rather than only the expiry, so the handle
+// itself stops existing — an expiry alone would leave a row that a later bug, or
+// a careless "extend the share" feature, could bring back to life.
+bookingsRouter.delete('/:id/share', protect, async (req, res) => {
+  const user = await prisma.user.findUnique({ where: { clerkId: req.auth.userId } })
+  if (!user) return res.status(401).json({ error: 'User not found' })
+
+  const booking = await prisma.booking.findUnique({ where: { id: req.params.id } })
+  if (!booking) return res.status(404).json({ error: 'Booking not found' })
+  if (booking.userId !== user.id) return res.status(403).json({ error: 'Forbidden' })
+
+  await prisma.booking.update({
+    where: { id: booking.id },
+    data: { shareToken: null, shareExpiresAt: null },
+  })
+
+  return res.json({ ok: true })
 })
 
 bookingsRouter.get('/:id/status', protect, async (req, res) => {

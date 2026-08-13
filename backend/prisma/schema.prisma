@@ -775,6 +775,24 @@ model Booking {
   // the booked class rather than to the driver row; see the status endpoint in
   // routes/bookings.js for why the plate's fallback cannot be copied here.
   vehicleModel        String?       @map("vehicle_model")
+  // "Follow my ride" — an opaque handle that lets someone with the link watch
+  // this trip WITHOUT an account. Minted only when the rider asks for it, so a
+  // ride nobody shared has no live handle to leak, and cleared when he revokes.
+  //
+  // NOT the booking id. That id is already in the rider's own URL, is handed to
+  // support, and appears in the WhatsApp templates — a share link built on it
+  // could not be revoked without breaking all of those, and anyone who had ever
+  // seen one would hold a permanent key to the ride.
+  //
+  // Nothing else may be looked up by this column, and nothing it feeds may be
+  // written: see routes/share.js for the exact payload, which is deliberately
+  // narrower than the rider's own status endpoint.
+  shareToken          String?       @unique @map("share_token")
+  // Every share dies on a clock, because the alternative is a link a rider sent
+  // to one person in one moment that still answers a year later, in a group chat
+  // he has left. Set at mint; the public route treats a past date as no link at
+  // all rather than as a link to nothing.
+  shareExpiresAt      DateTime?     @map("share_expires_at")
   scheduledAt         DateTime?     @map("scheduled_at")
   isOutstation        Boolean       @default(false) @map("is_outstation")
   preferSafeRoute     Boolean       @default(false) @map("prefer_safe_route")

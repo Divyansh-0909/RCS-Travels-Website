@@ -199,6 +199,7 @@ gcloud run deploy $SERVICE `
   --concurrency 40 `
   --allow-unauthenticated `
   --set-env-vars "CORS_ORIGINS=https://rcstravels.vercel.app" `
+  --set-env-vars "APP_ORIGIN=https://rcstravels.vercel.app" `
   --set-env-vars "GCS_BUCKET=rcs-travels-driver-documents" `
   --set-secrets "DATABASE_URL=DATABASE_URL:latest,CLERK_SECRET_KEY=CLERK_SECRET_KEY:latest,CLERK_PUBLISHABLE_KEY=CLERK_PUBLISHABLE_KEY:latest,FARE_QUOTE_SECRET=FARE_QUOTE_SECRET:latest,GOOGLE_MAPS_API_KEY=GOOGLE_MAPS_API_KEY:latest,FIREBASE_SERVICE_ACCOUNT_BASE64=FIREBASE_SERVICE_ACCOUNT_BASE64:latest,WHATSAPP_ACCESS_TOKEN=WHATSAPP_ACCESS_TOKEN:latest,WHATSAPP_PHONE_NUMBER_ID=WHATSAPP_PHONE_NUMBER_ID:latest,ADMIN_PHONE=ADMIN_PHONE:latest"
 ```

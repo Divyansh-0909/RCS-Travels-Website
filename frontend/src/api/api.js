@@ -31,6 +31,11 @@ export const estimateFare      = (pickupAddress, dropAddress, vehicleClass, pick
 export const createBooking     = (data, getToken)        => request("/api/bookings", { method: "POST", body: data, getToken });
 export const cancelBooking     = (bookingId, getToken)   => request("/api/bookings/cancel", { method: "POST", body: { bookingId }, getToken});
 export const getBookingStatus  = (id, getToken)          => request(`/api/bookings/${id}/status`, { getToken });
+export const shareBooking      = (id, getToken)          => request(`/api/bookings/${id}/share`, { method: "POST", getToken });
+export const unshareBooking    = (id, getToken)          => request(`/api/bookings/${id}/share`, { method: "DELETE", getToken });
+// No getToken, and that is the feature: the person following a shared ride has no
+// account. The token in the path is the whole of the authorisation.
+export const getSharedTrip     = (token)                 => request(`/api/share/${encodeURIComponent(token)}`);
 export const getMyBookings     = (filters, getToken)     => request(`/api/bookings/my-bookings${toQuery(filters)}`, { getToken });
 export const sendOtp           = (phone, intent)         => request("/api/auth/send-otp", { method: "POST", body: { phone, intent } });
 export const verifyOtp         = (phone, otp, intent)    => request("/api/auth/verify-otp", { method: "POST", body: { phone, otp, intent } });

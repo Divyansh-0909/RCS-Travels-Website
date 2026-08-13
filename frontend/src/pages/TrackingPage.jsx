@@ -27,43 +27,7 @@ import RideDetails from "../components/RideDetails";
 import Skeleton from "../components/ui/Skeleton";
 import { SAFE_ROUTE_SURCHARGE, isDistancePriced } from "../constants/fares";
 import { labelOf } from "../constants/vehicles";
-
-// Statuses where a driver exists and may be moving — the only ones that poll.
-const LIVE_STATUSES = ["assigned", "en_route", "reached", "started"];
-
-// ETAs are derived from the driver's last known position rather than a Routes
-// call: at one request per 5-second poll that would be both expensive and
-// pointless, since the answer changes by seconds. Straight-line distance over a
-// city average is honest enough for "how far away is my cab" and costs nothing.
-// Swap in a real duration if the driver app ever reports one.
-const AVG_SPEED_KMH = 25;
-
-function haversineKm(from, to) {
-    const toRad = (d) => (d * Math.PI) / 180;
-    const dLat = toRad(to.lat - from.lat);
-    const dLng = toRad(to.lng - from.lng);
-    const a = Math.sin(dLat / 2) ** 2 +
-        Math.cos(toRad(from.lat)) * Math.cos(toRad(to.lat)) * Math.sin(dLng / 2) ** 2;
-    return 2 * 6371 * Math.asin(Math.sqrt(a));
-}
-
-// null whenever either end is unknown, so callers render a dash instead of a
-// confident lie. Never rounds below 1 — "0 mins away" reads as broken.
-const etaMinutes = (from, to) =>
-    from && to ? Math.max(1, Math.round((haversineKm(from, to) / AVG_SPEED_KMH) * 60)) : null;
-
-const minsLabel = (n) => (n == null ? "—" : `${n} min${n === 1 ? "" : "s"}`);
-
-// Plates are stored exactly as the captain typed them, upper-cased — "UP16AB1234"
-// as often as "UP 16 AB 1234". A rider matching a plate against a car reads it in
-// groups, so an unspaced one gets grouped; anything that isn't the standard
-// state-district-series-number shape is printed untouched rather than guessed at,
-// because a mangled plate is worse than a dense one.
-const PLATE = /^([A-Z]{2})(\d{1,2})([A-Z]{1,3})(\d{4})$/;
-const formatPlate = (n) => {
-    const m = n && PLATE.exec(n.replace(/\s+/g, ""));
-    return m ? `${m[1]} ${m[2]} ${m[3]} ${m[4]}` : n;
-};
+import { LIVE_STATUSES, etaMinutes, minsLabel, formatPlate } from "../lib/trip";
 
 // ---- Shared layout + type scale -------------------------------------------
 // The desktop content column is 377px — OnBoarding's effective control width
@@ -343,6 +307,54 @@ const TrackingPage = () => {
     const callDriver = () => {
         if (driver?.phone) window.location.href = `tel:${driver.phone}`;
     };
+
+    // "Follow my ride". Asks the server for the link — the same one every time
+    // while it is live, so a rider who shares with two people has one thing to
+    // revoke — then hands it to the OS share sheet, which is where a person
+    // chooses WhatsApp or a contact.
+    //
+    // navigator.share needs a user gesture and a secure context, and desktop
+    // browsers largely do not have it, so the clipboard is the fallback and the
+    // pill says so. Both paths are inside the same click, because Safari
+    // invalidates the gesture across an await it did not start with — hence the
+    // fetch first and the share immediately after, never in a .then chain.
+    const [shareBusy, setShareBusy] = useState(false);
+    const [shareNote, setShareNote] = useState("");
+    const shareTrip = async () => {
+        if (shareBusy || !bookingId) return;
+        setShareBusy(true);
+        setShareNote("");
+        try {
+            const data = await api.shareBooking(bookingId);
+            if (data?.error) {
+                setShareNote(data.error);
+                return;
+            }
+            const text = `Follow my RCS Travels ride: ${data.url}`;
+            if (navigator.share) {
+                // A cancelled share sheet rejects with AbortError. That is the
+                // rider changing their mind, not a failure, so it says nothing.
+                try {
+                    await navigator.share({ title: "My RCS Travels ride", text, url: data.url });
+                    return;
+                } catch (err) {
+                    if (err?.name === "AbortError") return;
+                }
+            }
+            await navigator.clipboard.writeText(data.url);
+            setShareNote("Link copied");
+        } catch {
+            setShareNote("Couldn't create a link");
+        } finally {
+            setShareBusy(false);
+        }
+    };
+
+    useEffect(() => {
+        if (!shareNote) return;
+        const t = setTimeout(() => setShareNote(""), 3000);
+        return () => clearTimeout(t);
+    }, [shareNote]);
 
     // One driver card for every state that shows one, so its type scale and
     // padding can't drift between the scheduled / live / completed screens.
@@ -768,10 +780,18 @@ const TrackingPage = () => {
                                 column — the column is vertically centred on
                                 mobile, so its top moves with the content. */}
                             {backArrow}
-                            <Button prop={{ variant: "input", bg: "var(--background-muted)", rounded: "999px" }} className='absolute z-20 -top-12 right-4 px-3 sm:hidden block shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)]'>
+                            <Button
+                                onClick={shareTrip}
+                                prop={{ variant: "input", bg: "var(--background-muted)", rounded: "999px", disabled: shareBusy || !bookingId }}
+                                className='absolute z-20 -top-12 right-4 px-3 sm:hidden block shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)]'
+                            >
                                 <div className="flex gap-1.5 items-center justify-center">
                                     <Icon path={mdiShareVariant} size={0.7} />
-                                    <h4 className="text-sm">Share</h4>
+                                    {/* The pill carries its own result — "Link
+                                        copied" where there is no OS share sheet.
+                                        whitespace-nowrap so the wider label grows
+                                        the pill instead of wrapping inside it. */}
+                                    <h4 className="text-sm whitespace-nowrap">{shareNote || "Share"}</h4>
                                 </div>
                             </Button>
                             {/* Bounds the column to the sheet's height on phones so
@@ -800,10 +820,14 @@ const TrackingPage = () => {
                                             <h3 className={`text-center sm:text-left w-full ${SUBTITLE}`}>{liveHeadline.detail}</h3>
                                         </>
                                     )}
-                                    <Button prop={{ variant: "input", bg: "var(--background-muted)", rounded: "999px" }} className="mt-2 px-3 hidden sm:block">
+                                    <Button
+                                        onClick={shareTrip}
+                                        prop={{ variant: "input", bg: "var(--background-muted)", rounded: "999px", disabled: shareBusy || !bookingId }}
+                                        className="mt-2 px-3 hidden sm:block"
+                                    >
                                         <div className="flex gap-1.5 items-center justify-center">
                                             <Icon path={mdiShareVariant} className="text-[var(--text-muted)]" size={0.6} />
-                                            <p className="text-sm sm:text-base">Share</p>
+                                            <p className="text-sm sm:text-base whitespace-nowrap">{shareNote || "Share"}</p>
                                         </div>
                                     </Button>
                                 </div>

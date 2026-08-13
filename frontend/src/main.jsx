@@ -12,6 +12,7 @@ import VehicleSelect from './pages/VehicleSelect';
 import SignUpPage from './pages/SignUpPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import TrackingPage from './pages/TrackingPage';
+import SharedTrip from './pages/SharedTrip';
 import ManageAccount from './pages/ManageAccount';
 import SettingsPage from './pages/SettingsPage';
 import SafetyPage from './pages/SafetyPage';
@@ -66,6 +67,14 @@ const router = createBrowserRouter([{
     // param (the /dev previews).
     path: "/booking/:id",
     element: <ProtectedRoute><TrackingPage /></ProtectedRoute>,
+  },
+  // Public, and the only page that is public WITHOUT being for everyone: the
+  // token in the path is the whole of the authorisation, so there is no
+  // ProtectedRoute here by design — the person following a shared ride has no
+  // account. Short path because it is pasted into chat messages by hand.
+  {
+    path: "/t/:token",
+    element: <SharedTrip />,
   },
   {
     path: "/manage-account",

@@ -91,6 +91,17 @@ export const pageMeta = {
             "Watch your driver make their way to you, with their name, number, and vehicle, and call or cancel from the same place.",
         noindex: true,
     },
+    /* Not behind auth, and noindex for a stronger reason than the rest: the URL
+       IS the credential. A crawler that reached one would be publishing a live
+       window onto a stranger's trip, and the description is written to give
+       nothing away in a link preview — a WhatsApp card that named the rider or
+       the destination would leak the trip to every group the link passed
+       through, before anyone opened it. */
+    "/t": {
+        title: "Following a Trip | RCS Travels",
+        description: "Someone shared their ride with you. Open the link to see where they are.",
+        noindex: true,
+    },
     "/manage-account": {
         title: "Manage Account | RCS Travels",
         description:

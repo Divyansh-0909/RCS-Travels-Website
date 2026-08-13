@@ -12,6 +12,8 @@ export function useApi() {
     createBooking:    (data)          => api.createBooking(data, getToken),
     cancelBooking:    (bookingId)     => api.cancelBooking(bookingId, getToken),
     getBookingStatus: (id)            => api.getBookingStatus(id, getToken),
+    shareBooking:     (id)            => api.shareBooking(id, getToken),
+    unshareBooking:   (id)            => api.unshareBooking(id, getToken),
     getMyBookings:    (filters)       => api.getMyBookings(filters, getToken),
     sendOtp:          (phone, intent)      => api.sendOtp(phone, intent),
     verifyOtp:        (phone, otp, intent) => api.verifyOtp(phone, otp, intent),
