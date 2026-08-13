@@ -4,11 +4,15 @@ import { useDriver } from '../hooks/useDriver';
 
 // The gate.
 //
-// Home, Available, Post, Rides and every ride screen sit behind this. A captain
-// whose documents are not approved cannot reach any of them — not because those
+// Available, Post, Rides and every ride screen sit behind this. A captain whose
+// documents are not approved cannot reach any of them — not because those
 // screens would break, but because every request they make would 403 from
 // requireApprovedDriver, and a screen full of failed requests is a worse way to
 // learn you are not verified than being told.
+//
+// In practice he has no way to ask for them either: the AppBar drops those tabs
+// until he is approved. This stays because a bar is a suggestion and a route is
+// a fact — a stale deep link or a push payload can still name one of these paths.
 //
 // IT IS NOT A SECURITY BOUNDARY, and nothing here should ever be mistaken for
 // one. The server refuses an unapproved driver at every endpoint that matters,
@@ -40,9 +44,9 @@ const VerifiedRoute = () => {
   }
 
   if (!profile?.onboarding?.canDrive) {
-    // `state` carries where he was trying to go, so the moment he is approved
-    // the app can put him there instead of dumping him on Home.
-    return <Navigate to="/onboarding/status" replace state={{ from: location.pathname }} />;
+    // Home, which for him is the application status. `state` carries where he was
+    // trying to go, so the moment he is approved the app can put him there.
+    return <Navigate to="/" replace state={{ from: location.pathname }} />;
   }
 
   return <Outlet />;

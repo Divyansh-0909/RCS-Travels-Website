@@ -6,6 +6,7 @@ import Animated, { useAnimatedStyle, withTiming } from "react-native-reanimated"
 import { useLocation, useNavigate } from "react-router-native";
 import AppText from "./AppText";
 import { useApi } from "../hooks/useApi";
+import { useDriver } from "../hooks/useDriver";
 
 
 const Bell = cssInterop(BellIcon, {
@@ -30,6 +31,13 @@ const OnlineToggle = () => {
     const onHome = pathname === "/";
 
     const api = useApi()
+    const { profile } = useDriver();
+
+    // "/" is the application status until he is approved, and none of this header
+    // belongs on it: the switch would 403, and offering to go online is the one
+    // thing that screen exists to explain he cannot do yet. The bell goes with it —
+    // /notifications is behind the gate.
+    const canDrive = profile?.onboarding?.canDrive ?? false;
 
     const knob = useAnimatedStyle(() => ({
         transform: [{
@@ -52,7 +60,7 @@ const OnlineToggle = () => {
         }
     }
 
-    if (!onHome) return null;
+    if (!onHome || !canDrive) return null;
 
     return (
         <View className="absolute z-50 flex flex-col justify-center items-center top-10 w-[92%]">

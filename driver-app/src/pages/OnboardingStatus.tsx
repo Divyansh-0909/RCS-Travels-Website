@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
 import {
-  CheckCircleIcon,
   ClockIcon,
   ShieldCheckIcon,
   UploadSimpleIcon,
@@ -10,10 +9,15 @@ import {
 } from 'phosphor-react-native';
 import { useNavigate } from 'react-router-native';
 import AppText from '../components/AppText';
+import Button from '../components/ui/Button';
 import { useDriver } from '../hooks/useDriver';
 import { openSupportWhatsApp } from '../constants/support';
 
-// Where a captain lands whenever he cannot drive yet.
+// Home, for a captain who cannot drive yet.
+//
+// Not a screen he is sent to — the one the Home tab opens, for as long as being
+// approved is the only thing he is waiting on. HomeGate swaps the ride board in
+// under him the moment that changes.
 //
 // One screen with six faces rather than six screens, because the difference
 // between them is a sentence and a button — and because the state changes under
@@ -31,9 +35,18 @@ const INK = 'text-[var(--background-primary)]';
 const MUTED = 'text-gray-600';
 const TITLE_TRACKING = { letterSpacing: -0.72 };
 
+// Same clearance every other board inside the shell reserves. This screen centres
+// its stack rather than scrolling it, so without this the stack centres on the
+// full height and parks its last button behind the floating bar.
+const BAR_CLEARANCE = 132;
+
+// How wide the column is allowed to get. A cap, not a width — a 360px phone is
+// narrower than this once the padding is off, and nothing about that screen
+// should change.
+const CONTENT_MAX = 320;
+
 const PRIMARY = '#243AFB';
 const AMBER = '#92400E';
-const GREEN = '#15803D';
 const RED = '#B91C1C';
 
 type Face = {
@@ -60,7 +73,10 @@ const FACES: Record<string, Face> = {
     title: 'Nearly there',
     body: 'A few documents are still missing. Add the rest and we’ll get them reviewed.',
     action: 'documents',
-    actionLabel: 'Continue',
+    // Names the job, not the navigation. "Continue" describes what the app does
+    // when tapped; this describes what he does when he gets there, in the same
+    // words the sentence above just used.
+    actionLabel: 'Add the rest',
   },
   // Seconds, not days. Said plainly so he does not close the app thinking it has
   // hung, and so he does not ring the office about a machine check.
@@ -114,14 +130,10 @@ const OnboardingStatus = () => {
   const navigate = useNavigate();
 
   const blockedBy = profile?.onboarding?.blockedBy ?? 'notUploaded';
-  const canDrive = profile?.onboarding?.canDrive ?? false;
 
-  // The moment he is approved, this screen has no reason to exist. Sending him
-  // on rather than leaving a "you're approved" page with a button is the point:
-  // he came here because he wanted Home.
-  useEffect(() => {
-    if (canDrive) navigate('/', { replace: true });
-  }, [canDrive, navigate]);
+  // No approved case to handle here any more. This screen only ever renders as
+  // Home's unapproved face, so the moment canDrive flips, HomeGate stops
+  // rendering it — there is nothing left for it to redirect away from.
 
   // `scanning` is the one state that resolves on its own in seconds, so it is
   // the one state worth re-asking about while he watches. Everything else waits
@@ -145,7 +157,29 @@ const OnboardingStatus = () => {
   const { Icon } = face;
 
   return (
-    <ScrollView className="flex-1 bg-white" contentContainerStyle={{ padding: 20, gap: 16, flexGrow: 1, justifyContent: 'center' }}>
+    <ScrollView
+      // w-full is load-bearing, not tidiness. The shell centres this with
+      // alignItems: 'center', which leaves the scroller's width auto — and a child
+      // asking for w-full inside an auto-width parent resolves its percentage
+      // against nothing and comes out zero wide. The text blocks below size from
+      // their own content and survive it; the button is w-full, and without this it
+      // renders at zero width, which is to say invisibly.
+      className="flex-1 w-full bg-white"
+      contentContainerStyle={{
+        padding: 20,
+        paddingBottom: BAR_CLEARANCE,
+        flexGrow: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      {/* The column, capped. Everything here is one short line of type over one
+          button, and both read worse the wider they get: a sentence that runs the
+          full width of a large phone is a sentence the eye has to track back
+          across, and a button that wide stops looking like a thing to press.
+          Below CONTENT_MAX the padding above still governs, so on a small phone
+          this changes nothing. */}
+      <View style={{ width: '100%', maxWidth: CONTENT_MAX, gap: 16 }}>
       <View className="items-center gap-4">
         <View
           className="w-16 h-16 rounded-2xl items-center justify-center"
@@ -173,38 +207,63 @@ const OnboardingStatus = () => {
         ) : null}
       </View>
 
+      {/* The shared Button, not a Pressable carrying both a className and a
+          style-as-a-function. NativeWind merges an inline style into its own
+          computation and understands objects and arrays only — a function is
+          collected, applied, and yields nothing (see the note in Button.tsx). That
+          silently dropped this button's fill, leaving it full width, correctly
+          padded, and setting white text on a white page. */}
       {face.action ? (
-        <Pressable
-          role="button"
+        <Button
           onPress={() => {
             if (face.action === 'support') openSupportWhatsApp();
             else navigate('/account/documents');
           }}
-          className="w-full rounded-xl py-4 items-center mt-2"
-          style={({ pressed }) => ({ backgroundColor: PRIMARY, opacity: pressed ? 0.85 : 1 })}
         >
-          <AppText className="font-semibold text-white">{face.actionLabel}</AppText>
-        </Pressable>
+          {face.actionLabel}
+        </Button>
       ) : null}
 
       {/* Always reachable, from every state. A captain who is stuck and cannot
           find a human is a captain who stops trying. */}
       {face.action !== 'support' ? (
+        // No className on the Pressable, so that the style function actually runs
+        // and the press feedback with it — the same NativeWind rule the button
+        // above ran into. Layout moves into the function rather than being split
+        // across both.
         <Pressable
           role="button"
           onPress={() => openSupportWhatsApp()}
-          className="w-full py-3 items-center"
-          style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
+          // No alignItems, so the label stretches the full width and text-center
+          // has something to centre against. Centring the View instead would
+          // shrink-wrap the text and leave a two-line wrap ragged.
+          style={({ pressed }) => ({
+            width: '100%',
+            paddingVertical: 12,
+            opacity: pressed ? 0.6 : 1,
+          })}
         >
-          <AppText className={`text-sm ${MUTED}`}>Need help? Talk to the office</AppText>
+          {/* Nested, because only half of this is the link. The question is a
+              muted aside; "Talk to Raju" is the thing being offered, and it is
+              the only part that should look like it can be tapped.
+
+              text-primary rather than an inline colour: AppText only skips its
+              white default when the className says a colour, so setting it in
+              style alone would leave two colours on the element and stylesheet
+              order to pick between them. The underline is safe in style — an
+              object merges. */}
+          <AppText className={`text-sm text-center ${MUTED}`}>
+            Need help?{' '}
+            <AppText
+              className="text-sm font-medium text-primary"
+              style={{ textDecorationLine: 'underline' }}
+            >
+              Talk to Raju
+            </AppText>
+          </AppText>
         </Pressable>
       ) : null}
-
-      {canDrive ? (
-        <View className="items-center gap-2">
-          <CheckCircleIcon size={22} weight="fill" color={GREEN} />
-        </View>
-      ) : null}
+      </View>
     </ScrollView>
   );
 };
