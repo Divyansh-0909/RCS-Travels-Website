@@ -134,16 +134,23 @@ IMPORTANT:
        drivers. That gate is the only thing stopping a rider's number signing
        into the captain app. Do NOT loosen it to unblock testing; seed a Driver
        row instead.~~
-- !! DECIDE THE API URL BEFORE THE FIRST CAPTAIN BUILD, because it is baked in.
-  EXPO_PUBLIC_* values are INLINED INTO THE JS BUNDLE AT BUILD TIME. So the API URL a build
-  carries is not configuration a captain's phone can be talked out of later — changing it is a
-  rebuild and a redistribution to every driver. That matters right now, because the backend is
-  moving from Render to Cloud Run and the Cloud Run URL
-  (https://rcs-api-197642164526.asia-south1.run.app) is not one to bake into anything.
-  DO THIS FIRST: map a custom domain — api.rcstravels.co.in — in front of Cloud Run, and point
-  both the website and the app at that. Then this migration, and every future one, is a mapping
-  change rather than an app release. No captain is on the app yet, so it will never be cheaper
-  to fix than now.
+- [DONE — 13 Aug 2026] THE API URL IS NOW https://api.rcstravels.co.in, and every client must
+  use it. EXPO_PUBLIC_* values are INLINED INTO THE JS BUNDLE AT BUILD TIME, so the URL a
+  captain build carries is not configuration his phone can be talked out of later — changing it
+  is a rebuild and a redistribution to every driver. Hence doing this before the first build.
+  !! THE EAS `development` ENVIRONMENT STILL POINTS AT A LAPTOP LAN ADDRESS. Local .env and
+  .env.local are updated; the EAS-stored value is not, and that is what a BUILD reads. Fix it
+  with `eas env:update --environment development` before any build leaves this machine, and
+  populate `preview`/`production`, which are still empty (see the item below).
+  HOW IT IS WIRED, because it is not the obvious way: a Cloud Run domain mapping would have
+  been free and does not exist in asia-south1 (501 UNIMPLEMENTED — and note that LISTING
+  mappings there succeeds and returns nothing, which reads as support and is not). A Global
+  External Application Load Balancer works anywhere and costs ~$18/month for the forwarding
+  rule alone, more than the rest of this stack combined. So Firebase Hosting sits in front as a
+  pure proxy: TLS and auto-renewing certs on the custom domain, every path rewritten to the
+  rcs-api Cloud Run service. See firebase.json and backend/hosting/README.md.
+  Cloud Scheduler and Cloud Tasks deliberately STAY on the run.app URL — internal callers no
+  bundle ever sees, so repointing them would only mean redoing the OIDC audience config.
 - POINT THE DRIVER APP AT THE RIGHT BACKEND BEFORE ANY BUILD THAT LEAVES THIS LAPTOP. Only the
   `development` EAS environment has variables (pushed 4 Aug 2026); `preview` and
   `production` are EMPTY. A build on either compiles cleanly and then dies on
