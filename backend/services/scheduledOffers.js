@@ -86,9 +86,34 @@ export async function offerScheduledRide(bookingId) {
     .filter((row) => row.status === 'rejected' || row.status === 'withdrawn')
     .reduce((n, row) => n + row._count, 0)
 
-  const group = eligibleGroup(booking, { rcsOffered, rcsResolved })
+  let group = eligibleGroup(booking, { rcsOffered, rcsResolved })
+  let drivers = (await candidatesIn(booking, group)).filter((d) => hasRoom(d, booking))
 
-  const drivers = (await candidatesIn(booking, group)).filter((d) => hasRoom(d, booking))
+  // rcs -> partner WHEN THERE IS NOBODY IN rcs TO ASK, and this is a deadlock fix
+  // rather than a policy change.
+  //
+  // eligibleGroup escalates on OFFERS RESOLVED: it stays at `rcs` while
+  // rcsOffered is 0, on the reading that nobody has been asked yet. That reading
+  // breaks when nobody CAN be asked — a fleet with no approved rcs driver in this
+  // vehicle class never creates an rcs offer, so rcsOffered is 0 on every sweep,
+  // forever, and the booking sits at `rcs` until it is cancelled. It never
+  // reaches the partner drivers who could have taken it. Found 14 Aug 2026 with a
+  // fleet that was entirely `partner`: scheduled rides were offered to nobody at
+  // all, silently, and the sweep reported success each time.
+  //
+  // Safe to re-run: candidatesIn excludes anyone already holding an offer for
+  // this booking, so a later sweep that lands here again finds nobody new and
+  // creates nothing rather than offering the ride twice.
+  //
+  // Only from rcs. The `admin` hold is bounded by a clock and expires on its own,
+  // so an owner with no driver row costs the booking a few minutes, not the ride
+  // — falling through THAT would hand away every booking during the window Raju
+  // is meant to have first refusal on.
+  if (drivers.length === 0 && group === 'rcs') {
+    group = 'partner'
+    drivers = (await candidatesIn(booking, group)).filter((d) => hasRoom(d, booking))
+  }
+
   if (drivers.length === 0) return 0
 
   // createMany rather than a row at a time: the sweep is a background job and a
