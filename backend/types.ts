@@ -152,6 +152,18 @@ const suspendDriverSchema = z.object({
   path: ['reason'],
 });
 
+// Which side of the fleet a captain drives on.
+//
+// `admin` IS DELIBERATELY MISSING from this enum rather than merely refused by the
+// route. It is exactly one row — the owner's — and it is what the owner-first hold
+// on every scheduled booking resolves to (eligibleGroup, constants/dispatch.js).
+// Handing it to a second captain would give him first refusal on the whole fleet's
+// work, and a body that cannot express the value is one no future caller can talk
+// the route into. The route refuses to move a driver already in it, separately.
+const driverGroupSchema = z.object({
+  group: z.enum(['rcs', 'partner']),
+});
+
 const locationSchema = z.object({
   lat: z.number(),
   lng: z.number(),
@@ -194,6 +206,11 @@ const driverListQuerySchema = z.object({
   vehicleClass: z.enum(VehicleClass).optional(),
   vehicleNumber: z.string().trim().optional(),
   verificationStatus: z.enum(VerificationStatus).optional(),
+  // The whole enum here, `admin` included — unlike driverGroupSchema, which is a
+  // WRITE and must not be able to name the owner's group. Reading the list back
+  // filtered to one row is harmless, and "show me the owner's row" is a question
+  // an admin has as much reason to ask as any other.
+  group: z.enum(DriverGroup).optional(),
   isOnline: z
     .enum(["true", "false"])
     .transform(value => value === "true")
@@ -286,6 +303,6 @@ const fareZoneCollectionSchema = z.object({
 });
 
 export {locationSchema, bookingListQuerySchema,driverListQuerySchema,myBookingsQuerySchema,userListQuerySchema,fareZoneCollectionSchema}
-export {reviewDocumentSchema, suspendDriverSchema}
+export {reviewDocumentSchema, suspendDriverSchema, driverGroupSchema}
 export {rideParamsSchema, driverOnlineSchema, fcmTokenSchema, rideStatusSchema, driverRidesQuerySchema, driverAccountInformationSchema, UploadUrlRequest, ConfirmDocumentsRequest}
 export {addVehicleSchema, activeVehicleSchema}

@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import { Linking, Pressable, View } from 'react-native';
 import { cssInterop } from 'nativewind';
 import { PhoneIcon, XIcon } from 'phosphor-react-native';
-import Animated, { FadeIn, SlideInDown } from 'react-native-reanimated';
+import Animated, { FadeIn, SlideInUp } from 'react-native-reanimated';
 import AppText from './AppText';
+import { useNoticeTop } from './AppBarVisibility';
 import { INK_TEXT, MUTED, SURFACE } from './ui/rideUi';
 import { ACTIVE_RIDE_STATUSES } from '../constants/booking';
 import { useApi } from '../hooks/useApi';
@@ -42,6 +43,7 @@ const isBusyWith = (bookings: UpcomingBooking[], exceptId: string) =>
 const RideAcceptedSheet = () => {
     const { accepted, clearAccepted } = useOffers();
     const api = useApi();
+    const top = useNoticeTop();
     const [show, setShow] = useState(false);
 
     useEffect(() => {
@@ -73,20 +75,25 @@ const RideAcceptedSheet = () => {
     return (
         <Animated.View
             entering={FadeIn.duration(180)}
-            style={{ position: 'absolute', inset: 0, zIndex: 90, justifyContent: 'flex-end' }}
+            style={{ position: 'absolute', inset: 0, zIndex: 90 }}
         >
-            {/* Tapping off the sheet closes it, the way every sheet on a phone
-                does. Its own view so the card above never inherits the dim. */}
+            {/* Tapping off it closes it, the way every sheet on a phone does. Its
+                own view so the card never inherits the dim. */}
             <Pressable
                 onPress={clearAccepted}
                 accessibilityLabel="Close"
                 style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(11,11,20,0.45)' }}
             />
 
+            {/* At the top with every other thing the app raises on its own, and
+                sliding in from the edge it is anchored to. It used to be a bottom
+                sheet, which put a prompt he did not ask for directly over the
+                controls he reaches for — and over the ride sheet, on the one
+                screen where the next thing to press really matters. */}
             <Animated.View
-                entering={SlideInDown.duration(280)}
-                className="w-full rounded-t-3xl px-6 pt-5 pb-10 gap-1"
-                style={{ backgroundColor: SURFACE }}
+                entering={SlideInUp.duration(280)}
+                className="absolute left-3 right-3 rounded-3xl px-6 pt-5 pb-6 gap-1"
+                style={{ top, backgroundColor: SURFACE }}
             >
                 <View className="flex-row items-start justify-between">
                     <View className="w-14 h-14 rounded-full items-center justify-center bg-primary">

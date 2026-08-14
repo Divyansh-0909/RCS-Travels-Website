@@ -9,6 +9,7 @@ import Animated, {
     withTiming,
 } from 'react-native-reanimated';
 import AppText from './AppText';
+import { useNoticeTop } from './AppBarVisibility';
 import { OfferCard } from './ui/offerCard';
 import { useOffers } from '../hooks/useOffers';
 
@@ -43,14 +44,13 @@ const DISMISS_AT = SCREEN_W * 0.28;
  */
 const PANEL_SECONDS = 30;
 
-// The bar sits at bottom 24 and runs ~68 tall (AppBar.tsx), so its top edge is
-// at 92. Clearing it by a margin rather than sitting on it, and above its z so
-// the card is never half-under the tabs.
-const ABOVE_APPBAR = 104;
 const PANEL_Z = 60;
 
 const OfferPanel = () => {
     const { panelOffer, canAccept, here, accept, reject, dismiss } = useOffers();
+    // Pinned to the top with everything else the app raises on its own. See
+    // useNoticeTop for why the bottom is the wrong end of this screen for it.
+    const top = useNoticeTop();
     const [error, setError] = useState<string | null>(null);
 
     const tx = useSharedValue(0);
@@ -134,7 +134,7 @@ const OfferPanel = () => {
     return (
         <View
             pointerEvents="box-none"
-            style={{ position: 'absolute', left: 0, right: 0, bottom: ABOVE_APPBAR, zIndex: PANEL_Z, alignItems: 'center' }}
+            style={{ position: 'absolute', left: 0, right: 0, top, zIndex: PANEL_Z, alignItems: 'center' }}
         >
             <Animated.View style={[{ width: '92%' }, cardStyle]} {...pan.panHandlers}>
                 {/* The clock, as a line that empties rather than a number counting

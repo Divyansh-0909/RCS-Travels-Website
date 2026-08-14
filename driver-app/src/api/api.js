@@ -173,5 +173,10 @@ export const getRide           = (id, getToken)          => request(`/api/driver
 // and the pickup or drop it belongs to, which is the record of whether a
 // captain really was where he said he was when he tapped.
 export const setRideStatus     = (id, to, extra, getToken)  => request(`/api/driver/rides/${encodeURIComponent(id)}/status`, { method: "PATCH", body: { to, ...extra }, getToken });
+// Hands a ride back before it has begun — assigned or en_route only. The server
+// puts the booking back to `confirmed` for dispatch to re-offer, and refuses
+// once he has marked himself arrived, when a rider is already waiting on him.
+export const cancelRide        = (id, getToken)          => request(`/api/driver/rides/${encodeURIComponent(id)}/cancel`, { method: "PATCH", getToken });
+
 export const acceptRide        = (id, getToken)          => request(`/api/driver/rides/${encodeURIComponent(id)}/accept`, { method: "PATCH", getToken });
 export const declineRide       = (id, getToken)          => request(`/api/driver/rides/${encodeURIComponent(id)}/decline`, { method: "PATCH", getToken });

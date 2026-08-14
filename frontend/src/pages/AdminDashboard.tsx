@@ -11,7 +11,7 @@ import Button from "../components/ui/Button";
 import EmptyState from "../components/ui/EmptyState";
 import FailureState from "../components/ui/FailureState";
 import Chips, { filterLabel, filterField } from "../components/ui/Chips";
-import { VerificationStatus, BookingStatus, CancelledBy, BookingSource, VehicleClass } from "../types/enums";
+import { VerificationStatus, BookingStatus, CancelledBy, BookingSource, VehicleClass, DriverGroup } from "../types/enums";
 import { VEHICLE_CLASS_NAMES } from "../constants/vehicles";
 
 
@@ -28,6 +28,20 @@ const verificationChip = (status: VerificationStatus) => {
     if (status === "approved") return "text-green-700 bg-green-600/10"
     if (status === "rejected") return "text-red-600 bg-red-500/10"
     return "text-amber-600 bg-amber-500/10"
+}
+
+// Returns the element rather than a class name — unlike verificationChip above,
+// because `partner` gets no chip at all and "" would still render an empty pill.
+// It is the default and the majority, so a chip on every card would be a column
+// of noise the eye has to filter to find the handful that are not.
+const fleetBadge = (group: DriverGroup) => {
+    if (group === "partner") return null
+    const tone = group === "rcs" ? "text-primary bg-primary/10" : "text-amber-700 bg-amber-500/10"
+    return (
+        <span className={`${tone} text-xs font-semibold px-2.5 py-1 rounded-full shrink-0`}>
+            {group === "rcs" ? "RCS fleet" : "Owner"}
+        </span>
+    )
 }
 
 const bookingStatuses: BookingStatus[] = ["pending", "confirmed", "assigned", "en_route", "reached", "started", "completed", "cancelled", "no_driver"]
@@ -65,6 +79,9 @@ type Driver = {
     // stopped. The two answer different questions and the card shows both.
     suspendedAt: string | null
     suspensionReason: string | null
+    // Dispatch order, not eligibility. Moved from the paperwork panel below, and
+    // shown here so "who is in the fleet" can be answered by reading the page.
+    group: DriverGroup
     vehicleClass: VehicleClass
     vehicleNumber: string
     createdAt: string
@@ -86,7 +103,9 @@ type User = {
 // them back on the enum the filter state and the API both expect.
 const vehicleOptions = VEHICLE_CLASS_NAMES.map(cls => ({ value: cls as VehicleClass, label: vehicleLabel(cls) }))
 const bookingSections = ["Status", "Vehicle type", "Dates", "Source", "Cancelled by"]
-const driverSections = ["Vehicle type", "Verification", "Availability", "Vehicle number", "Driver phone", "Joined"]
+// Fleet sits next to Verification because they are the two questions about the
+// captain himself; everything after is about his car, his number, or his dates.
+const driverSections = ["Vehicle type", "Verification", "Fleet", "Availability", "Vehicle number", "Driver phone", "Joined"]
 const userSections = ["Gender", "User phone", "Joined"]
 // Same values ManageAccount writes, so the filter matches what's stored
 const genderOptions = ["Male", "Female", "Others", "Rather not say"].map(g => ({ value: g, label: g }))
@@ -106,6 +125,7 @@ const AdminDashboard = () => {
     const [vehicleClass, setVehicleClass] = useState<VehicleClass | null>(null)
     const [vehicleNumber, setVehicleNumber] = useState<string | null>(null)
     const [verificationStatus, setVerificationStatus] = useState<VerificationStatus | null>(null)
+    const [group, setGroup] = useState<DriverGroup | null>(null)
     const [isOnline, setIsOnline] = useState<boolean | null>(null)
     const [gender, setGender] = useState<string | null>(null)
     const [userPhone, setUserPhone] = useState<string | null>(null)
@@ -209,7 +229,7 @@ const AdminDashboard = () => {
         setError(null)
         setLoading(true)
         try {
-            const data = await api.getDrivers({ search: searchParam, driverName, driverPhone, vehicleClass, vehicleNumber, verificationStatus, isOnline, startDate, endDate, page, limit, ...overrides })
+            const data = await api.getDrivers({ search: searchParam, driverName, driverPhone, vehicleClass, vehicleNumber, verificationStatus, group, isOnline, startDate, endDate, page, limit, ...overrides })
             if (id !== reqRef.current) return
             if (data?.error) {
                 setError(data.error)
@@ -266,7 +286,7 @@ const AdminDashboard = () => {
     const tabFiltersActive = selected === 0
         ? !!(status || vehicleClass || startDate || endDate || source || cancelledBy) || isOutstation !== null
         : selected === 1
-            ? !!(vehicleClass || vehicleNumber || driverPhone || verificationStatus || startDate || endDate) || isOnline !== null
+            ? !!(vehicleClass || vehicleNumber || driverPhone || verificationStatus || group || startDate || endDate) || isOnline !== null
             : !!(gender || userPhone || startDate || endDate)
     const filtersActive = !!searchParam || tabFiltersActive
 
@@ -315,14 +335,14 @@ const AdminDashboard = () => {
 
     function clearFilters() {
         setStatus(null); setVehicleClass(null); setStartDate(null); setEndDate(null); setSource(null); setCancelledBy(null)
-        setVerificationStatus(null); setIsOnline(null); setVehicleNumber(null); setDriverPhone(null)
+        setVerificationStatus(null); setIsOnline(null); setVehicleNumber(null); setDriverPhone(null); setGroup(null)
         setGender(null); setUserPhone(null)
         setExpanded(false)
         if (page !== 1) {
             setPage(1)
             return
         }
-        const cleared = { status: null, vehicleClass: null, startDate: null, endDate: null, source: null, cancelledBy: null, verificationStatus: null, isOnline: null, vehicleNumber: null, driverPhone: null, gender: null, userPhone: null }
+        const cleared = { status: null, vehicleClass: null, startDate: null, endDate: null, source: null, cancelledBy: null, verificationStatus: null, group: null, isOnline: null, vehicleNumber: null, driverPhone: null, gender: null, userPhone: null }
         selected === 0 ? searchBooking(null, cleared) : selected === 1 ? searchDrivers(null, cleared) : searchUsers(null, cleared)
     }
 
@@ -421,10 +441,14 @@ const AdminDashboard = () => {
                                     <>
                                         {sectionIndex === 0 && <Chips options={vehicleOptions} value={vehicleClass} onChange={setVehicleClass} />}
                                         {sectionIndex === 1 && <Chips options={[{ value: "pending", label: "Pending" }, { value: "approved", label: "Approved" }, { value: "rejected", label: "Rejected" }]} value={verificationStatus} onChange={setVerificationStatus} />}
-                                        {sectionIndex === 2 && <Chips options={[{ value: true, label: "Online" }, { value: false, label: "Offline" }]} value={isOnline} onChange={setIsOnline} />}
-                                        {sectionIndex === 3 && <input type="text" value={vehicleNumber ?? ""} onChange={(e) => setVehicleNumber(e.target.value || null)} placeholder="e.g. UP32 AB 1234" className={filterField} />}
-                                        {sectionIndex === 4 && <input type="tel" value={driverPhone ?? ""} onChange={(e) => setDriverPhone(e.target.value || null)} placeholder="XXXXX XXXXX" className={filterField} />}
-                                        {sectionIndex === 5 && (
+                                        {/* "Owner" is one row and is offered anyway:
+                                            filtering to it is the quickest way to
+                                            check the hold has somebody to hold for. */}
+                                        {sectionIndex === 2 && <Chips options={[{ value: "rcs", label: "RCS fleet" }, { value: "partner", label: "Partner" }, { value: "admin", label: "Owner" }]} value={group} onChange={setGroup} />}
+                                        {sectionIndex === 3 && <Chips options={[{ value: true, label: "Online" }, { value: false, label: "Offline" }]} value={isOnline} onChange={setIsOnline} />}
+                                        {sectionIndex === 4 && <input type="text" value={vehicleNumber ?? ""} onChange={(e) => setVehicleNumber(e.target.value || null)} placeholder="e.g. UP32 AB 1234" className={filterField} />}
+                                        {sectionIndex === 5 && <input type="tel" value={driverPhone ?? ""} onChange={(e) => setDriverPhone(e.target.value || null)} placeholder="XXXXX XXXXX" className={filterField} />}
+                                        {sectionIndex === 6 && (
                                             <>
                                                 <label className={filterLabel}>From</label>
                                                 <input type="text" value={startDate ?? ""} onChange={(e) => setStartDate(e.target.value || null)} placeholder="YYYY-MM-DD" className={filterField} />
@@ -653,6 +677,11 @@ const AdminDashboard = () => {
                                         {driver.suspendedAt && (
                                             <span className="text-xs font-semibold px-2.5 py-1 rounded-full text-red-600 bg-red-500/10">Suspended</span>
                                         )}
+                                        {/* Last of the three: it is the one that
+                                            does not change day to day, so it should
+                                            not push the two that do further from
+                                            the name they belong to. */}
+                                        {fleetBadge(driver.group)}
                                     </div>
                                 </div>
 
@@ -684,6 +713,13 @@ const AdminDashboard = () => {
                                         // admin's place in it.
                                         onVerificationChange={(status) => setDrivers(
                                             drivers.map((d) => d.id === driver.id ? { ...d, verificationStatus: status } : d),
+                                        )}
+                                        // Same reason: the fleet chip on this card
+                                        // has to follow the move made in the panel
+                                        // below it, and a refetch would drop the
+                                        // admin back to the top of the list.
+                                        onGroupChange={(group) => setDrivers(
+                                            drivers.map((d) => d.id === driver.id ? { ...d, group } : d),
                                         )}
                                     />
                                 )}

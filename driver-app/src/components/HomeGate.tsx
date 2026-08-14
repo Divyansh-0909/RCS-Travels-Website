@@ -1,7 +1,12 @@
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { Navigate } from 'react-router-native';
+import { useApi } from '../hooks/useApi';
 import { useDriver, type GatedDriverProfile } from '../hooks/useDriver';
 import { useRides } from '../hooks/useRides';
+import type { UpcomingBooking } from '../types/enums';
+import { RideCancelled } from './RideCancelled';
+import { RideCompleted } from './RideCompleted';
 import ActiveRide from '../pages/ActiveRide';
 import Home from '../pages/Home';
 import OnboardingStatus from '../pages/OnboardingStatus';
@@ -42,9 +47,41 @@ export const homeScreenFor = (profile: GatedDriverProfile | null | undefined): H
 
 const HomeGate = () => {
   const { profile, loading, notRegistered } = useDriver();
+  const api = useApi();
   // One fetch for whichever screen is chosen. The ride screens need the booking
   // itself — /me answers with { id, status } and nothing a panel could draw.
   const { active, next, refresh } = useRides();
+
+  // THE RIDE THAT HAS JUST ENDED, held past the moment it stopped being active.
+  // A ride leaving `active` — finished, or called off by the rider — is gone from
+  // the next read, so without this the screen jumps straight back to the board
+  // and he never learns what happened to it. Kept until he dismisses it.
+  //
+  // WHY IT IS FETCHED RATHER THAN REMEMBERED. The snapshot we hold is the ride as
+  // it was while ACTIVE, which by definition says nothing about how it ended: the
+  // terminal status and the cancellation charge are both written at the moment it
+  // leaves the list. So the transition is the trigger and the row is re-read for
+  // the answer.
+  const [ended, setEnded] = useState<UpcomingBooking | null>(null);
+  const previous = useRef<UpcomingBooking | null>(null);
+  useEffect(() => {
+    const left = previous.current;
+    previous.current = active;
+
+    if (!left || active || left.id === ended?.id) return;
+
+    let cancelled = false;
+    (async () => {
+      const fresh = await api.getRide(left.id);
+      if (cancelled) return;
+      // A read that fails still has to produce a screen — falling back to the
+      // snapshot shows the completion rather than nothing, which is the better
+      // of the two wrong answers.
+      setEnded(fresh?.error ? left : (fresh.booking ?? fresh));
+    })();
+
+    return () => { cancelled = true; };
+  }, [active, ended, api]);
 
   // Only on the cold start, when there is no profile to render either screen
   // from. A refresh with a profile already in hand keeps showing it, or the
@@ -68,17 +105,38 @@ const HomeGate = () => {
 
   if (screen === 'status') return <OnboardingStatus />;
 
+  // A completion TAKES the screen — he has just dropped somebody off and the
+  // fare is the thing he wants. A cancellation does not: nothing is being asked
+  // of him, so it rides over whichever screen he has been returned to as a
+  // dismissible notice, and is rendered further down with the rest of the shell.
+  if (ended?.status === 'completed') {
+    return <RideCompleted ride={ended} onDone={() => setEnded(null)} />;
+  }
+  const cancelled = ended?.status === 'cancelled' ? ended : null;
+
+  // The notice rides over whichever of the three he lands on, so each is wrapped
+  // rather than the cancellation being a fourth screen. Nothing is being asked of
+  // him — it is a statement about a ride that has already gone.
+  const withNotice = (screen: ReactNode) => (
+    <>
+      {screen}
+      {cancelled ? <RideCancelled ride={cancelled} onDismiss={() => setEnded(null)} /> : null}
+    </>
+  );
+
   // `activeRide` on the profile said there is one; this is the booking behind
   // it. They can disagree for a moment — the profile refreshes on foreground and
   // the list on its own schedule — so the ride screen waits for the row rather
   // than rendering a panel with nothing in it.
-  if (screen === 'ride' && active) return <ActiveRide ride={active} onChanged={refresh} />;
-
-  if (screen === 'standby' || screen === 'ride') {
-    return <Standby next={next} onChanged={refresh} />;
+  if (screen === 'ride' && active) {
+    return withNotice(<ActiveRide ride={active} onChanged={refresh} />);
   }
 
-  return <Home />;
+  if (screen === 'standby' || screen === 'ride') {
+    return withNotice(<Standby next={next} onChanged={refresh} />);
+  }
+
+  return withNotice(<Home />);
 };
 
 export default HomeGate;

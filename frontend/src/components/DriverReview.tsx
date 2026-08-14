@@ -2,11 +2,12 @@ import { useEffect, useState } from "react"
 import Icon from "@mdi/react"
 import { mdiOpenInNew, mdiAlertCircleOutline, mdiCheck, mdiClose } from "@mdi/js"
 import { useAuth } from "@clerk/clerk-react"
-import { getDriverDocuments, reviewDocument, setDriverSuspension } from "../api/api"
+import { getDriverDocuments, reviewDocument, setDriverSuspension, setDriverGroup } from "../api/api"
 import { labelOf } from "../constants/vehicles"
-import { VerificationStatus } from "../types/enums"
+import { DriverGroup, VerificationStatus } from "../types/enums"
 
-// Reviewing one captain's paperwork, and stopping him driving.
+// Reviewing one captain's paperwork, stopping him driving, and moving him between
+// the fleet and the partner pool.
 //
 // THE ONE RULE THIS SCREEN EXISTS TO ENFORCE: nobody approves a document he has
 // not opened. The server already refuses to review anything the file check has
@@ -58,6 +59,7 @@ type Payload = {
         verificationStatus: VerificationStatus
         suspendedAt: string | null
         suspensionReason: string | null
+        group: DriverGroup
     }
     vehicles: Vehicle[]
     documents: Document[]
@@ -74,7 +76,24 @@ const statusChipFor = (status: Document["status"]) =>
         : status === "rejected" ? "text-red-600 bg-red-500/10"
             : "text-amber-600 bg-amber-500/10"
 
-const chip = "text-xs font-semibold px-2.5 py-1 rounded-full capitalize shrink-0"
+// The group's own words. Never the raw key: "partner" on its own reads as a
+// demotion, and "rcs" reads as nothing at all.
+const GROUP_LABELS: Record<DriverGroup, string> = {
+    admin: "Owner",
+    rcs: "RCS fleet",
+    partner: "Partner captain",
+}
+
+const groupChipFor = (group: DriverGroup) =>
+    group === "rcs" ? "text-primary bg-primary/10"
+        : group === "admin" ? "text-amber-700 bg-amber-500/10"
+            : "text-gray-600 bg-gray-500/10"
+
+const plainChip = "text-xs font-semibold px-2.5 py-1 rounded-full shrink-0"
+// Every other chip on this screen prints an enum key straight from the wire, so
+// it needs the capitalize. The group chip does not — its words are written above,
+// and "RCS fleet" would come out of that rule as "RCS Fleet".
+const chip = `${plainChip} capitalize`
 
 const shortDate = (value: string) =>
     new Date(value).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
@@ -84,10 +103,12 @@ const shortDate = (value: string) =>
 const hasLapsed = (expiresAt: string | null) =>
     Boolean(expiresAt) && new Date(`${expiresAt!.slice(0, 10)}T23:59:59.999Z`) < new Date()
 
-const DriverReview = ({ driverId, onVerificationChange }: {
+const DriverReview = ({ driverId, onVerificationChange, onGroupChange }: {
     driverId: string
     /** Lets the list card update its chip without refetching the whole page. */
     onVerificationChange?: (status: VerificationStatus) => void
+    /** Same job for the fleet chip, which the list card also shows. */
+    onGroupChange?: (group: DriverGroup) => void
 }) => {
     const { getToken } = useAuth()
     const [data, setData] = useState<Payload | null>(null)
@@ -104,6 +125,8 @@ const DriverReview = ({ driverId, onVerificationChange }: {
     const [suspendOpen, setSuspendOpen] = useState(false)
     const [suspendReason, setSuspendReason] = useState("")
     const [suspendBusy, setSuspendBusy] = useState(false)
+
+    const [groupBusy, setGroupBusy] = useState(false)
 
     const load = async () => {
         setLoading(true)
@@ -151,6 +174,21 @@ const DriverReview = ({ driverId, onVerificationChange }: {
         setSuspendOpen(false)
         setSuspendReason("")
         await load()
+    }
+
+    // Patched in place rather than refetched, which is the opposite of what a
+    // document review does — and for a reason. An approval can promote a
+    // replacement, clear a second row and change the captain's own verdict, none
+    // of which the client can work out. A group move changes one column and
+    // nothing downstream of it, so re-minting eleven signed document URLs to
+    // repaint one chip would be a round trip for no new information.
+    const moveGroup = async (group: DriverGroup) => {
+        setGroupBusy(true)
+        const result = await setDriverGroup(driverId, { group }, getToken)
+        setGroupBusy(false)
+        if (result?.error) { setError(result.error); return }
+        setData((current) => current && { ...current, driver: { ...current.driver, group: result.group } })
+        onGroupChange?.(result.group)
     }
 
     if (loading) return <p className="text-sm text-gray-500 py-4">Loading paperwork…</p>
@@ -322,6 +360,49 @@ const DriverReview = ({ driverId, onVerificationChange }: {
                     {missingNote(vehicle.missing)}
                 </section>
             ))}
+
+            {/* Which side of the fleet he drives on. Above suspension so the
+                destructive action stays last on the screen, and separated from the
+                paperwork because it is not a fact about his papers: a partner
+                captain is not a captain with something missing. */}
+            <section className="w-full mt-6 pt-4 border-t border-[var(--background-primary)]/10">
+                <div className="flex flex-wrap items-center gap-2">
+                    <h4 className="font-medium text-[var(--background-primary)]">Fleet</h4>
+                    <span className={`${plainChip} ${groupChipFor(data.driver.group)}`}>
+                        {GROUP_LABELS[data.driver.group]}
+                    </span>
+                </div>
+
+                {/* The owner's own row. The server refuses to move it, so the button
+                    is not offered — an admin should not find that out from a 409. */}
+                {data.driver.group === "admin" ? (
+                    <p className="text-sm text-gray-500 mt-1">
+                        Every scheduled ride is held for him before it reaches the fleet, so this row can't be moved from here.
+                    </p>
+                ) : (
+                    <>
+                        <p className="text-sm text-gray-500 mt-1">
+                            {data.driver.group === "rcs"
+                                ? "Offered scheduled rides before partner captains, and ranked ahead of them on ride-now."
+                                : "Offered scheduled rides only once the RCS fleet has passed on them."}
+                        </p>
+                        {/* One click each way, and no confirmation: the move is
+                            reversible by the button that replaces this one, and it
+                            changes queue order rather than whether he can work. */}
+                        <button
+                            disabled={groupBusy}
+                            onClick={() => moveGroup(data.driver.group === "rcs" ? "partner" : "rcs")}
+                            className="mt-3 text-sm px-3 py-1.5 rounded-xl border border-[var(--background-primary)]/30 text-[var(--background-primary)] hover:bg-[var(--background-primary)]/5 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 transition-colors duration-300"
+                        >
+                            {groupBusy
+                                ? "Saving…"
+                                : data.driver.group === "rcs"
+                                    ? "Move to partner captains"
+                                    : "Move to RCS fleet"}
+                        </button>
+                    </>
+                )}
+            </section>
 
             {/* Suspension sits apart from the documents on purpose. It is a
                 judgement about conduct, not about paperwork, and a captain can be

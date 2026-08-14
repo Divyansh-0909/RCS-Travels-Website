@@ -1,14 +1,15 @@
-import { useState } from 'react';
-import { Linking, Pressable, TextInput, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Linking, Pressable, View } from 'react-native';
 import { cssInterop } from 'nativewind';
 import { NavigationArrowIcon, PhoneIcon } from 'phosphor-react-native';
 import * as Location from 'expo-location';
 import AppText from '../components/AppText';
+import { OtpEntry } from '../components/OtpEntry';
 import { BottomSheet } from '../components/ui/BottomSheet';
 import MapSlot from '../components/ui/MapSlot';
 import { SlideAction } from '../components/ui/SlideAction';
-import { INK_TEXT, MUTED } from '../components/ui/rideUi';
-import { activeLeg, initials, rupees, splitAddress } from '../constants/booking';
+import { INK_TEXT, MUTED, RouteLeg } from '../components/ui/rideUi';
+import { activeLeg, initials, rupees } from '../constants/booking';
 import { useApi } from '../hooks/useApi';
 import { useDriver } from '../hooks/useDriver';
 import type { UpcomingBooking } from '../types/enums';
@@ -38,31 +39,63 @@ const STEP: Record<string, { to: string; label: string }> = {
     started: { to: 'completed', label: 'Slide to finish the ride' },
 };
 
-const OTP_LENGTH = 4;
-
 // Enough to keep the slider clear of the gesture bar at the bottom edge. There is
 // no tab bar on this screen to clear — the shell hides it for the ride.
 const BOTTOM_SAFE = 24;
 
-// What survives being pushed down: the leg and the address, which is the one
-// thing worth glancing at while the map has the rest of the screen.
-const PEEK = 124;
+// What survives being pushed down: the leg label and BOTH route legs, which is
+// the whole route rather than half of it. Raised from 124 when the single
+// address became a proper two-ended route — at the old height the drop would
+// have been cut through the middle, which is worse than not showing it.
+const PEEK = 172;
 
 const ActiveRide = ({ ride, onChanged }: { ride: UpcomingBooking; onChanged: () => void }) => {
     const api = useApi();
     const { refresh: refreshDriver } = useDriver();
-    const [otp, setOtp] = useState('');
     const [error, setError] = useState<string | null>(null);
 
+    // The code screen opens ITSELF the moment he marks himself arrived, because
+    // that is the next thing that happens in the world — he pulls up, the rider
+    // walks over, and the code is the only thing standing between them and
+    // moving. Closeable, though: he may arrive before she does, and a screen he
+    // cannot get out of while he waits is a screen he will come to resent. The
+    // slider on the sheet brings it back.
+    const [otpOpen, setOtpOpen] = useState(false);
+    useEffect(() => {
+        if (ride.status === 'reached') setOtpOpen(true);
+    }, [ride.status]);
+
     const leg = activeLeg(ride.status);
+    // Which end the navigation button aims at — the only place the active leg
+    // still narrows the route down to one address.
     const address = leg.endpoint === 'drop' ? ride.dropAddress : ride.pickupAddress;
-    const { main, rest } = splitAddress(address);
     const step = STEP[ride.status];
 
     // The rider hands over a code to start the ride, and only then. It is her
     // bookingCode; the server compares it and refuses with 403 rather than
     // telling the app what it should have been.
     const needsOtp = ride.status === 'reached';
+
+    // Mirrors DRIVER_CANCELLABLE_STATUSES on the server. Both `assigned` and
+    // `en_route` count, so a scheduled ride he has taken but not set off for can
+    // be handed back the same way as one he is already driving to.
+    const canCancel = ride.status === 'assigned' || ride.status === 'en_route';
+    const [cancelling, setCancelling] = useState(false);
+
+    const cancelRide = async () => {
+        if (cancelling) return;
+        setCancelling(true);
+        setError(null);
+        try {
+            const result = await api.cancelRide(ride.id);
+            if (result?.error) { setError(result.error); return; }
+            // Both, for the same reason advance() moves both: the list drives this
+            // screen and the profile drives the shell and the GPS cadence.
+            await Promise.all([onChanged(), refreshDriver()]);
+        } finally {
+            setCancelling(false);
+        }
+    };
 
     const openMaps = () => {
         const destination = encodeURIComponent(address);
@@ -71,7 +104,7 @@ const ActiveRide = ({ ride, onChanged }: { ride: UpcomingBooking; onChanged: () 
         Linking.openURL(`https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=driving`);
     };
 
-    const advance = async () => {
+    const advance = async (otp?: string) => {
         if (!step) return;
         setError(null);
 
@@ -86,7 +119,7 @@ const ActiveRide = ({ ride, onChanged }: { ride: UpcomingBooking; onChanged: () 
 
         const result = await api.setRideStatus(ride.id, step.to, {
             ...where,
-            ...(needsOtp ? { otp } : {}),
+            ...(otp ? { otp } : {}),
         });
 
         if (result?.error) {
@@ -94,7 +127,10 @@ const ActiveRide = ({ ride, onChanged }: { ride: UpcomingBooking; onChanged: () 
             return;
         }
 
-        setOtp('');
+        // Only once the server has taken it. A wrong code comes back 403 and the
+        // screen has to stay up with the message on it, not close as though it
+        // had worked.
+        setOtpOpen(false);
         // The ride list drives this screen; the profile drives whether the shell
         // is hidden and how often the GPS reports. Finishing a ride has to move
         // both, or he is left on a stripped-down screen with no ride on it.
@@ -105,26 +141,59 @@ const ActiveRide = ({ ride, onChanged }: { ride: UpcomingBooking; onChanged: () 
         <View style={{ flex: 1, width: '100%' }}>
             <MapSlot />
 
+            {/* OUTSIDE THE SHEET, floating over the map just above it. Navigation
+                is the one thing he wants while the sheet is pushed down and the
+                map has the screen — burying it in the panel meant dragging the
+                panel back up to reach the button whose whole purpose is to send
+                him away from the app.
+
+                Anchored to the same edge the sheet's collapsed height leaves
+                free, so it sits on the map rather than over the panel. */}
+            <Pressable
+                role="button"
+                onPress={openMaps}
+                style={({ pressed }) => ({
+                    position: 'absolute',
+                    left: 16, right: 16,
+                    bottom: PEEK + BOTTOM_SAFE + 16,
+                    opacity: pressed ? 0.85 : 1,
+                })}
+            >
+                <View className="w-full flex-row items-center justify-center gap-2 rounded-2xl py-3.5 bg-[var(--background-primary)]">
+                    <NavArrow size={18} weight="fill" className="text-[var(--foreground)]" />
+                    <AppText className="text-base font-semibold text-[var(--foreground)]">
+                        {leg.endpoint === 'drop' ? 'Go to drop' : 'Go to pickup'}
+                    </AppText>
+                </View>
+            </Pressable>
+
             {/* No tab-bar clearance here — the shell hides the bar and the scrim
                 for the length of a ride (useShellHidden), so the only thing under
                 the sheet is the gesture area. */}
             <BottomSheet peek={PEEK} bottomInset={BOTTOM_SAFE}>
               <View className="px-5 pb-2 gap-4">
-                <View className="gap-0.5">
-                    <View className="flex-row items-center justify-between gap-3">
-                        <AppText className={`text-xs font-semibold uppercase tracking-wide ${MUTED}`}>
-                            {leg.label}
-                        </AppText>
-                        <AppText className={`text-base font-semibold ${INK_TEXT}`}>
-                            {rupees(ride.fare)}
-                        </AppText>
-                    </View>
-                    <AppText numberOfLines={1} className={`text-2xl font-bold ${INK_TEXT}`} style={{ letterSpacing: -0.5 }}>
-                        {main}
+                <View className="flex-row items-center justify-between gap-3">
+                    <AppText className={`text-xs font-semibold uppercase tracking-wide ${MUTED}`}>
+                        {leg.label}
                     </AppText>
-                    {rest ? (
-                        <AppText numberOfLines={2} className={`text-sm ${MUTED}`}>{rest}</AppText>
-                    ) : null}
+                    <AppText className={`text-base font-semibold ${INK_TEXT}`}>
+                        {rupees(ride.fare)}
+                    </AppText>
+                </View>
+
+                {/* BOTH ENDS, drawn by the same RouteLeg the ride detail and the
+                    offer card use. This screen used to print only the leg being
+                    driven, as a bare heading with no dot and no counterpart — the
+                    one place in the app where a route did not look like a route,
+                    and it read as broken next to every other screen. A captain
+                    also wants the drop while he is still driving to the pickup:
+                    it is how he knows what he has taken on.
+
+                    Which leg he is ON is still said, by the label above and by
+                    where the navigation button sends him. */}
+                <View className="gap-3">
+                    <RouteLeg address={ride.pickupAddress} />
+                    <RouteLeg address={ride.dropAddress} drop />
                 </View>
 
                 <View className="flex-row items-center gap-3">
@@ -147,62 +216,62 @@ const ActiveRide = ({ ride, onChanged }: { ride: UpcomingBooking; onChanged: () 
                         onPress={() => Linking.openURL(`tel:${ride.customerPhone}`)}
                         style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
                     >
-                        <View className="w-11 h-11 rounded-xl items-center justify-center bg-primary">
+                        <View className="w-11 h-11 rounded-xl items-center justify-center bg-[var(--background-primary)]">
                             <Phone size={20} weight="fill" className="text-[var(--foreground)]" />
                         </View>
                     </Pressable>
                 </View>
 
-                <Pressable
-                    role="button"
-                    onPress={openMaps}
-                    style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
-                >
-                    <View
-                        className="w-full flex-row items-center justify-center gap-2 rounded-2xl py-3.5"
-                        style={{ backgroundColor: '#f3f3f3' }}
-                    >
-                        <NavArrow size={18} weight="fill" className={INK_TEXT} />
-                        <AppText className={`text-base font-semibold ${INK_TEXT}`}>
-                            {leg.endpoint === 'drop' ? 'Go to drop' : 'Go to pickup'}
-                        </AppText>
-                    </View>
-                </Pressable>
-
-                {needsOtp ? (
-                    <View className="gap-1.5">
-                        <AppText className={`text-xs font-semibold uppercase tracking-wide ${MUTED}`}>
-                            Ask the rider for their code
-                        </AppText>
-                        <TextInput
-                            value={otp}
-                            onChangeText={(text) => setOtp(text.replace(/\D/g, '').slice(0, OTP_LENGTH))}
-                            keyboardType="number-pad"
-                            maxLength={OTP_LENGTH}
-                            placeholder="0000"
-                            placeholderTextColor="#9a9aa5"
-                            className="w-full rounded-2xl px-4 py-3 text-2xl font-semibold text-center"
-                            style={{ backgroundColor: '#f3f3f3', color: '#121220', letterSpacing: 8 }}
-                        />
-                    </View>
-                ) : null}
-
-                {error ? (
+                {error && !otpOpen ? (
                     <AppText className="text-sm font-medium text-red-600">{error}</AppText>
                 ) : null}
 
                 {step ? (
                     <SlideAction
                         label={step.label}
-                        onConfirm={advance}
-                        // Grey with a reason on it rather than a dead control: the
-                        // captain can see he is one thing short, and what.
-                        disabled={needsOtp && otp.length < OTP_LENGTH}
-                        disabledHint="Enter the rider's code"
+                        // At `reached` this opens the code screen rather than
+                        // sending anything — the code is collected there and the
+                        // slide that starts the ride lives on it.
+                        onConfirm={needsOtp ? () => setOtpOpen(true) : () => advance()}
                     />
+                ) : null}
+
+                {/* BEFORE HE ARRIVES, AND NOT AFTER. Handing back a ride he has not
+                    started is a thing that happens — the car will not start, he
+                    misjudged the distance — and the booking simply goes back out to
+                    dispatch. Once he has slid Arrived the rider is standing at the
+                    kerb waiting for him, and walking away then is a support call
+                    rather than a button, so it goes. The server enforces the same
+                    window; this only stops offering what it would refuse.
+
+                    Plain text, not a button: it is the one destructive thing on a
+                    screen full of controls he taps in traffic, and it should take
+                    a deliberate reach rather than sit there competing with the
+                    slide he actually means to use. */}
+                {canCancel ? (
+                    <Pressable
+                        role="button"
+                        onPress={cancelRide}
+                        disabled={cancelling}
+                        hitSlop={8}
+                        style={({ pressed }) => ({ opacity: pressed || cancelling ? 0.5 : 1, alignSelf: 'center' })}
+                    >
+                        <AppText className="text-sm font-semibold text-red-600">
+                            {cancelling ? 'Cancelling…' : "Can't take this ride"}
+                        </AppText>
+                    </Pressable>
                 ) : null}
               </View>
             </BottomSheet>
+
+            {otpOpen && needsOtp ? (
+                <OtpEntry
+                    riderName={ride.user?.name ?? null}
+                    error={error}
+                    onSubmit={(code) => advance(code)}
+                    onClose={() => { setError(null); setOtpOpen(false); }}
+                />
+            ) : null}
         </View>
     );
 };

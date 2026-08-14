@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 import { useApi } from './useApi';
+import { useDriver } from './useDriver';
 import { ACTIVE_RIDE_STATUSES } from '../constants/booking';
 import type { UpcomingBooking } from '../types/enums';
 
@@ -28,6 +29,7 @@ type Result = {
 
 export function useRides(): Result {
     const api = useApi();
+    const { profile } = useDriver();
     const [rides, setRides] = useState<UpcomingBooking[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -49,6 +51,30 @@ export function useRides(): Result {
     }, [api]);
 
     useEffect(() => { refresh(); }, [refresh]);
+
+    /**
+     * Re-read whenever the SERVER's count of his rides changes.
+     *
+     * This is what makes accepting a ride land on the screen straight away.
+     * Accepting refreshes the profile — it has to, because the location cadence
+     * reads assignedRides — but this list is what the screens are actually built
+     * from, and nothing was telling it to look again. So the ride existed, the
+     * profile knew about it, and Home carried on showing the state before it
+     * until something else happened to trigger a fetch.
+     *
+     * Keyed on the profile's own numbers rather than wired through the offer
+     * hook: anything that changes what he is holding moves one of these — an
+     * accept, a completion, a cancellation by the rider, an admin reassigning —
+     * and each one is a reason to re-read regardless of which end caused it.
+     */
+    const assignedRides = profile?.onboarding?.assignedRides ?? 0;
+    const activeRideId = profile?.activeRide?.id ?? null;
+    const first = useRef(true);
+    useEffect(() => {
+        // The mount fetch above already covers the first pass.
+        if (first.current) { first.current = false; return; }
+        refresh();
+    }, [assignedRides, activeRideId, refresh]);
 
     // The statuses move while he is out of the app — a ride he completed, a ride
     // an admin cancelled — so coming back is the moment to re-read them.

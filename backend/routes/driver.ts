@@ -1318,6 +1318,90 @@ driverRouter.post('/location', protect, async (req, res) => {
     return res.json({ ok: true })
 })
 
+/**
+ * A captain gives a ride back.
+ *
+ * NOT THE SAME ACT AS A RIDER CANCELLING, and it is deliberately narrower. He may
+ * hand back a ride he has taken but not begun — something came up, the car will
+ * not start, he misjudged the distance — and the booking goes back out to
+ * dispatch rather than dying. Once he has marked himself ARRIVED that stops being
+ * true: the rider is standing there waiting for him, and walking away at that
+ * point is a support conversation, not a button.
+ *
+ * BEFORE_ARRIVAL is exactly the window the app offers it in, and the server keeps
+ * its own copy of the rule because a client that has been open a while can be
+ * showing a button for a state the ride has already left.
+ *
+ * The booking returns to `confirmed`, not `pending`: it was confirmed once and
+ * the rider has not changed anything. Its offers are all withdrawn — the ride is
+ * about to be offered again and stale rows would let a second captain accept a
+ * ride he was never re-offered — and the seats come back, the same way and for
+ * the same reasons as in the rider's cancel.
+ *
+ * NO CANCELLATION CHARGE. That number is the rider's for changing her mind; a
+ * captain handing back a ride owes nothing under any rule written so far.
+ */
+const DRIVER_CANCELLABLE_STATUSES: BookingStatus[] = ['assigned', 'en_route']
+
+driverRouter.patch('/rides/:id/cancel', protect, async (req, res) => {
+    const driver = await requireDriverForAssignedWork(req, res)
+    if (!driver) return
+
+    const parsed = rideParamsSchema.safeParse(req.params)
+    if (!parsed.success) {
+        return res.status(400).json({ error: 'Invalid booking id', issues: parsed.error.issues })
+    }
+
+    const booking = await prisma.booking.findUnique({ where: { id: parsed.data.id } })
+    if (!booking) return res.status(404).json({ error: 'Booking not found' })
+    if (booking.driverId !== driver.id) return res.status(403).json({ error: 'Forbidden' })
+
+    if (!DRIVER_CANCELLABLE_STATUSES.includes(booking.status)) {
+        return res.status(409).json({
+            error: booking.status === 'reached' || booking.status === 'started'
+                ? 'Call support to drop a ride you have already reached'
+                : `Cannot cancel a ${booking.status} ride`,
+            status: booking.status,
+        })
+    }
+
+    const seats = seatsOf(driver.vehicleClass)
+
+    await prisma.$transaction(async (tx) => {
+        // Guarded on the status it was read at, so two taps — or a tap racing the
+        // rider's own cancel — cannot both take effect.
+        const { count } = await tx.booking.updateMany({
+            where: { id: booking.id, status: booking.status },
+            data: { status: 'confirmed', driverId: null },
+        })
+        if (count === 0) return
+
+        await tx.rideOffer.updateMany({
+            where: { bookingId: booking.id, status: 'pending' },
+            data: { status: 'withdrawn', respondedAt: new Date() },
+        })
+
+        if (seats !== null) {
+            if (booking.sharing) {
+                // One seat back, capped in the WHERE rather than in JS — see the
+                // identical guard in the rider's cancel for why the cap cannot be
+                // decided against a value read before the transaction.
+                await tx.driver.updateMany({
+                    where: { id: driver.id, vehicleCapacity: { lt: seats } },
+                    data: { vehicleCapacity: { increment: 1 } },
+                })
+            } else {
+                await tx.driver.update({
+                    where: { id: driver.id },
+                    data: { vehicleCapacity: seats },
+                })
+            }
+        }
+    })
+
+    return res.json({ bookingId: booking.id, status: 'confirmed' })
+})
+
 driverRouter.post('/fcm-token', protect, async (req, res) => {
     const driver = await requireDriverForAssignedWork(req, res)
     if (!driver) return

@@ -85,6 +85,14 @@ export const reviewDocument     = (documentId, body, getToken) =>
 export const setDriverSuspension = (driverId, body, getToken) =>
     request(`/api/admin/drivers/${driverId}/suspension`, { method: "PATCH", body, getToken });
 
+// `{ group: 'rcs' }` to move a captain into the fleet, `{ group: 'partner' }` to
+// move him back out. Dispatch order only — it changes who is offered a ride first,
+// not whether he may be offered one at all. 'admin' is not a value this accepts:
+// the owner's row is what the owner-first hold resolves to, and the server refuses
+// it with a 409. See routes/admin.ts.
+export const setDriverGroup      = (driverId, body, getToken) =>
+    request(`/api/admin/drivers/${driverId}/group`, { method: "PATCH", body, getToken });
+
 // Streams a PDF, so it can't use request() (which parses JSON); fetch a Blob.
 export const downloadMyData = async (getToken) => {
     const token = await getToken();

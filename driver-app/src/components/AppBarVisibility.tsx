@@ -78,6 +78,32 @@ export const isDrillDown = (pathname: string) =>
  * screen with no way out of it. The ride owns "/"; every other route keeps the
  * bar that gets him home.
  */
+/**
+ * Where anything that arrives UNBIDDEN sits: the top of the screen.
+ *
+ * Offers, the call-the-rider prompt, anything the app raises rather than the
+ * captain opens. They go to the top because the bottom of this app is where the
+ * things he reaches for live — the tab bar, the ride sheet, the slide-to-confirm
+ * — and dropping an interruption on top of those puts it under his thumb at the
+ * moment he is using them. A notice he did not ask for should not be able to
+ * catch a tap meant for a control he did.
+ *
+ * OVER THE HEADER, NOT UNDER IT. These used to start below OnlineToggle so as
+ * not to cover the online switch — which was the wrong instinct. A ride landing
+ * is more urgent than the switch that says he is available for one, and the
+ * captain has seconds to answer it; making him read past the wordmark to find
+ * the card costs him some of them. The notices carry a higher z than the header
+ * (OfferPanel 60, the accepted prompt 90, against the header's 50), so they
+ * simply sit on top of it for as long as they are up.
+ *
+ * A single number now, and the hook stays because the value is still shared by
+ * two components and because where a notice belongs is a decision about the app
+ * rather than about either of them.
+ */
+const NOTICE_TOP = 44;
+
+export const useNoticeTop = () => NOTICE_TOP;
+
 export const useShellHidden = () => {
     const { pathname } = useLocation();
     const { profile } = useDriver();

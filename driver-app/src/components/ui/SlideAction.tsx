@@ -32,6 +32,16 @@ const Arrow = cssInterop(ArrowRightIcon, {
 
 const KNOB = 56;
 const PAD = 4;
+
+// `primary` from the shared tokens, as a literal for the same reason rideUi
+// writes its own out: this is a style object on an Animated.View, and NativeWind
+// classes do not reach one. The fill beside it uses the class.
+//
+// KNOB ON PRIMARY, TRACK ON PRIMARY-LIGHT, and the pairing is the point — the
+// knob has to stay findable against the fill it is dragging across. A white knob
+// vanished into the pale track before it moved, and a knob the same blue as the
+// fill would vanish into it after.
+const KNOB_FILL = '#243AFB';
 /** How far across counts as meaning it. Below this it springs back. */
 const CONFIRM_AT = 0.72;
 
@@ -107,7 +117,7 @@ export const SlideAction = ({
         >
             <Animated.View
                 pointerEvents="none"
-                className="absolute left-0 top-0 bottom-0 rounded-full bg-primary"
+                className="absolute left-0 top-0 bottom-0 rounded-full bg-primary-light"
                 style={fillStyle}
             />
 
@@ -125,14 +135,14 @@ export const SlideAction = ({
                         height: KNOB,
                         marginLeft: PAD,
                         borderRadius: 999,
-                        backgroundColor: '#ffffff',
+                        backgroundColor: KNOB_FILL,
                         alignItems: 'center',
                         justifyContent: 'center',
                     },
                     knobStyle,
                 ]}
             >
-                <Arrow size={24} weight="bold" className="text-[var(--background-primary)]" />
+                <Arrow size={24} weight="bold" className="text-[var(--foreground)]" />
             </Animated.View>
         </View>
     );

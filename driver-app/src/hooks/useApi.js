@@ -72,6 +72,7 @@ export function useApi() {
     // `extra` carries the otp when moving to `started`, and the captain's current
     // lat/lng whenever there is one to send.
     setRideStatus: (id, to, extra)      => api.setRideStatus(id, to, extra, stableGetToken),
+    cancelRide:    (id)                 => api.cancelRide(id, stableGetToken),
     acceptRide:    (id)                 => api.acceptRide(id, stableGetToken),
     declineRide:   (id)                 => api.declineRide(id, stableGetToken),
   }), [stableGetToken, stableSignOut]);

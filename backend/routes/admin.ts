@@ -4,7 +4,7 @@ import type { Prisma } from '@prisma/client'
 import { protect, protectAdmin } from '../middleware/auth.js'
 import { prisma } from '../db/prisma.js'
 import { getFareZones, saveFareZones } from '../services/fareZones.js'
-import { bookingListQuerySchema, driverListQuerySchema, userListQuerySchema, fareZoneCollectionSchema, rideParamsSchema, reviewDocumentSchema, suspendDriverSchema } from '../types.ts'
+import { bookingListQuerySchema, driverListQuerySchema, userListQuerySchema, fareZoneCollectionSchema, rideParamsSchema, reviewDocumentSchema, suspendDriverSchema, driverGroupSchema } from '../types.ts'
 import { normalizeReference } from '../lib/bookingReference.js'
 // Already annotated as BookingStatus[] at its definition, which is what lets it be
 // used in a `status: { in: … }` filter from a .ts file — see the comment there.
@@ -26,7 +26,8 @@ import { signedDocumentUrl } from '../services/documentScan.js'
 import { promoteReplacement, recomputeAfterDocumentChange } from '../services/driverDocuments.js'
 import { withdrawOffersForDriver } from '../services/scheduledOffers.js'
 
-// Three list endpoints, the fare-zone editor, document review, and suspension.
+// Three list endpoints, the fare-zone editor, document review, suspension, and
+// the move between the RCS fleet and the partner pool.
 //
 // THERE IS NO "APPROVE THIS DRIVER" ENDPOINT, and that is deliberate rather than
 // missing. A captain's verificationStatus is DERIVED — recomputeDriverVerification
@@ -104,6 +105,11 @@ adminRouter.get('/booking', protect, protectAdmin, async (req, res) => {
     // Only the fields the dashboard renders; `shareGroupId` is kept for the co-rider grouping below.
     const bookingSelect = {
         id: true,
+        // The readable ride name, "RCS4831902". Filtered on above and printed by
+        // the expanded card, but it was never SELECTED — so the card rendered
+        // "Ride ID:" followed by nothing, and the copy button beside it put the
+        // word `undefined` on the clipboard. `id` stays because it keys the row.
+        reference: true,
         customerPhone: true,
         pickupAddress: true,
         dropAddress: true,
@@ -161,7 +167,7 @@ adminRouter.get('/driver', protect, protectAdmin, async (req, res) => {
     if (!parsed.success) {
         return res.status(400).json({ error: 'Invalid query parameters', issues: parsed.error.issues })
     }
-    const { search, driverName, driverPhone, vehicleClass, vehicleNumber, verificationStatus, isOnline, startDate, endDate, page, limit } = parsed.data
+    const { search, driverName, driverPhone, vehicleClass, vehicleNumber, verificationStatus, group, isOnline, startDate, endDate, page, limit } = parsed.data
 
     const where: Prisma.DriverWhereInput = {}
     if (search) {
@@ -190,6 +196,7 @@ adminRouter.get('/driver', protect, protectAdmin, async (req, res) => {
         mode: "insensitive",
     }
     if (verificationStatus) where.verificationStatus = verificationStatus
+    if (group) where.group = group
     if (startDate || endDate) {
         const createdAt: Prisma.DateTimeFilter = {}
         if (startDate) createdAt.gte = new Date(`${startDate}T00:00:00+05:30`)
@@ -212,6 +219,11 @@ adminRouter.get('/driver', protect, protectAdmin, async (req, res) => {
                 vehicleNumber: true,
                 isOnline: true,
                 verificationStatus: true,
+                // Which side of the fleet he drives on. On the list rather than
+                // only on the review screen, because it is the one thing about a
+                // captain an admin looks for without opening anything — "who is
+                // in the fleet" is a question you ask of the whole page.
+                group: true,
                 // Both, not just the timestamp. A suspension the dashboard can
                 // see but not explain is one an admin cannot decide whether to
                 // lift, which is the only action he has.
@@ -340,6 +352,10 @@ adminRouter.get('/drivers/:id/documents', protect, protectAdmin, async (req, res
         select: {
             id: true, name: true, phone: true, verificationStatus: true,
             isOnline: true, activeVehicleId: true,
+            // The review screen is where the move between fleet and partner pool
+            // is made, so it has to be able to say which side he is on now — and
+            // to recognise the owner's row, which it must not offer to move.
+            group: true,
             // A suspension is invisible in verificationStatus by design — his
             // paperwork is still in order — so without these the review screen
             // would show a fully approved captain and no hint that he is stopped.
@@ -673,6 +689,86 @@ adminRouter.patch('/drivers/:id/suspension', protect, protectAdmin, async (req, 
         stillOnlineMidRide: suspended && midRide > 0,
         withdrawnOffers,
     })
+})
+
+/**
+ * Move a captain into the RCS fleet, or back out to the partner pool.
+ *
+ * The second judgement on this router, and it sits beside suspension for the same
+ * reason: nothing derives it. Verification falls out of a man's documents; which
+ * side of the fleet he drives on is a decision somebody makes about him, and until
+ * now the only way to record it was an UPDATE typed at the database by hand.
+ *
+ * WHAT THE GROUP DOES, and all it does, is order the queue. driverAssignment ranks
+ * ride-now candidates by group before distance, and offerScheduledRide walks a
+ * booking admin → rcs → partner. Promoting a captain means he is asked first;
+ * demoting him means he is asked once the fleet has passed. It touches neither his
+ * verification nor his suspension, and a promoted captain with lapsed paperwork is
+ * still undispatchable — he is simply first in a queue he cannot be picked from.
+ *
+ * THE OWNER'S ROW IS NOT REACHABLE FROM HERE, in either direction. `admin` is one
+ * row, and it is what the owner-first hold resolves to for the first 15–45 minutes
+ * of every scheduled booking. Promoting a second captain into it would hand him
+ * first refusal on all of that work; demoting the owner out of it would leave the
+ * hold with nobody to offer to, and offerScheduledRide's empty-group fallback
+ * deliberately covers only `rcs`, so those bookings would sit unoffered until the
+ * hold expired on its own. The body cannot name the group (driverGroupSchema) and
+ * this route refuses a driver already in it.
+ *
+ * PENDING OFFERS ARE LEFT ALONE, which is the opposite of what suspension does to
+ * them, and the difference is the point. A suspended captain can never answer —
+ * every accept path refuses him — so his offers are dead weight holding bookings
+ * open. A demoted one can still answer: he was asked while he was in the fleet,
+ * and withdrawing that takes a live candidate off a booking that is short of them.
+ * RideOffer.group records the group each offer went out under, so the escalation
+ * test keeps counting his row against `rcs` after he leaves it, which is the whole
+ * reason that column is stored rather than re-derived at read time.
+ */
+adminRouter.patch('/drivers/:id/group', protect, protectAdmin, async (req, res) => {
+    const parsedParams = rideParamsSchema.safeParse(req.params)
+    if (!parsedParams.success) {
+        return res.status(400).json({ error: 'Invalid driver id', issues: parsedParams.error.issues })
+    }
+
+    const parsedBody = driverGroupSchema.safeParse(req.body)
+    if (!parsedBody.success) {
+        return res.status(400).json({ error: 'Invalid request body', issues: parsedBody.error.issues })
+    }
+    const { group } = parsedBody.data
+
+    const driver = await prisma.driver.findUnique({
+        where: { id: parsedParams.data.id },
+        select: { id: true, group: true },
+    })
+    if (!driver) return res.status(404).json({ error: 'Driver not found' })
+
+    // 409 rather than a silent no-op: an admin who somehow got this far is asking
+    // for something that will not happen, and a 200 saying "still admin" reads as
+    // a change that did not take.
+    if (driver.group === 'admin') {
+        return res.status(409).json({
+            error: "This is the owner's own driver row. Every scheduled ride is held for him before it reaches the fleet, so its group cannot be changed from the dashboard.",
+            group: driver.group,
+        })
+    }
+
+    // Idempotent by omission, exactly as suspension is: two admins looking at the
+    // same screen is the usual cause, and the useful answer is the current state
+    // rather than a 409 that makes one of them wonder whether it worked.
+    if (driver.group === group) {
+        return res.json({ id: driver.id, group: driver.group, changed: false })
+    }
+
+    const updated = await prisma.driver.update({
+        where: { id: driver.id },
+        data: { group },
+        select: { id: true, name: true, group: true },
+    })
+
+    // No push. His badge changes the next time the app fetches /me, and there is
+    // nothing here he has to DO — the one notification worth interrupting somebody
+    // for is the one that changes what he can do, which is notifyDriverApproved.
+    return res.json({ ...updated, changed: true })
 })
 
 export default adminRouter
