@@ -159,6 +159,19 @@ export const rejectOffer       = (id, getToken)          => request(`/api/driver
 export const getRides          = (filters, getToken)     => request(`/api/driver/rides${toQuery(filters)}`, { getToken });
 export const getUpcomingRide   = (getToken)              => request(`/api/driver/upcoming-ride`, { getToken });
 export const getRide           = (id, getToken)          => request(`/api/driver/rides/${encodeURIComponent(id)}`, { getToken });
-export const setRideStatus     = (id, status, getToken)  => request(`/api/driver/rides/${encodeURIComponent(id)}/status`, { method: "PATCH", body: { status }, getToken });
+// Moves a ride along: en_route -> reached -> started -> completed. The server
+// owns which of those is legal from where (RIDE_TRANSITIONS) and answers 409
+// with the status it actually holds, so the app never has to guess.
+//
+// THE BODY KEY IS `to`, NOT `status`. This sent { status } until it was first
+// called, which rideStatusSchema rejects outright — a 400 on every transition,
+// invisible for as long as nothing used it.
+//
+// `otp` is the rider's booking code and is required to reach `started`; the
+// server compares it and refuses with 403 on a mismatch. `lat`/`lng` are
+// optional and worth sending: the server stores the distance between the fix
+// and the pickup or drop it belongs to, which is the record of whether a
+// captain really was where he said he was when he tapped.
+export const setRideStatus     = (id, to, extra, getToken)  => request(`/api/driver/rides/${encodeURIComponent(id)}/status`, { method: "PATCH", body: { to, ...extra }, getToken });
 export const acceptRide        = (id, getToken)          => request(`/api/driver/rides/${encodeURIComponent(id)}/accept`, { method: "PATCH", getToken });
 export const declineRide       = (id, getToken)          => request(`/api/driver/rides/${encodeURIComponent(id)}/decline`, { method: "PATCH", getToken });

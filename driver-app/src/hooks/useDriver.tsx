@@ -27,14 +27,39 @@ type OnboardingState = {
   assignedRides: number;
 };
 
+/**
+ * The row plus the routing answer the server computes with it. Exported because
+ * HomeGate decides which screen "/" is from exactly this shape, and App.tsx asks
+ * HomeGate the same question to match its padding — neither can take a bare
+ * DriverProfile, which has no `onboarding`.
+ */
+export type GatedDriverProfile = DriverProfile & { onboarding: OnboardingState };
+
 type DriverContextValue = {
   /** null while the first load is in flight, or if the driver row is missing. */
-  profile: (DriverProfile & { onboarding: OnboardingState }) | null;
+  profile: GatedDriverProfile | null;
   loading: boolean;
   error: string | null;
   /** 403 "Not a registered driver" — signed in with Clerk, no driver row yet. */
   notRegistered: boolean;
   refresh: () => Promise<void>;
+  /**
+   * Write a field the app already knows the answer to, without waiting to be
+   * told it again.
+   *
+   * FOR ONE CASE, AND IT IS A REAL ONE: the online switch. HomeGate picks the
+   * screen off profile.isOnline, so before this a captain tapped Online and then
+   * watched the old screen while two requests went out and came back — the
+   * PATCH, and then a whole /me to learn the single field the PATCH had just
+   * confirmed. On a cold Render instance that is seconds of a switch that looks
+   * broken.
+   *
+   * Safe here precisely because the endpoint answers with the field: once the
+   * PATCH succeeds, the value written here and the value on the row are the same
+   * thing, so nothing is being guessed and no reconciling fetch is owed. The
+   * caller puts it back if the request is refused.
+   */
+  patchProfile: (patch: Partial<GatedDriverProfile>) => void;
 };
 
 const DriverContext = createContext<DriverContextValue | null>(null);
@@ -103,9 +128,13 @@ export const DriverProvider = ({ children }: { children: ReactNode }) => {
     return () => sub.remove();
   }, [refresh]);
 
+  const patchProfile = useCallback((patch: Partial<GatedDriverProfile>) => {
+    setProfile((prev) => (prev ? { ...prev, ...patch } : prev));
+  }, []);
+
   const value = useMemo(
-    () => ({ profile, loading, error, notRegistered, refresh }),
-    [profile, loading, error, notRegistered, refresh],
+    () => ({ profile, loading, error, notRegistered, refresh, patchProfile }),
+    [profile, loading, error, notRegistered, refresh, patchProfile],
   );
 
   return <DriverContext.Provider value={value}>{children}</DriverContext.Provider>;

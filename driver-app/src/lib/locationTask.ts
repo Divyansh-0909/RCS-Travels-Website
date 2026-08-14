@@ -55,6 +55,26 @@ let lastSent: { lat: number; lng: number; at: number } | null = null;
 let inFlight = false;
 let loadingClerk: Promise<unknown> | null = null;
 
+/**
+ * Consecutive "Driver is not online" refusals.
+ *
+ * A SINGLE 403 IS NOT AN ANSWER, and this counter is the whole reason. Going
+ * online is two things happening at once: the app flips isOnline locally so the
+ * screen and the GPS move on the tap, and a PATCH goes off to make it true on
+ * the server. The service can therefore be running, and a fix can arrive, a
+ * moment before the row says he is online — a race the captain never sees and
+ * that resolves itself in one round trip.
+ *
+ * Stopping on the first one would lose that race permanently: the service shuts
+ * down, the notification disappears, and a captain who is online everywhere he
+ * can see stops being findable by dispatch until he toggles again.
+ *
+ * Three in a row is a different claim. At these cadences that is a stretch of
+ * refusals no handshake explains, and means he really is offline.
+ */
+let refusals = 0;
+const REFUSALS_BEFORE_STOP = 3;
+
 /** Metres between two coordinates. Same haversine as the server's. */
 function metresBetween(aLat: number, aLng: number, bLat: number, bLng: number) {
   const toRad = (d: number) => (d * Math.PI) / 180;
@@ -125,8 +145,14 @@ TaskManager.defineTask(LOCATION_TASK, async ({ data, error }) => {
     // justified it. Stopping is what takes the notification off his phone;
     // without this it would sit there advertising a shift that had ended, and
     // the task would 403 every few seconds for the rest of the day.
+    //
+    // But only once the refusals have stopped looking like the going-online
+    // handshake. See `refusals`.
     if (res?.status === 403) {
-      await Location.stopLocationUpdatesAsync(LOCATION_TASK).catch(() => {});
+      refusals += 1;
+      if (refusals >= REFUSALS_BEFORE_STOP) {
+        await Location.stopLocationUpdatesAsync(LOCATION_TASK).catch(() => {});
+      }
       return;
     }
 
@@ -135,6 +161,10 @@ TaskManager.defineTask(LOCATION_TASK, async ({ data, error }) => {
     // this send as outstanding and tries again on the next wake-up.
     if (res?.error) return;
 
+    // A fix the server took: whatever the last few refusals were about, they are
+    // over. Reset here rather than on any success anywhere, so a run of 403s
+    // broken only by network errors still adds up to a stop.
+    refusals = 0;
     lastSent = { ...fix, at: now };
   } finally {
     inFlight = false;

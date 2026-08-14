@@ -1,33 +1,17 @@
-import { AppState, Pressable, View } from "react-native";
+import { Pressable, View } from "react-native";
 import { cssInterop } from "nativewind";
 import { CaretRightIcon } from "phosphor-react-native";
 import AppText from "../components/AppText";
-import RideCard from "../components/ui/RideCard";
 import ScheduledRide from "../components/ui/ScheduledRide";
 import MarketPromo from "../components/ui/MarketPromo";
-import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-native";
-import { useApi } from "../hooks/useApi";
-import { UpcomingBooking } from "../types/enums";
-import { ACTIVE_RIDE_STATUSES } from "../constants/booking";
+import { useRides } from "../hooks/useRides";
 
 // Phosphor takes a colour prop, not a class. cssInterop is how AppBar and
 // OnlineToggle colour theirs, so the caret reads its blue from the same token.
 const Caret = cssInterop(CaretRightIcon, {
     className: { target: false, nativeStyleToProp: { color: true } },
 });
-
-type ApiError = {
-    error: string;
-    status: number;
-    code?: string;
-};
-
-type GetRidesResponse =
-    | {
-        bookings: UpcomingBooking[];
-    }
-    | ApiError;
 
 const MAX_ROWS = 2;
 
@@ -37,56 +21,40 @@ const MAX_ROWS = 2;
 // that the scrim is there, faded halfway to white before it gets there.
 const BAR_CLEARANCE = 132;
 
+/**
+ * The board a captain sees while he is OFFLINE.
+ *
+ * It used to be home in every state, and carried the active-ride card as well.
+ * Both of those moved: an active ride has its own screen and an online captain
+ * gets the map, so what is left here is the one case where neither applies —
+ * signed in, approved, and not taking work. HomeGate decides which of the three
+ * he is looking at.
+ *
+ * The scheduled list stays, because it is exactly what he came to check. A
+ * captain going offline for the evening still wants to know when tomorrow's
+ * first pickup is.
+ */
 const Home = () => {
-    const api = useApi()
     const navigate = useNavigate()
-    const [rides, setRides] = useState<UpcomingBooking[]>([])
-    const [error, setError] = useState<string | null>(null)
-
-    const latestRequest = useRef(0)
-    const invalidateInFlight = useCallback(() => { latestRequest.current++ }, [])
-
-    const refresh = useCallback(async () => {
-        const requestId = ++latestRequest.current;
-        setError(null)
-        try {
-            const data = await api.getRides() as GetRidesResponse;
-            if (requestId !== latestRequest.current) return;
-
-            if ("error" in data) {
-                setError(data.error);
-                return;
-            }
-
-            setRides(data.bookings);
-        } catch (e: unknown) {
-            if (requestId !== latestRequest.current) return;
-
-            if (e instanceof Error) setError(e.message);
-            else setError("Something went wrong")
-        }
-    }, [api]);
-
-    useEffect(() => {
-        refresh();
-        return invalidateInFlight;
-    }, [refresh, invalidateInFlight]);
-
-    useEffect(() => {
-        const subscription = AppState.addEventListener("change", (state) => {
-            if (state === "active") refresh();
-        });
-
-        return () => subscription.remove();
-    }, [refresh]);
-
-    const active = rides.find((ride) => ACTIVE_RIDE_STATUSES.includes(ride.status)) ?? null;
-    const scheduled = rides.filter((ride) => ride.status === "assigned");
+    const { scheduled, error, refresh } = useRides()
 
     return (
         <View
             style={{ flex: 1, width: '92%', gap: 16, paddingTop: 8, paddingBottom: BAR_CLEARANCE }}
         >
+            {/* Said plainly, at the top, because it is the reason the rest of this
+                screen is quiet. Without it a captain who does not remember
+                flipping the switch reads an empty board as the fleet having no
+                work, and waits on nothing. */}
+            <View className="w-full rounded-2xl px-4 py-3 gap-0.5" style={{ backgroundColor: '#f3f3f3' }}>
+                <AppText className="text-base font-semibold text-[var(--background-primary)]">
+                    You&apos;re offline
+                </AppText>
+                <AppText className="text-xs text-gray-600">
+                    Go online to start getting rides.
+                </AppText>
+            </View>
+
             {error && (
                 <View className="w-full flex-row items-center justify-between gap-4">
                     <AppText numberOfLines={2} className="flex-1 text-sm text-red-600">{error}</AppText>
@@ -100,11 +68,10 @@ const Home = () => {
                 </View>
             )}
 
-            {active && (
-                <>
-                    <RideCard booking={active} onPress={() => navigate(`/rides/${active.id}`)} />
-                </>
-            )}
+            {/* No active-ride card here any more. A ride in progress takes over
+                the whole screen (ActiveRide) rather than sitting at the top of a
+                list, and a captain cannot be offline with one anyway — the server
+                refuses to take him offline until it is finished. */}
 
             <View className="w-full gap-2">
                 <View className="flex-row items-center justify-between gap-3 px-1">

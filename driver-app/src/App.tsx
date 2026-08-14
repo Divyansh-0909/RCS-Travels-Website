@@ -8,6 +8,7 @@ import OfferPanel from './components/OfferPanel';
 import OnlineToggle from './components/OnlineToggle';
 import RideAcceptedSheet from './components/RideAcceptedSheet';
 import { RideMenuDrawer, RideMenuProvider } from './components/RideMenu';
+import { homeScreenFor } from './components/HomeGate';
 import { useDriver } from './hooks/useDriver';
 import { useDriverLocation } from './hooks/useDriverLocation';
 
@@ -35,13 +36,20 @@ const App = () => {
     // padding there would be an inch of white the screen never fills.
     const showsHomeHeader = pathname === '/' && (profile?.onboarding?.canDrive ?? false);
 
+    // The two map screens run to every edge and the header floats over them, so
+    // padding above them would be a white stripe where the map should be. Asked
+    // of HomeGate rather than re-derived here — the screen and its clearance are
+    // one decision, and splitting it is how they come apart.
+    const homeScreen = pathname === '/' ? homeScreenFor(profile) : null;
+    const fullBleed = homeScreen === 'ride' || homeScreen === 'standby';
+
     return (
         <AppBarVisibilityProvider>
             {/* Wraps the shell because its two halves sit at opposite ends of it:
                 the button is inside the header, the drawer has to cover the whole
                 screen and so cannot be the header's child. */}
             <RideMenuProvider>
-            <View className={`relative w-full h-full bg-[var(--foreground)] ${showsHomeHeader ? 'pt-34' : 'pt-10'} flex flex-col justify-center items-center`}>
+            <View className={`relative w-full h-full bg-[var(--foreground)] ${fullBleed ? 'pt-0' : showsHomeHeader ? 'pt-34' : 'pt-10'} flex flex-col justify-center items-center`}>
                 <OnlineToggle />
                 <Animated.View
                     key={pathname}

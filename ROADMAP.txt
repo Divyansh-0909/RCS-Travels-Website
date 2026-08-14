@@ -67,6 +67,37 @@ IMPORTANT:
   backend/scripts/push-secrets.ps1 (adds a new Secret Manager version, and touches
   only keys present in the file) -> gcloud run services update rcs-api --region
   asia-south1 to pick up :latest -> delete .env.production again.
+- !! A CAPTAIN CAN BOOK A RIDE AND THEN DRIVE IT HIMSELF. Nothing anywhere stops
+  him. Found 14 Aug 2026 while working out how to test the driver flow end to end
+  on one phone — which is the same thing, done on purpose.
+  HOW IT WORKS, and why it is not an accident of the data model: the Clerk identity
+  is derived from the phone number alone (routes/hybridAuth.js), so one person with
+  one number is one Clerk user holding a User row AND a Driver row. That is
+  deliberate and correct — a captain who also books cabs is one person. What is
+  missing is anybody checking the two apart at dispatch: candidatesWithin filters on
+  radius, freshness, is_online, is_active, suspension, approval and vehicle class,
+  and never once asks who booked the ride. Neither accept endpoint asks either.
+  Both rows already carry clerkId, so the join is sitting right there unused.
+  WHY IT IS HARMLESS TODAY, and exactly when it stops being: fares are fixed by
+  destination and commission moves money between two accounts belonging to the same
+  man, so a self-booked ride nets out to roughly nothing. It becomes a live fraud
+  vector the moment anything is payable ON a ride rather than FOR one — the ride
+  acceptance deposit (block 10), the driver wallet, or any completion-count or
+  streak incentive. All three are already on this roadmap. Whoever builds the first
+  of them owns this.
+  IT IS ALSO A QUEUE EXPLOIT RIGHT NOW, at zero cost: lastOfferedAt is stamped when
+  an offer goes OUT (markOffered, deliberately, see the comment there), so booking a
+  ride to yourself and ignoring it spends a rival's turn and moves you up the
+  fairness ordering. Small at this fleet size, not nothing.
+  THE FIX: driver.clerkId !== booking.user.clerkId, in candidatesWithin and in both
+  PATCH .../accept handlers — the query is the one that matters, the endpoints are
+  the ones that close the race. Cheap, and it needs a test.
+  DO NOT LAND IT WITHOUT AN ESCAPE HATCH. Self-booking is currently the only way to
+  drive the whole flow — book, dispatch, offer, accept, en_route, arrive, OTP,
+  complete — on one handset with one number, and there is no second test phone. An
+  env flag (ALLOW_SELF_ASSIGN=1, dev only, off by default like FCM_ALWAYS_ACCEPT is
+  meant to be) keeps that possible. Guard it the way that flag should have been:
+  refuse to honour it when NODE_ENV is production.
 - [RESOLVED — 12 Aug 2026] @@unique([driverId, type]) plus "renewal replaces the old file" meant an
   approved captain who renewed his insurance three weeks early destroyed his own approved document
   and dropped to pending. Settled a third way, neither of the two options below: the key is now

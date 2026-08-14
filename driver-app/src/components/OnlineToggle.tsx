@@ -33,20 +33,23 @@ const OnlineToggle = () => {
     const onHome = pathname === "/";
 
     const api = useApi()
-    const { profile, refresh } = useDriver();
+    const { profile, patchProfile } = useDriver();
     const { onActiveRide } = useShellHidden();
 
     // THE SERVER OWNS THIS, not a useState seeded false. The flag lives on the
     // driver row, so a captain who was online when he last closed the app is
     // still online now — a local default would have shown him "Offline" while
     // dispatch was busy offering him rides. It is also what useDriverLocation
-    // reads to decide whether to transmit, and two copies of "am I online" is
-    // exactly how the switch and the GPS end up disagreeing.
-    const serverOnline = profile?.isOnline ?? false;
-    // Optimistic override so the knob moves under the thumb rather than after a
-    // round trip. Cleared once the refresh below has re-read the truth.
-    const [pending, setPending] = useState<boolean | null>(null);
-    const online = pending ?? serverOnline;
+    // reads to decide whether to transmit, and what HomeGate picks the screen
+    // from; two copies of "am I online" is exactly how the switch, the screen
+    // and the GPS end up disagreeing.
+    //
+    // Which is why the optimism now lives on the PROFILE rather than in a local
+    // `pending` beside it. A second copy here moved the knob instantly and left
+    // the screen behind it, waiting out the round trip — the switch looked
+    // instant and the app looked stuck.
+    const online = profile?.isOnline ?? false;
+    const [busy, setBusy] = useState(false);
 
     // "/" is the application status until he is approved, and none of this header
     // belongs on it: the switch would 403, and offering to go online is the one
@@ -61,10 +64,19 @@ const OnlineToggle = () => {
     }));
 
     async function toggleOnline() {
+        if (busy) return
         const next = !online
         setError(null)
-        setPending(next)
+        setBusy(true)
 
+        try {
+            await commitOnline(next)
+        } finally {
+            setBusy(false)
+        }
+    }
+
+    async function commitOnline(next: boolean) {
         // BEFORE the server is told, because going online without it is worse
         // than not going online at all: the switch would read Online, dispatch
         // would never find him — the radius search reads driver_locations, which
@@ -75,10 +87,13 @@ const OnlineToggle = () => {
         // is a setting he has to change in Settings rather than in a prompt, and
         // telling a captain who has ALREADY allowed location to allow location
         // sends him round in a circle looking for a switch he has flipped.
+        // FIRST, and before anything optimistic. A denial here means he is not
+        // going online at all, and having already flipped the screen to Standby
+        // we would have to flip it back — a bounce that reads as a bug rather
+        // than as a refusal.
         if (next) {
             const permission = await ensureLocationPermission()
             if (permission !== "granted") {
-                setPending(null)
                 setError(permission === "deniedBackground"
                     ? "Set location to \"Allow all the time\" so rides reach you while you drive"
                     : "Allow location access to go online")
@@ -86,22 +101,29 @@ const OnlineToggle = () => {
             }
         }
 
+        // NOW, on the strength of the tap. This is what moves the knob, swaps the
+        // screen and starts or stops the GPS — all three read the same field, so
+        // all three move together and none of them waits on the network.
+        patchProfile({ isOnline: next })
+
         // The api layer RETURNS its failures rather than throwing them — a 409
         // "finish your active ride" arrives as { error }, not as an exception.
         // The try/catch that used to be here caught nothing and let every
         // refusal through as success, leaving the switch claiming a state the
         // server had declined.
         const res = await api.setOnline(next)
+
         if (res?.error) {
-            setPending(null)
+            // Put it back. The optimism above was a claim about what the server
+            // would say, and it said otherwise.
+            patchProfile({ isOnline: !next })
             setError(res.error)
-            return
         }
 
-        // Re-read rather than assume: this is what publishes the new state to
-        // useDriverLocation, which starts or stops the GPS off the same field.
-        await refresh()
-        setPending(null)
+        // NO REFRESH ON SUCCESS. /driver/online answers with the one field this
+        // changes, and it agrees with what was written above — so a whole /me
+        // would spend a second round trip confirming something already known.
+        // That request was the reason the screen lagged the switch.
     }
 
     if (!onHome || !canDrive) return null;
