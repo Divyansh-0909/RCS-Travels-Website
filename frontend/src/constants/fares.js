@@ -20,7 +20,7 @@ export const CARRIER_CHARGE = 200;
 // backend/routes/bookings.js, which is what actually charges it; this copy exists
 // so the booking screen can warn with the real number rather than a rounded one.
 // If the server's figure moves, move this with it.
-export const CANCELLATION_CHARGE_PCT = 35;
+export const CANCELLATION_CHARGE_PCT = 15;
 
 // How /api/fare/estimate priced a ride. 'zone' is the provider's own all-in
 // quote; the two distance sources pay for the drive alone and leave tolls with

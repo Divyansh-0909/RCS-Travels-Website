@@ -19,10 +19,16 @@ const bookingsRouter = Router()
 /** @type {import('@prisma/client').BookingStatus[]} */
 export const ACTIVE_STATUSES = ['pending', 'confirmed', 'assigned', 'en_route', 'reached', 'started']
 
-// Cancelling once the driver is waiting at the pickup costs the rider 35% — that
+// Cancelling once the driver is waiting at the pickup costs the rider 15% — that
 // driver turned down other rides and has already spent the fuel. Anything earlier
 // is free, including en_route: the driver is moving but hasn't committed the wait.
 // A ride already underway can't be self-cancelled; that's a support conversation.
+//
+// 15 FROM 35, 14 Aug 2026, Raju's number. The old figure was never his — it came
+// in with the cancellation rule itself and nobody had priced it since. Kept in
+// step with the copy in frontend/src/constants/fares.js, which is what warns the
+// rider before she taps: the two disagreeing means quoting one number and taking
+// another.
 // A ride worth following: one that is going to happen, or is happening. `pending`
 // is out because the search may still end in no_driver, and a link that never
 // resolves into anything is worse than no link. The terminal statuses are out
@@ -32,7 +38,7 @@ const SHAREABLE_STATUSES = ['confirmed', 'assigned', 'en_route', 'reached', 'sta
 
 const CANCELLABLE_STATUSES = ['pending', 'confirmed', 'assigned', 'en_route', 'reached']
 const CHARGEABLE_STATUSES = ['reached']
-export const CANCELLATION_CHARGE_PCT = 35
+export const CANCELLATION_CHARGE_PCT = 15
 
 // What cancelling would cost right now. Exported so the status endpoint can warn
 // the rider with the same number the cancel endpoint will actually charge.

@@ -26,6 +26,9 @@ import { sendLocation } from '../api/api';
 
 export const LOCATION_TASK = 'rcs-driver-location';
 
+/** A position on its way to the server. Exported with reportFix, which takes it. */
+export type Fix = { lat: number; lng: number };
+
 /**
  * The send gate, and the reason it lives here rather than in the hook.
  *
@@ -106,6 +109,65 @@ async function authToken() {
   return (await clerk.session?.getToken()) ?? null;
 }
 
+/**
+ * The send gate, shared by both ways a fix can reach this module.
+ *
+ * TWO CALLERS, ONE THROTTLE, AND ONE `lastSent`. The background task is the
+ * normal path; the foreground watcher in useDriverLocation is the fallback for a
+ * handset that will not start the service at all. If each kept its own idea of
+ * when it last sent, a device that switched between them would either double up
+ * or go quiet for a heartbeat — and worse, the two would disagree about whether
+ * the server had heard from him recently, which is the one thing the staleness
+ * cutoff depends on.
+ *
+ * `post` is passed in because the credential differs: headless, the task builds
+ * its own token; in the foreground, useApi already has one.
+ */
+export async function reportFix(
+    fix: Fix,
+    post: (fix: Fix) => Promise<{ error?: string; status?: number } | undefined>,
+) {
+    const now = Date.now();
+
+    const moved =
+        !lastSent || metresBetween(lastSent.lat, lastSent.lng, fix.lat, fix.lng) >= MIN_MOVE_M;
+    const heartbeatDue = !lastSent || now - lastSent.at >= IDLE_HEARTBEAT_MS;
+    if (!moved && !heartbeatDue) return;
+
+    // Never queue. A backlog of positions is a backlog of WRONG positions — by
+    // the time the third is delivered the first two describe places he has
+    // already left. Skipping is correct, not a compromise.
+    if (inFlight) return;
+    inFlight = true;
+
+    try {
+        const res = await post(fix);
+
+        // He went offline, or the service outlived the shift that justified it.
+        // Only acted on once the refusals stop looking like the going-online
+        // handshake — see `refusals`.
+        if (res?.status === 403) {
+            refusals += 1;
+            if (refusals >= REFUSALS_BEFORE_STOP) {
+                await Location.stopLocationUpdatesAsync(LOCATION_TASK).catch(() => {});
+            }
+            return;
+        }
+
+        // Anything else is dropped rather than retried: the next fix is seconds
+        // away and more accurate. lastSent stays put, so the heartbeat still
+        // counts this send as outstanding and tries again.
+        if (res?.error) return;
+
+        // Reset only on a fix the server took, so a run of 403s broken by network
+        // errors still adds up to a stop.
+        refusals = 0;
+        lastSent = { ...fix, at: now };
+    } finally {
+        inFlight = false;
+    }
+}
+
 TaskManager.defineTask(LOCATION_TASK, async ({ data, error }) => {
   // Losing signal is not an error worth acting on — it is a tunnel, and the next
   // wake-up brings a fix.
@@ -122,51 +184,13 @@ TaskManager.defineTask(LOCATION_TASK, async ({ data, error }) => {
   if (!newest) return;
 
   const fix = { lat: newest.coords.latitude, lng: newest.coords.longitude };
-  const now = Date.now();
 
-  const moved =
-    !lastSent || metresBetween(lastSent.lat, lastSent.lng, fix.lat, fix.lng) >= MIN_MOVE_M;
-  const heartbeatDue = !lastSent || now - lastSent.at >= IDLE_HEARTBEAT_MS;
-  if (!moved && !heartbeatDue) return;
-
-  // Never queue. A backlog of positions is a backlog of WRONG positions; by the
-  // time a held request goes out it describes the wrong place, and the fix
-  // behind it is better than both.
-  if (inFlight) return;
-  inFlight = true;
-  try {
+  // The gate, the retry policy and the refusal counting all live in reportFix,
+  // which the foreground fallback shares. All this path owns is the credential:
+  // headless, there is no useAuth to borrow one from.
+  await reportFix(fix, async (f) => {
     const token = await authToken();
-    if (!token) return;
-
-    const res = await sendLocation(fix, async () => token);
-
-    // He went offline — from another device, or because the app was killed
-    // between the toggle and here — and the service outlived the state that
-    // justified it. Stopping is what takes the notification off his phone;
-    // without this it would sit there advertising a shift that had ended, and
-    // the task would 403 every few seconds for the rest of the day.
-    //
-    // But only once the refusals have stopped looking like the going-online
-    // handshake. See `refusals`.
-    if (res?.status === 403) {
-      refusals += 1;
-      if (refusals >= REFUSALS_BEFORE_STOP) {
-        await Location.stopLocationUpdatesAsync(LOCATION_TASK).catch(() => {});
-      }
-      return;
-    }
-
-    // Anything else is dropped rather than retried: the next fix is seconds
-    // away and more accurate. lastSent stays put, so the heartbeat still counts
-    // this send as outstanding and tries again on the next wake-up.
-    if (res?.error) return;
-
-    // A fix the server took: whatever the last few refusals were about, they are
-    // over. Reset here rather than on any success anywhere, so a run of 403s
-    // broken only by network errors still adds up to a stop.
-    refusals = 0;
-    lastSent = { ...fix, at: now };
-  } finally {
-    inFlight = false;
-  }
+    if (!token) return { error: 'no session' };
+    return sendLocation(f, async () => token);
+  });
 });

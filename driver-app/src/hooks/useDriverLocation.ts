@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import * as Location from 'expo-location';
-import { LOCATION_TASK } from '../lib/locationTask';
+import { LOCATION_TASK, reportFix } from '../lib/locationTask';
+import { useApi } from './useApi';
 
 /**
  * Starts and stops the location service; it does not do the reporting.
@@ -58,6 +59,30 @@ const MODES = {
  * is being collected and why, because it is the only disclosure he sees while
  * driving.
  */
+/**
+ * Starting the service is retried, because the failure it hits is a RACE rather
+ * than a refusal.
+ *
+ * expo-task-manager keeps its Android context in a WeakReference and hands the
+ * SharedPreferences built from it to callers that do not null-check
+ * (TaskService.getSharedPreferences returns null; TasksPersistence.getAll
+ * dereferences it). Before TaskService has been constructed with a live context
+ * — which on a cold start is the first second or so — startLocationUpdatesAsync
+ * rejects with a NullPointerException from inside the library.
+ *
+ * A second later the same call succeeds. Dropping to the degraded foreground
+ * watcher over a race that resolves on its own would cost the captain the whole
+ * shift's background reporting for the sake of one early tick, so it is worth
+ * asking again before giving up.
+ *
+ * The initial settle is what keeps the common case to a single attempt: without
+ * it every cold start would log a failure before its first success.
+ */
+const START_SETTLE_MS = 600;
+const START_BACKOFF_MS = [1500, 4000];
+
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 const FOREGROUND_SERVICE = {
   notificationTitle: 'Online with RCS Captains',
   notificationBody: 'Sharing your location so nearby rides reach you.',
@@ -108,25 +133,55 @@ export async function ensureLocationPermission(): Promise<LocationPermission> {
  * @param onRide  he holds a ride somebody is watching, which picks the cadence.
  */
 export function useDriverLocation(enabled: boolean, onRide: boolean) {
+  const api = useApi();
   const mode = onRide ? MODES.ride : MODES.idle;
 
   useEffect(() => {
     let cancelled = false;
+    let watcher: Location.LocationSubscription | null = null;
 
-    (async () => {
+    /**
+     * FOREGROUND ONLY, and only when the service refuses to start.
+     *
+     * Reporting nothing is the worst outcome available here: a captain who looks
+     * online to himself, and to the switch, while dispatch cannot see him. So a
+     * handset that will not run the service still reports for as long as the app
+     * is on screen — degraded, but findable. Shares reportFix with the task, so
+     * both paths throttle against one `lastSent` rather than two.
+     */
+    const watchInForeground = async () => {
+      watcher = await Location.watchPositionAsync(
+        { accuracy: mode.accuracy, timeInterval: mode.timeInterval, distanceInterval: 0 },
+        (loc) => {
+          void reportFix(
+            { lat: loc.coords.latitude, lng: loc.coords.longitude },
+            (f) => api.sendLocation(f),
+          );
+        },
+        () => {},
+      );
+      if (cancelled) { watcher.remove(); watcher = null; }
+    };
+
+    /** 'ok' when there is nothing more to do; 'no-permission' to degrade without retrying. */
+    const attemptStart = async (): Promise<'ok' | 'no-permission'> => {
       const running = await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK);
-      if (cancelled) return;
+      if (cancelled) return 'ok';
 
       if (!enabled) {
         // Also the repair path for a service that outlived its shift: the app
         // may open to a captain the server says is offline while a task from a
         // killed session is still registered and still holding a notification.
         if (running) await Location.stopLocationUpdatesAsync(LOCATION_TASK);
-        return;
+        return 'ok';
       }
 
       const { granted } = await Location.getBackgroundPermissionsAsync();
-      if (!granted || cancelled) return;
+      if (cancelled) return 'ok';
+
+      // A settled answer, not a race — retrying changes nothing. He can still be
+      // found while he is looking at the app.
+      if (!granted) return 'no-permission';
 
       // Re-registering an already-running task is how the cadence changes:
       // startLocationUpdatesAsync replaces the options of a task of the same
@@ -136,12 +191,48 @@ export function useDriverLocation(enabled: boolean, onRide: boolean) {
         ...mode,
         foregroundService: FOREGROUND_SERVICE,
       });
+      return 'ok';
+    };
+
+    (async () => {
+      // Let the native side finish coming up before the first ask. See
+      // START_SETTLE_MS — this is the difference between one clean attempt and a
+      // guaranteed failure followed by a retry, on every cold start.
+      if (enabled) await wait(START_SETTLE_MS);
+      if (cancelled) return;
+
+      let last: unknown;
+
+      for (let attempt = 0; attempt <= START_BACKOFF_MS.length; attempt++) {
+        try {
+          if (await attemptStart() === 'no-permission') break;
+          return;
+        } catch (err) {
+          last = err;
+          const backoff = START_BACKOFF_MS[attempt];
+          if (backoff === undefined) break;
+          await wait(backoff);
+          if (cancelled) return;
+        }
+      }
+
+      // Out of attempts, or refused outright. THIS USED TO BE AN UNHANDLED
+      // REJECTION, which is how it reached the captain as a red box rather than
+      // a log. Whatever the reason — the library's null context, an OEM battery
+      // manager refusing the service, Android declining to start one from a state
+      // it considers background — none of it is worth failing the shift over.
+      if (last) console.warn('location service did not start:', (last as Error)?.message);
+      if (!cancelled) await watchInForeground().catch(() => {});
     })();
 
-    return () => { cancelled = true; };
-    // NO STOP IN THE CLEANUP, deliberately. This effect re-runs whenever the
-    // cadence changes, and stopping there would tear the service down and build
-    // it back up mid-ride. The service is ended by `enabled` going false — that
-    // is, by him going offline — and by nothing else.
-  }, [enabled, mode]);
+    return () => {
+      cancelled = true;
+      watcher?.remove();
+    };
+    // NO SERVICE STOP IN THE CLEANUP, deliberately. This effect re-runs whenever
+    // the cadence changes, and stopping there would tear the service down and
+    // build it back up mid-ride. The service is ended by `enabled` going false —
+    // that is, by him going offline — and by nothing else. The foreground
+    // watcher IS torn down, because it belongs to this effect's lifetime.
+  }, [enabled, mode, api]);
 }

@@ -9,7 +9,8 @@
     "android": "expo start --dev-client --android",
     "ios": "expo start --dev-client --ios",
     "web": "expo start --web",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "postinstall": "patch-package"
   },
   "dependencies": {
     "@clerk/clerk-expo": "^2.19.31",
@@ -52,6 +53,7 @@
     "babel-preset-expo": "~55.0.24",
     "eslint": "^9.39.5",
     "eslint-config-expo": "~55.0.1",
+    "patch-package": "^8.0.1",
     "typescript": "~5.9.2"
   },
   "overrides": {

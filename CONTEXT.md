@@ -364,9 +364,20 @@ accepted | rejected | withdrawn), `VehicleClass` (hatchback | sedan | suv | suv_
   **Nothing writes either.** `walletBalance` *is* returned by `GET /api/driver/me` and rendered
   by the app's `WalletCard`, so a captain sees a wallet that will read ₹0 for as long as the
   ledger is unbuilt — the one place this gap is visible to a real person rather than only in
-  the schema.
+  the schema. **Available / Held / Total is a derivation over this table, not new columns**
+  (total = `sum(entries)`, held = `deposit_hold` rows whose booking has no matching
+  `deposit_refund`, available = the difference). **The `(bookingId, type)` unique is missing**
+  — the index is deliberately non-unique because one booking produces a hold, its refund and a
+  commission debit, which means a retried completion or a redelivered webhook will
+  double-credit. It needs adding before anything writes here.
 - **Coupon** — a row per issued coupon. `@@unique([userId, earnedFor])` stops one month
-  issuing two; the unique `bookingId` stops the same ₹100 being spent twice.
+  issuing two; the unique `bookingId` stops the same coupon being spent twice.
+  **The earning rule changed on 14 Aug 2026** from "₹100 after 6 completed rides in a month"
+  to **monthly spend tiers** — ₹2,000 → ₹100, ₹2,500 → ₹200, ₹5,000 → ₹500, highest tier
+  reached wins, one per customer per calendar month, completed rides only. The schema already
+  supports this: `amount` is a column and the composite unique already enforces one-per-month.
+  Only the `@default(100)` and the model's own comment still describe the old rule — **the
+  schema comment and ROADMAP block 12 currently disagree**, and the comment is the stale one.
 - **WhatsappSession** — booking-bot conversation state.
 
 ### Dead
@@ -646,6 +657,24 @@ Ride acceptance deposit, overcharge flags → fines → suspension, coupons, rat
 the driver marketplace, payments and monthly accounts. Schema exists for most of it; no code
 touches any of it. Full detail in ROADMAP blocks 7 and 9-12.
 
+**Payments — Razorpay, chosen 14 Aug 2026.** Nothing is built; the word "razorpay" does not
+yet appear anywhere outside the docs. The shape is fixed though: the backend computes the
+amount, creates the **Order server-side**, hands the client only an `order_id`, and confirms
+by **webhook** with an API verification call as the supplement. The amount comes out of the
+**signed fare quote**, never out of `req.body` — otherwise the `FARE_QUOTE` guarantee that
+`POST /api/bookings` already enforces is thrown away at the last step. Razorpay touches
+exactly three things: customer payments, RazorpayX payouts, and a driver clearing a negative
+balance. **It is deliberately absent from the ride-now accept path.**
+
+**The driver wallet stays an accounts-payable ledger.** Top-up was proposed again on 14 Aug
+and refused again — a driver-funded balance is stored value and lands under the RBI PPI
+regime, which ROADMAP block 10 exists to avoid. The proposed alternative, a per-ride payment
+*authorisation* on accept, was refused too: it puts a gateway round-trip inside a path the
+dispatch ring assumes is a 2-second tap. So the acceptance deposit is a **ledger debit** on
+accept and a credit on completion, and a **negative balance is the state that blocks going
+online**. The one inbound payment a driver may make is clearing that debt, **capped at the
+debt** so it can never produce a positive spendable balance.
+
 ---
 
 ## 6. Auth model (hybrid WhatsApp-OTP + Clerk)
@@ -911,7 +940,10 @@ in-process and rate-limited so the API key never reaches the browser.
 7. **Dead reckoning** on the customer side — the columns are already written.
 8. **Sharing pool** — see §12; the corridor pass cannot run.
 9. **The accountability layer** — wallet, deposit, flags, fines, coupons, ratings. Schema
-   migrated, no code.
+   migrated, no code. Order settled 14 Aug: the **month-end tiered coupon issuing job**, then
+   the **coupon inside the signed quote**, then the **wallet credit on redemption**, then the
+   **`WalletEntry(bookingId, type)` unique**. All four need no gateway, which is why they come
+   before Razorpay rather than after it.
 10. **Round trips**, then the marketplace backend, payments, outstation.
 11. **Polish** — i18next Hindi wiring, and the optimizations in ROADMAP.
 

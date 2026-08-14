@@ -1,0 +1,56 @@
+diff --git a/node_modules/expo-task-manager/android/src/main/java/expo/modules/taskManager/TaskService.java b/node_modules/expo-task-manager/android/src/main/java/expo/modules/taskManager/TaskService.java
+index 44cd804..d1e8e31 100644
+--- a/node_modules/expo-task-manager/android/src/main/java/expo/modules/taskManager/TaskService.java
++++ b/node_modules/expo-task-manager/android/src/main/java/expo/modules/taskManager/TaskService.java
+@@ -82,7 +82,17 @@ public class TaskService implements SingletonModule, TaskServiceInterface {
+ 
+   public TaskService(Context context) {
+     super();
+-    mContextRef = new WeakReference<>(context);
++    // THE APPLICATION CONTEXT, not whatever was passed in. This is held weakly,
++    // so an Activity context can be collected — and every mContextRef.get() in
++    // this file then returns null, including the one behind
++    // getSharedPreferences(). That is the root of the NullPointerException
++    // TasksPersistence throws during startLocationUpdatesAsync.
++    //
++    // The Application object lives as long as the process, so the weak reference
++    // to it can never come back empty, and holding it leaks nothing — which is
++    // the whole reason the WeakReference was here. It was guarding against a leak
++    // that cannot happen while creating a null that can.
++    mContextRef = new WeakReference<>(context.getApplicationContext());
+     mTasksAndEventsRepository = TasksAndEventsRepository.create(context);
+ 
+     if (!mTasksAndEventsRepository.tasksExist()) {
+diff --git a/node_modules/expo-task-manager/android/src/main/java/expo/modules/taskManager/repository/TasksPersistence.java b/node_modules/expo-task-manager/android/src/main/java/expo/modules/taskManager/repository/TasksPersistence.java
+index a872533..859a66b 100644
+--- a/node_modules/expo-task-manager/android/src/main/java/expo/modules/taskManager/repository/TasksPersistence.java
++++ b/node_modules/expo-task-manager/android/src/main/java/expo/modules/taskManager/repository/TasksPersistence.java
+@@ -16,6 +16,15 @@ import expo.modules.interfaces.taskManager.TaskInterface;
+ public class TasksPersistence {
+ 
+   public void clearTaskPersistence(SharedPreferences preferences, String but) {
++    // TaskService.getSharedPreferences() returns null when its context
++    // WeakReference is empty, and persistTasksForAppScopeKey below already
++    // guards for exactly that. This method and readPersistedTasks did not, so a
++    // null arrived here and became a NullPointerException on getAll() — which is
++    // how startLocationUpdatesAsync rejects during the first second after a cold
++    // start. Nothing is persisted yet in that window, so returning is correct.
++    if (preferences == null) {
++      return;
++    }
+     Map<String, ?> map = preferences.getAll();
+     for(String key: map.keySet()) {
+       if(!but.equals(key)) {
+@@ -56,6 +65,12 @@ public class TasksPersistence {
+   public Map<String, TasksAndEventsRepository.AppConfig> readPersistedTasks(SharedPreferences preferences) {
+     Map<String, TasksAndEventsRepository.AppConfig> result = new HashMap<>();
+ 
++    // Same guard as clearTaskPersistence above. An empty result is the honest
++    // answer when there is no store to read: no tasks have been persisted.
++    if (preferences == null) {
++      return result;
++    }
++
+     Map<String, ?> appScopeKeyToAppConfigsMap = preferences.getAll();
+ 
+     for (Map.Entry<String, ?> appScopeKeyToConfig : appScopeKeyToAppConfigsMap.entrySet()) {
