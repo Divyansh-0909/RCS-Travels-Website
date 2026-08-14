@@ -1,7 +1,18 @@
 import { prisma } from '../db/prisma.js'
 import { Prisma } from '@prisma/client'
 import { randomUUID } from 'node:crypto'
-import {sendFCM, sendWhatsApp} from './notification.js'
+import {sendFCM, sendPush, sendWhatsApp} from './notification.js'
+
+/**
+ * getDriver's answer when the ride has gone OUT to captains but nobody has taken
+ * it yet — which, for ride-now, is now the ordinary outcome rather than an edge.
+ *
+ * Distinct from null, and that distinction is load-bearing: startAssignment
+ * writes `no_driver` on null, so returning it here would kill a booking the
+ * moment its offers were sent. A booking nobody answers is written off by the
+ * lazy expiry in GET /bookings/:id instead, on ASSIGNMENT_DEADLINE_MS.
+ */
+export const OFFERED = 'offered'
 import { seatsOf } from '../constants/vehicles.js'
 import { LOCATION_STALE_AFTER_MS } from '../constants/dispatch.js'
 import {
@@ -327,6 +338,10 @@ export async function getDriver(bookingId) {
   if (!row) return null
 
   const triedDriverIds = new Set()
+  // How many captains have been sent this ride in the ring being walked. Non-zero
+  // means the search is over as far as this function is concerned: the answer is
+  // theirs to give, not ours to invent.
+  let offered = 0
 
   for(let i=0; i<70; i+=10){
     // A ring of FCM sends can take a while; re-check before starting the next
@@ -504,50 +519,63 @@ export async function getDriver(bookingId) {
       // is answered. See markOffered.
       await markOffered(x.driverId)
 
-      const response =
-        await sendFCM(x.driver.fcmToken, {
-          notification: {
-            title: row.scheduledAt ? `New Scheduled Ride, Pick up at ${row.scheduledAt}` : 'Immediate Pickup',
-            body: `\n${row.pickupAddress} → ${row.dropAddress} \n₹${row.fare}`,
-          },
-          data: {
-            bookingId:      row.id,
-            pickupAddress:  row.pickupAddress,
-            pickupLat:      String(row.pickupLat),
-            pickupLng:      String(row.pickupLng),
-            dropAddress:    row.dropAddress,
-            dropLat:        String(row.dropLat),
-            dropLng:        String(row.dropLng),
-            fare:           String(row.fare),
-            vehicleClass:   row.vehicleClass,
-            pickupTime:     pickupTimeLabel,
-            customerPhone:  row.customerPhone,
-          },
-        })
-
-      if (response === true ) {
-        // on-spot rides have no confirmedAt yet. The claim also takes the seats:
-        // a solo ride the whole vehicle, a fresh sharing ride one seat.
-        const claim = await claimBookingForDriver(row, x.driver, row.confirmedAt ?? new Date())
-
-        if (claim === 'booking_taken') return null
-        if (claim === 'no_room') continue
-
-        assignedDriver = x.driverId
-
-        sendWhatsApp(x.driver.phone,
-          `You have been assigned a ride.
-          \nPickup Time: ${pickupTimeLabel}
-          \nPickup Location: ${row.pickupAddress}
-          \nDrop Location: ${row.dropAddress}
-          \nCustomer Phone Number: ${row.customerPhone}`
-        )
-        return assignedDriver
-      }
+      // AN OFFER HE ANSWERS, not an answer invented for him.
+      //
+      // This used to call sendFCM and assign the ride on its return value.
+      // sendFCM is a stub that waits 30 seconds and returns a coin flip — with
+      // FCM_ALWAYS_ACCEPT it does not even wait — so a ride-now booking landed on
+      // a captain fully assigned, with no notification and nothing to accept or
+      // decline. He found out he had a ride by noticing one.
+      //
+      // A row and a push instead. Everything that answers it already exists and
+      // is the same machinery the scheduled path uses: GET /driver/offers reads
+      // these rows, the card and the notification page render them, and PATCH
+      // /driver/offers/:id/accept settles the race through claimBookingForDriver.
+      //
+      // WHY THE WHOLE RING RATHER THAN ONE DRIVER AT A TIME. The old loop offered
+      // to one captain and waited 30 seconds before trying the next, which a
+      // rider watching a spinner pays for. Broadcasting hands the ride to whoever
+      // answers first — the same trade scheduledOffers already makes, for the
+      // same reason, and claimBookingForDriver is what makes the race safe.
+      await offerRideNow(row, x)
+      offered += 1
     }
+
+    // Somebody has been asked. Stop widening — a wider ring would offer the same
+    // ride to drivers further away while the near ones are still deciding.
+    if (offered > 0) return OFFERED
   }
 
   return null
+}
+
+/**
+ * Put a ride-now booking on one captain's notification page and nudge his phone.
+ *
+ * Neither half is allowed to fail the search. The ROW is the offer — a captain
+ * with a dead FCM token still finds the ride when he next opens the app — so a
+ * push that does not send costs immediacy and nothing else. And the unique on
+ * (bookingId, driverId) means a re-run of the ring quietly does nothing rather
+ * than offering the same ride twice.
+ */
+async function offerRideNow(row, x) {
+  try {
+    await prisma.rideOffer.create({
+      data: { bookingId: row.id, driverId: x.driverId, group: x.driver.group },
+    })
+  } catch {
+    // Already offered to him. Nothing to do and nothing to report.
+    return
+  }
+
+  // sendPush, not sendFCM: the real one. It takes the driver row, puts title and
+  // body at the top level, and clears the token when Firebase says the install
+  // is gone. `screen` is what usePushRegistration reads to route the tap.
+  await sendPush(x.driver, {
+    title: row.sharing ? 'New sharing ride' : 'New ride',
+    body: `${row.pickupAddress} → ${row.dropAddress} · ₹${row.fare}`,
+    data: { screen: 'notifications', bookingId: row.id },
+  }).catch(() => {})
 }
 
 // How long a booking may sit in `pending` before it's written off. Only a crash
@@ -572,7 +600,12 @@ export async function markNoDriver(bookingId) {
 // itself, so this only has to record the failure case.
 export function startAssignment(bookingId) {
   getDriver(bookingId)
-    .then(driverId => (driverId ? null : markNoDriver(bookingId)))
+    // OFFERED is not a failure and must not be written off. The ride is sitting
+    // on captains' phones waiting to be accepted; the booking stays `pending`
+    // until one of them takes it, or until the lazy expiry in GET /bookings/:id
+    // gives up on it at ASSIGNMENT_DEADLINE_MS. Treating it as null here would
+    // mark `no_driver` in the same tick the notifications went out.
+    .then(result => (result ? null : markNoDriver(bookingId)))
     .catch(async err => {
       console.error(`driver assignment failed for booking ${bookingId}:`, err)
       await markNoDriver(bookingId).catch(() => {})
