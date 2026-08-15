@@ -89,17 +89,17 @@ const Illustration = ({ children }) => (
     </div>
 );
 
-const VehicleSelect = ()=>{
-    const phone=useData(state=>state.phone)
-    const scheduledTime= useData(state=>state.scheduledTime)
-    const dropLocation= useData(state=>state.dropLocation)
-    const setDrop= useData(state=>state.setDrop)
-    const pickupLocation= useData(state=>state.pickupLocation)
-    const setPickup= useData(state=>state.setPickup)
-    const pickupCoords= useData(state=>state.pickupCoords)
-    const setPickupCoords= useData(state=>state.setPickupCoords)
-    const dropCoords= useData(state=>state.dropCoords)
-    const setDropCoords= useData(state=>state.setDropCoords)
+const VehicleSelect = () => {
+    const phone = useData(state => state.phone)
+    const scheduledTime = useData(state => state.scheduledTime)
+    const dropLocation = useData(state => state.dropLocation)
+    const setDrop = useData(state => state.setDrop)
+    const pickupLocation = useData(state => state.pickupLocation)
+    const setPickup = useData(state => state.setPickup)
+    const pickupCoords = useData(state => state.pickupCoords)
+    const setPickupCoords = useData(state => state.setPickupCoords)
+    const dropCoords = useData(state => state.dropCoords)
+    const setDropCoords = useData(state => state.setDropCoords)
     const distanceKm = useData(state => state.distanceKm);
     const setDistanceKm = useData(state => state.setDistanceKm);
     const durationMin = useData(state => state.durationMin);
@@ -109,26 +109,28 @@ const VehicleSelect = ()=>{
     const fareSource = useData(state => state.fareSource);
     const setFareSource = useData(state => state.setFareSource);
     const setFare = useData(state => state.setFare);
-    const vehicleClass = useData(state=>state.vehicleClass);
+    const vehicleClass = useData(state => state.vehicleClass);
     const setVehicleClass = useData(state => state.setVehicleClass);
-    const sharing = useData(state=>state.sharing);
+    const sharing = useData(state => state.sharing);
     const setSharing = useData(state => state.setSharing);
-    const safeRoute = useData(state=>state.safeRoute);
+    const safeRoute = useData(state => state.safeRoute);
     const setSafeRoute = useData(state => state.setSafeRoute);
-    const needsCarrier = useData(state=>state.needsCarrier);
+    const needsCarrier = useData(state => state.needsCarrier);
     const setNeedsCarrier = useData(state => state.setNeedsCarrier);
     const setFareToll = useData(state => state.setFareToll);
     const setFareCarrier = useData(state => state.setFareCarrier);
     const setFareAirport = useData(state => state.setFareAirport);
-    const bookingId = useData(state=>state.bookingId);
+    const bookingId = useData(state => state.bookingId);
     const setBookingId = useData(state => state.setBookingId);
-    const bookingCode = useData(state=>state.bookingCode);
+    const bookingCode = useData(state => state.bookingCode);
     const setBookingCode = useData(state => state.setBookingCode);
-    const status = useData(state=>state.status);
+    const status = useData(state => state.status);
     const setStatus = useData(state => state.setStatus);
     const setActiveBooking = useData(state => state.setActiveBooking);
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(false);
+    const searchStartedAt = useData(state => state.searchStartedAt);
+    const setSearchStartedAt = useData(state => state.setSearchStartedAt);
     // { hatchback:{solo,sharing,source}, sedan:{...}, ... } from /api/fare/estimate.
     // Route-scoped and transient, so it stays local rather than going in the
     // store; the booked fare is what gets persisted.
@@ -163,7 +165,7 @@ const VehicleSelect = ()=>{
     // the first estimate lands. Google's alternatives decide it, so it changes
     // with the route rather than with anything the rider set.
     const [safeRouteInfo, setSafeRouteInfo] = useState(devSafeRoute);
-    const [panelState, setPanelState]= useState(devParams?.get("panel") ?? "");  // "confirm" | "error"
+    const [panelState, setPanelState] = useState(devParams?.get("panel") ?? "");  // "confirm" | "error"
     const [step, setStep] = useState(() => {
         const devStep = devParams?.get("step");
         return devStep === "searching" || devStep === "confirmLocation" ? devStep : "vehicleType";
@@ -185,7 +187,7 @@ const VehicleSelect = ()=>{
     const [msgIndex, setMsgIndex] = useState(0);
     const [illusIndex, setIllusIndex] = useState(0);
     const navigate = useViewNavigate();
-    const api=useApi();
+    const api = useApi();
     const isMobile = useIsMobile();
     // The raw Map instance of the mobile page-background map, for reframing on
     // step changes (desktop mounts a fresh <GoogleMap> per panel instead).
@@ -312,16 +314,37 @@ const VehicleSelect = ()=>{
 
     useEffect(() => {
         if (step !== "searching") return;
-        // durations (ms) each message stays before advancing — last 2 stay 3× longer
+
         const durations = [30000, 30000, 30000, 30000, 30000, 30000, 210000, 210000];
-        const timeouts = [];
-        let elapsed = 0;
-        durations.slice(0, -1).forEach((dur, i) => {
-            elapsed += dur;
-            timeouts.push(setTimeout(() => setMsgIndex(i + 1), elapsed));
-        });
-        return () => timeouts.forEach(clearTimeout);
-    }, [step]);
+
+        const updateMessage = () => {
+            if (!searchStartedAt) return;
+
+            const elapsed = Date.now() - searchStartedAt;
+
+            let accumulated = 0;
+            let index = 0;
+
+            for (let i = 0; i < durations.length - 1; i++) {
+                accumulated += durations[i];
+
+                if (elapsed < accumulated) {
+                    index = i;
+                    break;
+                }
+
+                index = i + 1;
+            }
+
+            setMsgIndex(index);
+        };
+
+        updateMessage();
+
+        const timer = setInterval(updateMessage, 1000);
+
+        return () => clearInterval(timer);
+    }, [step, searchStartedAt]);
 
     // Driver assignment runs detached on the server, so this panel is driven by
     // polling: a driver landing moves us to tracking, an exhausted search to the
@@ -359,6 +382,15 @@ const VehicleSelect = ()=>{
         timer = setTimeout(poll, 5000);
         return () => { cancelled = true; clearTimeout(timer); };
     }, [step, bookingId]);
+
+
+    const SEARCH_DURATION = 60_000
+
+    const searchElapsed = searchStartedAt
+        ? Math.min(Date.now() - searchStartedAt, SEARCH_DURATION)
+        : 0;
+
+    const animationProgress = searchElapsed / SEARCH_DURATION;
 
     const pickupPoint = pickupCoords ?? PICKUP_FALLBACK;
     const dropPoint = dropCoords ?? DROP_FALLBACK;
@@ -571,22 +603,22 @@ const VehicleSelect = ()=>{
             // `fare` stays as a cross-check — it is what the rider was looking
             // at, and the server rejects the booking if the two have drifted.
             const data = await api.createBooking({
-                pickupAddress:  pickupLocation,
-                pickupLat:      pickupCoords?.lat ?? PICKUP_FALLBACK.lat,
-                pickupLng:      pickupCoords?.lng ?? PICKUP_FALLBACK.lng,
-                dropAddress:    dropLocation,
-                dropLat:        dropCoords?.lat ?? DROP_FALLBACK.lat,
-                dropLng:        dropCoords?.lng ?? DROP_FALLBACK.lng,
-                vehicleClass:   vehicleClass,   // hatchback | sedan | suv | suv_premium
-                fareQuote:      quote,
-                fare:           rideFare,
-                sharing:        sharing,
-                scheduledAt:    scheduledTime,
-                isOutstation:   false,
+                pickupAddress: pickupLocation,
+                pickupLat: pickupCoords?.lat ?? PICKUP_FALLBACK.lat,
+                pickupLng: pickupCoords?.lng ?? PICKUP_FALLBACK.lng,
+                dropAddress: dropLocation,
+                dropLat: dropCoords?.lat ?? DROP_FALLBACK.lat,
+                dropLng: dropCoords?.lng ?? DROP_FALLBACK.lng,
+                vehicleClass: vehicleClass,   // hatchback | sedan | suv | suv_premium
+                fareQuote: quote,
+                fare: rideFare,
+                sharing: sharing,
+                scheduledAt: scheduledTime,
+                isOutstation: false,
             });
 
             if (data?.error) {
-                if (data.error === "No drivers available. Please try again shortly."){
+                if (data.error === "No drivers available. Please try again shortly.") {
                     setPanelState("noDriver")
                     return
                 }
@@ -623,17 +655,20 @@ const VehicleSelect = ()=>{
                 scheduledAt: scheduledTime,
             });
 
-            if(scheduledTime) setPanelState("confirmed")
+            if (scheduledTime) setPanelState("confirmed")
             else if (data.status === "assigned") {
                 // freshStatus: the store status was set a line ago from this same
                 // response, so TrackingPage can render it without a skeleton.
                 navigate(`/booking/${data.bookingId}`, { state: { freshStatus: true } })
                 return
             }
-            else setStep("searching")
+            else {
+                setSearchStartedAt(Date.now());
+                setStep("searching");
+            }
         } catch (err) {
             console.error(err);
-            
+
             setError("Something went wrong");
         } finally {
             setLoading(false);
@@ -655,8 +690,8 @@ const VehicleSelect = ()=>{
     // comparison at all — it is the other half of what they are agreeing to.
     let solo = sharing ? "text-xs sm:text-sm text-[var(--text-muted)]" : "font-semibold text-lg sm:text-2xl text-[var(--text)]"
     let share = sharing ? "font-semibold text-lg sm:text-2xl text-[var(--text)]" : "text-xs sm:text-sm text-[var(--text-muted)]"
-    let soloVisiblity = sharing? "block" : "hidden"
-    let shareVisiblity = sharing? "hidden" : "block"
+    let soloVisiblity = sharing ? "block" : "hidden"
+    let shareVisiblity = sharing ? "hidden" : "block"
 
     // Any panel state (noDriver / confirmed) supersedes the search.
     const searchingVisible = step === "searching" && !panelState
@@ -960,211 +995,216 @@ const VehicleSelect = ()=>{
     // would double the page width and let the whole screen scroll sideways.
     return (
         <div className="relative overflow-hidden bg-transparent text-center flex flex-col justify-center items-center w-[100vw] h-[100dvh]">
-                <>
-                    <ErrorPanel prop={{error: error, setError: setError}} />
+            <>
+                <ErrorPanel prop={{ error: error, setError: setError }} />
 
-                    {/* Mobile: land-colored backdrop behind the map so seams
+                {/* Mobile: land-colored backdrop behind the map so seams
                         (e.g. the confirm step's shortened map) and tile-load
                         flashes read as more map instead of page background */}
-                    {isMobile && (
-                        <div className="absolute inset-0 z-0" style={{ background: MAP_LAND_COLOR }} />
-                    )}
+                {isMobile && (
+                    <div className="absolute inset-0 z-0" style={{ background: MAP_LAND_COLOR }} />
+                )}
 
-                    {/* Mobile: persistent page-background map — the opaque
+                {/* Mobile: persistent page-background map — the opaque
                         bottom-sheet panels sit over it (OnBoarding layering) */}
-                    {isMobile && (
-                        <GoogleMap
-                            center={pickupPoint}
-                            zoom={12}
-                            onMapReady={setMapApi}
-                            onIdle={step === "confirmLocation" ? handleMapSettled : undefined}
-                            // on the confirm step the map ends above the bottom
-                            // sheet, so its center (pin + getCenter) is the
-                            // center of the VISIBLE area, not the viewport
-                            className={`absolute inset-x-0 top-0 z-0 ${step === "confirmLocation" ? "bottom-[270px]" : "bottom-0"}`}
-                        >
-                            {step === "confirmLocation" && <CenterPin target={confirmTarget} />}
-                        </GoogleMap>
-                    )}
-                    <BackgroundPanel show={panelState === "noDriver" || (panelState === "confirmed" && scheduledTime)} className={`z-4 sm:z-3 bottom-0 gap-1.5 sm:gap-2 py-6 text-center flex flex-col justify-center items-center`}>
-                        { panelState === "noDriver"
-                            ? <ErrorMark className="-mt-2" size={isMobile ? 120 : 140} />
-                            : <SuccessCheck className="-mt-2" size={isMobile ? 120 : 140} /> }
-                        <h2 className={TITLE}> { panelState === "noDriver" ? "No drivers nearby." :  "You're all set." } </h2>
-                        {/* leading-snug, not -relaxed: at 1.625 the line box added
+                {isMobile && (
+                    <GoogleMap
+                        center={pickupPoint}
+                        zoom={12}
+                        onMapReady={setMapApi}
+                        onIdle={step === "confirmLocation" ? handleMapSettled : undefined}
+                        // on the confirm step the map ends above the bottom
+                        // sheet, so its center (pin + getCenter) is the
+                        // center of the VISIBLE area, not the viewport
+                        className={`absolute inset-x-0 top-0 z-0 ${step === "confirmLocation" ? "bottom-[270px]" : "bottom-0"}`}
+                    >
+                        {step === "confirmLocation" && <CenterPin target={confirmTarget} />}
+                    </GoogleMap>
+                )}
+                <BackgroundPanel show={panelState === "noDriver" || (panelState === "confirmed" && scheduledTime)} className={`z-4 sm:z-3 bottom-0 gap-1.5 sm:gap-2 py-6 text-center flex flex-col justify-center items-center`}>
+                    {panelState === "noDriver"
+                        ? <ErrorMark className="-mt-2" size={isMobile ? 120 : 140} />
+                        : <SuccessCheck className="-mt-2" size={isMobile ? 120 : 140} />}
+                    <h2 className={TITLE}> {panelState === "noDriver" ? "No drivers nearby." : "You're all set."} </h2>
+                    {/* leading-snug, not -relaxed: at 1.625 the line box added
                             5.6px of dead space above and below, which read as
                             gap and swamped the container's own spacing */}
-                        <p className="text-base sm:text-lg leading-snug"> { panelState === "noDriver" ? "Try again in a few minutes." :  <>We'll WhatsApp you <br /> when a driver is assigned.</> } </p>
-                        {/* COL goes on a wrapper, not on the Button: prop.width
+                    <p className="text-base sm:text-lg leading-snug"> {panelState === "noDriver" ? "Try again in a few minutes." : <>We'll WhatsApp you <br /> when a driver is assigned.</>} </p>
+                    {/* COL goes on a wrapper, not on the Button: prop.width
                             is an inline style and would beat the class at every
                             breakpoint, stretching the button to the full sheet */}
-                        <div className={`mt-1 ${COL}`}>
-                            <Button
-                                onClick={() => navigate('/')}
-                                prop={{
-                                    type: "submit",
-                                    width: "100%",
-                                }}
-                            >
-                                <span className="text-base sm:text-lg">{loading? "Loading..." : "Go back"}</span>
-                            </Button>
-                        </div>
-                    </BackgroundPanel>
-                    
-                    {/* Searching panel — illustrations */}
-                    <BackgroundPanel show={searchingVisible && detialsVisibility === false} className={`z-3 sm:z-2 sm:overflow-hidden py-6 text-left sm:px-[9%] md:px-[5%] xl:px-[13%] flex flex-col sm:flex-row sm:justify-center lg:justify-between items-center`}>
-                        {/* Back to the zoomed-out full-route view while searching */}
-                        {!isMobile && searchingVisible && detialsVisibility === false && (
-                            <GoogleMap center={pickupPoint} zoom={12} onMapReady={setMapApi} className={MAP_CLASSES} />
-                        )}
+                    <div className={`mt-1 ${COL}`}>
+                        <Button
+                            onClick={() => navigate('/')}
+                            prop={{
+                                type: "submit",
+                                width: "100%",
+                            }}
+                        >
+                            <span className="text-base sm:text-lg">{loading ? "Loading..." : "Go back"}</span>
+                        </Button>
+                    </div>
+                </BackgroundPanel>
 
-                        <div className={`relative z-10 sm:order-1 flex flex-col justify-end sm:justify-center items-center sm:items-start ${STACK} w-full sm:w-auto h-full sm:h-auto`}>
-                            <h2 className={`w-full text-center sm:text-left ${TITLE}`}>Requesting a ride</h2>
+                {/* Searching panel — illustrations */}
+                <BackgroundPanel show={searchingVisible && detialsVisibility === false} className={`z-3 sm:z-2 sm:overflow-hidden py-6 text-left sm:px-[9%] md:px-[5%] xl:px-[13%] flex flex-col sm:flex-row sm:justify-center lg:justify-between items-center`}>
+                    {/* Back to the zoomed-out full-route view while searching */}
+                    {!isMobile && searchingVisible && detialsVisibility === false && (
+                        <GoogleMap center={pickupPoint} zoom={12} onMapReady={setMapApi} className={MAP_CLASSES} />
+                    )}
 
-                            <div className={`flex flex-col items-center sm:items-start justify-center gap-4 ${COL}`}>
-                                {/* progress reads as one status block: bar, then
+                    <div className={`relative z-10 sm:order-1 flex flex-col justify-end sm:justify-center items-center sm:items-start ${STACK} w-full sm:w-auto h-full sm:h-auto`}>
+                        <h2 className={`w-full text-center sm:text-left ${TITLE}`}>Requesting a ride</h2>
+
+                        <div className={`flex flex-col items-center sm:items-start justify-center gap-4 ${COL}`}>
+                            {/* progress reads as one status block: bar, then
                                     the rotating message, then the way out */}
-                                <div className="relative w-full rounded-full h-[6px] overflow-hidden">
-                                    <div className="absolute z-1 inset-0 bg-primary animate-searching-bar h-full"/>
-                                    <div className="absolute z-0 inset-0 bg-gray-500 w-full h-full"/>
-                                </div>
-
-                                <div className="w-full flex justify-between items-center gap-3">
-                                    <p className="text-left text-base sm:text-lg text-[var(--text-muted)]">{searchMessages[msgIndex]}</p>
-                                    {/* same pill as TrackingPage's — content-sized
-                                        and fully rounded, not a fixed 110px box */}
-                                    <Button onClick={()=>setDetialsVisibility(true)} prop={{ variant: "input", bg: "var(--background-muted)", rounded: "999px" }} className="cursor-pointer px-3 shrink-0" >
-                                        <p className="text-sm sm:text-base text-[var(--text)] whitespace-nowrap">Ride details</p>
-                                    </Button>
-                                </div>
+                            <div className="relative w-full rounded-full h-[6px] overflow-hidden">
+                                <div
+                                    className="absolute z-1 inset-0 bg-primary h-full"
+                                    style={{
+                                        width: `${(1 - animationProgress) * 100}%`,
+                                    }}
+                                />
+                                <div className="absolute z-0 inset-0 bg-gray-500 w-full h-full" />
                             </div>
 
-                            {/* no w-full — it beats COL's w-[290px] at the base
-                                breakpoint and the card goes full-bleed on mobile */}
-                            {/* artwork and its caption stay centred at both
-                                breakpoints — this card is a promo, not a control */}
-                            <div key={illusIndex} className={`animate-illus-fade rounded-xl border border-[var(--foreground)]/30 bg-[var(--background-muted)] p-3 flex flex-col items-center justify-center gap-3 ${COL}`}>
-                                {illusIndex === 0 && (
-                                    <>
-                                        <Illustration><PriceIllustration /></Illustration>
-                                        <div className="w-full text-center flex flex-col gap-1 px-1 pb-1">
-                                            <h3 className="text-lg sm:text-xl font-medium text-[var(--text)] leading-tight">Lowest fares on campus.</h3>
-                                            <p className="text-sm sm:text-base leading-relaxed text-[var(--text-muted)]">Save up to 40% over cabs, every ride.</p>
-                                        </div>
-                                    </>
-                                )}
-                                {illusIndex === 1 && (
-                                    <>
-                                        <Illustration><SafetyIllustration /></Illustration>
-                                        <div className="w-full text-center flex flex-col gap-1 px-1 pb-1">
-                                            <h3 className="text-lg sm:text-xl font-medium text-[var(--text)] leading-tight">Every ride, verified safe.</h3>
-                                            <p className="text-sm sm:text-base leading-relaxed text-[var(--text-muted)]">Background-checked drivers. Real-time GPS.</p>
-                                        </div>
-                                    </>
-                                )}
-                                {illusIndex === 2 && (
-                                    <>
-                                        <Illustration><WhatsAppIllustration /></Illustration>
-                                        <div className="w-full text-center flex flex-col gap-1 px-1 pb-1">
-                                            <h3 className="text-lg sm:text-xl font-medium text-[var(--text)] leading-tight">Same WhatsApp. Zero effort.</h3>
-                                            <p className="text-sm sm:text-base leading-relaxed text-[var(--text-muted)]">Book like you always have. We handle the rest.</p>
-                                        </div>
-                                    </>
-                                )}
+                            <div className="w-full flex justify-between items-center gap-3">
+                                <p className="text-left text-base sm:text-lg text-[var(--text-muted)]">{searchMessages[msgIndex]}</p>
+                                {/* same pill as TrackingPage's — content-sized
+                                        and fully rounded, not a fixed 110px box */}
+                                <Button onClick={() => setDetialsVisibility(true)} prop={{ variant: "input", bg: "var(--background-muted)", rounded: "999px" }} className="cursor-pointer px-3 shrink-0" >
+                                    <p className="text-sm sm:text-base text-[var(--text)] whitespace-nowrap">Ride details</p>
+                                </Button>
                             </div>
                         </div>
-                    </BackgroundPanel>
 
-                    {/* Searching panel — ride details */}
-                    <BackgroundPanel show={searchingVisible && detialsVisibility === true} className={`z-3 sm:z-2 py-6 sm:overflow-hidden text-left flex flex-col sm:flex-row justify-center items-center sm:justify-center lg:justify-between sm:px-[9%] md:px-[5%] xl:px-[13%]`}>
-                        {/* same split as every other desktop panel: content
+                        {/* no w-full — it beats COL's w-[290px] at the base
+                                breakpoint and the card goes full-bleed on mobile */}
+                        {/* artwork and its caption stay centred at both
+                                breakpoints — this card is a promo, not a control */}
+                        <div key={illusIndex} className={`animate-illus-fade rounded-xl border border-[var(--foreground)]/30 bg-[var(--background-muted)] p-3 flex flex-col items-center justify-center gap-3 ${COL}`}>
+                            {illusIndex === 0 && (
+                                <>
+                                    <Illustration><PriceIllustration /></Illustration>
+                                    <div className="w-full text-center flex flex-col gap-1 px-1 pb-1">
+                                        <h3 className="text-lg sm:text-xl font-medium text-[var(--text)] leading-tight">Lowest fares on campus.</h3>
+                                        <p className="text-sm sm:text-base leading-relaxed text-[var(--text-muted)]">Save up to 40% over cabs, every ride.</p>
+                                    </div>
+                                </>
+                            )}
+                            {illusIndex === 1 && (
+                                <>
+                                    <Illustration><SafetyIllustration /></Illustration>
+                                    <div className="w-full text-center flex flex-col gap-1 px-1 pb-1">
+                                        <h3 className="text-lg sm:text-xl font-medium text-[var(--text)] leading-tight">Every ride, verified safe.</h3>
+                                        <p className="text-sm sm:text-base leading-relaxed text-[var(--text-muted)]">Background-checked drivers. Real-time GPS.</p>
+                                    </div>
+                                </>
+                            )}
+                            {illusIndex === 2 && (
+                                <>
+                                    <Illustration><WhatsAppIllustration /></Illustration>
+                                    <div className="w-full text-center flex flex-col gap-1 px-1 pb-1">
+                                        <h3 className="text-lg sm:text-xl font-medium text-[var(--text)] leading-tight">Same WhatsApp. Zero effort.</h3>
+                                        <p className="text-sm sm:text-base leading-relaxed text-[var(--text-muted)]">Book like you always have. We handle the rest.</p>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    </div>
+                </BackgroundPanel>
+
+                {/* Searching panel — ride details */}
+                <BackgroundPanel show={searchingVisible && detialsVisibility === true} className={`z-3 sm:z-2 py-6 sm:overflow-hidden text-left flex flex-col sm:flex-row justify-center items-center sm:justify-center lg:justify-between sm:px-[9%] md:px-[5%] xl:px-[13%]`}>
+                    {/* same split as every other desktop panel: content
                             left, the booked route on the right */}
-                        {!isMobile && detialsVisibility && (
-                            <GoogleMap center={pickupPoint} zoom={12} onMapReady={setMapApi} className={MAP_CLASSES} />
-                        )}
-                        <RideDetails prop={{bookingId, setLoading, setError, setDetialsVisibility}}/>
-                    </BackgroundPanel>
-                    
-                    <div className={`${panelState === "noDriver" || (panelState === "confirmed" && scheduledTime) || step === "searching" ? "block" : "hidden" } absolute z-2 sm:z-1 bottom-0 bg-black/40 w-[100vw] h-[100dvh]`}/>
-                    
-                    {/* Confirm-location panel — zoomed into the target endpoint;
+                    {!isMobile && detialsVisibility && (
+                        <GoogleMap center={pickupPoint} zoom={12} onMapReady={setMapApi} className={MAP_CLASSES} />
+                    )}
+                    <RideDetails prop={{ bookingId, setLoading, setError, setDetialsVisibility }} />
+                </BackgroundPanel>
+
+                <div className={`${panelState === "noDriver" || (panelState === "confirmed" && scheduledTime) || step === "searching" ? "block" : "hidden"} absolute z-2 sm:z-1 bottom-0 bg-black/40 w-[100vw] h-[100dvh]`} />
+
+                {/* Confirm-location panel — zoomed into the target endpoint;
                         the map drags under a fixed pin, and each settle
                         reverse-geocodes the center into the address card. */}
-                    <BackgroundPanel show={step === "confirmLocation"} className={`z-1 sm:z-0 sm:overflow-hidden py-6 text-left flex flex-col sm:flex-row sm:px-[9%] md:px-[5%] xl:px-[13%] sm:justify-center lg:justify-between items-center`}>
-                        {!isMobile && step === "confirmLocation" && (
-                            <GoogleMap
-                                center={confirmTarget === "pickup" ? pickupPoint : dropPoint}
-                                zoom={17}
-                                onMapReady={setMapApi}
-                                onIdle={handleMapSettled}
-                                className={MAP_CLASSES}
-                            >
-                                <CenterPin target={confirmTarget} />
-                            </GoogleMap>
-                        )}
+                <BackgroundPanel show={step === "confirmLocation"} className={`z-1 sm:z-0 sm:overflow-hidden py-6 text-left flex flex-col sm:flex-row sm:px-[9%] md:px-[5%] xl:px-[13%] sm:justify-center lg:justify-between items-center`}>
+                    {!isMobile && step === "confirmLocation" && (
+                        <GoogleMap
+                            center={confirmTarget === "pickup" ? pickupPoint : dropPoint}
+                            zoom={17}
+                            onMapReady={setMapApi}
+                            onIdle={handleMapSettled}
+                            className={MAP_CLASSES}
+                        >
+                            <CenterPin target={confirmTarget} />
+                        </GoogleMap>
+                    )}
 
-                        <div onClick={cancelLocationAdjust} className="max-sm:-top-12 max-sm:left-4 max-sm:h-9 max-sm:my-1 max-sm:px-3 max-sm:rounded-full max-sm:border max-sm:border-[var(--foreground)]/30 max-sm:bg-[var(--background-muted)] max-sm:shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)] flex items-center justify-center cursor-pointer sm:opacity-[0.8] transition-opacity duration-300 hover:opacity-[1] absolute z-20 sm:left-5 sm:top-6 text-[var(--text)]">
-                            <Icon path={mdiKeyboardBackspace} size={1.2} />
+                    <div onClick={cancelLocationAdjust} className="max-sm:-top-12 max-sm:left-4 max-sm:h-9 max-sm:my-1 max-sm:px-3 max-sm:rounded-full max-sm:border max-sm:border-[var(--foreground)]/30 max-sm:bg-[var(--background-muted)] max-sm:shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)] flex items-center justify-center cursor-pointer sm:opacity-[0.8] transition-opacity duration-300 hover:opacity-[1] absolute z-20 sm:left-5 sm:top-6 text-[var(--text)]">
+                        <Icon path={mdiKeyboardBackspace} size={1.2} />
+                    </div>
+
+                    <div className={`relative z-10 sm:order-1 flex flex-col justify-end sm:justify-center items-center sm:items-start ${STACK} w-full sm:w-auto h-full sm:h-auto py-2 sm:py-0`}>
+                        <div className={`flex flex-col justify-center items-center sm:items-start ${PAIR} ${COL}`}>
+                            <h2 className={`w-full text-center sm:text-left ${TITLE}`}>Confirm {confirmTarget} point</h2>
+                            <h3 className={`hidden sm:block w-full text-center sm:text-left ${SUBTITLE}`}>{confirmTarget === "pickup" ? "Place the pin where you'll wait" : "Place the pin where you're headed"}</h3>
                         </div>
 
-                        <div className={`relative z-10 sm:order-1 flex flex-col justify-end sm:justify-center items-center sm:items-start ${STACK} w-full sm:w-auto h-full sm:h-auto py-2 sm:py-0`}>
-                            <div className={`flex flex-col justify-center items-center sm:items-start ${PAIR} ${COL}`}>
-                                <h2 className={`w-full text-center sm:text-left ${TITLE}`}>Confirm {confirmTarget} point</h2>
-                                <h3 className={`hidden sm:block w-full text-center sm:text-left ${SUBTITLE}`}>{confirmTarget === "pickup" ? "Place the pin where you'll wait" : "Place the pin where you're headed"}</h3>
-                            </div>
-
-                            <div className={`flex flex-col justify-center items-center sm:items-start gap-3 ${COL}`}>
-                                {/* address + the ride it belongs to sit in one
+                        <div className={`flex flex-col justify-center items-center sm:items-start gap-3 ${COL}`}>
+                            {/* address + the ride it belongs to sit in one
                                     card, split by a hairline */}
-                                <div className="w-full rounded-xl border border-[var(--foreground)]/30 bg-[var(--background-muted)] px-4 text-left">
-                                    <div className="flex flex-col gap-0.5 py-3">
-                                        <p className="text-xs sm:text-sm text-[var(--text-muted)]">{confirmTarget === "pickup" ? "Pickup" : "Drop"}</p>
-                                        <h4 className="truncate w-full text-base sm:text-xl font-medium text-[var(--text)]">{confirmTarget === "pickup" ? pickupLocation : dropLocation}</h4>
-                                    </div>
-                                    {/* Only when a ride is actually selected. This
+                            <div className="w-full rounded-xl border border-[var(--foreground)]/30 bg-[var(--background-muted)] px-4 text-left">
+                                <div className="flex flex-col gap-0.5 py-3">
+                                    <p className="text-xs sm:text-sm text-[var(--text-muted)]">{confirmTarget === "pickup" ? "Pickup" : "Drop"}</p>
+                                    <h4 className="truncate w-full text-base sm:text-xl font-medium text-[var(--text)]">{confirmTarget === "pickup" ? pickupLocation : dropLocation}</h4>
+                                </div>
+                                {/* Only when a ride is actually selected. This
                                         screen is also reached by clicking a map
                                         marker from "Choose a ride" (see
                                         enterLocationAdjust), where nothing has been
                                         picked yet — the row then had no fare to
                                         show and its "Cab Economy" fallback named a
                                         vehicle the rider had not chosen. */}
-                                    {vehicleClass && (
-                                        <>
-                                            <div className="w-full h-px bg-[var(--foreground)]/10" />
-                                            <div className="flex items-center justify-between w-full py-3 gap-3">
-                                                {/* The car, not the category: at the
+                                {vehicleClass && (
+                                    <>
+                                        <div className="w-full h-px bg-[var(--foreground)]/10" />
+                                        <div className="flex items-center justify-between w-full py-3 gap-3">
+                                            {/* The car, not the category: at the
                                                     point of paying, "Sedan" is what
                                                     was chosen and priced, and the
                                                     category alone couldn't say which
                                                     of its two cars is coming. */}
-                                                <h4 className="text-sm sm:text-base text-[var(--text-muted)]">{labelOf(vehicleClass)}{sharing ? " · Sharing" : " · Solo"}{safeRoute && safeRouteInfo?.available ? " · Safer route" : ""}{needsCarrier ? " · Carrier" : ""}</h4>
-                                                {/* re-priced on every pin adjust, so it
+                                            <h4 className="text-sm sm:text-base text-[var(--text-muted)]">{labelOf(vehicleClass)}{sharing ? " · Sharing" : " · Solo"}{safeRoute && safeRouteInfo?.available ? " · Safer route" : ""}{needsCarrier ? " · Carrier" : ""}</h4>
+                                            {/* re-priced on every pin adjust, so it
                                                     skeletons rather than flashing ₹— */}
-                                                {pricing && fareFor(vehicleClass) == null
-                                                    ? <Skeleton className="h-5 sm:h-6 w-16 sm:w-20" />
-                                                    : <h4 className="text-base sm:text-xl font-semibold">{label(vehicleClass, sharing ? "sharing" : "solo")}</h4>}
-                                            </div>
-                                        </>
-                                    )}
-                                </div>
-                                <Button
-                                    onClick={handleConfirmLocation}
-                                    prop={{ type: "button", width: "100%", disabled: loading }}
-                                    className="w-full"
-                                >
-                                    <span className="text-base sm:text-lg">{loading ? "Booking..." : bookAfterConfirm ? "Confirm pickup" : `Confirm ${confirmTarget} location`}</span>
-                                </Button>
-                                {/* Same wording as the booking step — this is the
+                                            {pricing && fareFor(vehicleClass) == null
+                                                ? <Skeleton className="h-5 sm:h-6 w-16 sm:w-20" />
+                                                : <h4 className="text-base sm:text-xl font-semibold">{label(vehicleClass, sharing ? "sharing" : "solo")}</h4>}
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                            <Button
+                                onClick={handleConfirmLocation}
+                                prop={{ type: "button", width: "100%", disabled: loading }}
+                                className="w-full"
+                            >
+                                <span className="text-base sm:text-lg">{loading ? "Booking..." : bookAfterConfirm ? "Confirm pickup" : `Confirm ${confirmTarget} location`}</span>
+                            </Button>
+                            {/* Same wording as the booking step — this is the
                                     last screen before the ride is created, so it
                                     must not state softer terms than the one before. */}
-                                <p className="text-xs sm:text-sm leading-snug text-[var(--text-muted)]">
-                                    Free cancellation until the driver reaches your pickup. After that it's {CANCELLATION_CHARGE_PCT}% of the fare.
-                                </p>
-                            </div>
+                            <p className="text-xs sm:text-sm leading-snug text-[var(--text-muted)]">
+                                Free cancellation until the driver reaches your pickup. After that it's {CANCELLATION_CHARGE_PCT}% of the fare.
+                            </p>
                         </div>
-                    </BackgroundPanel>
+                    </div>
+                </BackgroundPanel>
 
-                    {/* The one panel that becomes a draggable sheet on phones:
+                {/* The one panel that becomes a draggable sheet on phones:
                         it sits over a full-bleed map and its content is taller
                         than a phone, so collapsed/half/expanded is a real
                         choice. `duration` covers the exit spring, which takes
@@ -1186,43 +1226,43 @@ const VehicleSelect = ()=>{
                         scroll, it shortens it, so the last card was clipped with
                         a dead band beneath it. Desktop keeps py-6; it isn't a
                         scroller. */}
-                    <BackgroundPanel
-                        sheet
-                        initialSnap={SHEET_INITIAL_SNAP}
-                        duration={420}
-                        bottomInset={pinBookBar ? bookBarHeight : 0}
-                        // The sheet is sized to its content, and this screen's
-                        // content arrives late: the estimate decides whether there
-                        // are notice pills above the list at all, and whether the
-                        // list is a list or one of the three states that replace
-                        // it. Measured once at mount, the sheet would be sized for
-                        // a screen that no longer exists.
-                        contentKey={`${showsBookForm}-${pricing}-${fareNotices.length}`}
-                        // Fired on settle, not per frame — the Book bar below
-                        // sheds its toggles and fine print at `collapsed`, and
-                        // the bar shrinking feeds straight back in as a smaller
-                        // bottomInset (measured above), so the sheet springs
-                        // down into the space the bar just gave up.
-                        onSnapChange={setSheetSnap}
-                        show={step === "vehicleType"}
-                        className={`z-1 sm:z-0 sm:overflow-hidden py-6 max-sm:pb-0 text-left sm:px-[9%] md:px-[5%] xl:px-[13%] flex flex-col sm:flex-row sm:justify-center lg:justify-between items-center`}
-                    >
-                        {/* Zoomed-out full-route view; markers are clickable to
+                <BackgroundPanel
+                    sheet
+                    initialSnap={SHEET_INITIAL_SNAP}
+                    duration={420}
+                    bottomInset={pinBookBar ? bookBarHeight : 0}
+                    // The sheet is sized to its content, and this screen's
+                    // content arrives late: the estimate decides whether there
+                    // are notice pills above the list at all, and whether the
+                    // list is a list or one of the three states that replace
+                    // it. Measured once at mount, the sheet would be sized for
+                    // a screen that no longer exists.
+                    contentKey={`${showsBookForm}-${pricing}-${fareNotices.length}`}
+                    // Fired on settle, not per frame — the Book bar below
+                    // sheds its toggles and fine print at `collapsed`, and
+                    // the bar shrinking feeds straight back in as a smaller
+                    // bottomInset (measured above), so the sheet springs
+                    // down into the space the bar just gave up.
+                    onSnapChange={setSheetSnap}
+                    show={step === "vehicleType"}
+                    className={`z-1 sm:z-0 sm:overflow-hidden py-6 max-sm:pb-0 text-left sm:px-[9%] md:px-[5%] xl:px-[13%] flex flex-col sm:flex-row sm:justify-center lg:justify-between items-center`}
+                >
+                    {/* Zoomed-out full-route view; markers are clickable to
                             adjust either endpoint. Guarded on `step` so the
                             singleton map moves out promptly on step change. */}
-                        {!isMobile && step === "vehicleType" && (
-                            <GoogleMap center={pickupPoint} zoom={12} onMapReady={setMapApi} className={MAP_CLASSES} />
-                        )}
+                    {!isMobile && step === "vehicleType" && (
+                        <GoogleMap center={pickupPoint} zoom={12} onMapReady={setMapApi} className={MAP_CLASSES} />
+                    )}
 
-                        <div onClick={()=>navigate('/')} className="max-sm:-top-12 max-sm:left-4 max-sm:h-9 max-sm:my-1 max-sm:px-3 max-sm:rounded-full max-sm:border max-sm:border-[var(--foreground)]/30 max-sm:bg-[var(--background-muted)] max-sm:shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)] flex items-center justify-center cursor-pointer sm:opacity-[0.8] transition-opacity duration-300 hover:opacity-[1] absolute z-20 sm:left-5 sm:top-6 text-[var(--text)]">
-                            <Icon path={mdiKeyboardBackspace} size={1.2} />
-                        </div>
-                        {/* Bounds the column to the sheet's height on phones, so the
+                    <div onClick={() => navigate('/')} className="max-sm:-top-12 max-sm:left-4 max-sm:h-9 max-sm:my-1 max-sm:px-3 max-sm:rounded-full max-sm:border max-sm:border-[var(--foreground)]/30 max-sm:bg-[var(--background-muted)] max-sm:shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)] flex items-center justify-center cursor-pointer sm:opacity-[0.8] transition-opacity duration-300 hover:opacity-[1] absolute z-20 sm:left-5 sm:top-6 text-[var(--text)]">
+                        <Icon path={mdiKeyboardBackspace} size={1.2} />
+                    </div>
+                    {/* Bounds the column to the sheet's height on phones, so the
                             scroll area inside it has something to be `flex-1` of.
                             sm:contents removes it from layout entirely from the sm
                             breakpoint up, so the desktop side panel is laid out
                             exactly as it was before the sheet existed. */}
-                        <div className="w-full flex-1 min-h-0 flex flex-col items-center sm:contents">
+                    <div className="w-full flex-1 min-h-0 flex flex-col items-center sm:contents">
                         {/* flex-1, not h-full: the grabber is a sibling above this,
                             so a percentage height would overflow the panel by the
                             grabber's own height and push the last of the content
@@ -1297,81 +1337,81 @@ const VehicleSelect = ()=>{
                                 data-sheet-scroll
                                 className="w-full min-h-0 flex-1 flex flex-col items-center overscroll-contain sm:contents"
                             >
-                            {!hasRoute ? (
-                                <div className={COL}>
-                                    <EmptyState
-                                        tone="dark"
-                                        align="sm-left"
-                                        title="No route set"
-                                        message="Tell us where you're starting from and where you're headed, and we'll price it."
-                                        action={{ label: "Set your route", onClick: () => navigate('/') }}
-                                    />
-                                </div>
-                            ) : estimateError ? (
-                                <div className={COL}>
-                                    <FailureState
-                                        tone="dark"
-                                        align="sm-left"
-                                        title="Couldn't price this route"
-                                        detail={estimateError}
-                                        onRetry={() => fetchEstimate()}
-                                        retrying={pricing}
-                                        secondaryAction={{ label: "Change your route", onClick: () => navigate('/') }}
-                                    />
-                                </div>
-                            ) : routeUnpriced ? (
-                                <div className={COL}>
-                                    {/* Deliberately not a fallback price. A placeholder
+                                {!hasRoute ? (
+                                    <div className={COL}>
+                                        <EmptyState
+                                            tone="dark"
+                                            align="sm-left"
+                                            title="No route set"
+                                            message="Tell us where you're starting from and where you're headed, and we'll price it."
+                                            action={{ label: "Set your route", onClick: () => navigate('/') }}
+                                        />
+                                    </div>
+                                ) : estimateError ? (
+                                    <div className={COL}>
+                                        <FailureState
+                                            tone="dark"
+                                            align="sm-left"
+                                            title="Couldn't price this route"
+                                            detail={estimateError}
+                                            onRetry={() => fetchEstimate()}
+                                            retrying={pricing}
+                                            secondaryAction={{ label: "Change your route", onClick: () => navigate('/') }}
+                                        />
+                                    </div>
+                                ) : routeUnpriced ? (
+                                    <div className={COL}>
+                                        {/* Deliberately not a fallback price. A placeholder
                                         here is what once charged ₹400 for a trip the
                                         rate card prices at ₹1800 — so an unpriced
                                         route asks a human instead of guessing. */}
-                                    <EmptyState
-                                        tone="dark"
-                                        align="sm-left"
-                                        title="We don't price this route yet"
-                                        message="This drop-off isn't on our rate card. Message us and we'll quote it by hand."
-                                        action={{
-                                            label: "Ask us for a fare",
-                                            onClick: () => openSupportWhatsApp(
-                                                `Hi, I'd like a fare for ${pickupLocation} to ${dropLocation}.`
-                                            ),
-                                        }}
-                                        secondaryAction={{ label: "Change your route", onClick: () => navigate('/') }}
-                                    />
-                                </div>
-                            ) : (
-                            <form id={BOOK_FORM_ID} className={`flex flex-col justify-center items-stretch gap-2 ${COL}`} noValidate onSubmit={handleSubmit}>
-                                {/* Two cars per category, under a heading that
+                                        <EmptyState
+                                            tone="dark"
+                                            align="sm-left"
+                                            title="We don't price this route yet"
+                                            message="This drop-off isn't on our rate card. Message us and we'll quote it by hand."
+                                            action={{
+                                                label: "Ask us for a fare",
+                                                onClick: () => openSupportWhatsApp(
+                                                    `Hi, I'd like a fare for ${pickupLocation} to ${dropLocation}.`
+                                                ),
+                                            }}
+                                            secondaryAction={{ label: "Change your route", onClick: () => navigate('/') }}
+                                        />
+                                    </div>
+                                ) : (
+                                    <form id={BOOK_FORM_ID} className={`flex flex-col justify-center items-stretch gap-2 ${COL}`} noValidate onSubmit={handleSubmit}>
+                                        {/* Two cars per category, under a heading that
                                     names it. The category is what the rider
                                     recognises ("Cab XL"); the class under it is
                                     the actual car and the thing that gets priced,
                                     matched to a driver and stored on the booking.
                                     The list comes from constants/vehicles.js, so
                                     a new car appears here by editing that map. */}
-                                {/* Phones show what the fare already covers at the
+                                        {/* Phones show what the fare already covers at the
                                     top of the scroll area, so it's read before the
                                     prices it explains rather than after them.
                                     Desktop keeps them beside the distance chip in
                                     the header, where the whole form is visible at
                                     once. */}
-                                {isMobile && fareNotices.length > 0 && (
-                                    // Set off underneath, on top of the form's own
-                                    // gap-2: the pill is a note about the whole list,
-                                    // so it needs more air than the list's own
-                                    // headings have — tight there and it reads as a
-                                    // label for Cab Economy. Nothing above it: the
-                                    // 8px the header's own gap gives is deliberate,
-                                    // and a margin here would undo it.
-                                    // Centred, like the chip it hangs under: the two
-                                    // are one block describing the trip, and a
-                                    // left-aligned pill under a centred chip reads as
-                                    // a stray heading for the list below it.
-                                    <div className="w-full mb-3 flex flex-col items-center gap-1.5">
-                                        {fareNotices.map(text => <NoticePill key={text}>{text}</NoticePill>)}
-                                    </div>
-                                )}
+                                        {isMobile && fareNotices.length > 0 && (
+                                            // Set off underneath, on top of the form's own
+                                            // gap-2: the pill is a note about the whole list,
+                                            // so it needs more air than the list's own
+                                            // headings have — tight there and it reads as a
+                                            // label for Cab Economy. Nothing above it: the
+                                            // 8px the header's own gap gives is deliberate,
+                                            // and a margin here would undo it.
+                                            // Centred, like the chip it hangs under: the two
+                                            // are one block describing the trip, and a
+                                            // left-aligned pill under a centred chip reads as
+                                            // a stray heading for the list below it.
+                                            <div className="w-full mb-3 flex flex-col items-center gap-1.5">
+                                                {fareNotices.map(text => <NoticePill key={text}>{text}</NoticePill>)}
+                                            </div>
+                                        )}
 
-                                {/* max-sm:pb-6 gives the last card the 24px the panel
+                                        {/* max-sm:pb-6 gives the last card the 24px the panel
                                     gave up with max-sm:pb-0. Padding on the panel
                                     shortened the scroller instead of padding it (see
                                     there); on a child of the scroller it is scrollable
@@ -1385,51 +1425,51 @@ const VehicleSelect = ()=>{
                                     the seam had nothing left to separate, and 16px
                                     between cards 2 and 3 of an unlabelled list reads
                                     as an accident. */}
-                                <div className="flex flex-col items-stretch gap-4 sm:gap-2 max-sm:pb-6">
-                                    {VEHICLE_CATEGORIES.map(group => (
-                                        <div key={group.category} className="flex flex-col items-stretch gap-2">
-                                            {/* Phones only. The heading is what makes
+                                        <div className="flex flex-col items-stretch gap-4 sm:gap-2 max-sm:pb-6">
+                                            {VEHICLE_CATEGORIES.map(group => (
+                                                <div key={group.category} className="flex flex-col items-stretch gap-2">
+                                                    {/* Phones only. The heading is what makes
                                                 a scrolled list navigable — you land
                                                 mid-list and it says where you are.
                                                 Desktop shows all four cards at once,
                                                 so it's a label for something already
                                                 in view. */}
-                                            {isMobile && (
-                                                <h3 className="px-1 text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                                                    {group.category}
-                                                </h3>
-                                            )}
-                                            {group.classes.map(cls => vehicleCard(
-                                                cls, labelOf(cls), seatsOf(cls),
-                                                label(cls, "solo"), label(cls, "sharing"),
+                                                    {isMobile && (
+                                                        <h3 className="px-1 text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                                                            {group.category}
+                                                        </h3>
+                                                    )}
+                                                    {group.classes.map(cls => vehicleCard(
+                                                        cls, labelOf(cls), seatsOf(cls),
+                                                        label(cls, "solo"), label(cls, "sharing"),
+                                                    ))}
+                                                </div>
                                             ))}
                                         </div>
-                                    ))}
-                                </div>
 
-                                {/* The three ride preferences used to be a card of
+                                        {/* The three ride preferences used to be a card of
                                     rows here on desktop and columns in the phone
                                     bar. They are the columns at both breakpoints
                                     now — see bookAction, which renders them
                                     directly above the button they re-price. */}
 
-                                {/* The fare notices used to sit here on desktop,
+                                        {/* The fare notices used to sit here on desktop,
                                     under the preferences card. They're beside the
                                     distance chip in the header now — see there.
                                     Phones keep theirs at the top of this scroll
                                     area, above the prices they explain. */}
 
-                                {/* On phones the CTA is rendered outside this form,
+                                        {/* On phones the CTA is rendered outside this form,
                                     pinned below the sheet — see bookAction. */}
-                                {!isMobile && bookAction}
-                            </form>
-                            )}
+                                        {!isMobile && bookAction}
+                                    </form>
+                                )}
                             </div>
                         </div>
-                        </div>
-                    </BackgroundPanel>
+                    </div>
+                </BackgroundPanel>
 
-                    {/* The Book bar, phones only. Pinned to the bottom of the
+                {/* The Book bar, phones only. Pinned to the bottom of the
                         viewport with the sheet resting on top of it, so the CTA
                         is reachable at every snap point instead of only once the
                         rider has dragged the sheet up far enough to find it.
@@ -1439,28 +1479,28 @@ const VehicleSelect = ()=>{
                         a bar floating under a card. Its height is measured and
                         handed back as the sheet's bottomInset — nothing here
                         assumes a number. */}
-                    {pinBookBar && (
-                        <div
-                            ref={bookBarRef}
-                            className="absolute inset-x-0 bottom-0 z-2 flex justify-center border-t border-[var(--foreground)]/10 bg-panel-gradient px-[7vw] pt-3 pb-[calc(1.25rem+env(safe-area-inset-bottom))]"
-                        >
-                            <div className={COL}>{bookAction}</div>
-                        </div>
-                    )}
+                {pinBookBar && (
+                    <div
+                        ref={bookBarRef}
+                        className="absolute inset-x-0 bottom-0 z-2 flex justify-center border-t border-[var(--foreground)]/10 bg-panel-gradient px-[7vw] pt-3 pb-[calc(1.25rem+env(safe-area-inset-bottom))]"
+                    >
+                        <div className={COL}>{bookAction}</div>
+                    </div>
+                )}
 
-                    {/* The options sheet, phones only — a page-level surface
+                {/* The options sheet, phones only — a page-level surface
                         over the fare sheet and the Book bar both, which is why
                         it is mounted here rather than beside the line that
                         opens it. Kept mounted with the bar so its exit spring
                         can play; `open` is what shows it. */}
-                    {pinBookBar && (
-                        <RideOptionsSheet
-                            options={rideOptions}
-                            open={optionsOpen}
-                            onClose={closeRideOptions}
-                        />
-                    )}
-                </>
+                {pinBookBar && (
+                    <RideOptionsSheet
+                        options={rideOptions}
+                        open={optionsOpen}
+                        onClose={closeRideOptions}
+                    />
+                )}
+            </>
         </div>
     );
 };

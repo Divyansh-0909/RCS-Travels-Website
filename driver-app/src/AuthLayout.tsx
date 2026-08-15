@@ -1,6 +1,7 @@
 import { View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { Outlet, useLocation } from 'react-router-native';
+import SwipeBack from './components/SwipeBack';
 
 const AuthLayout = () => {
     const { pathname } = useLocation();
@@ -13,7 +14,9 @@ const AuthLayout = () => {
                 pointerEvents="box-none"
                 style={{ flex: 1, width: '100%', alignItems: 'center', justifyContent: 'center' }}
             >
-                <Outlet />
+                <SwipeBack>
+                    <Outlet />
+                </SwipeBack>
             </Animated.View>
         </View>
     )

@@ -1,5 +1,5 @@
-import {create} from 'zustand'
-import {persist} from 'zustand/middleware'
+import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 
 // The ride form belongs to the trip in front of the rider, not to the browser,
 // so it rides in sessionStorage: a reload or a back-out of /vehicle keeps the
@@ -47,55 +47,55 @@ const splitStorage = {
     },
 }
 
-export const useData = create (persist (set =>({
+export const useData = create(persist(set => ({
     phone: "",
-    setPhone: (number)=> set (state => ({phone: number})),
+    setPhone: (number) => set(state => ({ phone: number })),
 
     username: null,
-    setUsername: (name)=> set(state=> ({username: name})),
+    setUsername: (name) => set(state => ({ username: name })),
 
     language: "English",
-    setLanguage: (lang)=> set(state=> ({language: lang})),
+    setLanguage: (lang) => set(state => ({ language: lang })),
 
     gender: null,
-    setGender: (sex)=>set(state=>({gender: sex})),
+    setGender: (sex) => set(state => ({ gender: sex })),
 
     emergencyContact: null,
-    setEmergencyContact: (number)=>set(state=>({emergencyContact: number})),
+    setEmergencyContact: (number) => set(state => ({ emergencyContact: number })),
 
     dob: null,
-    setDOB: (date)=>set(state=>({dob: date})),
+    setDOB: (date) => set(state => ({ dob: date })),
 
     pickupLocation: "",
-    setPickup: (location)=> set (state => ({pickupLocation: location})),
+    setPickup: (location) => set(state => ({ pickupLocation: location })),
 
     dropLocation: "",
-    setDrop: (location)=> set (state => ({dropLocation: location})),
+    setDrop: (location) => set(state => ({ dropLocation: location })),
 
     // { lat, lng } of the picked place; null once the text is hand-edited.
     pickupCoords: null,
-    setPickupCoords: (coords)=> set (state => ({pickupCoords: coords})),
+    setPickupCoords: (coords) => set(state => ({ pickupCoords: coords })),
 
     dropCoords: null,
-    setDropCoords: (coords)=> set (state => ({dropCoords: coords})),
+    setDropCoords: (coords) => set(state => ({ dropCoords: coords })),
 
     // From the fare estimate, for display on /book and ride details.
     distanceKm: null,
-    setDistanceKm: (km)=> set (state => ({distanceKm: km})),
+    setDistanceKm: (km) => set(state => ({ distanceKm: km })),
 
     durationMin: null,
-    setDurationMin: (min)=> set (state => ({durationMin: min})),
+    setDurationMin: (min) => set(state => ({ durationMin: min })),
 
     // Encoded road path from the same Routes call, for drawing the route on maps.
     routePolyline: null,
-    setRoutePolyline: (polyline)=> set (state => ({routePolyline: polyline})),
+    setRoutePolyline: (polyline) => set(state => ({ routePolyline: polyline })),
 
     // How the estimate priced the ride: 'zone' | 'formula' | 'per_km' (older
     // bookings may carry the retired 'fixed_table'). The two distance sources
     // exclude tolls, so isDistancePriced() in constants/fares is what the tolls
     // notice keys off. Tracking never calls the estimate, so it reads this.
     fareSource: null,
-    setFareSource: (source)=> set (state => ({fareSource: source})),
+    setFareSource: (source) => set(state => ({ fareSource: source })),
 
     // The flat add-ons the server folded into the booked fare. Kept so the ride
     // details breakdown can subtract them back out of the total rather than
@@ -103,27 +103,31 @@ export const useData = create (persist (set =>({
     // particular is waived on some routes, so its sticker price is not the
     // amount charged. Persisted with fareSource: tracking never re-estimates.
     fareToll: 0,
-    setFareToll: (amount)=> set (state => ({fareToll: amount ?? 0})),
+    setFareToll: (amount) => set(state => ({ fareToll: amount ?? 0 })),
 
     fareCarrier: 0,
-    setFareCarrier: (amount)=> set (state => ({fareCarrier: amount ?? 0})),
+    setFareCarrier: (amount) => set(state => ({ fareCarrier: amount ?? 0 })),
 
     fareAirport: 0,
-    setFareAirport: (amount)=> set (state => ({fareAirport: amount ?? 0})),
+    setFareAirport: (amount) => set(state => ({ fareAirport: amount ?? 0 })),
 
     // Autocomplete picks for the on-focus recents panel. Persisted; capped at
     // 15 by evicting the lowest frecency score (count decayed by age).
     recentPlaces: [],
-    addRecentPlace: (label, coords)=> set (state => {
+    addRecentPlace: (label, coords) => set(state => {
         const now = Date.now();
         const existing = state.recentPlaces.find(p => p.label === label);
         let updated = existing
             ? state.recentPlaces.map(p => p.label === label
-                ? { ...p, count: p.count + 1, lastUsedAt: now,
-                    lat: coords?.lat ?? p.lat ?? null, lng: coords?.lng ?? p.lng ?? null }
+                ? {
+                    ...p, count: p.count + 1, lastUsedAt: now,
+                    lat: coords?.lat ?? p.lat ?? null, lng: coords?.lng ?? p.lng ?? null
+                }
                 : p)
-            : [...state.recentPlaces, { label, count: 1, lastUsedAt: now,
-                lat: coords?.lat ?? null, lng: coords?.lng ?? null }];
+            : [...state.recentPlaces, {
+                label, count: 1, lastUsedAt: now,
+                lat: coords?.lat ?? null, lng: coords?.lng ?? null
+            }];
         if (updated.length > 15) {
             const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
             const score = (p) => p.count * Math.exp(-(now - p.lastUsedAt) / THIRTY_DAYS);
@@ -135,7 +139,7 @@ export const useData = create (persist (set =>({
 
     // Merge server-derived places (booking history) into the local list.
     // Same label → max count (sum would double-count) and latest lastUsedAt.
-    mergeRecentPlaces: (serverPlaces)=> set (state => {
+    mergeRecentPlaces: (serverPlaces) => set(state => {
         const now = Date.now();
         const merged = new Map(state.recentPlaces.map(p => [p.label, { ...p }]));
         for (const sp of serverPlaces) {
@@ -163,89 +167,92 @@ export const useData = create (persist (set =>({
     // the source of truth; this holds the last fetched copy — persisted so the
     // booking form's suggestions can show them before any refresh lands.
     savedPlaces: [],
-    setSavedPlaces: (places)=> set (() => ({savedPlaces: places ?? []})),
+    setSavedPlaces: (places) => set(() => ({ savedPlaces: places ?? [] })),
 
     // Deliberately not persisted, unlike the timing choice beside it. A Date
     // does not survive JSON, and a restored slot can have aged past the 30-min
     // lead the picker enforces — so a reload would hand back a time the rider
     // can no longer book. Re-picking from the calendar is the honest reset.
     scheduledTime: null,
-    setScheduledTime: (time)=> set(state=> ({scheduledTime: time})),
+    setScheduledTime: (time) => set(state => ({ scheduledTime: time })),
 
     timing: "Schedule",
-    setTiming: (timing)=> set(state=> ({timing: timing})),
+    setTiming: (timing) => set(state => ({ timing: timing })),
 
     fare: null,
-    setFare: (fare)=> set(state=> ({fare: fare})),
+    setFare: (fare) => set(state => ({ fare: fare })),
 
     // One of the keys in constants/vehicles.js. Null until the rider picks —
     // there is deliberately no default class, because a default would mean the
     // Book button is live before anyone has chosen what they're paying for.
     vehicleClass: null,
-    setVehicleClass: (vehicle)=> set(state=> ({vehicleClass: vehicle})),
+    setVehicleClass: (vehicle) => set(state => ({ vehicleClass: vehicle })),
 
     bookingId: null,
-    setBookingId: (id)=> set(state=> ({bookingId: id})),
+    setBookingId: (id) => set(state => ({ bookingId: id })),
 
     bookingCode: null,
-    setBookingCode: (code)=> set(state=> ({bookingCode: code})),
+    setBookingCode: (code) => set(state => ({ bookingCode: code })),
 
     status: "",
-    setStatus: (status)=> set(state=> ({status: status})),
+    setStatus: (status) => set(state => ({ status: status })),
 
     // Shape: { id, code, status, pickupAddress, dropAddress, fare, scheduledAt }
     activeBooking: null,
-    setActiveBooking: (booking)=> set(state=> ({activeBooking: booking})),
+    setActiveBooking: (booking) => set(state => ({ activeBooking: booking })),
 
     cancelledBy: null,
-    setCancelledBy: (by)=> set(state=> ({cancelledBy: by})),
+    setCancelledBy: (by) => set(state => ({ cancelledBy: by })),
 
     // What cancelling right now would cost, computed server-side and refreshed by
     // the tracking poll. Kept off the client so the warning the rider reads and
     // the amount the cancel endpoint charges can never drift apart.
     cancellationCharge: 0,
-    setCancellationCharge: (amount)=> set(state=> ({cancellationCharge: amount ?? 0})),
+    setCancellationCharge: (amount) => set(state => ({ cancellationCharge: amount ?? 0 })),
 
     // Off by default: a solo ride is the ride the rider asked for, and sharing
     // is the opt-in that trades privacy for a lower fare. Defaulting it on made
     // the headline price one the rider hadn't agreed to the terms of.
     sharing: false,
-    setSharing: (share) => set(state=>({sharing: share})),
+    setSharing: (share) => set(state => ({ sharing: share })),
 
     // Forces the route through the lit highway instead of the shorter unlit
     // stretch near campus. Per-ride opt-in, deliberately not persisted — the
     // choice belongs to the trip, not the account.
     safeRoute: false,
-    setSafeRoute: (on) => set(state=>({safeRoute: on})),
+    setSafeRoute: (on) => set(state => ({ safeRoute: on })),
 
     // Roof carrier for oversized luggage. Same reasoning as safeRoute: it belongs
     // to this trip's luggage, not to the account, so it is not persisted.
     needsCarrier: false,
-    setNeedsCarrier: (on) => set(state=>({needsCarrier: on})),
+    setNeedsCarrier: (on) => set(state => ({ needsCarrier: on })),
 
     // Dev-only: lets /dev/* preview routes render auth-gated UI without Clerk.
     devAuthBypass: false,
-    setDevAuthBypass: (on) => set(() => ({devAuthBypass: on})),
+    setDevAuthBypass: (on) => set(() => ({ devAuthBypass: on })),
+
+    searchStartedAt: null,
+    setSearchStartedAt: (value) => set(()=>{ searchStartedAt: value }),
 }),
-{
-    name: 'rcs-data',
-    storage: splitStorage,
-    // Persisted: phone (pre-fills login), language, recent places, and the
-    // ride form (addresses + their coords — they must travel together or a
-    // reload would rebook from the fallback anchors) plus its route metrics,
-    // so tracking still draws the real road route after a reload. /book wipes
-    // the metrics on mount, so a new booking can't inherit the old route.
-    // `timing` rides along so backing out of /book returns the rider to the
-    // Now/Schedule choice they made, not to the default. SESSION_KEYS above
-    // decides which of these outlive the tab.
-    partialize: (state) => ({
-        phone: state.phone, language: state.language, recentPlaces: state.recentPlaces,
-        savedPlaces: state.savedPlaces, timing: state.timing,
-        pickupLocation: state.pickupLocation, dropLocation: state.dropLocation,
-        pickupCoords: state.pickupCoords, dropCoords: state.dropCoords,
-        distanceKm: state.distanceKm, durationMin: state.durationMin,
-        routePolyline: state.routePolyline, fareSource: state.fareSource,
-        fareToll: state.fareToll, fareCarrier: state.fareCarrier,
-        fareAirport: state.fareAirport,
-    }),
-}))
+    {
+        name: 'rcs-data',
+        storage: splitStorage,
+        // Persisted: phone (pre-fills login), language, recent places, and the
+        // ride form (addresses + their coords — they must travel together or a
+        // reload would rebook from the fallback anchors) plus its route metrics,
+        // so tracking still draws the real road route after a reload. /book wipes
+        // the metrics on mount, so a new booking can't inherit the old route.
+        // `timing` rides along so backing out of /book returns the rider to the
+        // Now/Schedule choice they made, not to the default. SESSION_KEYS above
+        // decides which of these outlive the tab.
+        partialize: (state) => ({
+            phone: state.phone, language: state.language, recentPlaces: state.recentPlaces,
+            savedPlaces: state.savedPlaces, timing: state.timing,
+            pickupLocation: state.pickupLocation, dropLocation: state.dropLocation,
+            pickupCoords: state.pickupCoords, dropCoords: state.dropCoords,
+            distanceKm: state.distanceKm, durationMin: state.durationMin,
+            routePolyline: state.routePolyline, fareSource: state.fareSource,
+            fareToll: state.fareToll, fareCarrier: state.fareCarrier,
+            fareAirport: state.fareAirport,
+        }),
+    }))

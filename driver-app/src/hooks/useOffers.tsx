@@ -34,6 +34,7 @@ export type Offer = {
     safeRoute: boolean;
     sharing: boolean;
     needsCarrier: boolean;
+    expiresAt: string;
 };
 
 /**

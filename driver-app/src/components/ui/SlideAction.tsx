@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useRef, useState, useEffect } from 'react';
 import { PanResponder, View, type LayoutChangeEvent } from 'react-native';
 import { cssInterop } from 'nativewind';
 import { ArrowRightIcon } from 'phosphor-react-native';
@@ -60,6 +60,10 @@ export const SlideAction = ({
     const [width, setWidth] = useState(0);
     const x = useSharedValue(0);
 
+    useEffect(() => {
+        x.value = 0;
+    }, [label, disabled, x]);
+
     // PanResponder is built once, so everything it reaches for lives in a ref or
     // it would close over the first render's values for good.
     const state = useRef({ width: 0, disabled: false, onConfirm });
@@ -69,8 +73,10 @@ export const SlideAction = ({
 
     const fire = useCallback(() => {
         const { onConfirm: run } = state.current;
+
+        x.value = 0;
         void run();
-    }, []);
+    }, [x]);
 
     const pan = useRef(
         PanResponder.create({

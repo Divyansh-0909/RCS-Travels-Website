@@ -1,7 +1,7 @@
 import { Pressable, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import AppText from './AppText';
-import CheckMarkOutline from './illustrations/CheckMarkOutline';
+import SuccessCheck from './ui/SuccessCheck';
 import { INK_TEXT, MUTED, SURFACE } from './ui/rideUi';
 import { fareBreakdown, rupees, splitAddress } from '../constants/booking';
 import type { UpcomingBooking } from '../types/enums';
@@ -36,7 +36,7 @@ export const RideCompleted = ({
         <View className="flex h-full justify-between w-[92%] pt-18 pb-10">
             <Animated.View entering={FadeIn.duration(220)} className="items-center gap-3">
                 <View className="w-20 h-20 rounded-full items-center justify-center bg-primary">
-                    <CheckMarkOutline size={44} strokeWidth={5} delay={140} />
+                    <SuccessCheck className="-mt-2 -mb-2" size={120} />
                 </View>
                 <View className='flex justify-center items-center gap-1'>
                     <AppText className={`text-2xl font-semibold ${INK_TEXT}`} style={{ letterSpacing: -0.6 }}>

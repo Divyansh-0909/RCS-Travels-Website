@@ -1,5 +1,6 @@
 import { View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
+import SwipeBack from './components/SwipeBack';
 import { Outlet, useLocation } from 'react-router-native';
 import AppBar from './components/AppBar';
 import AppBarScrim from './components/AppBarScrim';
@@ -57,7 +58,9 @@ const App = () => {
                     pointerEvents="box-none"
                     style={{ flex: 1, width: '100%', alignItems: 'center', justifyContent: 'center' }}
                 >
-                    <Outlet/>
+                    <SwipeBack>
+                        <Outlet/>
+                    </SwipeBack>
                 </Animated.View>
                 {/* Between the routes and the bar, in both senses: after the Outlet
                     so it paints over the content, before the AppBar so the bar
