@@ -47,7 +47,7 @@ const FORM_W = "max-sm:w-[78vw]!";
 // typed chars, recent places when (near-)empty. select() resolves coords
 // (recents carry their own; Google picks cost one Details call); manual
 // edits clear them.
-function useAddressSuggestions(value, setValue, setCoords, api, exclusiveRef, closeOthers) {
+function useAddressSuggestions(value, setValue, setCoords, api, exclusiveRef, closeOthers,allowCurrentLocation = false) {
   const recentPlaces = useData(state => state.recentPlaces);
   const savedPlaces = useData(state => state.savedPlaces);
   const addRecentPlace = useData(state => state.addRecentPlace);
@@ -86,6 +86,13 @@ function useAddressSuggestions(value, setValue, setCoords, api, exclusiveRef, cl
     .map(p => ({ id: `saved-${p.id ?? p.label}`, saved: true, name: p.label, label: p.address, lat: p.lat ?? null, lng: p.lng ?? null }));
   const savedAddresses = new Set(saved.map(s => s.label));
 
+  const currentLocationItem = {
+    id: "__current_location__",
+    label: "Current location",
+    name: "Current location",
+    isCurrentLocation: true,
+  };
+
   let recents = [];
   if (recentPlaces.length) {
     const [latest, ...rest] = [...recentPlaces].sort((a, b) => b.lastUsedAt - a.lastUsedAt);
@@ -94,7 +101,7 @@ function useAddressSuggestions(value, setValue, setCoords, api, exclusiveRef, cl
 
   const items = typed
     ? googleSuggestions.map(s => ({ id: s.placePrediction?.placeId, label: s.placePrediction?.text?.text }))
-    : [...saved, ...recents.map(p => ({ id: p.label, label: p.label, lat: p.lat, lng: p.lng }))];
+    : [...(allowCurrentLocation ? [currentLocationItem] : []), ...saved, ...recents.map(p => ({ id: p.label, label: p.label, lat: p.lat, lng: p.lng }))];
 
   // Only react to actual value CHANGES: a store-prefilled value on mount (and
   // StrictMode's double effect run) must not auto-open the panel or wipe
@@ -150,16 +157,69 @@ function useAddressSuggestions(value, setValue, setCoords, api, exclusiveRef, cl
 
   async function select(item) {
     justSelectedRef.current = true;
+
+    if (item.isCurrentLocation) {
+      if (!navigator.geolocation) {
+        setLookupError("Location isn't available on this device.");
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords;
+
+          setCoords({
+            lat: latitude,
+            lng: longitude,
+          });
+
+          const data = await api.reverseGeocode(latitude, longitude);
+
+          if (data?.error) {
+            setLookupError("Couldn't determine your current address.");
+            return;
+          }
+
+          const address = data.address;
+
+          setValue(address);
+          setExpanded(false);
+          addRecentPlace(address, {
+            lat: latitude,
+            lng: longitude,
+          });
+        },
+        () => {
+          setLookupError("Couldn't access your current location.");
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 30000,
+        },
+      );
+
+      return;
+    }
+
     setValue(item.label);
     setExpanded(false);
 
-    let coords = item.lat != null ? { lat: item.lat, lng: item.lng } : null;
-    // Saved-place ids aren't Google place ids — a saved row without coords
-    // resolves later, exactly like a hand-typed address.
+    let coords = item.lat != null
+      ? { lat: item.lat, lng: item.lng }
+      : null;
+
     if (!coords && item.id && !item.saved) {
       const data = await api.placeDetails(item.id);
-      if (!data.error && data.lat != null) coords = { lat: data.lat, lng: data.lng };
+
+      if (!data.error && data.lat != null) {
+        coords = {
+          lat: data.lat,
+          lng: data.lng,
+        };
+      }
     }
+
     setCoords(coords);
     addRecentPlace(item.label, coords);
   }
@@ -254,7 +314,11 @@ const SuggestionDropdown = ({ anim, items, onSelect, above = false, error = null
                   }`}
               >
                 <h4 className="text-left text-base">{mainLocation}</h4>
-                <p className="text-left text-xs text-[var(--text-muted)]">{remainingLocation}</p>
+                <p className="text-left text-xs text-[var(--text-muted)]">
+                  {item.isCurrentLocation
+                    ? "Use your current location"
+                    : remainingLocation}
+                </p>
               </div>
             </li>
           );
@@ -399,8 +463,8 @@ const OnBoarding = () => {
   const suggestionCloserRef = useRef(null);
   const closeSuggestions = () => { suggestionCloserRef.current?.(); };
   const closeTimingPanels = () => { setExpand(false); setExpandCalendar(false); };
-  const pickupAutocomplete = useAddressSuggestions(pickupLocation, setPickup, setPickupCoords, api, suggestionCloserRef, closeTimingPanels)
-  const dropAutocomplete = useAddressSuggestions(dropLocation, setDrop, setDropCoords, api, suggestionCloserRef, closeTimingPanels)
+  const pickupAutocomplete = useAddressSuggestions(pickupLocation, setPickup, setPickupCoords, api, suggestionCloserRef, closeTimingPanels,true)
+  const dropAutocomplete = useAddressSuggestions(dropLocation, setDrop, setDropCoords, api, suggestionCloserRef, closeTimingPanels,false)
   const isMobile = useIsMobile();
 
   // The calendar panel is portalled to the body (see its comment at the render
@@ -740,14 +804,14 @@ const OnBoarding = () => {
                                 day: "numeric",
                                 month: "numeric",
                               })}
-                              <Icon 
+                              <Icon
                                 path={mdiClose}
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  e.preventDefault(); 
+                                  e.preventDefault();
                                   setScheduledTime(null);
                                 }}
-                                size={0.7} 
+                                size={0.7}
                                 className="mx-1 ml-1.5 transition-opcaity duration-300 opacity-[0.7] hover:opacity-[1]" />
                             </span>
                           ) : (
