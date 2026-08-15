@@ -34,21 +34,13 @@ export const BottomSheet = ({
     children,
     peek = DEFAULT_PEEK,
     bottomInset = 0,
+    above
 }: {
     children: ReactNode;
     peek?: number;
-    /**
-     * Clearance for whatever floats over the sheet's bottom edge — the tab bar,
-     * on the screens that still have one.
-     *
-     * PADDING INSIDE THE SHEET, NOT AN OFFSET UNDER IT. Lifting the whole sheet
-     * clear of the bar would leave a band of map below it, which stops reading
-     * as a bottom sheet and starts reading as a card that has come loose. So the
-     * sheet stays welded to the bottom edge and simply keeps its content above
-     * the line the bar occupies: the bar floats over sheet rather than over
-     * anything the captain needs to read or press.
-     */
     bottomInset?: number;
+    above?: ReactNode;
+
 }) => {
     const [height, setHeight] = useState(0);
     const y = useSharedValue(0);
@@ -110,18 +102,25 @@ export const BottomSheet = ({
         <Animated.View
             onLayout={(e: LayoutChangeEvent) => setHeight(e.nativeEvent.layout.height)}
             className="absolute left-0 right-0 bottom-0 rounded-t-3xl"
-            style={[{ backgroundColor: SURFACE }, slide]}
+            style={[slide]}
         >
+            {above}
             {/* The grab area. Padded well beyond the bar itself — the bar is the
                 signal, the padding is the target, and a 4px line is not something
                 to ask a driver to hit. */}
-            <View {...pan.panHandlers} className="w-full items-center pt-3 pb-2">
-                <View className="w-10 h-1 rounded-full" style={{ backgroundColor: '#c9c9d2' }} />
+            <View
+                className='rounded-t-3xl'
+                style={[{ backgroundColor: SURFACE }]}
+            >
+                <View {...pan.panHandlers} className="w-full items-center pt-3 pb-2">
+                    <View className="w-10 h-1 rounded-full" style={{ backgroundColor: '#c9c9d2' }} />
+                </View>
+
+                <View style={{ paddingBottom: bottomInset }}>
+                    {children}
+                </View>
             </View>
 
-            <View style={{ paddingBottom: bottomInset }}>
-                {children}
-            </View>
         </Animated.View>
     );
 };

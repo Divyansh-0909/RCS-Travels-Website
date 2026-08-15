@@ -10,7 +10,7 @@ import { useDriver } from "../hooks/useDriver";
 import { ensureLocationPermission } from "../hooks/useDriverLocation";
 import { useShellHidden } from "./AppBarVisibility";
 import { RideMenuButton } from "./RideMenu";
-
+import { useData } from "../hooks/useData";
 
 const Bell = cssInterop(BellIcon, {
     className: { target: false, nativeStyleToProp: { color: true } },
@@ -22,11 +22,11 @@ const KNOB_ON = -8;    // web: -left-2
 const TITLE_TRACKING = { letterSpacing: -0.72 };
 
 const OnlineToggle = () => {
+    const hidden = useData((state) => state.hidden);
     const [error, setError] = useState<string | null>(null)
     const navigate = useNavigate();
     const { pathname } = useLocation();
     const onNotifications = pathname === "/notifications";
-
     // The whole header is Home's, not the shell's: going online is a decision a
     // captain makes from the ride list, and neither the wordmark nor the bell says
     // anything about Account or Post. Home is the index route, so it answers to "/".
@@ -126,6 +126,8 @@ const OnlineToggle = () => {
         // That request was the reason the screen lagged the switch.
     }
 
+    if (hidden) return null;
+
     if (!onHome || !canDrive) return null;
 
     return (
@@ -142,7 +144,7 @@ const OnlineToggle = () => {
                 rows waiting on his notification page either way — and the one
                 thing he still needs from this header is to see that they have. */}
             {!onActiveRide && (
-                <AppText className="text-xl bg-[var(--foreground)] my-1 py-1 px-3 rounded-full text-[var(--text-foreground)] flex flex-row justify-center items-center font-semibold text-center" style={TITLE_TRACKING}>
+                <AppText className="text-xl bg-transparent my-1 py-1 px-3 rounded-full text-[var(--text-foreground)] flex flex-row justify-center items-center font-semibold text-center" style={TITLE_TRACKING}>
                     RCS{" "}
                     <AppText className="text-[var(--text-foreground)]">
                         Travels

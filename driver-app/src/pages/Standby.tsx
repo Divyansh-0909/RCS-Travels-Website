@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Linking, Pressable, View } from 'react-native';
 import { cssInterop } from 'nativewind';
+import { useNavigate } from 'react-router-native';
 import { NavigationArrowIcon } from 'phosphor-react-native';
 import AppText from '../components/AppText';
 import { BottomSheet } from '../components/ui/BottomSheet';
@@ -49,6 +50,7 @@ const Standby = ({ next, onChanged }: { next: UpcomingBooking | null; onChanged:
     const { refresh: refreshDriver } = useDriver();
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const navigate = useNavigate();
 
     const start = async () => {
         if (!next || busy) return;
@@ -82,66 +84,69 @@ const Standby = ({ next, onChanged }: { next: UpcomingBooking | null; onChanged:
             <MapSlot />
 
             <BottomSheet peek={PEEK} bottomInset={APPBAR_CLEARANCE}>
-              <View className="px-5 pb-2 gap-3">
-                {next && place ? (
-                    <>
-                        <View className="flex-row items-center justify-between gap-3">
-                            <AppText className={`text-xs font-semibold uppercase tracking-wide ${MUTED}`}>
-                                Next pickup
-                            </AppText>
-                            <AppText className={`text-xs font-semibold uppercase tracking-wide ${next.scheduledAt ? MUTED : 'text-primary'}`}>
-                                {whenLabel(next.scheduledAt)}
-                            </AppText>
-                        </View>
-
-                        <View className="gap-0.5">
-                            <AppText numberOfLines={1} className={`text-xl font-bold ${INK_TEXT}`} style={{ letterSpacing: -0.4 }}>
-                                {place.main}
-                            </AppText>
-                            {place.rest ? (
-                                <AppText numberOfLines={1} className={`text-sm ${MUTED}`}>{place.rest}</AppText>
-                            ) : null}
-                        </View>
-
-                        <View className="flex-row items-center justify-between">
-                            <AppText className={`text-base font-semibold ${INK_TEXT}`}>
-                                {rupees(next.fare)}
-                            </AppText>
-                            <AppText numberOfLines={1} className={`text-sm ${MUTED} flex-1 text-right ml-3`}>
-                                to {splitAddress(next.dropAddress).main}
-                            </AppText>
-                        </View>
-
-                        {error ? (
-                            <AppText className="text-sm font-medium text-red-600">{error}</AppText>
-                        ) : null}
-
-                        <Pressable
-                            role="button"
-                            onPress={start}
-                            disabled={busy}
-                            style={({ pressed }) => ({ opacity: pressed || busy ? 0.85 : 1 })}
-                        >
-                            <View className="w-full flex-row items-center justify-center gap-2 rounded-2xl py-3.5 bg-primary">
-                                <NavArrow size={18} weight="fill" className="text-[var(--foreground)]" />
-                                <AppText className="text-base font-semibold text-[var(--foreground)]">
-                                    Go to pickup point
+                <View className="px-5 pb-2 gap-3">
+                    {next && place ? (
+                        <>
+                            <View className="flex-row items-center justify-between gap-3">
+                                <AppText className={`text-base font-semibold uppercase tracking-wide ${MUTED}`}>
+                                    Next pickup
+                                </AppText>
+                                <AppText className={`text-base font-semibold uppercase tracking-wide ${next.scheduledAt ? MUTED : 'text-primary'}`}>
+                                    {whenLabel(next.scheduledAt)}
                                 </AppText>
                             </View>
-                        </Pressable>
-                    </>
-                ) : (
-                    <View className="gap-0.5 py-1">
-                        <AppText className={`text-base font-semibold ${INK_TEXT}`}>
-                            You&apos;re online
-                        </AppText>
-                        <AppText className={`text-sm ${MUTED}`}>
-                            Waiting for rides. You&apos;ll get a card here and a notification
-                            the moment one comes in.
-                        </AppText>
-                    </View>
-                )}
-              </View>
+
+                            <View className="gap-0.5 p-3 bg-[var(--foreground-muted)] rounded-2xl">
+                                <AppText numberOfLines={1} className={`text-xl font-semibold ${INK_TEXT}`} style={{ letterSpacing: -0.4 }}>
+                                    {place.main}
+                                </AppText>
+                                {place.rest ? (
+                                    <AppText numberOfLines={1} className={`text-sm ${MUTED}`}>{place.rest}</AppText>
+                                ) : null}
+
+                                <Pressable
+                                    role="button"
+                                    onPress={() => navigate(`/rides/${next.id}`)}
+                                    style={({ pressed }) => ({ opacity: pressed || busy ? 0.85 : 1 })}
+                                >
+                                    <View className="w-25 flex-row items-center mt-2 justify-center gap-2 rounded-xl p-2 bg-[var(--background-primary)]">
+                                        <AppText className="text-sm w-fit font-semibold text-[var(--text)]">
+                                            Ride details
+                                        </AppText>
+                                    </View>
+                                </Pressable>
+                            </View>
+
+                            {error ? (
+                                <AppText className="text-sm font-medium text-red-600">{error}</AppText>
+                            ) : null}
+
+                            <Pressable
+                                role="button"
+                                onPress={start}
+                                disabled={busy}
+                                style={({ pressed }) => ({ opacity: pressed || busy ? 0.85 : 1 })}
+                            >
+                                <View className="w-full flex-row items-center justify-center gap-2 rounded-2xl py-3.5 bg-primary">
+                                    <NavArrow size={18} weight="fill" className="text-[var(--foreground)]" />
+                                    <AppText className="text-base font-semibold text-[var(--foreground)]">
+                                        Go to pickup point
+                                    </AppText>
+                                </View>
+                            </Pressable>
+                        </>
+                    ) : (
+                        <View className="gap-0.5 py-2 flex flex-col justify-center items-center text-center">
+                            <AppText className={`text-2xl font-semibold ${INK_TEXT}`}>
+                                You&apos;re online
+                            </AppText>
+                            <AppText className={`text-sm text-center ${MUTED}`}>
+                                Waiting for rides. You&apos;ll get a card here and a notification
+                                the moment one comes in.
+                            </AppText>
+                        </View>
+                    )}
+                </View>
             </BottomSheet>
         </View>
     );

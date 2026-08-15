@@ -95,46 +95,31 @@ const RideAcceptedSheet = () => {
                 className="absolute left-3 right-3 rounded-3xl px-6 pt-5 pb-6 gap-1"
                 style={{ top, backgroundColor: SURFACE }}
             >
-                <View className="flex-row items-start justify-between">
-                    <View className="w-14 h-14 rounded-full items-center justify-center bg-primary">
-                        <Phone size={26} weight="fill" className="text-[var(--foreground)]" />
-                    </View>
+                <View className="flex-row items-center justify-between">
+                    <AppText
+                        className={`text-2xl font-semibold ${INK_TEXT}`}
+                        style={{ letterSpacing: -0.6 }}
+                    >
+                        Contact the rider
+                    </AppText>
                     <Pressable
                         role="button"
                         accessibilityLabel="Close"
                         onPress={clearAccepted}
                         hitSlop={12}
                         style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}
-                        className="w-9 h-9 items-center justify-center rounded-full"
+                        className="w-9 h-9 mb-1 items-center justify-center rounded-full"
                     >
                         <Cross size={22} weight="bold" className={INK_TEXT} />
                     </Pressable>
                 </View>
 
-                <AppText
-                    className={`text-2xl font-bold mt-4 ${INK_TEXT}`}
-                    style={{ letterSpacing: -0.6 }}
-                >
-                    Call the rider
-                </AppText>
                 <AppText className={`text-base ${MUTED}`}>
                     Tell them you are on the way. A rider who has heard from you is far
                     less likely to cancel.
                 </AppText>
 
-                <View className="mt-5 flex-row items-center gap-3">
-                    <View
-                        className="flex-1 rounded-2xl px-4 py-3.5"
-                        style={{ backgroundColor: '#f3f3f3' }}
-                    >
-                        <AppText className={`text-xs font-semibold uppercase ${MUTED}`}>
-                            Picking up from
-                        </AppText>
-                        <AppText numberOfLines={1} className={`text-base font-semibold ${INK_TEXT}`}>
-                            {accepted.pickup.address}
-                        </AppText>
-                    </View>
-
+                <View className="mt-2 flex-row items-center gap-3">
                     <Pressable
                         role="button"
                         accessibilityLabel={`Call ${accepted.customerPhone}`}
@@ -146,23 +131,13 @@ const RideAcceptedSheet = () => {
                             clearAccepted();
                         }}
                         style={({ pressed }) => ({ opacity: pressed ? 0.75 : 1 })}
-                        className="w-16 h-16 rounded-full items-center justify-center bg-primary"
+                        className="w-full h-12 rounded-xl flex flex-row gap-2 items-center justify-center bg-primary"
                     >
-                        <Phone size={26} weight="fill" className="text-[var(--foreground)]" />
+                        <Phone size={22} weight="fill" className="text-[var(--foreground)]" />
+                        <AppText className='font-semibold text-lg'>Call Rider</AppText>
                     </Pressable>
                 </View>
-
-                <Pressable
-                    role="button"
-                    onPress={clearAccepted}
-                    hitSlop={8}
-                    style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
-                    className="self-center mt-5"
-                >
-                    <AppText className={`text-sm font-semibold ${MUTED}`}>
-                        I&apos;ll call later
-                    </AppText>
-                </Pressable>
+                
             </Animated.View>
         </Animated.View>
     );

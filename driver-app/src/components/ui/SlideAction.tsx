@@ -30,8 +30,8 @@ const Arrow = cssInterop(ArrowRightIcon, {
  * and would drag in a native module and a new build for one control.
  */
 
-const KNOB = 56;
-const PAD = 4;
+const KNOB = 50;
+const PAD = 6;
 
 // `primary` from the shared tokens, as a literal for the same reason rideUi
 // writes its own out: this is a style object on an Animated.View, and NativeWind
@@ -41,7 +41,7 @@ const PAD = 4;
 // knob has to stay findable against the fill it is dragging across. A white knob
 // vanished into the pale track before it moved, and a knob the same blue as the
 // fill would vanish into it after.
-const KNOB_FILL = '#243AFB';
+const KNOB_FILL = '#7A94FF';
 /** How far across counts as meaning it. Below this it springs back. */
 const CONFIRM_AT = 0.72;
 
@@ -70,10 +70,7 @@ export const SlideAction = ({
     const fire = useCallback(() => {
         const { onConfirm: run } = state.current;
         void run();
-        // Home again, so the same control can front the next transition without
-        // the knob sitting at the far end of a track that now says something else.
-        x.value = withTiming(0, { duration: 260 });
-    }, [x]);
+    }, []);
 
     const pan = useRef(
         PanResponder.create({
@@ -113,16 +110,16 @@ export const SlideAction = ({
         <View
             onLayout={(e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width)}
             className={`w-full rounded-full overflow-hidden ${disabled ? 'opacity-50' : ''}`}
-            style={{ height: KNOB + PAD * 2, backgroundColor: '#f3f3f3', justifyContent: 'center' }}
+            style={{ height: KNOB + PAD * 2, backgroundColor: '#243AFB', justifyContent: 'center' }}
         >
             <Animated.View
                 pointerEvents="none"
-                className="absolute left-0 top-0 bottom-0 rounded-full bg-primary-light"
+                className="absolute left-0 top-0 bottom-0 rounded-full bg-primary"
                 style={fillStyle}
             />
 
             <Animated.View pointerEvents="none" style={labelStyle} className="absolute w-full items-center">
-                <AppText className="text-base font-semibold text-[var(--background-primary)]">
+                <AppText className="text-base font-semibold text-[var(--foreground)]">
                     {disabled && disabledHint ? disabledHint : label}
                 </AppText>
             </Animated.View>

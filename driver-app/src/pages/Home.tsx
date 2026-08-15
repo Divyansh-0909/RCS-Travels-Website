@@ -4,36 +4,17 @@ import { CaretRightIcon } from "phosphor-react-native";
 import AppText from "../components/AppText";
 import ScheduledRide from "../components/ui/ScheduledRide";
 import MarketPromo from "../components/ui/MarketPromo";
+import DriverCouponPromo from "../components/ui/DriverCouponPromo";
 import { useNavigate } from "react-router-native";
 import { useRides } from "../hooks/useRides";
 
-// Phosphor takes a colour prop, not a class. cssInterop is how AppBar and
-// OnlineToggle colour theirs, so the caret reads its blue from the same token.
 const Caret = cssInterop(CaretRightIcon, {
     className: { target: false, nativeStyleToProp: { color: true } },
 });
 
 const MAX_ROWS = 2;
-
-// The floating AppBar and the scrim behind it own the bottom of every screen, so the
-// last card needs its own clearance to be readable at all. Same number the Rides and
-// Account boards reserve. Without it the Market promo ends up under the bar and, now
-// that the scrim is there, faded halfway to white before it gets there.
 const BAR_CLEARANCE = 132;
 
-/**
- * The board a captain sees while he is OFFLINE.
- *
- * It used to be home in every state, and carried the active-ride card as well.
- * Both of those moved: an active ride has its own screen and an online captain
- * gets the map, so what is left here is the one case where neither applies —
- * signed in, approved, and not taking work. HomeGate decides which of the three
- * he is looking at.
- *
- * The scheduled list stays, because it is exactly what he came to check. A
- * captain going offline for the evening still wants to know when tomorrow's
- * first pickup is.
- */
 const Home = () => {
     const navigate = useNavigate()
     const { scheduled, error, refresh } = useRides()
@@ -42,15 +23,11 @@ const Home = () => {
         <View
             style={{ flex: 1, width: '92%', gap: 16, paddingTop: 8, paddingBottom: BAR_CLEARANCE }}
         >
-            {/* Said plainly, at the top, because it is the reason the rest of this
-                screen is quiet. Without it a captain who does not remember
-                flipping the switch reads an empty board as the fleet having no
-                work, and waits on nothing. */}
-            <View className="w-full rounded-2xl px-4 py-3 gap-0.5" style={{ backgroundColor: '#f3f3f3' }}>
-                <AppText className="text-base font-semibold text-[var(--background-primary)]">
+            <View className="flex items-center justify-center w-full rounded-2xl px-4 py-10 gap-0.5">
+                <AppText className="text-2xl font-semibold text-[var(--background-primary)]">
                     You&apos;re offline
                 </AppText>
-                <AppText className="text-xs text-gray-600">
+                <AppText className="text-base text-gray-600">
                     Go online to start getting rides.
                 </AppText>
             </View>
@@ -67,12 +44,6 @@ const Home = () => {
                     </Pressable>
                 </View>
             )}
-
-            {/* No active-ride card here any more. A ride in progress takes over
-                the whole screen (ActiveRide) rather than sitting at the top of a
-                list, and a captain cannot be offline with one anyway — the server
-                refuses to take him offline until it is finished. */}
-
             <View className="w-full gap-2">
                 <View className="flex-row items-center justify-between gap-3 px-1">
                     <AppText className="text-xs font-semibold uppercase tracking-wide text-gray-600">
@@ -107,6 +78,7 @@ const Home = () => {
             </View>
 
             <MarketPromo />
+            <DriverCouponPromo />
         </View>
     )
 }

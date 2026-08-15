@@ -3,13 +3,16 @@ import { Linking, Pressable, View } from 'react-native';
 import { cssInterop } from 'nativewind';
 import { NavigationArrowIcon, PhoneIcon } from 'phosphor-react-native';
 import * as Location from 'expo-location';
+import { splitAddress, activeLeg, initials, rupees } from '../constants/booking';
+import { useNavigate } from 'react-router-native';
 import AppText from '../components/AppText';
 import { OtpEntry } from '../components/OtpEntry';
 import { BottomSheet } from '../components/ui/BottomSheet';
 import MapSlot from '../components/ui/MapSlot';
 import { SlideAction } from '../components/ui/SlideAction';
 import { INK_TEXT, MUTED, RouteLeg } from '../components/ui/rideUi';
-import { activeLeg, initials, rupees } from '../constants/booking';
+import { useData } from '../hooks/useData';
+
 import { useApi } from '../hooks/useApi';
 import { useDriver } from '../hooks/useDriver';
 import type { UpcomingBooking } from '../types/enums';
@@ -50,6 +53,7 @@ const BOTTOM_SAFE = 24;
 const PEEK = 172;
 
 const ActiveRide = ({ ride, onChanged }: { ride: UpcomingBooking; onChanged: () => void }) => {
+    const navigate = useNavigate()
     const api = useApi();
     const { refresh: refreshDriver } = useDriver();
     const [error, setError] = useState<string | null>(null);
@@ -62,7 +66,9 @@ const ActiveRide = ({ ride, onChanged }: { ride: UpcomingBooking; onChanged: () 
     // slider on the sheet brings it back.
     const [otpOpen, setOtpOpen] = useState(false);
     useEffect(() => {
-        if (ride.status === 'reached') setOtpOpen(true);
+        if (ride.status === 'reached') {
+            setOtpOpen(true);
+        }
     }, [ride.status]);
 
     const leg = activeLeg(ride.status);
@@ -104,6 +110,8 @@ const ActiveRide = ({ ride, onChanged }: { ride: UpcomingBooking; onChanged: () 
         Linking.openURL(`https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=driving`);
     };
 
+    const place = ride ? splitAddress(ride.pickupAddress) : null;
+
     const advance = async (otp?: string) => {
         if (!step) return;
         setError(null);
@@ -137,51 +145,48 @@ const ActiveRide = ({ ride, onChanged }: { ride: UpcomingBooking; onChanged: () 
         await Promise.all([onChanged(), refreshDriver()]);
     };
 
+    const above = (
+        <Pressable
+            className='mb-4 flex items-center justify-center'
+            role="button"
+            onPress={openMaps}
+            style={({ pressed }) => ({
+                position: 'absolute',
+                left: 16,
+                right: 16,
+                top: -64,
+                opacity: pressed ? 0.85 : 1,
+            })}
+        >
+            <View className="w-[90%] flex-row items-center justify-center gap-2 rounded-full py-3.5 bg-[var(--background-primary)]">
+                <NavArrow
+                    size={18}
+                    weight="fill"
+                    className="text-[var(--foreground)]"
+                />
+                <AppText className="text-base font-semibold text-[var(--foreground)]">
+                    {leg.endpoint === 'drop' ? 'Go to drop' : 'Go to pickup'}
+                </AppText>
+            </View>
+        </Pressable>
+    )
+
     return (
         <View style={{ flex: 1, width: '100%' }}>
             <MapSlot />
 
-            {/* OUTSIDE THE SHEET, floating over the map just above it. Navigation
-                is the one thing he wants while the sheet is pushed down and the
-                map has the screen — burying it in the panel meant dragging the
-                panel back up to reach the button whose whole purpose is to send
-                him away from the app.
-
-                Anchored to the same edge the sheet's collapsed height leaves
-                free, so it sits on the map rather than over the panel. */}
-            <Pressable
-                role="button"
-                onPress={openMaps}
-                style={({ pressed }) => ({
-                    position: 'absolute',
-                    left: 16, right: 16,
-                    bottom: PEEK + BOTTOM_SAFE + 16,
-                    opacity: pressed ? 0.85 : 1,
-                })}
-            >
-                <View className="w-full flex-row items-center justify-center gap-2 rounded-2xl py-3.5 bg-[var(--background-primary)]">
-                    <NavArrow size={18} weight="fill" className="text-[var(--foreground)]" />
-                    <AppText className="text-base font-semibold text-[var(--foreground)]">
-                        {leg.endpoint === 'drop' ? 'Go to drop' : 'Go to pickup'}
-                    </AppText>
-                </View>
-            </Pressable>
-
             {/* No tab-bar clearance here — the shell hides the bar and the scrim
                 for the length of a ride (useShellHidden), so the only thing under
                 the sheet is the gesture area. */}
-            <BottomSheet peek={PEEK} bottomInset={BOTTOM_SAFE}>
-              <View className="px-5 pb-2 gap-4">
-                <View className="flex-row items-center justify-between gap-3">
-                    <AppText className={`text-xs font-semibold uppercase tracking-wide ${MUTED}`}>
-                        {leg.label}
-                    </AppText>
-                    <AppText className={`text-base font-semibold ${INK_TEXT}`}>
-                        {rupees(ride.fare)}
-                    </AppText>
-                </View>
+            <BottomSheet peek={PEEK} bottomInset={BOTTOM_SAFE} above={above}>
+                <View className="px-5 pb-2 gap-1 mt-2">
+                    <View className="flex-row items-center justify-between gap-3">
+                        <AppText className={`text-xs font-semibold uppercase tracking-wide ${MUTED}`}>
+                            {leg.label}
+                        </AppText>
+                    </View>
 
-                {/* BOTH ENDS, drawn by the same RouteLeg the ride detail and the
+                    {/* BOTH ENDS, drawn by the same RouteLeg the ride detail and the
                     offer card use. This screen used to print only the leg being
                     driven, as a bare heading with no dot and no counterpart — the
                     one place in the app where a route did not look like a route,
@@ -191,85 +196,66 @@ const ActiveRide = ({ ride, onChanged }: { ride: UpcomingBooking; onChanged: () 
 
                     Which leg he is ON is still said, by the label above and by
                     where the navigation button sends him. */}
-                <View className="gap-3">
-                    <RouteLeg address={ride.pickupAddress} />
-                    <RouteLeg address={ride.dropAddress} drop />
-                </View>
-
-                <View className="flex-row items-center gap-3">
-                    <View className="w-11 h-11 rounded-full items-center justify-center" style={{ backgroundColor: '#f3f3f3' }}>
-                        <AppText className={`text-base font-semibold ${INK_TEXT}`}>
-                            {initials(ride.user?.name ?? null)}
+                    <View className="gap-0.5">
+                        <AppText numberOfLines={1} className={`text-xl font-semibold ${INK_TEXT}`} style={{ letterSpacing: -0.4 }}>
+                            {place?.main}
                         </AppText>
-                    </View>
-                    <AppText numberOfLines={1} className={`flex-1 text-base font-semibold ${INK_TEXT}`}>
-                        {ride.user?.name ?? 'Rider'}
-                    </AppText>
-                    {/* The style function and className never share a Pressable —
-                        NativeWind folds `style` into its own computation and drops
-                        a function, so the press feedback would silently do nothing.
-                        Same split RideCard uses: the function on the Pressable, the
-                        looks on a View inside it. */}
-                    <Pressable
-                        role="button"
-                        aria-label={`Call ${ride.user?.name ?? 'the rider'}`}
-                        onPress={() => Linking.openURL(`tel:${ride.customerPhone}`)}
-                        style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
-                    >
-                        <View className="w-11 h-11 rounded-xl items-center justify-center bg-[var(--background-primary)]">
-                            <Phone size={20} weight="fill" className="text-[var(--foreground)]" />
+                        {place?.rest ? (
+                            <AppText numberOfLines={1} className={`text-sm ${MUTED}`}>{place.rest}</AppText>
+                        ) : null}
+
+                        <View className='flex flex-row w-full my-2.5 h-fit justify-between items-center'>
+                            <Pressable
+                                className='w-[49%]'
+                                role="button"
+                                onPress={() => navigate(`/rides/${ride.id}`)}
+                                style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
+                            >
+                                <View className="flex-row items-center justify-center gap-2 rounded-xl p-3 bg-[var(--foreground-muted)]">
+                                    <AppText className="text-base font-semibold text-[var(--background-primary)]">
+                                        Ride details
+                                    </AppText>
+                                </View>
+                            </Pressable>
+
+                            <Pressable
+                                className='w-[49%]'
+                                role="button"
+                                aria-label={`Call ${ride.user?.name ?? 'the rider'}`}
+                                onPress={() => Linking.openURL(`tel:${ride.customerPhone}`)}
+                                style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+                            >
+                                <View className="rounded-xl w-full flex flex-row gap-2 p-3 items-center justify-center bg-[var(--foreground-muted)]">
+                                    <Phone size={20} weight="fill" className="text-[var(--background-primary)]" />
+                                    <AppText className='text-base font-semibold text-[var(--background-primary)]'>Call Rider</AppText>
+                                </View>
+                            </Pressable>
                         </View>
-                    </Pressable>
+                    </View>
+
+                    {error && !otpOpen ? (
+                        <AppText className="text-sm font-medium text-red-600">{error}</AppText>
+                    ) : null}
+
+                    {step ? (
+                        <SlideAction
+                            label={step.label}
+                            // At `reached` this opens the code screen rather than
+                            // sending anything — the code is collected there and the
+                            // slide that starts the ride lives on it.
+                            onConfirm={needsOtp ? () => setOtpOpen(true) : () => advance()}
+                        />
+                    ) : null}
+
                 </View>
-
-                {error && !otpOpen ? (
-                    <AppText className="text-sm font-medium text-red-600">{error}</AppText>
-                ) : null}
-
-                {step ? (
-                    <SlideAction
-                        label={step.label}
-                        // At `reached` this opens the code screen rather than
-                        // sending anything — the code is collected there and the
-                        // slide that starts the ride lives on it.
-                        onConfirm={needsOtp ? () => setOtpOpen(true) : () => advance()}
-                    />
-                ) : null}
-
-                {/* BEFORE HE ARRIVES, AND NOT AFTER. Handing back a ride he has not
-                    started is a thing that happens — the car will not start, he
-                    misjudged the distance — and the booking simply goes back out to
-                    dispatch. Once he has slid Arrived the rider is standing at the
-                    kerb waiting for him, and walking away then is a support call
-                    rather than a button, so it goes. The server enforces the same
-                    window; this only stops offering what it would refuse.
-
-                    Plain text, not a button: it is the one destructive thing on a
-                    screen full of controls he taps in traffic, and it should take
-                    a deliberate reach rather than sit there competing with the
-                    slide he actually means to use. */}
-                {canCancel ? (
-                    <Pressable
-                        role="button"
-                        onPress={cancelRide}
-                        disabled={cancelling}
-                        hitSlop={8}
-                        style={({ pressed }) => ({ opacity: pressed || cancelling ? 0.5 : 1, alignSelf: 'center' })}
-                    >
-                        <AppText className="text-sm font-semibold text-red-600">
-                            {cancelling ? 'Cancelling…' : "Can't take this ride"}
-                        </AppText>
-                    </Pressable>
-                ) : null}
-              </View>
             </BottomSheet>
 
             {otpOpen && needsOtp ? (
                 <OtpEntry
                     riderName={ride.user?.name ?? null}
                     error={error}
-                    onSubmit={(code) => advance(code)}
-                    onClose={() => { setError(null); setOtpOpen(false); }}
+                    onSubmit={(code) => {advance(code);}}
+                    onClose={() => { setError(null); setOtpOpen(false);}}
                 />
             ) : null}
         </View>

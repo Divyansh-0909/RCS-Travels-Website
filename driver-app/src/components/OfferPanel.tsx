@@ -120,8 +120,6 @@ const OfferPanel = () => {
         opacity: 1 - Math.min(Math.abs(tx.value) / (SCREEN_W * 0.6), 1) * 0.85,
     }));
 
-    const barStyle = useAnimatedStyle(() => ({ width: `${life.value * 100}%` }));
-
     if (!panelOffer) return null;
 
     const answer = async (action: (id: string) => Promise<{ error?: string } | null>) => {
@@ -131,25 +129,21 @@ const OfferPanel = () => {
         setError(failure?.error ?? null);
     };
 
+    
+
     return (
         <View
             pointerEvents="box-none"
             style={{ position: 'absolute', left: 0, right: 0, top, zIndex: PANEL_Z, alignItems: 'center' }}
         >
             <Animated.View style={[{ width: '92%' }, cardStyle]} {...pan.panHandlers}>
-                {/* The clock, as a line that empties rather than a number counting
-                    down. He is driving; a shrinking bar is read in a glance and a
-                    digit has to be actually read. */}
-                <View className="h-1 w-full rounded-full overflow-hidden bg-[var(--background-muted)] mb-1.5">
-                    <Animated.View className="h-full rounded-full bg-primary" style={barStyle} />
-                </View>
-
                 <OfferCard
                     offer={panelOffer}
                     here={here}
                     canAccept={canAccept}
                     onAccept={() => answer(accept)}
                     onReject={() => answer(reject)}
+                    timerProgress={life}
                 />
 
                 {error ? (
@@ -158,7 +152,7 @@ const OfferPanel = () => {
                     </View>
                 ) : (
                     <AppText className="text-xs text-center mt-2 text-[var(--background-primary)] opacity-60">
-                        Swipe away to hide — it stays in Notifications
+                        Swipe away to hide, it stays in Notifications
                     </AppText>
                 )}
             </Animated.View>

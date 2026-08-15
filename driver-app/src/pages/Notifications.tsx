@@ -1,9 +1,12 @@
 import { useState } from "react";
-import { ActivityIndicator, ScrollView, View } from "react-native";
+  import { useNavigate } from "react-router-native";
+import { ActivityIndicator, ScrollView, View, Pressable} from "react-native";
 import AppText from "../components/AppText";
+import { cssInterop } from 'nativewind';
 import { OfferCard } from "../components/ui/offerCard";
 import { INK_TEXT, MUTED } from "../components/ui/rideUi";
 import { useOffers } from "../hooks/useOffers";
+import { ArrowLeftIcon } from 'phosphor-react-native';
 
 /**
  * The record of every ride currently offered to him.
@@ -17,7 +20,14 @@ import { useOffers } from "../hooks/useOffers";
  * answers separately with canAccept; hiding them would mean a ride he is still
  * entitled to take simply vanishing because a switch was off.
  */
+
+const TITLE_TRACKING = { letterSpacing: -0.72 };
+const CARD = '#f3f3f3';   
+const asThemed = { className: { target: false, nativeStyleToProp: { color: true } } } as const;
+const Back = cssInterop(ArrowLeftIcon, asThemed);  
+
 const Notifications = () => {
+    const navigate = useNavigate();
     const { offers, canAccept, here, loading, accept, reject } = useOffers();
     const [error, setError] = useState<string | null>(null);
 
@@ -39,20 +49,37 @@ const Notifications = () => {
 
     return (
         <ScrollView
-            className="w-[92%]"
+            className="w-[92%] h-full"
             contentContainerStyle={{ paddingBottom: 180, paddingTop: 8 }}
             showsVerticalScrollIndicator={false}
         >
-            <View className="flex-row items-baseline justify-between mb-1">
-                <AppText className={`text-2xl font-bold ${INK_TEXT}`} style={{ letterSpacing: -0.6 }}>
-                    Notifications
-                </AppText>
-                {offers.length > 0 ? (
-                    <AppText className={`text-sm font-semibold ${MUTED}`}>
-                        {offers.length} {offers.length === 1 ? "ride" : "rides"}
+            <View className="relative">
+                <View className="flex-row h-full items-baseline justify-center pt-1 gap-2 mb-1">
+                    <AppText className={`text-xl font-semibold ${INK_TEXT}`} style={TITLE_TRACKING}>
+                        Notifications
                     </AppText>
-                ) : null}
+                    {offers.length > 0 ? (
+                        <AppText className={`text-sm font-semibold ${MUTED}`}>
+                            {offers.length} {offers.length === 1 ? "ride" : "rides"}
+                        </AppText>
+                    ) : null}
+                </View>
+                <Pressable
+                    className="absolute -top-2 left-0"
+                    role="button"
+                    aria-label="back"
+                    onPress={() => navigate("/")}
+                    style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+                >
+                    <View
+                        className="w-11 h-11 rounded-full items-center justify-center"
+                        style={{ backgroundColor: CARD }}
+                    >
+                        <Back size={22} weight="bold" className={INK_TEXT} />
+                    </View>
+                </Pressable>
             </View>
+
 
             {/* Said once, at the top, rather than as a disabled state on every
                 card: the reason none of them can be taken is the same reason for
@@ -71,12 +98,12 @@ const Notifications = () => {
             ) : null}
 
             {offers.length === 0 ? (
-                <View className="items-center justify-center py-16 gap-1">
+                <View className="items-center justify-center h-full py-16 pt-20 gap-1">
                     <AppText className={`text-base font-semibold ${INK_TEXT}`}>
-                        No rides offered yet
+                        No notifications
                     </AppText>
                     <AppText className={`text-sm text-center ${MUTED}`}>
-                        Scheduled rides you are offered will wait here until you answer them.
+                        Rides you are offered {"\n"} will wait here until you answer them.
                     </AppText>
                 </View>
             ) : (

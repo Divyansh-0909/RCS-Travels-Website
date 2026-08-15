@@ -255,6 +255,17 @@ model Driver {
   // the state that blocks going online until it clears.
   walletBalance Float @default(0) @map("wallet_balance")
 
+  // Loyalty: rides on which the 5% PLATFORM COMMISSION is waived, granted
+  // LOYALTY_REWARD_RIDES at a time every LOYALTY_REQUIRED_RIDES completed rides
+  // (services/loyalty.js). A counter rather than a "free until ride N" marker
+  // because the reward has to survive rides that were never commissionable in
+  // the first place — a ₹400 ride is under the floor and must not silently burn
+  // one. Decremented only when a commission would ACTUALLY have been charged.
+  //
+  // Waives the 5% and nothing else: never a marketplace fee (block 7), never a
+  // complaint fine, never the marketplace cancellation fee.
+  commissionFreeRidesRemaining Int @default(0) @map("commission_free_rides_remaining")
+
   // WHOSE TURN IT IS. Dispatch used to rank candidates on distance alone, which
   // at low volume is not a tiebreak at all: the fleet parks in a handful of fixed
   // spots, every ride starts from roughly the same gate, so whoever waits nearest
@@ -410,6 +421,17 @@ model WalletEntry {
   driverId  String          @map("driver_id")
   amount    Float
   type      WalletEntryType
+  // THE IDEMPOTENCY KEY. A deterministic name for the business event that caused
+  // this entry — `deposit_hold:booking:<id>`, `fine:driver:<id>:threshold:3` —
+  // built by services/walletKeys.js and unique across the table.
+  //
+  // (bookingId, type) is deliberately NOT the key: one booking legitimately
+  // produces a hold, its refund AND a commission debit, and a fine is tied to a
+  // complaint threshold rather than to any booking. A retried completion, a
+  // redelivered Razorpay webhook or a re-run monthly job collides here and is
+  // discarded, which is the only thing standing between a retry and paying a
+  // driver twice.
+  eventKey  String          @unique @map("event_key")
   // How the money actually moved, when it moved outside the wallet. Null for
   // entries that are purely internal (a deposit hold, a fine debited from
   // credit). This is the "wallet / cash / UPI" column the spec requires.

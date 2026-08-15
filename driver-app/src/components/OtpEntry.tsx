@@ -1,29 +1,20 @@
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, TextInput, View } from 'react-native';
+import {
+    Pressable,
+    TextInput,
+    View,
+    type NativeSyntheticEvent,
+    type TextInputKeyPressEventData,
+} from 'react-native';
 import { cssInterop } from 'nativewind';
 import { XIcon } from 'phosphor-react-native';
 import Animated, { FadeIn, SlideInDown } from 'react-native-reanimated';
 import AppText from './AppText';
-import { SlideAction } from './ui/SlideAction';
 import { INK_TEXT, MUTED, SURFACE } from './ui/rideUi';
 
 const Cross = cssInterop(XIcon, {
     className: { target: false, nativeStyleToProp: { color: true } },
 });
-
-/**
- * The code that starts the ride, on a screen of its own.
- *
- * A FIELD IN THE CORNER OF THE RIDE SHEET WAS THE WRONG SHAPE FOR THIS. Handing
- * over the code is the one moment in the trip that is a conversation with the
- * rider rather than a thing the captain does to his phone — he has to ask for
- * it, hear four digits over traffic, and type them without losing his place. It
- * deserves the whole screen and nothing else on it.
- *
- * It is also the only irreversible step he cannot undo by driving somewhere:
- * starting a ride begins the fare. Hence the same slide-to-confirm the rest of
- * the flow uses, rather than a button under a keyboard.
- */
 
 export const OTP_LENGTH = 4;
 
@@ -35,85 +26,210 @@ export const OtpEntry = ({
 }: {
     riderName: string | null;
     error: string | null;
-    /** Resolves when the server has answered; the screen stays up if it refused. */
     onSubmit: (otp: string) => void | Promise<void>;
     onClose: () => void;
 }) => {
     const [otp, setOtp] = useState('');
-    const input = useRef<TextInput>(null);
+    const [focusedBox, setFocusedBox] = useState(-1);
 
-    // Straight into the keypad. He has just parked and the rider is at the
-    // window; a screen that waits to be tapped before it will take a number is a
-    // screen asking him to do the same job twice.
+    const otpRefs = useRef<(TextInput | null)[]>([]);
+
+    /*
+     * Focus the requested OTP box.
+     *
+     * This is what makes tapping a particular box useful rather than sending
+     * every tap to one hidden input.
+     */
+    const focusBox = (index: number) => {
+        otpRefs.current[index]?.focus();
+    };
+
+    /*
+     * Handles both normal single-digit entry and paste/autofill.
+     *
+     * React Native can give us more than one character when the user pastes
+     * an OTP or when the OS autofills the code.
+     */
+    const handleOtpDigit = (index: number, value: string) => {
+        const digits = value.replace(/\D/g, '');
+
+        if (!digits) return;
+
+        // Paste / OTP autofill.
+        if (digits.length > 1) {
+            const pasted = digits.slice(0, OTP_LENGTH);
+
+            setOtp(pasted);
+
+            // Keep the final entered box focused.
+            focusBox(Math.min(pasted.length, OTP_LENGTH - 1));
+
+            return;
+        }
+
+        const chars = Array.from(
+            { length: OTP_LENGTH },
+            (_, i) => otp[i] ?? '',
+        );
+
+        chars[index] = digits[0];
+
+        const nextOtp = chars.join('');
+
+        setOtp(nextOtp);
+
+        // Automatically advance to the next box.
+        if (index < OTP_LENGTH - 1) {
+            focusBox(index + 1);
+        }
+    };
+
+    /*
+     * Backspace behavior:
+     *
+     * 123_
+     *     ↑ backspace → 12__
+     *
+     * If the current box is already empty:
+     *
+     * 123_
+     *    ↑ backspace → 12__
+     *   focus moves to the previous box
+     */
+    const handleOtpKeyPress = (
+        index: number,
+        event: NativeSyntheticEvent<TextInputKeyPressEventData>,
+    ) => {
+        if (event.nativeEvent.key !== 'Backspace') return;
+
+        const chars = Array.from(
+            { length: OTP_LENGTH },
+            (_, i) => otp[i] ?? '',
+        );
+
+        if (chars[index]) {
+            chars[index] = '';
+        } else if (index > 0) {
+            chars[index - 1] = '';
+            focusBox(index - 1);
+        }
+
+        setOtp(chars.join(''));
+    };
+
+    /*
+     * Focus the first box when the OTP screen opens.
+     */
     useEffect(() => {
-        const t = setTimeout(() => input.current?.focus(), 250);
-        return () => clearTimeout(t);
+        const timer = setTimeout(() => {
+            focusBox(0);
+        }, 250);
+
+        return () => clearTimeout(timer);
     }, []);
 
-    const digits = Array.from({ length: OTP_LENGTH }, (_, i) => otp[i] ?? '');
+    const digits = Array.from(
+        { length: OTP_LENGTH },
+        (_, i) => otp[i] ?? '',
+    );
+
     const complete = otp.length === OTP_LENGTH;
 
     return (
         <Animated.View
             entering={FadeIn.duration(160)}
-            style={{ position: 'absolute', inset: 0, zIndex: 95, backgroundColor: SURFACE }}
+            style={{
+                position: 'absolute',
+                inset: 0,
+                zIndex: 95,
+                backgroundColor: SURFACE,
+            }}
         >
-            <Animated.View entering={SlideInDown.duration(240)} className="flex-1 px-6 pt-16">
-                <Pressable
-                    role="button"
-                    accessibilityLabel="Close"
-                    onPress={onClose}
-                    hitSlop={12}
-                    style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1, alignSelf: 'flex-end' })}
+            <Animated.View
+                entering={SlideInDown.duration(240)}
+                className="flex-1 px-6 pt-20"
+            >
+                <AppText
+                    className={`text-3xl text-center font-semibold mt-6 ${INK_TEXT}`}
+                    style={{ letterSpacing: -0.8 }}
                 >
-                    <View className="w-10 h-10 items-center justify-center rounded-full" style={{ backgroundColor: '#f3f3f3' }}>
-                        <Cross size={22} weight="bold" className={INK_TEXT} />
-                    </View>
-                </Pressable>
-
-                <AppText className={`text-3xl font-bold mt-6 ${INK_TEXT}`} style={{ letterSpacing: -0.8 }}>
-                    Start the ride
-                </AppText>
-                <AppText className={`text-base mt-1 ${MUTED}`}>
-                    Ask {riderName ?? 'the rider'} for the {OTP_LENGTH}-digit code on their screen.
+                    Enter OTP
                 </AppText>
 
-                {/* One box per digit, and the real field is invisible behind them.
-                    A code read aloud is read a character at a time, so it wants to
-                    be SET a character at a time — and boxes show him where he is
-                    without him having to find a cursor. */}
-                <Pressable onPress={() => input.current?.focus()} className="mt-10">
-                    <View className="flex-row justify-between">
-                        {digits.map((digit, i) => (
-                            <View
-                                key={i}
-                                className="rounded-2xl items-center justify-center"
-                                style={{
-                                    width: 64, height: 76,
-                                    backgroundColor: '#f3f3f3',
-                                    borderWidth: 2,
-                                    // The next empty box is outlined, so his eye has
-                                    // somewhere to be between digits.
-                                    borderColor: i === otp.length ? '#243AFB' : 'transparent',
-                                }}
-                            >
-                                <AppText className={`text-3xl font-bold ${INK_TEXT}`}>{digit}</AppText>
-                            </View>
-                        ))}
-                    </View>
-                </Pressable>
+                <AppText
+                    className={`text-base text-center mt-1 ${MUTED}`}
+                >
+                    Ask {'the rider'} for the {OTP_LENGTH}-digit code on their
+                    screen.
+                </AppText>
 
-                <TextInput
-                    ref={input}
-                    value={otp}
-                    onChangeText={(t) => setOtp(t.replace(/\D/g, '').slice(0, OTP_LENGTH))}
-                    keyboardType="number-pad"
-                    maxLength={OTP_LENGTH}
-                    // Off screen rather than hidden: a display:none input cannot
-                    // hold focus, and the keyboard closes the moment it loses it.
-                    style={{ position: 'absolute', opacity: 0, height: 1, width: 1 }}
-                    autoFocus
-                />
+                {/*
+                 * OTP boxes.
+                 *
+                 * These are real TextInputs rather than decorative Views.
+                 * This gives us:
+                 * - tap-to-focus
+                 * - cursor/focus behavior
+                 * - paste
+                 * - keyboard backspace
+                 * - OS OTP autofill
+                 * - automatic movement between boxes
+                 */}
+                <View className="mt-10 mb-3">
+                    <View className="flex-row justify-center items-center gap-3">
+                        {Array.from({ length: OTP_LENGTH }).map((_, i) => {
+                            const digit = digits[i];
+                            const focused = focusedBox === i;
+
+                            return (
+                                <TextInput
+                                    key={i}
+                                    ref={(ref) => {
+                                        otpRefs.current[i] = ref;
+                                    }}
+                                    value={digit}
+                                    keyboardType="number-pad"
+                                    maxLength={1}
+                                    textContentType={
+                                        i === 0 ? 'oneTimeCode' : 'none'
+                                    }
+                                    autoComplete={
+                                        i === 0 ? 'sms-otp' : 'off'
+                                    }
+                                    onChangeText={(value) =>
+                                        handleOtpDigit(i, value)
+                                    }
+                                    onKeyPress={(event) =>
+                                        handleOtpKeyPress(i, event)
+                                    }
+                                    onFocus={() => setFocusedBox(i)}
+                                    onBlur={() => setFocusedBox(-1)}
+                                    selectTextOnFocus
+                                    className={`rounded-2xl text-center text-3xl font-bold ${INK_TEXT}`}
+                                    style={{
+                                        width: 50,
+                                        height: 50,
+                                        padding: 0,
+                                        borderWidth: 2,
+                                        borderColor: error
+                                            ? '#DC2626'
+                                            : focused
+                                                ? '#243AFB'
+                                                : '#AEAEAE',
+                                        backgroundColor: error
+                                            ? 'rgba(220,38,38,0.06)'
+                                            : focused
+                                                ? 'rgba(36,58,251,0.05)'
+                                                : 'transparent',
+                                        textAlign: 'center',
+                                        textAlignVertical: 'center',
+                                        includeFontPadding: false,
+                                    }}
+                                />
+                            );
+                        })}
+                    </View>
+                </View>
 
                 {error ? (
                     <AppText className="text-sm font-medium text-red-600 mt-5 text-center">
@@ -121,15 +237,47 @@ export const OtpEntry = ({
                     </AppText>
                 ) : null}
 
-                <View className="mt-auto mb-10">
-                    <SlideAction
-                        label="Slide to start the ride"
-                        onConfirm={() => onSubmit(otp)}
+                <View className="mt-10 flex justify-center items-center w-full gap-2">
+                    <Pressable
+                        className="w-full flex items-center justify-center"
+                        role="button"
+                        onPress={() => onSubmit(otp)}
                         disabled={!complete}
-                        disabledHint={`Enter the ${OTP_LENGTH}-digit code`}
-                    />
+                    >
+                        <View
+                            className={`w-[92%] flex-row items-center justify-center gap-2 rounded-full py-3.5 ${complete
+                                    ? 'bg-primary'
+                                    : 'bg-primary-light'
+                                }`}
+                        >
+                            <AppText className="text-base font-semibold text-[var(--foreground)]">
+                                Start ride
+                            </AppText>
+                        </View>
+                    </Pressable>
+                    <Pressable
+                        className='w-full flex items-center justify-center'
+                        role="button"
+                        accessibilityLabel="Close"
+                        onPress={onClose}
+                        hitSlop={12}
+                        style={({ pressed }) => ({
+                            opacity: pressed ? 0.5 : 1,
+                            alignSelf: 'flex-end',
+                        })}
+                    >
+                        <View
+                            className={`w-[92%] flex-row items-center justify-center gap-2 rounded-full py-3.5 border border-[var(--foreground-muted)]`}
+                        >
+                            <AppText className="text-base font-semibold text-[var(--background-primary)]">
+                                Back
+                            </AppText>
+                        </View>
+                    </Pressable>
                 </View>
             </Animated.View>
         </Animated.View>
     );
 };
+
+export default OtpEntry;

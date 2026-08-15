@@ -148,9 +148,6 @@ export async function reportFix(
         // handshake — see `refusals`.
         if (res?.status === 403) {
             refusals += 1;
-            if (refusals >= REFUSALS_BEFORE_STOP) {
-                await Location.stopLocationUpdatesAsync(LOCATION_TASK).catch(() => {});
-            }
             return;
         }
 

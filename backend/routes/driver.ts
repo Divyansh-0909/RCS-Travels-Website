@@ -1733,7 +1733,10 @@ driverRouter.patch('/rides/:id/status', protect, async (req, res) => {
         // COMMISSION_MIN_FARE, so a shared fare under the floor pays nothing
         // while the solo fare above it pays 5% — scaling the stored amount would
         // keep a zero at zero and quietly hand the cut away.
-        const { pct, amt } = commissionOn(soloRideFare)
+        // couponAmount 0: an unmatched share reverts to the solo fare, and no
+        // coupon has been redeemed against this booking (redemption ships with
+        // ROADMAP block 12). Passed explicitly — the floor is post-coupon now.
+        const { pct, amt } = commissionOn({ rideFare: soloRideFare, couponAmount: 0 })
 
         data.fare = booking.soloFare
         data.rideFare = soloRideFare

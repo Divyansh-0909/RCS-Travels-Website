@@ -364,12 +364,21 @@ accepted | rejected | withdrawn), `VehicleClass` (hatchback | sedan | suv | suv_
   **Nothing writes either.** `walletBalance` *is* returned by `GET /api/driver/me` and rendered
   by the app's `WalletCard`, so a captain sees a wallet that will read ₹0 for as long as the
   ledger is unbuilt — the one place this gap is visible to a real person rather than only in
-  the schema. **Available / Held / Total is a derivation over this table, not new columns**
-  (total = `sum(entries)`, held = `deposit_hold` rows whose booking has no matching
-  `deposit_refund`, available = the difference). **The `(bookingId, type)` unique is missing**
-  — the index is deliberately non-unique because one booking produces a hold, its refund and a
-  commission debit, which means a retried completion or a redelivered webhook will
-  double-credit. It needs adding before anything writes here.
+  the schema. **Available / Held / Total is a derivation over this table, not new columns** —
+  and the **ledger sum is `available`, not `total`**, because a `deposit_hold` is a real signed
+  debit that has already come off the sum. So `available = sum(entries) = walletBalance`,
+  `held` = `deposit_hold` rows whose booking has no matching `deposit_refund`, and
+  `total = available + held`. Computing it the other way subtracts the hold twice. It is
+  `available` that goes negative and blocks going online. Implemented in
+  `services/walletKeys.js`.
+- **`WalletEntry.eventKey`** — added 14 Aug 2026, `@unique`. A deterministic name for the
+  business event behind each entry (`deposit_hold:booking:<id>`, `fine:driver:<id>:threshold:3`),
+  built by `services/walletKeys.js`. `(bookingId, type)` was the wrong key: one booking
+  legitimately produces a hold, its refund *and* a commission debit, and a fine is tied to a
+  complaint threshold rather than a booking. All ledger writes go through
+  `services/wallet.js#postWalletEntry`, which uses `createMany({ skipDuplicates: true })` rather
+  than catching P2002 — in Postgres a failed insert aborts the surrounding transaction, so
+  catching the violation would poison every later write in the same one.
 - **Coupon** — a row per issued coupon. `@@unique([userId, earnedFor])` stops one month
   issuing two; the unique `bookingId` stops the same coupon being spent twice.
   **The earning rule changed on 14 Aug 2026** from "₹100 after 6 completed rides in a month"

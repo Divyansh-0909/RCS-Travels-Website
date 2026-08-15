@@ -1,14 +1,11 @@
 import type { ReactNode } from 'react';
 import { Image, Pressable, View } from 'react-native';
+import Animated, { useAnimatedStyle , SharedValue } from 'react-native-reanimated';
+
 import { cssInterop } from 'nativewind';
 import { PhoneIcon } from 'phosphor-react-native';
 import AppText from '../AppText';
 import { splitAddress } from '../../constants/booking';
-
-// The pieces the ride list and the ride detail screen both draw. They live here rather
-// than in either one because they are the same thing in both places by definition: a
-// route is a route, and a captain who saw one shape on the list and another on the
-// screen it opened would be looking at two records as far as he could tell.
 
 const asThemed = { className: { target: false, nativeStyleToProp: { color: true } } } as const;
 export const Phone = cssInterop(PhoneIcon, asThemed);
@@ -28,8 +25,8 @@ export const MUTED = 'text-gray-600';
 export const CONTENT = 'text-black';
 
 // The primary line of a section: the thing a captain actually reads, as opposed to the
-// label naming it or the small print qualifying it. A place name and a fare line are
-// the same kind of thing to him, so they are set once here.
+// label naming it or the small print qualifying it. A place name and a fare line are the
+// same kind of thing to him, so they are set once here.
 export const PRIMARY_LINE = `text-base font-semibold ${CONTENT}`;
 
 // The status pill's fill says which KIND of state the ride is in rather than which
@@ -120,14 +117,12 @@ export const FactPill = ({ children }: { children: ReactNode }) => (
  * that must not. A component prop would have forced the image to pretend it was an icon.
  *
  * Both variants are filled — ink for the primary, --foreground for the secondary. The
- * secondary used to be transparent with a hairline round it, which put an outline on the
- * one surface on these screens that is otherwise borderless; filled, it sits on the page
- * tint the same way the cards above it do, and the border goes with the job it was doing.
+ * secondary used to be transparent with a hairline round it, which put an outline on
+ * the one surface on these screens that is otherwise borderless; filled, it sits on the
+ * page tint the same way the cards above it do, and the border goes with the job it was doing.
  *
- * flex-1 and the padding are classes, never a style function. NativeWind interops
- * Pressable and folds `style` into its own computation, which understands objects and
- * arrays but not functions — a function is collected and yields nothing, so layout set
- * that way never arrives. See Button.tsx, which hit this first.
+ * When `progress` is provided, the button uses primary-muted as its base and a primary
+ * layer fills it from left to right according to the timer.
  */
 export const ActionButton = ({
     label,
@@ -135,25 +130,57 @@ export const ActionButton = ({
     onPress,
     solid,
     padY = 'py-3',
+    progress,
 }: {
     label: string;
     leading: ReactNode;
     onPress: () => void;
     solid?: boolean;
     padY?: string;
-}) => (
-    <Pressable role="button" onPress={onPress} className="flex-1">
-        <View
-            className={`flex-row items-center justify-center gap-1 ${padY}`}
-            style={{ backgroundColor: solid ? INK : SURFACE, borderRadius: 12 }}
-        >
-            {leading}
-            <AppText className={`text-sm font-semibold ${solid ? 'text-white' : INK_TEXT}`}>
-                {label}
-            </AppText>
-        </View>
-    </Pressable>
-);
+    progress?: SharedValue<number>;
+}) => {
+    const progressStyle = useAnimatedStyle(() => ({
+        width: progress ? `${progress.value * 100}%` : '100%',
+    }));
+
+    return (
+        <Pressable role="button" onPress={onPress} className="flex-1">
+            <View
+                className={`relative flex-row items-center justify-center gap-1 overflow-hidden ${padY} ${
+                    progress
+                        ? 'bg-primary-light'
+                        : solid
+                            ? 'bg-[var(--background-primary)]'
+                            : 'bg-[var(--foreground)]'
+                }`}
+                style={{
+                    borderRadius: 12,
+                    borderWidth: progress ? 0 : solid ? 0 : 1,
+                    borderColor: MUTED,
+                }}
+            >
+                {progress && (
+                    <Animated.View
+                        pointerEvents="none"
+                        className="absolute left-0 top-0 bottom-0 bg-primary"
+                        style={progressStyle}
+                    />
+                )}
+
+                <View className="z-10 flex-row items-center justify-center gap-1">
+                    {leading}
+                    <AppText
+                        className={`text-sm font-semibold ${
+                            solid || progress ? 'text-white' : INK_TEXT
+                        }`}
+                    >
+                        {label}
+                    </AppText>
+                </View>
+            </View>
+        </Pressable>
+    );
+};
 
 /** The two marks the action buttons are fronted by, so both call sites agree on size. */
 export const PhoneMark = () => (
@@ -161,8 +188,12 @@ export const PhoneMark = () => (
 );
 
 export const WhatsappMark = () => (
-    // 24 against the phone glyph's 18, which is not the mismatch it looks like: the
-    // artwork has transparent margin baked in, so the circle inside this box draws to
-    // about what an 18pt icon does. Sized to what reads, not to what the numbers say.
-    <Image source={WhatsappLogo} style={{ width: 24, height: 24 }} accessibilityIgnoresInvertColors />
+    // 24 against the phone glyph's 18, which is not the mismatch it looks like: the artwork
+    // has transparent margin baked in, so the circle inside this box draws to about what an
+    // 18pt icon does. Sized to what reads, not to what the numbers say.
+    <Image
+        source={WhatsappLogo}
+        style={{ width: 24, height: 24 }}
+        accessibilityIgnoresInvertColors
+    />
 );

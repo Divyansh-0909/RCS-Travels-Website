@@ -1425,38 +1425,52 @@ each numbered block unblocks the ones after it. Outstation is PARKED (see bottom
    it. Model 1 ONLY: the platform NEVER touches the fare itself (the real
    customer still pays the claiming driver directly, exactly as before —
    holding that fare would be payment-aggregator licensing).
-   !! MODEL CHANGED (28 Jul 2026, Raju's direction) — the deposit is no longer
-   refunded to the claimer. It is now PAID TO THE POSTER instead:
-     - POSTER sets the deposit amount himself when he posts the ride (his own
-       number, not a formula off the fare — validate deposit < fare at post
-       time, since no rational claimer would ever accept the reverse).
-     - CLAIMER pays that deposit by UPI to claim it.
-     - PLATFORM FEE = flat 12% of the deposit (Raju's number), no cap.
-     - MINIMUM DEPOSIT = ₹100 (Raju's number — supersedes Claude's earlier
-       ₹300 recommendation below the fee-vs-payout-cost line).
-     - ON COMPLETION: poster is paid `deposit − fee`. Claimer gets NOTHING
-       back — the deposit IS his payment to the poster for taking the job;
-       the platform's cut is its 12% of that payment.
-     - POSTER cancels the posting (even after the claimer already paid) ->
-       claimer gets the FULL deposit refunded, fee charged to nobody.
-     - CLAIMER cancels after accepting -> claimer forfeits ONLY the fee, gets
-       `deposit − fee` back, poster gets nothing (ride never happened for him
-       either).
-   !! ₹100 FLOOR IS THIN AT THE BOTTOM OF THE RANGE. Fee on a ₹100 deposit is
-   ₹12; the RazorpayX payout to the poster (~₹5–6, unavoidable since every
-   completed ride pays a DIFFERENT poster — payouts can no longer collapse
-   into one weekly transfer the way "pay Raju" alone could) plus WhatsApp
-   notifications for claim + completion can consume all of that ₹12 or push
-   the ride into a net loss. This was flagged to Raju as a trade-off; ₹100 is
-   his explicit choice, not a bug — but do not "fix" it by silently raising
-   the floor. If per-ride losses become visible in practice, that's the
-   trigger to revisit, not a hunch beforehand.
-   !! COST-RECOVERY GOAL NO LONGER APPLIES CLEANLY — the old 30%-of-deposit
-   fee was sized to recover the project's ~₹620–800/mo running costs from
-   marketplace volume alone. That link is now broken: the fee is fixed at 12%
-   by mandate, and the deposit is poster-chosen rather than tied to the fare,
-   so revenue is no longer a predictable function of ride volume. Don't
-   assume this feature funds anything now — track it separately.
+   !! MODEL REPLACED 14 Aug 2026. THIS SUPERSEDES THE 28 Jul MODEL ENTIRELY.
+   The 28 Jul rule — claimer's deposit paid to the poster, claimer gets nothing
+   back, flat 12% platform fee on the deposit, ₹100 floor — IS DEAD. Do not
+   implement it, and do not reason from it. What follows is the whole rule.
+     - POSTER (Driver A) sets BOTH the fare and the deposit when he posts.
+     - MINIMUM DEPOSIT = ₹50. DEPOSIT MUST BE LESS THAN THE FARE — validate
+       both at post time, since no rational claimer accepts the reverse.
+     - The listing shows fare and deposit plainly, so B can see the economics
+       BEFORE claiming. Rider details and A's own details stay hidden.
+     - CLAIMER (Driver B) settles the deposit to claim. The deposit then sits
+       HELD — it is not A's money yet and it is not revenue.
+     - ONLY AFTER THE HOLD SUCCEEDS does B see the rider and A's details.
+   ON COMPLETION — AND ONLY ON COMPLETION. Nothing settles before the ride is
+   done; the held deposit does not move to A early.
+     PLATFORM FEE IS 6%, CHARGED TO BOTH SIDES SEPARATELY:
+       B's pre-fee amount = fare − deposit
+       B's fee            = 6% of (fare − deposit)
+       B receives         = (fare − deposit) − fee
+       A's pre-fee amount = deposit
+       A's fee            = 6% of deposit
+       A receives         = deposit − fee
+     Worked: fare ₹2,000, deposit ₹300. B: 1700 − 102 = ₹1,598. A: 300 − 18 =
+     ₹282. Platform: ₹120.
+   B CANCELS AFTER CLAIMING:
+     cancellation fee = 12% of the deposit, to the PLATFORM.
+     B receives deposit − 12%. A receives NOTHING — the ride never happened
+     for him. (₹300 deposit -> ₹36 platform, ₹264 back to B, ₹0 to A.)
+   A CANCELS AFTER B HAS CLAIMED:
+     B receives the FULL held deposit back, no fee. A receives nothing.
+   !! THE MARKETPLACE DEPOSIT IS NOT THE SCHEDULED-RIDE ACCEPTANCE DEPOSIT
+   (block 10, 15% of fare, always returned). Two deposits now exist in the
+   driver app with different amounts, different lifecycles and different
+   owners. They must never share a name, a screen or a WalletEntryType.
+   !! THE 6% IS NOT THE 5% PLATFORM COMMISSION EITHER, and the driver loyalty
+   reward (block 14) waives the 5% ONLY — it never waives a marketplace fee
+   or the 12% cancellation fee.
+   !! COST-RECOVERY GOAL DOES NOT APPLY. The old 30%-of-deposit fee was sized
+   to recover the project's ~₹620–800/mo running costs from marketplace volume
+   alone. That link is broken: the fee is 6% by mandate and the deposit is
+   poster-chosen rather than tied to the fare, so revenue is not a predictable
+   function of ride volume. Don't assume this feature funds anything.
+   !! PAYOUT COST STILL BITES AT THE FLOOR, AND THE FLOOR IS NOW LOWER. On a
+   ₹50 deposit A's fee is ₹3, against a RazorpayX payout of ~₹5–6 to a
+   DIFFERENT poster on every completed ride. The smallest listings lose money
+   on A's side. ₹50 is the confirmed floor — do not silently raise it; if
+   per-ride losses show up in practice, that is the trigger to revisit.
    NO DRIVER WALLET IN THE MARKETPLACE — this is collect-and-settle per ride,
    on UPI throughout, not a maintained balance. THE BLANKET "no driver wallet"
    RULE IS SUPERSEDED (8 Aug 2026, block 10): the platform DOES now have a
@@ -1709,10 +1723,19 @@ each numbered block unblocks the ones after it. Outstation is PARKED (see bottom
    transfer with a real per-transaction fee, fired once per redeemed ride.
    Accrue in the ledger, settle periodically.
    AVAILABLE / HELD / TOTAL IS A UI DERIVATION OVER THE LEDGER, NOT NEW
-   COLUMNS. Total = sum(entries) = Driver.walletBalance. Held = the sum of
-   `deposit_hold` entries whose booking has no matching `deposit_refund`.
-   Available = total − held. Nothing extra is stored, and the captain still
-   sees "₹80 held for booking X, returned when the ride completes".
+   COLUMNS. [CORRECTED 14 Aug — the first draft of this paragraph had it
+   backwards.] THE LEDGER SUM IS *AVAILABLE*, NOT TOTAL: a `deposit_hold` is a
+   real signed debit, so it has ALREADY come off sum(entries). Therefore
+   AVAILABLE = sum(entries) = Driver.walletBalance; HELD = the sum of
+   `deposit_hold` entries whose booking has no matching `deposit_refund`;
+   TOTAL = available + held. Writing it the other way round (total = sum,
+   available = total − held) subtracts the hold TWICE and shows a captain less
+   money than he has. ₹1,000 credited then ₹80 held is available 920, held 80,
+   total 1000. Nothing extra is stored, and he still sees "₹80 held for
+   booking X, returned when the ride completes".
+   IT IS *AVAILABLE* THAT GOES NEGATIVE AND BLOCKS GOING ONLINE, not total —
+   held money is not his to spend and can never rescue him from a debit.
+   Implemented in services/walletKeys.js (balancesFrom, isBlockedByBalance).
    TERMINOLOGY IS PART OF THE SPEC, not UI polish. Say "₹80 HELD from wallet"
    on accept and "hold RELEASED" on completion — never "paid". "Paid" is
    reserved for money that genuinely leaves him: a fine, a marketplace

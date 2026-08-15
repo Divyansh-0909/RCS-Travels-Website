@@ -2,12 +2,35 @@ export const COMMISSION_PCT = 5
 export const COMMISSION_MIN_FARE = 800
 
 /**
- * @param rideFare the driving fare alone, with pass-through charges already
- *                 stripped out — see rideFareOf() for what counts.
+ * The ₹800 floor is tested against what the customer ACTUALLY PAYS — after the
+ * coupon, not before it (decided 14 Aug 2026, supersedes the earlier reading).
+ * A ₹1,200 ride with a ₹500 coupon is a ₹700 ride for this purpose and earns no
+ * commission.
+ *
+ * !! THE ARGUMENT IS AN OBJECT ON PURPOSE. This used to take a bare `rideFare`
+ * number, and the whole risk in this change is a call site that keeps passing
+ * the PRE-coupon fare and silently over-charges commission. A number now throws
+ * instead of quietly computing the old answer — the mistake is not expressible.
+ *
+ * @param rideFare      driving fare alone, pass-through charges already stripped
+ *                      out by rideFareOf().
+ * @param couponAmount  the coupon applied to this booking, 0 when there is none.
  */
-export function commissionOn(rideFare) {
-  if (!(rideFare >= COMMISSION_MIN_FARE)) return { pct: 0, amt: 0 }
-  return { pct: COMMISSION_PCT, amt: Math.round((rideFare * COMMISSION_PCT) / 100) }
+export function commissionOn(args) {
+  if (typeof args !== 'object' || args === null) {
+    throw new TypeError(
+      'commissionOn({ rideFare, couponAmount }) — a bare fare is refused because ' +
+      'the ₹800 floor must be tested AFTER the coupon.',
+    )
+  }
+  const { rideFare, couponAmount = 0 } = args
+  const payableRideFare = Math.max(0, rideFare - couponAmount)
+  if (!(payableRideFare >= COMMISSION_MIN_FARE)) return { pct: 0, amt: 0, payableRideFare }
+  return {
+    pct: COMMISSION_PCT,
+    amt: Math.round((payableRideFare * COMMISSION_PCT) / 100),
+    payableRideFare,
+  }
 }
 
 /**

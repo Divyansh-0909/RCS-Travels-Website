@@ -170,7 +170,11 @@ bookingsRouter.post('/', protect, async (req, res) => {
     // because the client sent them, and they only ever protected the commission
     // — the fare they were subtracted from was itself unchecked.
     const rideFare = rideFareOf(fare, { toll, airport, carrier })
-    const { pct: commissionPct, amt: commissionAmt } = commissionOn(rideFare)
+    // couponAmount is 0 until redemption ships (ROADMAP block 12). It is passed
+    // explicitly rather than defaulted so the floor is already tested through the
+    // post-coupon path — the day a coupon reaches this route the rule is right
+    // here, instead of depending on someone finding this line again.
+    const { pct: commissionPct, amt: commissionAmt } = commissionOn({ rideFare, couponAmount: 0 })
 
     const user = await prisma.user.findUnique({ where: { clerkId: req.auth.userId } })
     if (!user) return res.status(401).json({ error: 'Complete signup before booking' })

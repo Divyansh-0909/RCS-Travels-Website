@@ -258,7 +258,7 @@ async function main() {
     const rideFare = fareFor(driver.vehicleClass, baseFare)
     const fare = rideFare + addOns
     const scheduledAt = scheduledIn === null ? null : minutes(scheduledIn)
-    const commission = commissionOn(rideFare)
+    const commission = commissionOn({ rideFare, couponAmount: 0 })
 
     const data = {
       id,

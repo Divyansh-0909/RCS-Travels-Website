@@ -49,7 +49,8 @@ export const HIDE = { duration: 220, easing: Easing.out(Easing.cubic) } as const
 export const isDrillDown = (pathname: string) =>
     /^\/rides\/.+/.test(pathname)
     || pathname === '/account/documents'
-    || pathname === '/account/vehicles';
+    || pathname === '/account/vehicles'
+    || pathname === '/notifications'
 
 /**
  * Whether the shell should get out of the way entirely.

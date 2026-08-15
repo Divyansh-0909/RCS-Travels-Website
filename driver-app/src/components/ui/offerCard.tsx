@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { View } from 'react-native';
 import { cssInterop } from 'nativewind';
+import type { SharedValue } from 'react-native-reanimated';
 import { CheckIcon, XIcon } from 'phosphor-react-native';
 import AppText from '../AppText';
 import { ActionButton, FactPill, INK_TEXT, MUTED, RouteLeg, SURFACE } from './rideUi';
@@ -52,10 +53,10 @@ const whenLabel = (scheduledAt: string | null) => {
  */
 const Chip = ({ label, strong }: { label: string; strong?: boolean }) => (
     <View
-        className="rounded-full px-2.5 py-1"
-        style={{ backgroundColor: strong ? '#243AFB' : '#f3f3f3' }}
+        className="rounded-xl px-2.5 py-1"
+        style={{ backgroundColor: strong ? '#121220' : '#f3f3f3' }}
     >
-        <AppText className={`text-xs font-semibold ${strong ? 'text-white' : INK_TEXT}`}>
+        <AppText className={`text-sm font-semibold ${strong ? 'text-white' : INK_TEXT}`}>
             {label}
         </AppText>
     </View>
@@ -67,12 +68,14 @@ export const OfferCard = ({
     canAccept,
     onAccept,
     onReject,
+    timerProgress,
 }: {
     offer: Offer;
     here: { lat: number; lng: number } | null;
     canAccept: boolean;
     onAccept: () => void | Promise<void>;
     onReject: () => void | Promise<void>;
+    timerProgress?: SharedValue<number>;
 }) => {
     // Guards a double-tap into two requests, and dims the pair while one is in
     // flight. Accept and Reject share it: answering an offer twice, either way,
@@ -92,21 +95,21 @@ export const OfferCard = ({
 
     return (
         <View className="w-full rounded-2xl p-4" style={{ backgroundColor: SURFACE }}>
-            <View className="flex-row flex-wrap items-center gap-2">
-                <Chip label={offer.sharing ? 'Sharing' : 'Solo'} />
-                <Chip label={vehicleLabel(offer.vehicleClass)} />
-                {offer.isOutstation ? <Chip label="Outstation" strong /> : null}
-                {offer.needsCarrier ? <Chip label="Carrier" /> : null}
-                {offer.safeRoute ? <Chip label="Safer route" /> : null}
-            </View>
-
-            <View className="flex-row items-end justify-between mt-3">
+            <View className="flex-row items-end justify-between mb-3">
                 <AppText className={`text-3xl font-bold ${INK_TEXT}`} style={{ letterSpacing: -0.8 }}>
                     {rupees(offer.fare)}
                 </AppText>
-                <AppText className={`text-sm font-semibold ${offer.scheduledAt ? MUTED : 'text-primary'}`}>
+                <AppText className={`text-xl font-semibold ${offer.scheduledAt ? MUTED : 'text-primary'}`}>
                     {whenLabel(offer.scheduledAt)}
                 </AppText>
+            </View>
+
+            <View className="flex-row flex-wrap items-center gap-2">
+                <Chip label={offer.sharing ? 'Sharing' : 'Solo'} />
+                <Chip strong label={vehicleLabel(offer.vehicleClass)} />
+                {offer.isOutstation ? <Chip label="Outstation" strong /> : null}
+                {offer.needsCarrier ? <Chip label="Carrier" /> : null}
+                {offer.safeRoute ? <Chip label="Safer route" /> : null}
             </View>
 
             <View className="gap-3 mt-4">
@@ -138,9 +141,16 @@ export const OfferCard = ({
                 />
                 <ActionButton
                     label={canAccept ? 'Accept' : 'Go online'}
-                    leading={<Check size={18} weight="bold" className="text-[var(--foreground)]" />}
+                    leading={
+                        <Check
+                            size={18}
+                            weight="bold"
+                            className="text-[var(--foreground)]"
+                        />
+                    }
                     onPress={() => run(onAccept)}
                     solid
+                    progress={timerProgress}
                 />
             </View>
         </View>
