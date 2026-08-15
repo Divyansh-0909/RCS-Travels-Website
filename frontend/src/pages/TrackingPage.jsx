@@ -257,11 +257,11 @@ const TrackingPage = () => {
     // The time is what a waiting rider actually wants, so the ETA takes the
     // headline and the status/place drops to the line beneath it.
     const liveHeadline = status === "en_route"
-        ? { title: <>Driver arriving in <br />{pickupTime}</>, detail: `Meet at ${pickupLocation?.split(",")[0]}` }
+        ? { title: <>Arriving in <br />{pickupTime}</>, detail: `Meet at ${pickupLocation?.split(",")[0]}` }
         : status === "reached"
-            ? { title: "Driver has arrived", detail: `Waiting at ${pickupLocation?.split(",")[0]}` }
+            ? { title: "Arrived", detail: `Waiting at ${pickupLocation?.split(",")[0]}` }
             : status === "assigned"
-                ? { title: "Driver has been assigned", detail: "Heading your way" }
+                ? { title: "Assigned", detail: "Heading your way" }
                 // "Reaching in", not "Driver arriving in": on the pickup leg the
                 // headline is about the driver reaching you, here it is about
                 // reaching the destination — which the detail line below names.

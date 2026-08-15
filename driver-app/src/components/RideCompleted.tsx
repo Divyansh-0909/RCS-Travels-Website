@@ -5,25 +5,9 @@ import CheckMarkOutline from './illustrations/CheckMarkOutline';
 import { INK_TEXT, MUTED, SURFACE } from './ui/rideUi';
 import { fareBreakdown, rupees, splitAddress } from '../constants/booking';
 import type { UpcomingBooking } from '../types/enums';
-
-/**
- * The end of a ride, and the only screen in the flow with nothing to do on it.
- *
- * IT EXISTS FOR THE MONEY, not for the tick. A captain finishing a trip wants
- * one thing answered — what did I make on that — and until now the ride simply
- * vanished off his screen and he had to go find it in his history to know. The
- * tick is there because the rider gets one at the same moment and the two screens
- * should agree about what just happened.
- *
- * fareBreakdown is the captain's version: the rider's stops at the fare, his
- * carries on through the provider's cut to what actually reaches him, because
- * that is the only figure here he can act on.
- */
-
-// Bottom clearance. The shell has already put the tab bar back by the time this
-// renders — the ride is over, so activeRide is null and useShellHidden no longer
-// hides anything.
-const BAR_CLEARANCE = 132;
+import { useEffect } from 'react';
+import { useAppBarVisibility } from './AppBarVisibility';
+import { useData } from '../hooks/useData';
 
 export const RideCompleted = ({
     ride,
@@ -32,23 +16,36 @@ export const RideCompleted = ({
     ride: UpcomingBooking;
     onDone: () => void;
 }) => {
+    const { hidden: appBarHidden } = useAppBarVisibility();
+    const setHidden = useData((state) => state.setHidden);
+
+    useEffect(() => {
+        appBarHidden.value = 1;
+        setHidden(true);
+
+        return () => {
+            appBarHidden.value = 0;
+            setHidden(false);
+        };
+    }, [appBarHidden, setHidden]);
+
     const fare = fareBreakdown(ride);
     const drop = splitAddress(ride.dropAddress);
 
     return (
-        <View className="flex-1 w-[92%]" style={{ paddingTop: 24, paddingBottom: BAR_CLEARANCE }}>
+        <View className="flex h-full justify-between w-[92%] pt-18 pb-10">
             <Animated.View entering={FadeIn.duration(220)} className="items-center gap-3">
                 <View className="w-20 h-20 rounded-full items-center justify-center bg-primary">
-                    {/* Delayed a beat so the circle lands before the stroke draws,
-                        which is how the rider's screen sequences the same mark. */}
                     <CheckMarkOutline size={44} strokeWidth={5} delay={140} />
                 </View>
-                <AppText className={`text-2xl font-bold ${INK_TEXT}`} style={{ letterSpacing: -0.6 }}>
-                    Ride completed
-                </AppText>
-                <AppText numberOfLines={1} className={`text-sm ${MUTED}`}>
-                    Dropped at {drop.main}
-                </AppText>
+                <View className='flex justify-center items-center gap-1'>
+                    <AppText className={`text-2xl font-semibold ${INK_TEXT}`} style={{ letterSpacing: -0.6 }}>
+                        Ride completed
+                    </AppText>
+                    <AppText numberOfLines={1} className={`text-sm ${MUTED}`}>
+                        Dropped at {drop.main}
+                    </AppText>
+                </View>
             </Animated.View>
 
             <Animated.View
@@ -82,7 +79,7 @@ export const RideCompleted = ({
                         {fare.totalLabel}
                     </AppText>
                     <AppText
-                        className={`text-2xl font-bold ${INK_TEXT}`}
+                        className={`text-2xl font-semibold ${INK_TEXT}`}
                         style={{ letterSpacing: -0.5, fontVariant: ['tabular-nums'] }}
                     >
                         {rupees(fare.total)}

@@ -205,7 +205,7 @@ export const OtpEntry = ({
                                     onFocus={() => setFocusedBox(i)}
                                     onBlur={() => setFocusedBox(-1)}
                                     selectTextOnFocus
-                                    className={`rounded-2xl text-center text-3xl font-bold ${INK_TEXT}`}
+                                    className={`rounded-2xl text-center text-3xl font-semibold ${INK_TEXT}`}
                                     style={{
                                         width: 50,
                                         height: 50,
@@ -267,7 +267,7 @@ export const OtpEntry = ({
                         })}
                     >
                         <View
-                            className={`w-[92%] flex-row items-center justify-center gap-2 rounded-full py-3.5 border border-[var(--foreground-muted)]`}
+                            className={`w-[92%] flex-row items-center justify-center gap-2 rounded-full py-3.5 border border-[var(--backround-primary)]`}
                         >
                             <AppText className="text-base font-semibold text-[var(--background-primary)]">
                                 Back
