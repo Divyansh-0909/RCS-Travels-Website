@@ -93,14 +93,23 @@ function useAddressSuggestions(value, setValue, setCoords, api, exclusiveRef, cl
     isCurrentLocation: true,
   };
 
-  let recents = [];
-  const validRecentPlaces = recentPlaces.filter(
-    p => typeof p?.label === "string" && p.label.trim(),
+  // Keep the empty field useful rather than turning it into history: after the
+  // saved places, show one recency answer and one frequency answer. Select from
+  // non-saved places so Home/Work cannot appear twice, then de-duplicate when
+  // the same address happens to be both the latest and the most booked.
+  const recentCandidates = recentPlaces.filter(
+    p => typeof p?.label === "string"
+      && p.label.trim()
+      && !savedAddresses.has(p.label),
   );
-  if (validRecentPlaces.length) {
-    const [latest, ...rest] = [...validRecentPlaces].sort((a, b) => b.lastUsedAt - a.lastUsedAt);
-    recents = [latest, ...rest.sort((a, b) => b.count - a.count)].filter(p => !savedAddresses.has(p.label));
-  }
+  const mostRecent = [...recentCandidates]
+    .sort((a, b) => (b.lastUsedAt ?? 0) - (a.lastUsedAt ?? 0))[0];
+  const mostBooked = [...recentCandidates]
+    .sort((a, b) => (b.count ?? 0) - (a.count ?? 0))[0];
+  const recents = [mostRecent, mostBooked].filter(
+    (place, index, selected) => place
+      && selected.findIndex(candidate => candidate?.label === place.label) === index,
+  );
 
   const items = typed
     ? googleSuggestions
