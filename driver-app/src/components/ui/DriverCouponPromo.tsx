@@ -1,6 +1,9 @@
 import { Image, Pressable, View } from 'react-native';
-import { useNavigate } from 'react-router-native';
+import { useState } from 'react';
 import AppText from '../AppText';
+import { useApi } from '../../hooks/useApi';
+import { useDriver } from '../../hooks/useDriver';
+import { ensureLocationPermission } from '../../hooks/useDriverLocation';
 
 const CouponIllustration = require('../../../assets/market-illustration.webp');
 const AMBER = '#940F22';
@@ -11,7 +14,31 @@ const TITLE = { letterSpacing: -0.4, lineHeight: 24 };
 const PANEL_WIDTH = '34%';
 
 const DriverCouponPromo = () => {
-    const navigate = useNavigate();
+    const api = useApi();
+    const { patchProfile } = useDriver();
+    const [goingOnline, setGoingOnline] = useState(false);
+
+    const goOnline = async () => {
+        if (goingOnline) return;
+        setGoingOnline(true);
+
+        try {
+            // Match the header toggle's guard: the driver must be locatable before
+            // dispatch can mark them available for rides.
+            if (await ensureLocationPermission() !== 'granted') return;
+
+            patchProfile({ isOnline: true });
+            const result = await api.setOnline(true);
+
+            // The profile is updated optimistically so Home immediately switches
+            // to the online screen; restore it if the server declines the change.
+            if (result?.error) patchProfile({ isOnline: false });
+        } catch {
+            patchProfile({ isOnline: false });
+        } finally {
+            setGoingOnline(false);
+        }
+    };
 
     return (
         <View
@@ -24,24 +51,13 @@ const DriverCouponPromo = () => {
                         Complete 20 rides.
                     </AppText>
                     <AppText className="text-xl font-semibold" style={{ ...TITLE, color: INK }}>
-                        Get your next 3 free.
+                        No service fee on next 3 rides.
                     </AppText>
                 </View>
 
                 <AppText className="text-sm" style={{ color: SUBTLE }}>
-                    No platform commission on your next 3 eligible rides.
+                    Keep driving to unlock your reward.
                 </AppText>
-
-                <Pressable
-                    role="button"
-                    onPress={() => navigate('/rides')}
-                    className="self-start mt-1 rounded-full px-5 py-2 bg-[var(--background-primary)] active:opacity-80"
-                >
-                    {/* on clicking this online should be toggeled */}
-                    <AppText className="font-semibold text-[var(--foreground)]">
-                        Go online 
-                    </AppText>
-                </Pressable>
             </View>
 
             <View style={{ width: PANEL_WIDTH, backgroundColor: AMBER_PANEL }}>

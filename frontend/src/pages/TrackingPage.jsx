@@ -1003,16 +1003,23 @@ const TrackingPage = () => {
                         contentKey={`${!!driver}-${shareBusy}`}
                         className="z-50 sm:!h-auto sm:!rounded-t-4xl flex flex-col gap-4 px-[7vw] sm:px-8 pt-1 sm:pt-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:pb-8 text-left"
                     >
+                        <button
+                            type="button"
+                            onClick={() => setShareSheetOpen(false)}
+                            aria-label="Close share options"
+                            className="absolute z-20 -top-12 right-4 flex h-9 w-9 items-center justify-center rounded-full bg-[var(--background-muted)] shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)] transition-opacity duration-300 cursor-pointer active:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]/70 sm:hidden"
+                        >
+                            <Icon path={mdiClose} size={0.8} aria-hidden="true" />
+                        </button>
                         <div className="flex items-start justify-between gap-4">
                             <div className="flex flex-col gap-0.5">
                                 <h3 className="text-lg sm:text-xl font-medium leading-tight text-[var(--text)]">Share ride</h3>
-                                <p className="text-sm sm:text-base leading-snug text-[var(--text-muted)]">Choose what you want to send.</p>
                             </div>
                             <button
                                 type="button"
                                 onClick={() => setShareSheetOpen(false)}
                                 aria-label="Close share options"
-                                className="shrink-0 cursor-pointer rounded-full p-1 opacity-60 transition-opacity hover:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]/70"
+                                className="hidden sm:flex shrink-0 cursor-pointer rounded-full p-1 opacity-60 transition-opacity hover:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]/70"
                             >
                                 <Icon path={mdiClose} size={0.9} aria-hidden="true" />
                             </button>

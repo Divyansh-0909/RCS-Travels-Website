@@ -46,7 +46,7 @@ const KNOB_FILL = '#7A94FF';
 /** How far across counts as meaning it. Below this it springs back. */
 const CONFIRM_AT = 0.72;
 /** Let the completed gesture register before returning the thumb home. */
-const CONFIRM_HOLD_MS = 280;
+const CONFIRM_HOLD_MS = 600;
 const RETURN_DURATION_MS = 220;
 
 export const SlideAction = ({

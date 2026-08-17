@@ -59,7 +59,7 @@ const OnlineToggle = () => {
 
     const knob = useAnimatedStyle(() => ({
         transform: [{
-            translateX: withTiming(online ? KNOB_ON : KNOB_OFF, { duration: 300 }),
+            translateX: withTiming(online ? KNOB_ON : KNOB_OFF, { duration: 600 }),
         }],
     }));
 
