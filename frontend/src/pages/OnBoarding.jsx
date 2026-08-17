@@ -82,7 +82,7 @@ function useAddressSuggestions(value, setValue, setCoords, api, exclusiveRef, cl
   // select() from treating the id as a Google place id. Recents that repeat
   // a saved address are dropped so a place never shows twice.
   const saved = savedPlaces
-    .filter(p => p.address)
+    .filter(p => typeof p?.address === "string" && p.address.trim())
     .map(p => ({ id: `saved-${p.id ?? p.label}`, saved: true, name: p.label, label: p.address, lat: p.lat ?? null, lng: p.lng ?? null }));
   const savedAddresses = new Set(saved.map(s => s.label));
 
@@ -94,13 +94,18 @@ function useAddressSuggestions(value, setValue, setCoords, api, exclusiveRef, cl
   };
 
   let recents = [];
-  if (recentPlaces.length) {
-    const [latest, ...rest] = [...recentPlaces].sort((a, b) => b.lastUsedAt - a.lastUsedAt);
+  const validRecentPlaces = recentPlaces.filter(
+    p => typeof p?.label === "string" && p.label.trim(),
+  );
+  if (validRecentPlaces.length) {
+    const [latest, ...rest] = [...validRecentPlaces].sort((a, b) => b.lastUsedAt - a.lastUsedAt);
     recents = [latest, ...rest.sort((a, b) => b.count - a.count)].filter(p => !savedAddresses.has(p.label));
   }
 
   const items = typed
-    ? googleSuggestions.map(s => ({ id: s.placePrediction?.placeId, label: s.placePrediction?.text?.text }))
+    ? googleSuggestions
+      .map(s => ({ id: s.placePrediction?.placeId, label: s.placePrediction?.text?.text }))
+      .filter(item => typeof item.label === "string" && item.label.trim())
     : [...(allowCurrentLocation ? [currentLocationItem] : []), ...saved, ...recents.map(p => ({ id: p.label, label: p.label, lat: p.lat, lng: p.lng }))];
 
   // Only react to actual value CHANGES: a store-prefilled value on mount (and

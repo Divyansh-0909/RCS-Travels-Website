@@ -117,7 +117,12 @@ export const useData = create(persist(set => ({
     // Autocomplete picks for the on-focus recents panel. Persisted; capped at
     // 15 by evicting the lowest frecency score (count decayed by age).
     recentPlaces: [],
-    addRecentPlace: (label, coords) => set(state => {
+    addRecentPlace: (label, coords) => {
+        // A place without displayable text cannot be selected again. Guard the
+        // persisted list at its write boundary so a failed geocode (or malformed
+        // API response) cannot make every address dropdown crash on its next open.
+        if (typeof label !== 'string' || !label.trim()) return;
+        set(state => {
         const now = Date.now();
         const existing = state.recentPlaces.find(p => p.label === label);
         let updated = existing
@@ -138,7 +143,8 @@ export const useData = create(persist(set => ({
             updated = updated.filter(p => p !== lowest);
         }
         return { recentPlaces: updated };
-    }),
+        });
+    },
 
     // Merge server-derived places (booking history) into the local list.
     // Same label → max count (sum would double-count) and latest lastUsedAt.
