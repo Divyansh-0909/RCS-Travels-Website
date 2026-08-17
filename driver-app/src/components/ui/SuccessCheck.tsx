@@ -1,7 +1,7 @@
 import LottieView from 'lottie-react-native';
 import { View, type StyleProp, type ViewStyle } from 'react-native';
 
-const SuccessAnimation = require('../../assets/Success.json');
+const SuccessAnimation = require('../../../assets/Success.json');
 
 type SuccessCheckProps = {
     size?: number;

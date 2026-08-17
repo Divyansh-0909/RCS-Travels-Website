@@ -232,7 +232,7 @@ export const useData = create(persist(set => ({
     setDevAuthBypass: (on) => set(() => ({ devAuthBypass: on })),
 
     searchStartedAt: null,
-    setSearchStartedAt: (value) => set(()=>{ searchStartedAt: value }),
+    setSearchStartedAt: (value) => set(() => ({ searchStartedAt: value })),
 }),
     {
         name: 'rcs-data',
