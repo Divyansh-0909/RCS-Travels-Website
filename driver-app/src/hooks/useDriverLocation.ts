@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 import * as Location from 'expo-location';
 import { LOCATION_TASK, reportFix } from '../lib/locationTask';
@@ -137,6 +137,7 @@ export function useDriverLocation(enabled: boolean, onRide: boolean) {
   const api = useApi();
   const mode = onRide ? MODES.ride : MODES.idle;
   const [resumeEpoch, setResumeEpoch] = useState(0);
+  const wasEnabled = useRef(false);
 
   // Some Android vendors stop a foreground location service under memory or
   // battery pressure but leave the driver row online. Re-run the registration
@@ -152,6 +153,33 @@ export function useDriverLocation(enabled: boolean, onRide: boolean) {
   useEffect(() => {
     let cancelled = false;
     let watcher: Location.LocationSubscription | null = null;
+    const justCameOnline = enabled && !wasEnabled.current;
+    wasEnabled.current = enabled;
+
+    // The task normally reports the first OS-delivered fix. That can take up to
+    // the idle interval, though, leaving a newly-online driver invisible to
+    // dispatch unnecessarily. Read one current position here and deliberately
+    // bypass the shared throttle once; every later fix continues through the
+    // existing 20 m / two-minute gate.
+    const publishInitialFix = async () => {
+      if (!justCameOnline || cancelled) return;
+
+      try {
+        const location = await Location.getCurrentPositionAsync({ accuracy: mode.accuracy });
+        if (cancelled) return;
+
+        await reportFix(
+          { lat: location.coords.latitude, lng: location.coords.longitude },
+          (fix) => api.sendLocation(fix),
+          true,
+        );
+      } catch (err) {
+        // Starting the tracking service still matters if GPS cannot provide a
+        // one-time fix yet (for example while indoors). Its next normal update
+        // will retry through the regular reporting policy.
+        console.warn('initial location fix could not be read:', (err as Error)?.message);
+      }
+    };
 
     /**
      * FOREGROUND ONLY, and only when the service refuses to start.
@@ -219,6 +247,7 @@ export function useDriverLocation(enabled: boolean, onRide: boolean) {
       for (let attempt = 0; attempt <= START_BACKOFF_MS.length; attempt++) {
         try {
           if (await attemptStart() === 'no-permission') break;
+          await publishInitialFix();
           return;
         } catch (err) {
           last = err;

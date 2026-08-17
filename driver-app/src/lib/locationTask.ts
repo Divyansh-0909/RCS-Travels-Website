@@ -138,12 +138,13 @@ async function authToken() {
 export async function reportFix(
     fix: Fix,
     post: (fix: Fix) => Promise<{ error?: string; status?: number } | undefined>,
+    force = false,
 ) {
     const now = Date.now();
 
     const moved =
-        !lastSent || metresBetween(lastSent.lat, lastSent.lng, fix.lat, fix.lng) >= MIN_MOVE_M;
-    const heartbeatDue = !lastSent || now - lastSent.at >= IDLE_HEARTBEAT_MS;
+        force || !lastSent || metresBetween(lastSent.lat, lastSent.lng, fix.lat, fix.lng) >= MIN_MOVE_M;
+    const heartbeatDue = force || !lastSent || now - lastSent.at >= IDLE_HEARTBEAT_MS;
     if (!moved && !heartbeatDue) return;
 
     // Never queue. A backlog of positions is a backlog of WRONG positions — by
