@@ -156,32 +156,37 @@ function useAddressSuggestions(value, setValue, setCoords, api, exclusiveRef, cl
   }, [value]);
 
   async function select(item) {
-    justSelectedRef.current = true;
-
     if (item.isCurrentLocation) {
       if (!navigator.geolocation) {
         setLookupError("Location isn't available on this device.");
         return;
       }
 
+      setLookupError(null);
       navigator.geolocation.getCurrentPosition(
         async (position) => {
           const { latitude, longitude } = position.coords;
 
-          setCoords({
-            lat: latitude,
-            lng: longitude,
-          });
+          let data;
+          try {
+            data = await api.reverseGeocode(latitude, longitude);
+          } catch {
+            data = { error: "network" };
+          }
 
-          const data = await api.reverseGeocode(latitude, longitude);
-
-          if (data?.error) {
+          const address = data?.formattedAddress;
+          if (data?.error || !address) {
             setLookupError("Couldn't determine your current address.");
             return;
           }
 
-          const address = data.address;
-
+          // Set this immediately before the value changes so the autocomplete
+          // effect preserves the coordinates belonging to this selection.
+          justSelectedRef.current = true;
+          setCoords({
+            lat: latitude,
+            lng: longitude,
+          });
           setValue(address);
           setExpanded(false);
           addRecentPlace(address, {
@@ -202,6 +207,7 @@ function useAddressSuggestions(value, setValue, setCoords, api, exclusiveRef, cl
       return;
     }
 
+    justSelectedRef.current = true;
     setValue(item.label);
     setExpanded(false);
 

@@ -1007,48 +1007,50 @@ const TrackingPage = () => {
                             type="button"
                             onClick={() => setShareSheetOpen(false)}
                             aria-label="Close share options"
-                            className="absolute z-20 -top-12 right-4 flex h-9 w-9 items-center justify-center rounded-full bg-[var(--background-muted)] shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)] transition-opacity duration-300 cursor-pointer active:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]/70 sm:hidden"
+                            className="absolute z-20 -top-12 right-4 h-9 my-1 w-9 rounded-full border border-[var(--foreground)]/30 bg-[var(--background-muted)] shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)] flex items-center justify-center cursor-pointer transition-opacity duration-300 active:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]/70 sm:hidden"
                         >
                             <Icon path={mdiClose} size={0.8} aria-hidden="true" />
                         </button>
-                        <div className="flex items-start justify-between gap-4">
-                            <div className="flex flex-col gap-0.5">
-                                <h3 className="text-lg sm:text-xl font-medium leading-tight text-[var(--text)]">Share ride</h3>
+                        <div data-sheet-scroll className="min-h-0 flex-1 flex flex-col gap-4">
+                            <div className="flex items-start justify-between gap-4">
+                                <div className="flex flex-col gap-0.5">
+                                    <h3 className="text-xl font-medium leading-tight text-[var(--text)]">Share ride</h3>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setShareSheetOpen(false)}
+                                    aria-label="Close share options"
+                                    className="hidden sm:flex shrink-0 cursor-pointer rounded-full p-1 opacity-60 transition-opacity hover:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]/70"
+                                >
+                                    <Icon path={mdiClose} size={0.9} aria-hidden="true" />
+                                </button>
                             </div>
-                            <button
-                                type="button"
-                                onClick={() => setShareSheetOpen(false)}
-                                aria-label="Close share options"
-                                className="hidden sm:flex shrink-0 cursor-pointer rounded-full p-1 opacity-60 transition-opacity hover:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]/70"
-                            >
-                                <Icon path={mdiClose} size={0.9} aria-hidden="true" />
-                            </button>
-                        </div>
-                        <div className="flex flex-col divide-y divide-[var(--foreground)]/10">
-                            <button
-                                type="button"
-                                onClick={shareDriverDetails}
-                                disabled={shareBusy || !driver}
-                                className="group flex w-full items-center gap-4 rounded-lg py-3.5 text-left outline-none transition-opacity duration-300 cursor-pointer active:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]/70 disabled:cursor-not-allowed disabled:opacity-45"
-                            >
-                                <Icon path={mdiAccountOutline} size={1} className="shrink-0 text-[var(--text-muted)]" aria-hidden="true" />
-                                <span className="flex flex-col">
-                                    <span className="text-base sm:text-lg font-medium text-[var(--text)]">Share driver details</span>
-                                    <span className="text-sm text-[var(--text-muted)]">Name, phone number and vehicle details</span>
-                                </span>
-                            </button>
-                            <button
-                                type="button"
-                                onClick={shareTrip}
-                                disabled={shareBusy || !bookingId}
-                                className="group flex w-full items-center gap-4 rounded-lg py-3.5 text-left outline-none transition-opacity duration-300 cursor-pointer active:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]/70 disabled:cursor-not-allowed disabled:opacity-45"
-                            >
-                                <Icon path={mdiMapMarkerRadius} size={1} className="shrink-0 text-[var(--text-muted)]" aria-hidden="true" />
-                                <span className="flex flex-col">
-                                    <span className="text-base sm:text-lg font-medium text-[var(--text)]">Share live location</span>
-                                    <span className="text-sm text-[var(--text-muted)]">Send a link to follow this ride</span>
-                                </span>
-                            </button>
+                            <div className="flex flex-col divide-y divide-[var(--foreground)]/10">
+                                <button
+                                    type="button"
+                                    onClick={shareDriverDetails}
+                                    disabled={shareBusy || !driver}
+                                    className="group flex w-full items-center gap-4 rounded-lg py-3.5 text-left outline-none transition-opacity duration-300 cursor-pointer active:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]/70 disabled:cursor-not-allowed disabled:opacity-45"
+                                >
+                                    <Icon path={mdiAccountOutline} size={1} className="shrink-0 text-[var(--text-muted)]" aria-hidden="true" />
+                                    <span className="flex flex-col">
+                                        <span className="text-base sm:text-lg font-medium text-[var(--text)]">Share driver details</span>
+                                        <span className="text-sm text-[var(--text-muted)]">Name, phone number and vehicle details</span>
+                                    </span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={shareTrip}
+                                    disabled={shareBusy || !bookingId}
+                                    className="group flex w-full items-center gap-4 rounded-lg py-3.5 text-left outline-none transition-opacity duration-300 cursor-pointer active:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]/70 disabled:cursor-not-allowed disabled:opacity-45"
+                                >
+                                    <Icon path={mdiMapMarkerRadius} size={1} className="shrink-0 text-[var(--text-muted)]" aria-hidden="true" />
+                                    <span className="flex flex-col">
+                                        <span className="text-base sm:text-lg font-medium text-[var(--text)]">Share live location</span>
+                                        <span className="text-sm text-[var(--text-muted)]">Send a link to follow this ride</span>
+                                    </span>
+                                </button>
+                            </div>
                         </div>
                     </BackgroundPanel>
                 </>

@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState, useEffect } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { PanResponder, View, type LayoutChangeEvent } from 'react-native';
 import { cssInterop } from 'nativewind';
 import { ArrowRightIcon } from 'phosphor-react-native';
@@ -6,7 +6,6 @@ import Animated, {
     runOnJS,
     useAnimatedStyle,
     useSharedValue,
-    withDelay,
     withSpring,
     withTiming,
 } from 'react-native-reanimated';
@@ -45,9 +44,6 @@ const PAD = 6;
 const KNOB_FILL = '#7A94FF';
 /** How far across counts as meaning it. Below this it springs back. */
 const CONFIRM_AT = 0.72;
-/** Let the completed gesture register before returning the thumb home. */
-const CONFIRM_HOLD_MS = 600;
-const RETURN_DURATION_MS = 220;
 
 export const SlideAction = ({
     label,
@@ -65,11 +61,6 @@ export const SlideAction = ({
     const x = useSharedValue(0);
     const confirming = useRef(false);
 
-    useEffect(() => {
-        confirming.current = false;
-        x.value = 0;
-    }, [label, disabled, x]);
-
     // PanResponder is built once, so everything it reaches for lives in a ref or
     // it would close over the first render's values for good.
     const state = useRef({ width: 0, disabled: false, onConfirm });
@@ -79,26 +70,8 @@ export const SlideAction = ({
 
     const complete = useCallback(async () => {
         const { onConfirm: run } = state.current;
-        try {
-            await run();
-        } finally {
-            // A failed request leaves this control on screen, where it should be
-            // usable again. A successful action normally replaces it first.
-            confirming.current = false;
-        }
+        await run();
     }, []);
-
-    const returnThenConfirm = useCallback(() => {
-        // A next screen used to mount immediately, so the slider either stayed
-        // at the far edge or visibly snapped back for a single frame. Hold the
-        // completed gesture briefly, return it, THEN open OTP / finish the ride.
-        x.value = withDelay(
-            CONFIRM_HOLD_MS,
-            withTiming(0, { duration: RETURN_DURATION_MS }, (finished) => {
-                if (finished) runOnJS(complete)();
-            }),
-        );
-    }, [complete, x]);
 
     const pan = useRef(
         PanResponder.create({
@@ -116,10 +89,11 @@ export const SlideAction = ({
 
                 if (travelled / max >= CONFIRM_AT) {
                     confirming.current = true;
-                    // Run it to the end first. Confirming from wherever the thumb
-                    // left off reads as the control having been interrupted.
+                    // Finish at the right edge and latch there for this mount.
+                    // Leaving the page unmounts the control; returning creates a
+                    // fresh shared value at zero, putting the thumb back left.
                     x.value = withTiming(max, { duration: 120 }, (finished) => {
-                        if (finished) runOnJS(returnThenConfirm)();
+                        if (finished) runOnJS(complete)();
                     });
                 } else {
                     x.value = withSpring(0, { damping: 20, stiffness: 200 });
