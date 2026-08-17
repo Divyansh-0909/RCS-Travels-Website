@@ -10,6 +10,7 @@ import { VEHICLE_CLASS_NAMES, isVehicleClass, seatsOf } from '../constants/vehic
 import { createBooking, normalizeReference } from '../lib/bookingReference.js'
 import { signedRiderPhotoUrl } from '../services/driverPhoto.js'
 import { newShareToken, shareIsLive, shareUrlFor, SHARE_TTL_MS } from '../lib/shareLink.js'
+import { getNavigationEtaMinutes } from '../services/rideEstimate.js'
 
 const bookingsRouter = Router()
 
@@ -326,12 +327,34 @@ bookingsRouter.get('/:id/status', protect, async (req, res) => {
 
   if (!booking.driverId) return res.json({ bookingId: booking.id, reference: booking.reference, bookingCode: user.bookingCode, status, cancellationCharge, driver: null })
 
+  const location = booking.driver.location
+  const etaTarget = status === 'en_route'
+    ? { leg: 'pickup', lat: booking.pickupLat, lng: booking.pickupLng }
+    : status === 'started'
+      ? { leg: 'drop', lat: booking.dropLat, lng: booking.dropLng }
+      : null
+  let navigationEtaMinutes = null
+  if (location && etaTarget) {
+    try {
+      navigationEtaMinutes = await getNavigationEtaMinutes({
+        cacheKey: `${booking.id}:${etaTarget.leg}`,
+        origin: { lat: location.latitude, lng: location.longitude },
+        destination: etaTarget,
+      })
+    } catch (error) {
+      // Location and status are still useful when Routes is unavailable or the
+      // monthly guard is reached. Null tells the UI to show an honest dash.
+      console.warn('Live navigation ETA unavailable:', error?.message)
+    }
+  }
+
   return res.json({
     bookingId:   booking.id,
     reference:   booking.reference,
     bookingCode: user.bookingCode,
     status,
     cancellationCharge,
+    navigationEtaMinutes,
     driver: {
       name:          booking.driver.name,
       phone:         booking.driver.phone,

@@ -10,6 +10,9 @@ const SESSION_KEYS = [
     'distanceKm', 'durationMin', 'routePolyline',
     'fareSource', 'fareToll', 'fareCarrier', 'fareAirport',
     'timing',
+    // The active booking transaction must survive a reload in this tab.
+    'fare', 'vehicleClass', 'sharing', 'safeRoute', 'needsCarrier',
+    'bookingId', 'bookingCode', 'status', 'activeBooking', 'searchStartedAt',
 ]
 
 const read = (store, name) => {
@@ -254,5 +257,11 @@ export const useData = create(persist(set => ({
             routePolyline: state.routePolyline, fareSource: state.fareSource,
             fareToll: state.fareToll, fareCarrier: state.fareCarrier,
             fareAirport: state.fareAirport,
+            fare: state.fare, vehicleClass: state.vehicleClass,
+            sharing: state.sharing, safeRoute: state.safeRoute,
+            needsCarrier: state.needsCarrier,
+            bookingId: state.bookingId, bookingCode: state.bookingCode,
+            status: state.status, activeBooking: state.activeBooking,
+            searchStartedAt: state.searchStartedAt,
         }),
     }))

@@ -13,7 +13,7 @@ import PriceIllustration from "../components/illustrations/RadarScanIllustration
 import SafetyIllustration from "../components/illustrations/DriverEnRouteIllustration";
 import WhatsAppIllustration from "../components/illustrations/WhatsAppIllustration";
 import Icon from '@mdi/react';
-import { mdiKeyboardBackspace, mdiPhone, mdiShareVariant } from '@mdi/js';
+import { mdiAccountOutline, mdiClose, mdiKeyboardBackspace, mdiMapMarkerRadius, mdiPhone, mdiShareVariant } from '@mdi/js';
 import waLogo from '../assets/whatsapp-logo.webp';
 import { openSupportWhatsApp } from "../constants/support";
 import ErrorPanel from "../components/ui/ErrorPanel";
@@ -27,7 +27,8 @@ import RideDetails from "../components/RideDetails";
 import Skeleton from "../components/ui/Skeleton";
 import { SAFE_ROUTE_SURCHARGE, isDistancePriced } from "../constants/fares";
 import { labelOf } from "../constants/vehicles";
-import { LIVE_STATUSES, etaMinutes, minsLabel, formatPlate } from "../lib/trip";
+import { LIVE_STATUSES, minsLabel, formatPlate } from "../lib/trip";
+import { useExitAnim } from "../hooks/useExitAnim";
 
 // ---- Shared layout + type scale -------------------------------------------
 // The desktop content column is 377px — OnBoarding's effective control width
@@ -45,6 +46,7 @@ const PAIR = "gap-0.5 sm:gap-1";
 const TrackingPage = () => {
     const phone = useData(state => state.phone)
     const scheduledTime = useData(state => state.scheduledTime)
+    const activeBooking = useData(state => state.activeBooking)
     const dropLocation = useData(state => state.dropLocation)
     const pickupLocation = useData(state => state.pickupLocation)
     const pickupCoords = useData(state => state.pickupCoords)
@@ -141,6 +143,7 @@ const TrackingPage = () => {
             ...(devParams.get("driver") ? { latitude: 28.6042, longitude: 77.2712 } : {}),
         };
     });
+    const [navigationEtaMinutes, setNavigationEtaMinutes] = useState(null);
     const [mapApi, setMapApi] = useState(null);
 
     useEffect(() => {
@@ -182,6 +185,7 @@ const TrackingPage = () => {
                 clearRefreshNotice();
                 if (data.status) setStatus(data.status);
                 setDriver(data.driver ?? null);
+                setNavigationEtaMinutes(data.navigationEtaMinutes ?? null);
                 // Server-computed, so the cancel warning and the actual charge
                 // are always the same number.
                 setCancellationCharge(data.cancellationCharge);
@@ -242,17 +246,14 @@ const TrackingPage = () => {
     // thing that ever removes it.
     useEffect(() => clearDriverMarker, []);
 
-    // Driver -> pickup while they're coming to you; driver -> drop once the ride
-    // is underway, so the number counts down instead of restating the trip length.
-    // Before a driver exists, fall back to the booked route's duration.
-    const pickupTime = minsLabel(etaMinutes(driverPoint, pickupPoint));
+    // Supplied by the server from a traffic-aware Google navigation route. It is
+    // deliberately not reconstructed from straight-line distance in the browser.
+    const pickupTime = minsLabel(navigationEtaMinutes);
     // Same split as Ride details: the stored fare is the total, so the safer-route
     // add-on is backed out of it rather than added to it.
     const baseFare = fare != null ? fare - (safeRoute ? SAFE_ROUTE_SURCHARGE : 0) : null;
 
-    const dropTime = status === "started"
-        ? minsLabel(etaMinutes(driverPoint, dropPoint) ?? durationMin)
-        : minsLabel(durationMin);
+    const dropTime = status === "started" ? minsLabel(navigationEtaMinutes) : minsLabel(durationMin);
 
     // The time is what a waiting rider actually wants, so the ETA takes the
     // headline and the status/place drops to the line beneath it.
@@ -330,6 +331,41 @@ const TrackingPage = () => {
     // fetch first and the share immediately after, never in a .then chain.
     const [shareBusy, setShareBusy] = useState(false);
     const [shareNote, setShareNote] = useState("");
+    const [shareSheetOpen, setShareSheetOpen] = useState(false);
+    // Same mount-through-exit treatment as the booking flow's Ride options
+    // sheet, so the scrim and panel leave as one surface instead of vanishing.
+    const { mounted: shareSheetMounted, closing: shareSheetClosing } = useExitAnim(shareSheetOpen, 420);
+
+    const shareDriverDetails = async () => {
+        if (!driver || shareBusy) return;
+        setShareBusy(true);
+        setShareNote("");
+        const details = [
+            `Driver: ${driver.name}`,
+            driver.phone && `Phone: ${driver.phone}`,
+            driver.vehicleModel && `Vehicle: ${driver.vehicleModel}`,
+            driver.vehicleNumber && `Registration: ${formatPlate(driver.vehicleNumber)}`,
+        ].filter(Boolean).join("\n");
+        try {
+            if (navigator.share) {
+                try {
+                    await navigator.share({ title: "My RCS Travels driver", text: details });
+                    setShareSheetOpen(false);
+                    return;
+                } catch (err) {
+                    if (err?.name === "AbortError") return;
+                }
+            }
+            await navigator.clipboard.writeText(details);
+            setShareNote("Details copied");
+            setShareSheetOpen(false);
+        } catch {
+            setShareNote("Couldn't share details");
+        } finally {
+            setShareBusy(false);
+        }
+    };
+
     const shareTrip = async () => {
         if (shareBusy || !bookingId) return;
         setShareBusy(true);
@@ -346,6 +382,7 @@ const TrackingPage = () => {
                 // rider changing their mind, not a failure, so it says nothing.
                 try {
                     await navigator.share({ title: "My RCS Travels ride", text, url: data.url });
+                    setShareSheetOpen(false);
                     return;
                 } catch (err) {
                     if (err?.name === "AbortError") return;
@@ -353,6 +390,7 @@ const TrackingPage = () => {
             }
             await navigator.clipboard.writeText(data.url);
             setShareNote("Link copied");
+            setShareSheetOpen(false);
         } catch {
             setShareNote("Couldn't create a link");
         } finally {
@@ -583,7 +621,7 @@ const TrackingPage = () => {
                 fields still waiting on the status fetch shimmer in place. With
                 no status at all this falls through to the live panel, which is
                 the shell those per-field skeletons hang on. */}
-            {scheduledTime !== null && (status === "confirmed" || status === "assigned")
+            {(scheduledTime ?? activeBooking?.scheduledAt) != null && (status === "confirmed" || status === "assigned")
                     // contentKey: this panel drops the driver card before a driver
                     // exists, so its height changes with the status — and the sheet
                     // is sized to that height. bookingLoading is in the key for the
@@ -791,7 +829,7 @@ const TrackingPage = () => {
                                 mobile, so its top moves with the content. */}
                             {backArrow}
                             <Button
-                                onClick={shareTrip}
+                                onClick={() => setShareSheetOpen(true)}
                                 prop={{ variant: "input", bg: "var(--background-muted)", rounded: "999px", disabled: shareBusy || !bookingId }}
                                 className='absolute z-20 -top-12 right-4 px-3 sm:hidden block shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)]'
                             >
@@ -831,7 +869,7 @@ const TrackingPage = () => {
                                         </>
                                     )}
                                     <Button
-                                        onClick={shareTrip}
+                                        onClick={() => setShareSheetOpen(true)}
                                         prop={{ variant: "input", bg: "var(--background-muted)", rounded: "999px", disabled: shareBusy || !bookingId }}
                                         className="mt-2 px-3 hidden sm:block"
                                     >
@@ -949,6 +987,65 @@ const TrackingPage = () => {
                 )}
                 <RideDetails prop={{bookingId, setLoading, setError, setDetialsVisibility }} />
             </BackgroundPanel>
+            {shareSheetMounted && (
+                <>
+                    <div
+                        onClick={() => setShareSheetOpen(false)}
+                        className={`absolute inset-0 z-40 bg-black/50 backdrop-blur-[2px] ${shareSheetClosing ? "animate-panel-fade-out" : "animate-backdrop"} motion-reduce:animate-none`}
+                    />
+                    <BackgroundPanel
+                        sheet
+                        dismissible
+                        onDismiss={() => setShareSheetOpen(false)}
+                        initialSnap="expanded"
+                        show={shareSheetOpen}
+                        duration={420}
+                        contentKey={`${!!driver}-${shareBusy}`}
+                        className="z-50 sm:!h-auto sm:!rounded-t-4xl flex flex-col gap-4 px-[7vw] sm:px-8 pt-1 sm:pt-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:pb-8 text-left"
+                    >
+                        <div className="flex items-start justify-between gap-4">
+                            <div className="flex flex-col gap-0.5">
+                                <h3 className="text-lg sm:text-xl font-medium leading-tight text-[var(--text)]">Share ride</h3>
+                                <p className="text-sm sm:text-base leading-snug text-[var(--text-muted)]">Choose what you want to send.</p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setShareSheetOpen(false)}
+                                aria-label="Close share options"
+                                className="shrink-0 cursor-pointer rounded-full p-1 opacity-60 transition-opacity hover:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]/70"
+                            >
+                                <Icon path={mdiClose} size={0.9} aria-hidden="true" />
+                            </button>
+                        </div>
+                        <div className="flex flex-col divide-y divide-[var(--foreground)]/10">
+                            <button
+                                type="button"
+                                onClick={shareDriverDetails}
+                                disabled={shareBusy || !driver}
+                                className="group flex w-full items-center gap-4 rounded-lg py-3.5 text-left outline-none transition-opacity duration-300 cursor-pointer active:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]/70 disabled:cursor-not-allowed disabled:opacity-45"
+                            >
+                                <Icon path={mdiAccountOutline} size={1} className="shrink-0 text-[var(--text-muted)]" aria-hidden="true" />
+                                <span className="flex flex-col">
+                                    <span className="text-base sm:text-lg font-medium text-[var(--text)]">Share driver details</span>
+                                    <span className="text-sm text-[var(--text-muted)]">Name, phone number and vehicle details</span>
+                                </span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={shareTrip}
+                                disabled={shareBusy || !bookingId}
+                                className="group flex w-full items-center gap-4 rounded-lg py-3.5 text-left outline-none transition-opacity duration-300 cursor-pointer active:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]/70 disabled:cursor-not-allowed disabled:opacity-45"
+                            >
+                                <Icon path={mdiMapMarkerRadius} size={1} className="shrink-0 text-[var(--text-muted)]" aria-hidden="true" />
+                                <span className="flex flex-col">
+                                    <span className="text-base sm:text-lg font-medium text-[var(--text)]">Share live location</span>
+                                    <span className="text-sm text-[var(--text-muted)]">Send a link to follow this ride</span>
+                                </span>
+                            </button>
+                        </div>
+                    </BackgroundPanel>
+                </>
+            )}
         </div>
     )
 }

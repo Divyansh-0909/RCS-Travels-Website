@@ -10,7 +10,7 @@ import FailureState from "../components/ui/FailureState";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { useRefreshNotice } from "../hooks/useRefreshNotice";
 import { getSharedTrip } from "../api/api";
-import { LIVE_STATUSES, etaMinutes, minsLabel, formatPlate, placeName } from "../lib/trip";
+import { LIVE_STATUSES, minsLabel, formatPlate, placeName } from "../lib/trip";
 import { openSupportWhatsApp } from "../constants/support";
 import pfpPlaceholder from "../assets/pfp-placeholder.webp";
 import waLogo from "../assets/whatsapp-logo.webp";
@@ -134,8 +134,8 @@ const SharedTrip = () => {
     useEffect(() => clearDriverMarker, []);
 
     const who = trip?.riderName;
-    const pickupTime = minsLabel(etaMinutes(driverPoint, pickupPoint));
-    const dropTime = minsLabel(etaMinutes(driverPoint, dropPoint));
+    const pickupTime = minsLabel(trip?.navigationEtaMinutes);
+    const dropTime = minsLabel(trip?.navigationEtaMinutes);
 
     // Written for someone who is NOT in the car. The rider's screen says "your
     // driver"; this one names the person being followed, because that is the

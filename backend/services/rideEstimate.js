@@ -191,6 +191,64 @@ async function checkAndIncrementRoutesUsage() {
   })
 }
 
+// A rider polls status every five seconds, but a minute-granularity ETA gains
+// nothing from twelve paid route calculations a minute. Keep one traffic-aware
+// answer per ride leg for sixty seconds. The promise itself is cached so the
+// authenticated and shared views cannot race into duplicate requests.
+const LIVE_ETA_TTL_MS = 60_000
+const liveEtaCache = new Map()
+
+const routeSeconds = (duration) => {
+  const seconds = Number.parseFloat(String(duration ?? '').replace(/s$/, ''))
+  return Number.isFinite(seconds) ? seconds : null
+}
+
+/**
+ * Real driving ETA over Google's road network with current traffic.
+ * Returns null when Routes cannot answer; callers must not replace it with a
+ * straight-line speed guess, because that would make the label dishonest again.
+ */
+export async function getNavigationEtaMinutes({ cacheKey, origin, destination }) {
+  if (!cacheKey || origin?.lat == null || origin?.lng == null || destination?.lat == null || destination?.lng == null)
+    return null
+
+  const now = Date.now()
+  const cached = liveEtaCache.get(cacheKey)
+  if (cached && cached.expiresAt > now) return cached.value
+
+  const value = (async () => {
+    await checkAndIncrementRoutesUsage()
+    const response = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': process.env.GOOGLE_MAPS_API_KEY,
+        'X-Goog-FieldMask': 'routes.duration',
+      },
+      body: JSON.stringify({
+        origin: toWaypoint(null, origin),
+        destination: toWaypoint(null, destination),
+        travelMode: 'DRIVE',
+        routingPreference: 'TRAFFIC_AWARE_OPTIMAL',
+      }),
+    })
+    if (!response.ok) throw new Error(`GOOGLE_ROUTES_${response.status}`)
+    const data = await response.json()
+    const seconds = routeSeconds(data.routes?.[0]?.duration)
+    return seconds == null ? null : Math.max(1, Math.ceil(seconds / 60))
+  })()
+
+  liveEtaCache.set(cacheKey, { value, expiresAt: now + LIVE_ETA_TTL_MS })
+  try {
+    const minutes = await value
+    liveEtaCache.set(cacheKey, { value: minutes, expiresAt: now + LIVE_ETA_TTL_MS })
+    return minutes
+  } catch (error) {
+    liveEtaCache.delete(cacheKey)
+    throw error
+  }
+}
+
 // Pin-adjusted coords are more precise than the typed address, so prefer them.
 const toWaypoint = (address, coords) =>
   coords ? { location: { latLng: { latitude: coords.lat, longitude: coords.lng } } } : { address }

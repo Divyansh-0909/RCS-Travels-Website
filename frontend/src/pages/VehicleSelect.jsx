@@ -30,6 +30,35 @@ import { VEHICLE_CATEGORIES, VEHICLE_CLASS_NAMES, labelOf, seatsOf } from "../co
 // deliberately no local fallback table: a placeholder here would silently charge
 // the wrong fare for any destination the rate card actually prices.
 const NO_PRICE = "₹—";
+// Keep the visual runway aligned with the server's five-minute assignment
+// deadline. The previous one-minute bar reached 100% while searching continued.
+const SEARCH_DURATION = 5 * 60_000;
+
+// CSS owns every frame. Deriving width from Date.now() in VehicleSelect made
+// the bar move only when unrelated state re-rendered the page. Freeze the
+// starting point per mount, then let a transform run continuously on the
+// compositor. Returning from Ride details resumes from elapsed wall time.
+const SearchingProgressBar = ({ startedAt }) => {
+    const [{ progress, remaining }] = useState(() => {
+        const elapsed = startedAt ? Math.min(Date.now() - startedAt, SEARCH_DURATION) : 0;
+        return {
+            progress: elapsed / SEARCH_DURATION,
+            remaining: Math.max(0, SEARCH_DURATION - elapsed),
+        };
+    });
+
+    return (
+        <div className="relative w-full rounded-full h-[6px] overflow-hidden bg-gray-500">
+            <div
+                className="absolute inset-0 bg-primary origin-left animate-searching-bar"
+                style={{
+                    "--search-progress-start": progress,
+                    "--search-progress-duration": `${remaining}ms`,
+                }}
+            />
+        </div>
+    );
+};
 
 // Pickup ETA per vehicle class. Placeholder until the driver-availability
 // endpoint returns a real nearest-driver time — same shape, so swapping the
@@ -126,6 +155,7 @@ const VehicleSelect = () => {
     const setBookingCode = useData(state => state.setBookingCode);
     const status = useData(state => state.status);
     const setStatus = useData(state => state.setStatus);
+    const activeBooking = useData(state => state.activeBooking);
     const setActiveBooking = useData(state => state.setActiveBooking);
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(false);
@@ -165,10 +195,16 @@ const VehicleSelect = () => {
     // the first estimate lands. Google's alternatives decide it, so it changes
     // with the route rather than with anything the rider set.
     const [safeRouteInfo, setSafeRouteInfo] = useState(devSafeRoute);
-    const [panelState, setPanelState] = useState(devParams?.get("panel") ?? "");  // "confirm" | "error"
+    const restoredScheduledTime = scheduledTime ?? activeBooking?.scheduledAt ?? null;
+    const [panelState, setPanelState] = useState(
+        devParams?.get("panel") ?? (bookingId && status === "confirmed" && restoredScheduledTime ? "confirmed" : "")
+    );  // "confirm" | "error"
     const [step, setStep] = useState(() => {
         const devStep = devParams?.get("step");
-        return devStep === "searching" || devStep === "confirmLocation" ? devStep : "vehicleType";
+        if (devStep === "searching" || devStep === "confirmLocation") return devStep;
+        // Assignment continues on the server across a reload. If this tab owns
+        // one, reopen its searching panel and let the poll below resume it.
+        return bookingId && searchStartedAt ? "searching" : "vehicleType";
     }); // "vehicleType" | "confirmLocation" | "searching"
     // Which endpoint the confirm-location screen is adjusting, and whether
     // confirming should create the booking (Book ride path) or just return
@@ -267,6 +303,9 @@ const VehicleSelect = () => {
     }
 
     useEffect(() => {
+        // A restored search already owns a created booking. Repricing cannot
+        // change it and would wipe the route metrics used by Ride details.
+        if (bookingId && (searchStartedAt || restoredScheduledTime)) return;
         // wipe the previous route's metrics first — the map draws from the
         // store immediately, and a stale polyline would show the old booking's
         // path until the new estimate lands
@@ -364,6 +403,7 @@ const VehicleSelect = () => {
                     // the ride never happened — drop the optimistic trip card so
                     // OnBoarding doesn't offer a dead booking
                     setActiveBooking(null);
+                    setSearchStartedAt(null);
                     setBookingId(null);
                     setPanelState("noDriver");
                     return;
@@ -371,6 +411,7 @@ const VehicleSelect = () => {
                 if (LIVE_STATUSES.includes(data.status)) {
                     // freshStatus: the store status was set a line ago from this same
                     // response, so TrackingPage can render it without a skeleton.
+                    setSearchStartedAt(null);
                     navigate(`/booking/${bookingId}`, { state: { freshStatus: true } });
                     return;
                 }
@@ -383,14 +424,6 @@ const VehicleSelect = () => {
         return () => { cancelled = true; clearTimeout(timer); };
     }, [step, bookingId]);
 
-
-    const SEARCH_DURATION = 60_000
-
-    const searchElapsed = searchStartedAt
-        ? Math.min(Date.now() - searchStartedAt, SEARCH_DURATION)
-        : 0;
-
-    const animationProgress = searchElapsed / SEARCH_DURATION;
 
     const pickupPoint = pickupCoords ?? PICKUP_FALLBACK;
     const dropPoint = dropCoords ?? DROP_FALLBACK;
@@ -1021,7 +1054,7 @@ const VehicleSelect = () => {
                         {step === "confirmLocation" && <CenterPin target={confirmTarget} />}
                     </GoogleMap>
                 )}
-                <BackgroundPanel show={panelState === "noDriver" || (panelState === "confirmed" && scheduledTime)} className={`z-4 sm:z-3 bottom-0 gap-1.5 sm:gap-2 py-6 text-center flex flex-col justify-center items-center`}>
+                <BackgroundPanel show={panelState === "noDriver" || (panelState === "confirmed" && restoredScheduledTime)} className={`z-4 sm:z-3 bottom-0 gap-1.5 sm:gap-2 py-6 text-center flex flex-col justify-center items-center`}>
                     {panelState === "noDriver"
                         ? <ErrorMark className="-mt-2" size={isMobile ? 120 : 140} />
                         : <SuccessCheck className="-mt-2" size={isMobile ? 120 : 140} />}
@@ -1059,15 +1092,7 @@ const VehicleSelect = () => {
                         <div className={`flex flex-col items-center sm:items-start justify-center gap-4 ${COL}`}>
                             {/* progress reads as one status block: bar, then
                                     the rotating message, then the way out */}
-                            <div className="relative w-full rounded-full h-[6px] overflow-hidden">
-                                <div
-                                    className="absolute z-1 inset-0 bg-primary h-full"
-                                    style={{
-                                        width: `${(animationProgress) * 100}%`,
-                                    }}
-                                />
-                                <div className="absolute z-0 inset-0 bg-gray-500 w-full h-full" />
-                            </div>
+                            <SearchingProgressBar key={searchStartedAt ?? "new-search"} startedAt={searchStartedAt} />
 
                             <div className="w-full flex justify-between items-center gap-3">
                                 <p className="text-left text-base sm:text-lg text-[var(--text-muted)]">{searchMessages[msgIndex]}</p>
@@ -1125,7 +1150,7 @@ const VehicleSelect = () => {
                     <RideDetails prop={{ bookingId, setLoading, setError, setDetialsVisibility }} />
                 </BackgroundPanel>
 
-                <div className={`${panelState === "noDriver" || (panelState === "confirmed" && scheduledTime) || step === "searching" ? "block" : "hidden"} absolute z-2 sm:z-1 bottom-0 bg-black/40 w-[100vw] h-[100dvh]`} />
+                <div className={`${panelState === "noDriver" || (panelState === "confirmed" && restoredScheduledTime) || step === "searching" ? "block" : "hidden"} absolute z-2 sm:z-1 bottom-0 bg-black/40 w-[100vw] h-[100dvh]`} />
 
                 {/* Confirm-location panel — zoomed into the target endpoint;
                         the map drags under a fixed pin, and each settle

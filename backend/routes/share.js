@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { prisma } from '../db/prisma.js'
 import { signedRiderPhotoUrl } from '../services/driverPhoto.js'
 import { sharedTripView } from '../lib/shareLink.js'
+import { getNavigationEtaMinutes } from '../services/rideEstimate.js'
 
 const shareRouter = Router()
 
@@ -41,7 +42,26 @@ shareRouter.get('/:token', async (req, res) => {
 
   const photoUrl = booking.driver ? await signedRiderPhotoUrl(booking.driver) : null
 
-  return res.json(sharedTripView(booking, photoUrl))
+  const location = booking.driver?.location
+  const etaTarget = booking.status === 'en_route'
+    ? { leg: 'pickup', lat: booking.pickupLat, lng: booking.pickupLng }
+    : booking.status === 'started'
+      ? { leg: 'drop', lat: booking.dropLat, lng: booking.dropLng }
+      : null
+  let navigationEtaMinutes = null
+  if (location && etaTarget) {
+    try {
+      navigationEtaMinutes = await getNavigationEtaMinutes({
+        cacheKey: `${booking.id}:${etaTarget.leg}`,
+        origin: { lat: location.latitude, lng: location.longitude },
+        destination: etaTarget,
+      })
+    } catch (error) {
+      console.warn('Shared navigation ETA unavailable:', error?.message)
+    }
+  }
+
+  return res.json({ ...sharedTripView(booking, photoUrl), navigationEtaMinutes })
 })
 
 export default shareRouter
