@@ -87,6 +87,9 @@ const Rides = () => {
 
     const [searching, setSearching] = useState(false);
     const [query, setQuery] = useState('');
+    // Opening search is a prompt to start a new lookup, not another way to browse
+    // the current board. Keep the results area clear until the captain types.
+    const isSearchIdle = searching && query.trim().length === 0;
 
     const latestRequest = useRef(0);
 
@@ -159,9 +162,9 @@ const Rides = () => {
     // every time and re-groups the whole list for nothing.
     const sections = useMemo(() => {
         const all = cached ?? [];
-        const matched = query ? all.filter((ride) => matchesQuery(ride, query)) : all;
+        const matched = isSearchIdle ? [] : query ? all.filter((ride) => matchesQuery(ride, query)) : all;
         return groupByDay(matched, new Date(), scope === 'history' ? 'desc' : 'asc');
-    }, [cached, query, scope]);
+    }, [cached, isSearchIdle, query, scope]);
 
     // This board has never come back. Not "is empty" — `[]` is empty; null is unknown.
     // Everything below keys off that distinction, because the two states share no copy:
@@ -273,7 +276,7 @@ const Rides = () => {
                 })}
             </View>
 
-            {error && !failedFirstLoad && (
+            {error && !failedFirstLoad && !isSearchIdle && (
                 <View className="w-full flex-row items-center justify-between gap-4">
                     <AppText numberOfLines={2} className="flex-1 text-sm text-red-600">{error}</AppText>
                     <Pressable
@@ -307,7 +310,9 @@ const Rides = () => {
                 they can get. It comes back when the field closes; nothing is recomputed. */}
             {scope === 'history' && summary && !searching && <EarningsPanel summary={summary} />}
 
-            {firstLoad && !failedFirstLoad ? (
+            {isSearchIdle ? (
+                <View className="flex-1" />
+            ) : firstLoad && !failedFirstLoad ? (
                 // The board's own shape rather than a spinner in the middle of nothing.
                 // History reserves the panel's height too, so the rows do not shunt down
                 // when the week's total lands a frame after them.
@@ -381,7 +386,7 @@ const Rides = () => {
                 are a blank screen under a tap that appeared to do nothing. `isEmpty` is
                 computed from the FILTERED sections, so the search case was not even the
                 one the guard was written for. */}
-            {loading && !firstLoad && (
+            {loading && !firstLoad && !isSearchIdle && (
                 <View className="absolute right-1 top-1">
                     <ActivityIndicator size="small" color={INK} />
                 </View>
