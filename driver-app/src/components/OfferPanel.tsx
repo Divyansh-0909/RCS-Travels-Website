@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Dimensions, PanResponder, View } from 'react-native';
 import Animated, {
     cancelAnimation,
@@ -71,22 +71,40 @@ const OfferPanel = () => {
         if (id) dismissRef.current(id);
     }, []);
 
+    // The clock starts when the SERVER created the offer, not when this React
+    // component happened to mount. Otherwise force-closing the app and opening
+    // an offer notification would reset a nearly-finished prompt back to 30s.
+    // The pending RideOffer itself is still safe on Notifications; this only
+    // governs the transient floating interruption.
+    const offeredAt = panelOffer?.offeredAt ?? null;
+    const remainingMs = useMemo(() => {
+        const createdAt = offeredAt ? Date.parse(offeredAt) : Number.NaN;
+        if (!Number.isFinite(createdAt)) return PANEL_SECONDS * 1000;
+        return Math.max(0, createdAt + PANEL_SECONDS * 1000 - Date.now());
+    }, [offeredAt]);
+
     // Restart for each new offer: reset the position a previous swipe left
-    // behind, and give this card its own full thirty seconds.
+    // behind, but preserve the part of this offer's 30-second window that has
+    // already elapsed while the app was backgrounded or terminated.
     useEffect(() => {
         if (!offerId) return;
 
+        if (remainingMs <= 0) {
+            hide();
+            return;
+        }
+
         setError(null);
         tx.value = 0;
-        life.value = 1;
-        life.value = withTiming(0, { duration: PANEL_SECONDS * 1000 });
+        life.value = remainingMs / (PANEL_SECONDS * 1000);
+        life.value = withTiming(0, { duration: remainingMs });
 
-        const timer = setTimeout(hide, PANEL_SECONDS * 1000);
+        const timer = setTimeout(hide, remainingMs);
         return () => {
             clearTimeout(timer);
             cancelAnimation(life);
         };
-    }, [offerId, hide, tx, life]);
+    }, [offerId, offeredAt, remainingMs, hide, tx, life]);
 
     const pan = useRef(
         PanResponder.create({
@@ -120,7 +138,9 @@ const OfferPanel = () => {
         opacity: 1 - Math.min(Math.abs(tx.value) / (SCREEN_W * 0.6), 1) * 0.85,
     }));
 
-    if (!panelOffer) return null;
+    // A cold start can fetch an offer long after the short floating window
+    // elapsed. Keep it in Notifications, but never flash the expired panel.
+    if (!panelOffer || remainingMs <= 0) return null;
 
     const answer = async (action: (id: string) => Promise<{ error?: string } | null>) => {
         const failure = await action(panelOffer.offerId);

@@ -81,14 +81,27 @@ export function usePushRegistration(enabled: boolean) {
     return () => { cancelled = true; };
   }, [api, enabled]);
 
-  // Where a tap lands. The backend puts a `screen` on every notification that
-  // has somewhere useful to go, so this stays a lookup rather than a growing
-  // switch over message kinds — a new notification type needs no change here.
+  // Where a tap lands. This handles BOTH a live tap and the cold start caused by
+  // tapping a notification after Android has killed the app from Recents. The
+  // latter has no response listener running yet, so Expo retains it as the last
+  // response for us to read after the JS tree has mounted.
   useEffect(() => {
-    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
-      const screen = response.notification.request.content.data?.screen;
+    const redirect = (notification: Notifications.Notification) => {
+      const screen = notification.request.content.data?.screen;
       if (screen === 'documents') navigate('/account/documents');
       else if (screen === 'home') navigate('/');
+      else if (screen === 'notifications') navigate('/notifications');
+    };
+
+    const last = Notifications.getLastNotificationResponse();
+    if (last?.notification) {
+      redirect(last.notification);
+      // Do not route to the same screen again on a later normal launch.
+      Notifications.clearLastNotificationResponseAsync().catch(() => {});
+    }
+
+    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
+      redirect(response.notification);
     });
     return () => sub.remove();
   }, [navigate]);
