@@ -357,56 +357,13 @@
     }
 
     @keyframes loading-bar {
-        0% {
-            width: 0px;
-            animation-timing-function: ease-out;
-        }
-
-        10% {
-            width: 100px;
-            animation-timing-function: ease-out;
-        }
-
-        /* fast */
-        20% {
-            width: 120px;
-            animation-timing-function: ease-in;
-        }
-
-        /* slow */
-        32% {
-            width: 175px;
-            animation-timing-function: ease-out;
-        }
-
-        /* fast */
-        42% {
-            width: 190px;
-            animation-timing-function: ease-in;
-        }
-
-        /* slow */
-        50% {
-            width: 280px;
-            animation-timing-function: ease-out;
-        }
-
-        /* fast burst before halfway */
-        62% {
-            width: 332px;
-            animation-timing-function: ease-out;
-        }
-
-        /* fast burst after halfway */
-        100% {
-            width: 330px;
-        }
-
-        /* slow crawl to end */
+        from { transform: scaleX(var(--search-progress-start, 0)); }
+        to { transform: scaleX(1); }
     }
 
     .animate-searching-bar {
-        animation: loading-bar 600s linear;
+        animation: loading-bar var(--search-progress-duration, 60s) linear forwards;
+        will-change: transform;
     }
 
     @keyframes illus-fade {
