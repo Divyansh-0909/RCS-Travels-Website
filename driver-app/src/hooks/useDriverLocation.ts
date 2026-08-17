@@ -1,4 +1,5 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { AppState } from 'react-native';
 import * as Location from 'expo-location';
 import { LOCATION_TASK, reportFix } from '../lib/locationTask';
 import { useApi } from './useApi';
@@ -135,6 +136,18 @@ export async function ensureLocationPermission(): Promise<LocationPermission> {
 export function useDriverLocation(enabled: boolean, onRide: boolean) {
   const api = useApi();
   const mode = onRide ? MODES.ride : MODES.idle;
+  const [resumeEpoch, setResumeEpoch] = useState(0);
+
+  // Some Android vendors stop a foreground location service under memory or
+  // battery pressure but leave the driver row online. Re-run the registration
+  // check whenever the captain returns to the app, so an already-online driver
+  // becomes findable again without having to toggle Offline then Online.
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') setResumeEpoch((epoch) => epoch + 1);
+    });
+    return () => sub.remove();
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -234,5 +247,5 @@ export function useDriverLocation(enabled: boolean, onRide: boolean) {
     // build it back up mid-ride. The service is ended by `enabled` going false —
     // that is, by him going offline — and by nothing else. The foreground
     // watcher IS torn down, because it belongs to this effect's lifetime.
-  }, [enabled, mode, api]);
+  }, [enabled, mode, api, resumeEpoch]);
 }

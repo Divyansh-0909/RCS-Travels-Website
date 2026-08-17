@@ -1,3 +1,7 @@
+// A TaskManager wake has no ClerkProvider to import Clerk Expo's usual
+// polyfills. Clerk's headless client still builds request URLs, so install this
+// before importing it or Android's first background fix can fail on `href`.
+import 'react-native-url-polyfill/auto';
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 import { getClerkInstance } from '@clerk/clerk-expo';
@@ -103,8 +107,16 @@ async function authToken() {
   const clerk = getClerkInstance({ publishableKey, tokenCache });
   if (!clerk.loaded) {
     // Shared, so a burst of wake-ups cannot start several loads at once.
-    loadingClerk ??= clerk.load();
-    await loadingClerk;
+    const load = loadingClerk ?? clerk.load();
+    loadingClerk = load;
+    try {
+      await load;
+    } finally {
+      // A network failure must be retried by the next fix. Holding on to a
+      // rejected promise here would leave location reporting permanently dead
+      // until Android happened to create a new JS context.
+      if (loadingClerk === load) loadingClerk = null;
+    }
   }
   return (await clerk.session?.getToken()) ?? null;
 }
@@ -185,9 +197,16 @@ TaskManager.defineTask(LOCATION_TASK, async ({ data, error }) => {
   // The gate, the retry policy and the refusal counting all live in reportFix,
   // which the foreground fallback shares. All this path owns is the credential:
   // headless, there is no useAuth to borrow one from.
-  await reportFix(fix, async (f) => {
-    const token = await authToken();
-    if (!token) return { error: 'no session' };
-    return sendLocation(f, async () => token);
-  });
+  try {
+    await reportFix(fix, async (f) => {
+      const token = await authToken();
+      if (!token) return { error: 'no session' };
+      return sendLocation(f, async () => token);
+    });
+  } catch (err) {
+    // A task is a delivery opportunity, not a transaction that must succeed.
+    // Let the next, newer location retry instead of reporting the whole task as
+    // failed and obscuring the real transient auth or network problem.
+    console.warn('location task could not report this fix:', (err as Error)?.message);
+  }
 });
