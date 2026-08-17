@@ -33,10 +33,10 @@ export const RideCompleted = ({
     const drop = splitAddress(ride.dropAddress);
 
     return (
-        <View className="flex h-full justify-between w-[92%] pt-18 pb-10">
+        <View className="flex h-full justify-between w-full px-5 pt-18 pb-10">
             <Animated.View entering={FadeIn.duration(220)} className="items-center gap-3">
-                <View className="w-20 h-20 rounded-full items-center justify-center bg-primary">
-                    <SuccessCheck className="-mt-2 -mb-2" size={120} />
+                <View className="w-20 h-20 items-center justify-center">
+                    <SuccessCheck className="-mt-2" size={120} />
                 </View>
                 <View className='flex justify-center items-center gap-1'>
                     <AppText className={`text-2xl font-semibold ${INK_TEXT}`} style={{ letterSpacing: -0.6 }}>

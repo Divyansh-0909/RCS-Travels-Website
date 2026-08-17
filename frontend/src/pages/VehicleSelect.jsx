@@ -1063,7 +1063,7 @@ const VehicleSelect = () => {
                                 <div
                                     className="absolute z-1 inset-0 bg-primary h-full"
                                     style={{
-                                        width: `${(1 - animationProgress) * 100}%`,
+                                        width: `${(animationProgress) * 100}%`,
                                     }}
                                 />
                                 <div className="absolute z-0 inset-0 bg-gray-500 w-full h-full" />

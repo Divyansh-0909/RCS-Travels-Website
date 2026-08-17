@@ -9,7 +9,6 @@ import Animated, {
     withTiming,
 } from 'react-native-reanimated';
 import AppText from './AppText';
-import type { Offer } from '../hooks/useOffers';
 import { useNoticeTop } from './AppBarVisibility';
 import { OfferCard } from './ui/offerCard';
 import { useOffers } from '../hooks/useOffers';
@@ -43,6 +42,7 @@ const DISMISS_AT = SCREEN_W * 0.28;
  * Notifications. When ride-now dispatch becomes event-driven, that path DOES get
  * a real deadline, and this timer becomes the visible half of it.
  */
+const PANEL_SECONDS = 30;
 
 const PANEL_Z = 60;
 
@@ -74,32 +74,19 @@ const OfferPanel = () => {
     // Restart for each new offer: reset the position a previous swipe left
     // behind, and give this card its own full thirty seconds.
     useEffect(() => {
-        if (!panelOffer) return;
+        if (!offerId) return;
 
         setError(null);
         tx.value = 0;
         life.value = 1;
+        life.value = withTiming(0, { duration: PANEL_SECONDS * 1000 });
 
-        const expiresAt = new Date(panelOffer.expiresAt).getTime();
-        const remaining = Math.max(0, expiresAt - Date.now());
-
-        if (remaining === 0) {
-            hide();
-            return;
-        }
-
-        life.value = withTiming(
-            0,
-            { duration: remaining },
-            (finished) => {
-                if (finished) runOnJS(hide)();
-            },
-        );
-
+        const timer = setTimeout(hide, PANEL_SECONDS * 1000);
         return () => {
+            clearTimeout(timer);
             cancelAnimation(life);
         };
-    }, [panelOffer, hide, tx, life]);
+    }, [offerId, hide, tx, life]);
 
     const pan = useRef(
         PanResponder.create({
@@ -142,7 +129,7 @@ const OfferPanel = () => {
         setError(failure?.error ?? null);
     };
 
-
+    
 
     return (
         <View
