@@ -6,6 +6,7 @@ import Animated, {
     runOnJS,
     useAnimatedStyle,
     useSharedValue,
+    withDelay,
     withSpring,
     withTiming,
 } from 'react-native-reanimated';
@@ -44,6 +45,9 @@ const PAD = 6;
 const KNOB_FILL = '#7A94FF';
 /** How far across counts as meaning it. Below this it springs back. */
 const CONFIRM_AT = 0.72;
+/** Let the completed gesture register before returning the thumb home. */
+const CONFIRM_HOLD_MS = 280;
+const RETURN_DURATION_MS = 220;
 
 export const SlideAction = ({
     label,
@@ -59,8 +63,10 @@ export const SlideAction = ({
 }) => {
     const [width, setWidth] = useState(0);
     const x = useSharedValue(0);
+    const confirming = useRef(false);
 
     useEffect(() => {
+        confirming.current = false;
         x.value = 0;
     }, [label, disabled, x]);
 
@@ -71,18 +77,35 @@ export const SlideAction = ({
 
     const travel = Math.max(width - KNOB - PAD * 2, 1);
 
-    const fire = useCallback(() => {
+    const complete = useCallback(async () => {
         const { onConfirm: run } = state.current;
+        try {
+            await run();
+        } finally {
+            // A failed request leaves this control on screen, where it should be
+            // usable again. A successful action normally replaces it first.
+            confirming.current = false;
+        }
+    }, []);
 
-        x.value = 0;
-        void run();
-    }, [x]);
+    const returnThenConfirm = useCallback(() => {
+        // A next screen used to mount immediately, so the slider either stayed
+        // at the far edge or visibly snapped back for a single frame. Hold the
+        // completed gesture briefly, return it, THEN open OTP / finish the ride.
+        x.value = withDelay(
+            CONFIRM_HOLD_MS,
+            withTiming(0, { duration: RETURN_DURATION_MS }, (finished) => {
+                if (finished) runOnJS(complete)();
+            }),
+        );
+    }, [complete, x]);
 
     const pan = useRef(
         PanResponder.create({
-            onStartShouldSetPanResponder: () => !state.current.disabled,
+            onStartShouldSetPanResponder: () => !state.current.disabled && !confirming.current,
             onMoveShouldSetPanResponder: (_, g) =>
-                !state.current.disabled && Math.abs(g.dx) > 4 && Math.abs(g.dx) > Math.abs(g.dy),
+                !state.current.disabled && !confirming.current
+                    && Math.abs(g.dx) > 4 && Math.abs(g.dx) > Math.abs(g.dy),
             onPanResponderMove: (_, g) => {
                 const max = Math.max(state.current.width - KNOB - PAD * 2, 1);
                 x.value = Math.min(Math.max(g.dx, 0), max);
@@ -92,10 +115,11 @@ export const SlideAction = ({
                 const travelled = Math.min(Math.max(g.dx, 0), max);
 
                 if (travelled / max >= CONFIRM_AT) {
+                    confirming.current = true;
                     // Run it to the end first. Confirming from wherever the thumb
                     // left off reads as the control having been interrupted.
                     x.value = withTiming(max, { duration: 120 }, (finished) => {
-                        if (finished) runOnJS(fire)();
+                        if (finished) runOnJS(returnThenConfirm)();
                     });
                 } else {
                     x.value = withSpring(0, { damping: 20, stiffness: 200 });
