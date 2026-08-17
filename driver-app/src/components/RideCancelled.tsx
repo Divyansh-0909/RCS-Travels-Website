@@ -49,7 +49,7 @@ export const RideCancelled = ({
                 <View className="flex-row items-start justify-between gap-3">
                     <View className="flex-1 gap-0.5">
                         <AppText className={`text-lg font-bold ${INK_TEXT}`} style={{ letterSpacing: -0.4 }}>
-                            Ride cancelled
+                            {ride.cancelledBy === 'user' ? 'Rider cancelled' : 'Ride cancelled'}
                         </AppText>
                         <AppText numberOfLines={1} className={`text-sm ${MUTED}`}>
                             {pickup.main} · {ride.reference}

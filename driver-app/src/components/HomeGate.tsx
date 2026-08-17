@@ -50,7 +50,7 @@ const HomeGate = () => {
   const api = useApi();
   // One fetch for whichever screen is chosen. The ride screens need the booking
   // itself — /me answers with { id, status } and nothing a panel could draw.
-  const { active, next, refresh } = useRides();
+  const { rides, active, next, refresh } = useRides();
 
   // THE RIDE THAT HAS JUST ENDED, held past the moment it stopped being active.
   // A ride leaving `active` — finished, or called off by the rider — is gone from
@@ -63,12 +63,18 @@ const HomeGate = () => {
   // leaves the list. So the transition is the trigger and the row is re-read for
   // the answer.
   const [ended, setEnded] = useState<UpcomingBooking | null>(null);
-  const previous = useRef<UpcomingBooking | null>(null);
+  const previous = useRef<UpcomingBooking[]>([]);
   useEffect(() => {
-    const left = previous.current;
-    previous.current = active;
+    // The rider may cancel before the captain starts driving, when the booking
+    // is still `assigned` and therefore is `next`, not `active`. Compare the
+    // whole open list so both that case and a mid-ride cancellation produce the
+    // same terminal notice.
+    const left = previous.current.find(
+      (oldRide) => !rides.some((ride) => ride.id === oldRide.id),
+    );
+    previous.current = rides;
 
-    if (!left || active || left.id === ended?.id) return;
+    if (!left || left.id === ended?.id) return;
 
     let cancelled = false;
     (async () => {
@@ -81,7 +87,7 @@ const HomeGate = () => {
     })();
 
     return () => { cancelled = true; };
-  }, [active, ended, api]);
+  }, [rides, ended, api]);
 
   // Only on the cold start, when there is no profile to render either screen
   // from. A refresh with a profile already in hand keeps showing it, or the

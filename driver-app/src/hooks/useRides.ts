@@ -29,7 +29,7 @@ type Result = {
 
 export function useRides(): Result {
     const api = useApi();
-    const { profile } = useDriver();
+    const { profile, refresh: refreshProfile } = useDriver();
     const [rides, setRides] = useState<UpcomingBooking[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -44,11 +44,24 @@ export function useRides(): Result {
         const data = await api.getRides();
         if (request !== latest.current) return;
 
-        if (data?.error) setError(data.error);
-        else setRides(data.bookings ?? []);
+        if (data?.error) {
+            setError(data.error);
+        } else {
+            const bookings: UpcomingBooking[] = data.bookings ?? [];
+            setRides(bookings);
+
+            // /me is what HomeGate routes from. If the rider cancels while this
+            // app stays open, its activeRide snapshot otherwise keeps pointing
+            // at a booking the fresh list has just proved is gone. Reconcile it
+            // now so the active screen and shell both return online together.
+            const profileRideId = profile?.activeRide?.id;
+            if (profileRideId && !bookings.some((booking) => booking.id === profileRideId)) {
+                await refreshProfile();
+            }
+        }
 
         setLoading(false);
-    }, [api]);
+    }, [api, profile?.activeRide?.id, refreshProfile]);
 
     useEffect(() => { refresh(); }, [refresh]);
 
@@ -84,6 +97,29 @@ export function useRides(): Result {
         });
         return () => sub.remove();
     }, [refresh]);
+
+    // Rider cancellation is an external event: no local button or navigation
+    // exists to trigger a fetch. Poll only while the captain holds work, when a
+    // five-second cancellation delay matters; idle screens remain event-driven.
+    // Self-scheduling after each response prevents slow requests from stacking.
+    const hasAssignedWork = (profile?.onboarding?.assignedRides ?? 0) > 0;
+    useEffect(() => {
+        if (!hasAssignedWork) return;
+
+        let stopped = false;
+        let timer: ReturnType<typeof setTimeout> | null = null;
+
+        const tick = async () => {
+            await refresh();
+            if (!stopped) timer = setTimeout(tick, 5000);
+        };
+
+        timer = setTimeout(tick, 5000);
+        return () => {
+            stopped = true;
+            if (timer) clearTimeout(timer);
+        };
+    }, [hasAssignedWork, refresh]);
 
     const active = rides.find((r) => ACTIVE_RIDE_STATUSES.includes(r.status)) ?? null;
 

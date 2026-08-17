@@ -61,7 +61,10 @@ const BackgroundPanel = ({ show = true, duration = 250, className, children, she
 
     return (
         <div
-            ref={isSheet ? sheetRef : null}
+            // Keep the ref attached after a sheet becomes a regular panel. React
+            // may reuse this DOM node across ride statuses, and the hook needs the
+            // node on that transition to clear its old inline height/transform.
+            ref={sheetRef}
             className={`${className} ${animation} absolute bottom-0 bg-transparent shadow-[inset_0px_2px_4px_rgba(255,255,255,0.25),0px_0px_90px_25px_rgba(0,0,0,0.25)] rounded-t-4xl sm:rounded-none sm:h-[100dvh] w-[100vw] bg-panel-gradient ${isSheet ? "overscroll-contain" : ""}`}
         >
             {isSheet && (

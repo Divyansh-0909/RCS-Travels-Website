@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { PanResponder, View, type LayoutChangeEvent } from 'react-native';
 import { cssInterop } from 'nativewind';
 import { ArrowRightIcon } from 'phosphor-react-native';
@@ -61,6 +61,14 @@ export const SlideAction = ({
     const x = useSharedValue(0);
     const confirming = useRef(false);
 
+    // A completed action stays visibly latched, but the next ride status is a
+    // new action even though React reuses this component instance. Its label is
+    // the action identity, so reset only when that changes—not after a timer.
+    useEffect(() => {
+        confirming.current = false;
+        x.value = 0;
+    }, [label, x]);
+
     // PanResponder is built once, so everything it reaches for lives in a ref or
     // it would close over the first render's values for good.
     const state = useRef({ width: 0, disabled: false, onConfirm });
@@ -89,9 +97,9 @@ export const SlideAction = ({
 
                 if (travelled / max >= CONFIRM_AT) {
                     confirming.current = true;
-                    // Finish at the right edge and latch there for this mount.
-                    // Leaving the page unmounts the control; returning creates a
-                    // fresh shared value at zero, putting the thumb back left.
+                    // Finish at the right edge and latch there for this action.
+                    // A new ride step changes `label`, resetting the next action
+                    // to the left; leaving and returning also mounts it at zero.
                     x.value = withTiming(max, { duration: 120 }, (finished) => {
                         if (finished) runOnJS(complete)();
                     });

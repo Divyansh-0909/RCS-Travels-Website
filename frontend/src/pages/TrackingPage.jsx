@@ -629,7 +629,7 @@ const TrackingPage = () => {
                     // that loads without a driver loses it entirely.
                     ? <BackgroundPanel
                         sheet={mapVisible}
-                        initialSnap="half"
+                        initialSnap={status === "assigned" ? "expanded" : "half"}
                         duration={420}
                         contentKey={`${status}-${bookingLoading}`}
                         className={"py-6 max-sm:pb-0 sm:overflow-hidden justify-center items-center text-left sm:px-[9%] md:px-[5%] xl:px-[13%] flex flex-col sm:flex-row sm:justify-center lg:justify-between"}
@@ -718,12 +718,12 @@ const TrackingPage = () => {
                     </BackgroundPanel>
                     : status === "completed"
                         ?
-                        <BackgroundPanel className={"py-6 h-[100dvh] rounded-t-none flex justify-center items-center sm:px-[9%] md:px-[5%] xl:px-[13%]"}>
+                        <BackgroundPanel className={"max-sm:fixed max-sm:inset-0 h-[100dvh] max-sm:rounded-none max-sm:overflow-y-auto py-6 flex justify-center items-center sm:px-[9%] md:px-[5%] xl:px-[13%]"}>
                             {/* Desktop: one wide card split down the middle —
                                outcome on the left, receipt and actions on the
                                right. Mobile drops the card and stacks the two
                                halves in reading order. */}
-                            <div className="relative w-full h-full flex justify-center items-center">
+                            <div className="relative w-full h-full max-sm:h-auto max-sm:min-h-full flex justify-center items-center">
                                 {backArrowInPanel}
                                 <div className={`w-full flex flex-col items-center ${STACK} sm:w-[820px] sm:flex-row sm:items-stretch sm:gap-0`}>
                                 <div className="flex flex-col justify-center items-center sm:items-start gap-3 max-sm:w-[min(86vw,100%)] sm:w-1/2 sm:px-8 sm:py-10">
