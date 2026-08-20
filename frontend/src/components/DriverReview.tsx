@@ -64,6 +64,16 @@ type Payload = {
     vehicles: Vehicle[]
     documents: Document[]
     missing: string[]
+    conduct: {
+        cancellationCount30Days: number
+        benefitRestrictedUntil: string | null
+        complaints: Array<{
+            id: string
+            labels: string[]
+            createdAt: string
+            booking: { reference: string }
+        }>
+    }
 }
 
 const scanChip = (scan: Document["scanStatus"]) =>
@@ -360,6 +370,38 @@ const DriverReview = ({ driverId, onVerificationChange, onGroupChange }: {
                     {missingNote(vehicle.missing)}
                 </section>
             ))}
+
+            <section className="w-full mt-6 pt-4 border-t border-[var(--background-primary)]/10">
+                <h4 className="font-medium text-[var(--background-primary)]">Conduct</h4>
+                <div className="mt-2 flex flex-wrap gap-2">
+                    <span className={`${plainChip} ${data.conduct.cancellationCount30Days >= 5 ? "bg-red-500/10 text-red-700" : data.conduct.cancellationCount30Days >= 3 ? "bg-amber-500/10 text-amber-700" : "bg-gray-500/10 text-gray-600"}`}>
+                        {data.conduct.cancellationCount30Days} cancellations · 30 days
+                    </span>
+                    {data.conduct.benefitRestrictedUntil && new Date(data.conduct.benefitRestrictedUntil) > new Date() && (
+                        <span className={`${plainChip} bg-amber-500/10 text-amber-700`}>
+                            Benefits restricted until {shortDate(data.conduct.benefitRestrictedUntil)}
+                        </span>
+                    )}
+                </div>
+
+                <h5 className="mt-4 text-xs uppercase tracking-wide text-gray-500">Customer complaints</h5>
+                {data.conduct.complaints.length === 0 ? (
+                    <p className="mt-1 text-sm text-gray-500">No complaints recorded.</p>
+                ) : (
+                    <div className="mt-2 flex flex-col gap-3">
+                        {data.conduct.complaints.map((complaint) => (
+                            <div key={complaint.id} className="rounded-xl bg-[var(--background-primary)]/5 p-3">
+                                <p className="text-xs text-gray-500">{complaint.booking.reference} · {shortDate(complaint.createdAt)}</p>
+                                <div className="mt-2 flex flex-wrap gap-1.5">
+                                    {complaint.labels.map((label) => (
+                                        <span key={label} className={`${plainChip} bg-red-500/10 text-red-700`}>{label}</span>
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </section>
 
             {/* Which side of the fleet he drives on. Above suspension so the
                 destructive action stays last on the screen, and separated from the

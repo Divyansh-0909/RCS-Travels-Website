@@ -8,6 +8,10 @@ export type UpcomingBooking = {
   status: string;
   pickupAddress: string;
   dropAddress: string;
+  pickupLat: number;
+  pickupLng: number;
+  dropLat: number;
+  dropLng: number;
   // Null on a ride booked for right now, which is why every caller has an
   // "Immediate pickup" branch rather than a formatted date.
   scheduledAt: string | null;

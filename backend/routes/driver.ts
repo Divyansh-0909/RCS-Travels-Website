@@ -5,9 +5,9 @@ import { getAuth, clerkClient } from '@clerk/express'
 import { protect } from '../middleware/auth.js'
 import { prisma } from '../db/prisma.js'
 import { ACTIVE_STATUSES } from './bookings.js'
-import { ASSIGNABLE_STATUSES, claimBookingForDriver, joinPool } from '../services/driverAssignment.js'
+import { ASSIGNABLE_STATUSES, claimBookingForDriver, joinPool, startAssignment } from '../services/driverAssignment.js'
 import { evaluatePool, POOLABLE_HOST_STATUSES } from '../services/ridePooling.js'
-import { withdrawOtherOffers } from '../services/scheduledOffers.js'
+import { offerScheduledRide, withdrawOtherOffers } from '../services/scheduledOffers.js'
 import { seatsOf } from '../constants/vehicles.js'
 import { commissionOn } from '../services/commission.js'
 import { postWalletEntry } from '../services/wallet.js'
@@ -44,6 +44,8 @@ import {
     DOCUMENT_WARNING_DAYS,
 } from '../services/driverDocuments.js'
 import { addVehicle, removeVehicle, switchActiveVehicle } from '../services/driverVehicles.js'
+import { completionGeofence, locationProblem, PICKUP_RADIUS_KM } from '../services/rideGeofence.js'
+import { applyDriverCancellationConsequences } from '../services/driverCancellations.js'
 import { locationSchema, UploadUrlRequest, ConfirmDocumentsRequest, rideParamsSchema, driverOnlineSchema, driverAccountInformationSchema, addVehicleSchema, activeVehicleSchema, fcmTokenSchema, rideStatusSchema, driverRidesQuerySchema } from '../types.ts'
 
 // The driver-facing API. Nothing calls it yet — the driver app is Phase 5, and until
@@ -1373,14 +1375,15 @@ driverRouter.patch('/rides/:id/cancel', protect, async (req, res) => {
 
     const seats = seatsOf(driver.vehicleClass)
 
-    await prisma.$transaction(async (tx) => {
+    const consequence = await prisma.$transaction(async (tx) => {
         // Guarded on the status it was read at, so two taps — or a tap racing the
         // rider's own cancel — cannot both take effect.
+        const returnedStatus: BookingStatus = booking.scheduledAt ? 'confirmed' : 'pending'
         const { count } = await tx.booking.updateMany({
             where: { id: booking.id, status: booking.status },
-            data: { status: 'confirmed', driverId: null },
+            data: { status: returnedStatus, driverId: null },
         })
-        if (count === 0) return
+        if (count === 0) return null
 
         await tx.rideOffer.updateMany({
             where: { bookingId: booking.id, status: 'pending' },
@@ -1403,9 +1406,22 @@ driverRouter.patch('/rides/:id/cancel', protect, async (req, res) => {
                 })
             }
         }
+        return applyDriverCancellationConsequences(tx, driver.id, {
+            bookingId: booking.id,
+            fromStatus: booking.status,
+        })
     })
 
-    return res.json({ bookingId: booking.id, status: 'confirmed' })
+    if (!consequence) return res.status(409).json({ error: 'Ride changed while cancellation was in flight' })
+
+    // Put the rider back into the correct dispatch lane immediately. Ride Now
+    // searches only `pending`; scheduled offers search `confirmed`. Leaving both
+    // at `confirmed` stranded immediate rides after a captain handed them back.
+    if (booking.scheduledAt) void offerScheduledRide(booking.id).catch((error) =>
+        console.error(`scheduled re-offer failed for ${booking.id}:`, error))
+    else startAssignment(booking.id)
+
+    return res.json({ bookingId: booking.id, status: booking.scheduledAt ? 'confirmed' : 'pending', consequence })
 })
 
 driverRouter.post('/fcm-token', protect, async (req, res) => {
@@ -1642,7 +1658,7 @@ driverRouter.patch('/rides/:id/status', protect, async (req, res) => {
     if (!parsedBody.success) {
         return res.status(400).json({ error: 'Invalid request body', issues: parsedBody.error.issues })
     }
-    const { to, otp, lat, lng } = parsedBody.data
+    const { to, otp, lat, lng, accuracy, capturedAt, mocked, completionOverrideReason } = parsedBody.data
 
     const booking = await prisma.booking.findUnique({
         where: { id },
@@ -1689,9 +1705,46 @@ driverRouter.patch('/rides/:id/status', protect, async (req, res) => {
             : haversineDistance(lat, lng, booking.pickupLat, booking.pickupLng)
     }
 
+    // Arrival and completion change money, waiting liability and vehicle
+    // availability, so a cached or vague position is not evidence enough.
+    if (to === 'reached' || to === 'started' || to === 'completed') {
+        const problem = locationProblem({ lat, lng, accuracy, capturedAt, mocked })
+        if (problem) return res.status(422).json({ error: problem, code: 'LOCATION_REQUIRED' })
+    }
+
+    if ((to === 'reached' || to === 'started') && distanceKm! > PICKUP_RADIUS_KM) {
+        return res.status(409).json({
+            error: `You are ${Math.round(distanceKm! * 1000)} m from the pickup. Move within ${PICKUP_RADIUS_KM * 1000} m to ${to === 'reached' ? 'mark arrival' : 'start the ride'}.`,
+            code: 'PICKUP_GEOFENCE', details: { distanceKm, allowedKm: PICKUP_RADIUS_KM },
+        })
+    }
+
     if (to === 'started') {
         if (!otp || otp !== booking.user.bookingCode) {
             return res.status(403).json({ error: 'Wrong OTP' })
+        }
+    }
+
+    let customerConfirmedCompletion = false
+    if (to === 'completed') {
+        const verdict = completionGeofence(distanceKm!)
+        if (verdict === 'support') {
+            return res.status(409).json({
+                error: `You are ${Math.round(distanceKm! * 1000)} m from the booked drop. Update the destination or contact support to finish this ride.`,
+                code: 'DROP_SUPPORT_REQUIRED', details: { distanceKm },
+            })
+        }
+        if (verdict === 'customer_confirmation') {
+            if (!completionOverrideReason) {
+                return res.status(409).json({
+                    error: 'The customer must confirm this early or alternate drop.',
+                    code: 'DROP_CONFIRMATION_REQUIRED', details: { distanceKm },
+                })
+            }
+            if (!otp || otp !== booking.user.bookingCode) {
+                return res.status(403).json({ error: 'Wrong customer OTP', code: 'DROP_CONFIRMATION_OTP' })
+            }
+            customerConfirmedCompletion = true
         }
     }
 
@@ -1710,9 +1763,13 @@ driverRouter.patch('/rides/:id/status', protect, async (req, res) => {
     let settlementCommissionAmt = booking.commissionAmt
     const data: Record<string, unknown> =
         to === 'en_route' ? { status: to } :
-            to === 'reached' ? { status: to, reachedAt: now, reachedDistanceKm: distanceKm } :
+            to === 'reached' ? { status: to, reachedAt: now, reachedDistanceKm: distanceKm,
+                reachedAccuracyM: accuracy, reachedLocationAt: new Date(capturedAt!) } :
                 to === 'started' ? { status: to, startedAt: now } :
-                    { status: to, completedAt: now, completedDistanceKm: distanceKm }
+                    { status: to, completedAt: now, completedDistanceKm: distanceKm,
+                        completedAccuracyM: accuracy, completedLocationAt: new Date(capturedAt!),
+                        completionOverrideReason: completionOverrideReason ?? null,
+                        completionCustomerConfirmed: customerConfirmedCompletion }
 
     // THE UNMATCHED-SHARE FARE SWITCH.
     //
@@ -1805,14 +1862,16 @@ driverRouter.patch('/rides/:id/status', protect, async (req, res) => {
                 note: 'Full coupon reimbursement' })
 
             const liveDriver = await tx.driver.findUniqueOrThrow({ where: { id: driver.id },
-                select: { commissionFreeRidesRemaining: true } })
+                select: { commissionFreeRidesRemaining: true, cancellationBenefitRestrictedUntil: true } })
             const reward = commissionWithReward(settlementCommissionAmt, liveDriver.commissionFreeRidesRemaining)
             if (reward.consumeReward) {
                 await tx.driver.update({ where: { id: driver.id }, data: { commissionFreeRidesRemaining: { decrement: 1 } } })
                 await tx.booking.update({ where: { id: booking.id }, data: { commissionAmt: 0, commissionPct: 0 } })
             }
             const completed = await tx.booking.count({ where: { driverId: driver.id, status: 'completed' } })
-            const earned = loyaltyRewardsEarned(completed - 1, completed)
+            const benefitsRestricted = Boolean(liveDriver.cancellationBenefitRestrictedUntil &&
+                liveDriver.cancellationBenefitRestrictedUntil > now)
+            const earned = benefitsRestricted ? 0 : loyaltyRewardsEarned(completed - 1, completed)
             if (earned) await tx.driver.update({ where: { id: driver.id },
                 data: { commissionFreeRidesRemaining: { increment: earned } } })
 

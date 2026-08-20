@@ -3,7 +3,7 @@ import { cssInterop } from 'nativewind';
 import { XIcon } from 'phosphor-react-native';
 import Animated, { FadeIn, SlideInDown } from 'react-native-reanimated';
 import AppText from './AppText';
-import { INK_TEXT, MUTED, SURFACE } from './ui/rideUi';
+import { INK_TEXT, MUTED, PAGE, SURFACE } from './ui/rideUi';
 import { rupees, splitAddress } from '../constants/booking';
 import type { UpcomingBooking } from '../types/enums';
 
@@ -62,7 +62,7 @@ export const RideCancelled = ({
                         hitSlop={12}
                         style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}
                     >
-                        <View className="w-9 h-9 items-center justify-center rounded-full" style={{ backgroundColor: '#f3f3f3' }}>
+                        <View className="w-9 h-9 items-center justify-center rounded-full" style={{ backgroundColor: PAGE }}>
                             <Cross size={20} weight="bold" className={INK_TEXT} />
                         </View>
                     </Pressable>
@@ -72,15 +72,15 @@ export const RideCancelled = ({
                     no charge at all, and printing "₹0" invites him to wonder what
                     he did wrong. */}
                 {charge > 0 ? (
-                    <View className="rounded-2xl px-4 py-3 gap-0.5" style={{ backgroundColor: '#f3f3f3' }}>
+                    <View className="rounded-2xl px-4 py-3 gap-0.5" style={{ backgroundColor: PAGE }}>
                         <AppText className={`text-xs font-semibold uppercase tracking-wide ${MUTED}`}>
-                            Cancellation charge
+                            Your compensation
                         </AppText>
                         <AppText className={`text-2xl font-bold ${INK_TEXT}`} style={{ letterSpacing: -0.5 }}>
                             {rupees(charge)}
                         </AppText>
                         <AppText className={`text-xs ${MUTED}`}>
-                            Charged because you had already reached the pickup.
+                            Credited from the rider&apos;s advance because this was a late cancellation.
                         </AppText>
                     </View>
                 ) : (

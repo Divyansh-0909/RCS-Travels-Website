@@ -195,6 +195,7 @@ model User {
   overchargeFlags OverchargeFlag[]
   coupons         Coupon[]
   payments        Payment[]
+  complaints      RideComplaint[]
 
   // Admin user list sorts by createdAt desc; its filters (name/phone/gender)
   // are all `contains`, which no btree can serve anyway.
@@ -303,6 +304,7 @@ model Driver {
   // Waives the 5% and nothing else: never a marketplace fee (block 7), never a
   // complaint fine, never the marketplace cancellation fee.
   commissionFreeRidesRemaining Int @default(0) @map("commission_free_rides_remaining")
+  cancellationBenefitRestrictedUntil DateTime? @map("cancellation_benefit_restricted_until")
 
   // WHOSE TURN IT IS. Dispatch used to rank candidates on distance alone, which
   // at low volume is not a tiebreak at all: the fleet parks in a handful of fixed
@@ -335,6 +337,8 @@ model Driver {
   overchargeFlags OverchargeFlag[]
   walletEntries   WalletEntry[]
   offers          RideOffer[]
+  cancellations   DriverCancellation[]
+  complaints      RideComplaint[]
   vehicles        Vehicle[]              @relation("DriverVehicles")
   // SetNull rather than Cascade: deleting a car must not delete its owner. The
   // captain is left with no active car, which every route already treats as
@@ -487,6 +491,36 @@ model WalletEntry {
   @@index([driverId, createdAt])
   @@index([bookingId])
   @@map("wallet_entries")
+}
+
+model DriverCancellation {
+  id         String   @id @default(uuid())
+  driverId   String   @map("driver_id")
+  bookingId  String   @map("booking_id")
+  fromStatus String   @map("from_status")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  driver  Driver  @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([driverId, createdAt])
+  @@map("driver_cancellations")
+}
+
+model RideComplaint {
+  id        String   @id @default(uuid())
+  bookingId String   @unique @map("booking_id")
+  driverId  String   @map("driver_id")
+  userId    String   @map("user_id")
+  reasons   String[]
+  createdAt DateTime @default(now()) @map("created_at")
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  driver  Driver  @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([driverId, createdAt])
+  @@map("ride_complaints")
 }
 
 // External gateway attempts only. Driver accounting remains in WalletEntry.
@@ -965,9 +999,15 @@ model Booking {
   // a trip that has not happened. Null also covers a transition sent with no position,
   // which is the normal case when the OEM has killed the location service.
   reachedDistanceKm   Float?        @map("reached_distance_km")
+  reachedAccuracyM    Float?        @map("reached_accuracy_m")
+  reachedLocationAt  DateTime?     @map("reached_location_at")
   createdAt           DateTime      @default(now()) @map("created_at")
   completedAt         DateTime?     @map("completed_at")
   completedDistanceKm Float?        @map("completed_distance_km")
+  completedAccuracyM  Float?        @map("completed_accuracy_m")
+  completedLocationAt DateTime?     @map("completed_location_at")
+  completionOverrideReason String?  @map("completion_override_reason")
+  completionCustomerConfirmed Boolean @default(false) @map("completion_customer_confirmed")
   confirmedAt         DateTime?     @map("confirmed_at")
   cancelledBy         CancelledBy?  @map("cancelled_by")
   cancellationCharge  Float?        @map("cancellation_charge")
@@ -1014,6 +1054,8 @@ model Booking {
   coupon         Coupon?
   payments       Payment[]
   offers         RideOffer[]
+  driverCancellations DriverCancellation[]
+  complaint      RideComplaint?
 
   // Postgres does not index foreign keys automatically, and every index below is
   // driven by a real call site rather than by guesswork.

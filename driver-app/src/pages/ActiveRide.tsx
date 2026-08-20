@@ -10,7 +10,7 @@ import { OtpEntry } from '../components/OtpEntry';
 import { BottomSheet } from '../components/ui/BottomSheet';
 import MapSlot from '../components/ui/MapSlot';
 import { SlideAction } from '../components/ui/SlideAction';
-import { INK_TEXT, MUTED, RouteLeg } from '../components/ui/rideUi';
+import { INK_TEXT, MUTED, RouteLeg, SURFACE } from '../components/ui/rideUi';
 import { useData } from '../hooks/useData';
 
 import { useApi } from '../hooks/useApi';
@@ -52,6 +52,29 @@ const BOTTOM_SAFE = 24;
 // have been cut through the middle, which is worse than not showing it.
 const PEEK = 172;
 
+const DROP_OVERRIDE_REASONS = [
+    { value: 'customer_requested_early_drop', label: 'Customer requested an earlier drop' },
+    { value: 'drop_inaccessible', label: 'Booked drop is inaccessible' },
+    { value: 'road_or_security_restriction', label: 'Road or security restriction' },
+    { value: 'incorrect_drop_pin', label: 'Drop pin is incorrect' },
+] as const;
+
+const PICKUP_RADIUS_KM = 0.5;
+const DROP_SUPPORT_RADIUS_KM = 2;
+const MAX_FIX_ACCURACY_M = 100;
+const MAX_FIX_AGE_MS = 30_000;
+
+const distanceKmBetween = (from: { latitude: number; longitude: number }, to: { lat: number; lng: number }) => {
+    const rad = (degrees: number) => degrees * Math.PI / 180;
+    const dLat = rad(to.lat - from.latitude);
+    const dLng = rad(to.lng - from.longitude);
+    const a = Math.sin(dLat / 2) ** 2
+        + Math.cos(rad(from.latitude)) * Math.cos(rad(to.lat)) * Math.sin(dLng / 2) ** 2;
+    return 6371 * 2 * Math.asin(Math.sqrt(a));
+};
+
+const distanceLabel = (km: number) => km < 1 ? `${Math.round(km * 1000)} m away` : `${km.toFixed(1)} km away`;
+
 const ActiveRide = ({ ride, onChanged }: { ride: UpcomingBooking; onChanged: () => void }) => {
     const navigate = useNavigate()
     const api = useApi();
@@ -65,6 +88,44 @@ const ActiveRide = ({ ride, onChanged }: { ride: UpcomingBooking; onChanged: () 
     // cannot get out of while he waits is a screen he will come to resent. The
     // slider on the sheet brings it back.
     const [otpOpen, setOtpOpen] = useState(false);
+    const [dropOverrideOpen, setDropOverrideOpen] = useState(false);
+    const [dropOverrideReason, setDropOverrideReason] = useState<string | null>(null);
+    const [dropOtpOpen, setDropOtpOpen] = useState(false);
+    const [liveFix, setLiveFix] = useState<Location.LocationObject | null>(null);
+    const [locationIssue, setLocationIssue] = useState<string | null>(null);
+    const [locationClock, setLocationClock] = useState(() => Date.now());
+
+    useEffect(() => {
+        const timer = setInterval(() => setLocationClock(Date.now()), 5_000);
+        return () => clearInterval(timer);
+    }, []);
+
+    // Keep the action state in step with the car rather than waiting for a
+    // rejected swipe. The server repeats every check, so this is guidance and
+    // immediate feedback—not the authority for changing ride state.
+    useEffect(() => {
+        let subscription: Location.LocationSubscription | null = null;
+        let stopped = false;
+        const watch = async () => {
+            const permission = await Location.getForegroundPermissionsAsync().catch(() => null);
+            if (!permission?.granted) {
+                if (!stopped) setLocationIssue('Enable location to continue');
+                return;
+            }
+            if (stopped) return;
+            const initial = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High }).catch(() => null);
+            if (initial && !stopped) { setLiveFix(initial); setLocationIssue(null); }
+            else if (!stopped) setLocationIssue('Waiting for an accurate GPS fix…');
+            if (stopped) return;
+            subscription = await Location.watchPositionAsync({
+                accuracy: Location.Accuracy.High,
+                timeInterval: 5_000,
+                distanceInterval: 10,
+            }, (fix) => { setLiveFix(fix); setLocationIssue(null); }).catch(() => null);
+        };
+        watch();
+        return () => { stopped = true; subscription?.remove(); };
+    }, []);
     useEffect(() => {
         if (ride.status === 'reached') {
             setOtpOpen(true);
@@ -81,6 +142,25 @@ const ActiveRide = ({ ride, onChanged }: { ride: UpcomingBooking; onChanged: () 
     // bookingCode; the server compares it and refuses with 403 rather than
     // telling the app what it should have been.
     const needsOtp = ride.status === 'reached';
+
+    const geofenceAction = (() => {
+        if (!step || !['reached', 'started', 'completed'].includes(step.to)) return { disabled: false, hint: undefined };
+        if (!liveFix) return { disabled: true, hint: locationIssue ?? 'Waiting for GPS…' };
+        if ((liveFix.coords.accuracy ?? Infinity) > MAX_FIX_ACCURACY_M)
+            return { disabled: true, hint: 'Move into the open for better GPS' };
+        if (locationClock - liveFix.timestamp > MAX_FIX_AGE_MS)
+            return { disabled: true, hint: 'Refreshing your location…' };
+
+        const target = step.to === 'completed'
+            ? { lat: ride.dropLat, lng: ride.dropLng }
+            : { lat: ride.pickupLat, lng: ride.pickupLng };
+        const distance = distanceKmBetween(liveFix.coords, target);
+        if (step.to !== 'completed' && distance > PICKUP_RADIUS_KM)
+            return { disabled: true, hint: `Get within 500 m · ${distanceLabel(distance)}` };
+        if (step.to === 'completed' && distance > DROP_SUPPORT_RADIUS_KM)
+            return { disabled: true, hint: `Too far from drop · ${distanceLabel(distance)}` };
+        return { disabled: false, hint: undefined };
+    })();
 
     // Mirrors DRIVER_CANCELLABLE_STATUSES on the server. Both `assigned` and
     // `en_route` count, so a scheduled ride he has taken but not set off for can
@@ -112,26 +192,34 @@ const ActiveRide = ({ ride, onChanged }: { ride: UpcomingBooking; onChanged: () 
 
     const place = ride ? splitAddress(ride.pickupAddress) : null;
 
-    const advance = async (otp?: string) => {
+    const advance = async (otp?: string, overrideReason?: string) => {
         if (!step) return;
         setError(null);
 
         // Sent when there is one to send. The server measures it against the
         // pickup or the drop and stores the distance — the record of whether he
-        // was actually there when he said so. A captain with no fix yet still
-        // gets to move his ride along; this is evidence, not a gate.
-        const fix = await Location.getLastKnownPositionAsync().catch(() => null);
+        // was actually there when he said so. The server requires this evidence
+        // for arrival, start and completion and rejects missing or mocked fixes.
+        const fix = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High }).catch(() => null);
         const where = fix
-            ? { lat: fix.coords.latitude, lng: fix.coords.longitude }
+            ? {
+                lat: fix.coords.latitude,
+                lng: fix.coords.longitude,
+                accuracy: fix.coords.accuracy ?? 10_000,
+                capturedAt: Math.round(fix.timestamp),
+                mocked: Boolean((fix as Location.LocationObject & { mocked?: boolean }).mocked),
+            }
             : {};
 
         const result = await api.setRideStatus(ride.id, step.to, {
             ...where,
             ...(otp ? { otp } : {}),
+            ...(overrideReason ? { completionOverrideReason: overrideReason } : {}),
         });
 
         if (result?.error) {
             setError(result.error);
+            if (result.code === 'DROP_CONFIRMATION_REQUIRED') setDropOverrideOpen(true);
             return;
         }
 
@@ -139,6 +227,9 @@ const ActiveRide = ({ ride, onChanged }: { ride: UpcomingBooking; onChanged: () 
         // screen has to stay up with the message on it, not close as though it
         // had worked.
         setOtpOpen(false);
+        setDropOtpOpen(false);
+        setDropOverrideOpen(false);
+        setDropOverrideReason(null);
         // The ride list drives this screen; the profile drives whether the shell
         // is hidden and how often the GPS reports. Finishing a ride has to move
         // both, or he is left on a stripped-down screen with no ride on it.
@@ -244,6 +335,8 @@ const ActiveRide = ({ ride, onChanged }: { ride: UpcomingBooking; onChanged: () 
                             // sending anything — the code is collected there and the
                             // slide that starts the ride lives on it.
                             onConfirm={needsOtp ? () => setOtpOpen(true) : () => advance()}
+                            disabled={geofenceAction.disabled}
+                            disabledHint={geofenceAction.hint}
                         />
                     ) : null}
 
@@ -256,6 +349,56 @@ const ActiveRide = ({ ride, onChanged }: { ride: UpcomingBooking; onChanged: () 
                     error={error}
                     onSubmit={(code) => {advance(code);}}
                     onClose={() => { setError(null); setOtpOpen(false);}}
+                />
+            ) : null}
+
+            {dropOverrideOpen ? (
+                <View
+                    style={{ position: 'absolute', inset: 0, zIndex: 94, backgroundColor: 'rgba(0,0,0,0.45)' }}
+                    className="justify-end"
+                >
+                    <View className="rounded-t-3xl px-5 pt-5 pb-8 gap-3" style={{ backgroundColor: SURFACE }}>
+                        <AppText className={`text-xl font-bold ${INK_TEXT}`}>Confirm a different drop</AppText>
+                        <AppText className={`text-sm ${MUTED}`}>
+                            You are outside the normal drop area. Choose the reason, then ask the rider for their OTP.
+                        </AppText>
+                        {DROP_OVERRIDE_REASONS.map((reason) => (
+                            <Pressable
+                                key={reason.value}
+                                role="button"
+                                onPress={() => {
+                                    setError(null);
+                                    setDropOverrideReason(reason.value);
+                                    setDropOverrideOpen(false);
+                                    setDropOtpOpen(true);
+                                }}
+                                style={({ pressed }) => ({ opacity: pressed ? 0.65 : 1 })}
+                            >
+                                <View className="rounded-2xl bg-[var(--foreground-muted)] px-4 py-3">
+                                    <AppText className={`text-base font-semibold ${INK_TEXT}`}>{reason.label}</AppText>
+                                </View>
+                            </Pressable>
+                        ))}
+                        <Pressable
+                            role="button"
+                            onPress={() => { setDropOverrideOpen(false); setError(null); }}
+                            className="items-center py-3"
+                        >
+                            <AppText className={`text-base font-semibold ${INK_TEXT}`}>Back</AppText>
+                        </Pressable>
+                    </View>
+                </View>
+            ) : null}
+
+            {dropOtpOpen && dropOverrideReason ? (
+                <OtpEntry
+                    riderName={ride.user?.name ?? null}
+                    error={error}
+                    title="Confirm this drop"
+                    description="Ask the rider for their 4-digit code to confirm finishing away from the booked drop."
+                    submitLabel="Confirm and finish ride"
+                    onSubmit={(code) => advance(code, dropOverrideReason)}
+                    onClose={() => { setError(null); setDropOtpOpen(false); setDropOverrideReason(null); }}
                 />
             ) : null}
         </View>

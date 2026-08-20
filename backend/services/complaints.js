@@ -4,7 +4,7 @@ export const COMPLAINT_FINE_THRESHOLD = 3
 export const COMPLAINT_SUSPEND_THRESHOLD = 5
 export const COMPLAINT_FINE_AMOUNT = 200
 export async function applyComplaintConsequences(tx, driverId, { newComplaint = true } = {}) {
-  const complaints = await tx.overchargeFlag.count({ where: { driverId } })
+  const complaints = await tx.rideComplaint.count({ where: { driverId } })
   if (complaints >= COMPLAINT_FINE_THRESHOLD) await postWalletEntry(tx, {
     driverId, amount: -COMPLAINT_FINE_AMOUNT, type: 'fine', eventKey: walletEvent.fine(driverId, 3), note: 'Fine at 3 complaints',
   })

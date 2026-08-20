@@ -20,6 +20,7 @@ import SixSeaterCar from "../assets/6-seater-bottom-left.webp"
 import { vehicleLabel, statusChip, splitAddress, displayPhone, formatDateTime, CopyBtn } from "../components/ui/bookingDisplay";
 import { VEHICLE_CLASS_NAMES, seatsOf } from "../constants/vehicles";
 import Chips, { filterLabel, filterField } from "../components/ui/Chips";
+import { COMPLAINT_OPTIONS } from "../constants/complaints";
 
 const genderOptions = ["Male", "Female", "Others", "Rather not say"]
 
@@ -27,6 +28,7 @@ const RIDE_TAB = "Ride History"
 const items = ["Account info", RIDE_TAB, "Privacy & Data"]
 
 const rideStatuses = ["pending", "confirmed", "assigned", "en_route", "reached", "started", "completed", "cancelled"]
+const customerCancellableStatuses = new Set(["pending", "payment_pending", "confirmed", "assigned", "en_route", "reached"])
 // One filter chip per car.
 const vehicleOptions = VEHICLE_CLASS_NAMES.map(cls => ({ value: cls, label: vehicleLabel(cls) }))
 const rideFilterSections = ["Status", "Vehicle type", "Dates"]
@@ -78,6 +80,11 @@ const ManageAccount = () => {
     const [rideFilterExpand, setRideFilterExpand] = useState(false)
     const [rideFilterSection, setRideFilterSection] = useState(0)
     const [rideLoading, setRideLoading] = useState(false)
+    const [cancelConfirmation, setCancelConfirmation] = useState(null)
+    const [complaintRide, setComplaintRide] = useState(null)
+    const [complaintReasons, setComplaintReasons] = useState([])
+    const [complaintBusy, setComplaintBusy] = useState(false)
+    const [complaintError, setComplaintError] = useState(null)
     // Whether the ride list is scrolled off its top — drives the top fade,
     // which must stay invisible while the first card is still in place.
     const [rideScrolled, setRideScrolled] = useState(false)
@@ -94,7 +101,32 @@ const ManageAccount = () => {
     const clearRefreshNotice = useRefreshNotice(state => state.clearRefreshNotice)
     // Guards the profile refresh (and its retry) against landing after unmount.
     const mountedRef = useRef(true)
-    const { getMe, updateGender: updateGenderApi, updateEmergencyContact: updateEmergencyContactApi, updateDOB: updateDOBApi, deleteMe, logout, downloadMyData, getMyBookings, cancelBooking } = useApi()
+    const { getMe, updateGender: updateGenderApi, updateEmergencyContact: updateEmergencyContactApi, updateDOB: updateDOBApi, deleteMe, logout, downloadMyData, getMyBookings, cancelBooking, submitRideComplaint } = useApi()
+
+    const openComplaint = (booking) => {
+        setComplaintRide(booking.id)
+        setComplaintReasons(booking.complaint?.reasons ?? [])
+        setComplaintError(null)
+    }
+
+    const toggleComplaintReason = (reason) => {
+        setComplaintReasons((current) => current.includes(reason)
+            ? current.filter((item) => item !== reason)
+            : [...current, reason])
+    }
+
+    const saveComplaint = async (bookingId) => {
+        if (!complaintReasons.length || complaintBusy) return
+        setComplaintBusy(true)
+        setComplaintError(null)
+        const result = await submitRideComplaint(bookingId, complaintReasons)
+        setComplaintBusy(false)
+        if (result?.error) { setComplaintError(result.error); return }
+        setBookings((current) => current?.map((booking) => booking.id === bookingId
+            ? { ...booking, complaint: { reasons: complaintReasons } }
+            : booking))
+        setComplaintRide(null)
+    }
 
     // Clear any tab restore left over from the post-cancel reload.
     useEffect(() => { sessionStorage.removeItem("manageAccountTab") }, [])
@@ -226,21 +258,44 @@ const ManageAccount = () => {
         setTimeout(() => setCopied(false), 2000);
     };
 
-    async function handleCancel(id) {
+    const quotedCancellationCharge = (booking) => {
+        if (!booking?.scheduledAt || !booking.driverId || !booking.scheduledAdvancePaidAmount) return 0
+        const insideLateWindow = booking.status === "reached" || Date.parse(booking.scheduledAt) - Date.now() <= 30 * 60 * 1000
+        return insideLateWindow ? booking.scheduledAdvancePaidAmount / 100 : 0
+    }
+
+    async function handleCancel(booking) {
+        const id = booking?.id
         if (!id) return;
+
+        const quotedCharge = quotedCancellationCharge(booking)
+        if (cancelConfirmation?.id !== id || cancelConfirmation.charge !== quotedCharge) {
+            setCancelConfirmation({ id, charge: quotedCharge })
+            setRideError(null)
+            return
+        }
 
         try {
             setRideError(null);
 
-            const data = await cancelBooking(id);
+            const data = await cancelBooking(id, quotedCharge);
 
             if (data?.error) {
+                if (data.code === "CANCELLATION_AMOUNT_CHANGED") {
+                    setCancelConfirmation({ id, charge: data.cancellationCharge ?? 0 })
+                    setRideError(data.error)
+                    return
+                }
                 setRideError("Can't cancel ride");
                 return;
             }
             if (data.ok) {
                 if (bookingId === id) setBookingId(null);
-                sessionStorage.setItem("rideCancelled", "1");
+                sessionStorage.setItem("rideCancelled", JSON.stringify({
+                    cancellationCharge: data.cancellationCharge ?? 0,
+                    advanceDisposition: data.advanceDisposition ?? null,
+                    refundStatus: data.refund?.status ?? null,
+                }));
                 // Come back to this tab after the reload the toast relies on.
                 sessionStorage.setItem("manageAccountTab", RIDE_TAB);
                 window.location.reload();
@@ -799,10 +854,61 @@ const ManageAccount = () => {
                                                 </div>
 
                                                 <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
-                                                    {upcoming && booking.status !== "cancelled" &&
-                                                        <Button onClick={() => handleCancel(booking.id)} prop={{ variant: "negative", width: "200px" }}>Cancel ride</Button>}
+                                                    {upcoming && customerCancellableStatuses.has(booking.status) &&
+                                                        <Button onClick={() => handleCancel(booking)} prop={{ variant: "negative", width: "200px" }}>
+                                                            {cancelConfirmation?.id === booking.id
+                                                                ? cancelConfirmation.charge > 0
+                                                                    ? `Yes, cancel and pay ₹${cancelConfirmation.charge}`
+                                                                    : "Yes, cancel this ride"
+                                                                : "Cancel ride"}
+                                                        </Button>}
+                                                    {["completed", "cancelled"].includes(booking.status) && booking.driver && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => complaintRide === booking.id ? setComplaintRide(null) : openComplaint(booking)}
+                                                            className="rounded-full border border-[var(--background-primary)]/25 px-4 py-2 text-sm font-semibold text-[var(--background-primary)] hover:bg-[var(--background-primary)]/5 transition-colors"
+                                                        >
+                                                            {booking.complaint ? "Update complaint" : "Report driver"}
+                                                        </button>
+                                                    )}
                                                     <p>Need help? <u className="text-[var(--background-primary)] cursor-pointer transition-color duration-300 hover:text-[var(--background-primary)]/80">Talk to us</u></p>
                                                 </div>
+                                                {complaintRide === booking.id && (
+                                                    <div className="rounded-2xl border border-[var(--background-primary)]/10 bg-[var(--foreground)]/60 p-4">
+                                                        <h4 className="font-semibold text-[var(--background-primary)]">What happened?</h4>
+                                                        <p className="mt-0.5 text-sm text-gray-500">Choose every option that applies. No written feedback is needed.</p>
+                                                        <div className="mt-3 flex flex-wrap gap-2">
+                                                            {COMPLAINT_OPTIONS.map((option) => {
+                                                                const selected = complaintReasons.includes(option.value)
+                                                                return (
+                                                                    <button
+                                                                        type="button"
+                                                                        key={option.value}
+                                                                        aria-pressed={selected}
+                                                                        onClick={() => toggleComplaintReason(option.value)}
+                                                                        className={`${selected ? "bg-primary text-[var(--foreground)] border-primary" : "bg-[var(--foreground)] text-[var(--background-primary)] border-[var(--background-primary)]/20 hover:bg-[var(--background-primary)]/5"} rounded-full border px-3 py-2 text-sm font-medium transition-colors duration-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary`}
+                                                                    >
+                                                                        {option.label}
+                                                                    </button>
+                                                                )
+                                                            })}
+                                                        </div>
+                                                        {complaintError && <p className="mt-2 text-sm text-red-600">{complaintError}</p>}
+                                                        <div className="mt-4 flex gap-2">
+                                                            <button
+                                                                type="button"
+                                                                disabled={!complaintReasons.length || complaintBusy}
+                                                                onClick={() => saveComplaint(booking.id)}
+                                                                className="rounded-full bg-primary px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition-opacity duration-300 hover:opacity-[0.9] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-40"
+                                                            >
+                                                                {complaintBusy ? "Saving…" : "Submit complaint"}
+                                                            </button>
+                                                            <button type="button" onClick={() => setComplaintRide(null)} className="rounded-full px-4 py-2 text-sm font-semibold text-[var(--background-primary)]/60 transition-colors duration-300 hover:bg-[var(--background-primary)]/5 hover:text-[var(--background-primary)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
+                                                                Cancel
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                )}
                                                 </div>
                                             </div>
                                         </div>

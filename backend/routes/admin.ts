@@ -25,6 +25,8 @@ import {
 import { signedDocumentUrl } from '../services/documentScan.js'
 import { promoteReplacement, recomputeAfterDocumentChange } from '../services/driverDocuments.js'
 import { withdrawOffersForDriver } from '../services/scheduledOffers.js'
+import { cancellationWindowStart } from '../services/driverCancellations.js'
+import { COMPLAINT_REASON_LABELS } from '../constants/complaints.js'
 
 // Three list endpoints, the fare-zone editor, document review, suspension, and
 // the move between the RCS fleet and the partner pool.
@@ -360,6 +362,7 @@ adminRouter.get('/drivers/:id/documents', protect, protectAdmin, async (req, res
             // paperwork is still in order — so without these the review screen
             // would show a fully approved captain and no hint that he is stopped.
             suspendedAt: true, suspensionReason: true,
+            cancellationBenefitRestrictedUntil: true,
         },
     })
     if (!driver) return res.status(404).json({ error: 'Driver not found' })
@@ -426,6 +429,21 @@ adminRouter.get('/drivers/:id/documents', protect, protectAdmin, async (req, res
         take: 50,
     })
 
+    const [complaints, cancellationCount] = await Promise.all([
+        prisma.rideComplaint.findMany({
+            where: { driverId: driver.id },
+            orderBy: { createdAt: 'desc' },
+            take: 20,
+            select: {
+                id: true, reasons: true, createdAt: true,
+                booking: { select: { reference: true } },
+            },
+        }),
+        prisma.driverCancellation.count({
+            where: { driverId: driver.id, createdAt: { gte: cancellationWindowStart() } },
+        }),
+    ])
+
     const hasCurrent = (type: string, vehicleId: string | null) =>
         documents.some((d) => d.type === type && !d.isReplacement && d.vehicleId === vehicleId)
 
@@ -451,6 +469,15 @@ adminRouter.get('/drivers/:id/documents', protect, protectAdmin, async (req, res
         })),
         documents: withUrls,
         history,
+        conduct: {
+            cancellationCount30Days: cancellationCount,
+            benefitRestrictedUntil: driver.cancellationBenefitRestrictedUntil,
+            complaints: complaints.map((complaint) => ({
+                ...complaint,
+                labels: complaint.reasons.map((reason) =>
+                    (COMPLAINT_REASON_LABELS as Record<string, string>)[reason] ?? reason),
+            })),
+        },
         // The man's own two. The per-car lists live on `vehicles` above — a single
         // flat `missing` cannot mean anything for a captain with two cars, since
         // the same type is simultaneously present on one and absent on the other.

@@ -23,11 +23,17 @@ export const OtpEntry = ({
     error,
     onSubmit,
     onClose,
+    title = 'Enter OTP',
+    description,
+    submitLabel = 'Start ride',
 }: {
     riderName: string | null;
     error: string | null;
     onSubmit: (otp: string) => void | Promise<void>;
     onClose: () => void;
+    title?: string;
+    description?: string;
+    submitLabel?: string;
 }) => {
     const [otp, setOtp] = useState('');
     const [focusedBox, setFocusedBox] = useState(-1);
@@ -153,14 +159,13 @@ export const OtpEntry = ({
                     className={`text-3xl text-center font-semibold mt-6 ${INK_TEXT}`}
                     style={{ letterSpacing: -0.8 }}
                 >
-                    Enter OTP
+                    {title}
                 </AppText>
 
                 <AppText
                     className={`text-base text-center mt-1 ${MUTED}`}
                 >
-                    Ask {'the rider'} for the {OTP_LENGTH}-digit code on their
-                    screen.
+                    {description ?? `Ask the rider for the ${OTP_LENGTH}-digit code on their screen.`}
                 </AppText>
 
                 {/*
@@ -251,7 +256,7 @@ export const OtpEntry = ({
                                 }`}
                         >
                             <AppText className="text-base font-semibold text-[var(--foreground)]">
-                                Start ride
+                                {submitLabel}
                             </AppText>
                         </View>
                     </Pressable>

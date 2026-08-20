@@ -2,6 +2,8 @@ import {z} from 'zod';
 import { isDriverDocumentType } from './constants/driverDocuments.js';
 import {BookingStatus, BookingSource, CancelledBy, VerificationStatus, VehicleClass, DriverDocumentType,DriverGroup } from '@prisma/client';
 import type { Booking, Driver, User } from '@prisma/client';
+import { COMPLETION_OVERRIDE_REASONS } from './services/rideGeofence.js';
+import { COMPLAINT_REASONS } from './constants/complaints.js';
 
 // One car, as the app describes it. Shared by signup — which creates the driver
 // and his first car in one call — and by "add another car" later, because they
@@ -253,6 +255,19 @@ const rideStatusSchema = z.object({
   otp: z.string().trim().optional(),
   lat: z.number().min(-90).max(90).optional(),
   lng: z.number().min(-180).max(180).optional(),
+  accuracy: z.number().nonnegative().max(10_000).optional(),
+  // Expo supplies milliseconds since epoch on every LocationObject. It lets the
+  // server distinguish a live fix from an old cached position.
+  capturedAt: z.number().int().positive().optional(),
+  // Android exposes whether the provider marked this fix as mocked. It is not a
+  // complete device-integrity system, but a known mock must never authorize a
+  // money-changing arrival or completion transition.
+  mocked: z.boolean().optional(),
+  completionOverrideReason: z.enum(COMPLETION_OVERRIDE_REASONS).optional(),
+});
+
+const rideComplaintSchema = z.object({
+  reasons: z.array(z.enum(COMPLAINT_REASONS)).min(1).max(COMPLAINT_REASONS.length),
 });
 
 const userListQuerySchema = z.object({
@@ -306,3 +321,4 @@ export {locationSchema, bookingListQuerySchema,driverListQuerySchema,myBookingsQ
 export {reviewDocumentSchema, suspendDriverSchema, driverGroupSchema}
 export {rideParamsSchema, driverOnlineSchema, fcmTokenSchema, rideStatusSchema, driverRidesQuerySchema, driverAccountInformationSchema, UploadUrlRequest, ConfirmDocumentsRequest}
 export {addVehicleSchema, activeVehicleSchema}
+export {rideComplaintSchema}

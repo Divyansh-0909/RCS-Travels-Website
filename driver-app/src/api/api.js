@@ -79,7 +79,7 @@ async function request(path, { method = "GET", body, getToken } = {}) {
 
     if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        return { error: data.error || `Server error (${res.status})`, status: res.status, code: data.code };
+        return { error: data.error || `Server error (${res.status})`, status: res.status, code: data.code, details: data.details };
     }
 
     return res.json();
@@ -169,12 +169,13 @@ export const getRide           = (id, getToken)          => request(`/api/driver
 //
 // `otp` is the rider's booking code and is required to reach `started`; the
 // server compares it and refuses with 403 on a mismatch. `lat`/`lng` are
-// optional and worth sending: the server stores the distance between the fix
+// required for arrival/start/completion: the server stores the distance between the fix
 // and the pickup or drop it belongs to, which is the record of whether a
 // captain really was where he said he was when he tapped.
 export const setRideStatus     = (id, to, extra, getToken)  => request(`/api/driver/rides/${encodeURIComponent(id)}/status`, { method: "PATCH", body: { to, ...extra }, getToken });
 // Hands a ride back before it has begun — assigned or en_route only. The server
-// puts the booking back to `confirmed` for dispatch to re-offer, and refuses
+// puts scheduled work back to `confirmed` and Ride Now back to `pending`, then
+// immediately restarts the matching dispatcher. It refuses
 // once he has marked himself arrived, when a rider is already waiting on him.
 export const cancelRide        = (id, getToken)          => request(`/api/driver/rides/${encodeURIComponent(id)}/cancel`, { method: "PATCH", getToken });
 

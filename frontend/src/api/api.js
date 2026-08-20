@@ -19,7 +19,7 @@ async function request(path, { method = "GET", body, getToken } = {}) {
         // status lets callers react to specific codes (429 = OTP cooldown); code
         // is the server's own machine-readable tag where it sets one (FARE_QUOTE),
         // for the cases where reacting means more than showing the message.
-        return { error: data.error || `Server error (${res.status})`, status: res.status, code: data.code };
+        return { ...data, error: data.error || `Server error (${res.status})`, status: res.status, code: data.code };
     }
 
     return res.json();
@@ -29,7 +29,8 @@ export const getMe             = (getToken)              => request("/api/users/
 export const createMe          = (name, getToken)        => request("/api/users/me", { method: "POST", body: { name }, getToken });
 export const estimateFare      = (pickupAddress, dropAddress, vehicleClass, pickupCoords, dropCoords, preferSafeRoute, needsCarrier, getToken) => request("/api/fare/estimate", { method: "POST", body: { pickupAddress, dropAddress, vehicleClass, pickupCoords, dropCoords, preferSafeRoute, needsCarrier }, getToken });
 export const createBooking     = (data, getToken)        => request("/api/bookings", { method: "POST", body: data, getToken });
-export const cancelBooking     = (bookingId, getToken)   => request("/api/bookings/cancel", { method: "POST", body: { bookingId }, getToken});
+export const cancelBooking     = (bookingId, expectedCancellationCharge, getToken) => request("/api/bookings/cancel", { method: "POST", body: { bookingId, expectedCancellationCharge }, getToken});
+export const submitRideComplaint = (bookingId, reasons, getToken) => request(`/api/bookings/${encodeURIComponent(bookingId)}/complaint`, { method: "POST", body: { reasons }, getToken });
 export const createScheduledAdvanceOrder = (bookingId, getToken) => request(`/api/bookings/${bookingId}/scheduled-advance/order`, { method: "POST", getToken });
 export const createScheduledFinalOrder = (bookingId, getToken) => request(`/api/bookings/${bookingId}/scheduled-final/order`, { method: "POST", getToken });
 export const verifyPayment = (paymentId, response, getToken) => request(`/api/payments/${paymentId}/verify`, { method: "POST", body: response, getToken });

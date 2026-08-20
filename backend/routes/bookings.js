@@ -5,7 +5,7 @@ import { sendWhatsApp } from '../services/notification.js'
 import { prisma } from '../db/prisma.js'
 import { commissionOn, rideFareOf } from '../services/commission.js'
 import { verifyQuote } from '../services/fareQuote.js'
-import { myBookingsQuerySchema } from '../types.ts'
+import { myBookingsQuerySchema, rideComplaintSchema } from '../types.ts'
 import { VEHICLE_CLASS_NAMES, isVehicleClass, seatsOf } from '../constants/vehicles.js'
 import { createBooking, normalizeReference } from '../lib/bookingReference.js'
 import { signedRiderPhotoUrl } from '../services/driverPhoto.js'
@@ -498,24 +498,27 @@ bookingsRouter.get('/:id/status', protect, async (req, res) => {
 // One complaint per completed booking. The flag, threshold fine and suspension
 // are committed together; deterministic wallet keys make retries harmless.
 bookingsRouter.post('/:id/complaint', protect, async (req, res) => {
+  const parsed = rideComplaintSchema.safeParse(req.body)
+  if (!parsed.success) return res.status(400).json({ error: 'Choose at least one valid complaint reason', issues: parsed.error.issues })
   const user = await prisma.user.findUnique({ where: { clerkId: req.auth.userId } })
   if (!user) return res.status(401).json({ error: 'User not found' })
   const booking = await prisma.booking.findUnique({ where: { id: req.params.id } })
   if (!booking) return res.status(404).json({ error: 'Booking not found' })
   if (booking.userId !== user.id) return res.status(403).json({ error: 'Forbidden' })
-  if (booking.status !== 'completed' || !booking.driverId)
-    return res.status(409).json({ error: 'Only a completed ride can be reported' })
+  if (!['completed', 'cancelled'].includes(booking.status) || !booking.driverId)
+    return res.status(409).json({ error: 'Only a completed or customer-cancelled ride with an assigned driver can be reported' })
 
   const result = await prisma.$transaction(async (tx) => {
-    const inserted = await tx.overchargeFlag.createMany({ data: [{ bookingId: booking.id, driverId: booking.driverId,
-      userId: user.id, fareAtFlag: booking.fare, note: req.body?.note ?? null }], skipDuplicates: true })
+    const inserted = await tx.rideComplaint.createMany({ data: [{ bookingId: booking.id, driverId: booking.driverId,
+      userId: user.id, reasons: parsed.data.reasons }], skipDuplicates: true })
+    if (!inserted.count) await tx.rideComplaint.update({ where: { bookingId: booking.id }, data: { reasons: parsed.data.reasons } })
     return applyComplaintConsequences(tx, booking.driverId, { newComplaint: inserted.count === 1 })
   })
   return res.json({ bookingId: booking.id, ...result })
 })
 
 bookingsRouter.post('/cancel', protect, async (req, res) => {
-    const { bookingId } = req.body
+    const { bookingId, expectedCancellationCharge } = req.body
     if (!bookingId) return res.status(400).json({ error: 'bookingId is required' })
 
     const user = await prisma.user.findUnique({ where: { clerkId: req.auth.userId } })
@@ -537,6 +540,8 @@ bookingsRouter.post('/cancel', protect, async (req, res) => {
     }
     if (!CANCELLABLE_STATUSES.includes(booking.status))
         return res.status(409).json({ error: `Cannot cancel a ${booking.status} booking` })
+    if (!Number.isFinite(expectedCancellationCharge))
+        return res.status(400).json({ error: 'Confirm the current cancellation amount before cancelling', code: 'CANCELLATION_CONFIRMATION_REQUIRED' })
 
     let kind = scheduledCancellationKind(booking)
     if (kind === 'forfeit' && !booking.driverId) kind = 'refund'
@@ -544,6 +549,17 @@ bookingsRouter.post('/cancel', protect, async (req, res) => {
     const shouldRefund = advancePaid && kind === 'refund'
     const shouldForfeit = advancePaid && kind === 'forfeit'
     const cancellationCharge = shouldForfeit ? booking.scheduledAdvancePaidAmount / 100 : 0
+
+    // The 30-minute boundary can move between rendering and tapping. Refuse a
+    // different amount instead of silently taking money the confirmation did
+    // not name; the caller refreshes and asks again with this authoritative sum.
+    if (Number(expectedCancellationCharge) !== cancellationCharge) {
+        return res.status(409).json({
+            error: 'The cancellation amount changed. Review the updated amount and confirm again.',
+            code: 'CANCELLATION_AMOUNT_CHANGED',
+            cancellationCharge,
+        })
+    }
 
     const cancelled = await prisma.$transaction(async (tx) => {
         const moved = await tx.booking.updateMany({
@@ -683,7 +699,7 @@ bookingsRouter.get('/my-bookings', protect, async (req, res) => {
         prisma.booking.findMany({
             where,
             orderBy: { createdAt: 'desc' },
-            include: { driver: true },
+            include: { driver: true, complaint: true },
             skip: (page - 1) * limit,
             take: limit,
         }),

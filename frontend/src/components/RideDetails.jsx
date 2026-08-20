@@ -66,14 +66,28 @@ const RideDetails = ({ prop }) => {
                 return
             }
 
-            const data = await api.cancelBooking(cancelId)
+            const data = await api.cancelBooking(cancelId, cancellationCharge)
 
             if (data?.error) {
+                if (data.code === "CANCELLATION_AMOUNT_CHANGED") {
+                    useData.getState().setCancellationCharge(data.cancellationCharge ?? 0)
+                    setConfirmCancel(false)
+                    prop.setError(data.error)
+                    return
+                }
                 prop.setError("Can't cancel ride")
                 return
             }
             if (data.ok) {
-                sessionStorage.setItem("rideCancelled", "1")
+                // The landing-page outcome panel must show what the server
+                // actually settled, not the quote that happened to be on screen
+                // before the request. The disposition explains whether a paid
+                // advance was retained or is on its way back.
+                sessionStorage.setItem("rideCancelled", JSON.stringify({
+                    cancellationCharge: data.cancellationCharge ?? 0,
+                    advanceDisposition: data.advanceDisposition ?? null,
+                    refundStatus: data.refund?.status ?? null,
+                }))
                 window.location.href = '/'
             }
         } catch (err) {
@@ -172,13 +186,15 @@ const RideDetails = ({ prop }) => {
                     </p>
                 )}
                 <Button
-                    onClick={cancellationCharge > 0 && !confirmCancel
+                    onClick={!confirmCancel
                         ? (e) => { e.preventDefault(); setConfirmCancel(true); }
                         : handleCancel}
                     prop={{ variant: "negative", width: "100%" }}
                 >
                     <span className="text-base sm:text-lg">
-                        {confirmCancel ? `Yes, cancel and pay ₹${cancellationCharge}` : "Cancel ride"}
+                        {confirmCancel
+                            ? cancellationCharge > 0 ? `Yes, cancel and pay ₹${cancellationCharge}` : "Yes, cancel this ride"
+                            : "Cancel ride"}
                     </span>
                 </Button>
             </div>
