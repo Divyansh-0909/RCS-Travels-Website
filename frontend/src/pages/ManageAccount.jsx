@@ -259,9 +259,7 @@ const ManageAccount = () => {
     };
 
     const quotedCancellationCharge = (booking) => {
-        if (!booking?.scheduledAt || !booking.driverId || !booking.scheduledAdvancePaidAmount) return 0
-        const insideLateWindow = booking.status === "reached" || Date.parse(booking.scheduledAt) - Date.now() <= 30 * 60 * 1000
-        return insideLateWindow ? booking.scheduledAdvancePaidAmount / 100 : 0
+        return Number(booking?.cancellationChargeQuote) || 0
     }
 
     async function handleCancel(booking) {

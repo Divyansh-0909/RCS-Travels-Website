@@ -982,7 +982,7 @@ model Booking {
   status              BookingStatus @default(pending)
   // `status` is a current-state field: every transition overwrites the last, so once
   // a ride is cancelled or completed nothing records that it ever passed through
-  // `reached`. That state is what decides the 35% cancellation charge
+  // `reached`. That state is part of the evidence for retaining the 15% scheduled advance
   // (CHARGEABLE_STATUSES in routes/bookings.js), so the evidence for the charge is
   // destroyed by the transition that acts on it. These stamps are what a disputed
   // charge is defended with, and they cannot be backfilled — a column added later is

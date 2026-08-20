@@ -6,6 +6,7 @@ import {
   MAX_LOCATION_ACCURACY_M,
   MAX_LOCATION_AGE_MS,
   PICKUP_RADIUS_KM,
+  freshLocationWithinPickup,
 } from '../services/rideGeofence.ts'
 
 test('fresh accurate locations are accepted', () => {
@@ -30,4 +31,12 @@ test('drop bands use inclusive 500 m and 2 km boundaries', () => {
 
 test('pickup arrival and ride start use a 500 m boundary', () => {
   assert.equal(PICKUP_RADIUS_KM, 0.5)
+})
+
+test('customer cancellation uses a fresh driver position within 500 m', () => {
+  const now = 1_800_000_000_000
+  const pickup = { lat: 28.6, lng: 77.2 }
+  assert.equal(freshLocationWithinPickup({ latitude: 28.604, longitude: 77.2, updatedAt: new Date(now) }, pickup, now), true)
+  assert.equal(freshLocationWithinPickup({ latitude: 28.606, longitude: 77.2, updatedAt: new Date(now) }, pickup, now), false)
+  assert.equal(freshLocationWithinPickup({ latitude: 28.6, longitude: 77.2, updatedAt: new Date(now - MAX_LOCATION_AGE_MS - 1) }, pickup, now), false)
 })

@@ -187,14 +187,14 @@ const rides = [
   },
   {
     id: '00000000-0000-4000-8000-000000000017',
-    label: 'history — cancelled at the pickup, so the 35% charge is still owed',
+    label: 'history — cancelled within 500 m of pickup, so the 15% advance is retained',
     status: 'cancelled',
     scheduledIn: -2880,
     baseFare: 625, distanceKm: 38.1,
     cancelledBy: 'user',
-    // 35% of the fare, the rate CHARGEABLE_STATUSES applies once the driver is
-    // waiting at the pickup (routes/bookings.js). Computed at run, off the fare.
-    cancellationPct: 35,
+    // The scheduled advance retained once the driver is within the pickup
+    // geofence (routes/bookings.js). Computed at run, off the fare.
+    cancellationPct: 15,
     pickupAddress: 'Pari Chowk, Greater Noida',
     pickupLat: 28.4650, pickupLng: 77.5030,
     dropAddress: 'Kashmere Gate ISBT, Delhi',

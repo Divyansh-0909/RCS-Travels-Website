@@ -50,9 +50,3 @@ export async function applyRefundedPaymentEffect(tx, payment) {
       data: { scheduledAdvanceDisposition: 'refunded' } })
   }
 }
-
-export const scheduledCancellationKind = ({ scheduledAt, status, now = new Date() }) => {
-  if (!scheduledAt) return 'ride_now_free'
-  if (status === 'reached') return 'forfeit'
-  return scheduledAt.getTime() - now.getTime() <= 30 * 60 * 1000 ? 'forfeit' : 'refund'
-}

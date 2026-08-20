@@ -14,6 +14,23 @@ export const COMPLETION_OVERRIDE_REASONS = [
 
 export type CompletionOverrideReason = typeof COMPLETION_OVERRIDE_REASONS[number]
 
+export function haversineDistanceKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const rad = (degrees: number) => degrees * Math.PI / 180
+  const dLat = rad(lat2 - lat1)
+  const dLng = rad(lng2 - lng1)
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(rad(lat1)) * Math.cos(rad(lat2)) * Math.sin(dLng / 2) ** 2
+  return 6371 * 2 * Math.asin(Math.sqrt(a))
+}
+
+export function freshLocationWithinPickup(
+  location: { latitude: number; longitude: number; updatedAt: Date } | null | undefined,
+  pickup: { lat: number; lng: number },
+  nowMs = Date.now(),
+): boolean {
+  if (!location || nowMs - new Date(location.updatedAt).getTime() > MAX_LOCATION_AGE_MS) return false
+  return haversineDistanceKm(location.latitude, location.longitude, pickup.lat, pickup.lng) <= PICKUP_RADIUS_KM
+}
+
 export function locationProblem(
   fix: { lat?: number; lng?: number; accuracy?: number; capturedAt?: number; mocked?: boolean },
   nowMs = Date.now(),

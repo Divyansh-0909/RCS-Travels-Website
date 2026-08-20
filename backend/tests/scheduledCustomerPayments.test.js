@@ -1,6 +1,6 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
-import { scheduledPaymentAmounts, scheduledCancellationKind, applyCapturedPaymentEffect, applyRefundedPaymentEffect } from '../services/scheduledPayments.js'
+import { scheduledPaymentAmounts, applyCapturedPaymentEffect, applyRefundedPaymentEffect } from '../services/scheduledPayments.js'
 import { walletEvent } from '../services/walletKeys.js'
 
 describe('scheduled customer advance arithmetic uses integer paise', () => {
@@ -23,14 +23,6 @@ describe('scheduled customer advance arithmetic uses integer paise', () => {
       assert.equal(a.advance + a.remaining, a.finalFare)
     }
   })
-})
-
-describe('scheduled cancellation classification', () => {
-  const now = new Date('2026-08-18T10:00:00Z')
-  test('Ride Now has no scheduled charge', () => assert.equal(scheduledCancellationKind({ scheduledAt: null, status: 'reached', now }), 'ride_now_free'))
-  test('more than 30 minutes before pickup refunds', () => assert.equal(scheduledCancellationKind({ scheduledAt: new Date('2026-08-18T10:31:00Z'), status: 'confirmed', now }), 'refund'))
-  test('inside 30 minutes forfeits', () => assert.equal(scheduledCancellationKind({ scheduledAt: new Date('2026-08-18T10:30:00Z'), status: 'assigned', now }), 'forfeit'))
-  test('reached always forfeits the already-paid advance', () => assert.equal(scheduledCancellationKind({ scheduledAt: new Date('2026-08-18T12:00:00Z'), status: 'reached', now }), 'forfeit'))
 })
 
 describe('scheduled payment capture effects are guarded and idempotent', () => {

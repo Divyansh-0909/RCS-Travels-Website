@@ -126,7 +126,7 @@ const terms = [
     {
         heading: "Cancelling",
         body: [
-            "Cancelling is free until your driver reaches your pickup point, and costs 35% of the fare after that. If your driver cancels or never arrives, you pay nothing. The full policy, including what happens when no driver can be found, is on the Refunds & Cancellation page.",
+            "Cancelling is free while your driver is more than 500 metres from pickup. Once the driver's current location is within 500 metres, a scheduled ride cancellation retains the paid 15% advance. If your driver cancels or never comes within that area, you pay nothing. The full policy is on the Refunds & Cancellation page.",
         ],
     },
     {
@@ -405,23 +405,21 @@ const privacy = [
 
 const refunds = [
     {
-        heading: "Start here: nothing is prepaid",
+        heading: "Start here: Ride Now is not prepaid",
         body: [
-            "You pay your driver at the end of the trip, in cash or by UPI. Nothing is collected when you book. So in almost every case there's nothing to refund. A cancelled ride is simply a ride you never pay for.",
-            "The exceptions are below.",
+            "Ride Now is paid at the end of the trip, in cash or by UPI. Scheduled rides collect a 15% advance, which is either refunded or retained under the proximity rule below.",
         ],
     },
     {
-        heading: "Cancelling before your driver reaches you",
+        heading: "Cancelling before your driver is nearby",
         body: [
-            "Free, every time, no reason needed. That covers a ride that's still pending, one that's confirmed for later, and one where the driver is on the way.",
+            "Cancellation is free while no driver is assigned or the assigned driver's current location is more than 500 metres from pickup. Any paid scheduled advance is refunded.",
         ],
     },
     {
-        heading: "Cancelling after your driver reaches you",
+        heading: "Cancelling when your driver is nearby",
         body: [
-            "Once your driver is at the pickup point, cancelling costs 35% of the fare. Your driver has already spent the fuel and the time to get to you, and that's what this covers.",
-            `[TO CONFIRM: how this is actually collected. Nothing is prepaid, so there's no payment to deduct it from. Is it paid to the driver on the spot, added to your next ride, or waived in practice? The policy can't be published without an answer, and whatever it is, drivers need to be told the same thing.]`,
+            "Once the driver's current location is within 500 metres of pickup, cancelling a scheduled ride retains the paid 15% advance. That advance is credited to the driver for the fuel and time already spent reaching you.",
         ],
     },
     {
@@ -446,7 +444,7 @@ const refunds = [
     {
         heading: "If you don't turn up",
         body: [
-            `[TO CONFIRM: what happens when a driver waits at the pickup point and the rider never appears. Treated as a post-arrival cancellation at 35%? Free the first time? This case comes up constantly and drivers will ask, so decide it before publishing rather than at the roadside.]`,
+            "If you cancel after the driver is within 500 metres of pickup, the scheduled ride's paid 15% advance is retained. A dedicated timed no-show action is not currently available, so the driver must contact support if you do not respond.",
         ],
     },
     {

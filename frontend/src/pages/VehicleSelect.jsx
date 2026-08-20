@@ -991,7 +991,7 @@ const VehicleSelect = () => {
             {!barCollapsed && (
                 <p className="text-xs sm:text-sm leading-snug text-center sm:text-left text-[var(--text-muted)]">
                     {scheduledTime
-                        ? `Cancel more than 30 minutes before pickup for a full advance refund. Later cancellations forfeit the ${CANCELLATION_CHARGE_PCT}% advance.`
+                        ? `Cancel free while your driver is more than 500 m from pickup. Within 500 m, the paid ${CANCELLATION_CHARGE_PCT}% advance is retained.`
                         : "Ride Now cancellation is free before the trip starts."}
                 </p>
             )}
@@ -1270,7 +1270,7 @@ const VehicleSelect = () => {
                                     must not state softer terms than the one before. */}
                             <p className="text-xs sm:text-sm leading-snug text-[var(--text-muted)]">
                                 {scheduledTime
-                                    ? `Cancel more than 30 minutes before pickup for a full advance refund. Later cancellations forfeit the ${CANCELLATION_CHARGE_PCT}% advance.`
+                                    ? `Cancel free while your driver is more than 500 m from pickup. Within 500 m, the paid ${CANCELLATION_CHARGE_PCT}% advance is retained.`
                                     : "Ride Now cancellation is free before the trip starts."}
                             </p>
                         </div>

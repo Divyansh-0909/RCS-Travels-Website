@@ -39,7 +39,7 @@ const faqs = [
     },
     {
         q: "Can I cancel a booking?",
-        a: "Yes, from your ride's tracking page or by calling us. Cancellation is free until your driver reaches the pickup point. See the Cancellation tab for the full policy.",
+        a: "Yes, from your ride's tracking page or by calling us. Cancellation is free while your driver is more than 500 metres from pickup. For a scheduled ride, the paid 15% advance is retained once the driver is within 500 metres. See the Cancellation tab for the full policy.",
     },
 ]
 
@@ -50,8 +50,8 @@ const contacts = [
 ]
 
 const cancellationPolicy = [
-    ["Before your driver arrives", "Cancel any time while your ride is pending, confirmed, or the driver is on the way. It's completely free, no questions asked."],
-    ["After your driver arrives", "Once your driver has reached the pickup point, cancelling costs 35% of the fare. This covers the driver's time and fuel for the trip to you."],
+    ["Before your driver is nearby", "Cancellation is free while no driver is assigned or your driver is more than 500 metres from pickup."],
+    ["When your driver is nearby", "Once your driver's current location is within 500 metres of pickup, cancelling a scheduled ride retains the paid 15% advance for the driver's time and fuel."],
     ["How to cancel", "Use the cancel option on your ride's tracking page, or call us and we'll do it for you."],
 ]
 

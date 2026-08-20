@@ -14,9 +14,10 @@ import { getNavigationEtaMinutes } from '../services/rideEstimate.js'
 import { customerPaymentFor } from '../services/coupons.js'
 import { applyComplaintConsequences } from '../services/complaints.js'
 import { createOrderForPayment, refundPayment, PaymentError } from '../services/payments.js'
-import { createScheduledAdvanceIntent, createScheduledFinalIntent, scheduledPaymentAmounts, scheduledCancellationKind } from '../services/scheduledPayments.js'
+import { createScheduledAdvanceIntent, createScheduledFinalIntent, scheduledPaymentAmounts } from '../services/scheduledPayments.js'
 import { postWalletEntry } from '../services/wallet.js'
 import { walletEvent } from '../services/walletKeys.js'
+import { freshLocationWithinPickup } from '../services/rideGeofence.js'
 
 const bookingsRouter = Router()
 
@@ -26,9 +27,9 @@ const bookingsRouter = Router()
 /** @type {import('@prisma/client').BookingStatus[]} */
 export const ACTIVE_STATUSES = ['pending', 'payment_pending', 'confirmed', 'assigned', 'en_route', 'reached', 'started']
 
-// Cancelling once the driver is waiting at the pickup costs the rider 15% — that
-// driver turned down other rides and has already spent the fuel. Anything earlier
-// is free, including en_route: the driver is moving but hasn't committed the wait.
+// Cancelling when the driver is physically within 500 m of pickup costs the paid
+// 15% advance. The driver need not tap `reached`: a fresh live position proves
+// the trip to pickup was made. A stale position never creates a charge.
 // A ride already underway can't be self-cancelled; that's a support conversation.
 //
 // 15 FROM 35, 14 Aug 2026, Raju's number. The old figure was never his — it came
@@ -47,11 +48,17 @@ const CANCELLABLE_STATUSES = ['pending', 'payment_pending', 'confirmed', 'assign
 const CHARGEABLE_STATUSES = ['reached']
 export const CANCELLATION_CHARGE_PCT = 15
 
+export const driverIsAtPickup = (booking, now = Date.now()) => {
+  if (CHARGEABLE_STATUSES.includes(booking.status)) return true
+  return freshLocationWithinPickup(booking.driver?.location,
+    { lat: booking.pickupLat, lng: booking.pickupLng }, now)
+}
+
 // What cancelling would cost right now. Exported so the status endpoint can warn
 // the rider with the same number the cancel endpoint will actually charge.
 export const cancellationChargeFor = (booking) =>
   booking.scheduledAt && booking.driverId && booking.scheduledAdvancePaidAmount > 0 &&
-    (CHARGEABLE_STATUSES.includes(booking.status) || booking.scheduledAt.getTime() - Date.now() <= 30 * 60 * 1000)
+    driverIsAtPickup(booking)
     ? booking.scheduledAdvancePaidAmount / 100
     : 0
 
@@ -524,7 +531,7 @@ bookingsRouter.post('/cancel', protect, async (req, res) => {
     const user = await prisma.user.findUnique({ where: { clerkId: req.auth.userId } })
     if (!user) return res.status(401).json({ error: 'User not found' })
 
-    const booking = await prisma.booking.findUnique({ where: { id: bookingId }, include: { driver: true,
+    const booking = await prisma.booking.findUnique({ where: { id: bookingId }, include: { driver: { include: { location: true } },
         payments: { where: { purpose: 'scheduled_ride_advance' } } } })
     if (!booking) return res.status(404).json({ error: 'Booking not found' })
     if (booking.userId !== user.id) return res.status(403).json({ error: 'Forbidden' })
@@ -543,15 +550,13 @@ bookingsRouter.post('/cancel', protect, async (req, res) => {
     if (!Number.isFinite(expectedCancellationCharge))
         return res.status(400).json({ error: 'Confirm the current cancellation amount before cancelling', code: 'CANCELLATION_CONFIRMATION_REQUIRED' })
 
-    let kind = scheduledCancellationKind(booking)
-    if (kind === 'forfeit' && !booking.driverId) kind = 'refund'
     const advancePaid = advancePayment?.status === 'captured' && booking.scheduledAdvancePaidAmount > 0
-    const shouldRefund = advancePaid && kind === 'refund'
-    const shouldForfeit = advancePaid && kind === 'forfeit'
+    const shouldForfeit = advancePaid && Boolean(booking.driverId) && driverIsAtPickup(booking)
+    const shouldRefund = advancePaid && !shouldForfeit
     const cancellationCharge = shouldForfeit ? booking.scheduledAdvancePaidAmount / 100 : 0
 
-    // The 30-minute boundary can move between rendering and tapping. Refuse a
-    // different amount instead of silently taking money the confirmation did
+    // The driver can cross the 500 m boundary between rendering and tapping.
+    // Refuse a different amount instead of silently taking money the confirmation did
     // not name; the caller refreshes and asks again with this authoritative sum.
     if (Number(expectedCancellationCharge) !== cancellationCharge) {
         return res.status(409).json({
@@ -699,7 +704,7 @@ bookingsRouter.get('/my-bookings', protect, async (req, res) => {
         prisma.booking.findMany({
             where,
             orderBy: { createdAt: 'desc' },
-            include: { driver: true, complaint: true },
+            include: { driver: { include: { location: true } }, complaint: true },
             skip: (page - 1) * limit,
             take: limit,
         }),
@@ -708,7 +713,11 @@ bookingsRouter.get('/my-bookings', protect, async (req, res) => {
 
     // The code belongs to the user, not the ride; flattened onto each row because
     // that's the shape the client reads.
-    const withCode = bookings.map(b => ({ ...b, bookingCode: user.bookingCode }))
+    const withCode = bookings.map(b => {
+        const driver = b.driver ? { ...b.driver, location: undefined } : null
+        return { ...b, driver, bookingCode: user.bookingCode,
+            cancellationChargeQuote: cancellationChargeFor(b) }
+    })
 
     return res.json({ total, page, limit, bookings: withCode })
 })
