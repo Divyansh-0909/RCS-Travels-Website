@@ -30,6 +30,9 @@ export const createMe          = (name, getToken)        => request("/api/users/
 export const estimateFare      = (pickupAddress, dropAddress, vehicleClass, pickupCoords, dropCoords, preferSafeRoute, needsCarrier, getToken) => request("/api/fare/estimate", { method: "POST", body: { pickupAddress, dropAddress, vehicleClass, pickupCoords, dropCoords, preferSafeRoute, needsCarrier }, getToken });
 export const createBooking     = (data, getToken)        => request("/api/bookings", { method: "POST", body: data, getToken });
 export const cancelBooking     = (bookingId, getToken)   => request("/api/bookings/cancel", { method: "POST", body: { bookingId }, getToken});
+export const createScheduledAdvanceOrder = (bookingId, getToken) => request(`/api/bookings/${bookingId}/scheduled-advance/order`, { method: "POST", getToken });
+export const createScheduledFinalOrder = (bookingId, getToken) => request(`/api/bookings/${bookingId}/scheduled-final/order`, { method: "POST", getToken });
+export const verifyPayment = (paymentId, response, getToken) => request(`/api/payments/${paymentId}/verify`, { method: "POST", body: response, getToken });
 export const getBookingStatus  = (id, getToken)          => request(`/api/bookings/${id}/status`, { getToken });
 export const shareBooking      = (id, getToken)          => request(`/api/bookings/${id}/share`, { method: "POST", getToken });
 export const unshareBooking    = (id, getToken)          => request(`/api/bookings/${id}/share`, { method: "DELETE", getToken });

@@ -86,12 +86,12 @@ const isReferenceConflict = (e) => {
  * @param {import('@prisma/client').Prisma.BookingUncheckedCreateInput} data booking fields, minus `reference`
  * @returns {Promise<import('@prisma/client').Booking>}
  */
-export async function createBooking(data) {
+export async function createBooking(data, db = prisma) {
   let lastConflict = null
 
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
     try {
-      return await prisma.booking.create({
+      return await db.booking.create({
         data: { ...data, reference: generateReference() },
       })
     } catch (e) {

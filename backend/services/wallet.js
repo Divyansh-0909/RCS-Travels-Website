@@ -17,6 +17,9 @@ import { balancesFrom } from './walletKeys.js'
  *
  * @param tx a Prisma transaction client. Required — callers that have no other
  *           work to do should use postWalletEntryAlone().
+ * @param {{driverId: string, amount: number, type: import('@prisma/client').WalletEntryType,
+ * eventKey: string, method?: import('@prisma/client').PaymentMethod | null,
+ * bookingId?: string | null, note?: string | null}} entry
  * @returns {{ posted: boolean }} posted:false means this event was already
  *           recorded and nothing moved.
  */

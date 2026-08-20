@@ -105,7 +105,7 @@ export const OfferCard = ({
             </View>
 
             <View className="flex-row flex-wrap items-center gap-2">
-                <Chip label={offer.sharing ? 'Sharing' : 'Solo'} />
+                <Chip label={offer.additionalPickup ? 'Additional pickup' : offer.sharing ? 'Sharing' : 'Solo'} />
                 <Chip strong label={vehicleLabel(offer.vehicleClass)} />
                 {offer.isOutstation ? <Chip label="Outstation" strong /> : null}
                 {offer.needsCarrier ? <Chip label="Carrier" /> : null}

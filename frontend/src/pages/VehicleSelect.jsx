@@ -24,6 +24,7 @@ import Skeleton from "../components/ui/Skeleton";
 import EmptyState from "../components/ui/EmptyState";
 import FailureState from "../components/ui/FailureState";
 import { VEHICLE_CATEGORIES, VEHICLE_CLASS_NAMES, labelOf, seatsOf } from "../constants/vehicles";
+import { openRazorpayCheckout } from "../services/razorpayCheckout";
 
 // Every price on this screen comes from /api/fare/estimate, which resolves each
 // seat type through zones -> the fixed fare table -> the per-km formula. There is
@@ -179,6 +180,8 @@ const VehicleSelect = () => {
     // this one has to persist on the panel with a retry, where ErrorPanel's only
     // action is "Okay", which dismissed straight back onto unpriced cards.
     const [estimateError, setEstimateError] = useState(null);
+    const [scheduledCheckout, setScheduledCheckout] = useState(null);
+    const [scheduledFinancials, setScheduledFinancials] = useState(null);
 
     // Dev-only: /dev/vehicle?step=|?panel=|?safe= force internal states for previews.
     const devParams = import.meta.env.DEV ? new URLSearchParams(window.location.search) : null;
@@ -688,7 +691,11 @@ const VehicleSelect = () => {
                 scheduledAt: scheduledTime,
             });
 
-            if (scheduledTime) setPanelState("confirmed")
+            if (scheduledTime) {
+                setScheduledCheckout(data.payment ?? null);
+                setScheduledFinancials(data.financials ?? null);
+                setPanelState(data.status === "confirmed" ? "confirmed" : "payment");
+            }
             else if (data.status === "assigned") {
                 // freshStatus: the store status was set a line ago from this same
                 // response, so TrackingPage can render it without a skeleton.
@@ -706,6 +713,27 @@ const VehicleSelect = () => {
         } finally {
             setLoading(false);
         }
+    }
+
+    async function payScheduledAdvance() {
+        if (!bookingId) return;
+        try {
+            setLoading(true); setError(null);
+            const checkout = scheduledCheckout ?? await api.createScheduledAdvanceOrder(bookingId);
+            if (checkout?.error) throw new Error(checkout.error);
+            setScheduledCheckout(checkout);
+            const response = await openRazorpayCheckout(checkout, { description: "15% scheduled ride advance" });
+            const verified = await api.verifyPayment(checkout.paymentId, response);
+            if (verified?.error) throw new Error(verified.error);
+            const latest = await api.getBookingStatus(bookingId);
+            if (latest?.error) throw new Error(latest.error);
+            setStatus(latest.status);
+            setActiveBooking({ ...(activeBooking ?? {}), id: bookingId, status: latest.status,
+                scheduledAt: scheduledTime, fare: (latest.financials?.finalFare ?? 0) / 100 });
+            setPanelState(latest.status === "confirmed" ? "confirmed" : "payment");
+        } catch (err) {
+            if (err.message !== "Payment cancelled") setError(err.message || "Payment failed. Try again.");
+        } finally { setLoading(false); }
     }
 
     // Selected pricing mode carries the emphasis; the other drops to fine print.
@@ -962,7 +990,9 @@ const VehicleSelect = () => {
                 which is the last thing between this button and a real booking. */}
             {!barCollapsed && (
                 <p className="text-xs sm:text-sm leading-snug text-center sm:text-left text-[var(--text-muted)]">
-                    Free cancellation until the driver reaches your pickup. After that it's {CANCELLATION_CHARGE_PCT}% of the fare.
+                    {scheduledTime
+                        ? `Cancel more than 30 minutes before pickup for a full advance refund. Later cancellations forfeit the ${CANCELLATION_CHARGE_PCT}% advance.`
+                        : "Ride Now cancellation is free before the trip starts."}
                 </p>
             )}
         </div>
@@ -1054,6 +1084,22 @@ const VehicleSelect = () => {
                         {step === "confirmLocation" && <CenterPin target={confirmTarget} />}
                     </GoogleMap>
                 )}
+                <BackgroundPanel show={panelState === "payment" && restoredScheduledTime} className={`z-4 sm:z-3 bottom-0 gap-4 py-6 text-left flex flex-col justify-center items-center`}>
+                    <div className={COL}>
+                        <h2 className={TITLE}>Pay your ride advance</h2>
+                        <p className="mt-1 text-base sm:text-lg text-[var(--text-muted)]">This is part of your fare, not an extra charge.</p>
+                        {scheduledFinancials && <div className="mt-5 flex flex-col gap-2 text-base sm:text-lg">
+                            <div className="flex justify-between"><span>Fare</span><span>₹{scheduledFinancials.fare / 100}</span></div>
+                            <div className="flex justify-between"><span>Coupon</span><span>-₹{scheduledFinancials.coupon / 100}</span></div>
+                            <div className="flex justify-between font-medium"><span>Final fare</span><span>₹{scheduledFinancials.finalFare / 100}</span></div>
+                            <div className="flex justify-between"><span>Pay now (15%)</span><span>₹{scheduledFinancials.advance / 100}</span></div>
+                            <div className="flex justify-between"><span>Pay after ride</span><span>₹{scheduledFinancials.remaining / 100}</span></div>
+                        </div>}
+                        <Button onClick={payScheduledAdvance} className="mt-5 w-full" prop={{ width: "100%" }}>
+                            <span className="text-base sm:text-lg">{loading ? "Opening payment..." : `Pay ₹${(scheduledFinancials?.advance ?? 0) / 100}`}</span>
+                        </Button>
+                    </div>
+                </BackgroundPanel>
                 <BackgroundPanel show={panelState === "noDriver" || (panelState === "confirmed" && restoredScheduledTime)} className={`z-4 sm:z-3 bottom-0 gap-1.5 sm:gap-2 py-6 text-center flex flex-col justify-center items-center`}>
                     {panelState === "noDriver"
                         ? <ErrorMark className="-mt-2" size={isMobile ? 120 : 140} />
@@ -1223,7 +1269,9 @@ const VehicleSelect = () => {
                                     last screen before the ride is created, so it
                                     must not state softer terms than the one before. */}
                             <p className="text-xs sm:text-sm leading-snug text-[var(--text-muted)]">
-                                Free cancellation until the driver reaches your pickup. After that it's {CANCELLATION_CHARGE_PCT}% of the fare.
+                                {scheduledTime
+                                    ? `Cancel more than 30 minutes before pickup for a full advance refund. Later cancellations forfeit the ${CANCELLATION_CHARGE_PCT}% advance.`
+                                    : "Ride Now cancellation is free before the trip starts."}
                             </p>
                         </div>
                     </div>

@@ -19,6 +19,7 @@ import googleRouter from './routes/googleAPI.js'
 import internalRouter from './routes/internal.js'
 import shareRouter from './routes/share.js'
 import { JOBS_MODE } from './lib/jobs.js'
+import paymentsRouter, { razorpayWebhookHandler } from './routes/payments.js'
 
 const app = express()
 const PORT = process.env.PORT || 5000
@@ -47,6 +48,10 @@ app.use(cors({
   },
   credentials: true,
 }))
+// Razorpay signs the exact bytes. This endpoint must run before express.json(),
+// which would replace those bytes with a parsed object and make verification
+// impossible (or tempt code to re-stringify a subtly different payload).
+app.post('/api/payments/razorpay/webhook', express.raw({ type: 'application/json', limit: '1mb' }), razorpayWebhookHandler)
 app.use(express.json())
 
 // BEFORE clerkAuth, and that ordering is the point. These endpoints carry a
@@ -73,6 +78,7 @@ app.use('/api/driver', driverRouter)
 app.use('/api/users', usersRouter)
 app.use('/api/auth', authLimiter, hybridAuthRouter)
 app.use('/api/admin', adminRouter)
+app.use('/api/payments', paymentsRouter)
 app.use('/api/googleAPI', googleApiLimiter, googleRouter)
 
 // The database round trip is load-bearing, not decorative. Supabase's free tier

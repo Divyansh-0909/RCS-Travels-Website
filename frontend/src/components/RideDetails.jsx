@@ -167,9 +167,8 @@ const RideDetails = ({ prop }) => {
                     a single mis-tap shouldn't. */}
                 {cancellationCharge > 0 && (
                     <p className="text-xs sm:text-sm text-left text-[var(--text-muted)] leading-snug">
-                        Your driver is already waiting at the pickup point. Cancelling
-                        now charges <span className="text-[var(--text)]">₹{cancellationCharge}</span>
-                        {fare ? ` of the ₹${fare} fare` : ""}.
+                        Cancelling now retains <span className="text-[var(--text)]">₹{cancellationCharge}</span> from
+                        your scheduled advance for the driver. It is not a second charge.
                     </p>
                 )}
                 <Button

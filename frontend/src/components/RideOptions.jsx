@@ -62,7 +62,7 @@ const OptionRow = ({ label, note, on, onToggle, disabled = false }) => (
 );
 
 // Everything inside the popover and the sheet, so the two shells can't drift.
-const OptionsBody = ({ options, onClose, titleId }) => (
+const OptionsBody = ({ options, onClose, titleId, showClose = true }) => (
     <>
         {/* text-left explicitly: the vehicle page centres its text, and the
             sheet is a child of that page — inherited, the title and its line
@@ -75,14 +75,16 @@ const OptionsBody = ({ options, onClose, titleId }) => (
                     settings the cards behind this get re-priced by. */}
                 <p className="text-sm sm:text-base leading-snug text-[var(--text-muted)]">Each one changes your fare.</p>
             </div>
-            <button
-                type="button"
-                onClick={onClose}
-                aria-label="Close ride options"
-                className="shrink-0 cursor-pointer rounded-full p-1 opacity-60 transition-opacity duration-300 hover:opacity-100 active:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]/70"
-            >
-                <Icon path={mdiClose} size={0.9} aria-hidden="true" />
-            </button>
+            {showClose && (
+                <button
+                    type="button"
+                    onClick={onClose}
+                    aria-label="Close ride options"
+                    className="shrink-0 cursor-pointer rounded-full p-1 opacity-60 transition-opacity duration-300 hover:opacity-100 active:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]/70"
+                >
+                    <Icon path={mdiClose} size={0.9} aria-hidden="true" />
+                </button>
+            )}
         </div>
 
         {/* Hairlines between rows, not around each one: this is one list of
@@ -229,15 +231,26 @@ export const RideOptionsSheet = ({ options, open, onClose }) => {
                 contentKey={options.map(option => option.note).join("|")}
                 // pt-1, not the pt-6 the fare sheet carries: the grabber's own
                 // -mt-4 is what eats that padding there, and it can't here.
-                // This sheet has no [data-sheet-scroll] child, so the sheet
-                // itself becomes the scroller — and content pulled above a
-                // scroll container's start edge is unreachable, so the negative
-                // margin is simply clipped. Measured: the handle lands at
-                // padding + its own py-2, which at pt-1 is 12px under the top
-                // edge, with gap-4 then setting the header clear of it.
+                // The inner content owns scrolling so the close button can sit
+                // above the sheet without being clipped by its overflow.
                 className="z-6 flex flex-col gap-4 px-[7vw] pt-1 pb-[calc(1.5rem+env(safe-area-inset-bottom))] text-left"
             >
-                <OptionsBody options={options} onClose={onClose} titleId="ride-options-sheet-title" />
+                <button
+                    type="button"
+                    onClick={onClose}
+                    aria-label="Close ride options"
+                    className="absolute z-20 -top-12 right-4 h-9 my-1 w-9 rounded-full border border-[var(--foreground)]/30 bg-[var(--background-muted)] shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)] flex items-center justify-center cursor-pointer transition-opacity duration-300 active:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]/70"
+                >
+                    <Icon path={mdiClose} size={0.8} aria-hidden="true" />
+                </button>
+                <div data-sheet-scroll className="min-h-0 flex-1 flex flex-col gap-4">
+                    <OptionsBody
+                        options={options}
+                        onClose={onClose}
+                        titleId="ride-options-sheet-title"
+                        showClose={false}
+                    />
+                </div>
             </BackgroundPanel>
         </>
     );

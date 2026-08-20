@@ -474,7 +474,7 @@ const EMPTY_METRICS = { distanceKm: null, durationMin: null, polyline: null }
 const metricsOf = (route) =>
   route ? { distanceKm: route.distanceKm, durationMin: route.durationMin, polyline: route.polyline } : EMPTY_METRICS
 
-export async function getRideEstimate({ pickupAddress, dropAddress, vehicleClass, pickupCoords, dropCoords, preferSafeRoute, needsCarrier }) {
+export async function getRideEstimate({ pickupAddress, dropAddress, vehicleClass, pickupCoords, dropCoords, preferSafeRoute, needsCarrier, coupon = null }) {
 
   // Every price on the rate card is a price FROM CAMPUS: the zones are drawn
   // around the far endpoint and fare_table keys on the destination alone, so
@@ -654,6 +654,9 @@ export async function getRideEstimate({ pickupAddress, dropAddress, vehicleClass
     // ₹150 is in those fares and whether the driver gets sent the long way.
     safeRoute: { applied, waypoint: safeRouteInfo.waypoint },
     needsCarrier: Boolean(needsCarrier),
+    // Server-loaded coupon identity and value. Booking ignores any coupon amount
+    // outside this signature and atomically marks this exact row redeemed.
+    coupon,
   })
 
   return {

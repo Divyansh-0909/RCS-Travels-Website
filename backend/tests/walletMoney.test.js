@@ -3,6 +3,10 @@ import assert from 'node:assert/strict'
 
 import { commissionOn, rideFareOf, COMMISSION_MIN_FARE } from '../services/commission.js'
 import { walletEvent, balancesFrom, isBlockedByBalance } from '../services/walletKeys.js'
+import { scheduledDepositFor } from '../services/scheduledDeposit.js'
+import { couponAmountForSpend, customerPaymentFor } from '../services/coupons.js'
+import { loyaltyRewardsEarned, commissionWithReward } from '../services/loyalty.js'
+import { COMPLAINT_FINE_AMOUNT, COMPLAINT_FINE_THRESHOLD, COMPLAINT_SUSPEND_THRESHOLD } from '../services/complaints.js'
 
 // The money rules, with no database: every one of these is a pure function, and
 // each is here because getting it wrong is silent. A commission charged on the
@@ -118,5 +122,54 @@ describe('available / held / total', () => {
     assert.equal(b.available, -600)
     assert.equal(isBlockedByBalance(entries), true)
     assert.equal(isBlockedByBalance([credit(100)]), false)
+  })
+})
+
+describe('scheduled acceptance deposit', () => {
+  test('is exactly 15% of authoritative fare', () => assert.equal(scheduledDepositFor(1000), 150))
+  test('stable keys prevent duplicate hold and release events', () => {
+    assert.equal(walletEvent.depositHold('ride'), walletEvent.depositHold('ride'))
+    assert.equal(walletEvent.depositRefund('ride'), walletEvent.depositRefund('ride'))
+  })
+})
+
+describe('coupon tiers and settlement', () => {
+  test('highest monthly completed-spend tier wins', () => {
+    assert.equal(couponAmountForSpend(1999), 0)
+    assert.equal(couponAmountForSpend(2000), 100)
+    assert.equal(couponAmountForSpend(2500), 200)
+    assert.equal(couponAmountForSpend(5000), 500)
+  })
+  test('customer payment and reimbursement preserve the full fare', () => {
+    const payment = customerPaymentFor(1200, 500)
+    assert.equal(payment, 700)
+    assert.equal(payment + 500, 1200)
+    assert.equal(commissionOn({ rideFare: 1200, couponAmount: 500 }).amt, 0)
+  })
+})
+
+describe('complaint thresholds', () => {
+  test('fine once at 3 and suspend at 5', () => {
+    assert.equal(COMPLAINT_FINE_THRESHOLD, 3)
+    assert.equal(COMPLAINT_FINE_AMOUNT, 200)
+    assert.equal(COMPLAINT_SUSPEND_THRESHOLD, 5)
+    assert.equal(walletEvent.fine('d', 3), walletEvent.fine('d', 3))
+  })
+})
+
+describe('commission-free loyalty reward', () => {
+  test('20th completion grants 3 future eligible rides', () => assert.equal(loyaltyRewardsEarned(19, 20), 3))
+  test('three eligible commissions are waived, fourth is normal', () => {
+    let remaining = 3
+    const charged = []
+    for (let i = 0; i < 4; i++) {
+      const result = commissionWithReward(50, remaining)
+      charged.push(result.commission)
+      if (result.consumeReward) remaining--
+    }
+    assert.deepEqual(charged, [0, 0, 0, 50])
+  })
+  test('non-commissionable rides do not consume a reward', () => {
+    assert.deepEqual(commissionWithReward(0, 3), { commission: 0, consumeReward: false })
   })
 })

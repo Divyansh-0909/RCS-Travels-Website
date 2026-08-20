@@ -34,6 +34,8 @@ export type Offer = {
     safeRoute: boolean;
     sharing: boolean;
     needsCarrier: boolean;
+    /** True when accepting adds this rider to the trip already in progress. */
+    additionalPickup: boolean;
     expiresAt: string;
 };
 

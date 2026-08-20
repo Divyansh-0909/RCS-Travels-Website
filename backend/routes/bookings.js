@@ -11,6 +11,12 @@ import { createBooking, normalizeReference } from '../lib/bookingReference.js'
 import { signedRiderPhotoUrl } from '../services/driverPhoto.js'
 import { newShareToken, shareIsLive, shareUrlFor, SHARE_TTL_MS } from '../lib/shareLink.js'
 import { getNavigationEtaMinutes } from '../services/rideEstimate.js'
+import { customerPaymentFor } from '../services/coupons.js'
+import { applyComplaintConsequences } from '../services/complaints.js'
+import { createOrderForPayment, refundPayment, PaymentError } from '../services/payments.js'
+import { createScheduledAdvanceIntent, createScheduledFinalIntent, scheduledPaymentAmounts, scheduledCancellationKind } from '../services/scheduledPayments.js'
+import { postWalletEntry } from '../services/wallet.js'
+import { walletEvent } from '../services/walletKeys.js'
 
 const bookingsRouter = Router()
 
@@ -18,7 +24,7 @@ const bookingsRouter = Router()
 // string[] TS would otherwise infer from a .js file — without it every
 // `status: { in: ACTIVE_STATUSES }` in a typed route fails to compile.
 /** @type {import('@prisma/client').BookingStatus[]} */
-export const ACTIVE_STATUSES = ['pending', 'confirmed', 'assigned', 'en_route', 'reached', 'started']
+export const ACTIVE_STATUSES = ['pending', 'payment_pending', 'confirmed', 'assigned', 'en_route', 'reached', 'started']
 
 // Cancelling once the driver is waiting at the pickup costs the rider 15% — that
 // driver turned down other rides and has already spent the fuel. Anything earlier
@@ -37,15 +43,16 @@ export const ACTIVE_STATUSES = ['pending', 'confirmed', 'assigned', 'en_route', 
 // watch, and the outcome is the rider's to tell.
 const SHAREABLE_STATUSES = ['confirmed', 'assigned', 'en_route', 'reached', 'started']
 
-const CANCELLABLE_STATUSES = ['pending', 'confirmed', 'assigned', 'en_route', 'reached']
+const CANCELLABLE_STATUSES = ['pending', 'payment_pending', 'confirmed', 'assigned', 'en_route', 'reached']
 const CHARGEABLE_STATUSES = ['reached']
 export const CANCELLATION_CHARGE_PCT = 15
 
 // What cancelling would cost right now. Exported so the status endpoint can warn
 // the rider with the same number the cancel endpoint will actually charge.
 export const cancellationChargeFor = (booking) =>
-  CHARGEABLE_STATUSES.includes(booking.status)
-    ? Math.round((booking.fare * CANCELLATION_CHARGE_PCT) / 100)
+  booking.scheduledAt && booking.driverId && booking.scheduledAdvancePaidAmount > 0 &&
+    (CHARGEABLE_STATUSES.includes(booking.status) || booking.scheduledAt.getTime() - Date.now() <= 30 * 60 * 1000)
+    ? booking.scheduledAdvancePaidAmount / 100
     : 0
 
 // Two rides within this window are treated as the same time slot.
@@ -171,11 +178,12 @@ bookingsRouter.post('/', protect, async (req, res) => {
     // because the client sent them, and they only ever protected the commission
     // — the fare they were subtracted from was itself unchecked.
     const rideFare = rideFareOf(fare, { toll, airport, carrier })
+    const couponAmount = Number.isFinite(quote.coupon?.amount) ? Math.min(fare, quote.coupon.amount) : 0
     // couponAmount is 0 until redemption ships (ROADMAP block 12). It is passed
     // explicitly rather than defaulted so the floor is already tested through the
     // post-coupon path — the day a coupon reaches this route the rule is right
     // here, instead of depending on someone finding this line again.
-    const { pct: commissionPct, amt: commissionAmt } = commissionOn({ rideFare, couponAmount: 0 })
+    const { pct: commissionPct, amt: commissionAmt } = commissionOn({ rideFare, couponAmount })
 
     const user = await prisma.user.findUnique({ where: { clerkId: req.auth.userId } })
     if (!user) return res.status(401).json({ error: 'Complete signup before booking' })
@@ -201,7 +209,7 @@ bookingsRouter.post('/', protect, async (req, res) => {
         customerPhone: user.phone, vehicleClass,
         pickupAddress, pickupLat, pickupLng,
         dropAddress, dropLat, dropLng,
-        fare, rideFare, distanceKm: distanceKm ?? null,
+        fare, rideFare, couponAmount, customerPayment: customerPaymentFor(fare, couponAmount), distanceKm: distanceKm ?? null,
         // Only on a shared booking: it is the price this ride reverts to if
         // nobody joins, and a solo ride has nothing to revert to. Taken from the
         // same priced card as `fare`, so both numbers came out of one quote and
@@ -228,12 +236,54 @@ bookingsRouter.post('/', protect, async (req, res) => {
         commissionPct, commissionAmt, sharing: sharing === true
     }
 
+    const createWithCoupon = (data) => prisma.$transaction(async (tx) => {
+        if (quote.coupon) {
+            const claimed = await tx.coupon.updateMany({ where: {
+                id: quote.coupon.id, userId: user.id, amount: quote.coupon.amount, redeemedAt: null, bookingId: null,
+            }, data: { redeemedAt: new Date() } })
+            if (claimed.count === 0) throw Object.assign(new Error('COUPON_UNAVAILABLE'), { code: 'COUPON_UNAVAILABLE' })
+        }
+        const booking = await createBooking(data, tx)
+        if (quote.coupon) await tx.coupon.update({ where: { id: quote.coupon.id }, data: { bookingId: booking.id } })
+        return booking
+    })
+
     if (scheduledAt) {
-        const booking = await createBooking({ ...bookingData, status: 'confirmed', confirmedAt: new Date() })
-        return res.json({ bookingId: booking.id, reference: booking.reference, bookingCode, status: 'confirmed' })
+        let result
+        const amounts = scheduledPaymentAmounts({ fare, couponAmount })
+        try { result = await prisma.$transaction(async (tx) => {
+            if (quote.coupon) {
+                const claimed = await tx.coupon.updateMany({ where: {
+                    id: quote.coupon.id, userId: user.id, amount: quote.coupon.amount, redeemedAt: null, bookingId: null,
+                }, data: { redeemedAt: new Date() } })
+                if (claimed.count === 0) throw Object.assign(new Error('COUPON_UNAVAILABLE'), { code: 'COUPON_UNAVAILABLE' })
+            }
+            const booking = await createBooking({ ...bookingData, status: 'payment_pending', confirmedAt: null,
+                scheduledAdvancePct: amounts.advancePercentage, scheduledAdvanceAmount: amounts.advance,
+                scheduledRemainingAmount: amounts.remaining, scheduledAdvanceDisposition: 'awaiting_payment' }, tx)
+            if (quote.coupon) await tx.coupon.update({ where: { id: quote.coupon.id }, data: { bookingId: booking.id } })
+            const payment = await createScheduledAdvanceIntent(tx, booking, amounts)
+            return { booking, payment }
+        }) }
+        catch (err) { if (err.code === 'COUPON_UNAVAILABLE') return res.status(409).json({ error: 'Coupon already redeemed', code: err.code }); throw err }
+        try {
+            const checkout = await createOrderForPayment({ paymentId: result.payment.id, userId: user.id })
+            return res.json({ bookingId: result.booking.id, reference: result.booking.reference, bookingCode,
+                status: 'payment_pending', financials: { fare: amounts.originalFare, coupon: amounts.coupon,
+                    finalFare: amounts.finalFare, advance: amounts.advance, remaining: amounts.remaining,
+                    advancePercentage: amounts.advancePercentage }, payment: checkout })
+        } catch (err) {
+            return res.json({ bookingId: result.booking.id, reference: result.booking.reference, bookingCode,
+                status: 'payment_pending', financials: { fare: amounts.originalFare, coupon: amounts.coupon,
+                    finalFare: amounts.finalFare, advance: amounts.advance, remaining: amounts.remaining,
+                    advancePercentage: amounts.advancePercentage }, payment: null,
+                paymentError: { code: 'PAYMENT_ORDER_FAILED', message: 'Payment checkout could not be created. Retry payment.' } })
+        }
     }
 
-    const booking = await createBooking({ ...bookingData, status: 'pending', confirmedAt: null })
+    let booking
+    try { booking = await createWithCoupon({ ...bookingData, status: 'pending', confirmedAt: null }) }
+    catch (err) { if (err.code === 'COUPON_UNAVAILABLE') return res.status(409).json({ error: 'Coupon already redeemed', code: err.code }); throw err }
 
     // Assignment runs detached — it can take minutes, and the client needs a
     // booking id now so it can show "Requesting a ride" and poll for the
@@ -242,6 +292,39 @@ bookingsRouter.post('/', protect, async (req, res) => {
     startAssignment(booking.id)
 
     return res.json({ bookingId: booking.id, reference: booking.reference, bookingCode, status: 'pending' })
+})
+
+async function ownedBooking(req, res) {
+  const user = await prisma.user.findUnique({ where: { clerkId: req.auth.userId } })
+  if (!user) { res.status(401).json({ error: 'User not found' }); return null }
+  const booking = await prisma.booking.findUnique({ where: { id: req.params.id } })
+  if (!booking) { res.status(404).json({ error: 'Booking not found' }); return null }
+  if (booking.userId !== user.id) { res.status(403).json({ error: 'Forbidden' }); return null }
+  return { user, booking }
+}
+
+bookingsRouter.post('/:id/scheduled-advance/order', protect, async (req, res) => {
+  const owned = await ownedBooking(req, res)
+  if (!owned) return
+  if (!owned.booking.scheduledAt) return res.status(409).json({ error: 'Ride Now has no scheduled advance' })
+  const payment = await prisma.payment.findUnique({ where: { bookingId_purpose: {
+    bookingId: owned.booking.id, purpose: 'scheduled_ride_advance',
+  } } })
+  if (!payment) return res.status(409).json({ error: 'Scheduled advance obligation is missing' })
+  try { return res.json(await createOrderForPayment({ paymentId: payment.id, userId: owned.user.id })) }
+  catch (err) { if (err instanceof PaymentError) return res.status(err.status).json({ error: err.message, code: err.code }); throw err }
+})
+
+bookingsRouter.post('/:id/scheduled-final/order', protect, async (req, res) => {
+  const owned = await ownedBooking(req, res)
+  if (!owned) return
+  if (!owned.booking.scheduledAt || owned.booking.status !== 'completed')
+    return res.status(409).json({ error: 'Final payment is available only after a scheduled ride completes' })
+  if (owned.booking.scheduledAdvancePaidAmount !== owned.booking.scheduledAdvanceAmount)
+    return res.status(409).json({ error: 'Scheduled advance has not been paid' })
+  const payment = await prisma.$transaction((tx) => createScheduledFinalIntent(tx, owned.booking))
+  try { return res.json(await createOrderForPayment({ paymentId: payment.id, userId: owned.user.id })) }
+  catch (err) { if (err instanceof PaymentError) return res.status(err.status).json({ error: err.message, code: err.code }); throw err }
 })
 
 // Mint (or hand back) this ride's "follow my ride" link.
@@ -308,7 +391,7 @@ bookingsRouter.get('/:id/status', protect, async (req, res) => {
 
   const booking = await prisma.booking.findUnique({
     where: { id: req.params.id },
-    include: { driver: { include: { location: true } } },
+    include: { driver: { include: { location: true } }, payments: { select: { id: true, purpose: true, status: true, amount: true } } },
   })
 
   if (!booking) return res.status(404).json({ error: 'Booking not found' })
@@ -325,7 +408,15 @@ bookingsRouter.get('/:id/status', protect, async (req, res) => {
 
   const cancellationCharge = cancellationChargeFor({ ...booking, status })
 
-  if (!booking.driverId) return res.json({ bookingId: booking.id, reference: booking.reference, bookingCode: user.bookingCode, status, cancellationCharge, driver: null })
+  const paymentSummary = booking.scheduledAt ? {
+    fare: Math.round(booking.fare * 100), coupon: Math.round(booking.couponAmount * 100),
+    finalFare: Math.round(booking.customerPayment * 100), advance: booking.scheduledAdvanceAmount,
+    advancePaid: booking.scheduledAdvancePaidAmount, remaining: booking.scheduledRemainingAmount,
+    finalPaid: booking.scheduledFinalPaidAmount, advanceDisposition: booking.scheduledAdvanceDisposition,
+    payments: booking.payments,
+  } : null
+
+  if (!booking.driverId) return res.json({ bookingId: booking.id, reference: booking.reference, bookingCode: user.bookingCode, status, scheduledAt: booking.scheduledAt, cancellationCharge, financials: paymentSummary, driver: null })
 
   const location = booking.driver.location
   const etaTarget = status === 'en_route'
@@ -353,8 +444,13 @@ bookingsRouter.get('/:id/status', protect, async (req, res) => {
     reference:   booking.reference,
     bookingCode: user.bookingCode,
     status,
+    scheduledAt: booking.scheduledAt,
     cancellationCharge,
+    financials: paymentSummary,
     navigationEtaMinutes,
+    fare: booking.fare,
+    coupon: booking.couponAmount,
+    customerPayment: booking.customerPayment,
     driver: {
       name:          booking.driver.name,
       phone:         booking.driver.phone,
@@ -399,6 +495,25 @@ bookingsRouter.get('/:id/status', protect, async (req, res) => {
   })
 })
 
+// One complaint per completed booking. The flag, threshold fine and suspension
+// are committed together; deterministic wallet keys make retries harmless.
+bookingsRouter.post('/:id/complaint', protect, async (req, res) => {
+  const user = await prisma.user.findUnique({ where: { clerkId: req.auth.userId } })
+  if (!user) return res.status(401).json({ error: 'User not found' })
+  const booking = await prisma.booking.findUnique({ where: { id: req.params.id } })
+  if (!booking) return res.status(404).json({ error: 'Booking not found' })
+  if (booking.userId !== user.id) return res.status(403).json({ error: 'Forbidden' })
+  if (booking.status !== 'completed' || !booking.driverId)
+    return res.status(409).json({ error: 'Only a completed ride can be reported' })
+
+  const result = await prisma.$transaction(async (tx) => {
+    const inserted = await tx.overchargeFlag.createMany({ data: [{ bookingId: booking.id, driverId: booking.driverId,
+      userId: user.id, fareAtFlag: booking.fare, note: req.body?.note ?? null }], skipDuplicates: true })
+    return applyComplaintConsequences(tx, booking.driverId, { newComplaint: inserted.count === 1 })
+  })
+  return res.json({ bookingId: booking.id, ...result })
+})
+
 bookingsRouter.post('/cancel', protect, async (req, res) => {
     const { bookingId } = req.body
     if (!bookingId) return res.status(400).json({ error: 'bookingId is required' })
@@ -406,23 +521,42 @@ bookingsRouter.post('/cancel', protect, async (req, res) => {
     const user = await prisma.user.findUnique({ where: { clerkId: req.auth.userId } })
     if (!user) return res.status(401).json({ error: 'User not found' })
 
-    const booking = await prisma.booking.findUnique({ where: { id: bookingId }, include: {driver: true} })
+    const booking = await prisma.booking.findUnique({ where: { id: bookingId }, include: { driver: true,
+        payments: { where: { purpose: 'scheduled_ride_advance' } } } })
     if (!booking) return res.status(404).json({ error: 'Booking not found' })
     if (booking.userId !== user.id) return res.status(403).json({ error: 'Forbidden' })
+    const advancePayment = booking.payments[0] ?? null
+    if (booking.status === 'cancelled') {
+        let refund = null
+        if (booking.scheduledAdvanceDisposition === 'refund_pending' && advancePayment) {
+            try { refund = await refundPayment({ paymentId: advancePayment.id }) }
+            catch (err) { if (!(err instanceof PaymentError)) throw err }
+        }
+        return res.json({ ok: true, alreadyApplied: true, cancellationCharge: booking.cancellationCharge ?? 0,
+            advanceDisposition: booking.scheduledAdvanceDisposition, refund })
+    }
     if (!CANCELLABLE_STATUSES.includes(booking.status))
         return res.status(409).json({ error: `Cannot cancel a ${booking.status} booking` })
 
-    const cancellationCharge = cancellationChargeFor(booking)
+    let kind = scheduledCancellationKind(booking)
+    if (kind === 'forfeit' && !booking.driverId) kind = 'refund'
+    const advancePaid = advancePayment?.status === 'captured' && booking.scheduledAdvancePaidAmount > 0
+    const shouldRefund = advancePaid && kind === 'refund'
+    const shouldForfeit = advancePaid && kind === 'forfeit'
+    const cancellationCharge = shouldForfeit ? booking.scheduledAdvancePaidAmount / 100 : 0
 
-    await prisma.$transaction(async (tx) => {
-        await tx.booking.update({
-            where: { id: booking.id },
+    const cancelled = await prisma.$transaction(async (tx) => {
+        const moved = await tx.booking.updateMany({
+            where: { id: booking.id, status: booking.status },
             data: {
                 status: 'cancelled',
                 cancelledBy: 'user',
                 cancellationCharge,
+                ...(shouldRefund ? { scheduledAdvanceDisposition: 'refund_pending' } : {}),
+                ...(shouldForfeit ? { scheduledAdvanceDisposition: 'forfeited_to_driver' } : {}),
             },
         })
+        if (!moved.count) return false
 
         // Take the ride off every driver's notification page. Inside the same
         // transaction as the cancel: a scheduled ride that is cancelled but still
@@ -464,7 +598,24 @@ bookingsRouter.post('/cancel', protect, async (req, res) => {
                 })
             }
         }
+        if (booking.driverId && booking.scheduledAt) {
+            const hold = await tx.walletEntry.findUnique({ where: { eventKey: walletEvent.depositHold(booking.id) } })
+            if (hold) await postWalletEntry(tx, { driverId: booking.driverId, amount: Math.abs(hold.amount),
+                type: 'deposit_refund', eventKey: walletEvent.depositRefund(booking.id), bookingId: booking.id,
+                note: 'Scheduled ride acceptance deposit released after customer cancellation' })
+        }
+        if (shouldForfeit && booking.driverId) await postWalletEntry(tx, {
+            driverId: booking.driverId, amount: booking.scheduledAdvancePaidAmount / 100,
+            type: 'cancellation_compensation', eventKey: walletEvent.scheduledCancellationCompensation(booking.id),
+            bookingId: booking.id, note: 'Scheduled customer advance forfeited after late cancellation',
+        })
+        return true
     })
+
+    if (!cancelled) return res.status(409).json({ error: 'Booking changed while cancellation was in flight' })
+
+    let refund = null
+    if (shouldRefund && advancePayment) refund = await refundPayment({ paymentId: advancePayment.id })
 
     if (booking.driver) {
         // The ride's reference, not the rider's bookingCode. This line is trying to
@@ -480,7 +631,9 @@ bookingsRouter.post('/cancel', protect, async (req, res) => {
         )
     }
 
-    return res.json({ ok: true, cancellationCharge })
+    return res.json({ ok: true, cancellationCharge,
+        advanceDisposition: shouldRefund ? 'refund_pending' : shouldForfeit ? 'forfeited_to_driver' : booking.scheduledAdvanceDisposition,
+        refund })
 })
 
 bookingsRouter.get('/my-bookings', protect, async (req, res) => {

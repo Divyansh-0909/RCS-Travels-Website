@@ -29,6 +29,7 @@ export const walletEvent = {
   payout: (payoutId) => `payout:${payoutId}`,
   /** Manual admin correction. The caller supplies the reference. */
   adjustment: (reference) => `adjustment:${reference}`,
+  scheduledCancellationCompensation: (bookingId) => `scheduled_cancellation_compensation:booking:${bookingId}`,
 }
 
 /**

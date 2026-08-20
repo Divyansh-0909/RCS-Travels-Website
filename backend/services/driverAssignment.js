@@ -1,7 +1,7 @@
 import { prisma } from '../db/prisma.js'
 import { Prisma } from '@prisma/client'
 import { randomUUID } from 'node:crypto'
-import {sendFCM, sendPush, sendWhatsApp} from './notification.js'
+import { sendPush } from './notification.js'
 
 /**
  * getDriver's answer when the ride has gone OUT to captains but nobody has taken
@@ -287,7 +287,7 @@ export async function claimBookingForDriver(booking, driver, confirmedAt, onClai
  * never gets an id, which is what keeps `shareGroupId IS NOT NULL` meaning
  * "actually pooled" rather than "asked to be".
  */
-async function joinPool(tx, { host, joiner, orders }) {
+export async function joinPool(tx, { host, joiner, orders }) {
   const live = await tx.booking.findUnique({
     where: { id: host.id },
     select: { status: true, shareGroupId: true },
@@ -436,57 +436,13 @@ export async function getDriver(bookingId) {
         // His turn is spent here, before the push rather than after the answer.
         await markOffered(x.driverId)
 
-        const response =
-          await sendFCM(x.driver.fcmToken, {
-            notification: {
-              title: row.scheduledAt ? `New Scheduled Sharing Ride, Pick up at ${row.scheduledAt}` : 'Immediate Sharing Pickup',
-              body: `\n${row.pickupAddress} → ${row.dropAddress} \n₹${row.fare}`,
-            },
-            data: {
-              bookingId:      row.id,
-              pickupAddress:  row.pickupAddress,
-              pickupLat:      String(row.pickupLat),
-              pickupLng:      String(row.pickupLng),
-              dropAddress:    row.dropAddress,
-              dropLat:        String(row.dropLat),
-              dropLng:        String(row.dropLng),
-              fare:           String(row.fare),
-              vehicleClass:   row.vehicleClass,
-              pickupTime:     pickupTimeLabel,
-              customerPhone:  row.customerPhone,
-            },
-          })
-
-        if (response === true ) {
-          // on-spot rides have no confirmedAt yet
-          const claim = await claimBookingForDriver(
-            row, x.driver, row.confirmedAt ?? new Date(),
-            (tx) => joinPool(tx, { host, joiner: row, orders: match.orders }),
-          )
-
-          // The booking moved on while this ring was pinging — cancelled,
-          // expired, or taken through the driver app. Nothing left to search for.
-          if (claim === 'booking_taken') return null
-          // His last seat went to another ride between the offer and the answer.
-          // Only this candidate is out; the next one may still fit.
-          if (claim === 'no_room') continue
-          // The trip he was going to join ended, or was itself joined by
-          // somebody else, between the routing call and the claim. The sequence
-          // computed above describes a car that no longer exists.
-          if (claim === 'host_moved_on') continue
-
-          assignedDriver = x.driverId
-
-          sendWhatsApp(x.driver.phone,
-            `You have been assigned a sharing ride.
-            \nPickup Time: ${pickupTimeLabel}
-            \nPickup Location: ${row.pickupAddress}
-            \nDrop Location: ${row.dropAddress}
-            \nCustomer Phone Number: ${row.customerPhone}`
-          )
-          return assignedDriver
-        }
+        await offerRideNow(row, x, host.id)
+        offered += 1
       }
+
+    // Prefer filling an existing car. Do not also offer the same rider to idle
+    // captains while the compatible host is deciding.
+    if (offered > 0) return OFFERED
     
      
     // PASS 2 — seed a new trip on an idle vehicle.
@@ -558,10 +514,10 @@ export async function getDriver(bookingId) {
  * (bookingId, driverId) means a re-run of the ring quietly does nothing rather
  * than offering the same ride twice.
  */
-async function offerRideNow(row, x) {
+async function offerRideNow(row, x, poolHostBookingId = null) {
   try {
     await prisma.rideOffer.create({
-      data: { bookingId: row.id, driverId: x.driverId, group: x.driver.group },
+      data: { bookingId: row.id, driverId: x.driverId, group: x.driver.group, poolHostBookingId },
     })
   } catch {
     // Already offered to him. Nothing to do and nothing to report.
@@ -572,7 +528,7 @@ async function offerRideNow(row, x) {
   // body at the top level, and clears the token when Firebase says the install
   // is gone. `screen` is what usePushRegistration reads to route the tap.
   await sendPush(x.driver, {
-    title: row.sharing ? 'New sharing ride' : 'New ride',
+    title: poolHostBookingId ? 'New shared pickup on your route' : row.sharing ? 'New sharing ride' : 'New ride',
     body: `${row.pickupAddress} → ${row.dropAddress} · ₹${row.fare}`,
     data: { screen: 'notifications', bookingId: row.id },
   }).catch(() => {})

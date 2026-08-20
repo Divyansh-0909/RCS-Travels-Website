@@ -9,6 +9,7 @@ datasource db {
 
 enum BookingStatus {
   pending
+  payment_pending // scheduled fare locked; awaiting the customer's 15% advance
   confirmed // scheduled ride accepted, driver assigned closer to pickup time
   assigned
   en_route
@@ -115,12 +116,48 @@ enum WalletEntryType {
   // Admin correction. Always carries a note — an unexplained adjustment is
   // indistinguishable from a bug.
   adjustment
+  cancellation_compensation
 }
 
 enum PaymentMethod {
   wallet
   cash
   upi
+}
+
+enum PaymentPurpose {
+  scheduled_ride_advance
+  scheduled_ride_final
+  marketplace_deposit
+  cancellation_charge
+  other_customer_payment
+}
+
+enum ExternalPaymentStatus {
+  created
+  order_creating
+  order_created
+  authorized
+  captured
+  failed
+  refund_pending
+  refunded
+}
+
+enum WebhookProcessingStatus {
+  received
+  processed
+  ignored
+  failed
+}
+
+enum ScheduledAdvanceDisposition {
+  not_applicable
+  awaiting_payment
+  paid
+  refund_pending
+  refunded
+  forfeited_to_driver
 }
 
 enum OfferStatus {
@@ -157,6 +194,7 @@ model User {
   reviews         DriverReview[]
   overchargeFlags OverchargeFlag[]
   coupons         Coupon[]
+  payments        Payment[]
 
   // Admin user list sorts by createdAt desc; its filters (name/phone/gender)
   // are all `contains`, which no btree can serve anyway.
@@ -451,6 +489,57 @@ model WalletEntry {
   @@map("wallet_entries")
 }
 
+// External gateway attempts only. Driver accounting remains in WalletEntry.
+model Payment {
+  id                 String                @id @default(uuid())
+  userId             String                @map("user_id")
+  bookingId          String?               @map("booking_id")
+  purpose            PaymentPurpose
+  status             ExternalPaymentStatus @default(created)
+  amount             Int
+  currency           String                @default("INR")
+  idempotencyKey     String                @unique @map("idempotency_key")
+  razorpayOrderId    String?               @unique @map("razorpay_order_id")
+  razorpayPaymentId  String?               @unique @map("razorpay_payment_id")
+  razorpaySignature  String?               @map("razorpay_signature")
+  razorpayRefundId   String?               @unique @map("razorpay_refund_id")
+  failureCode        String?               @map("failure_code")
+  failureDescription String?               @map("failure_description")
+  originalFareAmount Int?                  @map("original_fare_amount")
+  couponAmount       Int?                  @map("coupon_amount")
+  finalFareAmount    Int?                  @map("final_fare_amount")
+  advancePercentage Int?                  @map("advance_percentage")
+  remainingAmount   Int?                  @map("remaining_amount")
+  createdAt          DateTime              @default(now()) @map("created_at")
+  updatedAt          DateTime              @updatedAt @map("updated_at")
+  capturedAt         DateTime?             @map("captured_at")
+  refundedAt         DateTime?             @map("refunded_at")
+
+  user          User                     @relation(fields: [userId], references: [id], onDelete: Restrict)
+  booking       Booking?                 @relation(fields: [bookingId], references: [id], onDelete: Restrict)
+  webhookEvents RazorpayWebhookEvent[]
+
+  @@index([userId, createdAt])
+  @@unique([bookingId, purpose])
+  @@map("payments")
+}
+
+model RazorpayWebhookEvent {
+  id          String                  @id @default(uuid())
+  eventId     String                  @unique @map("event_id")
+  eventType   String                  @map("event_type")
+  status      WebhookProcessingStatus @default(received)
+  paymentId   String?                 @map("payment_id")
+  result      String?
+  receivedAt  DateTime                @default(now()) @map("received_at")
+  processedAt DateTime?               @map("processed_at")
+
+  payment Payment? @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+
+  @@index([paymentId, receivedAt])
+  @@map("razorpay_webhook_events")
+}
+
 // One scheduled ride offered to one driver, and whether he has answered.
 //
 // WHY THIS EXISTS. Ride-now offers are synchronous: getDriver awaits each FCM as
@@ -476,6 +565,8 @@ model RideOffer {
   id          String      @id @default(uuid())
   bookingId   String      @map("booking_id")
   driverId    String      @map("driver_id")
+  // Set only when accepting would add this rider to an existing trip.
+  poolHostBookingId String? @map("pool_host_booking_id")
   status      OfferStatus @default(pending)
   // Which group this offer went out to. Recorded rather than re-derived, because
   // Driver.group can change between the offer and the answer, and "who was this
@@ -497,10 +588,12 @@ model RideOffer {
   // Escalation asks "does this booking still have unanswered offers in the
   // current group", and withdrawal sweeps every pending offer for a booking.
   @@index([bookingId, status])
+  @@index([poolHostBookingId])
   @@map("ride_offers")
 }
 
-// ₹100 issued after 6 completed rides in the same calendar month.
+// One coupon per customer per calendar month, awarded from completed-ride spend:
+// ₹2,000 => ₹100, ₹2,500 => ₹200, ₹5,000 => ₹500; highest tier wins.
 //
 // A row per issued coupon rather than a counter on User, because the coupon
 // outlives the month that earned it ("usable on any future ride") and because
@@ -509,8 +602,8 @@ model RideOffer {
 model Coupon {
   id         String    @id @default(uuid())
   userId     String    @map("user_id")
-  amount     Float     @default(100)
-  // The month whose 6 rides earned this coupon, "YYYY-MM". Unique per user, so
+  amount     Float
+  // The calendar month whose completed-ride spend earned it, "YYYY-MM". Unique per user, so
   // one month can never issue two coupons however many times the job runs.
   earnedFor  String    @map("earned_for")
   issuedAt   DateTime  @default(now()) @map("issued_at")
@@ -827,6 +920,14 @@ model Booking {
   // carrier). Commission is a percentage of THIS, so storing it makes the cut
   // auditable from the row alone — and fare - rideFare recovers the add-ons.
   rideFare            Float?        @map("ride_fare")
+  couponAmount        Float         @default(0) @map("coupon_amount")
+  customerPayment     Float         @default(0) @map("customer_payment")
+  scheduledAdvancePct Int           @default(0) @map("scheduled_advance_pct")
+  scheduledAdvanceAmount Int        @default(0) @map("scheduled_advance_amount")
+  scheduledAdvancePaidAmount Int    @default(0) @map("scheduled_advance_paid_amount")
+  scheduledRemainingAmount Int      @default(0) @map("scheduled_remaining_amount")
+  scheduledFinalPaidAmount Int      @default(0) @map("scheduled_final_paid_amount")
+  scheduledAdvanceDisposition ScheduledAdvanceDisposition @default(not_applicable) @map("scheduled_advance_disposition")
   // WHAT THIS RIDE COSTS IF NOBODY EVER SHARES IT — the solo price off the same
   // signed quote the shared price came from, set only on sharing bookings and
   // null on every solo one.
@@ -911,6 +1012,7 @@ model Booking {
   overchargeFlag OverchargeFlag?
   walletEntries  WalletEntry[]
   coupon         Coupon?
+  payments       Payment[]
   offers         RideOffer[]
 
   // Postgres does not index foreign keys automatically, and every index below is

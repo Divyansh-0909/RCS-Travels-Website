@@ -5,10 +5,16 @@ import { getAuth, clerkClient } from '@clerk/express'
 import { protect } from '../middleware/auth.js'
 import { prisma } from '../db/prisma.js'
 import { ACTIVE_STATUSES } from './bookings.js'
-import { ASSIGNABLE_STATUSES, claimBookingForDriver } from '../services/driverAssignment.js'
+import { ASSIGNABLE_STATUSES, claimBookingForDriver, joinPool } from '../services/driverAssignment.js'
+import { evaluatePool, POOLABLE_HOST_STATUSES } from '../services/ridePooling.js'
 import { withdrawOtherOffers } from '../services/scheduledOffers.js'
 import { seatsOf } from '../constants/vehicles.js'
 import { commissionOn } from '../services/commission.js'
+import { postWalletEntry } from '../services/wallet.js'
+import { walletEvent } from '../services/walletKeys.js'
+import { scheduledDepositFor } from '../services/scheduledDeposit.js'
+import { commissionWithReward, loyaltyRewardsEarned } from '../services/loyalty.js'
+import { createScheduledFinalIntent } from '../services/scheduledPayments.js'
 import { isStorageConfigured, signedUploadUrl, stat, remove } from '../lib/storage.js'
 import { sniffUpload, scanDocument, discardUpload, DRIVER_SCAN_MESSAGE } from '../services/documentScan.js'
 import { enqueueDocumentScan } from '../lib/tasks.js'
@@ -1488,6 +1494,7 @@ driverRouter.get('/rides', protect, async (req, res) => {
             needsCarrier: true,
             distanceKm: true,
             rideFare: true,
+            couponAmount: true,
             commissionPct: true,
             commissionAmt: true,
             cancelledBy: true,
@@ -1591,6 +1598,9 @@ driverRouter.get('/rides/:id', protect, async (req, res) => {
         needsCarrier: booking.needsCarrier,
         fare: booking.fare,
         rideFare: booking.rideFare,
+        coupon: booking.couponAmount,
+        customerPayment: booking.customerPayment,
+        walletReimbursement: booking.couponAmount,
         distanceKm: booking.distanceKm,
         scheduledAt: booking.scheduledAt,
         preferSafeRoute: booking.preferSafeRoute,
@@ -1648,6 +1658,9 @@ driverRouter.patch('/rides/:id/status', protect, async (req, res) => {
             soloFare: true,
             fare: true,
             rideFare: true,
+            scheduledAt: true,
+            couponAmount: true,
+            commissionAmt: true,
             pickupLat: true,
             pickupLng: true,
             dropLat: true,
@@ -1694,6 +1707,7 @@ driverRouter.patch('/rides/:id/status', protect, async (req, res) => {
     // worth measuring — it is the number that says whether captains sit on rides
     // they have accepted — but the status works without it.
     const now = new Date()
+    let settlementCommissionAmt = booking.commissionAmt
     const data: Record<string, unknown> =
         to === 'en_route' ? { status: to } :
             to === 'reached' ? { status: to, reachedAt: now, reachedDistanceKm: distanceKm } :
@@ -1736,12 +1750,14 @@ driverRouter.patch('/rides/:id/status', protect, async (req, res) => {
         // couponAmount 0: an unmatched share reverts to the solo fare, and no
         // coupon has been redeemed against this booking (redemption ships with
         // ROADMAP block 12). Passed explicitly — the floor is post-coupon now.
-        const { pct, amt } = commissionOn({ rideFare: soloRideFare, couponAmount: 0 })
+        const { pct, amt } = commissionOn({ rideFare: soloRideFare, couponAmount: booking.couponAmount })
 
         data.fare = booking.soloFare
         data.rideFare = soloRideFare
+        data.customerPayment = Math.max(0, booking.soloFare - booking.couponAmount)
         data.commissionPct = pct
         data.commissionAmt = amt
+        settlementCommissionAmt = amt
     }
 
     const seats = seatsOf(driver.vehicleClass)
@@ -1773,6 +1789,41 @@ driverRouter.patch('/rides/:id/status', protect, async (req, res) => {
                     where: { id: driver.id },
                     data: { vehicleCapacity: seats },
                 })
+            }
+        }
+
+        if (to === 'completed') {
+            if (booking.scheduledAt) {
+                const hold = await tx.walletEntry.findUnique({ where: { eventKey: walletEvent.depositHold(booking.id) } })
+                if (hold) await postWalletEntry(tx, { driverId: driver.id, amount: Math.abs(hold.amount),
+                    type: 'deposit_refund', eventKey: walletEvent.depositRefund(booking.id), bookingId: booking.id,
+                    note: 'Scheduled ride acceptance deposit released' })
+            }
+            if (booking.couponAmount > 0) await postWalletEntry(tx, { driverId: driver.id,
+                amount: booking.couponAmount, type: 'coupon_reimbursement',
+                eventKey: walletEvent.couponReimbursement(booking.id), bookingId: booking.id,
+                note: 'Full coupon reimbursement' })
+
+            const liveDriver = await tx.driver.findUniqueOrThrow({ where: { id: driver.id },
+                select: { commissionFreeRidesRemaining: true } })
+            const reward = commissionWithReward(settlementCommissionAmt, liveDriver.commissionFreeRidesRemaining)
+            if (reward.consumeReward) {
+                await tx.driver.update({ where: { id: driver.id }, data: { commissionFreeRidesRemaining: { decrement: 1 } } })
+                await tx.booking.update({ where: { id: booking.id }, data: { commissionAmt: 0, commissionPct: 0 } })
+            }
+            const completed = await tx.booking.count({ where: { driverId: driver.id, status: 'completed' } })
+            const earned = loyaltyRewardsEarned(completed - 1, completed)
+            if (earned) await tx.driver.update({ where: { id: driver.id },
+                data: { commissionFreeRidesRemaining: { increment: earned } } })
+
+            if (booking.scheduledAt) {
+                const completedBooking = await tx.booking.findUniqueOrThrow({ where: { id: booking.id } })
+                const remaining = Math.max(0, Math.round(completedBooking.customerPayment * 100) - completedBooking.scheduledAdvancePaidAmount)
+                if (remaining !== completedBooking.scheduledRemainingAmount) {
+                    await tx.booking.update({ where: { id: booking.id }, data: { scheduledRemainingAmount: remaining } })
+                    completedBooking.scheduledRemainingAmount = remaining
+                }
+                await createScheduledFinalIntent(tx, completedBooking)
             }
         }
 
@@ -1821,6 +1872,7 @@ driverRouter.get('/offers', protect, async (req, res) => {
         select: {
             id: true,
             createdAt: true,
+            poolHostBookingId: true,
             booking: {
                 select: {
                     id: true, reference: true, pickupAddress: true, pickupLat: true, pickupLng: true,
@@ -1878,6 +1930,7 @@ driverRouter.get('/offers', protect, async (req, res) => {
                 safeRoute: o.booking.preferSafeRoute,
                 sharing: o.booking.sharing,
                 needsCarrier: o.booking.needsCarrier,
+                additionalPickup: o.poolHostBookingId !== null,
             })),
     })
 })
@@ -1908,6 +1961,13 @@ driverRouter.patch('/offers/:id/accept', protect, async (req, res) => {
 
     if (!offer || offer.driverId !== driver.id) return res.status(404).json({ error: 'Offer not found' })
     if (offer.status !== 'pending') {
+        if (offer.status === 'accepted' && offer.booking.driverId === driver.id) return res.json({
+            bookingId: offer.booking.id, status: 'assigned', alreadyApplied: true,
+            pickup: { address: offer.booking.pickupAddress, lat: offer.booking.pickupLat, lng: offer.booking.pickupLng },
+            drop: { address: offer.booking.dropAddress, lat: offer.booking.dropLat, lng: offer.booking.dropLng },
+            fare: offer.booking.fare, vehicleClass: offer.booking.vehicleClass,
+            pickupTime: formatPickupTime(offer.booking.scheduledAt), customerPhone: offer.booking.customerPhone,
+        })
         return res.status(409).json({ error: `This offer was already ${offer.status}`, status: offer.status })
     }
 
@@ -1922,25 +1982,90 @@ driverRouter.patch('/offers/:id/accept', protect, async (req, res) => {
         : seats !== null && driver.vehicleCapacity >= seats
     if (!hasRoom) return res.status(409).json({ error: 'Vehicle has no room for this ride' })
 
+    // A pooled offer was made against one exact trip. Re-route it when the
+    // captain answers: his car and the host may have moved since the push, so
+    // accepting stale geometry could create a pickup that now violates the
+    // 15-minute wait/delay limits.
+    let poolJoin = null
+    if (offer.poolHostBookingId) {
+        const [host, location] = await Promise.all([
+            prisma.booking.findFirst({
+                where: {
+                    id: offer.poolHostBookingId,
+                    driverId: driver.id,
+                    status: { in: POOLABLE_HOST_STATUSES as BookingStatus[] },
+                    sharing: true,
+                    shareGroupId: null,
+                },
+            }),
+            prisma.driverLocation.findUnique({ where: { driverId: driver.id } }),
+        ])
+
+        if (!host || !location) {
+            await prisma.rideOffer.updateMany({
+                where: { id: offer.id, status: 'pending' },
+                data: { status: 'withdrawn', respondedAt: new Date() },
+            })
+            return res.status(409).json({ error: 'This shared pickup is no longer available', code: 'POOL_MOVED_ON' })
+        }
+
+        try {
+            const match = await evaluatePool({
+                driverPos: { lat: location.latitude, lng: location.longitude },
+                host,
+                joiner: booking,
+            })
+            if (!match.ok) {
+                await prisma.rideOffer.updateMany({
+                    where: { id: offer.id, status: 'pending' },
+                    data: { status: 'withdrawn', respondedAt: new Date() },
+                })
+                return res.status(409).json({ error: 'This shared pickup is no longer on your route', code: 'POOL_NO_LONGER_MATCHES' })
+            }
+            poolJoin = { host, orders: match.orders }
+        } catch {
+            return res.status(503).json({ error: 'Could not verify the shared route. Please try again.', code: 'ROUTE_UNAVAILABLE' })
+        }
+    }
+
     // Everything above is a read-then-check against a snapshot, and two drivers
     // tapping accept at the same instant BOTH pass all of it. Those checks buy a
     // specific error message in the ordinary case; this call is the only thing
     // deciding who actually gets the ride — and, via the capacity guard, whether
     // this driver had room for it at the moment he asked.
-    const claim = await claimBookingForDriver(
+    const depositAmount = booking.scheduledAt ? scheduledDepositFor(booking.fare) : 0
+    if (driver.walletBalance < depositAmount) {
+        return res.status(409).json({ error: 'Insufficient available wallet balance', code: 'INSUFFICIENT_WALLET', depositAmount })
+    }
+
+    let claim
+    try { claim = await claimBookingForDriver(
         booking,
         driver,
         booking.confirmedAt ?? new Date(),
         // Both inside the claim's transaction: answering his own offer, and
         // taking the ride off everyone else's notification page.
         async (tx) => {
+            const live = await tx.driver.findUniqueOrThrow({ where: { id: driver.id }, select: { walletBalance: true } })
+            if (live.walletBalance < depositAmount) throw new Error('INSUFFICIENT_WALLET')
+            if (depositAmount > 0) {
+                await postWalletEntry(tx, { driverId: driver.id, amount: -depositAmount, type: 'deposit_hold',
+                    eventKey: walletEvent.depositHold(booking.id), bookingId: booking.id,
+                    note: '15% scheduled ride acceptance deposit' })
+            }
+            if (poolJoin) await joinPool(tx, { host: poolJoin.host, joiner: booking, orders: poolJoin.orders })
             await tx.rideOffer.update({
                 where: { id: offer.id },
                 data: { status: 'accepted', respondedAt: new Date() },
             })
             await withdrawOtherOffers(booking.id, driver.id, tx)
         },
-    )
+    ) } catch (err) {
+        if ((err as Error).message === 'INSUFFICIENT_WALLET') return res.status(409).json({
+            error: 'Insufficient available wallet balance', code: 'INSUFFICIENT_WALLET', depositAmount,
+        })
+        throw err
+    }
 
     if (claim === 'booking_taken') {
         // Somebody else got there first. Take this offer off his page rather than
@@ -1956,6 +2081,14 @@ driverRouter.patch('/offers/:id/accept', protect, async (req, res) => {
         // His own second accept beat this one to the seats. The offer stays
         // pending on purpose — finish a ride and it fits again.
         return res.status(409).json({ error: 'Vehicle has no room for this ride' })
+    }
+
+    if (claim === 'host_moved_on') {
+        await prisma.rideOffer.updateMany({
+            where: { id: offer.id, status: 'pending' },
+            data: { status: 'withdrawn', respondedAt: new Date() },
+        })
+        return res.status(409).json({ error: 'This shared pickup is no longer available', code: 'POOL_MOVED_ON' })
     }
 
     return res.json({

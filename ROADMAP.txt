@@ -1425,10 +1425,7 @@ each numbered block unblocks the ones after it. Outstation is PARKED (see bottom
    it. Model 1 ONLY: the platform NEVER touches the fare itself (the real
    customer still pays the claiming driver directly, exactly as before —
    holding that fare would be payment-aggregator licensing).
-   !! MODEL REPLACED 14 Aug 2026. THIS SUPERSEDES THE 28 Jul MODEL ENTIRELY.
-   The 28 Jul rule — claimer's deposit paid to the poster, claimer gets nothing
-   back, flat 12% platform fee on the deposit, ₹100 floor — IS DEAD. Do not
-   implement it, and do not reason from it. What follows is the whole rule.
+   CONFIRMED MODEL. What follows is the whole rule.
      - POSTER (Driver A) sets BOTH the fare and the deposit when he posts.
      - MINIMUM DEPOSIT = ₹50. DEPOSIT MUST BE LESS THAN THE FARE — validate
        both at post time, since no rational claimer accepts the reverse.
@@ -1461,25 +1458,11 @@ each numbered block unblocks the ones after it. Outstation is PARKED (see bottom
    !! THE 6% IS NOT THE 5% PLATFORM COMMISSION EITHER, and the driver loyalty
    reward (block 14) waives the 5% ONLY — it never waives a marketplace fee
    or the 12% cancellation fee.
-   !! COST-RECOVERY GOAL DOES NOT APPLY. The old 30%-of-deposit fee was sized
-   to recover the project's ~₹620–800/mo running costs from marketplace volume
-   alone. That link is broken: the fee is 6% by mandate and the deposit is
-   poster-chosen rather than tied to the fare, so revenue is not a predictable
-   function of ride volume. Don't assume this feature funds anything.
    !! PAYOUT COST STILL BITES AT THE FLOOR, AND THE FLOOR IS NOW LOWER. On a
    ₹50 deposit A's fee is ₹3, against a RazorpayX payout of ~₹5–6 to a
    DIFFERENT poster on every completed ride. The smallest listings lose money
    on A's side. ₹50 is the confirmed floor — do not silently raise it; if
    per-ride losses show up in practice, that is the trigger to revisit.
-   NO DRIVER WALLET IN THE MARKETPLACE — this is collect-and-settle per ride,
-   on UPI throughout, not a maintained balance. THE BLANKET "no driver wallet"
-   RULE IS SUPERSEDED (8 Aug 2026, block 10): the platform DOES now have a
-   driver wallet. It just isn't used here — marketplace money still moves
-   claimer -> platform -> poster by UPI and never rests in a balance, because
-   that is fare money and holding it is the licensing problem this block was
-   built to dodge. Two deposits now exist in the driver app with OPPOSITE
-   semantics — this one is never refunded to the claimer, block 10's is — so
-   they must never share a name or a screen in the UI.
    RESOLVED (was open, Raju's direction closes it): yes, the poster gets paid.
 
 8. AIRPORT TERMINALS
@@ -1664,13 +1647,12 @@ each numbered block unblocks the ones after it. Outstation is PARKED (see bottom
    as a CACHE of sum(entries). Write the cache in the SAME TRANSACTION as the
    entry or the two drift, and the drift is money. Balance goes negative on
    purpose — that is the state that blocks going online.
-   The deposit percentage is not encoded anywhere yet, on purpose: it is Raju's
-   number and so is whether it applies below the ₹800 floor (asked 8 Aug).
-   THE DEPOSIT: before a driver is shown the rider's details, he pays a
-   PERCENTAGE OF THE FARE. On ride completion that money is returned to his
+   The scheduled-ride acceptance deposit is 15% of the authoritative fare.
+   Before a scheduled driver is shown the rider's details, the available wallet
+   balance is checked and the deposit is held. On completion it is returned to his
    DRIVER WALLET. This is Raju's/the user's decision, taken after the
    trade-offs below were put to them — it is not an open question.
-   PERCENTAGE STILL OPEN (Raju's number). Deposit is per-ride, not standing.
+   DRIVER WALLET. Ride Now never uses this deposit. Deposit is per-ride, not standing.
    THE WALLET is a maintained balance and pays for:
      - the ride acceptance deposit
      - future platform charges (commission, fines — block 11)
@@ -1830,8 +1812,7 @@ each numbered block unblocks the ones after it. Outstation is PARKED (see bottom
    earnedFor])` stops one month issuing two coupons however many times the job
    runs; the unique `bookingId` stops the same coupon being spent on two
    bookings racing each other.
-   !! THE EARNING RULE CHANGED 14 Aug 2026 — SPEND TIERS, NOT A RIDE COUNT.
-   It was "₹100 after 6 completed rides in the same month". It is now:
+   THE EARNING RULE IS MONTHLY COMPLETED-RIDE SPEND:
      ₹2,000 in a calendar month  ->  ₹100
      ₹2,500                      ->  ₹200
      ₹5,000                      ->  ₹500
@@ -1860,22 +1841,13 @@ each numbered block unblocks the ones after it. Outstation is PARKED (see bottom
    This is the reason the wallet has to exist at all, independent of block 10,
    and the tier change makes it more so: the per-redemption credit is now up
    to ₹500.
-   STILL TO DO: the month-end tiered issuing job, redemption inside the SIGNED
-   FARE QUOTE (see the !! below — this is the trap), the wallet credit on
-   redemption, and the review endpoints.
-   STILL OPEN (asked 14 Aug, unanswered): (a) does commission's ₹800 floor
-   test the fare BEFORE or AFTER the coupon? Tiers make this sharp — a ₹1,200
-   ride with a ₹500 coupon lands at ₹700, under the floor, so the platform
-   pays ₹500 AND forgoes ₹60 while the driver receives the full ₹1,200 either
-   way (₹700 cash + ₹500 credit). Testing pre-coupon rideFare leaves the
-   driver identical and costs ₹60 less each time. (b) Does a coupon EXPIRE?
+   Redemption is inside the signed fare quote and the driver receives the exact
+   coupon value as an idempotent wallet reimbursement on completion. The ₹800
+   commission floor is evaluated after the coupon. Coupon expiry remains open.
    There is no `expiresAt` on the model and this block says "usable on any
    future ride". Unbounded ₹100 liabilities were tolerable; unbounded ₹500
    ones accumulate. A 3-month expiry is a small migration and is much easier
    before any coupons exist than after.
-   !! THE SCHEMA COMMENT ABOVE `model Coupon` STILL DESCRIBES THE OLD 6-RIDE
-   RULE, as does its note on `earnedFor`. Fix it when the issuing job is
-   written — right now schema.prisma and this block disagree.
    !! COUPONS ARE MONEY-BEARING, SO THE COUPON MUST GO INSIDE THE SIGNED FARE
    QUOTE (see SERVER-SIDE FARE RECOMPUTATION below, which already says every
    new money-bearing field must). A coupon applied beside the quote instead of

@@ -29,6 +29,7 @@ import { SAFE_ROUTE_SURCHARGE, isDistancePriced } from "../constants/fares";
 import { labelOf } from "../constants/vehicles";
 import { LIVE_STATUSES, minsLabel, formatPlate } from "../lib/trip";
 import { useExitAnim } from "../hooks/useExitAnim";
+import { openRazorpayCheckout } from "../services/razorpayCheckout";
 
 // ---- Shared layout + type scale -------------------------------------------
 // The desktop content column is 377px — OnBoarding's effective control width
@@ -144,6 +145,8 @@ const TrackingPage = () => {
         };
     });
     const [navigationEtaMinutes, setNavigationEtaMinutes] = useState(null);
+    const [financials, setFinancials] = useState(null);
+    const [bookingScheduledAt, setBookingScheduledAt] = useState(activeBooking?.scheduledAt ?? scheduledTime ?? null);
     const [mapApi, setMapApi] = useState(null);
 
     useEffect(() => {
@@ -186,6 +189,8 @@ const TrackingPage = () => {
                 if (data.status) setStatus(data.status);
                 setDriver(data.driver ?? null);
                 setNavigationEtaMinutes(data.navigationEtaMinutes ?? null);
+                setFinancials(data.financials ?? null);
+                setBookingScheduledAt(data.scheduledAt ?? null);
                 // Server-computed, so the cancel warning and the actual charge
                 // are always the same number.
                 setCancellationCharge(data.cancellationCharge);
@@ -196,7 +201,7 @@ const TrackingPage = () => {
             arrivedFresh.current = false;
             // schedule the next tick from the response, not an interval, so a
             // slow request can never stack up overlapping polls
-            if (!cancelled && (!data?.status || LIVE_STATUSES.includes(data.status))) {
+            if (!cancelled && (!data?.status || LIVE_STATUSES.includes(data.status) || ["payment_pending", "confirmed"].includes(data.status))) {
                 timer = setTimeout(() => poll(false), 5000);
             }
         }
@@ -468,12 +473,45 @@ const TrackingPage = () => {
     // duplicated in both branches. Confirming payment is the only action here;
     // the extra-fare notice below already carries the route to support, so a
     // second support button would compete with the primary one.
+    async function payScheduledFinal() {
+        try {
+            setLoading(true); setError(null);
+            const checkout = await api.createScheduledFinalOrder(bookingId);
+            if (checkout?.error) throw new Error(checkout.error);
+            const response = await openRazorpayCheckout(checkout, { description: "Remaining scheduled ride fare" });
+            const verified = await api.verifyPayment(checkout.paymentId, response);
+            if (verified?.error) throw new Error(verified.error);
+            const latest = await api.getBookingStatus(bookingId);
+            if (latest?.error) throw new Error(latest.error);
+            setFinancials(latest.financials ?? null);
+        } catch (err) {
+            if (err.message !== "Payment cancelled") setError(err.message || "Payment failed. Try again.");
+        } finally { setLoading(false); }
+    }
+
+    async function payScheduledAdvance() {
+        try {
+            setLoading(true); setError(null);
+            const checkout = await api.createScheduledAdvanceOrder(bookingId);
+            if (checkout?.error) throw new Error(checkout.error);
+            const response = await openRazorpayCheckout(checkout, { description: "15% scheduled ride advance" });
+            const verified = await api.verifyPayment(checkout.paymentId, response);
+            if (verified?.error) throw new Error(verified.error);
+            const latest = await api.getBookingStatus(bookingId);
+            if (latest?.error) throw new Error(latest.error);
+            setStatus(latest.status); setFinancials(latest.financials ?? null);
+        } catch (err) {
+            if (err.message !== "Payment cancelled") setError(err.message || "Payment failed. Try again.");
+        } finally { setLoading(false); }
+    }
+
+    const finalPaymentDue = financials && financials.finalPaid < financials.remaining;
     const completedActions = (
-        <Button onClick={() => navigate("/")}
+        <Button onClick={finalPaymentDue ? payScheduledFinal : () => navigate("/")}
             className="w-full"
             prop={{ variant: "", width: "100%", innerClassName: "flex gap-2 items-center justify-center text-base sm:text-lg" }}
         >
-            Paid to driver
+            {finalPaymentDue ? (loading ? "Opening payment..." : `Pay remaining ₹${financials.remaining / 100}`) : "Payment complete"}
         </Button>
     );
 
@@ -621,7 +659,7 @@ const TrackingPage = () => {
                 fields still waiting on the status fetch shimmer in place. With
                 no status at all this falls through to the live panel, which is
                 the shell those per-field skeletons hang on. */}
-            {(scheduledTime ?? activeBooking?.scheduledAt) != null && (status === "confirmed" || status === "assigned")
+            {bookingScheduledAt != null && (["payment_pending", "confirmed", "assigned"].includes(status))
                     // contentKey: this panel drops the driver card before a driver
                     // exists, so its height changes with the status — and the sheet
                     // is sized to that height. bookingLoading is in the key for the
@@ -651,8 +689,8 @@ const TrackingPage = () => {
                             under it pushed the driver card off the half stop. */}
                         <div className={`relative z-10 sm:order-1 flex flex-col justify-end sm:justify-center items-center sm:items-start w-full sm:w-auto flex-1 min-h-0 sm:flex-initial sm:h-full gap-4 sm:gap-8`}>
                             <div className={`flex flex-col justify-center items-center sm:items-start ${PAIR} ${COL}`}>
-                                <h2 className={`text-center sm:text-left w-full ${TITLE}`}>{status === "assigned" ? "Driver has been assigned" : "Driver has not been assigned"}</h2>
-                                <h3 className={`text-center sm:text-left w-full ${SUBTITLE}`}>{status === "assigned" ? "Give the driver a call to confirm" : "Assigned closer to your pickup time"}</h3>
+                                <h2 className={`text-center sm:text-left w-full ${TITLE}`}>{status === "payment_pending" ? "Pay your ride advance" : status === "assigned" ? "Driver has been assigned" : "Driver has not been assigned"}</h2>
+                                <h3 className={`text-center sm:text-left w-full ${SUBTITLE}`}>{status === "payment_pending" ? "The 15% advance is part of your fare." : status === "assigned" ? "Give the driver a call to confirm" : "Assigned closer to your pickup time"}</h3>
                             </div>
 
                             {/* The scroll region, phones only: everything below the
@@ -665,6 +703,16 @@ const TrackingPage = () => {
                                 className="w-full min-h-0 flex-1 flex flex-col items-center gap-6 overscroll-contain sm:contents"
                             >
                             <div className={`flex flex-col justify-center items-start gap-3 ${COL}`}>
+                                {status === "payment_pending" && financials && <>
+                                    <div className="w-full flex flex-col gap-1 text-base sm:text-lg">
+                                        <div className="flex justify-between"><span>Final fare</span><span>₹{financials.finalFare / 100}</span></div>
+                                        <div className="flex justify-between"><span>Pay now (15%)</span><span>₹{financials.advance / 100}</span></div>
+                                        <div className="flex justify-between"><span>Pay after ride</span><span>₹{financials.remaining / 100}</span></div>
+                                    </div>
+                                    <Button onClick={payScheduledAdvance} prop={{ width: "100%" }}>
+                                        {loading ? "Opening payment..." : `Pay ₹${financials.advance / 100}`}
+                                    </Button>
+                                </>}
                                 {/* bookingLoading, not just driver: the store can
                                     already say "assigned" while the fetch that
                                     carries the driver is still in flight, and the
