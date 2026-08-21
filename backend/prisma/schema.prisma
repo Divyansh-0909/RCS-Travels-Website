@@ -493,6 +493,20 @@ model WalletEntry {
   @@map("wallet_entries")
 }
 
+// One row per Meta message id. The unique primary key is the idempotency lock:
+// a retried confirmation cannot create a second booking or send a second reply.
+model WhatsAppInboundMessage {
+  id          String   @id
+  phone       String
+  status      String   @default("processing")
+  error       String?
+  receivedAt  DateTime @default(now()) @map("received_at")
+  processedAt DateTime? @map("processed_at")
+
+  @@index([receivedAt])
+  @@map("whatsapp_inbound_messages")
+}
+
 model DriverCancellation {
   id         String   @id @default(uuid())
   driverId   String   @map("driver_id")

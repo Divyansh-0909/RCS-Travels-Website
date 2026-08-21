@@ -55,10 +55,12 @@ $SECRET_KEYS = @(
     "FIREBASE_SERVICE_ACCOUNT_BASE64",
     "WHATSAPP_PHONE_NUMBER_ID",
     "WHATSAPP_ACCESS_TOKEN",
+    "WHATSAPP_VERIFY_TOKEN",
+    "WHATSAPP_APP_SECRET",
     "ADMIN_PHONE"
 )
 
-# DELIBERATELY ABSENT: WHATSAPP_VERIFY_TOKEN, MSG91_AUTH_KEY, MSG91_TEMPLATE_ID.
+# DELIBERATELY ABSENT: MSG91_AUTH_KEY, MSG91_TEMPLATE_ID.
 # Checked against the source — nothing in routes/, services/, lib/ or middleware/
 # reads any of them. MSG91 was an SMS provider the OTP flow no longer uses, and
 # the verify token belongs to a webhook that was never wired up. Pushing them

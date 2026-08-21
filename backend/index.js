@@ -20,6 +20,7 @@ import internalRouter from './routes/internal.js'
 import shareRouter from './routes/share.js'
 import { JOBS_MODE } from './lib/jobs.js'
 import paymentsRouter, { razorpayWebhookHandler } from './routes/payments.js'
+import whatsappRouter from './routes/whatsapp.js'
 
 const app = express()
 const PORT = process.env.PORT || 5000
@@ -52,6 +53,9 @@ app.use(cors({
 // which would replace those bytes with a parsed object and make verification
 // impossible (or tempt code to re-stringify a subtly different payload).
 app.post('/api/payments/razorpay/webhook', express.raw({ type: 'application/json', limit: '1mb' }), razorpayWebhookHandler)
+// Meta signs the exact request bytes, so this must also be mounted before the
+// JSON parser. GET is the one-time webhook verification challenge.
+app.use('/webhooks/whatsapp', express.raw({ type: 'application/json', limit: '1mb' }), whatsappRouter)
 app.use(express.json())
 
 // BEFORE clerkAuth, and that ordering is the point. These endpoints carry a

@@ -87,8 +87,83 @@ async function sendPush(driver, { title, body, data = {} }) {
     }
 }
 
-function sendWhatsApp(phone, message){
-    console.log(`Message to ${phone} : ${message}`)
+async function sendWhatsApp(phone, message){
+    if (!phone || !process.env.WHATSAPP_PHONE_NUMBER_ID || !process.env.WHATSAPP_ACCESS_TOKEN) {
+        console.log(`Message to ${phone} : ${message} (WhatsApp not configured)`)
+        return false
+    }
+    const digits = String(phone).replace(/\D/g, '')
+    const to = digits.length === 10 ? `91${digits}` : digits
+    try {
+        const response = await fetch(
+            `https://graph.facebook.com/${process.env.WHATSAPP_API_VERSION || 'v21.0'}/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`,
+            { method: 'POST', headers: { Authorization: `Bearer ${process.env.WHATSAPP_ACCESS_TOKEN}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ messaging_product: 'whatsapp', to, type: 'text', text: { preview_url: true, body: message } }) },
+        )
+        if (!response.ok) throw new Error(`${response.status} ${await response.text()}`)
+        return true
+    } catch (err) {
+        console.error(`WhatsApp → ${to} failed:`, err.message)
+        return false
+    }
+}
+
+async function sendWhatsAppTemplate(phone, name, parameters) {
+    if (!name) return false
+    const digits = String(phone).replace(/\D/g, '')
+    const to = digits.length === 10 ? `91${digits}` : digits
+    try {
+        const response = await fetch(`https://graph.facebook.com/${process.env.WHATSAPP_API_VERSION || 'v21.0'}/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`, {
+            method: 'POST', headers: { Authorization: `Bearer ${process.env.WHATSAPP_ACCESS_TOKEN}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ messaging_product: 'whatsapp', to, type: 'template', template: {
+                name, language: { code: 'en_US' }, components: [{ type: 'body', parameters: parameters.map(text => ({ type: 'text', text: String(text) })) }],
+            } }),
+        })
+        if (!response.ok) throw new Error(`${response.status} ${await response.text()}`)
+        return true
+    } catch (err) {
+        console.error(`WhatsApp template ${name} → ${to} failed:`, err.message)
+        return false
+    }
+}
+
+const appOrigin = () => (process.env.APP_ORIGIN || 'http://localhost:1574').replace(/\/$/, '')
+
+export async function notifyWhatsAppRideStatus(bookingId, event) {
+    const booking = await prisma.booking.findUnique({ where: { id: bookingId }, include: {
+        user: { select: { phone: true } }, driver: { select: { name: true, vehicleNumber: true, vehicleModel: true } },
+    } })
+    if (!booking || booking.source !== 'whatsapp') return false
+    const track = `${appOrigin()}/booking/${booking.id}`
+    if (event === 'assigned') {
+        const driver = booking.driver
+        const template = process.env.WHATSAPP_TEMPLATE_DRIVER_ASSIGNED
+        if (template) return sendWhatsAppTemplate(booking.user.phone, template,
+            [driver?.name ?? 'Your driver', booking.vehicleModel ?? driver?.vehicleModel ?? booking.vehicleClass,
+             booking.vehicleNumber ?? driver?.vehicleNumber ?? '—', track])
+        return sendWhatsApp(booking.user.phone, `🚕 Driver assigned!\n\n${driver?.name ?? 'Your driver'}\n${booking.vehicleModel ?? driver?.vehicleModel ?? booking.vehicleClass} · ${booking.vehicleNumber ?? driver?.vehicleNumber ?? ''}\n\nTrack ride:\n${track}`)
+    }
+    if (event === 'reached') return process.env.WHATSAPP_TEMPLATE_DRIVER_ARRIVED
+        ? sendWhatsAppTemplate(booking.user.phone, process.env.WHATSAPP_TEMPLATE_DRIVER_ARRIVED, [track])
+        : sendWhatsApp(booking.user.phone, `🚕 Your driver has arrived at the pickup.\n\nTrack ride:\n${track}`)
+    if (event === 'completed') return process.env.WHATSAPP_TEMPLATE_RIDE_COMPLETED
+        ? sendWhatsAppTemplate(booking.user.phone, process.env.WHATSAPP_TEMPLATE_RIDE_COMPLETED, [booking.reference, booking.fare])
+        : sendWhatsApp(booking.user.phone, `✅ Ride completed.\nBooking: ${booking.reference}\nFare: ₹${booking.fare}`)
+    return false
+}
+
+export async function notifyWhatsAppPoolJoined(bookingId) {
+    const joined = await prisma.booking.findUnique({ where: { id: bookingId }, select: { shareGroupId: true } })
+    if (!joined?.shareGroupId) return false
+    const others = await prisma.booking.findMany({ where: { shareGroupId: joined.shareGroupId, id: { not: bookingId }, source: 'whatsapp' },
+        select: { id: true, customerPhone: true } })
+    await Promise.all(others.map(row => {
+        const track = `${appOrigin()}/booking/${row.id}`
+        return process.env.WHATSAPP_TEMPLATE_POOL_JOINED
+            ? sendWhatsAppTemplate(row.customerPhone, process.env.WHATSAPP_TEMPLATE_POOL_JOINED, [track])
+            : sendWhatsApp(row.customerPhone, `👥 Another passenger has joined your shared ride.\n\nThe driver will make an additional pickup before continuing your trip.\n\nTrack ride:\n${track}`)
+    }))
+    return others.length > 0
 }
 
 // Authentication templates require the code twice: once for the body text and once

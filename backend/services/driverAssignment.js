@@ -1,7 +1,7 @@
 import { prisma } from '../db/prisma.js'
 import { Prisma } from '@prisma/client'
 import { randomUUID } from 'node:crypto'
-import { sendPush } from './notification.js'
+import { sendPush, notifyWhatsAppRideStatus, notifyWhatsAppPoolJoined } from './notification.js'
 
 /**
  * getDriver's answer when the ride has gone OUT to captains but nobody has taken
@@ -208,7 +208,7 @@ export async function claimBookingForDriver(booking, driver, confirmedAt, onClai
   const now = new Date()
 
   try {
-    return await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
       const claimed = await tx.booking.updateMany({
         where: { id: booking.id, status: { in: ASSIGNABLE_STATUSES } },
         // THE CAR IS SNAPSHOTTED HERE, in the same statement that assigns the
@@ -262,6 +262,17 @@ export async function claimBookingForDriver(booking, driver, confirmedAt, onClai
 
       return 'claimed'
     })
+    if (result === 'claimed') {
+      // The guarded assignment above is the idempotency boundary. Notifications
+      // happen only for the caller that actually moved the row to assigned.
+      try {
+        await notifyWhatsAppRideStatus(booking.id, 'assigned')
+        if (booking.sharing) await notifyWhatsAppPoolJoined(booking.id)
+      } catch (err) {
+        console.error(`WhatsApp assignment notification failed for ${booking.id}:`, err.message)
+      }
+    }
+    return result
   } catch (err) {
     if (err instanceof ClaimFailure) return err.reason
     throw err

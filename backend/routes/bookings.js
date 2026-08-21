@@ -1,23 +1,22 @@
 import { Router } from 'express'
 import { protect } from '../middleware/auth.js'
-import { startAssignment, markNoDriver, ASSIGNMENT_DEADLINE_MS } from '../services/driverAssignment.js'
+import { markNoDriver, ASSIGNMENT_DEADLINE_MS } from '../services/driverAssignment.js'
 import { sendWhatsApp } from '../services/notification.js'
 import { prisma } from '../db/prisma.js'
-import { commissionOn, rideFareOf } from '../services/commission.js'
 import { verifyQuote } from '../services/fareQuote.js'
 import { myBookingsQuerySchema, rideComplaintSchema } from '../types.ts'
 import { VEHICLE_CLASS_NAMES, isVehicleClass, seatsOf } from '../constants/vehicles.js'
-import { createBooking, normalizeReference } from '../lib/bookingReference.js'
+import { normalizeReference } from '../lib/bookingReference.js'
 import { signedRiderPhotoUrl } from '../services/driverPhoto.js'
 import { newShareToken, shareIsLive, shareUrlFor, SHARE_TTL_MS } from '../lib/shareLink.js'
 import { getNavigationEtaMinutes } from '../services/rideEstimate.js'
-import { customerPaymentFor } from '../services/coupons.js'
 import { applyComplaintConsequences } from '../services/complaints.js'
 import { createOrderForPayment, refundPayment, PaymentError } from '../services/payments.js'
-import { createScheduledAdvanceIntent, createScheduledFinalIntent, scheduledPaymentAmounts } from '../services/scheduledPayments.js'
+import { createScheduledFinalIntent } from '../services/scheduledPayments.js'
 import { postWalletEntry } from '../services/wallet.js'
 import { walletEvent } from '../services/walletKeys.js'
 import { freshLocationWithinPickup } from '../services/rideGeofence.js'
+import { createBookingFromQuote, BookingCreationError } from '../services/bookingCreation.js'
 
 const bookingsRouter = Router()
 
@@ -61,9 +60,6 @@ export const cancellationChargeFor = (booking) =>
     driverIsAtPickup(booking)
     ? booking.scheduledAdvancePaidAmount / 100
     : 0
-
-// Two rides within this window are treated as the same time slot.
-const OVERLAP_MS = 15 * 60 * 1000
 
 const normAddress = (s) => s?.trim().toLowerCase()
 
@@ -143,27 +139,6 @@ bookingsRouter.post('/', protect, async (req, res) => {
     if (typeof quotedToRider === 'number' && quotedToRider !== fare)
         return staleQuote(422, 'The price for this ride has changed. Refresh and try again.')
 
-    // Itemised inside `fare` by the estimate, so the commission comes off the
-    // driving alone. `parking` has no source yet; when one exists it will be
-    // quoted here like the rest rather than accepted from the client.
-    const toll    = pricedClass.toll ?? 0
-    const airport = pricedClass.airport ?? 0
-    const carrier = pricedClass.carrier ?? 0
-
-    // Both of these are already paid for inside `fare`, so neither can be a
-    // request field any more: a booking claiming preferSafeRoute against a quote
-    // priced without it would send the driver the long way round for free.
-    const preferSafeRoute = quote.safeRoute?.applied === true
-    const safeWaypoint = preferSafeRoute ? quote.safeRoute.waypoint : null
-    const needsCarrier = quote.needsCarrier === true
-    const distanceKm = quote.distanceKm
-    // Out of the quote for the same reason as the distance: the client does not
-    // get to describe the route. The polyline in particular is what the pooling
-    // matcher measures a second rider's pickup against, so a client-supplied one
-    // would let a rider draw the road their own match is judged on.
-    const durationMin = quote.durationMin
-    const routePolyline = quote.polyline
-
     if (scheduledAt) {
         const scheduled = new Date(scheduledAt)
         if (isNaN(scheduled.getTime()))
@@ -180,125 +155,18 @@ bookingsRouter.post('/', protect, async (req, res) => {
     }
 
 
-    // No clamps here any more: every one of these came out of the quote this
-    // server signed, so there is nothing to bound. The old flat() caps existed
-    // because the client sent them, and they only ever protected the commission
-    // — the fare they were subtracted from was itself unchecked.
-    const rideFare = rideFareOf(fare, { toll, airport, carrier })
-    const couponAmount = Number.isFinite(quote.coupon?.amount) ? Math.min(fare, quote.coupon.amount) : 0
-    // couponAmount is 0 until redemption ships (ROADMAP block 12). It is passed
-    // explicitly rather than defaulted so the floor is already tested through the
-    // post-coupon path — the day a coupon reaches this route the rule is right
-    // here, instead of depending on someone finding this line again.
-    const { pct: commissionPct, amt: commissionAmt } = commissionOn({ rideFare, couponAmount })
 
     const user = await prisma.user.findUnique({ where: { clerkId: req.auth.userId } })
     if (!user) return res.status(401).json({ error: 'Complete signup before booking' })
-
-    const bookingCode = user.bookingCode
-
-    // Reject bookings colliding with a live one: same time slot or same pickup + drop route.
-    const activeBookings = await prisma.booking.findMany({
-        where: { userId: user.id, status: { in: ACTIVE_STATUSES } },
-    })
-    const newRideAt = scheduledAt ? new Date(scheduledAt).getTime() : Date.now()
-    for (const b of activeBookings) {
-        const activeRideAt = b.scheduledAt ? b.scheduledAt.getTime() : Date.now()
-        if (Math.abs(newRideAt - activeRideAt) < OVERLAP_MS)
-            return res.status(409).json({ error: 'You already have a ride around this time' })
-        if (normAddress(b.pickupAddress) === normAddress(pickupAddress) &&
-            normAddress(b.dropAddress) === normAddress(dropAddress))
-            return res.status(409).json({ error: 'You already have an active booking for this route' })
+    try {
+      return res.json(await createBookingFromQuote({ user, quote, pickupAddress, pickupLat, pickupLng,
+        dropAddress, dropLat, dropLng, vehicleClass, sharing: sharing === true, scheduledAt,
+        isOutstation: isOutstation ?? false, source: 'website' }))
+    } catch (error) {
+      if (error instanceof BookingCreationError)
+        return res.status(error.status).json({ error: error.message, ...(error.code ? { code: error.code } : {}) })
+      throw error
     }
-
-    const bookingData = {
-        userId: user.id,
-        customerPhone: user.phone, vehicleClass,
-        pickupAddress, pickupLat, pickupLng,
-        dropAddress, dropLat, dropLng,
-        fare, rideFare, couponAmount, customerPayment: customerPaymentFor(fare, couponAmount), distanceKm: distanceKm ?? null,
-        // Only on a shared booking: it is the price this ride reverts to if
-        // nobody joins, and a solo ride has nothing to revert to. Taken from the
-        // same priced card as `fare`, so both numbers came out of one quote and
-        // the rider was shown both before booking.
-        soloFare: sharing === true ? (pricedClass.solo ?? null) : null,
-        // Both nullable and both genuinely absent sometimes: a Routes failure
-        // still prices zone and fixed-table trips, and those quotes carry no
-        // route at all. A booking without a polyline simply cannot host a pool.
-        durationMin: durationMin != null ? Math.round(durationMin) : null,
-        routePolyline: routePolyline ?? null,
-        isOutstation: isOutstation ?? false,
-        preferSafeRoute,
-        // Only kept when the rider actually took the safer route — and it is the
-        // quote's own waypoint, so the road stored here is provably the one the
-        // ₹150 was charged for. A quote with the flag set but no point is still
-        // dropped rather than stored: half a coordinate is worse than none.
-        ...(preferSafeRoute && Number.isFinite(safeWaypoint?.lat) && Number.isFinite(safeWaypoint?.lng)
-            ? { safeWaypointLat: safeWaypoint.lat, safeWaypointLng: safeWaypoint.lng }
-            : { safeWaypointLat: null, safeWaypointLng: null }),
-        // Stored because the driver has to actually turn up with a roof carrier
-        // fitted — the charge is already inside `fare`, but the instruction isn't.
-        needsCarrier,
-        scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
-        commissionPct, commissionAmt, sharing: sharing === true
-    }
-
-    const createWithCoupon = (data) => prisma.$transaction(async (tx) => {
-        if (quote.coupon) {
-            const claimed = await tx.coupon.updateMany({ where: {
-                id: quote.coupon.id, userId: user.id, amount: quote.coupon.amount, redeemedAt: null, bookingId: null,
-            }, data: { redeemedAt: new Date() } })
-            if (claimed.count === 0) throw Object.assign(new Error('COUPON_UNAVAILABLE'), { code: 'COUPON_UNAVAILABLE' })
-        }
-        const booking = await createBooking(data, tx)
-        if (quote.coupon) await tx.coupon.update({ where: { id: quote.coupon.id }, data: { bookingId: booking.id } })
-        return booking
-    })
-
-    if (scheduledAt) {
-        let result
-        const amounts = scheduledPaymentAmounts({ fare, couponAmount })
-        try { result = await prisma.$transaction(async (tx) => {
-            if (quote.coupon) {
-                const claimed = await tx.coupon.updateMany({ where: {
-                    id: quote.coupon.id, userId: user.id, amount: quote.coupon.amount, redeemedAt: null, bookingId: null,
-                }, data: { redeemedAt: new Date() } })
-                if (claimed.count === 0) throw Object.assign(new Error('COUPON_UNAVAILABLE'), { code: 'COUPON_UNAVAILABLE' })
-            }
-            const booking = await createBooking({ ...bookingData, status: 'payment_pending', confirmedAt: null,
-                scheduledAdvancePct: amounts.advancePercentage, scheduledAdvanceAmount: amounts.advance,
-                scheduledRemainingAmount: amounts.remaining, scheduledAdvanceDisposition: 'awaiting_payment' }, tx)
-            if (quote.coupon) await tx.coupon.update({ where: { id: quote.coupon.id }, data: { bookingId: booking.id } })
-            const payment = await createScheduledAdvanceIntent(tx, booking, amounts)
-            return { booking, payment }
-        }) }
-        catch (err) { if (err.code === 'COUPON_UNAVAILABLE') return res.status(409).json({ error: 'Coupon already redeemed', code: err.code }); throw err }
-        try {
-            const checkout = await createOrderForPayment({ paymentId: result.payment.id, userId: user.id })
-            return res.json({ bookingId: result.booking.id, reference: result.booking.reference, bookingCode,
-                status: 'payment_pending', financials: { fare: amounts.originalFare, coupon: amounts.coupon,
-                    finalFare: amounts.finalFare, advance: amounts.advance, remaining: amounts.remaining,
-                    advancePercentage: amounts.advancePercentage }, payment: checkout })
-        } catch (err) {
-            return res.json({ bookingId: result.booking.id, reference: result.booking.reference, bookingCode,
-                status: 'payment_pending', financials: { fare: amounts.originalFare, coupon: amounts.coupon,
-                    finalFare: amounts.finalFare, advance: amounts.advance, remaining: amounts.remaining,
-                    advancePercentage: amounts.advancePercentage }, payment: null,
-                paymentError: { code: 'PAYMENT_ORDER_FAILED', message: 'Payment checkout could not be created. Retry payment.' } })
-        }
-    }
-
-    let booking
-    try { booking = await createWithCoupon({ ...bookingData, status: 'pending', confirmedAt: null }) }
-    catch (err) { if (err.code === 'COUPON_UNAVAILABLE') return res.status(409).json({ error: 'Coupon already redeemed', code: err.code }); throw err }
-
-    // Assignment runs detached — it can take minutes, and the client needs a
-    // booking id now so it can show "Requesting a ride" and poll for the
-    // outcome. A search that reaches nobody lands on `no_driver`, which is not
-    // an ACTIVE_STATUS, so the rider can immediately try again.
-    startAssignment(booking.id)
-
-    return res.json({ bookingId: booking.id, reference: booking.reference, bookingCode, status: 'pending' })
 })
 
 async function ownedBooking(req, res) {

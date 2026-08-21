@@ -46,6 +46,7 @@ import {
 import { addVehicle, removeVehicle, switchActiveVehicle } from '../services/driverVehicles.js'
 import { completionGeofence, locationProblem, PICKUP_RADIUS_KM } from '../services/rideGeofence.js'
 import { applyDriverCancellationConsequences } from '../services/driverCancellations.js'
+import { notifyWhatsAppRideStatus } from '../services/notification.js'
 import { locationSchema, UploadUrlRequest, ConfirmDocumentsRequest, rideParamsSchema, driverOnlineSchema, driverAccountInformationSchema, addVehicleSchema, activeVehicleSchema, fcmTokenSchema, rideStatusSchema, driverRidesQuerySchema } from '../types.ts'
 
 // The driver-facing API. Nothing calls it yet — the driver app is Phase 5, and until
@@ -1891,6 +1892,11 @@ driverRouter.patch('/rides/:id/status', protect, async (req, res) => {
 
     if (!moved) {
         return res.status(409).json({ error: 'Ride changed while the request was in flight' })
+    }
+
+    if (to === 'reached' || to === 'completed') {
+        try { await notifyWhatsAppRideStatus(booking.id, to) }
+        catch (err) { console.error(`WhatsApp ${to} notification failed for ${booking.id}:`, (err as Error).message) }
     }
 
     // The ride just ended, so a driver whose paperwork lapsed while he was
