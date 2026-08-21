@@ -24,6 +24,7 @@ import RefreshNotice from './components/ui/RefreshNotice';
 import DevPreview from './pages/DevPreview';
 import PageMeta from './components/PageMeta';
 import NotFound from './pages/NotFound';
+import OpenDriverApp from './pages/OpenDriverApp';
 import LegalPage from './pages/LegalPage';
 import { legalPaths } from './constants/legal';
 
@@ -75,6 +76,13 @@ const router = createBrowserRouter([{
   {
     path: "/t/:token",
     element: <SharedTrip />,
+  },
+  {
+    // WhatsApp template buttons require an HTTPS URL. This public hand-off page
+    // opens the installed Captains app through its custom scheme; it contains no
+    // ride data, and the driver API still authenticates access to the booking.
+    path: "/captains/rides/:id",
+    element: <OpenDriverApp />,
   },
   {
     path: "/manage-account",

@@ -2,6 +2,7 @@
   "expo": {
     "name": "RCS Captains",
     "slug": "driver-app",
+    "scheme": "rcscaptains",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -17,6 +18,22 @@
     },
     "android": {
       "package": "com.rcstravels.driver",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "data": [
+            {
+              "scheme": "https",
+              "host": "www.rcstravels.co.in",
+              "pathPrefix": "/captains/rides"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ],
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",

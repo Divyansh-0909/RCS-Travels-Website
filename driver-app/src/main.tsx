@@ -15,6 +15,7 @@ import { NativeRouter, Route, Routes, Navigate } from 'react-router-native';
 import App from './App';
 import AuthLayout from './AuthLayout';
 import ErrorBoundary from './components/ErrorBoundary';
+import DeepLinkNavigator from './components/DeepLinkNavigator';
 import HomeGate from './components/HomeGate';
 import VerifiedRoute, { AssignedWorkRoute } from './components/VerifiedRoute';
 import { DriverProvider } from './hooks/useDriver';
@@ -48,6 +49,7 @@ const AppRoutes = () => {
     return (
         <NativeRouter>
             <StatusBar style="auto" />
+            <DeepLinkNavigator isSignedIn={isSignedIn} />
             <DriverProvider>
             {/* Inside DriverProvider, not beside it: the offer list is gated on
                 onboarding.canDrive (GET /offers is behind requireApprovedDriver)
