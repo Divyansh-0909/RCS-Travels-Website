@@ -1,7 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
-import { ClerkProvider } from '@clerk/clerk-react'
+import { ClerkProvider, useAuth, useUser } from '@clerk/clerk-react'
 import LoginPage from './pages/LoginPage'
 import './index.css'
 import App from './App'
@@ -27,11 +27,25 @@ import NotFound from './pages/NotFound';
 import OpenDriverApp from './pages/OpenDriverApp';
 import LegalPage from './pages/LegalPage';
 import { legalPaths } from './constants/legal';
+import LoadingScreen from './components/LoadingScreen';
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
 
 if (!PUBLISHABLE_KEY) {
   throw new Error('Missing Clerk Publishable Key')
+}
+
+// Keep the application behind the existing branded loading screen until Clerk
+// has restored both the session and its user. Without this gate, auth-dependent
+// UI mounts with an indeterminate session, briefly paints the signed-out state,
+// and then swaps to the signed-in navbar once Clerk finishes loading.
+function AuthLoadingGate({ children }) {
+  const { isLoaded: authLoaded } = useAuth();
+  const { isLoaded: userLoaded } = useUser();
+
+  if (!authLoaded || !userLoaded) return <LoadingScreen />;
+
+  return <>{children}</>;
 }
 
 // Pathless layout route: PageMeta renders every page through an <Outlet/> and
@@ -138,11 +152,13 @@ createRoot(document.getElementById('root')).render(
     <ClerkProvider publishableKey={PUBLISHABLE_KEY}>
       <ThemeProvider>
         <ErrorBoundary>
-          <RouterProvider router={router} />
-          <RideCancelledToast />
-          {/* Global, like the toast above: any page can raise a stale-data
-              notice through the useRefreshNotice store without threading props */}
-          <RefreshNotice />
+          <AuthLoadingGate>
+            <RouterProvider router={router} />
+            <RideCancelledToast />
+            {/* Global, like the toast above: any page can raise a stale-data
+                notice through the useRefreshNotice store without threading props */}
+            <RefreshNotice />
+          </AuthLoadingGate>
         </ErrorBoundary>
       </ThemeProvider>
     </ClerkProvider>
