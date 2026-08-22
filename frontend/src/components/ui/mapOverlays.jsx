@@ -14,8 +14,15 @@ export const MAP_CLASSES = "absolute inset-0 z-0 sm:rounded-lg sm:relative sm:in
 // primary-light car = driver. SVG because Google map markers can't use CSS;
 // the transparent padding also gives endpoint pins a comfortable tap target.
 const MARKER_SHADOW = `<filter id="ms" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="2" stdDeviation="2.5" flood-color="#000000" flood-opacity="0.6"/></filter>`;
-const PICKUP_MARKER_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="52">${MARKER_SHADOW}<g filter="url(#ms)"><path d="M24 24V46" stroke="#ffffff" stroke-width="3" stroke-linecap="round"/><circle cx="24" cy="17" r="12" fill="#ffffff"/></g></svg>`;
-const DROP_MARKER_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="52">${MARKER_SHADOW}<g filter="url(#ms)"><path d="M24 24V46" stroke="#243AFB" stroke-width="3" stroke-linecap="round"/><circle cx="24" cy="17" r="12" fill="#243AFB"/><circle cx="24" cy="17" r="4.5" fill="#0B0B14"/></g></svg>`;
+// Match CenterPin's visible 16px circle and 20px stem. The larger SVG canvas
+// is only transparent breathing room for the shadow; it does not enlarge it.
+const ENDPOINT_ICON_WIDTH = 40;
+const ENDPOINT_ICON_HEIGHT = 42;
+const ENDPOINT_X = 20;
+const ENDPOINT_CIRCLE_Y = 12;
+const ENDPOINT_TIP_Y = 32;
+const PICKUP_MARKER_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="${ENDPOINT_ICON_WIDTH}" height="${ENDPOINT_ICON_HEIGHT}">${MARKER_SHADOW}<g filter="url(#ms)"><path d="M${ENDPOINT_X} ${ENDPOINT_CIRCLE_Y}V${ENDPOINT_TIP_Y}" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/><circle cx="${ENDPOINT_X}" cy="${ENDPOINT_CIRCLE_Y}" r="8" fill="#ffffff"/></g></svg>`;
+const DROP_MARKER_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="${ENDPOINT_ICON_WIDTH}" height="${ENDPOINT_ICON_HEIGHT}">${MARKER_SHADOW}<g filter="url(#ms)"><path d="M${ENDPOINT_X} ${ENDPOINT_CIRCLE_Y}V${ENDPOINT_TIP_Y}" stroke="#243AFB" stroke-width="2" stroke-linecap="round"/><circle cx="${ENDPOINT_X}" cy="${ENDPOINT_CIRCLE_Y}" r="8" fill="#243AFB"/><circle cx="${ENDPOINT_X}" cy="${ENDPOINT_CIRCLE_Y}" r="3" fill="#0B0B14"/></g></svg>`;
 // mdiCar is a 24x24 path; 0.72 scale centres it in the 22px puck.
 const DRIVER_MARKER_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="44" height="44">${MARKER_SHADOW}<g filter="url(#ms)"><circle cx="22" cy="22" r="13" fill="#7A94FF"/><path d="${mdiCar}" fill="#0B0B14" transform="translate(13.4,13.4) scale(0.72)"/></g></svg>`;
 
@@ -27,19 +34,22 @@ const svgIcon = (g, svg, size) => ({
 
 const endpointIcon = (g, svg) => ({
     url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
-    scaledSize: new g.Size(48, 52),
+    scaledSize: new g.Size(ENDPOINT_ICON_WIDTH, ENDPOINT_ICON_HEIGHT),
     // The stem's tip, rather than the centre of the circle, is the coordinate.
-    anchor: new g.Point(24, 46),
+    anchor: new g.Point(ENDPOINT_X, ENDPOINT_TIP_Y),
 });
 
-// Fixed centre pin for the confirm-location map — the tip sits on the map
-// centre while the map drags underneath.
+// Fixed centre pin for the confirm-location map. The small endpoint circle sits
+// exactly on the map centre while its stem rises into a compact location label.
 export const CenterPin = ({ target }) => (
-    <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-full flex flex-col items-center drop-shadow-[0_2px_5px_rgba(0,0,0,0.65)]">
+    <div className="pointer-events-none absolute left-1/2 top-1/2 z-10 h-0 w-0 drop-shadow-[0_2px_5px_rgba(0,0,0,0.65)]">
+        <div className={`absolute bottom-5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold leading-none ${target === "pickup" ? "bg-[var(--foreground)] text-[var(--text-foreground)]" : "bg-primary text-[var(--foreground)]"}`}>
+            {target === "pickup" ? "Pickup location" : "Drop location"}
+        </div>
+        <div className={`absolute bottom-0 left-1/2 h-5 w-0.5 -translate-x-1/2 ${target === "pickup" ? "bg-[var(--foreground)]" : "bg-primary"}`} />
         {target === "pickup"
-            ? <div className="w-6 h-6 rounded-full bg-[var(--foreground)]" />
-            : <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center"><div className="w-[9px] h-[9px] rounded-full bg-[var(--background)]" /></div>}
-        <div className={`w-[3px] h-[22px] rounded-b-full ${target === "pickup" ? "bg-[var(--foreground)]" : "bg-primary"}`} />
+            ? <div className="absolute left-1/2 top-1/2 flex h-4 w-4 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-[var(--foreground)]"><div className="h-1.5 w-1.5 rounded-full bg-[var(--background)]" /></div>
+            : <div className="absolute left-1/2 top-1/2 flex h-4 w-4 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-primary"><div className="h-1.5 w-1.5 rounded-full bg-[var(--background)]" /></div>}
     </div>
 );
 
@@ -55,7 +65,7 @@ export function clearRouteView() {
 // road path from the fare estimate (straight-line fallback when it's missing),
 // and fitted in frame. onPickupClick/onDropClick make the markers tappable —
 // omit them where the route is already booked and can't be adjusted.
-export function showRouteView(map, { pickupPoint, dropPoint, routePolyline, onPickupClick, onDropClick }) {
+export function showRouteView(map, { pickupPoint, dropPoint, routePolyline, onPickupClick, onDropClick, framePoints = [], padding = 60 }) {
     clearRouteView();
     const g = window.google.maps;
     const routePath = routePolyline && g.geometry
@@ -79,7 +89,30 @@ export function showRouteView(map, { pickupPoint, dropPoint, routePolyline, onPi
     routePath.forEach(p => bounds.extend(p));
     bounds.extend(pickupPoint);
     bounds.extend(dropPoint);
-    map.fitBounds(bounds, 60);
+    framePoints.forEach(p => bounds.extend(p));
+    map.fitBounds(bounds, padding);
+}
+
+// Pre-booking fleet preview. Kept separate from the assigned-driver marker so
+// leaving VehicleSelect cannot disturb TrackingPage's live animated car.
+let nearbyVehicleMarkers = [];
+
+export function setNearbyVehiclePositions(map, positions, label) {
+    clearNearbyVehicleMarkers();
+    if (!positions?.length) return;
+    const g = window.google.maps;
+    nearbyVehicleMarkers = positions.map((position) => new g.Marker({
+        map,
+        position,
+        zIndex: 8,
+        title: `Nearby ${label}`,
+        icon: svgIcon(g, DRIVER_MARKER_SVG, 44),
+    }));
+}
+
+export function clearNearbyVehicleMarkers() {
+    nearbyVehicleMarkers.forEach(marker => marker.setMap(null));
+    nearbyVehicleMarkers = [];
 }
 
 // Driver puck, kept in its own registry so live position updates never

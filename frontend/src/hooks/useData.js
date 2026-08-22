@@ -191,10 +191,10 @@ export const useData = create(persist(set => ({
     fare: null,
     setFare: (fare) => set(state => ({ fare: fare })),
 
-    // One of the keys in constants/vehicles.js. Null until the rider picks —
-    // there is deliberately no default class, because a default would mean the
-    // Book button is live before anyone has chosen what they're paying for.
-    vehicleClass: null,
+    // One of the keys in constants/vehicles.js. Every new ride starts on the
+    // fleet's economy option; the selected card and its fare are visible before
+    // the rider compares the larger classes.
+    vehicleClass: "hatchback",
     setVehicleClass: (vehicle) => set(state => ({ vehicleClass: vehicle })),
 
     bookingId: null,

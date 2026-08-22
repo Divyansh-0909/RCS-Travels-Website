@@ -3,37 +3,27 @@ import { useState } from 'react';
 import { Pressable, type ViewStyle } from 'react-native';
 import AppText from '../AppText';
 
-// Same reason as Input: no color-mix() on native, so the website's /15, /30 and
-// /10 steps are resolved here. Solid fills come from tokens.cjs colours.
+// Same reason as Input: no color-mix() on native, so pressed and error fills are
+// resolved here. Solid fills come from tokens.cjs colours.
 const PRIMARY = '#243AFB';
 const NEGATIVE = '#B91C1C';
-const BORDER = 'rgba(255,255,255,0.3)';
-const BORDER_DROPDOWN = 'rgba(255,255,255,0.15)';
-const BORDER_ERROR = 'rgba(185,28,28,0.5)';
 const BG_ERROR = 'rgba(185,28,28,0.1)';
 const BG_DROPDOWN = '#121220';
 const BG_PRESSED = 'rgba(255,255,255,0.15)';
 
-// The outline variant's own pair, and the reason it exists as a variant at all:
-// every border above is rgba WHITE, tuned for the dark auth shell, and drawing one
-// of those on a light page is a button with no edge. These two are the light
-// shell's --background-primary and the 10% hairline the account screens rule with.
-const INK_SECONDARY = '#121220';
-const BORDER_SECONDARY = 'rgba(18,18,32,0.1)';
+// The light-shell secondary action keeps its own fill and ink pairing.
 const BG_SECONDARY = '#ffffff';
 
 interface ButtonProp {
     /**
-     * `secondary` is the outline for LIGHT surfaces: ink label, hairline edge,
-     * white fill. Same width, radius and padding as the solid — the fill is the
-     * only thing ranking them, which is what lets the two stack as a pair.
+     * `secondary` is the filled action for LIGHT surfaces: ink label and white
+     * fill. Same width, radius and padding as the solid; fill ranks the pair.
      */
     variant?: 'negative' | 'secondary' | 'input' | 'dropdown';
     width?: ViewStyle['width'];
     rounded?: number;
     paddingX?: number;
     bg?: string;
-    border?: boolean;
     error?: boolean;
     disabled?: boolean;
 }
@@ -73,16 +63,12 @@ const Button = ({ prop = {}, className = '', children, onPress }: Props) => {
         if (isSecondary) {
             return {
                 backgroundColor: BG_SECONDARY,
-                borderWidth: 1,
-                borderColor: BORDER_SECONDARY,
                 opacity: isDisabled ? 0.4 : pressed ? 0.6 : 1,
             };
         }
         if (isDropdown) {
             return {
                 backgroundColor: BG_DROPDOWN,
-                borderWidth: 1,
-                borderColor: BORDER_DROPDOWN,
                 boxShadow: '0px 4px 20px 2px rgba(0,0,0,0.5)',
                 opacity: isDisabled ? 0.4 : 1,
             };
@@ -90,15 +76,11 @@ const Button = ({ prop = {}, className = '', children, onPress }: Props) => {
         if (hasError) {
             return {
                 backgroundColor: BG_ERROR,
-                borderWidth: 1,
-                borderColor: BORDER_ERROR,
                 opacity: isDisabled ? 0.4 : 1,
             };
         }
         return {
             backgroundColor: pressed && !isDisabled ? BG_PRESSED : prop.bg ?? 'transparent',
-            borderWidth: 1,
-            borderColor: prop.border === false ? 'transparent' : BORDER,
             opacity: isDisabled ? 0.4 : 1,
         };
     };
@@ -122,7 +104,7 @@ const Button = ({ prop = {}, className = '', children, onPress }: Props) => {
             ]}
         >
             {typeof children === 'string' || typeof children === 'number' ? (
-                // The colour is spelled out for the outline only. AppText falls back
+                // The colour is spelled out for the light secondary. AppText falls back
                 // to --text, which is #ffffff — right on a solid fill and on the dark
                 // shell the other variants live on, invisible on this one's white.
                 <AppText

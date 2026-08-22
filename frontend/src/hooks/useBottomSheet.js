@@ -12,6 +12,12 @@ import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
 // proportional to it.
 export const SHEET_SNAPS = { collapsed: 0.28, half: 0.6 };
 
+// Stops closer than one comfortable touch target feel like the same stop: a
+// release can pick a different name without producing a visible move. When a
+// content-sized sheet is shorter than a viewport-based stop, this is the gap we
+// preserve on each side of `half` before falling back to evenly spaced stops.
+const MIN_SNAP_GAP_PX = 48;
+
 // Expanded is deliberately NOT a fraction. The panel floats its back button
 // above its own top edge — `-top-12` (-48px) plus the pill's `my-1` (4px) puts
 // its topmost pixel 44px above the sheet — and that button is the only way off
@@ -61,7 +67,9 @@ const prefersReducedMotion = () =>
 /**
  * Sheet height and the translateY of each stop, for a given viewport height.
  * The sheet is flush with the bottom at translateY 0, so hiding
- * `height - fraction*vh` of it leaves exactly `fraction` on screen.
+ * `height - fraction*vh` of it leaves exactly `fraction` on screen. Short
+ * content is the exception: its stops are pulled inside the sheet so expanded,
+ * half and collapsed remain distinct without making the sheet itself taller.
  */
 export function sheetStops(viewportHeight, bottomInset = 0, naturalHeight = 0, dismissible = false) {
     // A panel can pin an action bar below the sheet (the vehicle screen keeps its
@@ -77,11 +85,23 @@ export function sheetStops(viewportHeight, bottomInset = 0, naturalHeight = 0, d
     // means "all of the content", which on those screens is the whole point of
     // the stop. 0 (nothing measured yet) falls back to the cap.
     const height = naturalHeight > 0 ? Math.min(maxHeight, naturalHeight) : maxHeight;
-    // Clamped at 0: once the sheet is shorter than a fraction of the screen, that
-    // stop would sit ABOVE the fully-open sheet, i.e. lifted off the bottom edge.
-    // It collapses onto expanded instead, which is the honest answer — there is
-    // no more content to reveal.
-    const yFor = (fraction) => Math.max(0, height - fraction * available);
+    // Keep the collapsed stop viewport-relative on the panels tall enough to
+    // support it. On a short panel that would otherwise leave too little travel
+    // for three stops, show the same fraction of the SHEET instead. This keeps a
+    // compact panel compact while preserving a real collapsed state.
+    const preferredCollapsedY = height - SHEET_SNAPS.collapsed * available;
+    const collapsedY = preferredCollapsedY >= MIN_SNAP_GAP_PX * 2
+        ? preferredCollapsedY
+        : height * (1 - SHEET_SNAPS.collapsed);
+
+    // Prefer the established 60%-of-viewport stop. If that lands on expanded or
+    // crowds either neighbour, put half halfway through the actual travel range.
+    // Expanded stays at 0, so none of this adds empty height above the content.
+    const preferredHalfY = height - SHEET_SNAPS.half * available;
+    const halfY = preferredHalfY >= MIN_SNAP_GAP_PX
+        && preferredHalfY <= collapsedY - MIN_SNAP_GAP_PX
+        ? preferredHalfY
+        : collapsedY / 2;
     // Clear of the bar as well as its own box, so a closing sheet doesn't slide
     // across the bar on its way out.
     const hiddenY = height + bottomInset;
@@ -98,8 +118,8 @@ export function sheetStops(viewportHeight, bottomInset = 0, naturalHeight = 0, d
             : {
                 // The sheet's own height IS the expanded state, so it rests at 0.
                 expanded: 0,
-                half: yFor(SHEET_SNAPS.half),
-                collapsed: yFor(SHEET_SNAPS.collapsed),
+                half: halfY,
+                collapsed: collapsedY,
             },
     };
 }

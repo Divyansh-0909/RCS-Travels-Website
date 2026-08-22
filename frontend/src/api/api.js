@@ -29,6 +29,7 @@ export const getMe             = (getToken)              => request("/api/users/
 export const createMe          = (name, getToken)        => request("/api/users/me", { method: "POST", body: { name }, getToken });
 export const estimateFare      = (pickupAddress, dropAddress, vehicleClass, pickupCoords, dropCoords, preferSafeRoute, needsCarrier, getToken) => request("/api/fare/estimate", { method: "POST", body: { pickupAddress, dropAddress, vehicleClass, pickupCoords, dropCoords, preferSafeRoute, needsCarrier }, getToken });
 export const createBooking     = (data, getToken)        => request("/api/bookings", { method: "POST", body: data, getToken });
+export const getNearbyDrivers  = (pickupCoords, vehicleClass, getToken) => request(`/api/bookings/nearby-drivers?lat=${encodeURIComponent(pickupCoords.lat)}&lng=${encodeURIComponent(pickupCoords.lng)}&vehicleClass=${encodeURIComponent(vehicleClass)}`, { getToken });
 export const cancelBooking     = (bookingId, expectedCancellationCharge, getToken) => request("/api/bookings/cancel", { method: "POST", body: { bookingId, expectedCancellationCharge }, getToken});
 export const submitRideComplaint = (bookingId, reasons, getToken) => request(`/api/bookings/${encodeURIComponent(bookingId)}/complaint`, { method: "POST", body: { reasons }, getToken });
 export const createScheduledAdvanceOrder = (bookingId, getToken) => request(`/api/bookings/${bookingId}/scheduled-advance/order`, { method: "POST", getToken });

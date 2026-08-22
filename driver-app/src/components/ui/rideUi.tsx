@@ -155,8 +155,6 @@ export const ActionButton = ({
                 }`}
                 style={{
                     borderRadius: 12,
-                    borderWidth: progress ? 0 : solid ? 0 : 1,
-                    borderColor: MUTED,
                 }}
             >
                 {progress && (

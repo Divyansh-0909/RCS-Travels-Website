@@ -17,6 +17,8 @@ import { postWalletEntry } from '../services/wallet.js'
 import { walletEvent } from '../services/walletKeys.js'
 import { freshLocationWithinPickup } from '../services/rideGeofence.js'
 import { createBookingFromQuote, BookingCreationError } from '../services/bookingCreation.js'
+import { nearbyDriverAvailability, nearbyDriverEta } from '../services/nearbyDrivers.js'
+import { driverLocationVisibleToRider } from '../services/riderDriverLocation.js'
 
 const bookingsRouter = Router()
 
@@ -69,6 +71,48 @@ const normAddress = (s) => s?.trim().toLowerCase()
 const sameCoords = (a, b) =>
     Boolean(a) && Number.isFinite(b?.lat) && Number.isFinite(b?.lng) &&
     Math.abs(a.lat - b.lat) < 1e-6 && Math.abs(a.lng - b.lng) < 1e-6
+
+// Availability preview for the Ride Now vehicle picker. Authentication keeps
+// the fleet map out of the public API; the service returns anonymous rounded
+// points and applies the same freshness and eligibility filters as dispatch.
+bookingsRouter.get('/nearby-drivers', protect, async (req, res) => {
+  // This response is both personal-location-adjacent and deliberately live.
+  // Never let a browser or intermediary replay an older fleet snapshot.
+  res.set('Cache-Control', 'private, no-store')
+  const lat = Number(req.query.lat)
+  const lng = Number(req.query.lng)
+  const vehicleClass = String(req.query.vehicleClass ?? '')
+
+  if (!Number.isFinite(lat) || lat < -90 || lat > 90 ||
+      !Number.isFinite(lng) || lng < -180 || lng > 180) {
+    return res.status(400).json({ error: 'Valid pickup latitude and longitude are required' })
+  }
+  if (!isVehicleClass(vehicleClass)) {
+    return res.status(400).json({ error: `vehicleClass must be one of: ${VEHICLE_CLASS_NAMES.join(', ')}` })
+  }
+
+  const { vehicles, nearest } = await nearbyDriverAvailability({ lat, lng, vehicleClass })
+  let etaMinutes = null
+  if (nearest) {
+    try {
+      // Pickup rounded only in the cache key, not in the route itself. Nearby
+      // riders share one minute-granularity answer without moving the actual
+      // destination Google receives. Driver movement refreshes on the helper's
+      // one-minute TTL instead of spending a paid route call every 30 seconds.
+      etaMinutes = await nearbyDriverEta({
+        nearest,
+        vehicleClass,
+        pickup: { lat, lng },
+      }, getNavigationEtaMinutes)
+    } catch (error) {
+      // A car is still valid map context when the paid routing service cannot
+      // answer. Null keeps the UI honest by omitting the "min away" claim.
+      console.warn('Nearby driver ETA unavailable:', error?.message)
+    }
+  }
+
+  return res.json({ vehicles, etaMinutes })
+})
 
 bookingsRouter.post('/', protect, async (req, res) => {
     const {
@@ -261,6 +305,7 @@ bookingsRouter.delete('/:id/share', protect, async (req, res) => {
 })
 
 bookingsRouter.get('/:id/status', protect, async (req, res) => {
+  res.set('Cache-Control', 'private, no-store')
   const user = await prisma.user.findUnique({ where: { clerkId: req.auth.userId } })
   if (!user) return res.status(401).json({ error: 'User not found' })
 
@@ -293,7 +338,9 @@ bookingsRouter.get('/:id/status', protect, async (req, res) => {
 
   if (!booking.driverId) return res.json({ bookingId: booking.id, reference: booking.reference, bookingCode: user.bookingCode, status, scheduledAt: booking.scheduledAt, cancellationCharge, financials: paymentSummary, driver: null })
 
-  const location = booking.driver.location
+  const location = driverLocationVisibleToRider({ status, scheduledAt: booking.scheduledAt })
+    ? booking.driver.location
+    : null
   const etaTarget = status === 'en_route'
     ? { leg: 'pickup', lat: booking.pickupLat, lng: booking.pickupLng }
     : status === 'started'
@@ -362,10 +409,10 @@ bookingsRouter.get('/:id/status', protect, async (req, res) => {
       // path, and never a public one. Null until his photo is approved, which is
       // the only thing that writes Driver.pfpUrl.
       photoUrl:      await signedRiderPhotoUrl(booking.driver),
-      latitude:      booking.driver.location?.latitude,
-      longitude:     booking.driver.location?.longitude,
-      bearing:       booking.driver.location?.bearing,
-      speedKmh:      booking.driver.location?.speedKmh,
+      latitude:      location?.latitude,
+      longitude:     location?.longitude,
+      bearing:       location?.bearing,
+      speedKmh:      location?.speedKmh,
     },
   })
 })

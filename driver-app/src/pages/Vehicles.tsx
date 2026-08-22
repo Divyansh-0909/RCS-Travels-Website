@@ -376,8 +376,8 @@ const Vehicles = () => {
               two controls on one line that agree about nothing.
 
               Full width each, one under the other, and the FILL is what ranks
-              them: solid primary for the thing he opened the form to do, outline
-              for the way back out. Nothing here is destructive — cancelling an
+              them: solid primary for the thing he opened the form to do, white
+              fill for the way back out. Nothing here is destructive — cancelling an
               unsaved car costs him two fields — so the two being the same size is
               honest rather than dangerous. */}
           <View>
@@ -395,7 +395,7 @@ const Vehicles = () => {
             <Button prop={{ disabled: busy }} onPress={submitNew}>
               {busy ? 'Adding...' : 'Add car'}
             </Button>
-            {/* The shared outline, not a hand-rolled Pressable. It takes its width,
+            {/* The shared secondary action, not a hand-rolled Pressable. It takes its width,
                 radius, padding and centring from the same component the button
                 above it does, so the two cannot drift apart the way a copy of
                 those numbers would. */}
@@ -413,9 +413,7 @@ const Vehicles = () => {
           onPress={() => { setAdding(true); setFormError(null); }}
           className="mx-4 rounded-2xl p-4 flex-row items-center gap-3"
           style={({ pressed }) => ({
-            backgroundColor: '#fff',
-            borderWidth: 1,
-            borderColor: HAIRLINE,
+            backgroundColor: CARD,
             opacity: pressed ? 0.6 : 1,
           })}
         >

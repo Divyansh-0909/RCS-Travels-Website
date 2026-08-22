@@ -2,7 +2,7 @@
 
 The deterministic Meta Cloud API flow is:
 
-`menu → book → Ride Now/Schedule → pickup → destination → vehicle + Solo/Share → confirmation`
+`menu → book → Ride Now/Schedule → pickup → destination → Solo/Share → roof carrier → safer-route choice (when available) → vehicle → confirmation`
 
 The same webhook also accepts a complete or partial booking in one text
 message. It extracts only unambiguous details, resolves supplied locations,
@@ -21,15 +21,27 @@ Destination: Gurgaon Cyber Hub
 When: now
 Vehicle: SUV
 Mode: sharing
+Roof carrier: yes
+Safer route: yes
 ```
 
 `When` accepts `now`, `scheduled`, `today`, `tomorrow`, or a date as
 `DD/MM/YYYY`/`YYYY-MM-DD`; scheduled times accept `18:30` or `6:30 pm`.
 Vehicle accepts Hatchback, Sedan, SUV, or Premium SUV, and mode accepts Solo or
-Sharing. A complete message goes to fare confirmation. A partial message asks
-only for the remaining ride type, date/time, location, vehicle, or mode. The
-existing `Hi`/menu/button flow remains available and `cancel` still clears an
-in-progress booking.
+Sharing. Sharing charges the sharing fare when a compatible passenger joins; if
+nobody joins, the solo fare applies. `Roof carrier: yes` or natural wording such
+as `with a roof carrier` requests luggage space outside the boot. The carrier
+adds up to the configured charge and can be included free on an eligible
+high-fare ride. `Safer route: yes` or natural wording such as `using the safer
+route` selects it; `Route preference: fastest` skips it. If the message omits an
+option, WhatsApp asks for Solo/Share and roof carrier, while the safer-route
+question appears only when the route engine confirms that an alternative can be
+offered. The safer route adds the configured flat fee and a distance-priced ride
+can also increase because of the longer drive. A complete message goes to fare
+confirmation. A partial message asks only for the remaining ride type, date/time,
+location, sharing mode, carrier preference, route preference (when applicable),
+or vehicle. The existing `Hi`/menu/button flow remains available and `cancel`
+still clears an in-progress booking.
 
 Pickup and destination accept either a WhatsApp location pin or a typed place.
 Ride Now enters the existing assignment/pooling service immediately. Scheduled

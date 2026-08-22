@@ -95,7 +95,7 @@ const RideDetails = ({ prop }) => {
             >
                 <Icon path={mdiKeyboardBackspace} size={1.05} />
             </button>
-            <div className={`flex items-center justify-center sm:justify-start ${COL}`}>
+            <div className={`flex items-center justify-start ${COL}`}>
                 <h2 className="text-xl font-semibold leading-tight tracking-[-0.03em] sm:text-2xl">Ride Details</h2>
             </div>
 
@@ -105,12 +105,12 @@ const RideDetails = ({ prop }) => {
                 {(distanceKm != null || durationMin != null) && (
                     <div className="flex items-center gap-2 pl-6">
                         {durationMin != null && (
-                            <span className="rounded-xl bg-[var(--background)] px-2.5 py-1.5 text-sm font-semibold">
+                            <span className="rounded-xl bg-[var(--background-primary)] px-2.5 py-1.5 text-sm font-semibold">
                                 {durationMin} min
                             </span>
                         )}
                         {distanceKm != null && (
-                            <span className="rounded-xl bg-[var(--background)] px-2.5 py-1.5 text-sm font-semibold">
+                            <span className="rounded-xl bg-[var(--background-primary)] px-2.5 py-1.5 text-sm font-semibold">
                                 {Math.round(distanceKm * 10) / 10} km
                             </span>
                         )}

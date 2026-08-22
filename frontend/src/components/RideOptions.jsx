@@ -53,11 +53,11 @@ const OptionRow = ({ label, note, on, onToggle, disabled = false }) => (
         onClick={onToggle}
         className={`group w-full flex items-center justify-between gap-4 py-3.5 text-left rounded-lg outline-none transition-opacity duration-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]/70 ${disabled ? "opacity-45 cursor-not-allowed" : "cursor-pointer active:opacity-80"}`}
     >
-        <span className="min-w-0 flex flex-col gap-0.5">
+        <span className="min-w-0 flex-1 flex flex-col gap-0.5">
             <span className="text-base sm:text-lg font-medium leading-tight text-[var(--text)]">{label}</span>
             <span className="text-sm sm:text-base leading-snug text-[var(--text-muted)]">{note}</span>
         </span>
-        <SliderToggle on={on} className="shrink-0" />
+        <SliderToggle on={on} className="shrink-0 max-sm:mr-2.5" />
     </button>
 );
 
@@ -69,12 +69,7 @@ const OptionsBody = ({ options, onClose, titleId, showClose = true }) => (
             underneath each centre on their own width and stop agreeing with
             each other or with the rows below. */}
         <div className="flex items-start justify-between gap-4 text-left">
-            <div className="flex flex-col gap-0.5">
-                <h3 id={titleId} className="text-lg sm:text-xl font-medium leading-tight text-[var(--text)]">Ride options</h3>
-                {/* Says why these three are grouped at all: they are the
-                    settings the cards behind this get re-priced by. */}
-                <p className="text-sm sm:text-base leading-snug text-[var(--text-muted)]">Each one changes your fare.</p>
-            </div>
+            <h3 id={titleId} className="text-xl sm:text-2xl font-medium leading-tight text-[var(--text)]">Ride options</h3>
             {showClose && (
                 <button
                     type="button"
@@ -192,7 +187,7 @@ export const RideOptionsPopover = ({ options, open, onClose, anchorRef }) => {
             // so the panel separates from what it covers instead of dissolving
             // into it. Deeper shadow than a dropdown's — this one floats over
             // four cards rather than sitting on the page.
-            className={`absolute bottom-full inset-x-0 z-30 mb-3 flex flex-col gap-3 rounded-2xl border border-[var(--foreground)]/15 bg-[var(--background-primary)] px-5 py-4 outline-none shadow-[0_24px_60px_rgba(0,0,0,0.65)] ${closing ? "animate-datetime-out" : "animate-datetime"} motion-reduce:animate-none`}
+            className={`absolute bottom-full inset-x-0 z-30 mb-3 flex flex-col gap-3 rounded-2xl bg-[var(--background-primary)] px-5 py-4 outline-none shadow-[0_24px_60px_rgba(0,0,0,0.65)] ${closing ? "animate-datetime-out" : "animate-datetime"} motion-reduce:animate-none`}
         >
             <OptionsBody options={options} onClose={onClose} titleId="ride-options-title" />
         </div>

@@ -16,7 +16,6 @@ import AppText from '../AppText';
 // two are one sequence and a captain should not feel the seam between them.
 
 const SCRIM = 'rgba(18,18,32,0.45)';
-const HAIRLINE = 'rgba(18,18,32,0.12)';
 const WELL = 'rgba(18,18,32,0.03)';
 
 const INK = 'text-[var(--background-primary)]';
@@ -35,7 +34,7 @@ const Option = ({ Icon, label, onPress }: OptionProps) => {
   // Held rather than read from Pressable's style callback. This row carries a
   // className, and NativeWind merges an inline style into its own computation and
   // understands objects and arrays only — a function is collected, applied, and
-  // yields nothing, so the fill and the border would both be dropped silently.
+  // yields nothing, so the fill would be dropped silently.
   // See the note at the top of ui/Button.
   const [pressed, setPressed] = useState(false);
 
@@ -48,8 +47,6 @@ const Option = ({ Icon, label, onPress }: OptionProps) => {
       className="w-full flex-row items-center gap-3 rounded-xl px-3.5 py-3.5"
       style={{
         backgroundColor: WELL,
-        borderWidth: 1,
-        borderColor: HAIRLINE,
         opacity: pressed ? 0.7 : 1,
       }}
     >

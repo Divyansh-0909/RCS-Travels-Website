@@ -272,7 +272,7 @@ export const OtpEntry = ({
                         })}
                     >
                         <View
-                            className={`w-[92%] flex-row items-center justify-center gap-2 rounded-full py-3.5 border border-[var(--backround-primary)]`}
+                            className="w-[92%] flex-row items-center justify-center gap-2 rounded-full bg-[var(--background-muted)] py-3.5"
                         >
                             <AppText className="text-base font-semibold text-[var(--background-primary)]">
                                 Back

@@ -1,7 +1,7 @@
 import { Prisma } from '@prisma/client'
 import { prisma } from '../db/prisma.js'
 import { normalizePhone } from '../lib/phone.js'
-import { getRideEstimate } from './rideEstimate.js'
+import { CARRIER_CHARGE, getRideEstimate } from './rideEstimate.js'
 import { verifyQuote } from './fareQuote.js'
 import { createBookingFromQuote, BookingCreationError } from './bookingCreation.js'
 import { VEHICLE_CLASSES, VEHICLE_CLASS_NAMES } from '../constants/vehicles.js'
@@ -78,8 +78,10 @@ const labelledValue = (text, labels) => {
 
 const trimBookingDetails = value => {
   const markers = [
-    /,\s*(?=(?:now|today|tomorrow|scheduled?|on\s+\d|at\s+\d|(?:vehicle|car|mode|ride\s*type|date|time)\s*[:=-]|premium\s+suv|hatchback|sedan|suv|solo|private|share|sharing|shared|pool(?:ing)?)\b)/i,
-    /\s+(?=(?:now|today|tomorrow|scheduled?\b|on\s+\d{1,4}[/-]|at\s+\d{1,2}(?::\d{2})?\s*(?:a\.?m\.?|p\.?m\.?)?\b|(?:vehicle|car|mode|ride\s*type|date|time)\s*[:=-]|premium\s+suv|hatchback|sedan|suv|solo|private|share|sharing|shared|pool(?:ing)?)\b)/i,
+    /[,\s]+(?=(?:sharing|share\s+ride|(?:roof|luggage)\s+carrier|carrier)\s*[:=-])/i,
+    /\s+(?=(?:with(?:out)?|using|taking|choose|prefer|want|need|add|require|no)\s+(?:(?:a|the)\s+)?(?:safe(?:r)?\s+route|sharing|shared?\s+ride|(?:(?:roof|luggage)\s+)?carrier)\b)/i,
+    /,\s*(?=(?:now|today|tomorrow|scheduled?|on\s+\d|at\s+\d|(?:(?:prefer\s+)?safe(?:r)?\s+route|route\s+preference|vehicle|car|mode|ride\s*type|date|time)\s*[:=-]|premium\s+suv|hatchback|sedan|suv|solo|private|share|sharing|shared|pool(?:ing)?|safe(?:r)?\s+route|fastest\s+route|standard\s+route)\b)/i,
+    /\s+(?=(?:now|today|tomorrow|scheduled?\b|on\s+\d{1,4}[/-]|at\s+\d{1,2}(?::\d{2})?\s*(?:a\.?m\.?|p\.?m\.?)?\b|(?:(?:prefer\s+)?safe(?:r)?\s+route|route\s+preference|vehicle|car|mode|ride\s*type|date|time)\s*[:=-]|premium\s+suv|hatchback|sedan|suv|solo|private|share|sharing|shared|pool(?:ing)?|safe(?:r)?\s+route|fastest\s+route|standard\s+route)\b)/i,
   ]
   let end = value.length
   for (const marker of markers) {
@@ -125,6 +127,54 @@ const vehicleFromText = text => {
   return null
 }
 
+const sharingFromText = text => {
+  const labels = 'mode|sharing|share\\s+ride'
+  const labelled = labelledValue(text, labels) ||
+    new RegExp('(?:' + labels + ')\\s*(?::|=|-)\\s*([^,.\\n]+)', 'i').exec(text)?.[1]?.trim()
+  if (labelled) {
+    if (/^(?:no|off|false|solo|private|not\s+shared?)$/i.test(labelled)) return false
+    if (/^(?:yes|on|true|share|shared|sharing|pool|pooling)$/i.test(labelled)) return true
+    return undefined
+  }
+  if (/\b(?:solo|private)(?:\s+ride)?\b/i.test(text) ||
+      /\b(?:without|no)\s+(?:a\s+)?(?:shared?|sharing)(?:\s+ride)?\b/i.test(text) ||
+      /\b(?:do\s+not|don['’]?t)\s+(?:want\s+to\s+)?share\b/i.test(text)) return false
+  if (/\b(?:share|shared|sharing|pool|pooling)(?:\s+ride)?\b/i.test(text)) return true
+  return undefined
+}
+
+const carrierFromText = text => {
+  const labels = '(?:roof|luggage)\\s+carrier|carrier'
+  const labelled = labelledValue(text, labels) ||
+    new RegExp('(?:' + labels + ')\\s*(?::|=|-)\\s*([^,.\\n]+)', 'i').exec(text)?.[1]?.trim()
+  if (labelled) {
+    if (/^(?:no|off|false|none|not\s+needed|not\s+required)$/i.test(labelled)) return false
+    if (/^(?:yes|on|true|needed|required|add)$/i.test(labelled)) return true
+    return undefined
+  }
+  if (/\b(?:without|no)\s+(?:a\s+|the\s+)?(?:roof\s+|luggage\s+)?carrier\b/i.test(text) ||
+      /\b(?:do\s+not|don['’]?t)\s+(?:(?:want|need|use|add|require)\s+)?(?:a\s+|the\s+)?(?:roof\s+|luggage\s+)?carrier\b/i.test(text)) return false
+  if (/\b(?:need|want|use|add|require|with)\s+(?:a\s+|the\s+)?(?:(?:roof|luggage)\s+)?carrier\b/i.test(text) ||
+      /\b(?:roof|luggage)\s+carrier\b/i.test(text)) return true
+  return undefined
+}
+
+const safeRouteFromText = text => {
+  const labels = '(?:prefer\\s+)?safe(?:r)?\\s+route|route\\s+preference'
+  const labelled = labelledValue(text, labels) ||
+    new RegExp('(?:' + labels + ')\\s*(?::|=|-)\\s*([^,.\\n]+)', 'i').exec(text)?.[1]?.trim()
+  if (labelled) {
+    if (/^(?:no|off|false|none|not\s+needed|fastest|quickest|standard|default)(?:\s+route)?$/i.test(labelled)) return false
+    if (/^(?:yes|on|true|safe|safer|preferred?|required|needed|highway)(?:\s+route)?$/i.test(labelled)) return true
+    return undefined
+  }
+  if (/\b(?:without|skip|no|not)\s+(?:a\s+|the\s+)?safe(?:r)?\s+route\b/i.test(text) ||
+      /\b(?:do\s+not|don['’]?t)\s+(?:(?:want|need|use|take|choose|prefer)\s+)?(?:a\s+|the\s+)?safe(?:r)?\s+route\b/i.test(text) ||
+      /\b(?:fastest|standard|default)\s+route\b/i.test(text)) return false
+  if (/\b(?:use|take|choose|prefer|want|with|via)?\s*(?:the\s+)?safe(?:r)?\s+route\b/i.test(text)) return true
+  return undefined
+}
+
 // Parses both a predictable labelled message and a natural sentence such as:
 // "Book a sedan solo from Sector 18 Noida to IGI Airport tomorrow at 6:30 pm".
 // It deliberately extracts only fields with strong signals; uncertain details
@@ -142,8 +192,9 @@ export function parseBookingMessage(value, now = new Date()) {
   }
 
   const vehicleClass = vehicleFromText(text)
-  const sharing = /\b(?:share|shared|sharing|pool|pooling)\b/i.test(text) ? true
-    : /\b(?:solo|private)\b/i.test(text) ? false : undefined
+  const sharing = sharingFromText(text)
+  const needsCarrier = carrierFromText(text)
+  const preferSafeRoute = safeRouteFromText(text)
   const when = labelledValue(text, 'when|ride\s*type|trip\s*type')
   const explicitNow = /\b(?:now|right\s+now|asap|immediately)\b/i.test(text) ||
     /^\s*(?:now|ride\s+now)\s*$/i.test(when || text)
@@ -153,7 +204,9 @@ export function parseBookingMessage(value, now = new Date()) {
   const scheduleTime = timeFromText(text)
   const rideType = explicitNow ? 'now' : (explicitScheduled || scheduleDate || scheduleTime) ? 'scheduled' : undefined
   const data = { ...(rideType && { rideType }), ...(pickupText && { pickupText }), ...(dropText && { dropText }),
-    ...(vehicleClass && { vehicleClass }), ...(sharing !== undefined && { sharing }) }
+    ...(vehicleClass && { vehicleClass }), ...(sharing !== undefined && { sharing }),
+    ...(needsCarrier !== undefined && { needsCarrier }),
+    ...(preferSafeRoute !== undefined && { preferSafeRoute }) }
   const issues = {}
   if (scheduleDate?.value) data.scheduleDate = scheduleDate.value
   else if (scheduleDate?.error) issues.scheduleDate = scheduleDate.error
@@ -164,25 +217,40 @@ export function parseBookingMessage(value, now = new Date()) {
     else if (parsed?.error) issues.scheduleTime = parsed.error
   }
 
-  const labelled = /^(?:\s*(?:pickup(?:\s+location)?|pick\s*up(?:\s+location)?|from|drop(?:-?off)?(?:\s+location)?|destination(?:\s+location)?|to|date|time|when|vehicle|car|cab|mode|ride\s*type)\s*(?::|=|-))/im.test(text)
+  const labelled = /^(?:\s*(?:pickup(?:\s+location)?|pick\s*up(?:\s+location)?|from|drop(?:-?off)?(?:\s+location)?|destination(?:\s+location)?|to|date|time|when|vehicle|car|cab|mode|ride\s*type|sharing|share\s+ride|(?:roof|luggage)\s+carrier|carrier|(?:prefer\s+)?safe(?:r)?\s+route|route\s+preference)\s*(?::|=|-))/im.test(text)
   const bookingWords = /\b(?:book|booking|cab|taxi|ride)\b/i.test(text)
-  const hasDetails = Boolean(pickupText || dropText || vehicleClass || sharing !== undefined || rideType)
+  const hasDetails = Boolean(pickupText || dropText || vehicleClass || sharing !== undefined || needsCarrier !== undefined ||
+    preferSafeRoute !== undefined || rideType)
   return { isBookingRequest: labelled || Boolean(pickupText && dropText) || (bookingWords && hasDetails), data, issues }
 }
 
 const estimate = data => getRideEstimate({ pickupAddress: data.pickup.address, dropAddress: data.drop.address,
   vehicleClass: 'hatchback', pickupCoords: { lat: data.pickup.lat, lng: data.pickup.lng },
-  dropCoords: { lat: data.drop.lat, lng: data.drop.lng }, preferSafeRoute: false, needsCarrier: false, coupon: null })
+  dropCoords: { lat: data.drop.lat, lng: data.drop.lng }, preferSafeRoute: data.preferSafeRoute === true,
+  needsCarrier: data.needsCarrier === true, coupon: null })
+
+const saferRoutePrompt = (to, fee) => sendButtons(to,
+  `A safer route is available for this trip.\n\nIt adds ₹${fee}. For distance-priced rides, the longer drive may also increase the fare.\n\nThis is a route preference, not a security service. Which route would you like?`,
+  [['safe_route_on', 'Safer route'], ['safe_route_off', 'Fastest route']])
+
+const sharingPrompt = to => sendButtons(to,
+  'Would you like a Solo or Share ride?\n\nWith Share, a compatible passenger may join. You pay the sharing fare if matched; otherwise the solo fare applies.',
+  [['sharing_on', 'Share ride'], ['sharing_off', 'Solo ride']])
+
+const carrierPrompt = to => sendButtons(to,
+  `Do you need a roof carrier for luggage that won’t fit in the boot?\n\nIt adds up to ₹${CARRIER_CHARGE} and may be included on eligible high-fare rides.`,
+  [['carrier_on', 'Add carrier'], ['carrier_off', 'No carrier']])
 
 function showOptions(to, data, fares) {
   const vehicles = data.vehicleClass ? [data.vehicleClass] : VEHICLE_CLASS_NAMES
-  const modes = typeof data.sharing === 'boolean' ? [data.sharing ? 'sharing' : 'solo'] : ['solo', 'sharing']
-  const rows = vehicles.flatMap(vehicle => modes.map(mode => ({ id: `ride:${vehicle}:${mode}`,
-    title: `${VEHICLE_CLASSES[vehicle].label} · ${mode === 'solo' ? 'Solo' : 'Share'}`,
-    description: `₹${fares[vehicle][mode]}${mode === 'sharing' ? ' · Save 25%' : ''}` })))
-  const choicePrompt = data.vehicleClass ? 'Choose Solo or Share:'
-    : typeof data.sharing === 'boolean' ? 'Choose a vehicle:' : 'Choose vehicle and ride type:'
-  return sendList(to, `🚕 Ride options${data.scheduleLabel ? `\n📅 ${data.scheduleLabel}` : ''}\n\n📍 ${data.pickup.address}\n📍 ${data.drop.address}\n\n${choicePrompt}`, rows)
+  const mode = data.sharing ? 'sharing' : 'solo'
+  const rows = vehicles.map(vehicle => ({ id: `ride:${vehicle}:${mode}`,
+    title: VEHICLE_CLASSES[vehicle].label,
+    description: data.sharing
+      ? `₹${fares[vehicle].sharing} if matched · ₹${fares[vehicle].solo} if not`
+      : `₹${fares[vehicle].solo} · Solo ride` }))
+  const choicePrompt = `Choose a vehicle for your ${data.sharing ? 'Share' : 'Solo'} ride:`
+  return sendList(to, `🚕 Ride options${data.scheduleLabel ? `\n📅 ${data.scheduleLabel}` : ''}${data.preferSafeRoute ? `\n🛣️ Safer route (+₹${data.safeRouteFee})` : ''}${data.needsCarrier ? '\n🧳 Roof carrier requested' : ''}\n\n📍 ${data.pickup.address}\n📍 ${data.drop.address}\n\n${choicePrompt}`, rows)
 }
 
 const scheduleDatePrompt = (data = {}) => data.scheduleDateError === 'too_far'
@@ -205,7 +273,7 @@ const destinationMissingPrompt = data => data.dropInvalid
   ? 'I couldn’t find the destination from your message. Share a location pin or type a more detailed destination.'
   : `📍 Pickup:\n${data.pickup.address}\n\nWhere are you going? Share a pin or type the destination.`
 
-const confirmationMessage = data => `${data.rideType === 'scheduled' ? 'Confirm scheduled ride' : 'Confirm your ride'}${data.scheduleLabel ? `\n${data.scheduleLabel}` : ''}\n\n📍 Pickup:\n${data.pickup.address}\n\n📍 Drop:\n${data.drop.address}\n\n🚘 ${VEHICLE_CLASSES[data.vehicleClass].label}\n${data.sharing ? '👥 Share' : '👤 Solo'}\n💰 Fare: ₹${data.fare}${data.sharing ? '\n\nA compatible passenger may join your trip.' : ''}\n\nConfirm booking?`
+const confirmationMessage = data => `${data.rideType === 'scheduled' ? 'Confirm scheduled ride' : 'Confirm your ride'}${data.scheduleLabel ? `\n${data.scheduleLabel}` : ''}\n\n📍 Pickup:\n${data.pickup.address}\n\n📍 Drop:\n${data.drop.address}\n\n🚘 ${VEHICLE_CLASSES[data.vehicleClass].label}\n${data.sharing ? '👥 Share' : '👤 Solo'}${data.needsCarrier ? `\n🧳 Roof carrier (${data.carrierWaived ? 'included' : `+₹${data.carrierCharge}`})` : ''}${data.preferSafeRoute ? `\n🛣️ Safer route (+₹${data.safeRouteFee})` : ''}\n💰 Fare: ₹${data.fare}${data.sharing ? `\n\nSharing fare if matched. If nobody joins, the solo fare is ₹${data.fares[data.vehicleClass].solo}.` : ''}\n\nConfirm booking?`
 
 async function showConfirmation(to, conversation, data) {
   await prisma.whatsappSession.update({ where: { phone: conversation.phone }, data: { step: 'CONFIRMATION', data } })
@@ -247,14 +315,32 @@ async function advanceBooking(to, conversation, initialData, now = new Date()) {
     await prisma.whatsappSession.update({ where: { phone: conversation.phone }, data: { step: 'DESTINATION', data } })
     return sendWhatsAppText(to, destinationMissingPrompt(data))
   }
+  if (typeof data.sharing !== 'boolean') {
+    await prisma.whatsappSession.update({ where: { phone: conversation.phone }, data: { step: 'SHARING_SELECTION', data } })
+    return sharingPrompt(to)
+  }
+  if (typeof data.needsCarrier !== 'boolean') {
+    await prisma.whatsappSession.update({ where: { phone: conversation.phone }, data: { step: 'CARRIER_SELECTION', data } })
+    return carrierPrompt(to)
+  }
   let quote
   try { quote = await estimate(data) }
   catch { return sendWhatsAppText(to, 'I couldn’t calculate a fare for that route. Type “cancel” and try again, or book on our website.') }
-  data = { ...data, fares: quote.fares }
+  if (quote.safeRoute?.available && typeof data.preferSafeRoute !== 'boolean') {
+    data = { ...data, safeRouteFee: quote.safeRoute.fee }
+    await prisma.whatsappSession.update({ where: { phone: conversation.phone }, data: { step: 'SAFE_ROUTE_SELECTION', data } })
+    return saferRoutePrompt(to, quote.safeRoute.fee)
+  }
+  if (data.preferSafeRoute && quote.safeRoute?.applied !== true)
+    await sendWhatsAppText(to, 'A safer alternative is not available for this trip, so I’ve kept the fastest route. Please review the fare before confirming.')
+  data = { ...data, preferSafeRoute: quote.safeRoute?.applied === true,
+    safeRouteFee: quote.safeRoute?.applied ? quote.safeRoute.fee : 0, fares: quote.fares }
   if (data.vehicleClass && typeof data.sharing === 'boolean') {
     const mode = data.sharing ? 'sharing' : 'solo'
-    const fare = quote.fares?.[data.vehicleClass]?.[mode]
-    if (fare > 0) return showConfirmation(to, conversation, { ...data, fare })
+    const selected = quote.fares?.[data.vehicleClass]
+    const fare = selected?.[mode]
+    if (fare > 0) return showConfirmation(to, conversation, { ...data, fare,
+      carrierCharge: selected.carrier ?? 0, carrierWaived: selected.carrierWaived === true })
     data = { ...data }
     delete data.vehicleClass
     delete data.fare
@@ -333,6 +419,33 @@ async function handleConversation(message, user, conversation) {
     delete data.scheduleTimeError
     return advanceBooking(to, conversation, data)
   }
+  if (conversation.step === 'SHARING_SELECTION') {
+    const sharing = input.value === 'sharing_on' ? true
+      : input.value === 'sharing_off' ? false
+        : input.type === 'text' && /^(?:yes|on)$/i.test(input.value) ? true
+          : input.type === 'text' && /^(?:no|off)$/i.test(input.value) ? false
+            : input.type === 'text' ? sharingFromText(input.value) : undefined
+    if (sharing === undefined) return sharingPrompt(to)
+    return advanceBooking(to, conversation, { ...data, sharing })
+  }
+  if (conversation.step === 'CARRIER_SELECTION') {
+    const needsCarrier = input.value === 'carrier_on' ? true
+      : input.value === 'carrier_off' ? false
+        : input.type === 'text' && /^(?:yes|on)$/i.test(input.value) ? true
+          : input.type === 'text' && /^(?:no|off)$/i.test(input.value) ? false
+            : input.type === 'text' ? carrierFromText(input.value) : undefined
+    if (needsCarrier === undefined) return carrierPrompt(to)
+    return advanceBooking(to, conversation, { ...data, needsCarrier })
+  }
+  if (conversation.step === 'SAFE_ROUTE_SELECTION') {
+    const preference = input.value === 'safe_route_on' ? true
+      : input.value === 'safe_route_off' ? false
+        : input.type === 'text' && /^(?:yes|on)$/i.test(input.value) ? true
+          : input.type === 'text' && /^(?:no|off)$/i.test(input.value) ? false
+        : input.type === 'text' ? safeRouteFromText(input.value) : undefined
+    if (preference === undefined) return saferRoutePrompt(to, data.safeRouteFee)
+    return advanceBooking(to, conversation, { ...data, preferSafeRoute: preference })
+  }
   if (['PICKUP', 'DESTINATION'].includes(conversation.step)) {
     if (!['text', 'location'].includes(input.type)) return sendWhatsAppText(to, 'Share a location pin or type a place name.')
     let locationInput = input
@@ -356,20 +469,33 @@ async function handleConversation(message, user, conversation) {
     const match = input.value?.match(/^ride:([^:]+):(solo|sharing)$/)
     if ((!match || !VEHICLE_CLASS_NAMES.includes(match[1])) && input.type === 'text') {
       const partial = parseBookingMessage(input.value).data
-      if (partial.vehicleClass || typeof partial.sharing === 'boolean')
+      if (partial.vehicleClass || typeof partial.sharing === 'boolean' || typeof partial.needsCarrier === 'boolean' ||
+          typeof partial.preferSafeRoute === 'boolean')
         return advanceBooking(to, conversation, { ...data, ...(partial.vehicleClass && { vehicleClass: partial.vehicleClass }),
-          ...(typeof partial.sharing === 'boolean' && { sharing: partial.sharing }) })
+          ...(typeof partial.sharing === 'boolean' && { sharing: partial.sharing }),
+          ...(typeof partial.needsCarrier === 'boolean' && { needsCarrier: partial.needsCarrier }),
+          ...(typeof partial.preferSafeRoute === 'boolean' && { preferSafeRoute: partial.preferSafeRoute }) })
     }
-    if (!match || !VEHICLE_CLASS_NAMES.includes(match[1])) return showOptions(to, data, data.fares)
+    if (!match || !VEHICLE_CLASS_NAMES.includes(match[1]))
+      return typeof data.sharing !== 'boolean' || typeof data.needsCarrier !== 'boolean'
+        ? advanceBooking(to, conversation, data) : showOptions(to, data, data.fares)
     const [, vehicleClass, mode] = match
-    data = { ...data, vehicleClass, sharing: mode === 'sharing', fare: data.fares[vehicleClass][mode] }
-    return showConfirmation(to, conversation, data)
+    return advanceBooking(to, conversation, { ...data, vehicleClass, sharing: mode === 'sharing' })
   }
   if (conversation.step === 'CONFIRMATION') {
     if (input.value === 'cancel') { await prisma.whatsappSession.update({ where: { phone: conversation.phone }, data: { step: 'CANCELLED', data: {} } }); return mainMenu(to, user.name) }
     if (input.value !== 'confirm') return sendWhatsAppText(to, 'Please choose Confirm or Cancel above.')
+    // Sessions created before these choices were added may already be sitting on
+    // an old confirmation message. Do not let that stale message bypass the new
+    // questions when the customer taps Confirm after deployment.
+    if (typeof data.sharing !== 'boolean' || typeof data.needsCarrier !== 'boolean')
+      return advanceBooking(to, conversation, data)
     try {
       const fresh = await estimate(data)
+      if (data.preferSafeRoute && fresh.safeRoute?.applied !== true) {
+        await sendWhatsAppText(to, 'The safer alternative is no longer available. I’ve recalculated the fastest route for you; please review it before confirming.')
+        return advanceBooking(to, conversation, { ...data, preferSafeRoute: false })
+      }
       const { quote, error } = verifyQuote(fresh.quote)
       if (error) throw new Error(error)
       const result = await createBookingFromQuote({ user, quote, pickupAddress: data.pickup.address, pickupLat: data.pickup.lat,

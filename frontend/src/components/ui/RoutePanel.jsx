@@ -26,7 +26,7 @@ const RoutePanel = ({ pickup, drop, className = "", size = "md", header, childre
     const to = splitAddress(drop);
     const dotOffset = SIZES[size].dot;
     return (
-        <div className={`${className} w-full text-left ${plain ? "" : "rounded-xl border border-[var(--foreground)]/30 bg-[var(--background-muted)] px-4 py-4"}`}>
+        <div className={`${className} w-full text-left ${plain ? "" : "rounded-2xl bg-[var(--background-muted)] p-5"}`}>
             {header && (
                 <>
                     <div className="w-full">{header}</div>

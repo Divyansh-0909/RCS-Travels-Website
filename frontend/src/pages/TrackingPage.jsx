@@ -25,6 +25,7 @@ import NoticePill from "../components/ui/NoticePill";
 import pfpPlaceholder from "../assets/pfp-placeholder.webp"
 import RideDetails from "../components/RideDetails";
 import Skeleton from "../components/ui/Skeleton";
+import OtpDisplay from "../components/ui/OtpDisplay";
 import { SAFE_ROUTE_SURCHARGE, isDistancePriced } from "../constants/fares";
 import { labelOf } from "../constants/vehicles";
 import { LIVE_STATUSES, minsLabel, formatPlate } from "../lib/trip";
@@ -39,7 +40,8 @@ const COL = "w-[min(86vw,100%)] sm:w-[377px]";
 const TITLE = "font-bold text-3xl sm:text-5xl leading-tight";
 const SUBTITLE = "text-lg sm:text-2xl font-normal leading-snug text-[var(--text-muted)]";
 const META = "text-base sm:text-xl";
-// Vertical rhythm: 8px inside a pair, 12–16px within a group, 32/48 between.
+// Vertical rhythm: 2–4px inside a text pair, 8–12px within a group, and
+// 24/32px between bottom-sheet sections.
 const STACK = "gap-6 sm:gap-8";
 const GROUP = "gap-2 sm:gap-3";
 const PAIR = "gap-0.5 sm:gap-1";
@@ -217,6 +219,7 @@ const TrackingPage = () => {
     const driverPoint = driver?.latitude != null && driver?.longitude != null
         ? { lat: driver.latitude, lng: driver.longitude }
         : null;
+    const hasDriverPoint = Boolean(driverPoint);
 
     // No map on the completed/cancelled screens (the ride is over); everything
     // else maps the booked route. The coords are persisted, so this no longer
@@ -229,9 +232,19 @@ const TrackingPage = () => {
     // AND clearing them for this page.
     useEffect(() => {
         if (!mapApi || !mapVisible) return;
-        showRouteView(mapApi, { pickupPoint, dropPoint, routePolyline });
+        showRouteView(mapApi, {
+            pickupPoint,
+            dropPoint,
+            routePolyline,
+            framePoints: driverPoint ? [driverPoint] : [],
+            // The phone sheet initially covers 60% of the viewport. Fit the
+            // route and assigned captain into the map area that remains above it.
+            padding: isMobile
+                ? { top: 48, right: 32, bottom: Math.round(window.innerHeight * 0.6) + 32, left: 32 }
+                : 60,
+        });
         return clearRouteView;
-    }, [mapApi, mapVisible, isMobile, routePolyline, pickupPoint?.lat, pickupPoint?.lng, dropPoint?.lat, dropPoint?.lng]);
+    }, [mapApi, mapVisible, isMobile, routePolyline, pickupPoint?.lat, pickupPoint?.lng, dropPoint?.lat, dropPoint?.lng, hasDriverPoint]);
 
     // Driver puck follows each poll; separate from the route overlays so
     // position updates don't redraw (or get cleared with) the route.
@@ -243,7 +256,10 @@ const TrackingPage = () => {
     // destination has nowhere to glide from. Removal is a separate concern with
     // a separate lifetime, below.
     useEffect(() => {
-        if (!mapApi || !mapVisible || !driverPoint) return;
+        if (!mapApi || !mapVisible || !driverPoint) {
+            clearDriverMarker();
+            return;
+        }
         setDriverPosition(mapApi, driverPoint);
     }, [mapApi, mapVisible, driverPoint?.lat, driverPoint?.lng]);
 
@@ -409,13 +425,13 @@ const TrackingPage = () => {
         return () => clearTimeout(t);
     }, [shareNote]);
 
-    // One driver card for every state that shows one, so its type scale and
-    // padding can't drift between the scheduled / live / completed screens.
+    // One driver card for every live state that shows one, so its type scale and
+    // padding can't drift between the scheduled and live screens.
     //
     // The driver is the one thing here that only the status fetch can supply, so
-    // the card keeps its border, fill and size throughout and swaps just the
-    // photo and the three text lines for placeholders. Sized to the live lines
-    // so nothing reflows when they land.
+    // the card keeps its fill and size throughout and swaps just the photo and
+    // the three text lines for placeholders. Sized to the live lines so nothing
+    // reflows when they land.
     //
     // Every field is read through `driver?.` even though the callers only render
     // this once a driver exists: the JSX is built on every render regardless of
@@ -429,10 +445,7 @@ const TrackingPage = () => {
     // screen long enough for the URL to die — and falls back to the placeholder,
     // which is also where a captain with no approved photo (null) lands.
     const driverCard = (
-        <Button
-            className={`w-full ${bookingLoading ? "pointer-events-none" : ""}`}
-            prop={{ variant: "input", width: "100%", bg: "var(--background-muted)", innerClassName: "flex justify-between items-center w-full px-4 py-3 gap-3" }}
-        >
+        <div className="flex w-full items-center justify-between gap-3 rounded-2xl bg-[var(--background-muted)] px-4 py-3">
             {bookingLoading ? (
                 <Skeleton rounded="rounded-full" className="w-16 h-16 sm:w-20 sm:h-20 shrink-0" />
             ) : (
@@ -465,7 +478,7 @@ const TrackingPage = () => {
                     <h4 className="text-sm sm:text-base text-[var(--text-muted)] leading-tight">{driver?.vehicleModel ?? labelOf(vehicleClass)}</h4>
                 </div>
             )}
-        </Button>
+        </div>
     );
 
     // Rendered in two slots on the completed screen — left column on desktop,
@@ -517,8 +530,8 @@ const TrackingPage = () => {
 
     // Compact variant for the completed receipt, where the driver sits inside the
     // card rather than beside it: the ride is over, so the plate is a record of who
-    // drove rather than something to identify at the kerb. No border of its own —
-    // the receipt card already provides one.
+    // drove rather than something to identify at the kerb. Its darker nested
+    // surface separates the identity record without bringing back an outline.
     //
     // Plate and model are BOTH snapshotted onto the booking when a driver claims
     // it, so the pair still names one car however many times the captain swaps
@@ -552,7 +565,7 @@ const TrackingPage = () => {
     const rideDetailsPill = (
         <Button
             onClick={() => setDetialsVisibility(true)}
-            prop={{ variant: "input", bg: "var(--background-muted)", rounded: "999px" }}
+            prop={{ variant: "input", bg: "var(--background-muted)", rounded: "999px", border: false }}
             className="cursor-pointer px-3 shrink-0"
         >
             <p className="text-sm sm:text-base text-[var(--text)] whitespace-nowrap">Ride details</p>
@@ -563,11 +576,12 @@ const TrackingPage = () => {
     // missing, and only on a cold load before the store has hydrated.
     const dropSummary = (
         <div className="flex w-full justify-between items-center gap-2.5 sm:gap-3">
-            <p className="text-left text-xs sm:text-sm text-[var(--text-muted)] leading-relaxed">Drop to: <br />
+            <div className="min-w-0 flex-1 text-left">
+                <p className="text-xs sm:text-sm text-[var(--text-muted)] leading-relaxed">Drop to:</p>
                 {dropLocation
-                    ? <span className="text-sm sm:text-lg text-[var(--text)]">{dropLocation.slice(0, 20) + '...'}</span>
+                    ? <p title={dropLocation} className="truncate text-sm sm:text-lg text-[var(--text)] leading-relaxed">{dropLocation}</p>
                     : <Skeleton className="mt-1 h-[21px] sm:h-[27px] w-28" />}
-            </p>
+            </div>
             {rideDetailsPill}
         </div>
     );
@@ -667,6 +681,10 @@ const TrackingPage = () => {
                     // that loads without a driver loses it entirely.
                     ? <BackgroundPanel
                         sheet={mapVisible}
+                        // Once assigned, this panel ends in the booking's primary
+                        // actions. Open content-fit so neither support nor Call
+                        // driver starts below the viewport; the half and collapsed
+                        // stops remain available when it is dragged down.
                         initialSnap={status === "assigned" ? "expanded" : "half"}
                         duration={420}
                         contentKey={`${status}-${bookingLoading}`}
@@ -684,13 +702,10 @@ const TrackingPage = () => {
                         <div className="w-full flex-1 min-h-0 flex flex-col items-center sm:contents">
                         {/* no pt-6: that reserved room for the arrow when it sat
                             inside the column, and it now floats above the sheet */}
-                        {/* gap-4 on phones rather than STACK's gap-6: the heading
-                            block is the only thing a collapsed sheet shows, and 24px
-                            under it pushed the driver card off the half stop. */}
-                        <div className={`relative z-10 sm:order-1 flex flex-col justify-end sm:justify-center items-center sm:items-start w-full sm:w-auto flex-1 min-h-0 sm:flex-initial sm:h-full gap-4 sm:gap-8`}>
+                        <div className={`relative z-10 sm:order-1 flex flex-col justify-end sm:justify-center items-center sm:items-start w-full sm:w-auto flex-1 min-h-0 sm:flex-initial sm:h-full ${STACK}`}>
                             <div className={`flex flex-col justify-center items-center sm:items-start ${PAIR} ${COL}`}>
-                                <h2 className={`text-center sm:text-left w-full ${TITLE}`}>{status === "payment_pending" ? "Pay your ride advance" : status === "assigned" ? "Driver has been assigned" : "Driver has not been assigned"}</h2>
-                                <h3 className={`text-center sm:text-left w-full ${SUBTITLE}`}>{status === "payment_pending" ? "The 15% advance is part of your fare." : status === "assigned" ? "Give the driver a call to confirm" : "Assigned closer to your pickup time"}</h3>
+                                <h2 className={`text-center sm:text-left w-full ${TITLE}`}>{status === "payment_pending" ? "Pay advance" : status === "assigned" ? "Driver assigned" : "Not assigned yet"}</h2>
+                                <h3 className={`text-center sm:text-left w-full ${status === "confirmed" ? "text-base sm:text-xl font-normal leading-snug text-[var(--text-muted)]" : SUBTITLE}`}>{status === "payment_pending" ? "The 15% advance is part of your fare." : status === "assigned" ? "Give the driver a call to confirm" : "Assigned closer to your pickup time"}</h3>
                             </div>
 
                             {/* The scroll region, phones only: everything below the
@@ -702,29 +717,35 @@ const TrackingPage = () => {
                                 data-sheet-scroll
                                 className="w-full min-h-0 flex-1 flex flex-col items-center gap-6 overscroll-contain sm:contents"
                             >
-                            <div className={`flex flex-col justify-center items-start gap-3 ${COL}`}>
-                                {status === "payment_pending" && financials && <>
-                                    <div className="w-full flex flex-col gap-1 text-base sm:text-lg">
-                                        <div className="flex justify-between"><span>Final fare</span><span>₹{financials.finalFare / 100}</span></div>
-                                        <div className="flex justify-between"><span>Pay now (15%)</span><span>₹{financials.advance / 100}</span></div>
-                                        <div className="flex justify-between"><span>Pay after ride</span><span>₹{financials.remaining / 100}</span></div>
+                            <div className={`flex flex-col justify-center items-start gap-6 ${COL}`}>
+                                {status === "payment_pending" && financials && (
+                                    <div className="flex w-full flex-col gap-3">
+                                        <div className="w-full flex flex-col gap-1 text-base sm:text-lg">
+                                            <div className="flex justify-between"><span>Final fare</span><span>₹{financials.finalFare / 100}</span></div>
+                                            <div className="flex justify-between"><span>Pay now (15%)</span><span>₹{financials.advance / 100}</span></div>
+                                            <div className="flex justify-between"><span>Pay after ride</span><span>₹{financials.remaining / 100}</span></div>
+                                        </div>
+                                        <Button onClick={payScheduledAdvance} prop={{ width: "100%" }}>
+                                            {loading ? "Opening payment..." : `Pay ₹${financials.advance / 100}`}
+                                        </Button>
                                     </div>
-                                    <Button onClick={payScheduledAdvance} prop={{ width: "100%" }}>
-                                        {loading ? "Opening payment..." : `Pay ₹${financials.advance / 100}`}
-                                    </Button>
-                                </>}
+                                )}
+                                {/* Driver identity and the destination/details row
+                                    are one compact ride-information group. */}
+                                <div className="flex w-full flex-col gap-3">
                                 {/* bookingLoading, not just driver: the store can
                                     already say "assigned" while the fetch that
                                     carries the driver is still in flight, and the
                                     card's own skeleton is what covers that gap. */}
-                                {status === "assigned" && (bookingLoading || driver) && driverCard}
+                                    {status === "assigned" && (bookingLoading || driver) && driverCard}
 
                                 {/* Same row as the live screen: where you're going,
                                     with the details behind the pill. Route, fare
                                     and distance live in that panel — the ride
                                     hasn't started, so none of it is time-critical
                                     enough to sit on the surface. */}
-                                {dropSummary}
+                                    {dropSummary}
+                                </div>
 
                                 {(tollNotice || driver) && (
                                     <div className="w-full flex flex-col gap-2">
@@ -740,7 +761,8 @@ const TrackingPage = () => {
                             <div className={`flex flex-col justify-center gap-2 items-center max-sm:pb-6 ${COL}`}>
                                 <Button
                                     onClick={() => openSupportWhatsApp("Hi, I need help with my ride.")}
-                                    prop={{ variant: "input", width: "100%", bg: "var(--background-muted)" }}
+                                    className="my-0!"
+                                    prop={{ variant: "input", width: "100%", bg: "var(--background-muted)", border: false }}
                                 >
                                     <span className="flex items-center justify-center gap-2 text-base sm:text-lg">
                                         <img src={waLogo} alt="WhatsApp" className="w-6 h-6" />
@@ -753,7 +775,7 @@ const TrackingPage = () => {
                                     the moment a poll returns. */}
                                 <Button
                                     onClick={callDriver}
-                                    className={`${status === 'assigned' ? "block" : "hidden"} w-full`}
+                                    className={`${status === 'assigned' ? "block" : "hidden"} my-0! w-full`}
                                     prop={{ variant: "", width: "100%", disabled: !driver?.phone, innerClassName: "flex gap-2 items-center justify-center text-base sm:text-lg" }}
                                 >
                                     <Icon path={mdiPhone} size={0.8} />
@@ -766,7 +788,7 @@ const TrackingPage = () => {
                     </BackgroundPanel>
                     : status === "completed"
                         ?
-                        <BackgroundPanel className={"max-sm:fixed max-sm:inset-0 h-[100dvh] max-sm:rounded-none max-sm:overflow-y-auto py-6 flex justify-center items-center sm:px-[9%] md:px-[5%] xl:px-[13%]"}>
+                        <BackgroundPanel className={"max-sm:fixed max-sm:inset-0 h-[100dvh] max-sm:rounded-none max-sm:overflow-hidden py-6 flex justify-center items-center sm:px-[9%] md:px-[5%] xl:px-[13%]"}>
                             {/* Desktop: one wide card split down the middle —
                                outcome on the left, receipt and actions on the
                                right. Mobile drops the card and stacks the two
@@ -784,7 +806,6 @@ const TrackingPage = () => {
                                         : <SuccessCheck className="-mt-2 -mb-2" size={isMobile ? 120 : 140} /> }
                                     <div className="flex flex-col items-center sm:items-start gap-1">
                                         <h3 className={SUBTITLE}>Ride has been completed</h3>
-                                        <h2 className={`text-center sm:text-left ${TITLE}`}>₹{fare}</h2>
                                     </div>
                                     {tollNotice}
                                     {/* Desktop keeps the actions with the outcome
@@ -799,21 +820,21 @@ const TrackingPage = () => {
                                         the same way Ride details breaks it down,
                                         and who drove. No route — the ride is over,
                                         and the addresses are still a tap away. */}
-                                    <div className="w-full rounded-xl border border-[var(--foreground)]/30 bg-[var(--background-muted)] px-4 py-4 text-left flex flex-col gap-2">
-                                        {distanceKm != null && (
-                                            <div className="flex items-center justify-between w-full">
-                                                <h3 className={`${META} text-[var(--text-muted)]`}>Distance</h3>
-                                                <h3 className={META}>{Math.round(distanceKm * 10) / 10} km</h3>
+                                    <div className="w-full rounded-2xl bg-[var(--background-muted)] p-5 text-left flex flex-col gap-3">
+                                        {(distanceKm != null || durationMin != null) && (
+                                            <div className="flex items-center gap-2">
+                                                {durationMin != null && (
+                                                    <span className="rounded-xl bg-[var(--background-primary)] px-2.5 py-1.5 text-sm font-semibold">
+                                                        {durationMin} min
+                                                    </span>
+                                                )}
+                                                {distanceKm != null && (
+                                                    <span className="rounded-xl bg-[var(--background-primary)] px-2.5 py-1.5 text-sm font-semibold">
+                                                        {Math.round(distanceKm * 10) / 10} km
+                                                    </span>
+                                                )}
                                             </div>
                                         )}
-                                        {durationMin != null && (
-                                            <div className="flex items-center justify-between w-full">
-                                                <h3 className={`${META} text-[var(--text-muted)]`}>Ride time</h3>
-                                                <h3 className={META}>{durationMin} min</h3>
-                                            </div>
-                                        )}
-
-                                        <div className="w-full h-px bg-[var(--foreground)]/10 my-1" />
 
                                         <div className="flex items-center justify-between w-full">
                                             <h3 className={`${META} text-[var(--text-muted)]`}>Base fare</h3>
@@ -825,20 +846,16 @@ const TrackingPage = () => {
                                                 <h3 className={META}>₹{SAFE_ROUTE_SURCHARGE}</h3>
                                             </div>
                                         )}
+                                        <div className="w-full h-px bg-[var(--foreground)]/10 my-1" />
                                         <div className="flex items-center justify-between w-full">
-                                            <h3 className={`${META} font-semibold`}>Total</h3>
-                                            <h3 className={`${META} font-semibold`}>₹{fare}</h3>
+                                            <h3 className="text-xl font-semibold">Total</h3>
+                                            <h3 className="text-xl font-semibold">₹{fare}</h3>
                                         </div>
 
-                                        {/* Rule and row together: with no driver
-                                            on the booking the rule would be a
-                                            divider under the last line, dividing
-                                            the total from nothing. */}
                                         {driverRow && (
-                                            <>
-                                                <div className="w-full h-px bg-[var(--foreground)]/10 my-1" />
+                                            <div className="rounded-xl bg-[var(--background)] p-3">
                                                 {driverRow}
-                                            </>
+                                            </div>
                                         )}
                                     </div>
 
@@ -859,7 +876,7 @@ const TrackingPage = () => {
 
                         : <BackgroundPanel
                             sheet={mapVisible}
-                            initialSnap="half"
+                            initialSnap={["en_route", "reached", "started", "on_trip"].includes(status) ? "expanded" : "half"}
                             duration={420}
                             // The OTP row appears at en_route and the headline
                             // grows a line with it, so the sheet's own height moves
@@ -895,10 +912,7 @@ const TrackingPage = () => {
                                 flex-1 of; sm:contents removes it from layout from
                                 sm up, leaving the desktop side panel untouched. */}
                             <div className="w-full flex-1 min-h-0 flex flex-col items-center sm:contents">
-                            {/* gap-4 on phones rather than STACK's gap-6: the ETA
-                                headline is the whole of the collapsed sheet, and
-                                24px under it cost the OTP row its place at half. */}
-                            <div className={`relative z-10 sm:order-1 flex flex-col justify-end sm:justify-center items-center sm:items-start w-full sm:w-auto flex-1 min-h-0 sm:flex-initial sm:h-auto gap-4 sm:gap-8`}>
+                            <div className={`relative z-10 sm:order-1 flex flex-col justify-end sm:justify-center items-center sm:items-start w-full sm:w-auto flex-1 min-h-0 sm:flex-initial sm:h-auto ${STACK}`}>
                                 <div className={`flex flex-col justify-center items-center sm:items-start ${PAIR} ${COL}`}>
                                     {/* The headline reads off status and the driver's
                                         ETA, so it is the one block here that can't be
@@ -941,7 +955,7 @@ const TrackingPage = () => {
                                     data-sheet-scroll
                                     className="w-full min-h-0 flex-1 flex flex-col items-center overscroll-contain sm:contents"
                                 >
-                                <div className={`flex flex-col justify-center items-start gap-3 max-sm:pb-6 ${COL}`}>
+                                <div className={`flex flex-col justify-center items-start gap-6 max-sm:pb-6 ${COL}`}>
                                     {/* OTP leads once there is one: from en_route on
                                         it is the thing the rider has to act on, and
                                         it reads out before the plate is checked.
@@ -954,31 +968,12 @@ const TrackingPage = () => {
                                         time wants to be set. The label sits bare on
                                         the sheet beside them. */}
                                     {(status === "en_route" || status === "reached") && (
-                                        // max-sm:mt-2 only: on phones this row is the
-                                        // first thing under the ETA headline and the
-                                        // container's gap-4 alone read as cramped.
-                                        // From sm up the column is gap-8 already.
-                                        <div className="flex items-center justify-between w-full gap-2.5 sm:gap-3 max-sm:mt-2 text-left">
-                                            <h3 className={`${META} text-[var(--text-muted)]`}>OTP</h3>
-                                            {/* Boxed even while empty: the row is the
-                                                same shape loaded or not, so nothing
-                                                shifts under the rider's thumb when the
-                                                code lands. */}
-                                            <div className="flex gap-2">
-                                                {(bookingCode ? String(bookingCode).split("") : [null, null, null, null]).map((digit, i) => (
-                                                    <div
-                                                        key={i}
-                                                        className="w-8 h-8 sm:w-10 sm:h-10 shrink-0 rounded-lg border border-[var(--foreground)]/30 bg-[var(--background-muted)] flex items-center justify-center"
-                                                    >
-                                                        {digit
-                                                            ? <span className="text-base sm:text-xl font-semibold leading-none">{digit}</span>
-                                                            : <Skeleton className="h-[16px] sm:h-[20px] w-3 sm:w-3.5" />}
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
+                                        <OtpDisplay code={bookingCode} loading={!bookingCode} />
                                     )}
 
+                                    {/* Driver identity and the destination/details
+                                        row are one compact ride-information group. */}
+                                    <div className="flex w-full flex-col gap-3">
                                     {/* This branch is the fallthrough for every
                                         status the two above don't claim, which
                                         includes the driverless ones — pending, and
@@ -986,22 +981,20 @@ const TrackingPage = () => {
                                         the card there put a driver who does not
                                         exist, with a plate to match a car against,
                                         in front of a rider who has nobody coming. */}
-                                    {(bookingLoading || driver) && driverCard}
+                                        {(bookingLoading || driver) && driverCard}
 
-                                    {/* where you're going sits straight on the sheet */}
-                                    {dropSummary}
+                                        {/* where you're going sits straight on the sheet */}
+                                        {dropSummary}
+                                    </div>
 
-                                    {/* extra top margin: with the drop row now on
-                                        the bare sheet, the container gap alone
-                                        let the notices crowd it */}
                                     {(tollNotice || driver) && (
-                                        <div className="w-full flex flex-col gap-2 mt-4">
+                                        <div className="w-full flex flex-col gap-2">
                                             {tollNotice}
                                             {driver && extraFareNotice}
                                         </div>
                                     )}
 
-                                    <div className="flex justify-between w-full gap-2 items-center mt-1">
+                                    <div className="flex justify-between w-full gap-2 items-center">
                                         <Button
                                             onClick={() => openSupportWhatsApp("Hi, I need help with my ride.")}
                                             prop={{ variant: "input", width: "100%", bg: "var(--background-muted)" }}

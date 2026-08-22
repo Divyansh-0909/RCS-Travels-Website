@@ -8,6 +8,7 @@ import {
   sharedTripView,
   SHARE_TTL_MS,
 } from '../lib/shareLink.js'
+import { SCHEDULED_LOCATION_LEAD_MS } from '../services/riderDriverLocation.js'
 
 // The share link is the only way to read a booking without an account, so these
 // are about what it refuses to do. No database: everything here is pure, which is
@@ -113,6 +114,23 @@ describe('what a shared trip reveals', () => {
     assert.equal(view.driver.name, 'Ramesh Kumar')
     assert.equal(view.driver.latitude, 28.61)
     assert.equal(view.driver.photoUrl, 'https://signed/photo.jpg')
+  })
+
+  test('a scheduled share hides the driver position until T-30 minutes', () => {
+    const now = Date.parse('2026-08-22T12:00:00.000Z')
+    const beforeWindow = sharedTripView(bookingWith({
+      status: 'assigned',
+      scheduledAt: new Date(now + SCHEDULED_LOCATION_LEAD_MS + 1),
+    }), null, now)
+    assert.equal(beforeWindow.driver.latitude, null)
+    assert.equal(beforeWindow.driver.longitude, null)
+
+    const insideWindow = sharedTripView(bookingWith({
+      status: 'assigned',
+      scheduledAt: new Date(now + SCHEDULED_LOCATION_LEAD_MS),
+    }), null, now)
+    assert.equal(insideWindow.driver.latitude, 28.61)
+    assert.equal(insideWindow.driver.longitude, 77.22)
   })
 
   test('the plate and model are the booking snapshot, not the driver row', () => {

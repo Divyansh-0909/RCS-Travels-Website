@@ -136,7 +136,7 @@ const OnlineToggle = () => {
                 swapped for another in place, which reads as the same header doing
                 a different job rather than as a different header. */}
             <View className="flex flex-row w-full justify-between items-center">
-                <View className="flex-row items-center gap-3 rounded-full bg-[var(--background-primary)] p-3 border border-[var(--background-muted)]">
+                <View className="flex-row items-center gap-3 rounded-full bg-[var(--background-primary)] p-3">
                     <Pressable
                         role="button"
                         aria-label="Notifications"
@@ -151,7 +151,7 @@ const OnlineToggle = () => {
                 </View>
 
                 {onActiveRide ? <RideMenuButton /> : (
-                <View className="flex-row items-center justify-between w-fit rounded-full bg-[var(--background-primary)] p-3 px-4 pr-6 border border-[var(--background-muted)]">
+                <View className="flex-row items-center justify-between w-fit rounded-full bg-[var(--background-primary)] p-3 px-4 pr-6">
                     <AppText
                         numberOfLines={1}
                         className="w-[70px] text-lg text-[var(--foreground)] font-semibold"

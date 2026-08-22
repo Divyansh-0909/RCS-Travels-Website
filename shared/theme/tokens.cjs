@@ -39,7 +39,8 @@ const colors = {
  * sites on the website keep resolving unchanged.
  */
 const surfaces = {
-  'background-muted': '#1d1d27',
+  'background-muted': '#262636',
+  'background-panel': '#272634',
   'background-primary': '#121220',
   background: '#0B0B14',
   foreground: '#ffffff',

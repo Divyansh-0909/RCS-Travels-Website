@@ -18,7 +18,6 @@ import { useData } from "../hooks/useData";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { useExitAnim } from "../hooks/useExitAnim";
 import { useSignIn, useAuth, useUser } from "@clerk/clerk-react";
-import RoutePanel from "../components/ui/RoutePanel";
 import { statusLabels } from "../constants/statusLabels";
 import { useRefreshNotice } from "../hooks/useRefreshNotice";
 
@@ -29,13 +28,8 @@ import { useRefreshNotice } from "../hooks/useRefreshNotice";
 const COL = "w-[min(86vw,100%)] sm:w-[377px]";
 const TITLE = "font-bold text-3xl sm:text-5xl leading-tight";
 const SUBTITLE = "text-lg sm:text-2xl font-normal leading-snug text-[var(--text-muted)]";
-const META = "text-base sm:text-xl";
 const STACK = "gap-6 sm:gap-8";
-const GROUP = "gap-2 sm:gap-3";
-const PAIR = "gap-0.5 sm:gap-1";
-// Current Trip sets its own step between the heading block, the route panel and
-// the CTA. One token for all three so they stay equal — a STACK reads too loose
-// here, a GROUP too tight.
+// Current Trip sets its own step between its heading, status and CTA.
 const TRIP_STEP = "gap-4 sm:gap-5";
 // The booking form sits just inside the page rail on phones. Marked important:
 // it has to beat the 86vw default Button and Input carry for every other
@@ -283,7 +277,7 @@ const SuggestionDropdown = ({ anim, items, onSelect, above = false, error = null
         onMouseDown={(e) => e.preventDefault()}
         className={`${anim.closing ? "animate-dropdown-out" : "animate-dropdown"
           } absolute z-10 ${above ? "bottom-13 sm:bottom-15 origin-bottom sm:origin-bottom-left" : "top-13 sm:top-15 sm:origin-top-left"} scale-[1] sm:scale-[1.3]
-          max-sm:w-full sm:w-[290px] max-w-full border border-[var(--foreground)]/15 bg-[var(--background-muted)]
+          max-sm:w-full sm:w-[290px] max-w-full bg-[var(--background-muted)]
           rounded-[16px] shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)]`}
       >
         <div className="px-4 py-3 text-left">
@@ -306,7 +300,7 @@ const SuggestionDropdown = ({ anim, items, onSelect, above = false, error = null
       className={`${anim.closing ? "animate-dropdown-out" : "animate-dropdown"
         } absolute z-10 ${above ? "bottom-13 sm:bottom-15 origin-bottom sm:origin-bottom-left" : "top-13 sm:top-15 sm:origin-top-left"} scale-[1] sm:scale-[1.3]
         max-sm:w-full sm:w-[290px] max-w-full max-h-[200px] overflow-y-auto scrollbar-inset
-        border border-[var(--foreground)]/15 bg-[var(--background-muted)]
+        bg-[var(--background-muted)]
         rounded-[16px] shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)]`}
     >
       <ul className="w-full flex flex-col justify-center items-center py-2">
@@ -361,12 +355,15 @@ const OnBoarding = () => {
   const setDrop = useData(state => state.setDrop)
   const setPickupCoords = useData(state => state.setPickupCoords);
   const setDropCoords = useData(state => state.setDropCoords);
+  const setDistanceKm = useData(state => state.setDistanceKm);
+  const setDurationMin = useData(state => state.setDurationMin);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const scheduledTime = useData(state => state.scheduledTime);
   const setScheduledTime = useData(state => state.setScheduledTime);
   const setBookingId = useData(state => state.setBookingId);
   const setFare = useData(state => state.setFare);
+  const setVehicleClass = useData(state => state.setVehicleClass);
   const setStatus = useData(state => state.setStatus);
   const setBookingCode = useData(state => state.setBookingCode);
   const activeBooking = useData(state => state.activeBooking);
@@ -402,6 +399,8 @@ const OnBoarding = () => {
     // (the form's coords may since have moved on to another route)
     if (activeBooking.pickupLat != null) setPickupCoords({ lat: activeBooking.pickupLat, lng: activeBooking.pickupLng });
     if (activeBooking.dropLat != null) setDropCoords({ lat: activeBooking.dropLat, lng: activeBooking.dropLng });
+    setDistanceKm(activeBooking.distanceKm ?? null);
+    setDurationMin(activeBooking.durationMin ?? null);
     setFare(activeBooking.fare);
     setScheduledTime(activeBooking.scheduledAt);
     // freshStatus: the status set above is the one the card the user just tapped
@@ -450,6 +449,8 @@ const OnBoarding = () => {
       pickupLng: active.pickupLng,
       dropLat: active.dropLat,
       dropLng: active.dropLng,
+      distanceKm: active.distanceKm,
+      durationMin: active.durationMin,
       fare: active.fare,
       scheduledAt: active.scheduledAt ? new Date(active.scheduledAt) : null,
     });
@@ -576,6 +577,9 @@ const OnBoarding = () => {
         navigate("/login");
         return;
       }
+      // Vehicle choice belongs to the new request. Both Ride Now and Schedule
+      // enter the price screen with the economy class selected initially.
+      setVehicleClass("hatchback");
       navigate("/book");
     } catch (err) {
       console.error(err);
@@ -589,79 +593,53 @@ const OnBoarding = () => {
     <div className="relative flex flex-col sm:flex-row h-[100dvh] sm:px-[9%] md:px-[5%] xl:px-[13%] sm:pt-16 sm:justify-center lg:justify-between items-center bg-[var(--background-primary)]">
       <div className="relative z-10 py-8 flex flex-col items-center lg:items-start w-full max-w-[500px] h-[inherit] sm:h-fit justify-end sm:justify-center">
         {(activeBooking && authed && !activeBooking.scheduledAt)
-          ? <div className={`flex flex-col justify-center items-center w-full lg:items-start ${TRIP_STEP}`}>
-            <div className={`flex flex-col items-center lg:items-start ${PAIR} ${COL}`}>
-              <h1 className={`w-full text-center lg:text-left ${TITLE}`}>Current Trip</h1>
-              <h2 className={`w-full text-center lg:text-left ${SUBTITLE}`}>{statusLabels[activeBooking.status] || "On trip"}</h2>
+          ? <div className={`flex w-full flex-col items-center justify-center lg:items-start ${TRIP_STEP}`}>
+            <div className={`flex flex-col items-center ${COL}`}>
+              <h1 className="w-full text-center text-2xl font-semibold leading-tight tracking-[-0.03em] sm:text-4xl">Current Trip</h1>
             </div>
 
-            <div className={`flex flex-col items-stretch text-left ${TRIP_STEP} ${COL}`}>
-              <RoutePanel size="sm" pickup={activeBooking.pickupAddress} drop={activeBooking.dropAddress}>
-                <div className="flex items-center justify-between w-full">
-                  <h4 className={`${META} text-[var(--text-muted)]`}>Fare</h4>
-                  <h4 className={META}>₹{activeBooking.fare}</h4>
-                </div>
-                {activeBooking.code && (
-                  <div className="flex items-center justify-between w-full">
-                    <h4 className={`${META} text-[var(--text-muted)]`}>Booking code</h4>
-                    <h4 className={`${META} tracking-[0.25em] -mr-[0.25em]`}>{activeBooking.code}</h4>
-                  </div>
-                )}
-              </RoutePanel>
+            <div className={`flex flex-col items-stretch gap-3 text-left ${COL}`}>
+              <div className="rounded-2xl bg-[var(--background-muted)] px-5 py-4 text-center" aria-live="polite">
+                <p className="text-lg font-semibold leading-tight sm:text-xl">
+                  {statusLabels[activeBooking.status] || "On trip"}
+                </p>
+              </div>
               <Button onClick={openActiveBooking} className="my-0!" prop={{ variant: "", width: "100%" }}>
                 <span className="text-base sm:text-lg">Track Ride</span>
               </Button>
             </div>
           </div>
           : <div className="flex flex-col text-center lg:text-left justify-center items-center lg:items-start gap-1 sm:gap-5">
-            <div className="flex flex-col items-center lg:items-start gap-0 mb-2 sm:mb-0">
-              <h2 className="sm:text-3xl text-xl font-normal leading-tight text-[var(--text-muted)]">
-                Hello {username?.split(" ")[0] || user?.firstName || "there"}!
-              </h2>
-              <h1 className="font-bold text-4xl sm:text-6xl lg:text-5xl xl:text-6xl leading-tight">Where you off to?</h1>
-            </div>
+            {!(activeBooking && authed && activeBooking.scheduledAt && !showForm) && (
+              <div className="flex flex-col items-center lg:items-start gap-0 mb-2 sm:mb-0">
+                <h2 className="sm:text-3xl text-xl font-normal leading-tight text-[var(--text-muted)]">
+                  Hello {username?.split(" ")[0] || user?.firstName || "there"}!
+                </h2>
+                <h1 className="font-bold text-4xl sm:text-6xl lg:text-5xl xl:text-6xl leading-tight">Where to?</h1>
+              </div>
+            )}
 
             {activeBooking && authed && activeBooking.scheduledAt && !showForm
-              ? <div className={`flex flex-col justify-center items-center lg:items-start mt-3 sm:mt-0 ${TRIP_STEP}`}>
-                <div className={`flex flex-col items-stretch text-left ${GROUP} ${COL}`}>
-                  <RoutePanel
-                    size="sm"
-                    pickup={activeBooking.pickupAddress}
-                    drop={activeBooking.dropAddress}
-                    header={
-                      // Status leads the card: it outranks the addresses and the
-                      // meta rows, so the state of the ride is the first thing
-                      // read. The confirmed caveat drops to a muted note beneath
-                      // rather than competing at that size.
-                      <>
-                        <h3 className="text-xl sm:text-2xl font-semibold leading-tight">
-                          {statusLabels[activeBooking.status] || activeBooking.status}
-                        </h3>
-                        {activeBooking.status === "confirmed" && (
-                          <p className="mt-0.5 text-xs sm:text-sm text-[var(--text-muted)] leading-snug">
-                            Driver assigned closer to your pickup time.
-                          </p>
-                        )}
-                      </>
-                    }
-                  >
-                    <div className="flex items-center justify-between w-full">
-                      <h4 className={`${META} text-[var(--text-muted)]`}>Scheduled</h4>
-                      <h4 className={META}>
-                        {new Date(activeBooking.scheduledAt).toLocaleString("en-GB", {
-                          day: "numeric", month: "short", hour: "numeric", minute: "2-digit", hour12: true,
-                        })}
-                      </h4>
-                    </div>
-                    <div className="flex items-center justify-between w-full">
-                      <h4 className={`${META} text-[var(--text-muted)]`}>Fare</h4>
-                      <h4 className={META}>₹{activeBooking.fare}</h4>
-                    </div>
-                  </RoutePanel>
+              ? <div className={`flex w-[86vw] flex-col items-center justify-center sm:w-[377px] ${TRIP_STEP}`}>
+                <div className="flex w-full flex-col items-center">
+                  <h1 className="w-full text-center text-2xl font-semibold leading-tight tracking-[-0.03em] sm:text-4xl">Scheduled Ride</h1>
+                </div>
+                <div className="flex w-full flex-col items-stretch gap-3 text-left">
+                  <div className="rounded-2xl bg-[var(--background-muted)] px-5 py-4 text-center" aria-live="polite">
+                    <p className="text-sm leading-snug text-[var(--text-muted)] sm:text-base">
+                      {new Date(activeBooking.scheduledAt).toLocaleString("en-GB", {
+                        day: "numeric", month: "short", hour: "numeric", minute: "2-digit", hour12: true,
+                      })}
+                    </p>
+                    <p className="mt-1 text-lg font-semibold leading-tight sm:text-xl">
+                      {statusLabels[activeBooking.status] || activeBooking.status}
+                    </p>
+                  </div>
 
                   <Button onClick={openActiveBooking} className="my-0!" prop={{ variant: "", width: "100%" }}>
-                    <span className="text-base sm:text-lg">See Ride Details</span>
+                    <span className="text-base sm:text-lg">View Ride</span>
                   </Button>
+
                   <Button onClick={() => setShowForm(true)} className="my-0!" prop={{ variant: "input", width: "100%", bg: "var(--background-primary)" }}>
                     <span className="text-base sm:text-lg">Book another ride</span>
                   </Button>

@@ -3,6 +3,7 @@ import { prisma } from '../db/prisma.js'
 import { signedRiderPhotoUrl } from '../services/driverPhoto.js'
 import { sharedTripView } from '../lib/shareLink.js'
 import { getNavigationEtaMinutes } from '../services/rideEstimate.js'
+import { driverLocationVisibleToRider } from '../services/riderDriverLocation.js'
 
 const shareRouter = Router()
 
@@ -15,6 +16,7 @@ const shareRouter = Router()
  * route only finds the row and checks the clock.
  */
 shareRouter.get('/:token', async (req, res) => {
+  res.set('Cache-Control', 'private, no-store')
   const { token } = req.params
 
   // Bounded before it reaches the database: a token is a fixed 22 characters, so
@@ -42,7 +44,9 @@ shareRouter.get('/:token', async (req, res) => {
 
   const photoUrl = booking.driver ? await signedRiderPhotoUrl(booking.driver) : null
 
-  const location = booking.driver?.location
+  const location = driverLocationVisibleToRider(booking)
+    ? booking.driver?.location
+    : null
   const etaTarget = booking.status === 'en_route'
     ? { leg: 'pickup', lat: booking.pickupLat, lng: booking.pickupLng }
     : booking.status === 'started'

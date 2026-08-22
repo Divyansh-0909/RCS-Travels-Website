@@ -1,4 +1,5 @@
 import { randomBytes } from 'node:crypto'
+import { driverLocationVisibleToRider } from '../services/riderDriverLocation.js'
 
 /**
  * How long a share link answers for, from the moment it is minted.
@@ -82,7 +83,7 @@ export const TERMINAL_STATUSES = ['completed', 'cancelled', 'no_driver']
  * @param {string | null} photoUrl already-signed, because signing is I/O and this
  *   is not
  */
-export function sharedTripView(booking, photoUrl) {
+export function sharedTripView(booking, photoUrl, now = Date.now()) {
   const ended = TERMINAL_STATUSES.includes(booking.status)
 
   // Once the ride has ended the driver's position stops being served at all — a
@@ -91,7 +92,9 @@ export function sharedTripView(booking, photoUrl) {
   // one, where it is the record of who drove; a cancelled ride has no driver
   // worth naming to a third party.
   const showDriver = !!booking.driver && (!ended || booking.status === 'completed')
-  const location = ended ? null : booking.driver?.location
+  const location = !ended && driverLocationVisibleToRider(booking, now)
+    ? booking.driver?.location
+    : null
 
   return {
     status: booking.status,

@@ -61,7 +61,7 @@ export const RideMenuButton = () => {
             onPress={() => setOpen(true)}
             hitSlop={10}
             style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
-            className="flex-row items-center gap-3 rounded-full bg-[var(--background-primary)] p-3 border border-[var(--background-muted)]"
+            className="flex-row items-center gap-3 rounded-full bg-[var(--background-primary)] p-3"
         >
             <View className="w-[22px] h-[22px] items-center justify-center">
                 <Burger size={20} weight="bold" className="text-[var(--foreground)]" />

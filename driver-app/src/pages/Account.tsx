@@ -38,7 +38,6 @@ const Caret = cssInterop(CaretRightIcon, asThemed);
 const SignOut = cssInterop(SignOutIcon, asThemed);
 
 const CARD = '#f3f3f3';                          // --foreground-muted
-const HAIRLINE = 'rgba(18,18,32,0.1)';
 const INK = 'text-[var(--background-primary)]';
 const MUTED = 'text-gray-600';
 
@@ -538,9 +537,8 @@ const Account = () => {
                 )}
               </View>
 
-              {/* Outlined, not the solid negative Button draws. Solid red at full
-                  width is the loudest thing that could sit on this page, and it would
-                  be pointed at the one action here nobody is trying to find. */}
+              {/* Quiet filled surface, not the solid negative Button draws. Solid
+                  red at full width would make the least-used action the loudest. */}
               <Pressable
                 role="button"
                 onPress={handleSignOut}
@@ -549,7 +547,7 @@ const Account = () => {
               >
                 <View
                   className="w-full flex-row items-center justify-center gap-2 rounded-2xl py-3.5"
-                  style={{ borderWidth: 1, borderColor: HAIRLINE }}
+                  style={{ backgroundColor: CARD }}
                 >
                   <SignOut size={18} weight="bold" className="text-[#B91C1C]" />
                   <AppText className="font-semibold" style={{ color: ERROR_TEXT }}>

@@ -10,6 +10,7 @@ export function useApi() {
     createMe:         (name)          => api.createMe(name, getToken),
     estimateFare:     (pickupAddress, dropAddress, vehicleClass, pickupCoords, dropCoords, preferSafeRoute, needsCarrier) => api.estimateFare(pickupAddress, dropAddress, vehicleClass, pickupCoords, dropCoords, preferSafeRoute, needsCarrier, getToken),
     createBooking:    (data)          => api.createBooking(data, getToken),
+    getNearbyDrivers: (pickupCoords, vehicleClass) => api.getNearbyDrivers(pickupCoords, vehicleClass, getToken),
     cancelBooking:    (bookingId, expectedCancellationCharge) => api.cancelBooking(bookingId, expectedCancellationCharge, getToken),
     submitRideComplaint: (bookingId, reasons) => api.submitRideComplaint(bookingId, reasons, getToken),
     createScheduledAdvanceOrder: (bookingId) => api.createScheduledAdvanceOrder(bookingId, getToken),

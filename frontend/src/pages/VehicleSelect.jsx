@@ -1,6 +1,6 @@
 import Button from "../components/ui/Button";
 import GoogleMap, { MAP_LAND_COLOR } from "../components/ui/GoogleMap";
-import { MAP_CLASSES, CenterPin, showRouteView, clearRouteView } from "../components/ui/mapOverlays";
+import { MAP_CLASSES, CenterPin, showRouteView, clearRouteView, setNearbyVehiclePositions, clearNearbyVehicleMarkers } from "../components/ui/mapOverlays";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { useData } from "../hooks/useData";
 import { useApi } from "../hooks/useApi";
@@ -61,12 +61,6 @@ const SearchingProgressBar = ({ startedAt }) => {
     );
 };
 
-// Pickup ETA per vehicle class. Placeholder until the driver-availability
-// endpoint returns a real nearest-driver time — same shape, so swapping the
-// source is a one-line change. The premium SUV is the rarest car on the road,
-// so it waits longest.
-const ETA_MIN = { hatchback: 3, sedan: 4, suv: 5, suv_premium: 8, any: 3 };
-
 // Dev-only stand-in for the estimate's `safeRoute` block (/dev/vehicle?safe=1).
 // Whether the option exists at all is the SERVER's verdict — Google's
 // alternatives decided it — so unlike every other preview state this one cannot
@@ -110,12 +104,11 @@ const GROUP = "gap-2 sm:gap-3";
 const PAIR = "gap-0.5 sm:gap-1";
 
 // The three searching illustrations are a fixed 290×200 canvas whose internals
-// are positioned in px, so they can't reflow — on phones they're scaled as
-// artwork instead. 290px is the full COL width, which would otherwise overflow
-// the card's p-3 padding. The box reserves the scaled size so layout stays honest.
+// are positioned in px, so they can't reflow. Centre the canvas in a full-width
+// stage and let wider phones use the last few percent of available card space.
 const Illustration = ({ children }) => (
-    <div className="w-[261px] h-[180px] sm:w-[290px] sm:h-[200px]">
-        <div className="w-[290px] origin-top-left scale-90 sm:scale-100">{children}</div>
+    <div className="flex h-[200px] w-full justify-center min-[380px]:h-[208px] sm:h-[220px] sm:w-[319px]">
+        <div className="w-[290px] shrink-0 origin-top scale-100 min-[380px]:scale-[1.04] sm:scale-110">{children}</div>
     </div>
 );
 
@@ -231,6 +224,9 @@ const VehicleSelect = () => {
     // The raw Map instance of the mobile page-background map, for reframing on
     // step changes (desktop mounts a fresh <GoogleMap> per panel instead).
     const [mapApi, setMapApi] = useState(null);
+    const [nearbyVehicles, setNearbyVehicles] = useState([]);
+    const [nearbyFramePoints, setNearbyFramePoints] = useState([]);
+    const [nearbyEta, setNearbyEta] = useState(null);
 
     const searchMessages = [
         "Finding drivers near you...",
@@ -436,6 +432,68 @@ const VehicleSelect = () => {
     // in its TDZ when the dep array is evaluated during render.
     const hasRoute = Boolean(pickupLocation?.trim() && dropLocation?.trim());
 
+    // Old persisted sessions may still carry the pre-default `null`. Repair
+    // those once without overriding a class the rider deliberately selected.
+    useEffect(() => {
+        if (!vehicleClass) setVehicleClass("hatchback");
+    }, [vehicleClass, setVehicleClass]);
+
+    // Only immediate rides expose current fleet positions. Refresh quietly:
+    // availability is useful map context, but a failed preview must never stop
+    // a rider from seeing prices or requesting the ride.
+    useEffect(() => {
+        let cancelled = false;
+        let timer = null;
+        let needsInitialFrame = true;
+
+        if (scheduledTime || step !== "vehicleType" || !vehicleClass || !hasRoute) {
+            setNearbyVehicles([]);
+            setNearbyFramePoints([]);
+            setNearbyEta(null);
+            return undefined;
+        }
+
+        // Do not show the previous class while its replacement request is in
+        // flight, and frame the map only once per class/pickup change. The 30 s
+        // refresh may move markers, but it must not repeatedly undo a user's pan.
+        setNearbyVehicles([]);
+        setNearbyFramePoints([]);
+        setNearbyEta(null);
+
+        async function refreshNearby() {
+            try {
+                const data = await api.getNearbyDrivers(pickupPoint, vehicleClass);
+                if (!cancelled) {
+                    const points = data?.error ? [] : (data.vehicles ?? []);
+                    setNearbyVehicles(points);
+                    setNearbyEta(
+                        !data?.error && data.etaMinutes != null
+                            ? { vehicleClass, minutes: data.etaMinutes }
+                            : null
+                    );
+                    if (!data?.error && needsInitialFrame) {
+                        setNearbyFramePoints(points);
+                        needsInitialFrame = false;
+                    }
+                }
+            } catch (err) {
+                console.error(err);
+                if (!cancelled) {
+                    setNearbyVehicles([]);
+                    setNearbyEta(null);
+                }
+            } finally {
+                if (!cancelled) timer = setTimeout(refreshNearby, 30_000);
+            }
+        }
+
+        refreshNearby();
+        return () => {
+            cancelled = true;
+            clearTimeout(timer);
+        };
+    }, [scheduledTime, step, vehicleClass, pickupPoint.lat, pickupPoint.lng, hasRoute]);
+
     // What the endpoint was before the confirm screen started writing to it.
     // Every map settle commits straight to the store (handleMapSettled below),
     // so backing out has nothing else to restore from.
@@ -537,12 +595,24 @@ const VehicleSelect = () => {
                 pickupPoint, dropPoint, routePolyline,
                 onPickupClick: () => enterLocationAdjust("pickup", false),
                 onDropClick: () => enterLocationAdjust("drop", false),
+                framePoints: !scheduledTime && step === "vehicleType" ? nearbyFramePoints : [],
             });
         }
         // leaving /book (or a StrictMode remount) must not strand overlays on
         // the shared map
         return clearRouteView;
-    }, [mapApi, isMobile, step, confirmTarget, routePolyline, hasRoute]);
+    }, [mapApi, isMobile, step, confirmTarget, routePolyline, hasRoute, scheduledTime, nearbyFramePoints]);
+
+    useEffect(() => {
+        if (!mapApi || scheduledTime || step !== "vehicleType" || !vehicleClass || !hasRoute) {
+            clearNearbyVehicleMarkers();
+            return undefined;
+        }
+        setNearbyVehiclePositions(mapApi, nearbyVehicles, labelOf(vehicleClass));
+        return clearNearbyVehicleMarkers;
+    }, [mapApi, scheduledTime, step, vehicleClass, nearbyVehicles, hasRoute]);
+
+    useEffect(() => clearNearbyVehicleMarkers, []);
 
     // "Book ride" leads to the pickup pin-confirm; the booking is only
     // created from there (confirmBooking).
@@ -1023,24 +1093,29 @@ const VehicleSelect = () => {
                         number rather than the word "Seater" — it reads at a
                         glance and costs less width than the label it replaces. */}
                     <h4 className="text-lg sm:text-xl font-medium text-[var(--text)] leading-tight">{name}</h4>
-                    <p className="flex items-center text-sm sm:text-base text-[var(--text-muted)] leading-tight">
+                    <p className="flex items-center gap-1 text-sm sm:text-base text-[var(--text-muted)] leading-tight">
                         {seats && (
-                            <span className="flex items-center gap-0.5 mr-1">
+                            <span className="flex items-center gap-0.5">
                                 {/* sized in CSS, not the size prop, so the glyph
                                     tracks the two type steps of this line */}
                                 <Icon path={mdiAccount} className="w-[16px] h-[16px] sm:w-[18px] sm:h-[18px]" />
-                                {seats} ·
+                                {seats}
                             </span>
                         )}
-                        {ETA_MIN[cls]} min away
+                        {!scheduledTime && nearbyEta?.vehicleClass === cls && (
+                            <>
+                                {seats && <span aria-hidden="true">·</span>}
+                                <span>{nearbyEta.minutes} min away</span>
+                            </>
+                        )}
                     </p>
                 </div>
-                {/* Only the price is pending — the name, seats and ETA are known
-                    up front, so the skeleton stands in for the two price lines
-                    rather than blanking the whole card. Gated on !serverFares so
-                    a background re-price doesn't flash over prices already on
-                    screen; the bar heights mirror the two type sizes, and which
-                    line is emphasised follows the sharing toggle. */}
+                {/* Only the price is skeletoned here. Driver availability has
+                    its own quiet loading state: the ETA is simply absent until
+                    an actual nearby vehicle and road route are known. Gated on
+                    !serverFares so a background re-price doesn't flash over
+                    prices already on screen; the bar heights mirror the two
+                    type sizes, and which line is emphasised follows sharing. */}
                 {pricing && !serverFares ? (
                     <div className="flex flex-col justify-center items-end gap-1.5 shrink-0">
                         <Skeleton className={sharing ? "h-[15px] sm:h-[17.5px] w-14 sm:w-16" : "h-[22.5px] sm:h-[30px] w-16 sm:w-20"} />
@@ -1089,7 +1164,7 @@ const VehicleSelect = () => {
                 )}
                 <BackgroundPanel show={panelState === "payment" && restoredScheduledTime} className={`z-4 sm:z-3 bottom-0 gap-4 py-6 text-left flex flex-col justify-center items-center`}>
                     <div className={COL}>
-                        <h2 className={TITLE}>Pay your ride advance</h2>
+                        <h2 className={TITLE}>Pay advance</h2>
                         <p className="mt-1 text-base sm:text-lg text-[var(--text-muted)]">This is part of your fare, not an extra charge.</p>
                         {scheduledFinancials && <div className="mt-5 flex flex-col gap-2 text-base sm:text-lg">
                             <div className="flex justify-between"><span>Fare</span><span>₹{scheduledFinancials.fare / 100}</span></div>
@@ -1107,7 +1182,7 @@ const VehicleSelect = () => {
                     {panelState === "noDriver"
                         ? <ErrorMark className="-mt-2" size={isMobile ? 120 : 140} />
                         : <SuccessCheck className="-mt-2" size={isMobile ? 120 : 140} />}
-                    <h2 className={TITLE}> {panelState === "noDriver" ? "No drivers nearby." : "You're all set."} </h2>
+                    <h2 className={TITLE}> {panelState === "noDriver" ? "No drivers nearby" : "All set"} </h2>
                     {/* leading-snug, not -relaxed: at 1.625 the line box added
                             5.6px of dead space above and below, which read as
                             gap and swamped the container's own spacing */}
@@ -1136,7 +1211,7 @@ const VehicleSelect = () => {
                     )}
 
                     <div className={`relative z-10 sm:order-1 flex flex-col justify-end sm:justify-center items-center sm:items-start ${STACK} w-full sm:w-auto h-full sm:h-auto`}>
-                        <h2 className={`w-full text-center sm:text-left ${TITLE}`}>Requesting a ride</h2>
+                        <h2 className={`w-full text-center sm:text-left ${TITLE}`}>Finding a driver</h2>
 
                         <div className={`flex flex-col items-center sm:items-start justify-center gap-4 ${COL}`}>
                             {/* progress reads as one status block: bar, then
@@ -1157,7 +1232,7 @@ const VehicleSelect = () => {
                                 breakpoint and the card goes full-bleed on mobile */}
                         {/* artwork and its caption stay centred at both
                                 breakpoints — this card is a promo, not a control */}
-                        <div key={illusIndex} className={`animate-illus-fade rounded-xl border border-[var(--foreground)]/30 bg-[var(--background-muted)] p-3 flex flex-col items-center justify-center gap-3 ${COL}`}>
+                        <div key={illusIndex} className={`animate-illus-fade rounded-2xl bg-[var(--background-muted)] px-4 py-3 sm:p-5 flex flex-col items-center justify-center gap-2 sm:gap-3 ${COL}`}>
                             {illusIndex === 0 && (
                                 <>
                                     <Illustration><PriceIllustration /></Illustration>
@@ -1223,14 +1298,14 @@ const VehicleSelect = () => {
 
                     <div className={`relative z-10 sm:order-1 flex flex-col justify-end sm:justify-center items-center sm:items-start ${STACK} w-full sm:w-auto h-full sm:h-auto py-2 sm:py-0`}>
                         <div className={`flex flex-col justify-center items-center sm:items-start ${PAIR} ${COL}`}>
-                            <h2 className={`w-full text-center sm:text-left ${TITLE}`}>Confirm {confirmTarget} point</h2>
+                            <h2 className={`w-full text-center sm:text-left ${TITLE}`}>Confirm {confirmTarget}</h2>
                             <h3 className={`hidden sm:block w-full text-center sm:text-left ${SUBTITLE}`}>{confirmTarget === "pickup" ? "Place the pin where you'll wait" : "Place the pin where you're headed"}</h3>
                         </div>
 
                         <div className={`flex flex-col justify-center items-center sm:items-start gap-3 ${COL}`}>
                             {/* address + the ride it belongs to sit in one
                                     card, split by a hairline */}
-                            <div className="w-full rounded-xl border border-[var(--foreground)]/30 bg-[var(--background-muted)] px-4 text-left">
+                            <div className="w-full rounded-2xl bg-[var(--background-muted)] px-5 text-left">
                                 <div className="flex flex-col gap-0.5 py-3">
                                     <p className="text-xs sm:text-sm text-[var(--text-muted)]">{confirmTarget === "pickup" ? "Pickup" : "Drop"}</p>
                                     <h4 className="truncate w-full text-base sm:text-xl font-medium text-[var(--text)]">{confirmTarget === "pickup" ? pickupLocation : dropLocation}</h4>
@@ -1386,7 +1461,7 @@ const VehicleSelect = () => {
                                                metrics land */
                                             <Skeleton rounded="rounded-full" className="h-[30px] sm:h-[34px] w-[130px] sm:w-[145px]" />
                                         ) : distanceKm != null && (
-                                            <div className="rounded-full border border-[var(--foreground)]/20 px-3 py-1 text-sm sm:text-base whitespace-nowrap text-[var(--text-muted)]">
+                                            <div className="rounded-xl bg-[var(--background-muted)] px-3 py-1.5 text-sm sm:text-base whitespace-nowrap text-[var(--text-muted)]">
                                                 {Math.round(distanceKm * 10) / 10} km{durationMin != null ? ` · ${durationMin} min` : ""}
                                             </div>
                                         )}

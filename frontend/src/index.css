@@ -549,7 +549,7 @@
 
     .bg-panel-gradient {
         background: radial-gradient(circle at top,
-                var(--background-muted) 0%,
+                var(--background-panel) 0%,
                 var(--background-primary) 40%,
                 var(--background) 100%);
     }

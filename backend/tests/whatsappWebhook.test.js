@@ -77,12 +77,48 @@ test('a labelled full booking message supports ride now and sharing', () => {
 Destination: Gurgaon Cyber Hub
 When: now
 Vehicle: SUV
-Mode: sharing`)
+Mode: sharing
+Roof carrier: yes
+Safer route: yes`)
   assert.equal(parsed.isBookingRequest, true)
   assert.deepEqual(parsed.data, {
     rideType: 'now', pickupText: 'Connaught Place, Delhi', dropText: 'Gurgaon Cyber Hub',
-    vehicleClass: 'suv', sharing: true,
+    vehicleClass: 'suv', sharing: true, needsCarrier: true, preferSafeRoute: true,
   })
+})
+
+test('natural and labelled booking messages understand sharing and carrier preferences', () => {
+  const carrier = parseBookingMessage('Book a sedan solo from Hauz Khas to India Gate now with a roof carrier')
+  assert.equal(carrier.data.dropText, 'India Gate')
+  assert.equal(carrier.data.sharing, false)
+  assert.equal(carrier.data.needsCarrier, true)
+
+  const noCarrier = parseBookingMessage('Book a shared ride from Hauz Khas to India Gate now without a roof carrier')
+  assert.equal(noCarrier.data.dropText, 'India Gate')
+  assert.equal(noCarrier.data.sharing, true)
+  assert.equal(noCarrier.data.needsCarrier, false)
+
+  const genericCarrier = parseBookingMessage('Book a ride from Hauz Khas to India Gate now with carrier')
+  assert.equal(genericCarrier.data.dropText, 'India Gate')
+  assert.equal(genericCarrier.data.needsCarrier, true)
+
+  assert.equal(parseBookingMessage('Book a ride\nSharing: no').data.sharing, false)
+  assert.equal(parseBookingMessage('Book a ride\nRoof carrier: not needed').data.needsCarrier, false)
+  assert.equal(parseBookingMessage('Book a ride\nCarrier: maybe').data.needsCarrier, undefined)
+})
+
+test('natural and labelled booking messages understand safer-route preferences', () => {
+  const safer = parseBookingMessage('Book a sedan solo from Hauz Khas to India Gate now using the safer route')
+  assert.equal(safer.data.pickupText, 'Hauz Khas')
+  assert.equal(safer.data.dropText, 'India Gate')
+  assert.equal(safer.data.preferSafeRoute, true)
+
+  assert.equal(parseBookingMessage('Book a ride with route preference: fastest').data.preferSafeRoute, false)
+  assert.equal(parseBookingMessage('Book a ride without the safer route').data.preferSafeRoute, false)
+  assert.equal(parseBookingMessage("Book a ride but I don't want the safer route").data.preferSafeRoute, false)
+  assert.equal(parseBookingMessage('Book a ride\nSafer route: not needed').data.preferSafeRoute, false)
+  assert.equal(parseBookingMessage('Book a ride\nSafer route: maybe').data.preferSafeRoute, undefined)
+  assert.equal(parseBookingMessage('Book a ride from Hauz Khas to India Gate now').data.preferSafeRoute, undefined)
 })
 
 test('partial booking messages retain known details and leave uncertain fields missing', () => {

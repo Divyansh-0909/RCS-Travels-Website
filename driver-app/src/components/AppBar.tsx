@@ -79,7 +79,7 @@
                 ]}
             >
                 <View
-                    className="flex w-full py-1 justify-center items-center h-fit rounded-full bg-[var(--background-primary)] border border-[var(--background-primary)]"
+                    className="flex w-full py-1 justify-center items-center h-fit rounded-full bg-[var(--background-primary)]"
                     style={{ minHeight: BAR_HEIGHT }}
                 >
                     <FlatList
