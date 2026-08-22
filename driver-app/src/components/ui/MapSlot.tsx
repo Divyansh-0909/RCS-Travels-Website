@@ -14,6 +14,22 @@ type Props = {
 const INITIAL_REGION_DELTA = 0.005;
 const ROUTE_EDGE_PADDING = { top: 64, right: 64, bottom: 64, left: 64 };
 const GOOGLE_MAP_ID = process.env.EXPO_PUBLIC_GOOGLE_MAPS_MAP_ID?.trim() || undefined;
+const FALLBACK_POINT: Point = { latitude: 28.6315, longitude: 77.2167 };
+
+// Native map props cross the React Native bridge before TypeScript can help us.
+// An object containing `latitude: undefined` is serialised without that key and
+// Android throws NoSuchKeyException while mounting the Polyline. Treat API and
+// GPS values as untrusted at this boundary so one incomplete ride cannot take
+// down the entire captain app.
+const validPoint = (latitude: unknown, longitude: unknown): Point | null => {
+    if (latitude === null || latitude === undefined || longitude === null || longitude === undefined) return null;
+    if ((typeof latitude === 'string' && latitude.trim() === '') || (typeof longitude === 'string' && longitude.trim() === '')) return null;
+    const lat = Number(latitude);
+    const lng = Number(longitude);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
+    return { latitude: lat, longitude: lng };
+};
 
 // Dark mirrors the passenger website. Light stays in the same blue-grey family,
 // with lifted shades instead of switching to an unrelated stock Google theme.
@@ -86,19 +102,26 @@ const MapSlot = ({ pickup, drop, driver, bottomSheetHeight = 0 }: Props) => {
     const dropLongitude = drop?.longitude;
     const driverLatitude = driver?.latitude;
     const driverLongitude = driver?.longitude;
+    const pickupPoint = useMemo(
+        () => validPoint(pickupLatitude, pickupLongitude),
+        [pickupLatitude, pickupLongitude],
+    );
+    const dropPoint = useMemo(
+        () => validPoint(dropLatitude, dropLongitude),
+        [dropLatitude, dropLongitude],
+    );
+    const driverPoint = useMemo(
+        () => validPoint(driverLatitude, driverLongitude),
+        [driverLatitude, driverLongitude],
+    );
     const points = useMemo(() => {
-        if (pickupLatitude !== undefined && pickupLongitude !== undefined) {
-            const start = { latitude: pickupLatitude, longitude: pickupLongitude };
-            if (dropLatitude !== undefined && dropLongitude !== undefined)
-                return [start, { latitude: dropLatitude, longitude: dropLongitude }];
-            return [start];
-        }
-        return [{ latitude: 28.6315, longitude: 77.2167 }];
-    }, [pickupLatitude, pickupLongitude, dropLatitude, dropLongitude]);
+        const routePoints = [pickupPoint, dropPoint].filter((point): point is Point => point !== null);
+        return routePoints.length > 0 ? routePoints : [FALLBACK_POINT];
+    }, [pickupPoint, dropPoint]);
     const fit = useCallback((animated: boolean) => {
         const map = mapRef.current;
         if (!map || !mapReadyRef.current || mapHeight <= 0) return;
-        if (driverLatitude !== undefined && driverLongitude !== undefined) {
+        if (driverPoint) {
             // The native camera centres against the full MapView. Shift its
             // target south by half the covered fraction so the driver renders
             // at the vertical centre of the map area above the initial sheet.
@@ -108,8 +131,8 @@ const MapSlot = ({ pickup, drop, driver, bottomSheetHeight = 0 }: Props) => {
             const latitudeOffset = visibleLatitudeDeltaRef.current * coveredHeight / (2 * mapHeight);
             const camera = {
                 center: {
-                    latitude: driverLatitude - latitudeOffset,
-                    longitude: driverLongitude,
+                    latitude: driverPoint.latitude - latitudeOffset,
+                    longitude: driverPoint.longitude,
                 },
             };
             if (animated) map.animateCamera(camera, { duration: 250 });
@@ -131,11 +154,11 @@ const MapSlot = ({ pickup, drop, driver, bottomSheetHeight = 0 }: Props) => {
             },
             animated,
         });
-    }, [driverLatitude, driverLongitude, mapHeight, points]);
+    }, [driverPoint, mapHeight, points]);
 
     useEffect(() => { fit(true); }, [fit]);
 
-    const initialTarget = driver ?? points[0];
+    const initialTarget = driverPoint ?? points[0];
 
     return (
         <MapView
@@ -177,19 +200,19 @@ const MapSlot = ({ pickup, drop, driver, bottomSheetHeight = 0 }: Props) => {
                 fit(false);
             }}
         >
-            {pickup && drop ? <Polyline coordinates={[pickup, drop]} strokeColor="#7A94FF" strokeWidth={4} /> : null}
-            {pickup ? (
-                <Marker coordinate={pickup} anchor={{ x: 0.5, y: 0.885 }} tracksViewChanges={false}>
+            {pickupPoint && dropPoint ? <Polyline coordinates={[pickupPoint, dropPoint]} strokeColor="#7A94FF" strokeWidth={4} /> : null}
+            {pickupPoint ? (
+                <Marker coordinate={pickupPoint} anchor={{ x: 0.5, y: 0.885 }} tracksViewChanges={false}>
                     <EndpointPin kind="pickup" />
                 </Marker>
             ) : null}
-            {drop ? (
-                <Marker coordinate={drop} anchor={{ x: 0.5, y: 0.885 }} tracksViewChanges={false}>
+            {dropPoint ? (
+                <Marker coordinate={dropPoint} anchor={{ x: 0.5, y: 0.885 }} tracksViewChanges={false}>
                     <EndpointPin kind="drop" />
                 </Marker>
             ) : null}
-            {driver ? (
-                <Marker coordinate={driver} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={false} zIndex={10}>
+            {driverPoint ? (
+                <Marker coordinate={driverPoint} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={false} zIndex={10}>
                     <DriverPin />
                 </Marker>
             ) : null}
