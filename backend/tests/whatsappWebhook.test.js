@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import crypto from 'node:crypto'
-import { messagesFromWebhook, parseIncoming, parseScheduleDate, parseScheduleTime } from '../services/whatsappBooking.js'
+import { messagesFromWebhook, parseBookingMessage, parseIncoming, parseScheduleDate, parseScheduleTime } from '../services/whatsappBooking.js'
 import { validWhatsAppChallenge, validWhatsAppSignature } from '../routes/whatsapp.js'
 import { normalizePhone } from '../lib/phone.js'
 
@@ -58,6 +58,76 @@ test('scheduled time observes format, 30-minute lead and seven-day limit', () =>
   assert.equal(parseScheduleTime('2026-08-20', '13:00', now).value, '2026-08-20T07:30:00.000Z')
   assert.equal(parseScheduleTime('2026-08-27', '13:00', now).error, 'too_far')
   assert.equal(parseScheduleTime('2026-08-20', '25:00', now), null)
+})
+
+test('a natural full booking message extracts route, schedule, vehicle and mode', () => {
+  const now = new Date('2026-08-22T06:30:00.000Z')
+  const parsed = parseBookingMessage('Book a sedan solo from Sector 18 Noida to IGI Airport tomorrow at 6:30 pm', now)
+  assert.equal(parsed.isBookingRequest, true)
+  assert.deepEqual(parsed.issues, {})
+  assert.deepEqual({ ...parsed.data, scheduleLabel: undefined }, {
+    rideType: 'scheduled', pickupText: 'Sector 18 Noida', dropText: 'IGI Airport',
+    vehicleClass: 'sedan', sharing: false, scheduleDate: '2026-08-23', scheduleTime: '18:30',
+    scheduledAt: '2026-08-23T13:00:00.000Z', scheduleLabel: undefined,
+  })
+})
+
+test('a labelled full booking message supports ride now and sharing', () => {
+  const parsed = parseBookingMessage(`Pickup: Connaught Place, Delhi
+Destination: Gurgaon Cyber Hub
+When: now
+Vehicle: SUV
+Mode: sharing`)
+  assert.equal(parsed.isBookingRequest, true)
+  assert.deepEqual(parsed.data, {
+    rideType: 'now', pickupText: 'Connaught Place, Delhi', dropText: 'Gurgaon Cyber Hub',
+    vehicleClass: 'suv', sharing: true,
+  })
+})
+
+test('partial booking messages retain known details and leave uncertain fields missing', () => {
+  const now = new Date('2026-08-22T06:30:00.000Z')
+  const parsed = parseBookingMessage('Book a premium SUV private from Hauz Khas to Noida Sector 62', now)
+  assert.equal(parsed.isBookingRequest, true)
+  assert.deepEqual(parsed.data, {
+    pickupText: 'Hauz Khas', dropText: 'Noida Sector 62', vehicleClass: 'suv_premium', sharing: false,
+  })
+  assert.equal(parsed.data.rideType, undefined)
+})
+
+test('an obvious from-to route can start booking without special command words', () => {
+  const parsed = parseBookingMessage('from Hauz Khas to India Gate now')
+  assert.equal(parsed.isBookingRequest, true)
+  assert.equal(parsed.data.rideType, 'now')
+  assert.equal(parsed.data.pickupText, 'Hauz Khas')
+  assert.equal(parsed.data.dropText, 'India Gate')
+})
+
+test('invalid supplied schedule details remain missing and carry a useful issue', () => {
+  const now = new Date('2026-08-22T06:30:00.000Z')
+  const parsed = parseBookingMessage(`Pickup location: Noida Sector 18
+Drop location: India Gate
+Date: 21/08/2026
+Time: 18:30`, now)
+  assert.equal(parsed.isBookingRequest, true)
+  assert.equal(parsed.data.rideType, 'scheduled')
+  assert.equal(parsed.data.scheduleDate, undefined)
+  assert.equal(parsed.data.scheduleTime, '18:30')
+  assert.equal(parsed.issues.scheduleDate, 'past')
+})
+
+test('time-only booking messages preserve the time so the flow only asks for a date', () => {
+  const now = new Date('2026-08-22T06:30:00.000Z')
+  const parsed = parseBookingMessage('Please book a cab at 6 pm', now)
+  assert.equal(parsed.isBookingRequest, true)
+  assert.equal(parsed.data.rideType, 'scheduled')
+  assert.equal(parsed.data.scheduleTime, '18:00')
+  assert.equal(parsed.data.scheduleDate, undefined)
+})
+
+test('greetings and the existing short book command stay out of full-message parsing', () => {
+  assert.equal(parseBookingMessage('Hi').isBookingRequest, false)
+  assert.equal(parseBookingMessage('Book a ride').isBookingRequest, false)
 })
 
 test('delivery receipts and malformed webhook branches contain no messages', () => {

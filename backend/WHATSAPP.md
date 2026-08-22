@@ -4,6 +4,33 @@ The deterministic Meta Cloud API flow is:
 
 `menu → book → Ride Now/Schedule → pickup → destination → vehicle + Solo/Share → confirmation`
 
+The same webhook also accepts a complete or partial booking in one text
+message. It extracts only unambiguous details, resolves supplied locations,
+and resumes the deterministic flow at the first missing or invalid field. For
+example:
+
+```text
+Book a sedan solo from Sector 18 Noida to IGI Airport tomorrow at 6:30 pm
+```
+
+For the most predictable result, customers can send labelled lines:
+
+```text
+Pickup: Connaught Place, Delhi
+Destination: Gurgaon Cyber Hub
+When: now
+Vehicle: SUV
+Mode: sharing
+```
+
+`When` accepts `now`, `scheduled`, `today`, `tomorrow`, or a date as
+`DD/MM/YYYY`/`YYYY-MM-DD`; scheduled times accept `18:30` or `6:30 pm`.
+Vehicle accepts Hatchback, Sedan, SUV, or Premium SUV, and mode accepts Solo or
+Sharing. A complete message goes to fare confirmation. A partial message asks
+only for the remaining ride type, date/time, location, vehicle, or mode. The
+existing `Hi`/menu/button flow remains available and `cancel` still clears an
+in-progress booking.
+
 Pickup and destination accept either a WhatsApp location pin or a typed place.
 Ride Now enters the existing assignment/pooling service immediately. Scheduled
 rides create the existing 15% advance obligation and remain `payment_pending`;

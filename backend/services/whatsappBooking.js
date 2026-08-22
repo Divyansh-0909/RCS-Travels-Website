@@ -27,7 +27,6 @@ const sendList = (to, body, rows) => send(to, { type: 'interactive', interactive
 const mainMenu = (to, name) => sendButtons(to, `Welcome back${name ? `, ${name.split(' ')[0]}` : ''} to RCS Travels 🚕\n\nWhat would you like to do?`,
   [['book', '🚕 Book a ride'], ['my_rides', '📋 My rides']])
 const rideMenu = to => sendButtons(to, 'Would you like to:', [['now', '🚕 Ride now'], ['schedule', '📅 Schedule ride']])
-const pickupPrompt = (to, label) => sendWhatsAppText(to, `${label ? `📅 Scheduled ride\n${label}\n\n` : ''}Where should we pick you up?\n\n📍 Share a location pin or type the pickup location.`)
 
 export function parseIncoming(message) {
   if (message.type === 'location') return { type: 'location', lat: Number(message.location?.latitude), lng: Number(message.location?.longitude) }
@@ -72,15 +71,209 @@ export function parseScheduleTime(date, value, now = new Date()) {
   return { value: scheduled.toISOString(), label: scheduled.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'medium', timeStyle: 'short' }) }
 }
 
+const labelledValue = (text, labels) => {
+  const match = new RegExp(`^\\s*(?:${labels})\\s*(?::|=|-)\\s*(.+?)\\s*$`, 'im').exec(text)
+  return match?.[1]?.trim() || null
+}
+
+const trimBookingDetails = value => {
+  const markers = [
+    /,\s*(?=(?:now|today|tomorrow|scheduled?|on\s+\d|at\s+\d|(?:vehicle|car|mode|ride\s*type|date|time)\s*[:=-]|premium\s+suv|hatchback|sedan|suv|solo|private|share|sharing|shared|pool(?:ing)?)\b)/i,
+    /\s+(?=(?:now|today|tomorrow|scheduled?\b|on\s+\d{1,4}[/-]|at\s+\d{1,2}(?::\d{2})?\s*(?:a\.?m\.?|p\.?m\.?)?\b|(?:vehicle|car|mode|ride\s*type|date|time)\s*[:=-]|premium\s+suv|hatchback|sedan|suv|solo|private|share|sharing|shared|pool(?:ing)?)\b)/i,
+  ]
+  let end = value.length
+  for (const marker of markers) {
+    const match = marker.exec(value)
+    if (match && match.index < end) end = match.index
+  }
+  return value.slice(0, end).replace(/[,.\s]+$/, '').trim()
+}
+
+const timeFromText = text => {
+  const labelled = labelledValue(text, 'time')
+  const source = labelled || text
+  let match = /\b([01]?\d|2[0-3]):([0-5]\d)(?:\s*(a\.?m\.?|p\.?m\.?))?\b/i.exec(source)
+  if (!match) match = /\b(1[0-2]|0?[1-9])(?:[:.]([0-5]\d))?\s*(a\.?m\.?|p\.?m\.?)\b/i.exec(source)
+  if (!match) return null
+  let hour = Number(match[1])
+  const minute = Number(match[2] || 0)
+  const meridiem = match[3]?.toLowerCase().replace(/\./g, '')
+  if (meridiem) {
+    if (hour > 12) return null
+    if (hour === 12) hour = 0
+    if (meridiem === 'pm') hour += 12
+  }
+  return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`
+}
+
+const dateFromText = (text, now) => {
+  const labelled = labelledValue(text, '(?:travel\\s*)?date')
+  const explicit = labelled?.match(/\b(?:\d{4}-\d{2}-\d{2}|\d{2}\/\d{2}\/\d{4})\b/)?.[0] ??
+    text.match(/\b(?:\d{4}-\d{2}-\d{2}|\d{2}\/\d{2}\/\d{4})\b/)?.[0]
+  if (explicit) return parseScheduleDate(explicit, now)
+  const lower = text.toLowerCase()
+  if (!/\b(today|tomorrow)\b/.test(lower)) return null
+  const offset = /\btomorrow\b/.test(lower) ? 1 : 0
+  return { value: new Date(now.getTime() + (330 * 60000) + (offset * 86400000)).toISOString().slice(0, 10) }
+}
+
+const vehicleFromText = text => {
+  if (/\bpremium\s+suv\b/i.test(text)) return 'suv_premium'
+  if (/\b(?:hatchback|hatch|mini|economy)\b/i.test(text)) return 'hatchback'
+  if (/\bsedan\b/i.test(text)) return 'sedan'
+  if (/\bsuv\b/i.test(text)) return 'suv'
+  return null
+}
+
+// Parses both a predictable labelled message and a natural sentence such as:
+// "Book a sedan solo from Sector 18 Noida to IGI Airport tomorrow at 6:30 pm".
+// It deliberately extracts only fields with strong signals; uncertain details
+// stay missing and the normal conversation asks for them.
+export function parseBookingMessage(value, now = new Date()) {
+  const text = String(value || '').trim()
+  let pickupText = labelledValue(text, 'pickup(?:\\s+location)?|pick\\s*up(?:\\s+location)?|from')
+  let dropText = labelledValue(text, 'drop(?:-?off)?(?:\\s+location)?|destination(?:\\s+location)?|to')
+  if (!pickupText || !dropText) {
+    const route = /\bfrom\s+(.+?)\s+to\s+(.+)/i.exec(text.replace(/\s+/g, ' '))
+    if (route) {
+      pickupText ||= route[1].replace(/^[\s,:-]+|[\s,:-]+$/g, '')
+      dropText ||= trimBookingDetails(route[2])
+    }
+  }
+
+  const vehicleClass = vehicleFromText(text)
+  const sharing = /\b(?:share|shared|sharing|pool|pooling)\b/i.test(text) ? true
+    : /\b(?:solo|private)\b/i.test(text) ? false : undefined
+  const when = labelledValue(text, 'when|ride\s*type|trip\s*type')
+  const explicitNow = /\b(?:now|right\s+now|asap|immediately)\b/i.test(text) ||
+    /^\s*(?:now|ride\s+now)\s*$/i.test(when || text)
+  const explicitScheduled = /\b(?:schedule|scheduled|today|tomorrow)\b/i.test(text) || /^\s*scheduled?\s*$/i.test(when || '') ||
+    /\b(?:\d{4}-\d{2}-\d{2}|\d{2}\/\d{2}\/\d{4})\b/.test(text)
+  const scheduleDate = dateFromText(text, now)
+  const scheduleTime = timeFromText(text)
+  const rideType = explicitNow ? 'now' : (explicitScheduled || scheduleDate || scheduleTime) ? 'scheduled' : undefined
+  const data = { ...(rideType && { rideType }), ...(pickupText && { pickupText }), ...(dropText && { dropText }),
+    ...(vehicleClass && { vehicleClass }), ...(sharing !== undefined && { sharing }) }
+  const issues = {}
+  if (scheduleDate?.value) data.scheduleDate = scheduleDate.value
+  else if (scheduleDate?.error) issues.scheduleDate = scheduleDate.error
+  if (scheduleTime) data.scheduleTime = scheduleTime
+  if (data.scheduleDate && data.scheduleTime) {
+    const parsed = parseScheduleTime(data.scheduleDate, data.scheduleTime, now)
+    if (parsed?.value) Object.assign(data, { scheduledAt: parsed.value, scheduleLabel: parsed.label })
+    else if (parsed?.error) issues.scheduleTime = parsed.error
+  }
+
+  const labelled = /^(?:\s*(?:pickup(?:\s+location)?|pick\s*up(?:\s+location)?|from|drop(?:-?off)?(?:\s+location)?|destination(?:\s+location)?|to|date|time|when|vehicle|car|cab|mode|ride\s*type)\s*(?::|=|-))/im.test(text)
+  const bookingWords = /\b(?:book|booking|cab|taxi|ride)\b/i.test(text)
+  const hasDetails = Boolean(pickupText || dropText || vehicleClass || sharing !== undefined || rideType)
+  return { isBookingRequest: labelled || Boolean(pickupText && dropText) || (bookingWords && hasDetails), data, issues }
+}
+
 const estimate = data => getRideEstimate({ pickupAddress: data.pickup.address, dropAddress: data.drop.address,
   vehicleClass: 'hatchback', pickupCoords: { lat: data.pickup.lat, lng: data.pickup.lng },
   dropCoords: { lat: data.drop.lat, lng: data.drop.lng }, preferSafeRoute: false, needsCarrier: false, coupon: null })
 
 function showOptions(to, data, fares) {
-  const rows = VEHICLE_CLASS_NAMES.flatMap(vehicle => ['solo', 'sharing'].map(mode => ({ id: `ride:${vehicle}:${mode}`,
+  const vehicles = data.vehicleClass ? [data.vehicleClass] : VEHICLE_CLASS_NAMES
+  const modes = typeof data.sharing === 'boolean' ? [data.sharing ? 'sharing' : 'solo'] : ['solo', 'sharing']
+  const rows = vehicles.flatMap(vehicle => modes.map(mode => ({ id: `ride:${vehicle}:${mode}`,
     title: `${VEHICLE_CLASSES[vehicle].label} · ${mode === 'solo' ? 'Solo' : 'Share'}`,
     description: `₹${fares[vehicle][mode]}${mode === 'sharing' ? ' · Save 25%' : ''}` })))
-  return sendList(to, `🚕 Ride options${data.scheduleLabel ? `\n📅 ${data.scheduleLabel}` : ''}\n\n📍 ${data.pickup.address}\n📍 ${data.drop.address}\n\nChoose vehicle and ride type:`, rows)
+  const choicePrompt = data.vehicleClass ? 'Choose Solo or Share:'
+    : typeof data.sharing === 'boolean' ? 'Choose a vehicle:' : 'Choose vehicle and ride type:'
+  return sendList(to, `🚕 Ride options${data.scheduleLabel ? `\n📅 ${data.scheduleLabel}` : ''}\n\n📍 ${data.pickup.address}\n📍 ${data.drop.address}\n\n${choicePrompt}`, rows)
+}
+
+const scheduleDatePrompt = (data = {}) => data.scheduleDateError === 'too_far'
+  ? 'Choose a date within the next 7 days.'
+  : data.scheduleDateError === 'past'
+    ? 'Choose today or a future date within the next 7 days. Send DD/MM/YYYY.'
+    : 'Schedule your ride\n\nYou can book 30 minutes to 7 days in advance.\n\nWhat date would you like to travel? Send DD/MM/YYYY.'
+
+const scheduleTimePrompt = data => data.scheduleTimeError === 'too_far'
+  ? 'That time is more than 7 days away. Choose an earlier time using HH:MM.'
+  : data.scheduleTimeError === 'too_soon'
+    ? 'Choose a time at least 30 minutes from now using HH:MM.'
+    : `${new Date(`${data.scheduleDate}T12:00:00+05:30`).toLocaleDateString('en-IN', { dateStyle: 'long' })}\n\nWhat time should your ride be? Send 24-hour time, for example 18:30.`
+
+const pickupMissingPrompt = data => data.pickupInvalid
+  ? 'I couldn’t find the pickup location from your message. Share a location pin or type a more detailed pickup location.'
+  : `${data.scheduleLabel ? `📅 Scheduled ride\n${data.scheduleLabel}\n\n` : ''}Where should we pick you up?\n\n📍 Share a location pin or type the pickup location.`
+
+const destinationMissingPrompt = data => data.dropInvalid
+  ? 'I couldn’t find the destination from your message. Share a location pin or type a more detailed destination.'
+  : `📍 Pickup:\n${data.pickup.address}\n\nWhere are you going? Share a pin or type the destination.`
+
+const confirmationMessage = data => `${data.rideType === 'scheduled' ? 'Confirm scheduled ride' : 'Confirm your ride'}${data.scheduleLabel ? `\n${data.scheduleLabel}` : ''}\n\n📍 Pickup:\n${data.pickup.address}\n\n📍 Drop:\n${data.drop.address}\n\n🚘 ${VEHICLE_CLASSES[data.vehicleClass].label}\n${data.sharing ? '👥 Share' : '👤 Solo'}\n💰 Fare: ₹${data.fare}${data.sharing ? '\n\nA compatible passenger may join your trip.' : ''}\n\nConfirm booking?`
+
+async function showConfirmation(to, conversation, data) {
+  await prisma.whatsappSession.update({ where: { phone: conversation.phone }, data: { step: 'CONFIRMATION', data } })
+  return sendButtons(to, confirmationMessage(data), [['confirm', '✅ Confirm'], ['cancel', '❌ Cancel']])
+}
+
+async function advanceBooking(to, conversation, initialData, now = new Date()) {
+  let data = { ...initialData }
+  if (!data.rideType) {
+    await prisma.whatsappSession.update({ where: { phone: conversation.phone }, data: { step: 'RIDE_TYPE_SELECTION', data } })
+    return rideMenu(to)
+  }
+  if (data.rideType === 'scheduled') {
+    if (!data.scheduleDate) {
+      await prisma.whatsappSession.update({ where: { phone: conversation.phone }, data: { step: 'SCHEDULE_DATE', data } })
+      return sendWhatsAppText(to, scheduleDatePrompt(data))
+    }
+    if (!data.scheduledAt && data.scheduleTime) {
+      const parsed = parseScheduleTime(data.scheduleDate, data.scheduleTime, now)
+      if (parsed?.value) {
+        data = { ...data, scheduledAt: parsed.value, scheduleLabel: parsed.label }
+        delete data.scheduleTimeError
+        delete data.scheduleDateError
+      } else {
+        data = { ...data, scheduleTimeError: parsed?.error || 'invalid' }
+        delete data.scheduleTime
+      }
+    }
+    if (!data.scheduledAt) {
+      await prisma.whatsappSession.update({ where: { phone: conversation.phone }, data: { step: 'SCHEDULE_TIME', data } })
+      return sendWhatsAppText(to, scheduleTimePrompt(data))
+    }
+  }
+  if (!data.pickup) {
+    await prisma.whatsappSession.update({ where: { phone: conversation.phone }, data: { step: 'PICKUP', data } })
+    return sendWhatsAppText(to, pickupMissingPrompt(data))
+  }
+  if (!data.drop) {
+    await prisma.whatsappSession.update({ where: { phone: conversation.phone }, data: { step: 'DESTINATION', data } })
+    return sendWhatsAppText(to, destinationMissingPrompt(data))
+  }
+  let quote
+  try { quote = await estimate(data) }
+  catch { return sendWhatsAppText(to, 'I couldn’t calculate a fare for that route. Type “cancel” and try again, or book on our website.') }
+  data = { ...data, fares: quote.fares }
+  if (data.vehicleClass && typeof data.sharing === 'boolean') {
+    const mode = data.sharing ? 'sharing' : 'solo'
+    const fare = quote.fares?.[data.vehicleClass]?.[mode]
+    if (fare > 0) return showConfirmation(to, conversation, { ...data, fare })
+    data = { ...data }
+    delete data.vehicleClass
+    delete data.fare
+  }
+  await prisma.whatsappSession.update({ where: { phone: conversation.phone }, data: { step: 'RIDE_OPTIONS', data } })
+  return showOptions(to, data, quote.fares)
+}
+
+async function bookingDataFromMessage(value, now = new Date()) {
+  const parsed = parseBookingMessage(value, now)
+  const data = { ...parsed.data, ...(parsed.issues.scheduleDate && { scheduleDateError: parsed.issues.scheduleDate }),
+    ...(parsed.issues.scheduleTime && { scheduleTimeError: parsed.issues.scheduleTime }) }
+  for (const [textKey, placeKey, invalidKey] of [['pickupText', 'pickup', 'pickupInvalid'], ['dropText', 'drop', 'dropInvalid']]) {
+    if (!data[textKey]) continue
+    try { data[placeKey] = await resolveLocation({ type: 'text', value: data[textKey] }) }
+    catch { data[invalidKey] = true }
+    delete data[textKey]
+  }
+  return { ...parsed, data }
 }
 
 async function handleConversation(message, user, conversation) {
@@ -99,6 +292,15 @@ async function handleConversation(message, user, conversation) {
     await prisma.whatsappSession.update({ where: { phone: conversation.phone }, data: { step: 'MAIN_MENU', data: {} } })
     return mainMenu(to, user.name)
   }
+  if (input.type === 'text' && !['book', 'book a ride'].includes(input.lower)) {
+    const detected = parseBookingMessage(input.value)
+    const canReplaceSession = ['MAIN_MENU', 'CANCELLED', 'COMPLETED'].includes(conversation.step) ||
+      Boolean(detected.data.pickupText || detected.data.dropText) || /\b(?:book|booking)\b/i.test(input.value)
+    if (detected.isBookingRequest && canReplaceSession) {
+      const parsed = await bookingDataFromMessage(input.value)
+      return advanceBooking(to, conversation, parsed.data)
+    }
+  }
   if (['MAIN_MENU', 'CANCELLED', 'COMPLETED'].includes(conversation.step)) {
     if (input.value === 'my_rides' || input.lower === 'my rides') {
       const rides = await prisma.booking.findMany({ where: { userId: user.id }, orderBy: { createdAt: 'desc' }, take: 5,
@@ -111,51 +313,57 @@ async function handleConversation(message, user, conversation) {
     return rideMenu(to)
   }
   if (conversation.step === 'RIDE_TYPE_SELECTION') {
-    if (input.value === 'schedule') {
-      await prisma.whatsappSession.update({ where: { phone: conversation.phone }, data: { step: 'SCHEDULE_DATE', data: { rideType: 'scheduled' } } })
-      return sendWhatsAppText(to, 'Schedule your ride\n\nYou can book 30 minutes to 7 days in advance.\n\nWhat date would you like to travel? Send DD/MM/YYYY.')
-    }
-    if (input.value !== 'now') return rideMenu(to)
-    await prisma.whatsappSession.update({ where: { phone: conversation.phone }, data: { step: 'PICKUP', data: { rideType: 'now' } } })
-    return pickupPrompt(to)
+    if (input.value === 'schedule' || input.lower === 'schedule' || input.lower === 'scheduled')
+      return advanceBooking(to, conversation, { ...data, rideType: 'scheduled' })
+    if (input.value !== 'now' && input.lower !== 'now' && input.lower !== 'ride now') return rideMenu(to)
+    return advanceBooking(to, conversation, { ...data, rideType: 'now' })
   }
   if (conversation.step === 'SCHEDULE_DATE') {
-    const parsed = input.type === 'text' && parseScheduleDate(input.value)
+    const parsed = input.type === 'text' && dateFromText(input.value, new Date())
     if (!parsed || parsed.error) return sendWhatsAppText(to, parsed?.error === 'too_far' ? 'Choose a date within the next 7 days.' : 'Send a valid future date as DD/MM/YYYY.')
     data = { ...data, scheduleDate: parsed.value }
-    await prisma.whatsappSession.update({ where: { phone: conversation.phone }, data: { step: 'SCHEDULE_TIME', data } })
-    return sendWhatsAppText(to, `${new Date(`${parsed.value}T12:00:00+05:30`).toLocaleDateString('en-IN', { dateStyle: 'long' })}\n\nWhat time should your ride be? Send 24-hour time, for example 18:30.`)
+    delete data.scheduleDateError
+    return advanceBooking(to, conversation, data)
   }
   if (conversation.step === 'SCHEDULE_TIME') {
-    const parsed = input.type === 'text' && parseScheduleTime(data.scheduleDate, input.value)
+    const scheduleTime = input.type === 'text' && timeFromText(input.value)
+    const parsed = scheduleTime && parseScheduleTime(data.scheduleDate, scheduleTime)
     if (!parsed || parsed.error) return sendWhatsAppText(to, parsed?.error === 'too_far' ? 'That time is more than 7 days away.' : 'Choose a valid time at least 30 minutes from now using HH:MM.')
-    data = { ...data, scheduledAt: parsed.value, scheduleLabel: parsed.label }
-    await prisma.whatsappSession.update({ where: { phone: conversation.phone }, data: { step: 'PICKUP', data } })
-    return pickupPrompt(to, parsed.label)
+    data = { ...data, scheduleTime, scheduledAt: parsed.value, scheduleLabel: parsed.label }
+    delete data.scheduleTimeError
+    return advanceBooking(to, conversation, data)
   }
   if (['PICKUP', 'DESTINATION'].includes(conversation.step)) {
     if (!['text', 'location'].includes(input.type)) return sendWhatsAppText(to, 'Share a location pin or type a place name.')
+    let locationInput = input
+    if (input.type === 'text') {
+      const labelled = parseBookingMessage(input.value).data
+      const value = conversation.step === 'PICKUP' ? labelled.pickupText : labelled.dropText
+      if (value) locationInput = { type: 'text', value }
+    }
     let place
-    try { place = await resolveLocation(input) } catch { return sendWhatsAppText(to, 'I couldn’t find that location. Share a pin or add more detail to the place name.') }
+    try { place = await resolveLocation(locationInput) } catch { return sendWhatsAppText(to, 'I couldn’t find that location. Share a pin or add more detail to the place name.') }
     if (conversation.step === 'PICKUP') {
       data = { ...data, pickup: place }
-      await prisma.whatsappSession.update({ where: { phone: conversation.phone }, data: { step: 'DESTINATION', data } })
-      return sendWhatsAppText(to, `📍 Pickup:\n${place.address}\n\nWhere are you going? Share a pin or type the destination.`)
+      delete data.pickupInvalid
+      return advanceBooking(to, conversation, data)
     }
     data = { ...data, drop: place }
-    try {
-      const quote = await estimate(data)
-      await prisma.whatsappSession.update({ where: { phone: conversation.phone }, data: { step: 'RIDE_OPTIONS', data: { ...data, fares: quote.fares } } })
-      return showOptions(to, data, quote.fares)
-    } catch { return sendWhatsAppText(to, 'I couldn’t calculate a fare for that route. Type “cancel” and try again, or book on our website.') }
+    delete data.dropInvalid
+    return advanceBooking(to, conversation, data)
   }
   if (conversation.step === 'RIDE_OPTIONS') {
     const match = input.value?.match(/^ride:([^:]+):(solo|sharing)$/)
+    if ((!match || !VEHICLE_CLASS_NAMES.includes(match[1])) && input.type === 'text') {
+      const partial = parseBookingMessage(input.value).data
+      if (partial.vehicleClass || typeof partial.sharing === 'boolean')
+        return advanceBooking(to, conversation, { ...data, ...(partial.vehicleClass && { vehicleClass: partial.vehicleClass }),
+          ...(typeof partial.sharing === 'boolean' && { sharing: partial.sharing }) })
+    }
     if (!match || !VEHICLE_CLASS_NAMES.includes(match[1])) return showOptions(to, data, data.fares)
     const [, vehicleClass, mode] = match
     data = { ...data, vehicleClass, sharing: mode === 'sharing', fare: data.fares[vehicleClass][mode] }
-    await prisma.whatsappSession.update({ where: { phone: conversation.phone }, data: { step: 'CONFIRMATION', data } })
-    return sendButtons(to, `${data.rideType === 'scheduled' ? 'Confirm scheduled ride' : 'Confirm your ride'}${data.scheduleLabel ? `\n${data.scheduleLabel}` : ''}\n\n📍 Pickup:\n${data.pickup.address}\n\n📍 Drop:\n${data.drop.address}\n\n🚘 ${VEHICLE_CLASSES[vehicleClass].label}\n${data.sharing ? '👥 Share' : '👤 Solo'}\n💰 Fare: ₹${data.fare}${data.sharing ? '\n\nA compatible passenger may join your trip.' : ''}\n\nConfirm booking?`, [['confirm', '✅ Confirm'], ['cancel', '❌ Cancel']])
+    return showConfirmation(to, conversation, data)
   }
   if (conversation.step === 'CONFIRMATION') {
     if (input.value === 'cancel') { await prisma.whatsappSession.update({ where: { phone: conversation.phone }, data: { step: 'CANCELLED', data: {} } }); return mainMenu(to, user.name) }
