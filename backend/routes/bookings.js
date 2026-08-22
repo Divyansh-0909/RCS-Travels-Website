@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { protect } from '../middleware/auth.js'
 import { markNoDriver, ASSIGNMENT_DEADLINE_MS } from '../services/driverAssignment.js'
-import { sendPush, sendWhatsApp } from '../services/notification.js'
+import { sendPush } from '../services/notification.js'
 import { prisma } from '../db/prisma.js'
 import { verifyQuote } from '../services/fareQuote.js'
 import { myBookingsQuerySchema, rideComplaintSchema } from '../types.ts'
@@ -512,19 +512,11 @@ bookingsRouter.post('/cancel', protect, async (req, res) => {
         // constant, so a driver holding two rides for the same rider got the same
         // value for both. It is also that rider's start-ride OTP (routes/driver.ts),
         // which a cancellation notice has no reason to put on a driver's phone.
-        await Promise.all([
-            sendPush(booking.driver, {
-                title: 'Ride cancelled by customer',
-                body: `${booking.reference}: ${booking.pickupAddress} to ${booking.dropAddress}`,
-                data: { kind: 'ride_cancelled', screen: 'home', bookingId: booking.id },
-            }),
-            sendWhatsApp(booking.driver.phone,
-                `A ride you were assigned has been cancelled by the customer.
-            \nRide ID: ${booking.reference}
-            \nPickup Location: ${booking.pickupAddress}
-            \nDrop Location: ${booking.dropAddress}`
-            ),
-        ])
+        await sendPush(booking.driver, {
+            title: 'Ride cancelled by customer',
+            body: `${booking.reference}: ${booking.pickupAddress} to ${booking.dropAddress}`,
+            data: { kind: 'ride_cancelled', screen: 'ride', bookingId: booking.id },
+        })
     }
 
     return res.json({ ok: true, cancellationCharge,

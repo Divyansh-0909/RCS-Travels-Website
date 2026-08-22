@@ -32,16 +32,19 @@ export function createScheduledFinalIntent(tx, booking) {
 }
 
 export async function applyCapturedPaymentEffect(tx, payment) {
-  if (!payment.bookingId) return
+  if (!payment.bookingId) return null
   if (payment.purpose === 'scheduled_ride_advance') {
-    await tx.booking.updateMany({ where: { id: payment.bookingId, status: 'payment_pending' }, data: {
+    const result = await tx.booking.updateMany({ where: { id: payment.bookingId, status: 'payment_pending' }, data: {
       status: 'confirmed', confirmedAt: new Date(), scheduledAdvancePaidAmount: payment.amount,
       scheduledAdvanceDisposition: 'paid',
     } })
+    return result?.count ? { type: 'scheduled_ride_advance', bookingId: payment.bookingId } : null
   } else if (payment.purpose === 'scheduled_ride_final') {
-    await tx.booking.updateMany({ where: { id: payment.bookingId, status: 'completed', scheduledFinalPaidAmount: 0 },
+    const result = await tx.booking.updateMany({ where: { id: payment.bookingId, status: 'completed', scheduledFinalPaidAmount: 0 },
       data: { scheduledFinalPaidAmount: payment.amount } })
+    return result?.count ? { type: 'scheduled_ride_final', bookingId: payment.bookingId } : null
   }
+  return null
 }
 
 export async function applyRefundedPaymentEffect(tx, payment) {

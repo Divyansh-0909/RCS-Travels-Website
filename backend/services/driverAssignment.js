@@ -1,7 +1,7 @@
 import { prisma } from '../db/prisma.js'
 import { Prisma } from '@prisma/client'
 import { randomUUID } from 'node:crypto'
-import { sendPush, notifyWhatsAppRideStatus, notifyWhatsAppPoolJoined } from './notification.js'
+import { sendPush, notifyWhatsAppNoDriver, notifyWhatsAppRideStatus, notifyWhatsAppPoolJoined } from './notification.js'
 
 /**
  * getDriver's answer when the ride has gone OUT to captains but nobody has taken
@@ -557,6 +557,7 @@ export async function markNoDriver(bookingId) {
     where: { id: bookingId, status: 'pending' },
     data: { status: 'no_driver' },
   })
+  if (count > 0) await notifyWhatsAppNoDriver(bookingId).catch(() => {})
   return count > 0
 }
 

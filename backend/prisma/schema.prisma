@@ -1061,6 +1061,11 @@ model Booking {
   // Raju. Without it the 5-minute sweep re-sends that message every 5 minutes
   // for the last hour — twelve identical messages, each one billed.
   adminAlertedAt DateTime? @map("admin_alerted_at")
+  // Claimed immediately before the T-30m template is sent. A failed send clears
+  // its own claim so the five-minute sweep retries; overlapping sweeps cannot
+  // both claim the same recipient.
+  customerReminderSentAt DateTime? @map("customer_reminder_sent_at")
+  driverReminderSentAt   DateTime? @map("driver_reminder_sent_at")
 
   review         DriverReview?
   overchargeFlag OverchargeFlag?

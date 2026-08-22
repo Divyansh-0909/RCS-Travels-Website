@@ -30,17 +30,27 @@ is introduced.
 ## Lifecycle templates
 
 Interactive replies are allowed during Meta's 24-hour customer-service window.
-Scheduled assignment can happen after that window, so production should approve
-four utility templates and set their names in the matching environment values:
+Scheduled assignment can happen after that window, so production uses approved
+utility templates whose names are set in the matching environment values:
 
-- `WHATSAPP_TEMPLATE_DRIVER_ASSIGNED`: body variables driver name, vehicle,
-  registration and tracking URL.
-- `WHATSAPP_TEMPLATE_DRIVER_ARRIVED`: tracking URL.
-- `WHATSAPP_TEMPLATE_RIDE_COMPLETED`: booking reference and fare.
-- `WHATSAPP_TEMPLATE_POOL_JOINED`: tracking URL.
+- `WHATSAPP_TEMPLATE_DRIVER_ASSIGNED`: customer notification, WhatsApp-origin rides only.
+- `WHATSAPP_TEMPLATE_CUSTOMER_SCHEDULED_REMINDER`: T-30m customer reminder,
+  WhatsApp-origin rides only.
+- `WHATSAPP_TEMPLATE_DRIVER_SCHEDULED_REMINDER`: T-30m driver reminder for
+  website and WhatsApp rides; its URL button opens the Captains app handoff.
+- `WHATSAPP_TEMPLATE_RIDE_COMPLETED`: customer receipt, WhatsApp-origin rides only.
+- `WHATSAPP_TEMPLATE_POOL_JOINED`: customer pool update, WhatsApp-origin rides only.
+- `WHATSAPP_TEMPLATE_DRIVER_CANCELLED_RIDE`: customer reassignment update,
+  WhatsApp-origin rides only.
+- `WHATSAPP_TEMPLATE_NO_DRIVER_FOUND`: customer failure update, WhatsApp-origin rides only.
+- `WHATSAPP_TEMPLATE_SCHEDULED_PAYMENT_CONFIRMED`: customer payment confirmation,
+  WhatsApp-origin rides only.
+- `WHATSAPP_TEMPLATE_ADMIN_UNASSIGNED_RIDE`: internal final-hour alert for all sources.
 
-Without a configured template, the service falls back to a free-text message;
-Meta may reject that fallback outside the 24-hour window.
+Customer cancellation never WhatsApps the driver. It uses the existing FCM
+push channel for both booking sources. Missing template configuration is treated
+as a failed send; lifecycle notifications do not fall back to free text outside
+Meta's 24-hour service window.
 
 ## Local webhook
 

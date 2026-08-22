@@ -1,5 +1,5 @@
 import { prisma } from '../db/prisma.js'
-import { sendWhatsApp } from './notification.js'
+import { notifyWhatsAppAdminUnassigned, sendScheduledRideReminders } from './notification.js'
 import { offerScheduledRide } from './scheduledOffers.js'
 import { ASSIGNMENT_HORIZON_H, SWEEP_INTERVAL_MS, ADMIN_ALERT_LEAD_MS } from '../constants/dispatch.js'
 
@@ -32,6 +32,7 @@ import { ASSIGNMENT_HORIZON_H, SWEEP_INTERVAL_MS, ADMIN_ALERT_LEAD_MS } from '..
 export async function sweepScheduledRides() {
   try {
     const now = Date.now()
+    await sendScheduledRideReminders(new Date(now))
     const horizon = new Date(now + ASSIGNMENT_HORIZON_H * 60 * 60 * 1000)
 
     const unfilled = await prisma.booking.findMany({
@@ -40,7 +41,9 @@ export async function sweepScheduledRides() {
         driverId: null,
         scheduledAt: { lte: horizon, gte: new Date(now) },
       },
-      select: { id: true, scheduledAt: true, adminAlertedAt: true },
+      select: { id: true, reference: true, scheduledAt: true, adminAlertedAt: true,
+        customerPhone: true, pickupAddress: true, dropAddress: true,
+        user: { select: { name: true } } },
     })
 
     for (const booking of unfilled) {
@@ -64,10 +67,7 @@ export async function sweepScheduledRides() {
       })
       if (count === 0) continue
 
-      sendWhatsApp(
-        process.env.ADMIN_PHONE,
-        `No driver has accepted booking ${booking.id}. Pickup at ${booking.scheduledAt}. Please assign manually.`,
-      )
+      await notifyWhatsAppAdminUnassigned(booking)
     }
   } catch (err) {
     console.error('Assignment job failed:', err)

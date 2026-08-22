@@ -6,7 +6,7 @@ import { verifyQuote } from './fareQuote.js'
 import { createBookingFromQuote, BookingCreationError } from './bookingCreation.js'
 import { VEHICLE_CLASSES, VEHICLE_CLASS_NAMES } from '../constants/vehicles.js'
 
-const API_VERSION = process.env.WHATSAPP_API_VERSION || 'v21.0'
+const API_VERSION = process.env.WHATSAPP_API_VERSION || 'v26.0'
 const APP_ORIGIN = (process.env.APP_ORIGIN || 'http://localhost:1574').replace(/\/$/, '')
 const ACTIVE_TTL = 24 * 60 * 60 * 1000
 
