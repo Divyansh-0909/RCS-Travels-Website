@@ -528,7 +528,10 @@ const VehicleSelect = () => {
         if (step === "confirmLocation") {
             clearRouteView();
             mapApi.setCenter(confirmTarget === "pickup" ? pickupPoint : dropPoint);
-            mapApi.setZoom(17);
+            // Individual Google building footprints are exposed at the closer
+            // street-level zooms. 17 mostly shows blocks, which is not precise
+            // enough when the rider is confirming a doorway/building.
+            mapApi.setZoom(19);
         } else {
             showRouteView(mapApi, {
                 pickupPoint, dropPoint, routePolyline,
@@ -1191,7 +1194,7 @@ const VehicleSelect = () => {
                     {/* same split as every other desktop panel: content
                             left, the booked route on the right */}
                     {!isMobile && detialsVisibility && (
-                        <GoogleMap center={pickupPoint} zoom={12} onMapReady={setMapApi} className={MAP_CLASSES} />
+                        <GoogleMap center={pickupPoint} zoom={12} onMapReady={setMapApi} className={`${MAP_CLASSES} max-lg:hidden`} />
                     )}
                     <RideDetails prop={{ bookingId, setLoading, setError, setDetialsVisibility }} />
                 </BackgroundPanel>
@@ -1205,7 +1208,7 @@ const VehicleSelect = () => {
                     {!isMobile && step === "confirmLocation" && (
                         <GoogleMap
                             center={confirmTarget === "pickup" ? pickupPoint : dropPoint}
-                            zoom={17}
+                            zoom={19}
                             onMapReady={setMapApi}
                             onIdle={handleMapSettled}
                             className={MAP_CLASSES}

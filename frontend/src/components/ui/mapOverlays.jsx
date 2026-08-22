@@ -10,12 +10,12 @@ import { haversineKm } from "../../lib/trip";
 // OnBoarding's illustration).
 export const MAP_CLASSES = "absolute inset-0 z-0 sm:rounded-lg sm:relative sm:inset-auto sm:z-auto sm:order-2 sm:shrink-0 sm:w-[350px] sm:h-[380px] lg:w-[500px] lg:h-[550px] xl:w-[660px] xl:h-[570px]";
 
-// Same dot language as the OnBoarding inputs / RoutePanel: solid white =
-// pickup, primary donut = drop, primary-light car = driver. SVG because map
-// markers can't use CSS; the transparent padding enlarges the tap target.
+// Same language on every map: white pin = pickup, primary donut pin = drop,
+// primary-light car = driver. SVG because Google map markers can't use CSS;
+// the transparent padding also gives endpoint pins a comfortable tap target.
 const MARKER_SHADOW = `<filter id="ms" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="2" stdDeviation="2.5" flood-color="#000000" flood-opacity="0.6"/></filter>`;
-const PICKUP_MARKER_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40">${MARKER_SHADOW}<circle cx="20" cy="20" r="8" fill="#ffffff" filter="url(#ms)"/></svg>`;
-const DROP_MARKER_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40">${MARKER_SHADOW}<g filter="url(#ms)"><circle cx="20" cy="20" r="9" fill="#243AFB"/><circle cx="20" cy="20" r="3.2" fill="#0B0B14"/></g></svg>`;
+const PICKUP_MARKER_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="52">${MARKER_SHADOW}<g filter="url(#ms)"><path d="M24 24V46" stroke="#ffffff" stroke-width="3" stroke-linecap="round"/><circle cx="24" cy="17" r="12" fill="#ffffff"/></g></svg>`;
+const DROP_MARKER_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="52">${MARKER_SHADOW}<g filter="url(#ms)"><path d="M24 24V46" stroke="#243AFB" stroke-width="3" stroke-linecap="round"/><circle cx="24" cy="17" r="12" fill="#243AFB"/><circle cx="24" cy="17" r="4.5" fill="#0B0B14"/></g></svg>`;
 // mdiCar is a 24x24 path; 0.72 scale centres it in the 22px puck.
 const DRIVER_MARKER_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="44" height="44">${MARKER_SHADOW}<g filter="url(#ms)"><circle cx="22" cy="22" r="13" fill="#7A94FF"/><path d="${mdiCar}" fill="#0B0B14" transform="translate(13.4,13.4) scale(0.72)"/></g></svg>`;
 
@@ -25,14 +25,21 @@ const svgIcon = (g, svg, size) => ({
     anchor: new g.Point(size / 2, size / 2),
 });
 
+const endpointIcon = (g, svg) => ({
+    url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
+    scaledSize: new g.Size(48, 52),
+    // The stem's tip, rather than the centre of the circle, is the coordinate.
+    anchor: new g.Point(24, 46),
+});
+
 // Fixed centre pin for the confirm-location map — the tip sits on the map
 // centre while the map drags underneath.
 export const CenterPin = ({ target }) => (
     <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-full flex flex-col items-center drop-shadow-[0_2px_5px_rgba(0,0,0,0.65)]">
         {target === "pickup"
-            ? <div className="w-5 h-5 rounded-full bg-[var(--foreground)]" />
-            : <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center"><div className="w-2 h-2 rounded-full bg-[var(--background)]" /></div>}
-        <div className={`w-0.5 h-4 ${target === "pickup" ? "bg-[var(--foreground)]" : "bg-primary"}`} />
+            ? <div className="w-6 h-6 rounded-full bg-[var(--foreground)]" />
+            : <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center"><div className="w-[9px] h-[9px] rounded-full bg-[var(--background)]" /></div>}
+        <div className={`w-[3px] h-[22px] rounded-b-full ${target === "pickup" ? "bg-[var(--foreground)]" : "bg-primary"}`} />
     </div>
 );
 
@@ -55,8 +62,8 @@ export function showRouteView(map, { pickupPoint, dropPoint, routePolyline, onPi
         ? g.geometry.encoding.decodePath(routePolyline)
         : [pickupPoint, dropPoint];
 
-    const pickupMarker = new g.Marker({ map, position: pickupPoint, icon: svgIcon(g, PICKUP_MARKER_SVG, 40) });
-    const dropMarker = new g.Marker({ map, position: dropPoint, icon: svgIcon(g, DROP_MARKER_SVG, 40) });
+    const pickupMarker = new g.Marker({ map, position: pickupPoint, icon: endpointIcon(g, PICKUP_MARKER_SVG) });
+    const dropMarker = new g.Marker({ map, position: dropPoint, icon: endpointIcon(g, DROP_MARKER_SVG) });
     if (onPickupClick) pickupMarker.addListener("click", onPickupClick);
     if (onDropClick) dropMarker.addListener("click", onDropClick);
 

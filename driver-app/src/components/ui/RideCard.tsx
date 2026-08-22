@@ -4,6 +4,7 @@ import { PhoneIcon } from 'phosphor-react-native';
 import AppText from '../AppText';
 import { UpcomingBooking } from '../../types/enums';
 import { activeLeg, initials, splitAddress } from '../../constants/booking';
+import { openDriverNavigation } from '../../lib/navigation';
 
 const Phone = cssInterop(PhoneIcon, {
     className: { target: false, nativeStyleToProp: { color: true } },
@@ -27,8 +28,7 @@ const RideCard = ({ booking, onPress }: Props) => {
     // list endpoint already returns, and it is the string the captain would have
     // typed anyway. Coordinates would be a second reason for /rides to widen.
     const navigate = () => {
-        const destination = encodeURIComponent(address);
-        Linking.openURL(`https://www.google.com/maps/dir/?api=1&destination=${destination}`);
+        openDriverNavigation(address).catch(() => {});
     };
 
     return (

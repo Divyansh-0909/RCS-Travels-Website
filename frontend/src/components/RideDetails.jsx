@@ -4,36 +4,23 @@ import { mdiKeyboardBackspace } from '@mdi/js';
 import Button from "./ui/Button";
 import { useData } from "../hooks/useData";
 import { useApi } from "../hooks/useApi";
-import { useViewNavigate } from "../hooks/useViewNavigate";
 import waLogo from '../assets/whatsapp-logo.webp';
 import { openSupportWhatsApp } from "../constants/support";
 import RoutePanel from "./ui/RoutePanel";
-import { statusLabels } from "../constants/statusLabels";
 import { SAFE_ROUTE_SURCHARGE } from "../constants/fares";
 
-// Same layout + type scale as VehicleSelect / TrackingPage: a real 377px
-// desktop column (OnBoarding's effective control width) instead of a scale
-// transform, with one rhythm for pairs, groups and stacks.
+// Keep the customer site's dark palette while following the captain app's
+// compact detail structure: route, quick facts, then a separate fare summary.
 const COL = "w-[min(86vw,100%)] sm:w-[377px]";
-const TITLE = "font-bold text-3xl sm:text-5xl leading-tight";
-const SUBTITLE = "text-lg sm:text-2xl font-normal leading-snug text-[var(--text-muted)]";
-const META = "text-base sm:text-xl";
-const STACK = "gap-6 sm:gap-8";
-const GROUP = "gap-2 sm:gap-3";
-const PAIR = "gap-0.5 sm:gap-1";
+const CARD = "rounded-2xl bg-[var(--background-muted)] p-5";
+const FARE_LINE = "text-sm sm:text-base font-medium";
 
 const RideDetails = ({ prop }) => {
     const bookingId = useData(state => state.bookingId);
-    const setBookingId = useData(state => state.setBookingId);
-    const api = useApi()
-    const navigate = useViewNavigate();
+    const api = useApi();
     const pickupLocation = useData(state => state.pickupLocation);
-    const setPickup = useData(state => state.setPickup);
     const dropLocation = useData(state => state.dropLocation);
-    const setDrop = useData(state => state.setDrop);
-    const setActiveBooking = useData(state => state.setActiveBooking);
     const fare = useData(state => state.fare);
-    const status = useData(state => state.status);
     const distanceKm = useData(state => state.distanceKm);
     const durationMin = useData(state => state.durationMin);
     const safeRoute = useData(state => state.safeRoute);
@@ -62,21 +49,21 @@ const RideDetails = ({ prop }) => {
             prop.setError(null);
             prop.setLoading(true);
             if (!cancelId) {
-                prop.setError("No active ride to cancel")
-                return
+                prop.setError("No active ride to cancel");
+                return;
             }
 
-            const data = await api.cancelBooking(cancelId, cancellationCharge)
+            const data = await api.cancelBooking(cancelId, cancellationCharge);
 
             if (data?.error) {
                 if (data.code === "CANCELLATION_AMOUNT_CHANGED") {
-                    useData.getState().setCancellationCharge(data.cancellationCharge ?? 0)
-                    setConfirmCancel(false)
-                    prop.setError(data.error)
-                    return
+                    useData.getState().setCancellationCharge(data.cancellationCharge ?? 0);
+                    setConfirmCancel(false);
+                    prop.setError(data.error);
+                    return;
                 }
-                prop.setError("Can't cancel ride")
-                return
+                prop.setError("Can't cancel ride");
+                return;
             }
             if (data.ok) {
                 // The landing-page outcome panel must show what the server
@@ -87,8 +74,8 @@ const RideDetails = ({ prop }) => {
                     cancellationCharge: data.cancellationCharge ?? 0,
                     advanceDisposition: data.advanceDisposition ?? null,
                     refundStatus: data.refund?.status ?? null,
-                }))
-                window.location.href = '/'
+                }));
+                window.location.href = '/';
             }
         } catch (err) {
             console.error(err);
@@ -98,80 +85,89 @@ const RideDetails = ({ prop }) => {
         }
     }
 
-    // sm:relative, not relative: on mobile this column must NOT be the offset
-    // parent, so the arrow inside resolves against the surrounding
-    // BackgroundPanel and can float above the sheet like every other screen's.
-    // z-10 still applies — it is a flex item of that panel.
     return (
-        <div className={`sm:relative z-10 sm:order-1 flex flex-col justify-center items-center sm:items-start text-left w-full sm:w-auto sm:h-[100dvh] ${STACK}`}>
-            {/* same treatment as TrackingPage's backArrow: a pill over the map
-                just above the sheet on mobile, a bare glyph fixed to the
-                panel's top-left corner on desktop */}
-            <div onClick={() => prop.setDetialsVisibility(false)} className="max-sm:absolute max-sm:z-20 max-sm:-top-12 max-sm:left-4 max-sm:h-9 max-sm:my-1 max-sm:px-3 max-sm:rounded-full max-sm:border max-sm:border-[var(--foreground)]/30 max-sm:bg-[var(--background-muted)] max-sm:shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)] flex items-center justify-center cursor-pointer sm:opacity-[0.8] transition-opacity duration-300 hover:opacity-[1] text-[var(--text)] sm:fixed sm:left-6 sm:top-6">
-                <Icon path={mdiKeyboardBackspace} size={1.2} />
+        <div className="z-10 flex w-full flex-col items-center gap-4 text-left sm:order-1 sm:h-[100dvh] sm:w-auto sm:justify-center sm:overflow-y-auto sm:py-6">
+            <button
+                type="button"
+                aria-label="Back"
+                onClick={() => prop.setDetialsVisibility(false)}
+                className="flex items-center justify-center text-[var(--text)] outline-none transition-colors max-sm:absolute max-sm:-top-12 max-sm:left-4 max-sm:z-20 max-sm:my-1 max-sm:h-9 max-sm:rounded-full max-sm:bg-[var(--background-muted)] max-sm:px-3 max-sm:shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)] max-sm:hover:bg-[var(--background-primary)] sm:fixed sm:top-6 sm:left-6 sm:h-9 sm:w-9 sm:rounded-xl sm:opacity-80 sm:hover:bg-[var(--foreground)]/10 sm:hover:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]/70"
+            >
+                <Icon path={mdiKeyboardBackspace} size={1.05} />
+            </button>
+            <div className={`flex items-center justify-center sm:justify-start ${COL}`}>
+                <h2 className="text-xl font-semibold leading-tight tracking-[-0.03em] sm:text-2xl">Ride Details</h2>
             </div>
-            <div className={`flex flex-col justify-center items-center sm:items-start ${PAIR} ${COL}`}>
-                <h2 className={`w-full text-center sm:text-left ${TITLE}`}>Ride Details</h2>
-                <h3 className={`w-full text-center sm:text-left ${SUBTITLE}`}>{statusLabels[status] || status}</h3>
-            </div>
-            <div className={`flex flex-col justify-center items-start ${GROUP} ${COL}`}>
-                <RoutePanel size="sm" pickup={pickupLocation} drop={dropLocation}>
-                    {distanceKm != null && (
-                        <div className="flex items-center justify-between w-full">
-                            <h4 className={`${META} text-[var(--text-muted)]`}>Distance</h4>
-                            <h4 className={META}>{Math.round(distanceKm * 10) / 10} km</h4>
-                        </div>
-                    )}
-                    {durationMin != null && (
-                        <div className="flex items-center justify-between w-full">
-                            <h4 className={`${META} text-[var(--text-muted)]`}>Ride time</h4>
-                            <h4 className={META}>{durationMin} min</h4>
-                        </div>
-                    )}
 
-                    <div className="w-full h-px bg-[var(--foreground)]/10 my-1" />
+            <div className={`${CARD} flex flex-col gap-4 ${COL}`}>
+                <RoutePanel plain size="sm" pickup={pickupLocation} drop={dropLocation} />
 
-                    <div className="flex items-center justify-between w-full">
-                        <h4 className={`${META} text-[var(--text-muted)]`}>Base fare</h4>
-                        <h4 className={META}>₹{baseFare}</h4>
+                {(distanceKm != null || durationMin != null) && (
+                    <div className="flex items-center gap-2 pl-6">
+                        {durationMin != null && (
+                            <span className="rounded-xl bg-[var(--background)] px-2.5 py-1.5 text-sm font-semibold">
+                                {durationMin} min
+                            </span>
+                        )}
+                        {distanceKm != null && (
+                            <span className="rounded-xl bg-[var(--background)] px-2.5 py-1.5 text-sm font-semibold">
+                                {Math.round(distanceKm * 10) / 10} km
+                            </span>
+                        )}
                     </div>
-                    {safeRoute && (
-                        <div className="flex items-center justify-between w-full">
-                            <h4 className={`${META} text-[var(--text-muted)]`}>Safer route</h4>
-                            <h4 className={META}>₹{surcharge}</h4>
-                        </div>
-                    )}
-                    {toll > 0 && (
-                        <div className="flex items-center justify-between w-full">
-                            <h4 className={`${META} text-[var(--text-muted)]`}>Highway toll</h4>
-                            <h4 className={META}>₹{toll}</h4>
-                        </div>
-                    )}
-                    {airport > 0 && (
-                        <div className="flex items-center justify-between w-full">
-                            <h4 className={`${META} text-[var(--text-muted)]`}>Airport pickup</h4>
-                            <h4 className={META}>₹{airport}</h4>
-                        </div>
-                    )}
-                    {carrier > 0 && (
-                        <div className="flex items-center justify-between w-full">
-                            <h4 className={`${META} text-[var(--text-muted)]`}>Roof carrier</h4>
-                            <h4 className={META}>₹{carrier}</h4>
-                        </div>
-                    )}
-                    <div className="flex items-center justify-between w-full">
-                        <h4 className={`${META} font-semibold`}>Total</h4>
-                        <h4 className={`${META} font-semibold`}>₹{fare}</h4>
-                    </div>
-                </RoutePanel>
+                )}
             </div>
-            <div className={`flex flex-col justify-center items-center sm:items-start gap-3 ${COL}`}>
+
+            <div className={`flex flex-col gap-2 ${COL}`}>
+                <p className="px-1 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">Ride summary</p>
+                <div className={`${CARD} flex flex-col gap-3`}>
+                    <div className="flex flex-col gap-2">
+                        <div className="flex items-start justify-between gap-3">
+                            <span className={FARE_LINE}>Base fare</span>
+                            <span className={FARE_LINE}>₹{baseFare}</span>
+                        </div>
+                        {safeRoute && (
+                            <div className="flex items-start justify-between gap-3">
+                                <span className={FARE_LINE}>Safer route</span>
+                                <span className={FARE_LINE}>₹{surcharge}</span>
+                            </div>
+                        )}
+                        {toll > 0 && (
+                            <div className="flex items-start justify-between gap-3">
+                                <span className={FARE_LINE}>Highway toll</span>
+                                <span className={FARE_LINE}>₹{toll}</span>
+                            </div>
+                        )}
+                        {airport > 0 && (
+                            <div className="flex items-start justify-between gap-3">
+                                <span className={FARE_LINE}>Airport pickup</span>
+                                <span className={FARE_LINE}>₹{airport}</span>
+                            </div>
+                        )}
+                        {carrier > 0 && (
+                            <div className="flex items-start justify-between gap-3">
+                                <span className={FARE_LINE}>Roof carrier</span>
+                                <span className={FARE_LINE}>₹{carrier}</span>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="h-px w-full bg-[var(--foreground)]/10" />
+
+                    <div className="flex items-center justify-between gap-3">
+                        <span className="text-xl font-semibold">Total</span>
+                        <span className="text-xl font-semibold">₹{fare}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div className={`flex flex-col items-center gap-2 sm:items-start ${COL}`}>
                 <Button
                     onClick={() => openSupportWhatsApp("Hi, I need help with my ride.")}
-                    prop={{ variant: "input", width: "100%", bg: "var(--background-muted)" }}
+                    prop={{ variant: "input", width: "100%", bg: "var(--background-muted)", border: false }}
                 >
                     <span className="flex items-center justify-center gap-2 text-base sm:text-lg">
-                        <img src={waLogo} alt="WhatsApp" className="w-6 h-6" />
+                        <img src={waLogo} alt="WhatsApp" className="h-6 w-6" />
                         Talk to support
                     </span>
                 </Button>
@@ -180,7 +176,7 @@ const RideDetails = ({ prop }) => {
                     Two taps required: cancelling costs money at this point, and
                     a single mis-tap shouldn't. */}
                 {cancellationCharge > 0 && (
-                    <p className="text-xs sm:text-sm text-left text-[var(--text-muted)] leading-snug">
+                    <p className="text-left text-xs leading-snug text-[var(--text-muted)] sm:text-sm">
                         Cancelling now retains <span className="text-[var(--text)]">₹{cancellationCharge}</span> from
                         your scheduled advance for the driver. It is not a second charge.
                     </p>
@@ -199,7 +195,7 @@ const RideDetails = ({ prop }) => {
                 </Button>
             </div>
         </div>
-    )
-}
+    );
+};
 
-export default RideDetails
+export default RideDetails;

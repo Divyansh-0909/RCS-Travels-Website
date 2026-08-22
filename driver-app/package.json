@@ -32,6 +32,7 @@
     "expo-notifications": "~55.0.25",
     "expo-secure-store": "~55.0.16",
     "expo-status-bar": "~55.0.6",
+    "expo-system-ui": "~55.0.21",
     "expo-task-manager": "~55.0.18",
     "expo-web-browser": "~55.0.18",
     "lottie-react-native": "~7.3.4",
@@ -57,11 +58,22 @@
     "eslint": "^9.39.5",
     "eslint-config-expo": "~55.0.1",
     "patch-package": "^8.0.1",
+    "react-native-svg-transformer": "^1.5.3",
     "typescript": "~5.9.2"
   },
   "overrides": {
     "react": "19.2.0",
     "react-dom": "19.2.0"
+  },
+  "expo": {
+    "autolinking": {
+      "android": {
+        "buildFromSource": [
+          "expo-task-manager",
+          "unimodules-app-loader"
+        ]
+      }
+    }
   },
   "private": true
 }

@@ -19,8 +19,6 @@ const Bell = cssInterop(BellIcon, {
 const KNOB_OFF = 20;   // web: left-5
 const KNOB_ON = -8;    // web: -left-2
 
-const TITLE_TRACKING = { letterSpacing: -0.72 };
-
 const OnlineToggle = () => {
     const hidden = useData((state) => state.hidden);
     const [error, setError] = useState<string | null>(null)
@@ -28,8 +26,8 @@ const OnlineToggle = () => {
     const { pathname } = useLocation();
     const onNotifications = pathname === "/notifications";
     // The whole header is Home's, not the shell's: going online is a decision a
-    // captain makes from the ride list, and neither the wordmark nor the bell says
-    // anything about Account or Post. Home is the index route, so it answers to "/".
+    // captain makes from the ride list, and the bell does not belong to Account or
+    // Post. Home is the index route, so it answers to "/".
     const onHome = pathname === "/";
 
     const api = useApi()
@@ -132,25 +130,6 @@ const OnlineToggle = () => {
 
     return (
         <View className="absolute z-50 flex flex-col justify-center items-center top-10 w-[92%]">
-            {/* Both gone while he is driving. The switch is not merely out of
-                place there — it is a control that CANNOT WORK: PATCH /driver/online
-                refuses to take a captain offline with a ride in progress
-                ("Finish your active ride before going offline"), so leaving it on
-                screen offers him an action the server will decline. The wordmark
-                goes with it because it was the switch's header, and a title strip
-                alone over a map is furniture.
-
-                The bell stays. Offers keep arriving while he drives — they are
-                rows waiting on his notification page either way — and the one
-                thing he still needs from this header is to see that they have. */}
-            {!onActiveRide && (
-                <AppText className="text-xl bg-transparent my-1 py-1 px-3 rounded-full text-[var(--text-foreground)] flex flex-row justify-center items-center font-semibold text-center" style={TITLE_TRACKING}>
-                    RCS{" "}
-                    <AppText className="text-[var(--text-foreground)]">
-                        Travels
-                    </AppText>
-                </AppText>
-            )}
             {/* justify-between either way: the bell holds the left edge it always
                 has, and the hamburger takes the exact spot the switch vacates. So
                 nothing on this row moves when a ride starts — one control is

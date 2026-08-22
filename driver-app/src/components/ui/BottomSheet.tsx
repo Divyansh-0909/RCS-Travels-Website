@@ -34,12 +34,14 @@ export const BottomSheet = ({
     children,
     peek = DEFAULT_PEEK,
     bottomInset = 0,
-    above
+    above,
+    onHeightChange,
 }: {
     children: ReactNode;
     peek?: number;
     bottomInset?: number;
     above?: ReactNode;
+    onHeightChange?: (height: number) => void;
 
 }) => {
     const [height, setHeight] = useState(0);
@@ -100,7 +102,11 @@ export const BottomSheet = ({
 
     return (
         <Animated.View
-            onLayout={(e: LayoutChangeEvent) => setHeight(e.nativeEvent.layout.height)}
+            onLayout={(e: LayoutChangeEvent) => {
+                const nextHeight = e.nativeEvent.layout.height;
+                setHeight(nextHeight);
+                onHeightChange?.(nextHeight);
+            }}
             className="absolute left-0 right-0 bottom-0 rounded-t-3xl"
             style={[slide]}
         >

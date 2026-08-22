@@ -10,7 +10,6 @@ import './lib/locationTask';
 import { ClerkProvider , useAuth } from '@clerk/clerk-expo';
 import { tokenCache } from '@clerk/clerk-expo/token-cache';
 import { useFonts } from 'expo-font';
-import { StatusBar } from 'expo-status-bar';
 import { NativeRouter, Route, Routes, Navigate } from 'react-router-native';
 import App from './App';
 import AuthLayout from './AuthLayout';
@@ -48,7 +47,6 @@ const AppRoutes = () => {
 
     return (
         <NativeRouter>
-            <StatusBar style="auto" />
             <DeepLinkNavigator isSignedIn={isSignedIn} />
             <DriverProvider>
             {/* Inside DriverProvider, not beside it: the offer list is gated on

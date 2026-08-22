@@ -1031,7 +1031,7 @@ const TrackingPage = () => {
             {/* ride details */}
             <BackgroundPanel show={detialsVisibility === true} className={`z-3 sm:z-2 py-6 sm:overflow-hidden text-left flex flex-col sm:flex-row justify-center items-center sm:justify-center lg:justify-between sm:px-[9%] md:px-[5%] xl:px-[13%]`}>
                 {!isMobile && detialsVisibility && pickupPoint && dropPoint && (
-                    <GoogleMap center={pickupPoint} zoom={12} onMapReady={setMapApi} className={MAP_CLASSES} />
+                    <GoogleMap center={pickupPoint} zoom={12} onMapReady={setMapApi} className={`${MAP_CLASSES} max-lg:hidden`} />
                 )}
                 <RideDetails prop={{bookingId, setLoading, setError, setDetialsVisibility }} />
             </BackgroundPanel>

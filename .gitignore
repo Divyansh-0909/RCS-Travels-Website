@@ -149,6 +149,14 @@ ds-bundle/
 # Agent / AI tooling
 # =========================
 # .claude/, .agents/, .cursor/ etc. are already caught by the '.*' rule above.
+# Keep the project-owned Codex UI workflow in Git while leaving downloaded or
+# machine-specific agent configuration ignored.
+!.agents/
+.agents/*
+!.agents/skills/
+.agents/skills/*
+!.agents/skills/rcs-ui/
+!.agents/skills/rcs-ui/**
 # These are the non-dotted leftovers: skill installs write a lockfile and an
 # empty root package-lock.json, neither of which describes this app's deps.
 /skills-lock.json

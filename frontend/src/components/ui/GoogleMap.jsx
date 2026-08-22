@@ -19,28 +19,38 @@ let mapInstance = null;
 // afterwards, so later mounts must not flash the skeleton again.
 let tilesEverLoaded = false;
 
-export const MAP_LAND_COLOR = "#2e2e38";
+export const MAP_LAND_COLOR = "#b9b9bf";
+const MAP_BUILDING_COLOR = "#e1e1e5";
+const MAP_BUILDING_STROKE = "#c9c9d0";
 
 const MAP_STYLES = [
     { elementType: "geometry", stylers: [{ color: MAP_LAND_COLOR }] },
-    { elementType: "labels.text.fill", stylers: [{ color: "#d6d6db" }] },
-    { elementType: "labels.text.stroke", stylers: [{ color: "#2e2e38" }, { weight: 2 }] },
-    { featureType: "poi", elementType: "labels.icon", stylers: [{ saturation: -100 }, { color: "#5f5f6a" }] },
-    { featureType: "administrative.locality", elementType: "labels.text.fill", stylers: [{ color: "#d6d6db" }] },
-    { featureType: "administrative.neighborhood", elementType: "labels.text.fill", stylers: [{ color: "#a0a0a8" }] },
-    { featureType: "landscape.man_made", elementType: "geometry", stylers: [{ color: "#34343f" }] },
-    { featureType: "water", elementType: "geometry", stylers: [{ color: "#1d1d27" }] },
-    { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#70708c" }] },
-    { featureType: "road", elementType: "geometry", stylers: [{ color: "#16161f" }] },
-    { featureType: "road", elementType: "geometry.stroke", stylers: [{ visibility: "off" }] },
-    { featureType: "road", elementType: "labels.text.fill", stylers: [{ color: "#9a9ab2" }] },
-    { featureType: "road.local", elementType: "geometry", stylers: [{ color: "#1d1d26" }] },
-    { featureType: "road.arterial", elementType: "geometry", stylers: [{ color: "#16161f" }] },
-    { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#101018" }] },
-    { featureType: "poi", stylers: [{ visibility: "off" }] },
+    { elementType: "labels.text.fill", stylers: [{ color: "#565660" }] },
+    { elementType: "labels.text.stroke", stylers: [{ color: "#f4f4f6" }, { weight: 2 }] },
+    { featureType: "administrative.locality", elementType: "labels.text.fill", stylers: [{ color: "#4f4f58" }] },
+    { featureType: "administrative.neighborhood", elementType: "labels.text.fill", stylers: [{ color: "#686872" }] },
+    // At close zoom Google renders building footprints as man-made landscape.
+    // Keep them visibly separate from the surrounding land so a rider can
+    // place the pickup pin on the correct house/building.
+    { featureType: "landscape.man_made", elementType: "geometry.fill", stylers: [{ color: MAP_BUILDING_COLOR }] },
+    { featureType: "landscape.man_made", elementType: "geometry.stroke", stylers: [{ color: MAP_BUILDING_STROKE }, { weight: 1 }] },
+    // Named campuses and businesses move into POI geometry at detailed zooms.
+    // Hide their labels, not the polygons themselves, or buildings disappear
+    // just when the rider zooms in to place a precise pin.
+    { featureType: "poi", elementType: "geometry.fill", stylers: [{ visibility: "on" }, { color: MAP_BUILDING_COLOR }] },
+    { featureType: "poi", elementType: "geometry.stroke", stylers: [{ visibility: "on" }, { color: MAP_BUILDING_STROKE }, { weight: 1 }] },
+    { featureType: "poi", elementType: "labels", stylers: [{ visibility: "off" }] },
+    { featureType: "water", elementType: "geometry", stylers: [{ color: "#dbe4ed" }] },
+    { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#687687" }] },
+    { featureType: "road", elementType: "geometry", stylers: [{ color: "#ffffff" }] },
+    { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#eeeeF2" }] },
+    { featureType: "road", elementType: "labels.text.fill", stylers: [{ color: "#55555f" }] },
+    { featureType: "road.local", elementType: "geometry", stylers: [{ color: "#f8f8fa" }] },
+    { featureType: "road.arterial", elementType: "geometry", stylers: [{ color: "#ffffff" }] },
+    { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#ffffff" }] },
     { featureType: "poi.park", stylers: [{ visibility: "on" }] },
-    { featureType: "poi.park", elementType: "geometry", stylers: [{ color: "#1b1b26" }] },
-    { featureType: "poi.park", elementType: "labels.text.fill", stylers: [{ color: "#5f5f6a" }] },
+    { featureType: "poi.park", elementType: "geometry", stylers: [{ color: "#e4efdf" }] },
+    { featureType: "poi.park", elementType: "labels.text.fill", stylers: [{ color: "#667060" }] },
     { featureType: "transit", stylers: [{ visibility: "off" }] },
 ];
 
@@ -97,6 +107,12 @@ const GoogleMap = ({ center, zoom = 16, onMapReady, onIdle, className, children 
                 mapInstance = new window.google.maps.Map(mapDiv, {
                     center: center ?? { lat: 28.6315, lng: 77.2167 },
                     zoom,
+                    renderingType: window.google.maps.RenderingType.RASTER,
+                    mapTypeId: "roadmap",
+                    tilt: 0,
+                    heading: 0,
+                    gestureHandling: "greedy",
+                    scrollwheel: true,
                     disableDefaultUI: true,
                     zoomControl: false,
                     keyboardShortcuts: false,
@@ -114,7 +130,13 @@ const GoogleMap = ({ center, zoom = 16, onMapReady, onIdle, className, children 
             // zoom buttons only on sm+ — mobile pinches, and the buttons
             // collide with the bottom-sheet layouts. Re-evaluated per mount,
             // which is when breakpoint hand-offs happen.
-            mapInstance.setOptions({ zoomControl: window.matchMedia("(min-width: 640px)").matches });
+            mapInstance.setOptions({
+                zoomControl: window.matchMedia("(min-width: 640px)").matches,
+                gestureHandling: "greedy",
+                scrollwheel: true,
+                styles: MAP_STYLES,
+                backgroundColor: MAP_LAND_COLOR,
+            });
 
             hostRef.current.appendChild(mapDiv);
             idleListener = mapInstance.addListener("idle", () => {

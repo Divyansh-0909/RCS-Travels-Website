@@ -1,5 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { View } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 import ErrorState from './ui/ErrorState';
 
 /**
@@ -49,6 +50,7 @@ class ErrorBoundary extends Component<Props, State> {
             // app's screens are the dark auth shell — without a background of its own
             // the error would be drawn over a login form it has already broken.
             <View className="flex-1 w-full items-center justify-center bg-[var(--foreground)]">
+                <StatusBar style="dark" animated />
                 <ErrorState
                     title="This screen stopped working"
                     // The raw message only in development. On a captain's phone it is a

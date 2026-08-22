@@ -3,6 +3,7 @@ import { Linking, Pressable, View } from 'react-native';
 import { cssInterop } from 'nativewind';
 import { NavigationArrowIcon, PhoneIcon } from 'phosphor-react-native';
 import * as Location from 'expo-location';
+import { openDriverNavigation } from '../lib/navigation';
 import { splitAddress, activeLeg, initials, rupees } from '../constants/booking';
 import { useNavigate } from 'react-router-native';
 import AppText from '../components/AppText';
@@ -92,6 +93,7 @@ const ActiveRide = ({ ride, onChanged }: { ride: UpcomingBooking; onChanged: () 
     const [dropOverrideReason, setDropOverrideReason] = useState<string | null>(null);
     const [dropOtpOpen, setDropOtpOpen] = useState(false);
     const [liveFix, setLiveFix] = useState<Location.LocationObject | null>(null);
+    const [mapBottomInset, setMapBottomInset] = useState(PEEK + BOTTOM_SAFE);
     const [locationIssue, setLocationIssue] = useState<string | null>(null);
     const [locationClock, setLocationClock] = useState(() => Date.now());
 
@@ -184,10 +186,7 @@ const ActiveRide = ({ ride, onChanged }: { ride: UpcomingBooking; onChanged: () 
     };
 
     const openMaps = () => {
-        const destination = encodeURIComponent(address);
-        // The same universal URL RideCard uses, and an address rather than
-        // coordinates for the same reason: it is what /rides already returns.
-        Linking.openURL(`https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=driving`);
+        openDriverNavigation(address).catch(() => setError('Google Maps could not be opened.'));
     };
 
     const place = ride ? splitAddress(ride.pickupAddress) : null;
@@ -264,12 +263,22 @@ const ActiveRide = ({ ride, onChanged }: { ride: UpcomingBooking; onChanged: () 
 
     return (
         <View style={{ flex: 1, width: '100%' }}>
-            <MapSlot />
+            <MapSlot
+                pickup={{ latitude: ride.pickupLat, longitude: ride.pickupLng }}
+                drop={{ latitude: ride.dropLat, longitude: ride.dropLng }}
+                driver={liveFix ? { latitude: liveFix.coords.latitude, longitude: liveFix.coords.longitude } : null}
+                bottomSheetHeight={mapBottomInset}
+            />
 
             {/* No tab-bar clearance here — the shell hides the bar and the scrim
                 for the length of a ride (useShellHidden), so the only thing under
                 the sheet is the gesture area. */}
-            <BottomSheet peek={PEEK} bottomInset={BOTTOM_SAFE} above={above}>
+            <BottomSheet
+                peek={PEEK}
+                bottomInset={BOTTOM_SAFE}
+                above={above}
+                onHeightChange={setMapBottomInset}
+            >
                 <View className="px-5 pb-2 gap-1 mt-2">
                     <View className="flex-row items-center justify-between gap-3">
                         <AppText className={`text-xs font-semibold uppercase tracking-wide ${MUTED}`}>

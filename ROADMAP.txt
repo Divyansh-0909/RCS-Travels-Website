@@ -2,6 +2,22 @@ RCS TRAVELS — PROJECT ROADMAP
 ===============================
 
 IMPORTANT:
+- [DONE — 20 Aug 2026] CANCELLATION / GEOFENCE / CONDUCT HARDENING LANDED.
+  Customer cancellation of a scheduled ride is free until the assigned driver's
+  fresh platform location is within 500 m of pickup; inside that radius the paid
+  15% advance is retained for the driver, whether or not `reached` was tapped.
+  Quote-vs-submit proximity races force a new confirmation instead of silently
+  changing the amount. Ride Now remains free because no customer advance is held.
+  Pickup arrival and OTP start use the same 500 m server geofence; completion is
+  normal through 500 m, needs a structured reason plus customer OTP through 2 km,
+  and requires support beyond 2 km. GPS must be <=100 m accuracy and <=30 s old;
+  known mock fixes fail closed. Driver self-cancel exists only in assigned/en_route,
+  re-dispatches immediately, counts over a rolling 30 days, restricts benefits at
+  3 and suspends at 5. Customer complaints are structured pills (no text), one row
+  per booking, editable without double-counting; 3 complaints fine and 5 suspend.
+  Admin review shows categories and conduct state. Migrations:
+  20260820170000_ride_geofence_enforcement and
+  20260820190000_driver_cancellation_and_complaints.
 - !! EVERY SEEDED TEST NUMBER IS A PLAUSIBLE REAL INDIAN MOBILE, AND SOME OF THEM HAVE
   ROWS IN THE PRODUCTION DATABASE. Nothing breaks while this is wrong, which is exactly
   why it needs writing down.
@@ -1010,7 +1026,8 @@ Goal: Live tracking, ride history, and multi-language support.
 
   - /booking/:id → show live driver location on Google Maps
     (polling is already in place — just add the map component)
-  - /my-bookings → ride history + cancel button with 35% charge warning
+  - /my-bookings → ride history + two-step cancellation with the server's current
+    15% scheduled-advance quote when the driver is within 500 m
     if driver has already reached pickup
   - Multi-language → wrap all strings with i18next, add Hindi translation file
   - Homepage → hero, vehicle pricing, trust indicators, language switcher
@@ -1057,14 +1074,16 @@ Always build the API endpoint first → test in Postman → then build the UI.
 Never build UI before the API exists.
 
 
-CURRENT STATUS  (verified against the code, 13 Aug 2026)
+CURRENT STATUS  (verified against the code, 20 Aug 2026)
 ---------------
   [x] Project folder structure created
   [x] Frontend dependencies installed (React, Vite, Tailwind, Clerk, i18next, Axios)
   [x] Backend dependencies installed (Express, Prisma, Clerk, Firebase, GCS, Cloud Tasks)
       NOTE: Multer and both @aws-sdk packages are installed and NEVER IMPORTED. Storage
       went to Supabase and then to GCS; all three are dead weight. Remove them.
-  [x] Prisma schema — 18 models, 11 enums, 38 migrations, all applied
+  [x] Prisma schema — 23 models, 15 enums, 49 migrations in the repository.
+      Deploy the two 20 Aug geofence/conduct migrations in each environment that
+      has not yet received them; repository presence is not deployment evidence.
   [x] Phase 1 — Foundation
   [x] Phase 2 — Core Backend APIs
   [x] Phase 3 — Customer Website
@@ -1080,7 +1099,9 @@ CURRENT STATUS  (verified against the code, 13 Aug 2026)
       console.log, so ride offers and the T−1h admin alert are both untested against a real
       device and a real number.)
   [~] Phase 7 — Tracking + Polish  (tracking screen with the real driver card, route map,
-      cancellation quote and share links; ride history with search/filter/pagination;
+      server-authoritative proximity cancellation quote and settlement panel, share links;
+      ride history with search/filter/pagination and structured complaint pills; admin
+      conduct reporting; themed geofence-disabled driver actions and alternate-drop OTP;
       marketing homepage; legal pages. Missing: the driver marker moving between polls —
       bearing and speedKmh are stored and nothing reads them — and i18next, which is
       installed, persists a language setting, and changes nothing.)
@@ -1731,31 +1752,27 @@ each numbered block unblocks the ones after it. Outstation is PARKED (see bottom
    instrument, and THE CAP IS THE ENTIRE REASON IT STAYS ON THE RIGHT SIDE OF
    THE LINE. If the cap is ever removed, this becomes top-up and block 10's
    regulatory paragraph applies again.
-   !! WalletEntry HAS NO UNIQUE KEY ON (bookingId, type). The index is
-   deliberately non-unique because one booking legitimately produces a hold,
-   its refund and a commission debit. The consequence is that a retried
-   completion or a twice-delivered webhook WILL double-credit. ADD THE
-   COMPOSITE UNIQUE BEFORE ANY CODE WRITES THIS TABLE — it is far cheaper as a
-   migration than as a reconciliation.
+   [DONE] Wallet entries now use deterministic unique `eventKey` values. The old
+   proposed (bookingId, type) key was intentionally not used because one booking
+   legitimately has several event types; retries of the same hold, refund,
+   compensation, fine or commission event resolve to one event key.
 
-11. OVERCHARGE FLAG -> STRIKES -> FINE -> SUSPENSION
-   SCHEMA DONE AND MIGRATED 8 Aug 2026. NO CODE WRITES IT YET.
-   OverchargeFlag is UNIQUE ON bookingId — one ride, one flag. Without that a
-   single annoyed rider taps five times and suspends a driver off one trip, which
-   is the cheapest possible abuse of the whole system. It snapshots `fareAtFlag`
-   because Booking.fare can still move (changed drop, added stop) and the flag
-   has to be reviewable against the number the rider actually saw.
-   Driver.suspendedAt + suspensionReason are separate from isActive, as specified,
-   and driverAssignment.js now filters `suspendedAt: null`.
-   THRESHOLD CHANGED 8 Aug: the message sent to Raju says 3 complaints -> fine
-   (not "more than 3"), 5 -> suspend. That also closes the strike-3 gap flagged
-   below. Nothing enforces either number yet — the fine amount is still his.
-   The rider gets a "Driver overcharged" button on a completed ride. Pressing
-   it FLAGS the driver.
-     - more than 3 flags  ->  the driver is FINED
-     - 5 flags            ->  the account is SUSPENDED, and ONLY AN ADMIN can
-                              lift the suspension
-   FINE AMOUNT STILL OPEN (Raju's number).
+11. STRUCTURED COMPLAINT -> FINE -> SUSPENSION
+   [DONE — 20 Aug 2026] RideComplaint is the live conduct-reporting path. It is
+   UNIQUE ON bookingId, so editing pills on the same ride never adds another
+   strike. Customers get structured pills with no text field on completed and
+   customer-cancelled rides with an assigned driver. Reasons cover extra money,
+   asked to cancel, dangerous driving, wrong car, driver/profile mismatch, rude
+   or inappropriate behaviour, and drop-off problems.
+   POST /api/bookings/:id/complaint validates the shared allowlist. Admin driver
+   review shows labels, total complaints, rolling 30-day driver cancellations,
+   benefit restriction and suspension. Three complaints create one idempotent
+   ₹200 wallet fine; five automatically suspend, and only an admin can reinstate.
+   Complaint counts currently have no decay or upheld/rejected moderation state;
+   those are the remaining abuse controls if false reporting becomes material.
+   Driver cancellation counts are separate: rolling 30 days, benefits restricted
+   at 3, suspension at 5.
+
    SUSPENDED DRIVERS (his spec, block 9's source file): cannot go online,
    cannot receive ride-now, cannot receive scheduled offers, and LOSE ALL
    PENDING SCHEDULED OFFERS — those bookings immediately restart assignment.
@@ -1774,31 +1791,11 @@ each numbered block unblocks the ones after it. Outstation is PARKED (see bottom
    His pending scheduled offers are withdrawn with the suspension as of the same
    day, and those bookings go back into the pool — see block 9 for why that needed
    a change to the escalation rule as well.
-   WHAT IS STILL MISSING is everything that would make this AUTOMATIC — the
-   rider's "Driver overcharged" button, the flag rows, the counting, and the fine.
-   Today a human decides and a human clicks.
    !! FINES LAND IN THE WALLET, and this is the elegant part: debit the fine
    from wallet credit; if the balance is short it goes NEGATIVE, and a
    negative balance blocks going online until it is cleared. No gateway, no
    collections, no chasing — and the coupon reimbursements he is owed pay it
    down automatically.
-   TRADE-OFFS PUT TO THE USER AND KNOWINGLY ACCEPTED — these are recorded so
-   they are not re-argued, and so the symptoms are recognisable if they show:
-     - RAW FLAGS, NOT UPHELD ONES. A free rider-side button where 5 presses
-       end a driver's income can be abused, and the honest false positive is
-       common: a rider charged the 35% cancellation fee genuinely believes he
-       was overcharged. Recommended and NOT adopted: admin review between flag
-       and strike, and deduping repeat flags from the same rider.
-     - NO DECAY WINDOW. 5 flags across two years counts the same as 5 in a
-       week. Recommended and not adopted: a rolling 90-day window.
-     - STRIKE 3 IS UNDEFINED by the rule as written ("more than 3" fines at 4,
-       suspension at 5).
-     - FLAG IS A BOOLEAN, not an amount. Capturing "asked for ₹200 extra"
-       would make an admin review take five seconds against the stored fare /
-       rideFare, and let a fine scale to the offence. Worth revisiting if
-       reviewing flags turns out to be slow.
-   If any of these turn into real problems in practice, THAT is the trigger to
-   revisit — not a hunch beforehand.
 
 12. CUSTOMER COUPONS + DRIVER RATINGS
    SCHEMA DONE AND MIGRATED 8 Aug 2026. NO CODE WRITES IT YET.
@@ -1925,7 +1922,7 @@ OUTSTATION — PARKED until the driver app exists. When it returns: per-day
    or the Booking/Trip/Waypoint split. Revisit when MAX_BOOKINGS_PER_VEHICLE
    moves off 2.
 
-OPEN QUESTIONS LOG (as of 14 Aug 2026)
+OPEN QUESTIONS LOG (updated 20 Aug 2026)
    For Raju: (a) 5% commission / ₹800 floor redistribution vs his ₹25-₹100
    sheet — confirm; (b) inter-terminal prices: toll/parking included?;
    (c) [REVISED Aug 2026 — the number is now x2.75, fitted to his own four Innova
@@ -1936,7 +1933,8 @@ OPEN QUESTIONS LOG (as of 14 Aug 2026)
    (d) outstation, whenever it comes back: Wagon R rate, the >250 km/day rate,
    calendar day vs 24h, and the plain/hills split;
    (e) NEW 8 Aug — ride acceptance deposit: what percentage of the fare?
-   (block 10); (f) NEW 8 Aug — overcharge fine: how much? (block 11);
+   (block 10); (f) ANSWERED 20 Aug — complaint fine is ₹200 at the third
+   unique booking complaint; five complaints suspend (block 11);
    For us: (h) NEW 8 Aug — is lifting a driver's suspension Raju-only, or any
    of the three admins? protectAdmin cannot tell them apart today (block 9).
    ANSWERED 8 Aug: (g) scheduled-ride admin hold is 15 min / 45 min, superseding
@@ -1946,7 +1944,8 @@ OPEN QUESTIONS LOG (as of 14 Aug 2026)
    ANSWERED 8 Aug: driver wallet — YES, the platform has one now (block 10,
    supersedes the blanket "no driver wallet" line in block 7). Ride acceptance
    deposit refunds to that wallet on completion. Overcharge flag thresholds:
-   >3 fine, 5 suspend, admin-only reinstate.
+   3 complaints fine, 5 suspend, admin-only reinstate. Driver cancellations use
+   their own rolling 30-day 3/5 benefit-restriction/suspension thresholds.
    ANSWERED 30 Jul: driver documents — his list, police verification dropped
    (block 6). Marketplace: yes, the posting driver is paid (block 7).
    ANSWERED 14 Aug: payment gateway is RAZORPAY (block 5), closing the

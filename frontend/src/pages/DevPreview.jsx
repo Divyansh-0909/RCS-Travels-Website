@@ -344,7 +344,7 @@ const DevPreview = () => {
                 )}
                 <BackgroundPanel className="z-3 sm:z-2 py-6 sm:overflow-hidden text-left flex flex-col sm:flex-row justify-center items-center sm:justify-center lg:justify-between sm:px-[9%] md:px-[5%] xl:px-[13%]">
                     {!isMobile && (
-                        <GoogleMap center={MOCK.pickupCoords} zoom={12} className={MAP_CLASSES} />
+                        <GoogleMap center={MOCK.pickupCoords} zoom={12} className={`${MAP_CLASSES} max-lg:hidden`} />
                     )}
                     <RideDetails
                         prop={{

@@ -1,4 +1,5 @@
 import { View } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import SwipeBack from './components/SwipeBack';
 import { Outlet, useLocation } from 'react-router-native';
@@ -32,7 +33,7 @@ const App = () => {
         (profile?.onboarding?.assignedRides ?? 0) > 0,
     );
 
-    // pt-34 is clearance for OnlineToggle's header, not for Home. An unapproved
+    // pt-24 is clearance for OnlineToggle's controls, not for Home. An unapproved
     // captain gets the status screen at "/" and no header above it, so the same
     // padding there would be an inch of white the screen never fills.
     const showsHomeHeader = pathname === '/' && (profile?.onboarding?.canDrive ?? false);
@@ -46,11 +47,15 @@ const App = () => {
 
     return (
         <AppBarVisibilityProvider>
+            {/* The signed-in shell is always light, including its map style. `auto`
+                follows the phone theme instead of the pixels under the bar, leaving
+                white icons on these surfaces when the device is in dark mode. */}
+            <StatusBar style="dark" animated />
             {/* Wraps the shell because its two halves sit at opposite ends of it:
                 the button is inside the header, the drawer has to cover the whole
                 screen and so cannot be the header's child. */}
             <RideMenuProvider>
-            <View className={`relative w-full h-full bg-[var(--foreground)] ${fullBleed ? 'pt-0' : showsHomeHeader ? 'pt-34' : 'pt-10'} flex flex-col justify-center items-center`}>
+            <View className={`relative w-full h-full bg-[var(--foreground)] ${fullBleed ? 'pt-0' : showsHomeHeader ? 'pt-24' : 'pt-10'} flex flex-col justify-center items-center`}>
                 <OnlineToggle />
                 <Animated.View
                     key={pathname}

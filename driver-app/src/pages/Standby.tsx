@@ -1,5 +1,7 @@
-import { useState } from 'react';
-import { Linking, Pressable, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Pressable, View } from 'react-native';
+import * as Location from 'expo-location';
+import { openDriverNavigation } from '../lib/navigation';
 import { cssInterop } from 'nativewind';
 import { useNavigate } from 'react-router-native';
 import { NavigationArrowIcon } from 'phosphor-react-native';
@@ -7,7 +9,7 @@ import AppText from '../components/AppText';
 import { BottomSheet } from '../components/ui/BottomSheet';
 import MapSlot from '../components/ui/MapSlot';
 import { INK_TEXT, MUTED } from '../components/ui/rideUi';
-import { clockParts, dayBucket, rupees, splitAddress } from '../constants/booking';
+import { clockParts, dayBucket, splitAddress } from '../constants/booking';
 import { useApi } from '../hooks/useApi';
 import { useDriver } from '../hooks/useDriver';
 import type { UpcomingBooking } from '../types/enums';
@@ -50,7 +52,43 @@ const Standby = ({ next, onChanged }: { next: UpcomingBooking | null; onChanged:
     const { refresh: refreshDriver } = useDriver();
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [liveFix, setLiveFix] = useState<Location.LocationObject | null>(null);
+    const [mapBottomInset, setMapBottomInset] = useState(PEEK + APPBAR_CLEARANCE);
     const navigate = useNavigate();
+
+    useEffect(() => {
+        let subscription: Location.LocationSubscription | null = null;
+        let stopped = false;
+        const locate = async () => {
+            const permission = await Location.getForegroundPermissionsAsync().catch(() => null);
+            if (!permission?.granted || stopped) return;
+
+            // Returning from another tab remounts Home, but a foreground watcher
+            // is not guaranteed to emit until Android produces its next fix. Use
+            // the service's recent cached position to centre the map immediately,
+            // then let the fresh fix and watcher replace it normally.
+            const cached = await Location.getLastKnownPositionAsync({
+                maxAge: 60_000,
+                requiredAccuracy: 200,
+            }).catch(() => null);
+            if (cached && !stopped) setLiveFix(cached);
+            if (stopped) return;
+
+            subscription = await Location.watchPositionAsync({
+                accuracy: Location.Accuracy.Balanced,
+                timeInterval: 10_000,
+                distanceInterval: 20,
+            }, (fix) => { if (!stopped) setLiveFix(fix); }).catch(() => null);
+            if (stopped) { subscription?.remove(); subscription = null; return; }
+
+            const current = await Location.getCurrentPositionAsync({
+                accuracy: Location.Accuracy.Balanced,
+            }).catch(() => null);
+            if (current && !stopped) setLiveFix(current);
+        };
+        void locate();
+        return () => { stopped = true; subscription?.remove(); };
+    }, []);
 
     const start = async () => {
         if (!next || busy) return;
@@ -61,9 +99,8 @@ const Standby = ({ next, onChanged }: { next: UpcomingBooking | null; onChanged:
             // Navigation opens either way. If the status write fails he is still
             // driving to a pickup, and holding the map hostage to a PATCH would
             // make a network blip look like a broken button.
-            Linking.openURL(
-                `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(next.pickupAddress)}&travelmode=driving`,
-            );
+            const opened = await openDriverNavigation(next.pickupAddress).catch(() => false);
+            if (!opened) return;
 
             const result = await api.setRideStatus(next.id, 'en_route', {});
             if (result?.error) {
@@ -81,9 +118,18 @@ const Standby = ({ next, onChanged }: { next: UpcomingBooking | null; onChanged:
 
     return (
         <View style={{ flex: 1, width: '100%' }}>
-            <MapSlot />
+            <MapSlot
+                pickup={next ? { latitude: next.pickupLat, longitude: next.pickupLng } : null}
+                drop={next ? { latitude: next.dropLat, longitude: next.dropLng } : null}
+                driver={liveFix ? { latitude: liveFix.coords.latitude, longitude: liveFix.coords.longitude } : null}
+                bottomSheetHeight={mapBottomInset}
+            />
 
-            <BottomSheet peek={PEEK} bottomInset={APPBAR_CLEARANCE}>
+            <BottomSheet
+                peek={PEEK}
+                bottomInset={APPBAR_CLEARANCE}
+                onHeightChange={setMapBottomInset}
+            >
                 <View className="px-5 pb-2 gap-3">
                     {next && place ? (
                         <>
@@ -138,11 +184,10 @@ const Standby = ({ next, onChanged }: { next: UpcomingBooking | null; onChanged:
                     ) : (
                         <View className="gap-0.5 py-2 flex flex-col justify-center items-center text-center">
                             <AppText className={`text-2xl font-semibold ${INK_TEXT}`}>
-                                You&apos;re online
+                                No ride scheduled
                             </AppText>
                             <AppText className={`text-sm text-center ${MUTED}`}>
-                                Waiting for rides. You&apos;ll get a card here and a notification
-                                the moment one comes in.
+                                Your next assigned ride shows up here.
                             </AppText>
                         </View>
                     )}

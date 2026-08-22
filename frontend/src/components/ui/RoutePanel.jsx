@@ -21,12 +21,12 @@ const Address = ({ title, subtitle, size }) => (
     </div>
 );
 
-const RoutePanel = ({ pickup, drop, className = "", size = "md", header, children }) => {
+const RoutePanel = ({ pickup, drop, className = "", size = "md", header, children, plain = false }) => {
     const from = splitAddress(pickup);
     const to = splitAddress(drop);
     const dotOffset = SIZES[size].dot;
     return (
-        <div className={`${className} w-full rounded-xl border border-[var(--foreground)]/30 bg-[var(--background-muted)] px-4 py-4 text-left`}>
+        <div className={`${className} w-full text-left ${plain ? "" : "rounded-xl border border-[var(--foreground)]/30 bg-[var(--background-muted)] px-4 py-4"}`}>
             {header && (
                 <>
                     <div className="w-full">{header}</div>
