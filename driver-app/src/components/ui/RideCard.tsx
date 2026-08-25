@@ -23,12 +23,21 @@ const RideCard = ({ booking, onPress }: Props) => {
     const leg = activeLeg(booking.status);
     const address = leg.endpoint === 'drop' ? booking.dropAddress : booking.pickupAddress;
     const { main, rest } = splitAddress(address);
+    const navigationDestination = leg.endpoint === 'drop'
+        ? { lat: booking.dropLat, lng: booking.dropLng }
+        : { lat: booking.pickupLat, lng: booking.pickupLng };
+    const navigationWaypoint = leg.endpoint === 'drop'
+        && booking.preferSafeRoute
+        && booking.safeWaypointLat != null
+        && booking.safeWaypointLng != null
+        ? { lat: booking.safeWaypointLat, lng: booking.safeWaypointLng }
+        : null;
 
-    // Handing the maps app an address rather than a coordinate pair: it is what the
-    // list endpoint already returns, and it is the string the captain would have
-    // typed anyway. Coordinates would be a second reason for /rides to widen.
+    // Use the exact pin the customer confirmed. A label can geocode to a different
+    // entrance or road; a safer booking also carries the same pass-through point
+    // that produced the route shown to the customer.
     const navigate = () => {
-        openDriverNavigation(address).catch(() => {});
+        openDriverNavigation(navigationDestination, navigationWaypoint).catch(() => {});
     };
 
     return (

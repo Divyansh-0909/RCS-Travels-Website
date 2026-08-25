@@ -1,18 +1,28 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View } from 'react-native';
+import { AppState, Image, Pressable, View } from 'react-native';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE, type MapStyleElement } from 'react-native-maps';
-import { CarIcon } from 'phosphor-react-native';
+import { CrosshairSimpleIcon } from 'phosphor-react-native';
+import { decodeGooglePolyline } from '../../lib/polyline';
 
 type Point = { latitude: number; longitude: number };
 type Props = {
     pickup?: Point | null;
     drop?: Point | null;
     driver?: Point | null;
+    carType?: string | null;
+    routePolyline?: string | null;
+    cameraMode?: 'follow-driver' | 'fit-route';
     bottomSheetHeight?: number;
 };
 
+const topView = require('../../../assets/top-view.webp');
+const topViewSedan = require('../../../assets/top-view-sedan.webp');
+
+
 const INITIAL_REGION_DELTA = 0.005;
 const ROUTE_EDGE_PADDING = { top: 64, right: 64, bottom: 64, left: 64 };
+const MAP_CONTROL_GAP = 16;
+const MAP_CONTROL_SIZE = 48;
 const GOOGLE_MAP_ID = process.env.EXPO_PUBLIC_GOOGLE_MAPS_MAP_ID?.trim() || undefined;
 const FALLBACK_POINT: Point = { latitude: 28.6315, longitude: 77.2167 };
 
@@ -83,19 +93,43 @@ const EndpointPin = ({ kind }: { kind: 'pickup' | 'drop' }) => {
     );
 };
 
-const DriverPin = () => (
-    <View style={{ width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: '#7A94FF', elevation: 6 }}>
-        <CarIcon size={23} weight="fill" color="#0B0B14" />
-    </View>
-);
+
+function DriverPin({ carType }: { carType: string | null }) {
+    return (
+        <View>
+            <Image
+                source={carType === 'sedan' ? topViewSedan : topView}
+                style={{ width: 60, height: 60 }}
+                resizeMode="contain"
+            />
+        </View>
+    );
+}
 
 /** Full-bleed active-ride map. Booking endpoints are facts, never draggable. */
-const MapSlot = ({ pickup, drop, driver, bottomSheetHeight = 0 }: Props) => {
+const MapSlot = ({
+    pickup,
+    drop,
+    driver,
+    carType,
+    routePolyline,
+    cameraMode = 'follow-driver',
+    bottomSheetHeight = 0,
+}: Props) => {
     const mapRef = useRef<MapView>(null);
     const mapReadyRef = useRef(false);
+    const followsDriverRef = useRef(cameraMode === 'follow-driver');
+    const cameraModeRef = useRef(cameraMode);
+    cameraModeRef.current = cameraMode;
+    const wasAwayRef = useRef(AppState.currentState !== 'active');
+    const resumeCenterPendingRef = useRef(false);
+    const resumeDriverKeyRef = useRef<string | null>(null);
+    const resumeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const fittedRouteKeyRef = useRef<string | null>(null);
     const visibleLatitudeDeltaRef = useRef(INITIAL_REGION_DELTA);
     const initialBottomSheetHeightRef = useRef(bottomSheetHeight);
     const [mapHeight, setMapHeight] = useState(0);
+    const [recenterPressed, setRecenterPressed] = useState(false);
     const pickupLatitude = pickup?.latitude;
     const pickupLongitude = pickup?.longitude;
     const dropLatitude = drop?.latitude;
@@ -114,29 +148,80 @@ const MapSlot = ({ pickup, drop, driver, bottomSheetHeight = 0 }: Props) => {
         () => validPoint(driverLatitude, driverLongitude),
         [driverLatitude, driverLongitude],
     );
+    const driverKey = driverPoint ? `${driverPoint.latitude}:${driverPoint.longitude}` : null;
+    const currentDriverKeyRef = useRef(driverKey);
+    currentDriverKeyRef.current = driverKey;
+    const endpointPoints = useMemo(
+        () => [pickupPoint, dropPoint].filter((point): point is Point => point !== null),
+        [pickupPoint, dropPoint],
+    );
+    const decodedRoute = useMemo(
+        () => decodeGooglePolyline(routePolyline),
+        [routePolyline],
+    );
+    const routePoints = useMemo(() => {
+        if (decodedRoute.length >= 2) return decodedRoute;
+        return endpointPoints;
+    }, [decodedRoute, endpointPoints]);
     const points = useMemo(() => {
-        const routePoints = [pickupPoint, dropPoint].filter((point): point is Point => point !== null);
-        return routePoints.length > 0 ? routePoints : [FALLBACK_POINT];
-    }, [pickupPoint, dropPoint]);
+        const framePoints = driverPoint ? [...routePoints, driverPoint] : routePoints;
+        return framePoints.length > 0 ? framePoints : [FALLBACK_POINT];
+    }, [driverPoint, routePoints]);
+    const routeFrameKey = `${pickupLatitude ?? ''}:${pickupLongitude ?? ''}:${dropLatitude ?? ''}:${dropLongitude ?? ''}:${routePolyline ?? ''}:driver-${Boolean(driverPoint)}`;
+
+    const centerOnDriver = useCallback((animated: boolean, resetZoom = false) => {
+        const map = mapRef.current;
+        if (!map || !mapReadyRef.current || !driverPoint || mapHeight <= 0) return false;
+
+        // The map continues under the sheet. Offset the native camera by half
+        // of that covered fraction so the car lands in the centre of the part
+        // the captain can actually see. Recenter restores the initial zoom;
+        // automatic GPS following preserves the captain's chosen zoom.
+        const coveredHeight = Math.min(Math.max(initialBottomSheetHeightRef.current, 0), mapHeight);
+        const latitudeDelta = resetZoom ? INITIAL_REGION_DELTA : visibleLatitudeDeltaRef.current;
+        const latitudeOffset = latitudeDelta * coveredHeight / (2 * mapHeight);
+        const camera = {
+            center: {
+                latitude: driverPoint.latitude - latitudeOffset,
+                longitude: driverPoint.longitude,
+            },
+        };
+
+        if (resetZoom) {
+            map.animateToRegion({
+                ...camera.center,
+                latitudeDelta: INITIAL_REGION_DELTA,
+                longitudeDelta: INITIAL_REGION_DELTA,
+            }, animated ? 250 : 0);
+        } else if (animated) map.animateCamera(camera, { duration: 250 });
+        else map.setCamera(camera);
+        return true;
+    }, [driverPoint, mapHeight]);
+
+    const centerOnDriverRef = useRef(centerOnDriver);
+    centerOnDriverRef.current = centerOnDriver;
+
     const fit = useCallback((animated: boolean) => {
         const map = mapRef.current;
         if (!map || !mapReadyRef.current || mapHeight <= 0) return;
+        if (cameraMode === 'fit-route') {
+            if (fittedRouteKeyRef.current !== routeFrameKey && points.length > 1) {
+                fittedRouteKeyRef.current = routeFrameKey;
+                map.fitToCoordinates(points, {
+                    edgePadding: {
+                        ...ROUTE_EDGE_PADDING,
+                        bottom: ROUTE_EDGE_PADDING.bottom + Math.max(initialBottomSheetHeightRef.current, 0),
+                    },
+                    animated,
+                });
+            }
+            return;
+        }
         if (driverPoint) {
-            // The native camera centres against the full MapView. Shift its
-            // target south by half the covered fraction so the driver renders
-            // at the vertical centre of the map area above the initial sheet.
-            // Use the CURRENT visible span: a GPS update must follow the driver
-            // without throwing away a zoom level the captain chose by pinching.
-            const coveredHeight = Math.min(Math.max(initialBottomSheetHeightRef.current, 0), mapHeight);
-            const latitudeOffset = visibleLatitudeDeltaRef.current * coveredHeight / (2 * mapHeight);
-            const camera = {
-                center: {
-                    latitude: driverPoint.latitude - latitudeOffset,
-                    longitude: driverPoint.longitude,
-                },
-            };
-            if (animated) map.animateCamera(camera, { duration: 250 });
-            else map.setCamera(camera);
+            // A deliberate pan suspends follow mode. Re-enabling it belongs to
+            // the recenter button, otherwise the next GPS tick would yank the
+            // map back while the captain is inspecting the road ahead.
+            if (followsDriverRef.current) centerOnDriver(animated);
             return;
         }
         if (points.length === 1) {
@@ -154,13 +239,76 @@ const MapSlot = ({ pickup, drop, driver, bottomSheetHeight = 0 }: Props) => {
             },
             animated,
         });
-    }, [driverPoint, mapHeight, points]);
+    }, [cameraMode, centerOnDriver, driverPoint, mapHeight, points, routeFrameKey]);
 
     useEffect(() => { fit(true); }, [fit]);
 
+    useEffect(() => {
+        const restoreCamera = () => {
+            centerOnDriverRef.current(false);
+        };
+
+        const subscription = AppState.addEventListener('change', (state) => {
+            if (state !== 'active') {
+                wasAwayRef.current = true;
+                if (resumeTimerRef.current) clearTimeout(resumeTimerRef.current);
+                resumeTimerRef.current = null;
+                return;
+            }
+
+            if (!wasAwayRef.current) return;
+            wasAwayRef.current = false;
+            resumeCenterPendingRef.current = true;
+            resumeDriverKeyRef.current = currentDriverKeyRef.current;
+            followsDriverRef.current = cameraModeRef.current === 'follow-driver';
+
+            // Restore against the first frame RCS owns again, using the fix we
+            // already had while Maps was in front. The short second pass covers
+            // Android devices that recreate the native GoogleMap surface a
+            // fraction after React receives the active event.
+            requestAnimationFrame(restoreCamera);
+            resumeTimerRef.current = setTimeout(() => {
+                resumeTimerRef.current = null;
+                restoreCamera();
+            }, 500);
+        });
+
+        return () => {
+            subscription.remove();
+            if (resumeTimerRef.current) clearTimeout(resumeTimerRef.current);
+            resumeTimerRef.current = null;
+        };
+    }, []);
+
+    useEffect(() => {
+        if (resumeCenterPendingRef.current && centerOnDriver(false)) {
+            // Keep the resume intent until native location hands us a position
+            // different from the one we had before Google Maps. That prevents a
+            // slow cached read from arriving after the settle timer and being
+            // ignored by fit-route mode.
+            if (driverKey !== resumeDriverKeyRef.current) {
+                resumeCenterPendingRef.current = false;
+            }
+        }
+    }, [centerOnDriver, driverKey]);
+
     const initialTarget = driverPoint ?? points[0];
 
+    const recenter = () => {
+        followsDriverRef.current = true;
+        centerOnDriver(true, true);
+    };
+
+    // The control stays above the measured sheet, where it remains available
+    // without covering the route or fighting the sheet's drag handle. Clamp it
+    // on short screens so it cannot be pushed behind the top app chrome.
+    const recenterBottom = Math.min(
+        Math.max(bottomSheetHeight, 0) + MAP_CONTROL_GAP,
+        Math.max(mapHeight - MAP_CONTROL_SIZE - 104, MAP_CONTROL_GAP),
+    );
+
     return (
+        <View style={{ position: 'absolute', inset: 0 }}>
         <MapView
             ref={mapRef}
             provider={PROVIDER_GOOGLE}
@@ -195,12 +343,23 @@ const MapSlot = ({ pickup, drop, driver, bottomSheetHeight = 0 }: Props) => {
                 // zoom/span currently visible on screen.
                 visibleLatitudeDeltaRef.current = region.latitudeDelta;
             }}
+            onPanDrag={() => {
+                followsDriverRef.current = false;
+            }}
             onMapReady={() => {
                 mapReadyRef.current = true;
+                if (resumeCenterPendingRef.current && centerOnDriver(false)) {
+                    return;
+                }
+
+                // A native GoogleMap surface may be recreated while React and
+                // this component stay mounted. Its old route key no longer says
+                // anything about the new camera, so allow the initial fit again.
+                fittedRouteKeyRef.current = null;
                 fit(false);
             }}
         >
-            {pickupPoint && dropPoint ? <Polyline coordinates={[pickupPoint, dropPoint]} strokeColor="#7A94FF" strokeWidth={4} /> : null}
+            {routePoints.length >= 2 ? <Polyline coordinates={routePoints} strokeColor="#7A94FF" strokeWidth={4} /> : null}
             {pickupPoint ? (
                 <Marker coordinate={pickupPoint} anchor={{ x: 0.5, y: 0.885 }} tracksViewChanges={false}>
                     <EndpointPin kind="pickup" />
@@ -212,11 +371,42 @@ const MapSlot = ({ pickup, drop, driver, bottomSheetHeight = 0 }: Props) => {
                 </Marker>
             ) : null}
             {driverPoint ? (
-                <Marker coordinate={driverPoint} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={false} zIndex={10}>
-                    <DriverPin />
+                // Keep view tracking enabled for this single live marker. On
+                // Android the WebP is decoded after the custom marker first
+                // mounts; disabling tracking freezes that first blank bitmap.
+                <Marker coordinate={driverPoint} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={true} zIndex={10}>
+                    <DriverPin carType={carType ?? null} />
                 </Marker>
             ) : null}
         </MapView>
+
+        {driverPoint ? (
+            <Pressable
+                role="button"
+                aria-label="Recenter map on your location"
+                accessibilityHint="Moves the map back to the captain vehicle"
+                hitSlop={4}
+                onPress={recenter}
+                onPressIn={() => setRecenterPressed(true)}
+                onPressOut={() => setRecenterPressed(false)}
+                style={{
+                    position: 'absolute',
+                    right: MAP_CONTROL_GAP,
+                    bottom: recenterBottom,
+                    width: MAP_CONTROL_SIZE,
+                    height: MAP_CONTROL_SIZE,
+                    borderRadius: MAP_CONTROL_SIZE / 2,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: '#ffffff',
+                    opacity: recenterPressed ? 0.75 : 1,
+                    elevation: 6,
+                }}
+            >
+                <CrosshairSimpleIcon size={24} weight="bold" color="#121220" />
+            </Pressable>
+        ) : null}
+        </View>
     );
 };
 

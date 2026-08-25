@@ -2,6 +2,7 @@ import Button from "../components/ui/Button";
 import GoogleMap, { MAP_LAND_COLOR } from "../components/ui/GoogleMap";
 import { MAP_CLASSES, CenterPin, showRouteView, clearRouteView, setNearbyVehiclePositions, clearNearbyVehicleMarkers } from "../components/ui/mapOverlays";
 import { useIsMobile } from "../hooks/useIsMobile";
+import { INITIAL_SHEET_SNAP } from "../hooks/useBottomSheet";
 import { useData } from "../hooks/useData";
 import { useApi } from "../hooks/useApi";
 import { useState, useEffect, useRef } from "react";
@@ -81,11 +82,9 @@ const LIVE_STATUSES = ["assigned", "en_route", "reached", "started"];
 // form, so it submits by id instead of by DOM position.
 const BOOK_FORM_ID = "vehicle-book-form";
 
-// Where the mobile sheet opens. Half, not collapsed: the fare cards are the
-// whole point of this step, and collapsed shows only the heading and the
-// distance chip. Named rather than inlined because the Book bar tracks the
-// sheet's stop and has to start out agreeing with it.
-const SHEET_INITIAL_SNAP = "half";
+// The Book bar tracks the sheet's stop and has to start out agreeing with the
+// shared full-content entry position.
+const SHEET_INITIAL_SNAP = INITIAL_SHEET_SNAP;
 
 // Dev fallbacks (seed anchors) for hand-typed addresses with no Places coords.
 const PICKUP_FALLBACK = { lat: 28.6315, lng: 77.2167 };
@@ -1211,7 +1210,7 @@ const VehicleSelect = () => {
                     )}
 
                     <div className={`relative z-10 sm:order-1 flex flex-col justify-end sm:justify-center items-center sm:items-start ${STACK} w-full sm:w-auto h-full sm:h-auto`}>
-                        <h2 className={`w-full text-center sm:text-left ${TITLE}`}>Finding a driver</h2>
+                        <h2 className={`w-full text-left ${TITLE}`}>Finding a driver</h2>
 
                         <div className={`flex flex-col items-center sm:items-start justify-center gap-4 ${COL}`}>
                             {/* progress reads as one status block: bar, then
@@ -1298,7 +1297,7 @@ const VehicleSelect = () => {
 
                     <div className={`relative z-10 sm:order-1 flex flex-col justify-end sm:justify-center items-center sm:items-start ${STACK} w-full sm:w-auto h-full sm:h-auto py-2 sm:py-0`}>
                         <div className={`flex flex-col justify-center items-center sm:items-start ${PAIR} ${COL}`}>
-                            <h2 className={`w-full text-center sm:text-left ${TITLE}`}>Confirm {confirmTarget}</h2>
+                            <h2 className={`w-full text-left ${TITLE}`}>Confirm {confirmTarget}</h2>
                             <h3 className={`hidden sm:block w-full text-center sm:text-left ${SUBTITLE}`}>{confirmTarget === "pickup" ? "Place the pin where you'll wait" : "Place the pin where you're headed"}</h3>
                         </div>
 
@@ -1361,8 +1360,8 @@ const VehicleSelect = () => {
                         choice. `duration` covers the exit spring, which takes
                         longer to settle than the 250ms wipe it replaces.
 
-                        Opens at half — see SHEET_INITIAL_SNAP, which the Book
-                        bar's collapsed form is keyed off as well.
+                        Opens at the shared full-content stop — see
+                        SHEET_INITIAL_SNAP, which the Book bar mirrors below.
 
                         Deliberately NOT applied to the confirmLocation panel
                         below-  its map is clipped to `bottom-[270px]` so the
@@ -1379,7 +1378,6 @@ const VehicleSelect = () => {
                         scroller. */}
                 <BackgroundPanel
                     sheet
-                    initialSnap={SHEET_INITIAL_SNAP}
                     duration={420}
                     bottomInset={pinBookBar ? bookBarHeight : 0}
                     // The sheet is sized to its content, and this screen's
@@ -1431,7 +1429,7 @@ const VehicleSelect = () => {
                             the title it hangs under. */}
                         <div className={`relative z-10 sm:order-1 flex flex-col justify-end sm:justify-center items-center sm:items-start gap-2 sm:gap-8 w-full sm:w-auto flex-1 min-h-0 sm:flex-initial sm:h-auto`}>
                             <div className={`flex flex-col justify-center items-center sm:items-start gap-3 sm:gap-2 ${COL}`}>
-                                <h2 className={`w-full text-center sm:text-left ${TITLE}`}>Choose a ride</h2>
+                                <h2 className={`w-full text-left ${TITLE}`}>Choose a ride</h2>
                                 {/* Route metrics land with the estimate, so the chip
                                     holds its place while that is in flight rather
                                     than popping in and pushing the cards down.

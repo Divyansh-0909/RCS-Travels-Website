@@ -1,7 +1,8 @@
 import { useRef, useState, type ReactNode } from 'react';
+import { LinearGradient } from 'expo-linear-gradient';
 import { PanResponder, View, type LayoutChangeEvent } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
-import { SURFACE } from './rideUi';
+import { PAGE, SURFACE } from './rideUi';
 
 /**
  * The panel on the map screens, as something he can push out of the way.
@@ -29,6 +30,10 @@ const SPRING = { damping: 22, stiffness: 220 } as const;
 
 /** A flick beats position: past this the direction of the throw decides. */
 const FLING = 0.5;
+
+// The dark ambient shadow lifts the sheet from the map. The inset is painted as
+// a separate neutral-grey gradient so it stays distinct on the light surface.
+const SHEET_DROP_SHADOW = '0px -10px 32px rgba(18,18,32,0.10)';
 
 export const BottomSheet = ({
     children,
@@ -115,16 +120,52 @@ export const BottomSheet = ({
                 signal, the padding is the target, and a 4px line is not something
                 to ask a driver to hit. */}
             <View
-                className='rounded-t-3xl'
-                style={[{ backgroundColor: SURFACE }]}
+                style={{
+                    borderTopLeftRadius: 24,
+                    borderTopRightRadius: 24,
+                    borderWidth: 1,
+                    borderColor: PAGE,
+                    backgroundColor: SURFACE,
+                    boxShadow: SHEET_DROP_SHADOW,
+                }}
             >
-                <View {...pan.panHandlers} className="w-full items-center pt-3 pb-2">
-                    <View className="w-10 h-1 rounded-full" style={{ backgroundColor: '#c9c9d2' }} />
-                </View>
+                <LinearGradient
+                    colors={[SURFACE, SURFACE, PAGE]}
+                    locations={[0, 0.4, 1]}
+                    start={{ x: 0.5, y: 0 }}
+                    end={{ x: 0.5, y: 1 }}
+                    style={{
+                        borderTopLeftRadius: 24,
+                        borderTopRightRadius: 24,
+                        overflow: 'hidden',
+                    }}
+                >
+                    <LinearGradient
+                        pointerEvents="none"
+                        colors={[
+                            'rgba(146,146,139,0.24)',
+                            'rgba(158,158,153,0.17)',
+                            'rgba(174,174,174,0.12)',
+                            'rgba(174,174,174,0)',
+                        ]}
+                        locations={[0, 0.2, 0.48, 0.75]}
+                        style={{
+                            position: 'absolute',
+                            left: 0,
+                            right: 0,
+                            top: 0,
+                            height: 8,
+                        }}
+                    />
 
-                <View style={{ paddingBottom: bottomInset }}>
-                    {children}
-                </View>
+                    <View {...pan.panHandlers} className="w-full items-center pt-3 pb-2">
+                        <View className="w-10 h-1 rounded-full" style={{ backgroundColor: '#c9c9d2' }} />
+                    </View>
+
+                    <View style={{ paddingBottom: bottomInset }}>
+                        {children}
+                    </View>
+                </LinearGradient>
             </View>
 
         </Animated.View>

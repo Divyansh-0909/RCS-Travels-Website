@@ -35,6 +35,11 @@ export const EXPANDED_TOP_GAP_PX = FLOATING_CHROME_PX + CHROME_BREATHING_PX;
 // to enumerate them read this instead.
 export const SNAP_NAMES = ["collapsed", "half", "expanded"];
 
+// Every customer-facing booking sheet opens at the content-fit stop. Lower
+// stops are destinations for an intentional drag, never the first view: the
+// rider must see the whole decision area before making more room for the map.
+export const INITIAL_SHEET_SNAP = "expanded";
+
 // ζ ≈ 0.9 — just inside underdamped, which in practice means the overshoot is
 // under a pixel and never actually shows. That is the intent: a sheet that
 // visibly bounces reads as a toy, and the weight comes from the velocity
@@ -194,7 +199,7 @@ export function resolveSnap(y, velocity, stops) {
  *                                         actually closes the sheet — this only reports it.
  * @param {(snap: typeof SNAP_NAMES[number]) => void} [options.onSnapChange] Fired on settle, not per frame.
  */
-export function useBottomSheet({ enabled, open = true, initialSnap = "collapsed", bottomInset = 0, contentKey, dismissible = false, onDismiss, onSnapChange }) {
+export function useBottomSheet({ enabled, open = true, initialSnap = INITIAL_SHEET_SNAP, bottomInset = 0, contentKey, dismissible = false, onDismiss, onSnapChange }) {
     const sheetRef = useRef(null);
     const grabberRef = useRef(null);
 

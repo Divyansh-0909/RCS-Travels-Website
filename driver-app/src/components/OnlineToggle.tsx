@@ -1,7 +1,7 @@
 import { cssInterop } from "nativewind";
 import { BellIcon } from "phosphor-react-native";
 import { useState } from "react";
-import { Pressable, View } from "react-native";
+import { ActivityIndicator, Pressable, View } from "react-native";
 import Animated, { useAnimatedStyle, withTiming } from "react-native-reanimated";
 import { useLocation, useNavigate } from "react-router-native";
 import AppText from "./AppText";
@@ -42,12 +42,12 @@ const OnlineToggle = () => {
     // from; two copies of "am I online" is exactly how the switch, the screen
     // and the GPS end up disagreeing.
     //
-    // Which is why the optimism now lives on the PROFILE rather than in a local
-    // `pending` beside it. A second copy here moved the knob instantly and left
-    // the screen behind it, waiting out the round trip — the switch looked
-    // instant and the app looked stuck.
+    // The second field is deliberately separate. isOnline is the captain's
+    // intent; dispatchReady is the server's evidence that a fresh fix exists.
     const online = profile?.isOnline ?? false;
+    const dispatchReady = profile?.dispatchReady ?? false;
     const [busy, setBusy] = useState(false);
+    const connecting = (online && !dispatchReady) || (busy && !online);
 
     // "/" is the application status until he is approved, and none of this header
     // belongs on it: the switch would 403, and offering to go online is the one
@@ -99,11 +99,6 @@ const OnlineToggle = () => {
             }
         }
 
-        // NOW, on the strength of the tap. This is what moves the knob, swaps the
-        // screen and starts or stops the GPS — all three read the same field, so
-        // all three move together and none of them waits on the network.
-        patchProfile({ isOnline: next })
-
         // The api layer RETURNS its failures rather than throwing them — a 409
         // "finish your active ride" arrives as { error }, not as an exception.
         // The try/catch that used to be here caught nothing and let every
@@ -112,16 +107,16 @@ const OnlineToggle = () => {
         const res = await api.setOnline(next)
 
         if (res?.error) {
-            // Put it back. The optimism above was a claim about what the server
-            // would say, and it said otherwise.
-            patchProfile({ isOnline: !next })
             setError(res.error)
+            return
         }
 
-        // NO REFRESH ON SUCCESS. /driver/online answers with the one field this
-        // changes, and it agrees with what was written above — so a whole /me
-        // would spend a second round trip confirming something already known.
-        // That request was the reason the screen lagged the switch.
+        // The switch records intent. A successful location POST separately
+        // moves dispatchReady to true and removes the Connecting pill.
+        patchProfile({ isOnline: next, dispatchReady: false })
+
+        // No full refresh is needed: /driver/online answered the intent, and the
+        // location POST will answer readiness independently.
     }
 
     if (hidden) return null;
@@ -162,8 +157,9 @@ const OnlineToggle = () => {
                     <Pressable
                         role="switch"
                         aria-checked={online}
+                        disabled={busy}
                         onPress={() => toggleOnline()}
-                        className="w-[50px] h-[22px] items-center justify-center"
+                        className={`w-[50px] h-[22px] items-center justify-center ${busy ? "opacity-60" : "opacity-100"}`}
                     >
                         <View className={`w-[50px] h-[14px] rounded-full ${online ? "bg-green-500" : "bg-gray-500"}`} />
                         <Animated.View
@@ -187,6 +183,15 @@ const OnlineToggle = () => {
                 </View>
                 )}
             </View>
+
+            {connecting && !error ? (
+                <View className="mt-2 self-end flex-row items-center gap-2 rounded-full bg-[var(--background-primary)] px-4 py-2 border border-[var(--background-muted)]">
+                    <ActivityIndicator size="small" color="#243AFB" />
+                    <AppText className="text-sm font-semibold text-[var(--foreground)]">
+                        Connecting to GPS…
+                    </AppText>
+                </View>
+            ) : null}
 
             {/* The refusal, in the captain's line of sight. Every failure here is
                 one he can act on — grant the permission, finish the ride he is

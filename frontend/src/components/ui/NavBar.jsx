@@ -12,11 +12,8 @@ import { useExitAnim } from '../../hooks/useExitAnim';
 import { scrollToSection, scrollToTop } from '../../hooks/useSmoothScroll';
 import { useLocation } from 'react-router-dom';
 import pfpPlaceholder from "../../assets/pfp-placeholder.webp"
-import FourSeaterSide from "../../assets/4-seater-bottom-left.webp"
-// Two car illustrations for four classes: the art is per seat count, so a sedan
-// shows the 4-seater and a premium SUV the 6-seater until per-class art exists.
-import SixSeaterSide from "../../assets/6-seater-bottom-left.webp"
-import { labelOf, seatsOf } from "../../constants/vehicles"
+import { angledVehicleImageOf } from "../../constants/vehicleImages"
+import { labelOf } from "../../constants/vehicles"
 import Skeleton from './Skeleton';
 import ErrorPanel from './ErrorPanel';
 
@@ -397,7 +394,11 @@ const NavBar = ({ invert = false, hideExpanded = false, className = "" }) => {
 
                         </div>
                         <div className='items-right'>
-                            <img className='w-30 -mr-2 ml-1 sm:ml-0 sm:mr-0 -my-2' src={seatsOf(vehicleClass) === 6 ? SixSeaterSide : FourSeaterSide} alt="car" />
+                            <img
+                                className='h-20 w-30 -mr-2 ml-1 -my-2 object-contain sm:ml-0 sm:mr-0'
+                                src={angledVehicleImageOf(vehicleClass)}
+                                alt={`${labelOf(vehicleClass)} vehicle`}
+                            />
                         </div>
                     </div>
                 </div>

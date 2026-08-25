@@ -12,6 +12,12 @@ export type UpcomingBooking = {
   pickupLng: number;
   dropLat: number;
   dropLng: number;
+  // The Google Routes path the customer confirmed. The active-ride map decodes
+  // this instead of drawing a misleading straight line between the endpoints.
+  routePolyline: string | null;
+  preferSafeRoute: boolean;
+  safeWaypointLat: number | null;
+  safeWaypointLng: number | null;
   // Null on a ride booked for right now, which is why every caller has an
   // "Immediate pickup" branch rather than a formatted date.
   scheduledAt: string | null;
@@ -68,6 +74,9 @@ export type DriverProfile = {
   verificationStatus: VerificationStatus;
   rejectionReason: string | null;
   isOnline: boolean;
+  // Server-derived: online intent plus a GPS heartbeat fresh enough for the
+  // dispatch query. False while the top status pill says Connecting to GPS.
+  dispatchReady: boolean;
 
   // THE CAR HE IS DRIVING RIGHT NOW, not the only one he owns. A captain may
   // keep a hatchback and an Innova and switch between them on /account/vehicles;

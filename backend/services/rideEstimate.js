@@ -191,10 +191,11 @@ async function checkAndIncrementRoutesUsage() {
   })
 }
 
-// A rider polls status every five seconds, but a minute-granularity ETA gains
-// nothing from twelve paid route calculations a minute. Keep one traffic-aware
-// answer per ride leg for sixty seconds. The promise itself is cached so the
-// authenticated and shared views cannot race into duplicate requests.
+// A rider polls status every five seconds, but a minute-granularity navigation
+// route gains nothing from twelve paid calculations a minute. Keep one
+// traffic-aware answer per ride leg for sixty seconds. The promise itself is
+// cached so the authenticated and shared views cannot race into duplicate
+// requests.
 const LIVE_ETA_TTL_MS = 60_000
 const liveEtaCache = new Map()
 
@@ -204,11 +205,11 @@ const routeSeconds = (duration) => {
 }
 
 /**
- * Real driving ETA over Google's road network with current traffic.
- * Returns null when Routes cannot answer; callers must not replace it with a
- * straight-line speed guess, because that would make the label dishonest again.
+ * Real driving route over Google's road network with current traffic. The same
+ * response supplies both the ETA and the path the rider's live marker follows,
+ * so road-aware animation does not add another paid request.
  */
-export async function getNavigationEtaMinutes({ cacheKey, origin, destination }) {
+export async function getNavigationRoute({ cacheKey, origin, destination }) {
   if (!cacheKey || origin?.lat == null || origin?.lng == null || destination?.lat == null || destination?.lng == null)
     return null
 
@@ -223,30 +224,50 @@ export async function getNavigationEtaMinutes({ cacheKey, origin, destination })
       headers: {
         'Content-Type': 'application/json',
         'X-Goog-Api-Key': process.env.GOOGLE_MAPS_API_KEY,
-        'X-Goog-FieldMask': 'routes.duration',
+        'X-Goog-FieldMask': 'routes.duration,routes.polyline.encodedPolyline',
       },
       body: JSON.stringify({
         origin: toWaypoint(null, origin),
         destination: toWaypoint(null, destination),
         travelMode: 'DRIVE',
         routingPreference: 'TRAFFIC_AWARE_OPTIMAL',
+        // Overview paths can bridge bends with long chords. The live puck needs
+        // the road geometry between fixes, so ask for the detailed path.
+        polylineQuality: 'HIGH_QUALITY',
       }),
     })
     if (!response.ok) throw new Error(`GOOGLE_ROUTES_${response.status}`)
     const data = await response.json()
-    const seconds = routeSeconds(data.routes?.[0]?.duration)
-    return seconds == null ? null : Math.max(1, Math.ceil(seconds / 60))
+    const route = data.routes?.[0]
+    const seconds = routeSeconds(route?.duration)
+    const polyline = typeof route?.polyline?.encodedPolyline === 'string'
+      ? route.polyline.encodedPolyline
+      : null
+    if (seconds == null && !polyline) return null
+    return {
+      minutes: seconds == null ? null : Math.max(1, Math.ceil(seconds / 60)),
+      polyline,
+    }
   })()
 
   liveEtaCache.set(cacheKey, { value, expiresAt: now + LIVE_ETA_TTL_MS })
   try {
-    const minutes = await value
-    liveEtaCache.set(cacheKey, { value: minutes, expiresAt: now + LIVE_ETA_TTL_MS })
-    return minutes
+    const route = await value
+    liveEtaCache.set(cacheKey, { value: route, expiresAt: now + LIVE_ETA_TTL_MS })
+    return route
   } catch (error) {
     liveEtaCache.delete(cacheKey)
     throw error
   }
+}
+
+/**
+ * ETA-only compatibility wrapper for callers such as nearby-driver previews.
+ * A failed route stays null; never substitute a straight-line speed estimate.
+ */
+export async function getNavigationEtaMinutes(args) {
+  const route = await getNavigationRoute(args)
+  return route?.minutes ?? null
 }
 
 // Pin-adjusted coords are more precise than the typed address, so prefer them.

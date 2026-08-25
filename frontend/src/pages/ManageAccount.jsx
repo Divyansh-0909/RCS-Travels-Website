@@ -15,10 +15,9 @@ import EmptyState from "../components/ui/EmptyState";
 import FailureState from "../components/ui/FailureState";
 import RideHistorySkeleton from "../components/RideHistorySkeleton";
 import { useRefreshNotice } from "../hooks/useRefreshNotice";
-import FourSeaterCar from "../assets/4-seater-bottom-left.webp"
-import SixSeaterCar from "../assets/6-seater-bottom-left.webp"
 import { vehicleLabel, statusChip, splitAddress, displayPhone, formatDateTime, CopyBtn } from "../components/ui/bookingDisplay";
-import { VEHICLE_CLASS_NAMES, seatsOf } from "../constants/vehicles";
+import { VEHICLE_CLASS_NAMES } from "../constants/vehicles";
+import { angledVehicleImageOf } from "../constants/vehicleImages";
 import Chips, { filterLabel, filterField } from "../components/ui/Chips";
 import { COMPLAINT_OPTIONS } from "../constants/complaints";
 
@@ -763,7 +762,11 @@ const ManageAccount = () => {
                                     <div className="flex justify-between items-start gap-4 w-full">
                                         {/* Route: pickup → drop, with the car on its left on sm+ */}
                                         <div className="flex items-center gap-4 min-w-0">
-                                            <img src={seatsOf(booking.vehicleClass) === 6 ? SixSeaterCar : FourSeaterCar} className={`hidden sm:block w-44 -ml-4 shrink-0 ${booking.status === "cancelled" ? "grayscale" : ""}`} alt="car-image" />
+                                            <img
+                                                src={angledVehicleImageOf(booking.vehicleClass)}
+                                                className={`hidden h-28 w-44 -ml-4 shrink-0 object-contain sm:block ${booking.status === "cancelled" ? "grayscale" : ""}`}
+                                                alt={`${vehicleLabel(booking.vehicleClass)} vehicle`}
+                                            />
                                             <div className="flex flex-col gap-3 min-w-0">
                                                 <div className="flex items-center gap-3">
                                                     <div className="w-3 h-3 rounded-full bg-[var(--background-primary)] shrink-0"></div>

@@ -1,5 +1,9 @@
 import { mdiCar } from "@mdi/js";
 import { haversineKm } from "../../lib/trip";
+import { headingBetween, pointAlongPreparedPath, preparePathMotion, roadPathBetween } from "../../lib/routeMotion";
+import { labelOf } from "../../constants/vehicles";
+import topViewVehicle from "../../assets/top-view.webp";
+import topViewSedan from "../../assets/top-view-sedan.webp";
 
 // Shared map furniture for every screen that draws a ride on the singleton
 // map (VehicleSelect, TrackingPage). Overlay handles are module-level for the
@@ -11,8 +15,8 @@ import { haversineKm } from "../../lib/trip";
 export const MAP_CLASSES = "absolute inset-0 z-0 sm:rounded-lg sm:relative sm:inset-auto sm:z-auto sm:order-2 sm:shrink-0 sm:w-[350px] sm:h-[380px] lg:w-[500px] lg:h-[550px] xl:w-[660px] xl:h-[570px]";
 
 // Same language on every map: white pin = pickup, primary donut pin = drop,
-// primary-light car = driver. SVG because Google map markers can't use CSS;
-// the transparent padding also gives endpoint pins a comfortable tap target.
+// top-view car = driver. Endpoint SVG padding gives each pin room for its
+// shadow; the live car uses the existing raster artwork below.
 const MARKER_SHADOW = `<filter id="ms" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="2" stdDeviation="2.5" flood-color="#000000" flood-opacity="0.6"/></filter>`;
 // Match CenterPin's visible 16px circle and 20px stem. The larger SVG canvas
 // is only transparent breathing room for the shadow; it does not enlarge it.
@@ -25,6 +29,75 @@ const PICKUP_MARKER_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="${ENDP
 const DROP_MARKER_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="${ENDPOINT_ICON_WIDTH}" height="${ENDPOINT_ICON_HEIGHT}">${MARKER_SHADOW}<g filter="url(#ms)"><path d="M${ENDPOINT_X} ${ENDPOINT_CIRCLE_Y}V${ENDPOINT_TIP_Y}" stroke="#243AFB" stroke-width="2" stroke-linecap="round"/><circle cx="${ENDPOINT_X}" cy="${ENDPOINT_CIRCLE_Y}" r="8" fill="#243AFB"/><circle cx="${ENDPOINT_X}" cy="${ENDPOINT_CIRCLE_Y}" r="3" fill="#0B0B14"/></g></svg>`;
 // mdiCar is a 24x24 path; 0.72 scale centres it in the 22px puck.
 const DRIVER_MARKER_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="44" height="44">${MARKER_SHADOW}<g filter="url(#ms)"><circle cx="22" cy="22" r="13" fill="#7A94FF"/><path d="${mdiCar}" fill="#0B0B14" transform="translate(13.4,13.4) scale(0.72)"/></g></svg>`;
+
+const LIVE_DRIVER_MARKER_SIZE = 72;
+const LIVE_VEHICLE_CLASSES = new Set(["hatchback", "sedan", "suv", "suv_premium"]);
+// These are the same top-view assets already used by the captain map. Sedan has
+// its own art; every other current class uses the established larger-car image.
+const LIVE_VEHICLE_IMAGE = {
+    sedan: { src: topViewSedan, width: 60, height: 28 },
+    default: { src: topViewVehicle, width: 60, height: 33 },
+};
+const loadedVehicleImages = new Map();
+const rotatedVehicleIcons = new Map();
+
+const normaliseVehicleClass = (vehicleClass) =>
+    LIVE_VEHICLE_CLASSES.has(vehicleClass) ? vehicleClass : "hatchback";
+
+const normaliseHeading = (heading, fallback = 0) => {
+    const number = Number(heading);
+    return Number.isFinite(number) ? (number % 360 + 360) % 360 : fallback;
+};
+
+const vehicleImageFor = (vehicleClass) =>
+    normaliseVehicleClass(vehicleClass) === "sedan" ? LIVE_VEHICLE_IMAGE.sedan : LIVE_VEHICLE_IMAGE.default;
+
+const loadVehicleImage = (src) => {
+    if (!loadedVehicleImages.has(src)) {
+        loadedVehicleImages.set(src, new Promise((resolve, reject) => {
+            const image = new Image();
+            image.onload = () => resolve(image);
+            image.onerror = reject;
+            image.src = src;
+        }));
+    }
+    return loadedVehicleImages.get(src);
+};
+
+// The source artwork faces west. Rotating it by bearing + 90 degrees makes its
+// nose use map compass bearings (0 north, 90 east). Three-degree buckets avoid
+// generating a new PNG on every animation frame while remaining visually smooth.
+const rotatedVehicleIconUrl = (vehicleClass, heading) => {
+    const nextClass = normaliseVehicleClass(vehicleClass);
+    const imageSpec = vehicleImageFor(nextClass);
+    const headingBucket = Math.round(normaliseHeading(heading) / 3) * 3 % 360;
+    const key = `${imageSpec.src}:${headingBucket}`;
+    if (!rotatedVehicleIcons.has(key)) {
+        rotatedVehicleIcons.set(key, loadVehicleImage(imageSpec.src).then((image) => {
+            const canvas = document.createElement("canvas");
+            canvas.width = LIVE_DRIVER_MARKER_SIZE;
+            canvas.height = LIVE_DRIVER_MARKER_SIZE;
+            const context = canvas.getContext("2d");
+            if (!context) throw new Error("Canvas unavailable");
+
+            context.translate(LIVE_DRIVER_MARKER_SIZE / 2, LIVE_DRIVER_MARKER_SIZE / 2);
+            context.rotate((headingBucket + 90) * Math.PI / 180);
+            context.shadowColor = "rgba(0, 0, 0, 0.55)";
+            context.shadowBlur = 4;
+            context.shadowOffsetY = 2;
+            context.drawImage(image, -imageSpec.width / 2, -imageSpec.height / 2,
+                imageSpec.width, imageSpec.height);
+            return canvas.toDataURL("image/png");
+        }));
+    }
+    return rotatedVehicleIcons.get(key);
+};
+
+const imageIcon = (g, url, width, height) => ({
+    url,
+    scaledSize: new g.Size(width, height),
+    anchor: new g.Point(width / 2, height / 2),
+});
 
 const svgIcon = (g, svg, size) => ({
     url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
@@ -122,6 +195,13 @@ let driverAnim = null;
 // When the previous position landed, in performance.now() terms. The gap
 // between two updates is what the next glide is timed against.
 let lastDriverUpdate = 0;
+// The route returned with the previous poll starts at that poll's fix, which is
+// exactly the road geometry needed to reach the next one. Keep it alongside the
+// new route and choose whichever matches both displayed positions best.
+let lastNavigationPolyline = null;
+let lastDriverVehicleClass = null;
+let lastDriverHeading = null;
+let driverAppearanceVersion = 0;
 
 // A GLIDE, NOT A JUMP, and it is the whole reason this file has an animation in
 // it. The car reports every few seconds and the rider polls every five, so
@@ -158,8 +238,36 @@ function cancelDriverAnim() {
 // pull away from it, which is what a car does at a junction and not what one
 // does mid-road — and since each fix is only a sample of a continuous drive,
 // constant velocity between two of them is the honest reading of the gap.
-function glideDriverTo(from, to, duration) {
+function updateDriverAppearance(g, vehicleClass, heading, force = false) {
+    if (!driverMarker) return;
+    const nextClass = normaliseVehicleClass(vehicleClass);
+    const nextHeading = normaliseHeading(heading, lastDriverHeading ?? 0);
+    const headingDelta = lastDriverHeading == null
+        ? Infinity
+        : Math.abs(((nextHeading - lastDriverHeading + 540) % 360) - 180);
+    if (!force && nextClass === lastDriverVehicleClass && headingDelta < 2) return;
+
+    if (nextClass !== lastDriverVehicleClass) driverMarker.setTitle(`Driver location · ${labelOf(nextClass)}`);
+    lastDriverVehicleClass = nextClass;
+    lastDriverHeading = nextHeading;
+    const version = ++driverAppearanceVersion;
+    void rotatedVehicleIconUrl(nextClass, nextHeading)
+        .then((url) => {
+            // Image decoding and canvas work are asynchronous. A car can round
+            // another bend before an earlier rotation finishes, so only the
+            // newest requested heading is allowed to reach the marker.
+            if (driverMarker && version === driverAppearanceVersion)
+                driverMarker.setIcon(imageIcon(g, url, LIVE_DRIVER_MARKER_SIZE, LIVE_DRIVER_MARKER_SIZE));
+        })
+        .catch(() => {
+            // Keep the unrotated established asset already on the marker. A
+            // missing image must not interrupt position animation.
+        });
+}
+
+function glideDriverTo(g, from, to, duration, vehicleClass, reportedBearing) {
     const start = performance.now();
+    updateDriverAppearance(g, vehicleClass, headingBetween(from, to) ?? reportedBearing);
     const step = (now) => {
         const t = Math.min((now - start) / duration, 1);
         driverMarker.setPosition({
@@ -171,21 +279,70 @@ function glideDriverTo(from, to, duration) {
     driverAnim = requestAnimationFrame(step);
 }
 
-export function setDriverPosition(map, coords) {
+function decodeNavigationPath(g, encoded) {
+    if (!encoded || !g.geometry?.encoding) return null;
+    try {
+        return g.geometry.encoding.decodePath(encoded);
+    } catch {
+        return null;
+    }
+}
+
+function roadMotionFor(g, encodedPolylines, from, to) {
+    let best = null;
+    for (const encoded of new Set(encodedPolylines.filter(Boolean))) {
+        const decoded = decodeNavigationPath(g, encoded);
+        if (!decoded) continue;
+        const candidate = roadPathBetween(decoded, from, to);
+        if (candidate && (!best || candidate.routeOffsetKm < best.routeOffsetKm)) best = candidate;
+    }
+    return best ? preparePathMotion(best.points) : null;
+}
+
+function glideDriverAlong(g, motion, duration, vehicleClass, reportedBearing) {
+    const start = performance.now();
+    // Land on the road before setting off. Usually this is sub-metre because the
+    // previous frame already ended on the same route; on the first routed update
+    // it removes ordinary GPS drift instead of drawing that drift across a block.
+    driverMarker.setPosition(motion.points[0]);
+    let previousPoint = motion.points[0];
+    updateDriverAppearance(g, vehicleClass,
+        headingBetween(motion.points[0], motion.points[1]) ?? reportedBearing);
+    const step = (now) => {
+        const t = Math.min((now - start) / duration, 1);
+        const nextPoint = pointAlongPreparedPath(motion, t);
+        updateDriverAppearance(g, vehicleClass, headingBetween(previousPoint, nextPoint) ?? reportedBearing);
+        driverMarker.setPosition(nextPoint);
+        previousPoint = nextPoint;
+        driverAnim = t < 1 ? requestAnimationFrame(step) : null;
+    };
+    driverAnim = requestAnimationFrame(step);
+}
+
+export function setDriverPosition(map, coords, { navigationPolyline = null, vehicleClass = null, bearing = null } = {}) {
     if (!coords) return;
     const g = window.google.maps;
     const now = performance.now();
 
     if (!driverMarker) {
+        const initialClass = normaliseVehicleClass(vehicleClass);
+        const initialHeading = normaliseHeading(bearing);
+        const initialImage = vehicleImageFor(initialClass);
         driverMarker = new g.Marker({
             map, position: coords, zIndex: 10,
-            icon: svgIcon(g, DRIVER_MARKER_SVG, 44),
+            icon: imageIcon(g, initialImage.src, initialImage.width, initialImage.height),
+            title: `Driver location · ${labelOf(initialClass)}`,
         });
+        lastDriverVehicleClass = null;
+        lastDriverHeading = null;
+        updateDriverAppearance(g, initialClass, initialHeading, true);
         lastDriverUpdate = now;
+        lastNavigationPolyline = navigationPolyline;
         return;
     }
 
     driverMarker.setMap(map);
+    updateDriverAppearance(g, vehicleClass, bearing);
 
     // From wherever the puck actually IS, not from the last position we were
     // given. A fix arriving mid-glide leaves the marker part-way between two
@@ -197,13 +354,18 @@ export function setDriverPosition(map, coords) {
 
     const gap = now - lastDriverUpdate;
     lastDriverUpdate = now;
+    const routeCandidates = [lastNavigationPolyline, navigationPolyline];
+    lastNavigationPolyline = navigationPolyline;
 
     if (haversineKm(from, coords) > SNAP_OVER_KM) {
         driverMarker.setPosition(coords);
         return;
     }
 
-    glideDriverTo(from, coords, Math.min(Math.max(gap, GLIDE_MIN_MS), GLIDE_MAX_MS));
+    const duration = Math.min(Math.max(gap, GLIDE_MIN_MS), GLIDE_MAX_MS);
+    const roadMotion = roadMotionFor(g, routeCandidates, from, coords);
+    if (roadMotion) glideDriverAlong(g, roadMotion, duration, vehicleClass, bearing);
+    else glideDriverTo(g, from, coords, duration, vehicleClass, bearing);
 }
 
 export function clearDriverMarker() {
@@ -213,4 +375,8 @@ export function clearDriverMarker() {
     driverMarker?.setMap(null);
     driverMarker = null;
     lastDriverUpdate = 0;
+    lastNavigationPolyline = null;
+    lastDriverVehicleClass = null;
+    lastDriverHeading = null;
+    driverAppearanceVersion += 1;
 }

@@ -9,7 +9,7 @@ import { VEHICLE_CLASS_NAMES, isVehicleClass, seatsOf } from '../constants/vehic
 import { normalizeReference } from '../lib/bookingReference.js'
 import { signedRiderPhotoUrl } from '../services/driverPhoto.js'
 import { newShareToken, shareIsLive, shareUrlFor, SHARE_TTL_MS } from '../lib/shareLink.js'
-import { getNavigationEtaMinutes } from '../services/rideEstimate.js'
+import { getNavigationEtaMinutes, getNavigationRoute } from '../services/rideEstimate.js'
 import { applyComplaintConsequences } from '../services/complaints.js'
 import { createOrderForPayment, refundPayment, PaymentError } from '../services/payments.js'
 import { createScheduledFinalIntent } from '../services/scheduledPayments.js'
@@ -347,13 +347,16 @@ bookingsRouter.get('/:id/status', protect, async (req, res) => {
       ? { leg: 'drop', lat: booking.dropLat, lng: booking.dropLng }
       : null
   let navigationEtaMinutes = null
+  let navigationPolyline = null
   if (location && etaTarget) {
     try {
-      navigationEtaMinutes = await getNavigationEtaMinutes({
+      const navigationRoute = await getNavigationRoute({
         cacheKey: `${booking.id}:${etaTarget.leg}`,
         origin: { lat: location.latitude, lng: location.longitude },
         destination: etaTarget,
       })
+      navigationEtaMinutes = navigationRoute?.minutes ?? null
+      navigationPolyline = navigationRoute?.polyline ?? null
     } catch (error) {
       // Location and status are still useful when Routes is unavailable or the
       // monthly guard is reached. Null tells the UI to show an honest dash.
@@ -370,12 +373,17 @@ bookingsRouter.get('/:id/status', protect, async (req, res) => {
     cancellationCharge,
     financials: paymentSummary,
     navigationEtaMinutes,
+    navigationPolyline,
     fare: booking.fare,
     coupon: booking.couponAmount,
     customerPayment: booking.customerPayment,
     driver: {
       name:          booking.driver.name,
       phone:         booking.driver.phone,
+      // Marker art describes the car the captain is actually driving now. Do
+      // not use booking.vehicleClass here: that is the class the rider ordered,
+      // and can differ from the captain's current vehicle record.
+      vehicleClass:  booking.driver.vehicleClass,
       // THE CAR SNAPSHOTTED ON THIS BOOKING, not the one on the driver row.
       // A captain may own several cars and switch between them, so reading it
       // through the relation makes every past ride show whichever car he is in

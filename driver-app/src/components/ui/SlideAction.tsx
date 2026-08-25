@@ -37,10 +37,10 @@ const PAD = 6;
 // writes its own out: this is a style object on an Animated.View, and NativeWind
 // classes do not reach one. The fill beside it uses the class.
 //
-// KNOB ON PRIMARY, TRACK ON PRIMARY-LIGHT, and the pairing is the point — the
-// knob has to stay findable against the fill it is dragging across. A white knob
-// vanished into the pale track before it moved, and a knob the same blue as the
-// fill would vanish into it after.
+// The active knob stays lighter than the track so it remains findable while it
+// moves. Once disabled, the knob is no longer an affordance, so it blends into
+// the track instead of leaving a mismatched patch of lighter padding.
+const TRACK_FILL = '#243AFB';
 const KNOB_FILL = '#7A94FF';
 /** How far across counts as meaning it. Below this it springs back. */
 const CONFIRM_AT = 0.72;
@@ -122,7 +122,7 @@ export const SlideAction = ({
         <View
             onLayout={(e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width)}
             className={`w-full rounded-full overflow-hidden ${disabled ? 'opacity-50' : ''}`}
-            style={{ height: KNOB + PAD * 2, backgroundColor: '#243AFB', justifyContent: 'center' }}
+            style={{ height: KNOB + PAD * 2, backgroundColor: TRACK_FILL, justifyContent: 'center' }}
         >
             <Animated.View
                 pointerEvents="none"
@@ -144,7 +144,7 @@ export const SlideAction = ({
                         height: KNOB,
                         marginLeft: PAD,
                         borderRadius: 999,
-                        backgroundColor: KNOB_FILL,
+                        backgroundColor: disabled ? TRACK_FILL : KNOB_FILL,
                         alignItems: 'center',
                         justifyContent: 'center',
                     },

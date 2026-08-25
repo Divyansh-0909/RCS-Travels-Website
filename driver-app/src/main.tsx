@@ -8,6 +8,7 @@ import '../global.css';
 import './lib/locationTask';
 
 import { ClerkProvider , useAuth } from '@clerk/clerk-expo';
+import { resourceCache } from '@clerk/clerk-expo/resource-cache';
 import { tokenCache } from '@clerk/clerk-expo/token-cache';
 import { useFonts } from 'expo-font';
 import { NativeRouter, Route, Routes, Navigate } from 'react-router-native';
@@ -15,6 +16,7 @@ import App from './App';
 import AuthLayout from './AuthLayout';
 import ErrorBoundary from './components/ErrorBoundary';
 import DeepLinkNavigator from './components/DeepLinkNavigator';
+import { PermissionPromptProvider } from './components/ui/PermissionPrompt';
 import HomeGate from './components/HomeGate';
 import VerifiedRoute, { AssignedWorkRoute } from './components/VerifiedRoute';
 import { DriverProvider } from './hooks/useDriver';
@@ -46,8 +48,14 @@ const AppRoutes = () => {
     }
 
     return (
-        <NativeRouter>
+        <NativeRouter
+            future={{
+                v7_startTransition: true,
+                v7_relativeSplatPath: true,
+            }}
+        >
             <DeepLinkNavigator isSignedIn={isSignedIn} />
+            <PermissionPromptProvider>
             <DriverProvider>
             {/* Inside DriverProvider, not beside it: the offer list is gated on
                 onboarding.canDrive (GET /offers is behind requireApprovedDriver)
@@ -99,6 +107,7 @@ const AppRoutes = () => {
             </Routes>
             </OfferProvider>
             </DriverProvider>
+            </PermissionPromptProvider>
         </NativeRouter>
     )
 }
@@ -119,7 +128,11 @@ const Main = () => {
         // type in — a fallback rendering in the system font would be the second thing
         // visibly wrong on a screen already reporting the first.
         <ErrorBoundary>
-            <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
+            <ClerkProvider
+                publishableKey={publishableKey}
+                tokenCache={tokenCache}
+                __experimental_resourceCache={resourceCache}
+            >
                 <AppRoutes />
             </ClerkProvider>
         </ErrorBoundary>

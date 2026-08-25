@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 import { useIsMobile } from "../../hooks/useIsMobile"
-import { useBottomSheet } from "../../hooks/useBottomSheet"
+import { INITIAL_SHEET_SNAP, useBottomSheet } from "../../hooks/useBottomSheet"
 
 // Enter animation when `show` turns true; on false, plays the exit and stays
 // mounted until it finishes. `duration` must match the exit animation's length.
@@ -11,7 +11,7 @@ import { useBottomSheet } from "../../hooks/useBottomSheet"
 // Without it nothing about the panel changes; with it, nothing changes from sm
 // up either — the hook is inert unless useIsMobile() is true, so the desktop
 // side panel keeps its layout, animation and scrolling exactly as before.
-const BackgroundPanel = ({ show = true, duration = 250, className, children, sheet = false, initialSnap = "collapsed", bottomInset = 0, contentKey, dismissible = false, onDismiss, onSnapChange }) => {
+const BackgroundPanel = ({ show = true, duration = 250, className, children, sheet = false, bottomInset = 0, contentKey, dismissible = false, onDismiss, onSnapChange }) => {
     const [mounted, setMounted] = useState(show)
     const [closing, setClosing] = useState(false)
     const isMobile = useIsMobile()
@@ -20,7 +20,10 @@ const BackgroundPanel = ({ show = true, duration = 250, className, children, she
     const { sheetRef, grabberRef } = useBottomSheet({
         enabled: isSheet && mounted,
         open: show,
-        initialSnap,
+        // Product invariant: a booking sheet's first resting position shows its
+        // full decision area. Half/collapsed remain available after a drag, but
+        // callers cannot accidentally hide content on entry.
+        initialSnap: INITIAL_SHEET_SNAP,
         // Px of pinned chrome below the sheet — the vehicle screen's Book bar.
         bottomInset,
         // Re-measure trigger for sheets whose height follows their content — the

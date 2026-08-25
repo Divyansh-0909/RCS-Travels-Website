@@ -3,6 +3,7 @@ import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { useNavigate } from 'react-router-native';
 import { useApi } from './useApi';
+import { usePermissionPrompt } from '../components/ui/PermissionPrompt';
 
 // Only consulted while the app is FOREGROUNDED — a backgrounded phone shows the
 // notification the ordinary way, which is the whole point of sending one.
@@ -46,6 +47,7 @@ async function ensureChannel() {
 export function usePushRegistration(enabled: boolean) {
   const api = useApi();
   const navigate = useNavigate();
+  const promptForPermission = usePermissionPrompt();
   const registered = useRef(false);
 
   useEffect(() => {
@@ -58,9 +60,18 @@ export function usePushRegistration(enabled: boolean) {
         await ensureChannel();
 
         const existing = await Notifications.getPermissionsAsync();
-        const granted = existing.granted
-          ? existing
-          : await Notifications.requestPermissionsAsync();
+        let granted = existing;
+
+        if (!existing.granted && existing.canAskAgain) {
+          const accepted = await promptForPermission({
+            kind: 'notifications',
+            title: 'Do not miss a ride',
+            message: 'Allow notifications for new ride offers and document approval updates.',
+            actionLabel: 'Continue',
+          });
+          if (!accepted || cancelled) return;
+          granted = await Notifications.requestPermissionsAsync();
+        }
 
         // Declined. Not an error and not worth a dialog — he can turn it on in
         // system settings, and nothing in the app depends on it.
@@ -79,7 +90,7 @@ export function usePushRegistration(enabled: boolean) {
     })();
 
     return () => { cancelled = true; };
-  }, [api, enabled]);
+  }, [api, enabled, promptForPermission]);
 
   // Where a tap lands. This handles BOTH a live tap and the cold start caused by
   // tapping a notification after Android has killed the app from Recents. The

@@ -113,11 +113,13 @@ export function sharedTripView(booking, photoUrl, now = Date.now()) {
     driver: showDriver
       ? {
           name:          booking.driver.name,
+          vehicleClass:  booking.driver.vehicleClass,
           vehicleNumber: booking.vehicleNumber ?? booking.driver.vehicleNumber,
           vehicleModel:  booking.vehicleModel,
           photoUrl:      photoUrl ?? null,
           latitude:      location?.latitude ?? null,
           longitude:     location?.longitude ?? null,
+          bearing:       location?.bearing ?? null,
         }
       : null,
     expiresAt: booking.shareExpiresAt,

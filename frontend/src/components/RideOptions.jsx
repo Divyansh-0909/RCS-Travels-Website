@@ -217,7 +217,6 @@ export const RideOptionsSheet = ({ options, open, onClose }) => {
                 sheet
                 dismissible
                 onDismiss={onClose}
-                initialSnap="expanded"
                 duration={420}
                 show={open}
                 // Re-measure when a note changes length — the carrier's line

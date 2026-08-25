@@ -2,6 +2,8 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { File } from 'expo-file-system';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
+import { Linking } from 'react-native';
+import { showPermissionPrompt } from '../components/ui/PermissionPrompt';
 
 import {
   IMAGE_QUALITY_LADDER,
@@ -114,9 +116,26 @@ async function compressImage(
  * used, and a PreparedDocument when it can.
  */
 export async function captureDocumentPhoto(): Promise<PrepareResult> {
-  const permission = await ImagePicker.requestCameraPermissionsAsync();
-  if (!permission.granted) {
-    return { error: 'RCS Captains needs camera access to photograph your documents.' };
+  const existing = await ImagePicker.getCameraPermissionsAsync();
+  if (!existing.granted) {
+    const canRequest = existing.canAskAgain;
+    const accepted = await showPermissionPrompt({
+      kind: 'camera',
+      title: canRequest ? 'Use your camera' : 'Turn on camera access',
+      message: canRequest
+        ? 'RCS Captains uses the camera only when you choose to photograph a document.'
+        : 'Camera access is off. Turn it on in app settings to photograph this document.',
+      actionLabel: canRequest ? 'Continue' : 'Open app settings',
+    });
+
+    if (!accepted) return null;
+    if (!canRequest) {
+      await Linking.openSettings();
+      return null;
+    }
+
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permission.granted) return null;
   }
 
   const result = await ImagePicker.launchCameraAsync({
@@ -146,9 +165,26 @@ export async function captureDocumentPhoto(): Promise<PrepareResult> {
  * photographed his papers before opening the app.
  */
 export async function pickDocumentPhoto(): Promise<PrepareResult> {
-  const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-  if (!permission.granted) {
-    return { error: 'RCS Captains needs photo access to attach your documents.' };
+  const existing = await ImagePicker.getMediaLibraryPermissionsAsync();
+  if (!existing.granted) {
+    const canRequest = existing.canAskAgain;
+    const accepted = await showPermissionPrompt({
+      kind: 'photos',
+      title: canRequest ? 'Choose from your photos' : 'Turn on photo access',
+      message: canRequest
+        ? 'RCS Captains needs access only so you can select a document photo to upload.'
+        : 'Photo access is off. Turn it on in app settings to choose this document.',
+      actionLabel: canRequest ? 'Continue' : 'Open app settings',
+    });
+
+    if (!accepted) return null;
+    if (!canRequest) {
+      await Linking.openSettings();
+      return null;
+    }
+
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) return null;
   }
 
   const result = await ImagePicker.launchImageLibraryAsync({

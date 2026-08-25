@@ -1,5 +1,9 @@
-import { Alert, AppState, Linking, Platform } from 'react-native';
+import { AppState, Linking, Platform } from 'react-native';
 import { requireOptionalNativeModule } from 'expo';
+import { showPermissionPrompt } from '../components/ui/PermissionPrompt';
+import { buildDriverNavigationUrl, type NavigationPoint } from './navigationUrl';
+
+export { buildDriverNavigationUrl } from './navigationUrl';
 
 type ReturnOverlayModule = {
   canDrawOverlays(): boolean;
@@ -19,8 +23,8 @@ AppState.addEventListener('change', (state) => {
 });
 
 /** Open turn-by-turn directions and leave an Android button over Google Maps. */
-export async function openDriverNavigation(address: string) {
-  const url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}&travelmode=driving`;
+export async function openDriverNavigation(destination: NavigationPoint, waypoint?: NavigationPoint | null) {
+  const url = buildDriverNavigationUrl(destination, waypoint);
 
   // Expo Go cannot load this app's local native module. Navigation still works
   // there; the return control is present in development and production builds.
@@ -30,14 +34,15 @@ export async function openDriverNavigation(address: string) {
   }
 
   if (!overlay.canDrawOverlays()) {
-    Alert.alert(
-      'Allow the return button',
-      'Enable “Display over other apps” for RCS Captains. Then come back and tap Navigate again.',
-      [
-        { text: 'Not now', style: 'cancel' },
-        { text: 'Open settings', onPress: () => overlay.requestPermission() },
-      ],
-    );
+    const accepted = await showPermissionPrompt({
+      kind: 'overlay',
+      title: 'Keep the return button handy',
+      message:
+        'Allow “Display over other apps” so a small RCS button can bring you back from Google Maps during a ride.',
+      actionLabel: 'Open display settings',
+    });
+
+    if (accepted) await overlay.requestPermission();
     return false;
   }
 

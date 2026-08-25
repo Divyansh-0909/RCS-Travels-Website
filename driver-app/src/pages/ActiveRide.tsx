@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Linking, Pressable, View } from 'react-native';
+import { AppState, Linking, Pressable, View } from 'react-native';
 import { cssInterop } from 'nativewind';
 import { NavigationArrowIcon, PhoneIcon } from 'phosphor-react-native';
 import * as Location from 'expo-location';
@@ -17,6 +17,7 @@ import { useData } from '../hooks/useData';
 import { useApi } from '../hooks/useApi';
 import { useDriver } from '../hooks/useDriver';
 import type { UpcomingBooking } from '../types/enums';
+import { getRememberedDriverLocation, rememberDriverLocation } from '../lib/driverLocationCache';
 
 const asThemed = { className: { target: false, nativeStyleToProp: { color: true } } } as const;
 const Phone = cssInterop(PhoneIcon, asThemed);
@@ -92,7 +93,7 @@ const ActiveRide = ({ ride, onChanged }: { ride: UpcomingBooking; onChanged: () 
     const [dropOverrideOpen, setDropOverrideOpen] = useState(false);
     const [dropOverrideReason, setDropOverrideReason] = useState<string | null>(null);
     const [dropOtpOpen, setDropOtpOpen] = useState(false);
-    const [liveFix, setLiveFix] = useState<Location.LocationObject | null>(null);
+    const [liveFix, setLiveFix] = useState<Location.LocationObject | null>(getRememberedDriverLocation);
     const [mapBottomInset, setMapBottomInset] = useState(PEEK + BOTTOM_SAFE);
     const [locationIssue, setLocationIssue] = useState<string | null>(null);
     const [locationClock, setLocationClock] = useState(() => Date.now());
@@ -108,6 +109,29 @@ const ActiveRide = ({ ride, onChanged }: { ride: UpcomingBooking; onChanged: () 
     useEffect(() => {
         let subscription: Location.LocationSubscription | null = null;
         let stopped = false;
+
+        const acceptFix = (fix: Location.LocationObject) => {
+            if (stopped) return;
+            rememberDriverLocation(fix);
+            setLiveFix((current) => !current || fix.timestamp >= current.timestamp ? fix : current);
+            setLocationIssue(null);
+        };
+
+        const readCachedFix = async () => {
+            const cached = await Location.getLastKnownPositionAsync({
+                maxAge: 60_000,
+                requiredAccuracy: 200,
+            }).catch(() => null);
+            if (cached) acceptFix(cached);
+        };
+
+        const appStateSubscription = AppState.addEventListener('change', (state) => {
+            // Foreground watchers pause behind Google Maps. Android's native
+            // last-known fix is updated by our background service, so read that
+            // immediately instead of waiting for the watcher to wake itself.
+            if (state === 'active') void readCachedFix();
+        });
+
         const watch = async () => {
             const permission = await Location.getForegroundPermissionsAsync().catch(() => null);
             if (!permission?.granted) {
@@ -115,18 +139,31 @@ const ActiveRide = ({ ride, onChanged }: { ride: UpcomingBooking; onChanged: () 
                 return;
             }
             if (stopped) return;
+
+            // `getCurrentPositionAsync` can take several seconds after Android
+            // resumes us. Paint the service's recent native fix first so the
+            // map never waits at a default camera while a fresher fix resolves.
+            await readCachedFix();
+            if (stopped) return;
+
             const initial = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High }).catch(() => null);
-            if (initial && !stopped) { setLiveFix(initial); setLocationIssue(null); }
+            if (initial) acceptFix(initial);
             else if (!stopped) setLocationIssue('Waiting for an accurate GPS fix…');
             if (stopped) return;
             subscription = await Location.watchPositionAsync({
                 accuracy: Location.Accuracy.High,
                 timeInterval: 5_000,
                 distanceInterval: 10,
-            }, (fix) => { setLiveFix(fix); setLocationIssue(null); }).catch(() => null);
+            }, (fix) => {
+                acceptFix(fix);
+            }).catch(() => null);
         };
         watch();
-        return () => { stopped = true; subscription?.remove(); };
+        return () => {
+            stopped = true;
+            appStateSubscription.remove();
+            subscription?.remove();
+        };
     }, []);
     useEffect(() => {
         if (ride.status === 'reached') {
@@ -135,9 +172,17 @@ const ActiveRide = ({ ride, onChanged }: { ride: UpcomingBooking; onChanged: () 
     }, [ride.status]);
 
     const leg = activeLeg(ride.status);
-    // Which end the navigation button aims at — the only place the active leg
-    // still narrows the route down to one address.
-    const address = leg.endpoint === 'drop' ? ride.dropAddress : ride.pickupAddress;
+    // Which end the navigation button aims at. Exact booked coordinates avoid
+    // asking Google Maps to geocode the customer's address a second time.
+    const navigationDestination = leg.endpoint === 'drop'
+        ? { lat: ride.dropLat, lng: ride.dropLng }
+        : { lat: ride.pickupLat, lng: ride.pickupLng };
+    const navigationWaypoint = leg.endpoint === 'drop'
+        && ride.preferSafeRoute
+        && ride.safeWaypointLat != null
+        && ride.safeWaypointLng != null
+        ? { lat: ride.safeWaypointLat, lng: ride.safeWaypointLng }
+        : null;
     const step = STEP[ride.status];
 
     // The rider hands over a code to start the ride, and only then. It is her
@@ -147,20 +192,23 @@ const ActiveRide = ({ ride, onChanged }: { ride: UpcomingBooking; onChanged: () 
 
     const geofenceAction = (() => {
         if (!step || !['reached', 'started', 'completed'].includes(step.to)) return { disabled: false, hint: undefined };
-        if (!liveFix) return { disabled: true, hint: locationIssue ?? 'Waiting for GPS…' };
+        if (!liveFix) return {
+            disabled: true,
+            hint: `Geofence unavailable · ${locationIssue ?? 'Waiting for GPS…'}`,
+        };
         if ((liveFix.coords.accuracy ?? Infinity) > MAX_FIX_ACCURACY_M)
-            return { disabled: true, hint: 'Move into the open for better GPS' };
+            return { disabled: true, hint: 'Geofence unavailable · Improve GPS accuracy' };
         if (locationClock - liveFix.timestamp > MAX_FIX_AGE_MS)
-            return { disabled: true, hint: 'Refreshing your location…' };
+            return { disabled: true, hint: 'Geofence unavailable · Refreshing location…' };
 
         const target = step.to === 'completed'
             ? { lat: ride.dropLat, lng: ride.dropLng }
             : { lat: ride.pickupLat, lng: ride.pickupLng };
         const distance = distanceKmBetween(liveFix.coords, target);
         if (step.to !== 'completed' && distance > PICKUP_RADIUS_KM)
-            return { disabled: true, hint: `Get within 500 m · ${distanceLabel(distance)}` };
+            return { disabled: true, hint: `Outside pickup geofence · ${distanceLabel(distance)}` };
         if (step.to === 'completed' && distance > DROP_SUPPORT_RADIUS_KM)
-            return { disabled: true, hint: `Too far from drop · ${distanceLabel(distance)}` };
+            return { disabled: true, hint: `Outside drop geofence · ${distanceLabel(distance)}` };
         return { disabled: false, hint: undefined };
     })();
 
@@ -186,7 +234,8 @@ const ActiveRide = ({ ride, onChanged }: { ride: UpcomingBooking; onChanged: () 
     };
 
     const openMaps = () => {
-        openDriverNavigation(address).catch(() => setError('Google Maps could not be opened.'));
+        openDriverNavigation(navigationDestination, navigationWaypoint)
+            .catch(() => setError('Google Maps could not be opened.'));
     };
 
     const place = ride ? splitAddress(ride.pickupAddress) : null;
@@ -268,6 +317,9 @@ const ActiveRide = ({ ride, onChanged }: { ride: UpcomingBooking; onChanged: () 
                 drop={{ latitude: ride.dropLat, longitude: ride.dropLng }}
                 driver={liveFix ? { latitude: liveFix.coords.latitude, longitude: liveFix.coords.longitude } : null}
                 bottomSheetHeight={mapBottomInset}
+                carType={ride.vehicleClass}
+                routePolyline={ride.routePolyline}
+                cameraMode="fit-route"
             />
 
             {/* No tab-bar clearance here — the shell hides the bar and the scrim

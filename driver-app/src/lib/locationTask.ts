@@ -1,12 +1,14 @@
-// A TaskManager wake has no ClerkProvider to import Clerk Expo's usual
-// polyfills. Clerk's headless client still builds request URLs, so install this
-// before importing it or Android's first background fix can fail on `href`.
-import 'react-native-url-polyfill/auto';
+// A TaskManager wake has no ClerkProvider to install Clerk Expo's usual
+// browser-shaped globals. This must be evaluated before Clerk's headless bundle
+// or authentication can fail before the location POST is attempted.
+import './headlessClerkPolyfills';
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 import { getClerkInstance } from '@clerk/clerk-expo';
+import { resourceCache } from '@clerk/clerk-expo/resource-cache';
 import { tokenCache } from '@clerk/clerk-expo/token-cache';
 import { sendLocation } from '../api/api';
+import { rememberDriverLocation } from './driverLocationCache';
 
 /**
  * Where the captain's position is actually sent from — a headless task, not the
@@ -51,6 +53,7 @@ export type Fix = { lat: number; lng: number };
  */
 const MIN_MOVE_M = 20;
 const IDLE_HEARTBEAT_MS = 2 * 60 * 1000;
+const AUTH_TIMEOUT_MS = 12_000;
 
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY;
 
@@ -61,6 +64,38 @@ const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY;
 let lastSent: { lat: number; lng: number; at: number } | null = null;
 let inFlight = false;
 let loadingClerk: Promise<unknown> | null = null;
+let lastTaskWarningAt = 0;
+let hasLoggedTaskWake = false;
+const acceptedListeners = new Set<() => void>();
+
+const TASK_WARNING_INTERVAL_MS = 30_000;
+
+function warnTask(message: string, detail?: unknown) {
+    const now = Date.now();
+    if (now - lastTaskWarningAt < TASK_WARNING_INTERVAL_MS) return;
+    lastTaskWarningAt = now;
+    console.warn(`[driver-location] ${message}`, detail ?? '');
+}
+
+async function withTimeout<T>(promise: Promise<T>, milliseconds: number, message: string) {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+        return await Promise.race([
+            promise,
+            new Promise<never>((_, reject) => {
+                timer = setTimeout(() => reject(new Error(message)), milliseconds);
+            }),
+        ]);
+    } finally {
+        if (timer) clearTimeout(timer);
+    }
+}
+
+/** Let the mounted app remove its Connecting pill even when the task sent the fix. */
+export function onLocationAccepted(listener: () => void) {
+    acceptedListeners.add(listener);
+    return () => { acceptedListeners.delete(listener); };
+}
 
 /**
  * Consecutive "Driver is not online" refusals.
@@ -104,21 +139,42 @@ function metresBetween(aLat: number, aLng: number, bLat: number, bLng: number) {
  * be stashed anywhere, and a signed-out captain simply has no session here.
  */
 async function authToken() {
-  const clerk = getClerkInstance({ publishableKey, tokenCache });
-  if (!clerk.loaded) {
-    // Shared, so a burst of wake-ups cannot start several loads at once.
-    const load = loadingClerk ?? clerk.load();
-    loadingClerk = load;
-    try {
-      await load;
-    } finally {
-      // A network failure must be retried by the next fix. Holding on to a
-      // rejected promise here would leave location reporting permanently dead
-      // until Android happened to create a new JS context.
-      if (loadingClerk === load) loadingClerk = null;
+  const clerk = getClerkInstance({
+    publishableKey,
+    tokenCache,
+    __experimental_resourceCache: resourceCache,
+  });
+  const token = (async () => {
+    if (!clerk.loaded) {
+      // Shared, so a burst of wake-ups cannot start several loads at once.
+      // ClerkJS defaults to its browser bootstrap, which constructs the cookie
+      // service from the `clerk.headless` bundle. A TaskManager wake has no DOM,
+      // and that path can fail before `devBrowser` is initialized, leaving its
+      // environment listener to throw later from `refreshCookies`. These are
+      // the same native options ClerkProvider supplies in Clerk Expo.
+      const load = loadingClerk ?? clerk.load({
+        standardBrowser: false,
+        experimental: {
+          rethrowOfflineNetworkErrors: true,
+        },
+      });
+      loadingClerk = load;
+      try {
+        await load;
+      } finally {
+        // A network failure must be retried by the next fix. Holding on to a
+        // rejected promise here would leave location reporting permanently dead
+        // until Android happened to create a new JS context.
+        if (loadingClerk === load) loadingClerk = null;
+      }
     }
-  }
-  return (await clerk.session?.getToken()) ?? null;
+    return (await clerk.session?.getToken()) ?? null;
+  })();
+
+  // A headless task has no screen lifecycle to shake a stalled Clerk load loose.
+  // Bound the whole auth operation so reportFix releases its in-flight gate and
+  // the next, newer GPS fix gets a real retry opportunity.
+  return withTimeout(token, AUTH_TIMEOUT_MS, 'Clerk session token timed out');
 }
 
 /**
@@ -145,12 +201,12 @@ export async function reportFix(
     const moved =
         force || !lastSent || metresBetween(lastSent.lat, lastSent.lng, fix.lat, fix.lng) >= MIN_MOVE_M;
     const heartbeatDue = force || !lastSent || now - lastSent.at >= IDLE_HEARTBEAT_MS;
-    if (!moved && !heartbeatDue) return;
+    if (!moved && !heartbeatDue) return false;
 
     // Never queue. A backlog of positions is a backlog of WRONG positions — by
     // the time the third is delivered the first two describe places he has
     // already left. Skipping is correct, not a compromise.
-    if (inFlight) return;
+    if (inFlight) return false;
     inFlight = true;
 
     try {
@@ -161,18 +217,20 @@ export async function reportFix(
         // handshake — see `refusals`.
         if (res?.status === 403) {
             refusals += 1;
-            return;
+            return false;
         }
 
         // Anything else is dropped rather than retried: the next fix is seconds
         // away and more accurate. lastSent stays put, so the heartbeat still
         // counts this send as outstanding and tries again.
-        if (res?.error) return;
+        if (res?.error) return false;
 
         // Reset only on a fix the server took, so a run of 403s broken by network
         // errors still adds up to a stop.
         refusals = 0;
         lastSent = { ...fix, at: now };
+        acceptedListeners.forEach((listener) => listener());
+        return true;
     } finally {
         inFlight = false;
     }
@@ -193,6 +251,15 @@ TaskManager.defineTask(LOCATION_TASK, async ({ data, error }) => {
   const newest = locations?.[locations.length - 1];
   if (!newest) return;
 
+  // If the UI is still in this JS runtime, its next map can reuse the fix
+  // synchronously when Android brings the app back from Google Maps.
+  rememberDriverLocation(newest);
+
+  if (__DEV__ && !hasLoggedTaskWake) {
+    hasLoggedTaskWake = true;
+    console.info('[driver-location] background task received a GPS fix');
+  }
+
   const fix = { lat: newest.coords.latitude, lng: newest.coords.longitude };
 
   // The gate, the retry policy and the refusal counting all live in reportFix,
@@ -201,13 +268,26 @@ TaskManager.defineTask(LOCATION_TASK, async ({ data, error }) => {
   try {
     await reportFix(fix, async (f) => {
       const token = await authToken();
-      if (!token) return { error: 'no session' };
-      return sendLocation(f, async () => token);
+      if (!token) {
+        warnTask('could not obtain a signed-in session token');
+        return { error: 'no session' };
+      }
+
+      const result = await sendLocation(f, async () => token);
+      if (result?.error) {
+        warnTask(`server report failed (status ${result.status ?? 0})`, result.error);
+      } else if (__DEV__) {
+        console.info('[driver-location] server accepted background fix');
+      }
+      return result;
     });
   } catch (err) {
     // A task is a delivery opportunity, not a transaction that must succeed.
     // Let the next, newer location retry instead of reporting the whole task as
     // failed and obscuring the real transient auth or network problem.
-    console.warn('location task could not report this fix:', (err as Error)?.message);
+    const detail = err instanceof Error
+      ? `${err.name}: ${err.message}${err.stack ? `\n${err.stack}` : ''}`
+      : String(err);
+    warnTask('unexpected background report failure', detail);
   }
 });

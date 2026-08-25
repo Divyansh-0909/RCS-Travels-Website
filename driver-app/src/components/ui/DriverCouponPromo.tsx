@@ -27,14 +27,11 @@ const DriverCouponPromo = () => {
             // dispatch can mark them available for rides.
             if (await ensureLocationPermission() !== 'granted') return;
 
-            patchProfile({ isOnline: true });
             const result = await api.setOnline(true);
 
-            // The profile is updated optimistically so Home immediately switches
-            // to the online screen; restore it if the server declines the change.
-            if (result?.error) patchProfile({ isOnline: false });
+            if (!result?.error) patchProfile({ isOnline: true, dispatchReady: false });
         } catch {
-            patchProfile({ isOnline: false });
+            patchProfile({ isOnline: false, dispatchReady: false });
         } finally {
             setGoingOnline(false);
         }

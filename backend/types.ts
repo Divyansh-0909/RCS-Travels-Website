@@ -167,8 +167,8 @@ const driverGroupSchema = z.object({
 });
 
 const locationSchema = z.object({
-  lat: z.number(),
-  lng: z.number(),
+  lat: z.number().min(-90).max(90),
+  lng: z.number().min(-180).max(180),
 });
 
 const bookingListQuerySchema = z.object({
@@ -239,6 +239,9 @@ const driverRidesQuerySchema = z.object({
   limit: z.coerce.number().int().positive().max(100).default(30),
 });
 
+// This records the captain's availability INTENT. /driver/me reports the
+// separate dispatchReady state derived from this flag plus GPS freshness, so
+// the app can say Connecting without pretending the first fix already landed.
 const driverOnlineSchema = z.object({
   isOnline: z.boolean(),
 });

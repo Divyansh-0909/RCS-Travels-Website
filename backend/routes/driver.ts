@@ -46,6 +46,7 @@ import {
 import { addVehicle, removeVehicle, switchActiveVehicle } from '../services/driverVehicles.js'
 import { completionGeofence, locationProblem, PICKUP_RADIUS_KM } from '../services/rideGeofence.js'
 import { applyDriverCancellationConsequences } from '../services/driverCancellations.js'
+import { isDriverDispatchReady } from '../services/driverAvailability.ts'
 import { notifyWhatsAppDriverCancelled, notifyWhatsAppRideStatus } from '../services/notification.js'
 import { locationSchema, UploadUrlRequest, ConfirmDocumentsRequest, rideParamsSchema, driverOnlineSchema, driverAccountInformationSchema, addVehicleSchema, activeVehicleSchema, fcmTokenSchema, rideStatusSchema, driverRidesQuerySchema } from '../types.ts'
 
@@ -1097,7 +1098,7 @@ driverRouter.get('/me', protect, async (req, res) => {
     // board totals, computed the same way so the two screens cannot disagree; and the
     // expiring count moves with the clock rather than with a write, so there is no
     // moment at which a cached copy of it could be refreshed.
-    const [rating, month, expiring, renewing, heldRides] = await Promise.all([
+    const [rating, month, expiring, renewing, heldRides, location] = await Promise.all([
         prisma.driverReview.aggregate({
             where: { driverId: driver.id },
             _avg: { rating: true },
@@ -1153,6 +1154,12 @@ driverRouter.get('/me', protect, async (req, res) => {
             },
             select: { id: true, status: true },
         }),
+        // Online is intent; this heartbeat is the evidence that dispatch can
+        // actually place him in a radius right now.
+        prisma.driverLocation.findUnique({
+            where: { driverId: driver.id },
+            select: { updatedAt: true },
+        }),
     ])
 
     // Expiring, minus the ones he has already sent a renewal for.
@@ -1186,6 +1193,7 @@ driverRouter.get('/me', protect, async (req, res) => {
 
     return res.json({
         id, verificationStatus, rejectionReason, isOnline,
+        dispatchReady: isDriverDispatchReady(isOnline, location),
         vehicleClass, vehicleNumber, vehicleModel, phone, name,
         // The car these four columns are a copy of. Sent so the app can address
         // the vehicle endpoints without a second call, and so a stale cache is
@@ -1318,13 +1326,13 @@ driverRouter.post('/location', protect, async (req, res) => {
         bearing = getBearing(previous.latitude, previous.longitude, lat, lng)
     }
 
-    await prisma.driverLocation.upsert({
+    const saved = await prisma.driverLocation.upsert({
         where: { driverId: driver.id },
         create: { driverId: driver.id, latitude: lat, longitude: lng, speedKmh, bearing },
         update: { latitude: lat, longitude: lng, speedKmh, bearing },
     })
 
-    return res.json({ ok: true })
+    return res.json({ ok: true, dispatchReady: true, locationUpdatedAt: saved.updatedAt })
 })
 
 /**
@@ -1465,6 +1473,10 @@ driverRouter.get('/upcoming-ride', protect, async (req, res) => {
             dropAddress: true,
             dropLat: true,
             dropLng: true,
+            routePolyline: true,
+            preferSafeRoute: true,
+            safeWaypointLat: true,
+            safeWaypointLng: true,
             scheduledAt: true,
             fare: true,
             vehicleClass: true,
@@ -1503,6 +1515,14 @@ driverRouter.get('/rides', protect, async (req, res) => {
             dropAddress: true,
             dropLat: true,
             dropLng: true,
+            // The exact road path the customer confirmed, plus the pass-through
+            // point that produced it when the safer route was selected. The
+            // captain map and Google Maps handoff must not independently guess
+            // which route this booking means.
+            routePolyline: true,
+            preferSafeRoute: true,
+            safeWaypointLat: true,
+            safeWaypointLng: true,
             scheduledAt: true,
             fare: true,
             vehicleClass: true,
@@ -1622,6 +1642,7 @@ driverRouter.get('/rides/:id', protect, async (req, res) => {
         dropAddress: booking.dropAddress,
         dropLat: booking.dropLat,
         dropLng: booking.dropLng,
+        routePolyline: booking.routePolyline,
         vehicleClass: booking.vehicleClass,
         needsCarrier: booking.needsCarrier,
         fare: booking.fare,

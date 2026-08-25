@@ -1,8 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { AppState } from 'react-native';
+import { AppState, Linking } from 'react-native';
 import * as Location from 'expo-location';
-import { LOCATION_TASK, reportFix } from '../lib/locationTask';
+import { showPermissionPrompt } from '../components/ui/PermissionPrompt';
+import { rememberDriverLocation } from '../lib/driverLocationCache';
+import { LOCATION_TASK, onLocationAccepted, reportFix } from '../lib/locationTask';
 import { useApi } from './useApi';
+import { useDriver } from './useDriver';
 
 /**
  * Starts and stops the location service; it does not do the reporting.
@@ -44,7 +47,12 @@ const MODES = {
     distanceInterval: 0,
   },
   idle: {
-    accuracy: Location.Accuracy.Balanced,
+    // Samsung and other OEMs may stop producing stationary screen-off fixes for
+    // PRIORITY_BALANCED_POWER_ACCURACY even while our foreground-service
+    // notification remains visible. High maps to Android's GPS-backed priority,
+    // which keeps the native callback alive; reportFix still limits stationary
+    // network traffic to one heartbeat every two minutes.
+    accuracy: Location.Accuracy.High,
     timeInterval: 20_000,
     distanceInterval: 0,
   },
@@ -81,6 +89,7 @@ const MODES = {
  */
 const START_SETTLE_MS = 600;
 const START_BACKOFF_MS = [1500, 4000];
+const IMMEDIATE_FIX_BACKOFF_MS = [1500, 4000];
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -116,13 +125,51 @@ export type LocationPermission = 'granted' | 'deniedForeground' | 'deniedBackgro
 
 export async function ensureLocationPermission(): Promise<LocationPermission> {
   const foreground = await Location.getForegroundPermissionsAsync();
-  const haveForeground = foreground.granted
-    || (foreground.canAskAgain && (await Location.requestForegroundPermissionsAsync()).granted);
+  let haveForeground = foreground.granted;
+
+  if (!haveForeground) {
+    const canRequest = foreground.canAskAgain;
+    const accepted = await showPermissionPrompt({
+      kind: 'location',
+      title: canRequest ? 'Share your location' : 'Turn on location access',
+      message: canRequest
+        ? 'RCS Captains uses your location to find nearby rides and guide customers to your live position.'
+        : 'Location access is off. Turn it on in app settings before going online.',
+      actionLabel: canRequest ? 'Continue' : 'Open app settings',
+    });
+
+    if (!accepted) return 'deniedForeground';
+    if (!canRequest) {
+      await Linking.openSettings();
+      return 'deniedForeground';
+    }
+
+    haveForeground = (await Location.requestForegroundPermissionsAsync()).granted;
+  }
   if (!haveForeground) return 'deniedForeground';
 
   const background = await Location.getBackgroundPermissionsAsync();
-  const haveBackground = background.granted
-    || (background.canAskAgain && (await Location.requestBackgroundPermissionsAsync()).granted);
+  let haveBackground = background.granted;
+
+  if (!haveBackground) {
+    const canRequest = background.canAskAgain;
+    const accepted = await showPermissionPrompt({
+      kind: 'background-location',
+      title: canRequest ? 'Keep rides reaching you' : 'Allow location all the time',
+      message: canRequest
+        ? 'Choose “Allow all the time” so dispatch can find you while you drive with the app in the background.'
+        : 'Open app settings and set Location to “Allow all the time” before going online.',
+      actionLabel: canRequest ? 'Continue' : 'Open app settings',
+    });
+
+    if (!accepted) return 'deniedBackground';
+    if (!canRequest) {
+      await Linking.openSettings();
+      return 'deniedBackground';
+    }
+
+    haveBackground = (await Location.requestBackgroundPermissionsAsync()).granted;
+  }
   if (!haveBackground) return 'deniedBackground';
 
   return 'granted';
@@ -135,9 +182,18 @@ export async function ensureLocationPermission(): Promise<LocationPermission> {
  */
 export function useDriverLocation(enabled: boolean, onRide: boolean) {
   const api = useApi();
+  const { patchProfile } = useDriver();
   const mode = onRide ? MODES.ride : MODES.idle;
   const [resumeEpoch, setResumeEpoch] = useState(0);
   const wasEnabled = useRef(false);
+
+  // The normal path is the TaskManager callback, not this React hook. Listen to
+  // the shared reporter so a background-task acknowledgement can remove the
+  // Connecting pill while the app is visible too.
+  useEffect(() => {
+    if (!enabled) return;
+    return onLocationAccepted(() => patchProfile({ dispatchReady: true }));
+  }, [enabled, patchProfile]);
 
   // Some Android vendors stop a foreground location service under memory or
   // battery pressure but leave the driver row online. Re-run the registration
@@ -154,31 +210,50 @@ export function useDriverLocation(enabled: boolean, onRide: boolean) {
     let cancelled = false;
     let watcher: Location.LocationSubscription | null = null;
     const justCameOnline = enabled && !wasEnabled.current;
+    const shouldPublishImmediately = justCameOnline || resumeEpoch > 0;
     wasEnabled.current = enabled;
+
+    // A successful response is the transition from Connecting to Online. A
+    // failed response deliberately leaves the intent alone: the foreground
+    // service and every later OS fix keep retrying until one is accepted.
+    const postFix = (fix: { lat: number; lng: number }) => api.sendLocation(fix);
 
     // The task normally reports the first OS-delivered fix. That can take up to
     // the idle interval, though, leaving a newly-online driver invisible to
     // dispatch unnecessarily. Read one current position here and deliberately
     // bypass the shared throttle once; every later fix continues through the
     // existing 20 m / two-minute gate.
-    const publishInitialFix = async () => {
-      if (!justCameOnline || cancelled) return;
+    const publishImmediateFix = async () => {
+      if (!shouldPublishImmediately || cancelled) return;
 
-      try {
-        const location = await Location.getCurrentPositionAsync({ accuracy: mode.accuracy });
+      let last: unknown;
+      for (let attempt = 0; attempt <= IMMEDIATE_FIX_BACKOFF_MS.length; attempt++) {
+        try {
+          const location = await Location.getCurrentPositionAsync({ accuracy: mode.accuracy });
+          if (cancelled) return;
+          rememberDriverLocation(location);
+
+          const accepted = await reportFix(
+            { lat: location.coords.latitude, lng: location.coords.longitude },
+            postFix,
+            true,
+          );
+          if (accepted) return;
+          last = new Error('location upload was not accepted');
+        } catch (err) {
+          last = err;
+        }
+
+        const backoff = IMMEDIATE_FIX_BACKOFF_MS[attempt];
+        if (backoff === undefined) break;
+        await wait(backoff);
         if (cancelled) return;
-
-        await reportFix(
-          { lat: location.coords.latitude, lng: location.coords.longitude },
-          (fix) => api.sendLocation(fix),
-          true,
-        );
-      } catch (err) {
-        // Starting the tracking service still matters if GPS cannot provide a
-        // one-time fix yet (for example while indoors). Its next normal update
-        // will retry through the regular reporting policy.
-        console.warn('initial location fix could not be read:', (err as Error)?.message);
       }
+
+      // The native service remains the long-running retry loop. This warning is
+      // diagnostic only; the visible state stays Connecting until a later fix
+      // is acknowledged or the captain goes offline.
+      console.warn('immediate location fix could not be reported:', (last as Error)?.message);
     };
 
     /**
@@ -194,9 +269,10 @@ export function useDriverLocation(enabled: boolean, onRide: boolean) {
       watcher = await Location.watchPositionAsync(
         { accuracy: mode.accuracy, timeInterval: mode.timeInterval, distanceInterval: 0 },
         (loc) => {
+          rememberDriverLocation(loc);
           void reportFix(
             { lat: loc.coords.latitude, lng: loc.coords.longitude },
-            (f) => api.sendLocation(f),
+            postFix,
           );
         },
         () => {},
@@ -242,12 +318,16 @@ export function useDriverLocation(enabled: boolean, onRide: boolean) {
       if (enabled) await wait(START_SETTLE_MS);
       if (cancelled) return;
 
+      // Do not make a captain wait through native service retries before the
+      // request that can make dispatch find him. This also repairs a service an
+      // Android vendor killed whenever the app returns to the foreground.
+      await publishImmediateFix();
+
       let last: unknown;
 
       for (let attempt = 0; attempt <= START_BACKOFF_MS.length; attempt++) {
         try {
           if (await attemptStart() === 'no-permission') break;
-          await publishInitialFix();
           return;
         } catch (err) {
           last = err;
@@ -276,5 +356,5 @@ export function useDriverLocation(enabled: boolean, onRide: boolean) {
     // build it back up mid-ride. The service is ended by `enabled` going false —
     // that is, by him going offline — and by nothing else. The foreground
     // watcher IS torn down, because it belongs to this effect's lifetime.
-  }, [enabled, mode, api, resumeEpoch]);
+  }, [enabled, mode, api, patchProfile, resumeEpoch]);
 }

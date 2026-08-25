@@ -9,6 +9,7 @@ import EmptyState from "../components/ui/EmptyState";
 import FailureState from "../components/ui/FailureState";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { useRefreshNotice } from "../hooks/useRefreshNotice";
+import { useStableDriverPhoto } from "../hooks/useStableDriverPhoto";
 import { getSharedTrip } from "../api/api";
 import { LIVE_STATUSES, minsLabel, formatPlate, placeName } from "../lib/trip";
 import { openSupportWhatsApp } from "../constants/support";
@@ -57,6 +58,7 @@ const SharedTrip = () => {
     // Once per outage, not once per tick — otherwise a watcher on a bad train
     // connection gets a pill whose dismiss timer restarts forever.
     const staleNotifiedRef = useRef(false);
+    const { stabilizeDriverPhoto, markDriverPhotoFailed } = useStableDriverPhoto();
 
     // Same shape as TrackingPage's poll: scheduled from the response rather than
     // on an interval, so a slow request can never stack up overlapping polls, and
@@ -92,7 +94,7 @@ const SharedTrip = () => {
                 staleNotifiedRef.current = false;
                 setError(null);
                 clearRefreshNotice();
-                setTrip(data);
+                setTrip({ ...data, driver: stabilizeDriverPhoto(data.driver ?? null) });
             }
             if (isFirst) setLoading(false);
 
@@ -104,7 +106,7 @@ const SharedTrip = () => {
         poll(true);
 
         return () => { cancelled = true; clearTimeout(timer); clearRefreshNotice(); };
-    }, [token, retryTick]);
+    }, [token, retryTick, stabilizeDriverPhoto]);
 
     const pickupPoint = trip?.pickup ?? null;
     const dropPoint = trip?.drop ?? null;
@@ -128,8 +130,12 @@ const SharedTrip = () => {
     // setDriverPosition nothing to interpolate from.
     useEffect(() => {
         if (!mapApi || !mapVisible || !driverPoint) return;
-        setDriverPosition(mapApi, driverPoint);
-    }, [mapApi, mapVisible, driverPoint?.lat, driverPoint?.lng]);
+        setDriverPosition(mapApi, driverPoint, {
+            navigationPolyline: trip?.navigationPolyline,
+            vehicleClass: trip?.driver?.vehicleClass,
+            bearing: trip?.driver?.bearing,
+        });
+    }, [mapApi, mapVisible, driverPoint?.lat, driverPoint?.lng, trip?.navigationPolyline, trip?.driver?.vehicleClass, trip?.driver?.bearing]);
 
     useEffect(() => clearDriverMarker, []);
 
@@ -221,7 +227,6 @@ const SharedTrip = () => {
 
             <BackgroundPanel
                 sheet={mapVisible}
-                initialSnap="half"
                 duration={420}
                 contentKey={`${trip?.status}-${loading}`}
                 className={"py-6 max-sm:pb-0 sm:overflow-hidden justify-center items-center flex flex-col sm:flex-row sm:justify-center lg:justify-between text-left sm:px-[9%] md:px-[5%] xl:px-[13%]"}
@@ -232,13 +237,13 @@ const SharedTrip = () => {
 
                 <div className="w-full flex-1 min-h-0 flex flex-col items-center sm:contents">
                     <div className="relative z-10 sm:order-1 flex flex-col justify-end sm:justify-center items-center sm:items-start w-full sm:w-auto flex-1 min-h-0 sm:flex-initial sm:h-auto gap-4 sm:gap-8">
-                        <div className={`flex flex-col justify-center items-center sm:items-start ${PAIR} ${COL}`}>
+                        <div className={`flex flex-col justify-center items-start ${PAIR} ${COL}`}>
                             {/* Whose trip this is, above the headline and small —
                                 it is context for everything below rather than the
                                 news itself. */}
                             {loading
                                 ? <Skeleton className="h-[18px] sm:h-[22px] w-32 mb-1" />
-                                : <p className="w-full text-center sm:text-left text-sm sm:text-base text-[var(--text-muted)] mb-1">
+                                : <p className="w-full text-left text-sm sm:text-base text-[var(--text-muted)] mb-1">
                                     You're following {possessive(who)}
                                   </p>}
 
@@ -250,8 +255,8 @@ const SharedTrip = () => {
                                 </>
                             ) : (
                                 <>
-                                    <h2 className={`text-center sm:text-left w-full ${TITLE}`}>{headline.title}</h2>
-                                    <h3 className={`text-center sm:text-left w-full ${SUBTITLE}`}>{headline.detail}</h3>
+                                    <h2 className={`text-left w-full ${TITLE}`}>{headline.title}</h2>
+                                    <h3 className={`text-left w-full ${SUBTITLE}`}>{headline.detail}</h3>
                                 </>
                             )}
                         </div>
@@ -274,9 +279,11 @@ const SharedTrip = () => {
                                         ) : (
                                             <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden shrink-0">
                                                 <img
-                                                    key={trip.driver.photoUrl ?? "placeholder"}
                                                     src={trip.driver.photoUrl || pfpPlaceholder}
-                                                    onError={(e) => { e.currentTarget.src = pfpPlaceholder; }}
+                                                    onError={(e) => {
+                                                        markDriverPhotoFailed(trip.driver.photoUrl);
+                                                        e.currentTarget.src = pfpPlaceholder;
+                                                    }}
                                                     alt=""
                                                     className="w-full h-full object-cover"
                                                 />

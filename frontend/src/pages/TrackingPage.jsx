@@ -30,6 +30,7 @@ import { SAFE_ROUTE_SURCHARGE, isDistancePriced } from "../constants/fares";
 import { labelOf } from "../constants/vehicles";
 import { LIVE_STATUSES, minsLabel, formatPlate } from "../lib/trip";
 import { useExitAnim } from "../hooks/useExitAnim";
+import { useStableDriverPhoto } from "../hooks/useStableDriverPhoto";
 import { openRazorpayCheckout } from "../services/razorpayCheckout";
 
 // ---- Shared layout + type scale -------------------------------------------
@@ -141,12 +142,15 @@ const TrackingPage = () => {
         return {
             name: "Ramesh Kumar",
             phone: "+919876543210",
+            vehicleClass: "sedan",
             vehicleNumber: "UP16AB1234",
             vehicleModel: "Maruti Swift Dzire",
-            ...(devParams.get("driver") ? { latitude: 28.6042, longitude: 77.2712 } : {}),
+            ...(devParams.get("driver") ? { latitude: 28.6042, longitude: 77.2712, bearing: 90 } : {}),
         };
     });
+    const { stabilizeDriverPhoto, markDriverPhotoFailed } = useStableDriverPhoto();
     const [navigationEtaMinutes, setNavigationEtaMinutes] = useState(null);
+    const [navigationPolyline, setNavigationPolyline] = useState(null);
     const [financials, setFinancials] = useState(null);
     const [bookingScheduledAt, setBookingScheduledAt] = useState(activeBooking?.scheduledAt ?? scheduledTime ?? null);
     const [mapApi, setMapApi] = useState(null);
@@ -189,8 +193,9 @@ const TrackingPage = () => {
                 setStatusError(null);
                 clearRefreshNotice();
                 if (data.status) setStatus(data.status);
-                setDriver(data.driver ?? null);
+                setDriver(stabilizeDriverPhoto(data.driver ?? null));
                 setNavigationEtaMinutes(data.navigationEtaMinutes ?? null);
+                setNavigationPolyline(data.navigationPolyline ?? null);
                 setFinancials(data.financials ?? null);
                 setBookingScheduledAt(data.scheduledAt ?? null);
                 // Server-computed, so the cancel warning and the actual charge
@@ -212,7 +217,7 @@ const TrackingPage = () => {
         // clearRefreshNotice on the way out: the stale pill belongs to this
         // ride's poll, and shouldn't follow the rider to another page.
         return () => { cancelled = true; clearTimeout(timer); clearRefreshNotice(); };
-    }, [bookingId, retryTick]);
+    }, [bookingId, retryTick, stabilizeDriverPhoto]);
 
     const pickupPoint = pickupCoords;
     const dropPoint = dropCoords;
@@ -260,8 +265,12 @@ const TrackingPage = () => {
             clearDriverMarker();
             return;
         }
-        setDriverPosition(mapApi, driverPoint);
-    }, [mapApi, mapVisible, driverPoint?.lat, driverPoint?.lng]);
+        setDriverPosition(mapApi, driverPoint, {
+            navigationPolyline,
+            vehicleClass: driver?.vehicleClass,
+            bearing: driver?.bearing,
+        });
+    }, [mapApi, mapVisible, driverPoint?.lat, driverPoint?.lng, navigationPolyline, driver?.vehicleClass, driver?.bearing]);
 
     // Leaving the page takes the puck with it. Empty deps, so this is the only
     // thing that ever removes it.
@@ -438,12 +447,11 @@ const TrackingPage = () => {
     // whether it is used, so a bare `driver.name` here throws on the driverless
     // states rather than being skipped by them.
     //
-    // photoUrl is signed and expires in fifteen minutes. The poll mints a fresh
-    // one every five seconds, and the key remounts the <img> when it rotates so
-    // the browser actually refetches; onError catches the case the poll can't —
-    // a completed ride, where polling has stopped and the rider sits on the
-    // screen long enough for the URL to die — and falls back to the placeholder,
-    // which is also where a captain with no approved photo (null) lands.
+    // The poll still returns a freshly signed photo URL every five seconds, but
+    // useStableDriverPhoto holds the currently loaded one until it is close to
+    // expiring. A failed URL is marked here so the next poll replaces it; the
+    // placeholder covers that short interval and captains with no approved
+    // photo (null).
     const driverCard = (
         <div className="flex w-full items-center justify-between gap-3 rounded-2xl bg-[var(--background-muted)] px-4 py-3">
             {bookingLoading ? (
@@ -451,9 +459,11 @@ const TrackingPage = () => {
             ) : (
                 <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden shrink-0">
                     <img
-                        key={driver?.photoUrl ?? "placeholder"}
                         src={driver?.photoUrl || pfpPlaceholder}
-                        onError={(e) => { e.currentTarget.src = pfpPlaceholder; }}
+                        onError={(e) => {
+                            markDriverPhotoFailed(driver?.photoUrl);
+                            e.currentTarget.src = pfpPlaceholder;
+                        }}
                         alt={driver?.name ? `${driver.name}, your driver` : ""}
                         className="w-full h-full object-cover"
                     />
@@ -542,9 +552,11 @@ const TrackingPage = () => {
         <div className="flex items-center gap-3 w-full">
             <div className="w-10 h-10 rounded-full overflow-hidden shrink-0">
                 <img
-                    key={driver.photoUrl ?? "placeholder"}
                     src={driver.photoUrl || pfpPlaceholder}
-                    onError={(e) => { e.currentTarget.src = pfpPlaceholder; }}
+                    onError={(e) => {
+                        markDriverPhotoFailed(driver.photoUrl);
+                        e.currentTarget.src = pfpPlaceholder;
+                    }}
                     alt=""
                     className="w-full h-full object-cover"
                 />
@@ -681,11 +693,8 @@ const TrackingPage = () => {
                     // that loads without a driver loses it entirely.
                     ? <BackgroundPanel
                         sheet={mapVisible}
-                        // Once assigned, this panel ends in the booking's primary
-                        // actions. Open content-fit so neither support nor Call
-                        // driver starts below the viewport; the half and collapsed
-                        // stops remain available when it is dragged down.
-                        initialSnap={status === "assigned" ? "expanded" : "half"}
+                        // Booking sheets always open content-fit; the half and
+                        // collapsed stops remain available after a deliberate drag.
                         duration={420}
                         contentKey={`${status}-${bookingLoading}`}
                         className={"py-6 max-sm:pb-0 sm:overflow-hidden justify-center items-center text-left sm:px-[9%] md:px-[5%] xl:px-[13%] flex flex-col sm:flex-row sm:justify-center lg:justify-between"}
@@ -703,9 +712,9 @@ const TrackingPage = () => {
                         {/* no pt-6: that reserved room for the arrow when it sat
                             inside the column, and it now floats above the sheet */}
                         <div className={`relative z-10 sm:order-1 flex flex-col justify-end sm:justify-center items-center sm:items-start w-full sm:w-auto flex-1 min-h-0 sm:flex-initial sm:h-full ${STACK}`}>
-                            <div className={`flex flex-col justify-center items-center sm:items-start ${PAIR} ${COL}`}>
-                                <h2 className={`text-center sm:text-left w-full ${TITLE}`}>{status === "payment_pending" ? "Pay advance" : status === "assigned" ? "Driver assigned" : "Not assigned yet"}</h2>
-                                <h3 className={`text-center sm:text-left w-full ${status === "confirmed" ? "text-base sm:text-xl font-normal leading-snug text-[var(--text-muted)]" : SUBTITLE}`}>{status === "payment_pending" ? "The 15% advance is part of your fare." : status === "assigned" ? "Give the driver a call to confirm" : "Assigned closer to your pickup time"}</h3>
+                            <div className={`flex flex-col justify-center items-start ${PAIR} ${COL}`}>
+                                <h2 className={`text-left w-full ${TITLE}`}>{status === "payment_pending" ? "Pay advance" : status === "assigned" ? "Driver assigned" : "Not assigned yet"}</h2>
+                                <h3 className={`text-left w-full ${status === "confirmed" ? "text-base sm:text-xl font-normal leading-snug text-[var(--text-muted)]" : SUBTITLE}`}>{status === "payment_pending" ? "The 15% advance is part of your fare." : status === "assigned" ? "Give the driver a call to confirm" : "Assigned closer to your pickup time"}</h3>
                             </div>
 
                             {/* The scroll region, phones only: everything below the
@@ -876,7 +885,6 @@ const TrackingPage = () => {
 
                         : <BackgroundPanel
                             sheet={mapVisible}
-                            initialSnap={["en_route", "reached", "started", "on_trip"].includes(status) ? "expanded" : "half"}
                             duration={420}
                             // The OTP row appears at en_route and the headline
                             // grows a line with it, so the sheet's own height moves
@@ -913,7 +921,7 @@ const TrackingPage = () => {
                                 sm up, leaving the desktop side panel untouched. */}
                             <div className="w-full flex-1 min-h-0 flex flex-col items-center sm:contents">
                             <div className={`relative z-10 sm:order-1 flex flex-col justify-end sm:justify-center items-center sm:items-start w-full sm:w-auto flex-1 min-h-0 sm:flex-initial sm:h-auto ${STACK}`}>
-                                <div className={`flex flex-col justify-center items-center sm:items-start ${PAIR} ${COL}`}>
+                                <div className={`flex flex-col justify-center items-start ${PAIR} ${COL}`}>
                                     {/* The headline reads off status and the driver's
                                         ETA, so it is the one block here that can't be
                                         drawn from the store alone. Two bars for TITLE's
@@ -926,8 +934,8 @@ const TrackingPage = () => {
                                         </>
                                     ) : (
                                         <>
-                                            <h2 className={`text-center sm:text-left w-full ${TITLE}`}>{liveHeadline.title}</h2>
-                                            <h3 className={`text-center sm:text-left w-full ${SUBTITLE}`}>{liveHeadline.detail}</h3>
+                                            <h2 className={`text-left w-full ${TITLE}`}>{liveHeadline.title}</h2>
+                                            <h3 className={`text-left w-full ${SUBTITLE}`}>{liveHeadline.detail}</h3>
                                         </>
                                     )}
                                     <Button
@@ -997,7 +1005,7 @@ const TrackingPage = () => {
                                     <div className="flex justify-between w-full gap-2 items-center">
                                         <Button
                                             onClick={() => openSupportWhatsApp("Hi, I need help with my ride.")}
-                                            prop={{ variant: "input", width: "100%", bg: "var(--background-muted)" }}
+                                            prop={{ variant: "input", width: "100%", bg: "var(--background-muted)", border: false }}
                                             className="flex-1"
                                         >
                                             <span className="flex items-center justify-center gap-2 text-base sm:text-lg">
@@ -1038,7 +1046,6 @@ const TrackingPage = () => {
                         sheet
                         dismissible
                         onDismiss={() => setShareSheetOpen(false)}
-                        initialSnap="expanded"
                         show={shareSheetOpen}
                         duration={420}
                         contentKey={`${!!driver}-${shareBusy}`}

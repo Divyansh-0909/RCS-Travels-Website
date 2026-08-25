@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { AppState, Pressable, View } from 'react-native';
 import * as Location from 'expo-location';
 import { openDriverNavigation } from '../lib/navigation';
 import { cssInterop } from 'nativewind';
@@ -13,6 +13,7 @@ import { clockParts, dayBucket, splitAddress } from '../constants/booking';
 import { useApi } from '../hooks/useApi';
 import { useDriver } from '../hooks/useDriver';
 import type { UpcomingBooking } from '../types/enums';
+import { getRememberedDriverLocation, rememberDriverLocation } from '../lib/driverLocationCache';
 
 const NavArrow = cssInterop(NavigationArrowIcon, {
     className: { target: false, nativeStyleToProp: { color: true } },
@@ -52,13 +53,32 @@ const Standby = ({ next, onChanged }: { next: UpcomingBooking | null; onChanged:
     const { refresh: refreshDriver } = useDriver();
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [liveFix, setLiveFix] = useState<Location.LocationObject | null>(null);
+    const [liveFix, setLiveFix] = useState<Location.LocationObject | null>(getRememberedDriverLocation);
     const [mapBottomInset, setMapBottomInset] = useState(PEEK + APPBAR_CLEARANCE);
     const navigate = useNavigate();
 
     useEffect(() => {
         let subscription: Location.LocationSubscription | null = null;
         let stopped = false;
+
+        const acceptFix = (fix: Location.LocationObject) => {
+            if (stopped) return;
+            rememberDriverLocation(fix);
+            setLiveFix((current) => !current || fix.timestamp >= current.timestamp ? fix : current);
+        };
+
+        const readCachedFix = async () => {
+            const cached = await Location.getLastKnownPositionAsync({
+                maxAge: 60_000,
+                requiredAccuracy: 200,
+            }).catch(() => null);
+            if (cached) acceptFix(cached);
+        };
+
+        const appStateSubscription = AppState.addEventListener('change', (state) => {
+            if (state === 'active') void readCachedFix();
+        });
+
         const locate = async () => {
             const permission = await Location.getForegroundPermissionsAsync().catch(() => null);
             if (!permission?.granted || stopped) return;
@@ -67,27 +87,29 @@ const Standby = ({ next, onChanged }: { next: UpcomingBooking | null; onChanged:
             // is not guaranteed to emit until Android produces its next fix. Use
             // the service's recent cached position to centre the map immediately,
             // then let the fresh fix and watcher replace it normally.
-            const cached = await Location.getLastKnownPositionAsync({
-                maxAge: 60_000,
-                requiredAccuracy: 200,
-            }).catch(() => null);
-            if (cached && !stopped) setLiveFix(cached);
+            await readCachedFix();
             if (stopped) return;
 
             subscription = await Location.watchPositionAsync({
                 accuracy: Location.Accuracy.Balanced,
                 timeInterval: 10_000,
                 distanceInterval: 20,
-            }, (fix) => { if (!stopped) setLiveFix(fix); }).catch(() => null);
+            }, (fix) => {
+                acceptFix(fix);
+            }).catch(() => null);
             if (stopped) { subscription?.remove(); subscription = null; return; }
 
             const current = await Location.getCurrentPositionAsync({
                 accuracy: Location.Accuracy.Balanced,
             }).catch(() => null);
-            if (current && !stopped) setLiveFix(current);
+            if (current) acceptFix(current);
         };
         void locate();
-        return () => { stopped = true; subscription?.remove(); };
+        return () => {
+            stopped = true;
+            appStateSubscription.remove();
+            subscription?.remove();
+        };
     }, []);
 
     const start = async () => {
@@ -99,7 +121,10 @@ const Standby = ({ next, onChanged }: { next: UpcomingBooking | null; onChanged:
             // Navigation opens either way. If the status write fails he is still
             // driving to a pickup, and holding the map hostage to a PATCH would
             // make a network blip look like a broken button.
-            const opened = await openDriverNavigation(next.pickupAddress).catch(() => false);
+            const opened = await openDriverNavigation({
+                lat: next.pickupLat,
+                lng: next.pickupLng,
+            }).catch(() => false);
             if (!opened) return;
 
             const result = await api.setRideStatus(next.id, 'en_route', {});
@@ -123,6 +148,8 @@ const Standby = ({ next, onChanged }: { next: UpcomingBooking | null; onChanged:
                 drop={next ? { latitude: next.dropLat, longitude: next.dropLng } : null}
                 driver={liveFix ? { latitude: liveFix.coords.latitude, longitude: liveFix.coords.longitude } : null}
                 bottomSheetHeight={mapBottomInset}
+                carType={next?.vehicleClass}
+                routePolyline={next?.routePolyline}
             />
 
             <BottomSheet

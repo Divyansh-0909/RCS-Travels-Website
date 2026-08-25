@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { BackHandler, Dimensions, Pressable, View } from 'react-native';
 import { cssInterop } from 'nativewind';
 import { ListIcon, XIcon } from 'phosphor-react-native';
-import Animated, { FadeIn, SlideInLeft, SlideOutLeft } from 'react-native-reanimated';
+import Animated, { FadeIn, SlideInRight, SlideOutRight } from 'react-native-reanimated';
 import { useLocation, useNavigate } from 'react-router-native';
 import AppText from './AppText';
 import { tabsFor } from './ui/tabs';
@@ -111,17 +111,17 @@ export const RideMenuDrawer = () => {
             </Animated.View>
 
             <Animated.View
-                entering={SlideInLeft.duration(240)}
-                exiting={SlideOutLeft.duration(180)}
+                entering={SlideInRight.duration(240)}
+                exiting={SlideOutRight.duration(180)}
                 className="bg-[var(--background-primary)]"
                 style={{
                     position: 'absolute',
-                    left: 0, top: 0, bottom: 0,
+                    right: 0, top: 0, bottom: 0,
                     width: DRAWER_WIDTH,
                     paddingTop: 56,
                     paddingHorizontal: 12,
-                    borderTopRightRadius: 28,
-                    borderBottomRightRadius: 28,
+                    borderTopLeftRadius: 28,
+                    borderBottomLeftRadius: 28,
                 }}
             >
                 <View className="flex-row items-center justify-between px-3 mb-6">

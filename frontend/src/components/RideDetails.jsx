@@ -14,6 +14,7 @@ import { SAFE_ROUTE_SURCHARGE } from "../constants/fares";
 const COL = "w-[min(86vw,100%)] sm:w-[377px]";
 const CARD = "rounded-2xl bg-[var(--background-muted)] p-5";
 const FARE_LINE = "text-sm sm:text-base font-medium";
+const CANCELLABLE_STATUSES = ["pending", "payment_pending", "confirmed", "assigned", "en_route", "reached"];
 
 const RideDetails = ({ prop }) => {
     const bookingId = useData(state => state.bookingId);
@@ -24,6 +25,7 @@ const RideDetails = ({ prop }) => {
     const distanceKm = useData(state => state.distanceKm);
     const durationMin = useData(state => state.durationMin);
     const safeRoute = useData(state => state.safeRoute);
+    const status = useData(state => state.status);
     const cancellationCharge = useData(state => state.cancellationCharge);
     const [confirmCancel, setConfirmCancel] = useState(false);
     const surcharge = safeRoute ? SAFE_ROUTE_SURCHARGE : 0;
@@ -34,6 +36,7 @@ const RideDetails = ({ prop }) => {
     const carrier = useData(state => state.fareCarrier);
     const airport = useData(state => state.fareAirport);
     const baseFare = fare != null ? fare - surcharge - toll - carrier - airport : null;
+    const canCancel = CANCELLABLE_STATUSES.includes(status);
 
     // One id for both the guard and the call. The two sources disagree in each
     // direction: the searching panel mounts this without the prop while the
@@ -58,7 +61,6 @@ const RideDetails = ({ prop }) => {
             if (data?.error) {
                 if (data.code === "CANCELLATION_AMOUNT_CHANGED") {
                     useData.getState().setCancellationCharge(data.cancellationCharge ?? 0);
-                    setConfirmCancel(false);
                     prop.setError(data.error);
                     return;
                 }
@@ -83,6 +85,60 @@ const RideDetails = ({ prop }) => {
         } finally {
             prop.setLoading(false);
         }
+    }
+
+    if (confirmCancel && canCancel) {
+        return (
+            <div
+                role="dialog"
+                aria-labelledby="cancel-ride-title"
+                className="z-10 flex w-full flex-col items-center gap-6 text-left sm:order-1 sm:h-[100dvh] sm:w-auto sm:justify-center sm:overflow-y-auto sm:py-6"
+            >
+                <button
+                    type="button"
+                    aria-label="Back to ride details"
+                    onClick={() => setConfirmCancel(false)}
+                    className="flex items-center justify-center text-[var(--text)] outline-none transition-colors max-sm:absolute max-sm:-top-12 max-sm:left-4 max-sm:z-20 max-sm:my-1 max-sm:h-9 max-sm:rounded-full max-sm:bg-[var(--background-muted)] max-sm:px-3 max-sm:shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)] max-sm:hover:bg-[var(--background-primary)] sm:fixed sm:top-6 sm:left-6 sm:h-9 sm:w-9 sm:rounded-xl sm:opacity-80 sm:hover:bg-[var(--foreground)]/10 sm:hover:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]/70"
+                >
+                    <Icon path={mdiKeyboardBackspace} size={1.05} />
+                </button>
+
+                <div className={`flex flex-col gap-2 ${COL}`}>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">Ride cancellation</p>
+                    <h2 id="cancel-ride-title" className="text-3xl font-bold leading-tight tracking-[-0.03em] sm:text-5xl">
+                        Cancel this ride?
+                    </h2>
+                    <p className="text-base leading-snug text-[var(--text-muted)] sm:text-xl">
+                        Review what happens before you confirm.
+                    </p>
+                </div>
+
+                <div className={`${CARD} flex flex-col gap-3 ${COL}`}>
+                    <div className="flex items-center justify-between gap-3">
+                        <span className={FARE_LINE}>Cancellation charge</span>
+                        <span className="text-xl font-semibold">₹{cancellationCharge}</span>
+                    </div>
+                    <div className="h-px w-full bg-[var(--foreground)]/10" />
+                    <p className="text-sm leading-snug text-[var(--text-muted)] sm:text-base">
+                        {cancellationCharge > 0
+                            ? "This comes from the advance you already paid and goes to your driver for reaching pickup. It is not a second charge."
+                            : "No cancellation charge will be added. If you paid an advance, its refund will be started after cancellation."}
+                    </p>
+                </div>
+
+                <div className={`flex flex-col items-stretch gap-2 ${COL}`}>
+                    <Button onClick={handleCancel} prop={{ variant: "negative", width: "100%" }}>
+                        <span className="text-base sm:text-lg">Yes, cancel ride</span>
+                    </Button>
+                    <Button
+                        onClick={() => setConfirmCancel(false)}
+                        prop={{ variant: "input", width: "100%", bg: "var(--background-muted)", border: false }}
+                    >
+                        <span className="text-base sm:text-lg">Keep ride</span>
+                    </Button>
+                </div>
+            </div>
+        );
     }
 
     return (
@@ -171,28 +227,18 @@ const RideDetails = ({ prop }) => {
                         Talk to support
                     </span>
                 </Button>
-                {/* The charge is computed server-side and refreshed by the
-                    tracking poll, so this number is exactly what gets billed.
-                    Two taps required: cancelling costs money at this point, and
-                    a single mis-tap shouldn't. */}
-                {cancellationCharge > 0 && (
-                    <p className="text-left text-xs leading-snug text-[var(--text-muted)] sm:text-sm">
-                        Cancelling now retains <span className="text-[var(--text)]">₹{cancellationCharge}</span> from
-                        your scheduled advance for the driver. It is not a second charge.
-                    </p>
+                {/* Once the driver verifies the OTP the status becomes
+                    `started`, and customer self-cancellation is no longer
+                    available. The consequences are shown on a separate panel
+                    after this entry action. */}
+                {canCancel && (
+                    <Button
+                        onClick={() => setConfirmCancel(true)}
+                        prop={{ variant: "negative", width: "100%" }}
+                    >
+                        <span className="text-base sm:text-lg">Cancel ride</span>
+                    </Button>
                 )}
-                <Button
-                    onClick={!confirmCancel
-                        ? (e) => { e.preventDefault(); setConfirmCancel(true); }
-                        : handleCancel}
-                    prop={{ variant: "negative", width: "100%" }}
-                >
-                    <span className="text-base sm:text-lg">
-                        {confirmCancel
-                            ? cancellationCharge > 0 ? `Yes, cancel and pay ₹${cancellationCharge}` : "Yes, cancel this ride"
-                            : "Cancel ride"}
-                    </span>
-                </Button>
             </div>
         </div>
     );

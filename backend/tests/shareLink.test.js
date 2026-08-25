@@ -43,6 +43,7 @@ const bookingWith = (overrides = {}) => ({
     id: 'driver-uuid-0001',
     name: 'Ramesh Kumar',
     phone: '9810000002',
+    vehicleClass: 'sedan',
     vehicleNumber: 'DL09OLD99',
     vehicleModel: 'Honda City',
     location: { latitude: 28.61, longitude: 77.22, bearing: 90, speedKmh: 30 },
@@ -112,7 +113,9 @@ describe('what a shared trip reveals', () => {
     const view = sharedTripView(bookingWith(), 'https://signed/photo.jpg')
     assert.equal(view.ended, false)
     assert.equal(view.driver.name, 'Ramesh Kumar')
+    assert.equal(view.driver.vehicleClass, 'sedan')
     assert.equal(view.driver.latitude, 28.61)
+    assert.equal(view.driver.bearing, 90)
     assert.equal(view.driver.photoUrl, 'https://signed/photo.jpg')
   })
 
@@ -124,6 +127,7 @@ describe('what a shared trip reveals', () => {
     }), null, now)
     assert.equal(beforeWindow.driver.latitude, null)
     assert.equal(beforeWindow.driver.longitude, null)
+    assert.equal(beforeWindow.driver.bearing, null)
 
     const insideWindow = sharedTripView(bookingWith({
       status: 'assigned',
@@ -145,6 +149,7 @@ describe('what a shared trip reveals', () => {
     assert.equal(view.driver.name, 'Ramesh Kumar')
     assert.equal(view.driver.latitude, null)
     assert.equal(view.driver.longitude, null)
+    assert.equal(view.driver.bearing, null)
   })
 
   test('a cancelled or driverless ride names nobody at all', () => {
