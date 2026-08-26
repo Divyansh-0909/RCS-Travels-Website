@@ -19,7 +19,7 @@ const topView = require('../../../assets/top-view.webp');
 const topViewSedan = require('../../../assets/top-view-sedan.webp');
 
 
-const INITIAL_REGION_DELTA = 0.005;
+const INITIAL_REGION_DELTA = 0.003;
 const ROUTE_EDGE_PADDING = { top: 64, right: 64, bottom: 64, left: 64 };
 const MAP_CONTROL_GAP = 16;
 const MAP_CONTROL_SIZE = 48;

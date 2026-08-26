@@ -89,6 +89,7 @@ export const sendOtp           = (phone, intent)         => request("/api/auth/s
 export const verifyOtp         = (phone, otp, intent)    => request("/api/auth/verify-otp", { method: "POST", body: { phone, otp, intent, audience: "driver" } });
 
 export const getMe             = (getToken)              => request("/api/driver/me", { getToken });
+export const getFeedback       = (getToken)              => request("/api/driver/me/feedback", { getToken });
 // Creates the driver row. Needs a Clerk session, so it can only run after the
 // OTP has been verified — which is why the details it takes are collected on
 // their own screen after sign-in rather than alongside the phone number.

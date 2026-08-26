@@ -28,7 +28,7 @@ import WalletCard from '../components/ui/WalletCard';
 import { useApi } from '../hooks/useApi';
 import { initials } from '../constants/booking';
 import { canJoinFleet, formatPhone, formatRating, groupLabel, isFleet, verificationLabel } from '../constants/driver';
-import { openSupportWhatsApp, supportPhoneDisplay } from '../constants/support';
+import { supportPhoneDisplay } from '../constants/support';
 import type { DriverProfile } from '../types/enums';
 
 const asThemed = { className: { target: false, nativeStyleToProp: { color: true } } } as const;
@@ -449,6 +449,7 @@ const Account = () => {
                 label="Linked UPI account"
                 Icon={BankIcon}
                 value="Not linked"
+                onPress={() => navigate('/account/payout')}
               />
               <AccountRow
                 label="Documents"
@@ -465,9 +466,9 @@ const Account = () => {
                   his name — and a row repeating the same number two inches below it
                   invited the captain to check whether the two agreed. What is left
                   here is what this row can actually open: what riders wrote. */}
-              <AccountRow label="Feedback" Icon={StarIcon} />
+              <AccountRow label="Feedback" Icon={StarIcon} onPress={() => navigate('/account/feedback')} />
               {/* Language lives under Settings, so it is not also a sibling of it. */}
-              <AccountRow label="Settings" Icon={GearIcon} />
+              <AccountRow label="Settings" Icon={GearIcon} onPress={() => navigate('/account/settings')} />
               {/* His name, his number, his papers — and the way out of the platform
                   altogether. Kept well clear of Log out at the foot of the page:
                   logging out is a thing he does every week, and closing an account is
@@ -476,24 +477,18 @@ const Account = () => {
               {/* UserIcon, the same glyph the AppBar's Account tab carries. The row
                   and the tab lead to the same subject, so a captain who tapped one
                   should recognise the other. */}
-              <AccountRow label="Manage account" Icon={UserIcon} />
+              <AccountRow label="Manage account" Icon={UserIcon} onPress={() => navigate('/account/manage')} />
 
-              {/* The rows below used to be a second group with a gap above them —
-                  their taps leave the app, and the split said so. One run now, on the
-                  hairlines alone. Worth knowing what that costs: the caret no longer
-                  distinguishes "opens a screen" from "opens WhatsApp", so anything
-                  added here that jumps out of the app has nothing left to announce it
-                  but its own label. */}
+              {/* One continuous menu. Carets distinguish the in-app Help and Legal
+                  pages from the system share sheet above them. */}
 
               {/* The system share sheet, NOT openSupportWhatsApp. This message is
                   addressed to a friend, and every other WhatsApp link in the app
                   opens a chat with support — sending a recruitment pitch down that
                   one would deliver it to exactly the wrong person. Share lets him
                   pick the recipient, which is the whole point of a referral. */}
-              {/* Both of these leave the app, so both drop the caret. Naming the
-                  destination in the value slot went with it: "WhatsApp" and "Invite"
-                  were answering a question the label already answers, and the row
-                  reads cleaner saying one thing well. */}
+              {/* Referral is the one system action in this run, so it alone drops
+                  the caret. Help now opens its own contact-method page. */}
               <AccountRow
                 label="Refer a captain"
                 Icon={UsersThreeIcon}
@@ -507,17 +502,11 @@ const Account = () => {
               <AccountRow
                 label="Help"
                 Icon={QuestionIcon}
-                caret={false}
-                onPress={() => openSupportWhatsApp('Hi, I need help with my captain account.')}
+                onPress={() => navigate('/account/help')}
               />
-              {/* Terms, privacy and the licences. Sits with Help rather than with
-                  Settings because it is a thing to READ, not a thing to change — and
-                  in this group because the documents live on the website, so this row
-                  leaves the app exactly as the two above it do.
-
-                  No caret yet: it is honest about having nowhere to go until there is
-                  a legal screen, or a URL to open. */}
-              <AccountRow label="Legal" Icon={InfoIcon} last />
+              {/* Terms, privacy and grievance information. The collection is an
+                  in-app page; each document then announces that it opens the website. */}
+              <AccountRow label="Legal" Icon={InfoIcon} onPress={() => navigate('/account/legal')} last />
             </View>
 
             {/* The error slot and the button are ONE scroller child, not two. As

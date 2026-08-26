@@ -49,9 +49,42 @@ export const statusFill = (status: string) => STATUS_FILLS[status] ?? INK;
 // Payment as a sentence rather than a chip. The colours that used to sit beside this
 // have gone with the words they dressed: the detail screen banners this across the head
 // of its card now and pairs its own ink to its own fill, which is a decision that cannot
-// be made one half at a time. See BANNER in RideDetail.
+// be made one half at a time. DetailStatusBanner owns those pairs below.
 export const paymentWords = (state: 'paid' | 'due' | 'void') =>
     state === 'paid' ? 'Paid' : state === 'void' ? 'No charge' : 'Payment due';
+
+export type DetailStatusTone = 'primary' | 'warning' | 'danger' | 'success' | 'neutral';
+
+// One banner language for both ride and marketplace detail screens. Each pair clears
+// AA at the 12px label size; the pale fills keep status visible without turning the
+// whole booking card into an alert. Cancelled/no-charge uses neutral because there is
+// no action left to take, while danger stays reserved for money that is still owed.
+const DETAIL_STATUS_TONES: Record<DetailStatusTone, { fill: string; ink: string }> = {
+    primary: { fill: 'rgba(36,58,251,0.12)', ink: 'text-primary' },
+    warning: { fill: '#FEF3C7', ink: 'text-[#92400E]' },
+    danger: { fill: '#FADCD8', ink: 'text-[#991B1B]' },
+    success: { fill: '#DCF0E3', ink: 'text-[#166534]' },
+    neutral: { fill: '#E8E8EC', ink: 'text-[#4B5563]' },
+};
+
+export const DetailStatusBanner = ({ label, tone }: { label: string; tone: DetailStatusTone }) => {
+    const colours = DETAIL_STATUS_TONES[tone];
+
+    return (
+        <View
+            className="w-full items-center py-2"
+            style={{
+                backgroundColor: colours.fill,
+                borderTopLeftRadius: 16,
+                borderTopRightRadius: 16,
+            }}
+        >
+            <AppText className={`text-xs font-semibold uppercase tracking-wide ${colours.ink}`}>
+                {label}
+            </AppText>
+        </View>
+    );
+};
 
 // ---------------------------------------------------------------------------
 
@@ -130,6 +163,7 @@ export const ActionButton = ({
     onPress,
     solid,
     padY = 'py-3',
+    size = 'default',
     progress,
 }: {
     label: string;
@@ -137,8 +171,10 @@ export const ActionButton = ({
     onPress: () => void;
     solid?: boolean;
     padY?: string;
+    size?: 'default' | 'large';
     progress?: SharedValue<number>;
 }) => {
+    const large = size === 'large';
     const progressStyle = useAnimatedStyle(() => ({
         width: progress ? `${progress.value * 100}%` : '100%',
     }));
@@ -146,7 +182,7 @@ export const ActionButton = ({
     return (
         <Pressable role="button" onPress={onPress} className="flex-1">
             <View
-                className={`relative flex-row items-center justify-center gap-1 overflow-hidden ${padY} ${
+                className={`relative flex-row items-center justify-center overflow-hidden ${large ? 'gap-2 py-3.5' : `gap-1 ${padY}`} ${
                     progress
                         ? 'bg-primary-light'
                         : solid
@@ -154,7 +190,7 @@ export const ActionButton = ({
                             : 'bg-[var(--foreground)]'
                 }`}
                 style={{
-                    borderRadius: 12,
+                    borderRadius: large ? 16 : 12,
                 }}
             >
                 {progress && (
@@ -165,10 +201,10 @@ export const ActionButton = ({
                     />
                 )}
 
-                <View className="z-10 flex-row items-center justify-center gap-1">
+                <View className={`z-10 flex-row items-center justify-center ${large ? 'gap-2' : 'gap-1'}`}>
                     {leading}
                     <AppText
-                        className={`text-sm font-semibold ${
+                        className={`${large ? 'text-base' : 'text-sm'} font-semibold ${
                             solid || progress ? 'text-white' : INK_TEXT
                         }`}
                     >

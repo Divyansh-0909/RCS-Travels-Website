@@ -60,13 +60,23 @@ const TABS: { key: RidesScope; label: string }[] = [
     { key: 'history', label: 'History' },
 ];
 
+const scopeFromSearch = (search: string): RidesScope =>
+    new URLSearchParams(search).get('tab') === 'history' ? 'history' : 'upcoming';
+
+const pathForScope = (scope: RidesScope) =>
+    scope === 'history' ? '/rides?tab=history' : '/rides';
+
 const Rides = () => {
     const api = useApi();
     const location = useLocation();
     const navigate = useNavigate();
     const onScroll = useHideAppBarOnScroll();
 
-    const [scope, setScope] = useState<RidesScope>('upcoming');
+    // The tab belongs to this navigation entry, not only to this component. Routes
+    // unmounts the board while a detail is open, so local state alone always came
+    // back as Upcoming. Keeping History in the entry URL lets every kind of Back
+    // (header, Android and edge swipe) restore the board that opened the ride.
+    const [scope, setScope] = useState<RidesScope>(() => scopeFromSearch(location.search));
     // Kept per tab, not per screen. Both boards are one request each and neither
     // changes while the captain is looking at the other, so re-fetching on every
     // switch bought nothing and cost a round trip to ap-south-1 — with an empty list
@@ -144,16 +154,15 @@ const Rides = () => {
         return () => subscription.remove();
     }, [refresh, scope]);
 
-    // Tapping Rides on the bar always lands on Upcoming — the work ahead is what the
-    // tab is for, and a captain who left the app on History last week should not have
-    // to find his way back. The AppBar navigates with replace to a path that may
-    // already be current, so the route key is what marks the tap; pathname would not
-    // change and the effect would never run.
+    // Tapping Rides on the bar still lands on Upcoming because that navigation removes
+    // `tab=history`. Returning through router history keeps it, so a detail's Back no
+    // longer looks identical to a fresh tab-bar tap. The route key also covers replace
+    // navigation to the same path, where pathname alone would not change.
     useEffect(() => {
-        setScope('upcoming');
+        setScope(scopeFromSearch(location.search));
         setSearching(false);
         setQuery('');
-    }, [location.key]);
+    }, [location.key, location.search]);
 
     // History runs backwards from now, upcoming forwards. Both read as "nearest to
     // today first", which is the same instinct pointed in two directions.
@@ -189,6 +198,10 @@ const Rides = () => {
     const switchTo = (next: RidesScope) => {
         if (next === scope) return;
         setScope(next);
+        // Replace rather than push: switching a tab should not require another Back
+        // press later. The replaced entry is nevertheless what a ride detail returns
+        // to, complete with the selected tab.
+        navigate(pathForScope(next), { replace: true });
         // The banner belongs to the board that failed, not to the screen.
         setError(null);
     };

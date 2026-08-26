@@ -24,7 +24,14 @@ import { OfferProvider } from './hooks/useOffers';
 import Account from './pages/Account';
 import Documents from './pages/Documents';
 import Vehicles from './pages/Vehicles';
+import Feedback from './pages/Feedback';
+import Help from './pages/Help';
+import Legal from './pages/Legal';
+import ManageAccount from './pages/ManageAccount';
+import PayoutAccount from './pages/PayoutAccount';
+import Settings from './pages/Settings';
 import Available from './pages/Available';
+import MarketplaceDetail from './pages/MarketplaceDetail';
 import Notifications from './pages/Notifications';
 import Post from './pages/Post';
 import Rides from './pages/Rides';
@@ -76,6 +83,7 @@ const AppRoutes = () => {
                         <Route index element={<HomeGate />} />
                         <Route element={<VerifiedRoute />}>
                             <Route path="available" element={<Available />} />
+                            <Route path="available/:id" element={<MarketplaceDetail />} />
                             <Route path="post" element={<Post />} />
                             <Route path="notifications" element={<Notifications />} />
                         </Route>
@@ -93,6 +101,12 @@ const AppRoutes = () => {
                         <Route path="account" element={<Account />} />
                         <Route path="account/documents" element={<Documents />} />
                         <Route path="account/vehicles" element={<Vehicles />} />
+                        <Route path="account/payout" element={<PayoutAccount />} />
+                        <Route path="account/feedback" element={<Feedback />} />
+                        <Route path="account/settings" element={<Settings />} />
+                        <Route path="account/manage" element={<ManageAccount />} />
+                        <Route path="account/help" element={<Help />} />
+                        <Route path="account/legal" element={<Legal />} />
                     </Route>
                     </>
                 ) : (

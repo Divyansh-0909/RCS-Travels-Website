@@ -46,7 +46,7 @@ import {
 import { addVehicle, removeVehicle, switchActiveVehicle } from '../services/driverVehicles.js'
 import { completionGeofence, locationProblem, PICKUP_RADIUS_KM } from '../services/rideGeofence.js'
 import { applyDriverCancellationConsequences } from '../services/driverCancellations.js'
-import { isDriverDispatchReady } from '../services/driverAvailability.ts'
+import { isDriverDispatchReady, restoreIdleDriverCapacity } from '../services/driverAvailability.ts'
 import { notifyWhatsAppDriverCancelled, notifyWhatsAppRideStatus } from '../services/notification.js'
 import { locationSchema, UploadUrlRequest, ConfirmDocumentsRequest, rideParamsSchema, driverOnlineSchema, driverAccountInformationSchema, addVehicleSchema, activeVehicleSchema, fcmTokenSchema, rideStatusSchema, driverRidesQuerySchema } from '../types.ts'
 
@@ -1074,6 +1074,48 @@ driverRouter.get('/me/documents', protect, async (req, res) => {
     })
 })
 
+// The captain's own rider feedback, newest first. The profile already carries the
+// aggregate; this endpoint adds only the individual rows a dedicated Feedback
+// screen needs. Rider identity is deliberately absent: the useful context is the
+// ride reference, not a customer's personal details.
+driverRouter.get('/me/feedback', protect, async (req, res) => {
+    const { userId } = getAuth(req)
+    if (!userId) return res.status(401).json({ error: 'Not signed in' })
+
+    const driver = await prisma.driver.findUnique({
+        where: { clerkId: userId },
+        select: { id: true },
+    })
+    if (!driver) return res.status(403).json({ error: 'Not a registered driver' })
+
+    const [summary, reviews] = await Promise.all([
+        prisma.driverReview.aggregate({
+            where: { driverId: driver.id },
+            _avg: { rating: true },
+            _count: { _all: true },
+        }),
+        prisma.driverReview.findMany({
+            where: { driverId: driver.id },
+            orderBy: { createdAt: 'desc' },
+            take: 50,
+            select: {
+                id: true,
+                rating: true,
+                comment: true,
+                createdAt: true,
+                booking: { select: { reference: true } },
+            },
+        }),
+    ])
+
+    return res.json({
+        summary: summary._count._all
+            ? { average: summary._avg.rating ?? 0, count: summary._count._all }
+            : null,
+        reviews,
+    })
+})
+
 // Deliberately still outside requireApprovedDriver. This is the one endpoint a
 // pending or rejected driver must be able to read, because it is what tells him he is
 // pending or rejected; gating it behind approval would answer "not yet approved" to
@@ -1290,9 +1332,19 @@ driverRouter.patch('/online', protect, async (req, res) => {
         if (active > 0) return res.status(409).json({ error: 'Finish your active ride before going offline' })
     }
 
-    await prisma.driver.update({
-        where: { id: driver.id },
-        data: { isOnline },
+    await prisma.$transaction(async (tx) => {
+        await tx.driver.update({
+            where: { id: driver.id },
+            data: { isOnline },
+        })
+
+        // Capacity is a denormalised live-seat counter. Legacy/manual booking
+        // changes can leave an empty car at zero, which makes both the customer
+        // map and assignment silently discard this otherwise-ready captain.
+        // Starting a shift is the natural repair boundary: no live ride means
+        // the whole active vehicle is free, and the guarded update does nothing
+        // when somebody is actually in it.
+        if (isOnline) await restoreIdleDriverCapacity(driver, tx)
     })
 
     return res.json({ isOnline })

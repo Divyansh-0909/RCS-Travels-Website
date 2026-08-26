@@ -8,6 +8,7 @@ import AppText from '../components/AppText';
 import {
     ActionButton,
     CONTENT,
+    DetailStatusBanner,
     FactPill,
     HAIRLINE,
     INK,
@@ -48,12 +49,6 @@ const Check = cssInterop(CheckIcon, asThemed);
 // number and have to stay that way; App.tsx is where it is set.
 const SHELL_TOP_PAD = 40;
 
-// This screen has no tab bar under it — AppBar returns null on a drill-down — so the
-// action bar sits on the screen edge itself. 24 is the same gap the AppBar keeps on the
-// screens that do have one, so the two share a rhythm rather than each picking a number.
-const ACTIONS_BOTTOM = 24;
-const ACTIONS_HEIGHT = 72;
-
 // One step down from PRIMARY_LINE, which the addresses keep. The summary is a column of
 // paired label-and-figure rows, so it reads as a table and a table does not need each
 // row set at reading size — the total under the rule is what the eye is going to, and
@@ -63,40 +58,11 @@ const FARE_LINE = `text-sm font-semibold ${CONTENT}`;
 type ApiError = { error: string; status: number; code?: string };
 type GetRideResponse = UpcomingBooking | ApiError;
 
-// What the ride owes, across the head of the card it belongs to. It used to be small
-// caps tucked beside the title, competing with it for the same line; a captain opens
-// this screen to find out where the money stands, so it is the first thing the card
-// says rather than the last thing on its first row.
-//
-// Fill and ink are paired per state, and the pairs are chosen together rather than
-// tinting each ink's own hue. The due red is a step darker than the #B91C1C the app
-// spends on unboxed money words: on a fill this warm that one lands at 3.9:1, under AA
-// at this size, and lightening the fill until it passes leaves no banner to read.
-const BANNER = {
-    due: { fill: '#FADCD8', ink: 'text-[#991B1B]' },     // 6.5:1
-    paid: { fill: '#DCF0E3', ink: 'text-[#166534]' },    // 6.1:1
-    void: { fill: '#E8E8EC', ink: 'text-[#4B5563]' },    // 6.2:1
-} as const;
-
-// rounded-2xl, written out. The banner draws its own two top corners rather than being
-// clipped to the card's: overflow hidden on a rounded parent is the one thing in this
-// stack Android does not honour reliably, and a square strip across the head of a
-// rounded card is exactly the failure that would produce.
-const CARD_RADIUS = 16;
-
 const PaymentBanner = ({ state }: { state: UpcomingBooking['paymentState'] }) => (
-    <View
-        className="w-full items-center py-2"
-        style={{
-            backgroundColor: BANNER[state].fill,
-            borderTopLeftRadius: CARD_RADIUS,
-            borderTopRightRadius: CARD_RADIUS,
-        }}
-    >
-        <AppText className={`text-xs font-semibold uppercase tracking-wide ${BANNER[state].ink}`}>
-            {paymentWords(state)}
-        </AppText>
-    </View>
+    <DetailStatusBanner
+        label={paymentWords(state)}
+        tone={state === 'due' ? 'danger' : state === 'paid' ? 'success' : 'neutral'}
+    />
 );
 
 // gap-4 is the card's own rhythm: the top card stacks whole blocks — a heading, a
@@ -177,7 +143,7 @@ const RideDetail = () => {
                 <Back size={22} weight="bold" className={INK_TEXT} />
             </Pressable>
             <AppText className={`text-xl font-semibold ${INK_TEXT}`} style={{ letterSpacing: -0.72 }}>
-                Details
+                Ride details
             </AppText>
         </View>
     );
@@ -219,7 +185,7 @@ const RideDetail = () => {
                 style={{ flex: 1 }}
                 contentContainerStyle={{
                     paddingHorizontal: 20,
-                    paddingBottom: ACTIONS_BOTTOM + ACTIONS_HEIGHT,
+                    paddingBottom: 16,
                     gap: 16,
                 }}
                 showsVerticalScrollIndicator={false}
@@ -375,25 +341,25 @@ const RideDetail = () => {
                 </View>
             </ScrollView>
 
-            {/* Pinned rather than scrolled to. Calling a rider is the time-critical thing
-                a captain opens this screen for, and it is the one action that must not
-                be at the bottom of a list he has to scroll through to reach. */}
+            {/* This footer owns real layout space and an opaque surface. The details
+                viewport therefore ends above it instead of scrolling behind the actions. */}
             <View
-                className="absolute left-0 right-0 flex-row gap-2 px-5"
-                style={{ bottom: ACTIONS_BOTTOM }}
+                className="w-full flex-row gap-2 px-5 pt-3 pb-6"
+                style={{ backgroundColor: PAGE }}
             >
                 {fareUnpaid(booking) && (
                     <ActionButton
                         label="Call rider"
                         leading={<PhoneMark />}
                         solid
+                        size="large"
                         onPress={() => Linking.openURL(`tel:${booking.customerPhone}`)}
                     />
                 )}
                 <ActionButton
                     label="Contact support"
-                    padY="py-2"
                     leading={<WhatsappMark />}
+                    size="large"
                     onPress={() => openSupportWhatsApp(`Hi, I need help with ride ${booking.reference}.`)}
                 />
             </View>

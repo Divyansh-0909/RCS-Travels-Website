@@ -839,12 +839,12 @@ input:focus{outline:none;border-color:var(--primary);background:var(--page)}
       <input id="pFare" type="number" value="4200" inputmode="numeric">
       <label for="pDep">Deposit you want (₹)</label>
       <input id="pDep" type="number" value="400" inputmode="numeric">
-      <p class="hint" id="depHint">Minimum ₹100, and it has to be less than the fare.</p>
+      <p class="hint" id="depHint">Minimum ₹50, and it has to be less than the fare.</p>
 
       <div class="card" style="margin-top:var(--s5)">
         <div class="split"><dt>Deposit</dt><dd id="sumDep">₹400</dd></div>
-        <div class="split"><dt>Platform fee (12%)</dt><dd id="sumFee" class="neg">−₹48</dd></div>
-        <div class="split"><dt style="color:var(--ink)">You receive on completion</dt><dd id="sumNet">₹352</dd></div>
+        <div class="split"><dt>Marketplace fee (10%)</dt><dd id="sumFee" class="neg">−₹40</dd></div>
+        <div class="split"><dt style="color:var(--ink)">You receive on completion</dt><dd id="sumNet">₹360</dd></div>
       </div>
 
       <div class="btn-row"><button class="btn btn-primary" id="postBtn">Post this ride</button></div>
@@ -1448,14 +1448,14 @@ input:focus{outline:none;border-color:var(--primary);background:var(--page)}
     const f = Number(fare.value) || 0;
     const d = Number(dep.value) || 0;
     let bad = "";
-    if (d < 100) bad = "The minimum deposit is ₹100.";
+    if (d < 50) bad = "The minimum deposit is ₹50.";
     else if (d >= f) bad = "The deposit has to be less than the fare, or nobody will take it.";
 
     depHint.dataset.bad = bad ? "1" : "0";
-    depHint.textContent = bad || "Minimum ₹100, and it has to be less than the fare.";
+    depHint.textContent = bad || "Minimum ₹50, and it has to be less than the fare.";
     postBtn.disabled = Boolean(bad);
 
-    const fee = d * 0.12;
+    const fee = d * 0.10;
     $("sumDep").textContent = rupees(d);
     $("sumFee").textContent = "−" + rupees(fee);
     $("sumNet").textContent = rupees(d - fee);

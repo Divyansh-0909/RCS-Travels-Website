@@ -6,10 +6,9 @@ claim; it becomes held, and rider plus Driver A details are revealed only after
 that succeeds. This deposit is separate from the scheduled-ride 15% acceptance
 deposit.
 
-Settlement occurs only after ride completion. Driver B's pre-fee amount is
-`fare - deposit`; the platform takes 6% and B receives the remainder. Driver A's
-pre-fee amount is the deposit; the platform takes 6% and A receives the
-remainder.
+Settlement occurs only after ride completion. Driver B receives `fare - deposit`
+with no marketplace completion fee. Driver A's pre-fee amount is the deposit;
+the platform takes 10% and A receives the remainder.
 
 If B cancels, the platform receives 12% of the deposit, B receives the rest,
 and A receives nothing. If A cancels, B receives the full held deposit, no fee

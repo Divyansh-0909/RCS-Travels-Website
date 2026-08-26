@@ -30,7 +30,7 @@ type Props = {
   value?: string | null;
   /** Draws the value in amber. For a value that is a thing to do, not a thing to read. */
   warn?: boolean;
-  /** Absent means there is nowhere to go yet — see the comment on the caret below. */
+  /** Absent means the row is informational rather than a control. */
   onPress?: () => void;
   /**
    * Force the caret off on a row that IS pressable. For taps that leave the app
@@ -67,12 +67,8 @@ const AccountRow = ({ label, Icon, value, warn, onPress, caret, last }: Props) =
         </AppText>
       ) : null}
 
-      {/* Drawn only where the tap goes somewhere, and only where that somewhere is a
-          screen. A caret is a promise about what happens next: the screens behind
-          half of these rows are not built yet, so a row that says "there is more
-          through here" and then does nothing is worse than a row that quietly says
-          nothing at all — and a row that hands the captain to WhatsApp has not kept
-          the promise either, which is what caret={false} is for. */}
+      {/* Drawn only where the tap opens another screen. A row that hands the captain
+          to a system surface such as Share can opt out with caret={false}. */}
       {showCaret ? <Caret size={16} weight="bold" className={MUTED} /> : null}
     </View>
   );

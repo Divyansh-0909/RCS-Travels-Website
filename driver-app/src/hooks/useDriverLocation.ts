@@ -90,6 +90,7 @@ const MODES = {
 const START_SETTLE_MS = 600;
 const START_BACKOFF_MS = [1500, 4000];
 const IMMEDIATE_FIX_BACKOFF_MS = [1500, 4000];
+const IMMEDIATE_FIX_TIMEOUT_MS = 12_000;
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -229,7 +230,16 @@ export function useDriverLocation(enabled: boolean, onRide: boolean) {
       let last: unknown;
       for (let attempt = 0; attempt <= IMMEDIATE_FIX_BACKOFF_MS.length; attempt++) {
         try {
-          const location = await Location.getCurrentPositionAsync({ accuracy: mode.accuracy });
+          // Expo documents that a high-accuracy one-shot can take a long time,
+          // especially indoors. Bound it so one unavailable GPS fix cannot hold
+          // this repair loop forever. The long-running service is started in
+          // parallel below and remains the authoritative retry path.
+          const location = await Promise.race([
+            Location.getCurrentPositionAsync({ accuracy: mode.accuracy }),
+            wait(IMMEDIATE_FIX_TIMEOUT_MS).then(() => {
+              throw new Error('current location timed out');
+            }),
+          ]);
           if (cancelled) return;
           rememberDriverLocation(location);
 
@@ -318,10 +328,13 @@ export function useDriverLocation(enabled: boolean, onRide: boolean) {
       if (enabled) await wait(START_SETTLE_MS);
       if (cancelled) return;
 
-      // Do not make a captain wait through native service retries before the
-      // request that can make dispatch find him. This also repairs a service an
-      // Android vendor killed whenever the app returns to the foreground.
-      await publishImmediateFix();
+      // Run the one-shot and the native service startup independently. A
+      // high-accuracy current-position request can take a long time indoors;
+      // awaiting it here used to prevent startLocationUpdatesAsync from running
+      // at all, leaving an already-online captain stuck on an old database fix.
+      // Whichever path receives a usable fix first reports it through the same
+      // throttle and makes dispatch find him.
+      void publishImmediateFix();
 
       let last: unknown;
 

@@ -1457,15 +1457,15 @@ each numbered block unblocks the ones after it. Outstation is PARKED (see bottom
      - ONLY AFTER THE HOLD SUCCEEDS does B see the rider and A's details.
    ON COMPLETION — AND ONLY ON COMPLETION. Nothing settles before the ride is
    done; the held deposit does not move to A early.
-     PLATFORM FEE IS 6%, CHARGED TO BOTH SIDES SEPARATELY:
+     DRIVER B PAYS NO MARKETPLACE COMPLETION FEE. DRIVER A PAYS 10% OF THE DEPOSIT:
        B's pre-fee amount = fare − deposit
-       B's fee            = 6% of (fare − deposit)
-       B receives         = (fare − deposit) − fee
+       B's fee            = ₹0
+       B receives         = fare − deposit
        A's pre-fee amount = deposit
-       A's fee            = 6% of deposit
+       A's fee            = 10% of deposit
        A receives         = deposit − fee
-     Worked: fare ₹2,000, deposit ₹300. B: 1700 − 102 = ₹1,598. A: 300 − 18 =
-     ₹282. Platform: ₹120.
+     Worked: fare ₹2,000, deposit ₹300. B: 2000 − 300 = ₹1,700. A: 300 − 30 =
+     ₹270. Platform: ₹30.
    B CANCELS AFTER CLAIMING:
      cancellation fee = 12% of the deposit, to the PLATFORM.
      B receives deposit − 12%. A receives NOTHING — the ride never happened
@@ -1476,11 +1476,11 @@ each numbered block unblocks the ones after it. Outstation is PARKED (see bottom
    (block 10, 15% of fare, always returned). Two deposits now exist in the
    driver app with different amounts, different lifecycles and different
    owners. They must never share a name, a screen or a WalletEntryType.
-   !! THE 6% IS NOT THE 5% PLATFORM COMMISSION EITHER, and the driver loyalty
+   !! THE 10% POSTER FEE IS NOT THE 5% PLATFORM COMMISSION EITHER, and the driver loyalty
    reward (block 14) waives the 5% ONLY — it never waives a marketplace fee
    or the 12% cancellation fee.
    !! PAYOUT COST STILL BITES AT THE FLOOR, AND THE FLOOR IS NOW LOWER. On a
-   ₹50 deposit A's fee is ₹3, against a RazorpayX payout of ~₹5–6 to a
+   ₹50 deposit A's fee is ₹5, against a RazorpayX payout of ~₹5–6 to a
    DIFFERENT poster on every completed ride. The smallest listings lose money
    on A's side. ₹50 is the confirmed floor — do not silently raise it; if
    per-ride losses show up in practice, that is the trigger to revisit.

@@ -31,15 +31,10 @@ export const HIDE = { duration: 220, easing: Easing.out(Easing.cubic) } as const
 // arrow, it owns the whole screen, and a tab bar under it would offer to leave the
 // section from a screen whose own affordance is to go up one level.
 //
-// "/account/documents" is the same shape and gets the same treatment. It is also the
-// screen a captain reaches by tapping a row in Account, and the one he does the actual
-// work of onboarding on: a checklist of eleven rows, each opening a picker. The bar
-// over the foot of that is a standing offer to abandon it half-done.
-//
-// "/account/vehicles" is that screen's neighbour — reached from the same card, wearing
-// the same back arrow, and ending in a form with a plate to type and two buttons at
-// the bottom of it. A floating tab bar over those is the same offer to walk away
-// mid-task, made over the one control the captain is reaching for.
+// Every "/account/*" route is the same shape: reached from the Account menu, wearing
+// a back arrow, and owning the full screen until the captain returns. Some end in a
+// document picker or form, while others are reading pages; in both cases a floating
+// tab bar would compete with the route's own navigation and cover its final action.
 //
 // Both the bar and the scrim read this, and that is the point of it living here rather
 // than in either file. The scrim is a WHITE fade sized to the bar it backs — on a
@@ -48,8 +43,8 @@ export const HIDE = { duration: 220, easing: Easing.out(Easing.cubic) } as const
 // pinned to its own bottom edge.
 export const isDrillDown = (pathname: string) =>
     /^\/rides\/.+/.test(pathname)
-    || pathname === '/account/documents'
-    || pathname === '/account/vehicles'
+    || /^\/available\/.+/.test(pathname)
+    || pathname.startsWith('/account/')
     || pathname === '/notifications'
 
 /**

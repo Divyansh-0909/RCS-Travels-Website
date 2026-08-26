@@ -68,7 +68,10 @@ const Notifications = () => {
                     className="absolute -top-2 left-0"
                     role="button"
                     aria-label="back"
-                    onPress={() => navigate("/")}
+                    // Notifications can be opened from any signed-in screen. Follow
+                    // the same router entry as Android and swipe-back instead of
+                    // hard-coding Home and discarding the captain's context.
+                    onPress={() => navigate(-1)}
                     style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
                 >
                     <View
