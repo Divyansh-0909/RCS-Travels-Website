@@ -69,7 +69,7 @@ const OptionsBody = ({ options, onClose, titleId, showClose = true }) => (
             underneath each centre on their own width and stop agreeing with
             each other or with the rows below. */}
         <div className="flex items-start justify-between gap-4 text-left">
-            <h3 id={titleId} className="text-xl sm:text-2xl font-medium leading-tight text-[var(--text)]">Ride options</h3>
+            <h3 id={titleId} className="min-w-0 flex-1 [overflow-wrap:anywhere] text-xl sm:text-2xl font-medium leading-tight text-[var(--text)]">Ride options</h3>
             {showClose && (
                 <button
                     type="button"

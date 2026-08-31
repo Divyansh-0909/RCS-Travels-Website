@@ -1,5 +1,5 @@
 import Icon from '@mdi/react';
-import { mdiMenu, mdiClose, mdiAccountCircle, mdiChevronDown, mdiCog, mdiInformation, mdiShieldCheck } from '@mdi/js';
+import { mdiMenu, mdiClose, mdiAccountCircle, mdiChevronDown, mdiCog, mdiInformation, mdiShieldCheck, mdiArrowRight, mdiMapMarkerOutline } from '@mdi/js';
 import { useViewNavigate } from "../../hooks/useViewNavigate";
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -16,6 +16,7 @@ import { angledVehicleImageOf } from "../../constants/vehicleImages"
 import { labelOf } from "../../constants/vehicles"
 import Skeleton from './Skeleton';
 import ErrorPanel from './ErrorPanel';
+import { SuggestionDropdown, useAddressSuggestions } from '../../pages/OnBoarding';
 
 
 // The initial-in-a-circle, at whatever size the surface needs.
@@ -27,7 +28,7 @@ const Avatar = ({ invert, initial, box, text }) => (
     </div>
 )
 
-const NavBar = ({ invert = false, hideExpanded = false, className = "" }) => {
+const NavBar = ({ invert = false, hideExpanded = false, hideDestinationInput = false, className = "" }) => {
     const { user: clerkUser } = useUser();
     const navigate = useViewNavigate();
     const { signIn } = useSignIn();
@@ -42,6 +43,8 @@ const NavBar = ({ invert = false, hideExpanded = false, className = "" }) => {
     const vehicleClass = useData(state => state.vehicleClass);
     const fare = useData(state => state.fare);
     const dropLocation = useData(state => state.dropLocation);
+    const setDrop = useData(state => state.setDrop);
+    const setDropCoords = useData(state => state.setDropCoords);
     const pickupLocation = useData(state => state.pickupLocation);
     const [expand, setExpand] = useState(false)
     const api = useApi();
@@ -49,6 +52,29 @@ const NavBar = ({ invert = false, hideExpanded = false, className = "" }) => {
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState(null)
     const drawerRef = useRef(null)
+    const destinationRef = useRef(null)
+    const [collapsed, setCollapsed] = useState(false)
+    const destinationOnly = collapsed && !hideDestinationInput
+    const destinationCloserRef = useRef(null)
+    const destinationAutocomplete = useAddressSuggestions(
+        dropLocation,
+        setDrop,
+        setDropCoords,
+        api,
+        destinationCloserRef,
+        () => setExpand(false),
+        false,
+    )
+
+    // The home rail begins as a clear destination-first control. Once the
+    // reader has moved into the page it becomes compact, while retaining the
+    // destination and menu instead of hiding the booking affordance entirely.
+    useEffect(() => {
+        const onScroll = () => setCollapsed(window.scrollY > 72)
+        onScroll()
+        window.addEventListener("scroll", onScroll, { passive: true })
+        return () => window.removeEventListener("scroll", onScroll)
+    }, [])
 
     useEffect(() => {
         if (isSignedIn) {
@@ -131,6 +157,15 @@ const NavBar = ({ invert = false, hideExpanded = false, className = "" }) => {
 
     const goHome = () => goToTopOf('/')
 
+    const openBooking = () => {
+        if (!dropLocation?.trim()) {
+            destinationRef.current?.focus()
+            destinationAutocomplete.onFocus()
+            return
+        }
+        navigate('/book', { state: { stage: 'route' } })
+    }
+
     // Close first, act on the next task — the scroll lock has to be released
     // before goToSection's smooth scroll can move the page.
     const go = (fn) => {
@@ -138,15 +173,18 @@ const NavBar = ({ invert = false, hideExpanded = false, className = "" }) => {
         setTimeout(fn, 0)
     }
 
-    // One source for both the desktop row and the drawer, so the signed-in and
-    // admin conditions can't drift apart.
-    const navLinks = [
+    const primaryNavLinks = [
         ["About", () => goToSection('about')],
         ["Outstation", () => goToTopOf('/outstation')],
         ["Help", () => navigate('/help')],
+    ]
+    const accountNavLinks = [
         ...(isSignedIn ? [["Ride History", () => navigate('/manage-account', { state: { tab: "Ride History" } })]] : []),
         ...(clerkUser?.publicMetadata?.role === "admin" ? [["Dashboard", () => navigate('/dashboard')]] : []),
     ]
+    // The drawer keeps every destination in one list; desktop separates
+    // account destinations so they sit beside the profile control.
+    const navLinks = [...primaryNavLinks, ...accountNavLinks]
 
     const userDropDownList = [[<Icon path={mdiAccountCircle} size={1.2} />, "Manage Account", "/manage-account"], [<Icon path={mdiCog} size={1.1} />, "Settings", "/settings"], [<Icon path={mdiShieldCheck} size={1.1} />, "Safety", "/safety"], [<Icon path={mdiInformation} size={1.1} />, "Legal", "/"]]
 
@@ -258,29 +296,35 @@ const NavBar = ({ invert = false, hideExpanded = false, className = "" }) => {
     )
 
     return (
-        <div className={`${className} flex flex-col justify-center items-center ${invert ? "bg-[var(--background-primary)]" : "bg-[var(--foreground)]"} max-sm:w-[min(86vw,100%)] sm:w-[740px] h-[40px] sm:h-[50px] gap-1 px-2.5 py-5.5 sm:py-6.5 rounded-full outline-1 outline-[var(--background)]/50 transition-colors duration-300 motion-reduce:transition-none`}>
-            <div className={`flex justify-between items-center ${invert ? "text-[var(--text)]" : "text-[var(--text-foreground)]"} transition-colors duration-300 motion-reduce:transition-none [&>*]:select-none w-full sm:gap-10 px-1`}>
-                <h3 onClick={goHome} className={`cursor-pointer pl-1 sm:opacity-[0.85] transition-opacity duration-300 opacity-[1] hover:opacity-[1]`}><span className='font-semibold'>RCS</span> travels</h3>
+        <div className={`${className} flex justify-center items-center ${destinationOnly ? "mt-2 w-[calc(89vw-2px)] rounded-full shadow-[0_8px_28px_rgba(0,0,0,0.18)] sm:w-[min(620px,calc(78vw-2px))]" : `border ${invert ? "bg-[var(--background-muted)] border-[var(--foreground)]/20" : "bg-[var(--foreground-muted)] border-[var(--background)]/20"} ${hideDestinationInput ? "w-full px-[5.5vw] py-3 sm:px-[11vw] sm:py-4" : "w-full flex-col gap-3 px-[5.5vw] sm:px-[11vw] py-4 pb-5"}`} transition-[width,padding,margin,border-radius,box-shadow,background-color] duration-300 motion-reduce:transition-none`}>
+            <div className={`${destinationOnly ? "hidden" : "flex w-full justify-between px-1 sm:grid sm:grid-cols-[1fr_auto_1fr] sm:gap-6"} items-center ${invert ? "text-[var(--text)]" : "text-[var(--text-foreground)]"} transition-colors duration-300 motion-reduce:transition-none [&>*]:select-none`}>
+                <h3 onClick={goHome} className='shrink-0 cursor-pointer pl-1 opacity-[1] transition-opacity duration-300 hover:opacity-[1] sm:order-2 sm:justify-self-center sm:text-2xl sm:opacity-[0.85]'><span className='font-semibold'>RCS</span> travels</h3>
 
-                <div className='sm:block hidden'>
-                    <ul className={`flex gap-1 [&>li]:cursor-pointer [&>li]:text-sm [&>li]:transition-all [&>li]:duration-300 [&>*]:px-2.5 [&>*]:py-1.5 [&>*]:rounded-full ${invert ? "[&>*]:text-[var(--text)]/80 [&>*]:hover:text-[var(--text)] [&>*]:bg-[var(--background-primary)] [&>*]:hover:bg-[var(--foreground)]/10" : "[&>*]:text-[var(--text-foreground)]/80 [&>*]:hover:text-[var(--text-foreground)] [&>*]:bg-[var(--foreground)] [&>*]:hover:bg-[var(--background-primary)]/10"}`}>
-                        {navLinks.map(([label, action], i) => (
+                <div className='hidden sm:order-1 sm:block sm:justify-self-start'>
+                    <ul className={`flex gap-1 [&>li]:cursor-pointer [&>li]:text-base [&>li]:transition-all [&>li]:duration-300 [&>*]:px-2.5 [&>*]:py-1.5 [&>*]:rounded-full ${invert ? "[&>*]:text-[var(--text)]/80 [&>*]:hover:text-[var(--text)] [&>*]:bg-[var(--background-muted)] [&>*]:hover:bg-[var(--foreground)]/10" : "[&>*]:text-[var(--text-foreground)]/80 [&>*]:hover:text-[var(--text-foreground)] [&>*]:bg-[var(--foreground-muted)] [&>*]:hover:bg-[var(--background-primary)]/10"}`}>
+                        {primaryNavLinks.map(([label, action], i) => (
                             <li key={i} onClick={action}>{label}</li>
                         ))}
                     </ul>
                 </div>
 
-                <div className='flex relative justify-center -mr-1.5 items-center gap-3 sm:block hidden '>
+                <div className='order-3 relative -mr-1.5 hidden items-center justify-center gap-3 sm:flex sm:justify-self-end'>
                     {isSignedIn
-                        ?
-                        <div onClick={() => setExpand(!expand)} className={`flex ${invert ? "text-[var(--text)] bg-[var(--background-primary)] hover:bg-[var(--foreground)]/10" : "text-[var(--text-foreground)] bg-[var(--foreground)] hover:bg-[var(--background-primary)]/10"} jusityf-center items-center px-1 py-1 rounded-3xl justify-center items-center gap-1 cursor-pointer transition-colors duration-300 motion-reduce:transition-none`}>
-                            <Avatar invert={invert} initial={user?.name?.charAt(0)} box='w-8 h-8' text='' />
-                            <Icon path={mdiChevronDown} style={{
-                                transform: expand
-                                    ? "rotate(180deg)"
-                                    : "rotate(0deg)",
-                            }} size={0.8} />
-                        </div>
+                        ? <>
+                            <ul className={`flex gap-1 [&>li]:cursor-pointer [&>li]:text-base [&>li]:transition-all [&>li]:duration-300 [&>*]:px-2.5 [&>*]:py-1.5 [&>*]:rounded-full ${invert ? "[&>*]:text-[var(--text)]/80 [&>*]:hover:text-[var(--text)] [&>*]:bg-[var(--background-muted)] [&>*]:hover:bg-[var(--foreground)]/10" : "[&>*]:text-[var(--text-foreground)]/80 [&>*]:hover:text-[var(--text-foreground)] [&>*]:bg-[var(--foreground-muted)] [&>*]:hover:bg-[var(--background-primary)]/10"}`}>
+                                {accountNavLinks.map(([label, action], i) => (
+                                    <li key={i} onClick={action}>{label}</li>
+                                ))}
+                            </ul>
+                            <div onClick={() => setExpand(!expand)} className={`flex ${invert ? "text-[var(--text)] bg-[var(--background-primary)] hover:bg-[var(--foreground)]/10" : "text-[var(--text-foreground)] bg-[var(--foreground)] hover:bg-[var(--background-primary)]/10"} jusityf-center items-center px-1 py-1 rounded-3xl justify-center items-center gap-1 cursor-pointer transition-colors duration-300 motion-reduce:transition-none`}>
+                                <Avatar invert={invert} initial={user?.name?.charAt(0)} box='w-8 h-8' text='' />
+                                <Icon path={mdiChevronDown} style={{
+                                    transform: expand
+                                        ? "rotate(180deg)"
+                                        : "rotate(0deg)",
+                                }} size={0.8} />
+                            </div>
+                        </>
                         :
                         <div className='flex gap-1 justify-center items-center [&>*]:opacity-[1] [&>*]:hover:opacity-[0.8] [&>*]:cursor-pointer [&>*]:transition-all [&>*]:duration-300'>
                             {/* Both follow the bar rather than the theme: the
@@ -336,10 +380,51 @@ const NavBar = ({ invert = false, hideExpanded = false, className = "" }) => {
                 <Icon
                     path={mdiMenu}
                     onClick={() => setExpand(!expand)}
-                    className='block sm:hidden cursor-pointer opacity-100 hover:opacity-70 active:opacity-60 transition-opacity duration-300'
+                    className='order-3 block shrink-0 cursor-pointer opacity-100 hover:opacity-70 active:opacity-60 transition-opacity duration-300 sm:hidden'
                     size={0.9}
                 />
             </div>
+
+            {!hideDestinationInput && <div className='relative order-2 flex w-full min-w-0 items-center justify-center sm:max-w-[620px]'>
+                <form
+                    onSubmit={(event) => {
+                        event.preventDefault()
+                        openBooking()
+                    }}
+                    className={`flex w-full items-center rounded-full border px-4 py-2 ${invert ? "border-[var(--foreground)]/20 bg-[var(--background)] text-[var(--foreground)]" : "border-[var(--background)]/15 bg-[var(--foreground)] text-[var(--background)]"}`}
+                >
+                    <Icon path={mdiMapMarkerOutline} size={0.95} className="shrink-0 opacity-60" />
+                    <input
+                        ref={destinationRef}
+                        id="nav-drop-location"
+                        type="text"
+                        value={dropLocation}
+                        onChange={(event) => setDrop(event.target.value)}
+                        onFocus={destinationAutocomplete.onFocus}
+                        onBlur={destinationAutocomplete.onBlur}
+                        autoComplete="off"
+                        aria-label="Drop location"
+                        placeholder="Enter drop location"
+                        className='min-w-0 flex-1 bg-transparent px-2 text-base outline-none placeholder:opacity-55 sm:text-lg'
+                    />
+                    <button
+                        type="submit"
+                        onMouseDown={(event) => event.preventDefault()}
+                        aria-label="Continue to trip details"
+                        className='flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-white transition-opacity hover:opacity-90 active:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary'
+                    >
+                        <Icon path={mdiArrowRight} size={0.95} />
+                    </button>
+                </form>
+                <SuggestionDropdown
+                    anim={destinationAutocomplete.dropdown}
+                    items={destinationAutocomplete.items}
+                    onSelect={destinationAutocomplete.select}
+                    error={destinationAutocomplete.lookupError}
+                    typed={destinationAutocomplete.typed}
+                    className="left-0! top-[calc(100%+8px)]! sm:top-[calc(100%+8px)]! sm:w-full! sm:scale-100!"
+                />
+            </div>}
 
             <ErrorPanel prop={{ error: expand ? error : null, setError, onOkay: () => navigate('/') }} />
 

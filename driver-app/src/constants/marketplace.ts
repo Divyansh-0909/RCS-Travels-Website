@@ -10,6 +10,9 @@ export type MarketplaceListing = {
     vehicleClass: string;
     status: MarketplaceStatus;
     mine: boolean;
+    /** Private fields, revealed only after a successful marketplace deposit hold. */
+    riderName?: string;
+    riderPhone?: string;
 };
 
 export const MARKETPLACE_POSTER_FEE_RATE = 0.10;

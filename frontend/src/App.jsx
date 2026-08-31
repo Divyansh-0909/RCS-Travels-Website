@@ -1,6 +1,5 @@
 import { Suspense, useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
-import OnBoarding from './pages/OnBoarding';
 import LoadingScreen from "./components/LoadingScreen";
 import NavBar from "./components/ui/NavBar";
 import HowItWorks from "./pages/HowItWorks";
@@ -49,11 +48,11 @@ function App() {
             pointer-events: the rail spans the viewport now, so it must not eat
             clicks either side of the bar. The drawer portals to body, so it is
             unaffected. */}
-        <div ref={railRef} className="fixed inset-x-0 z-100 flex justify-center top-6 sm:top-10 pointer-events-none">
+        <div ref={railRef} className="fixed inset-x-0 z-100 flex justify-center top-0 pointer-events-none">
           {/* Dark bar over everything except the dark bands: --primary-dark is
               dark enough that a white bar glares against it, and the bar's
               --background-primary reads as its own layer over the blue. */}
-          <NavBar invert={sectionTone !== "dark"} className="pointer-events-auto"/>
+          <NavBar invert={sectionTone === "dark"} className="pointer-events-auto"/>
         </div>
         <div id="smooth-wrapper">
           {/* data-bar-tone is the tone of the section itself, not of the bar
@@ -63,8 +62,10 @@ function App() {
               because it is a property of this arrangement: the same components
               appear on other routes against other backgrounds. */}
           <div id="smooth-content">
-            <div data-bar-tone="dark"><OnBoarding/></div>
-            <div id="how-it-works" data-bar-tone="light"><HowItWorks/></div>
+            {/* The fixed destination bar owns the top of the initial viewport.
+                Keep the first section below it so its headline is never hidden
+                under the two-row expanded state. */}
+            <div id="how-it-works" data-bar-tone="light" className="pt-[136px] sm:pt-[88px]"><HowItWorks/></div>
             <div id="services" data-bar-tone="light"><Services/></div>
             <div id="about" data-bar-tone="primary"><AboutUs/></div>
             <div id="why-us" data-bar-tone="light"><WhyUs/></div>

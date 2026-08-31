@@ -15,6 +15,11 @@ export type UpcomingBooking = {
   // The Google Routes path the customer confirmed. The active-ride map decodes
   // this instead of drawing a misleading straight line between the endpoints.
   routePolyline: string | null;
+  // Recomputed from the captain's latest uploaded position to the active leg's
+  // destination. The map trims this further between server refreshes.
+  navigationLeg: 'pickup' | 'drop' | null;
+  navigationPolyline: string | null;
+  navigationEtaMinutes: number | null;
   preferSafeRoute: boolean;
   safeWaypointLat: number | null;
   safeWaypointLng: number | null;

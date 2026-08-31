@@ -1,9 +1,10 @@
 import { View } from 'react-native';
 import { BankIcon, ShieldCheckIcon } from 'phosphor-react-native';
 import AppText from '../components/AppText';
-import Button from '../components/ui/Button';
+import AccountRow from '../components/ui/AccountRow';
 import AccountDetailScreen, {
   ACCOUNT_MUTED,
+  AccountList,
   AccountSection,
   AccountSectionLabel,
 } from '../components/ui/AccountDetailScreen';
@@ -28,24 +29,31 @@ const PayoutAccount = () => (
       </View>
     </AccountSection>
 
-    <AccountSectionLabel>Before you link an account</AccountSectionLabel>
+    <AccountSectionLabel>Payout setup</AccountSectionLabel>
+    <AccountList>
+      <AccountRow
+        label="Link or update UPI account"
+        detail="Handled securely with RCS Support"
+        value="Not linked"
+        Icon={BankIcon}
+        caret={false}
+        onPress={() => openSupportWhatsApp('Hi, I want to link or update the UPI account for my captain payouts.')}
+        last
+      />
+    </AccountList>
+
+    <AccountSectionLabel>Keep your account safe</AccountSectionLabel>
     <AccountSection>
       <View className="flex-row items-start gap-3">
-        <ShieldCheckIcon size={20} weight="regular" color="#121220" />
+        <View className="w-9 h-9 rounded-xl items-center justify-center bg-white">
+          <ShieldCheckIcon size={18} weight="regular" color="#121220" />
+        </View>
         <AppText className={`flex-1 text-sm ${ACCOUNT_MUTED}`}>
-          Support will verify that the UPI name belongs to you. Never send your UPI
-          PIN, OTP, card number or banking password to anyone.
+          Support verifies that the UPI name belongs to you. Never share your UPI PIN,
+          OTP, card number or banking password.
         </AppText>
       </View>
     </AccountSection>
-
-    <View className="mx-4 mt-2">
-      <Button
-        onPress={() => openSupportWhatsApp('Hi, I want to link or update the UPI account for my captain payouts.')}
-      >
-        Contact support
-      </Button>
-    </View>
   </AccountDetailScreen>
 );
 

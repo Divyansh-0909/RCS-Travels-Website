@@ -209,6 +209,17 @@ export const useData = create(persist(set => ({
     // Shape: { id, code, status, pickupAddress, dropAddress, fare, scheduledAt }
     activeBooking: null,
     setActiveBooking: (booking) => set(state => ({ activeBooking: booking })),
+    // End only the live ride transaction. Route/form fields stay in place so a
+    // rider can rebook the same journey without entering both addresses again.
+    clearActiveBooking: () => set(() => ({
+        bookingId: null,
+        bookingCode: null,
+        status: "",
+        activeBooking: null,
+        cancelledBy: null,
+        cancellationCharge: 0,
+        searchStartedAt: null,
+    })),
 
     cancelledBy: null,
     setCancelledBy: (by) => set(state => ({ cancelledBy: by })),

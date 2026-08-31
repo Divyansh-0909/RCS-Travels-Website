@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
-import Icon from "@mdi/react";
-import { mdiCheck, mdiClose } from "@mdi/js";
+import SuccessCheck from "../illustrations/SuccessCheck";
+import { useIsMobile } from "../../hooks/useIsMobile";
+import BackgroundPanel from "./BackgroundPanel";
+import Button from "./Button";
 
 // A cancel returns the rider to the landing page. Carry the server's settlement
-// across that navigation so this panel can say whether money was retained or is
+// across that navigation so this sheet can say whether money was retained or is
 // being refunded. "1" keeps cancellations made by an older open tab compatible.
 const readOutcome = () => {
     if (typeof sessionStorage === "undefined") return null;
@@ -19,51 +21,76 @@ const readOutcome = () => {
     }
 };
 
-const OUTCOME = readOutcome();
+// Read once at module load: development StrictMode deliberately renders twice,
+// while consuming sessionStorage must happen exactly once.
+const STORED_OUTCOME = readOutcome();
+const DISMISS_MS = 8000;
 
-const RideCancelledToast = () => {
+const RideCancelledToast = ({ outcome: outcomeOverride, dismissAfterMs = DISMISS_MS }) => {
+    const outcome = outcomeOverride ?? STORED_OUTCOME;
     const [show, setShow] = useState(false);
+    const isMobile = useIsMobile();
 
     useEffect(() => {
-        if (!OUTCOME) return;
-        // Enter on the next frame so the slide-up transition plays.
+        if (!outcome) return;
+        // BackgroundPanel owns the sheet motion; changing show on the next
+        // frame gives it a closed first paint to animate from.
         const enter = requestAnimationFrame(() => setShow(true));
-        const hide = setTimeout(() => setShow(false), 8000);
+        const hide = dismissAfterMs > 0
+            ? setTimeout(() => setShow(false), dismissAfterMs)
+            : null;
         return () => {
             cancelAnimationFrame(enter);
-            clearTimeout(hide);
+            if (hide) clearTimeout(hide);
         };
-    }, []);
+    }, [outcome, dismissAfterMs]);
 
-    if (!OUTCOME) return null;
+    if (!outcome) return null;
 
-    const charge = Number(OUTCOME.cancellationCharge) || 0;
-    const refundPending = OUTCOME.advanceDisposition === "refund_pending";
-    const refunded = OUTCOME.advanceDisposition === "refunded" || OUTCOME.refundStatus === "refunded";
+    const charge = Number(outcome.cancellationCharge) || 0;
+    const refundPending = outcome.advanceDisposition === "refund_pending";
+    const refunded = outcome.advanceDisposition === "refunded" || outcome.refundStatus === "refunded";
+    const dismiss = () => setShow(false);
 
     return (
-        <div
-            role="status"
-            aria-live="polite"
-            className={`${show ? "opacity-100 translate-y-0" : "opacity-0 translate-y-5 pointer-events-none"} fixed z-100 left-1/2 -translate-x-1/2 bottom-5 sm:bottom-8 w-[min(92vw,420px)] rounded-3xl bg-[var(--foreground)] text-[var(--text)] shadow-[0_18px_60px_rgba(0,0,0,0.28)] border border-[var(--text)]/10 p-5 transition-[opacity,transform] duration-300`}
-        >
-            <div className="flex items-start gap-3">
-                <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-[var(--foreground)]">
-                    <Icon path={mdiCheck} size={0.8} />
-                </span>
-                <div className="min-w-0 flex-1">
-                    <h3 className="text-lg font-bold">Ride cancelled</h3>
-                    <p className="mt-0.5 text-sm text-[var(--text-muted)]">
-                        {charge > 0
-                            ? "Your scheduled advance has been settled."
-                            : refundPending
-                                ? "Your advance refund has been started."
-                                : refunded
-                                    ? "Your advance has been refunded."
-                                    : "No cancellation fee was deducted."}
-                    </p>
+        <div className={`fixed inset-0 z-[120] ${show ? "pointer-events-auto" : "pointer-events-none"}`}>
+            <button
+                type="button"
+                aria-label="Dismiss cancellation summary"
+                onClick={dismiss}
+                className={`${show ? "opacity-100" : "opacity-0"} absolute inset-0 h-full w-full cursor-default bg-black/40 transition-opacity duration-300 motion-reduce:transition-none`}
+            />
 
-                    <div className="mt-4 rounded-2xl bg-[var(--background-muted)] px-4 py-3">
+            <BackgroundPanel
+                show={show}
+                duration={420}
+                sheet
+                dismissible
+                onDismiss={dismiss}
+                contentKey={`${charge}-${outcome.advanceDisposition ?? "none"}-${outcome.refundStatus ?? "none"}`}
+                className="z-1 gap-1.5 sm:gap-2 py-6 text-center text-[var(--text)] flex flex-col justify-center items-center"
+            >
+                <div
+                    role="status"
+                    aria-live="polite"
+                    data-sheet-scroll
+                    className="min-h-0 flex-1 flex w-full flex-col items-center overflow-y-auto"
+                >
+                    <SuccessCheck className="-mt-2" size={isMobile ? 120 : 140} />
+                    <div className="flex w-[min(86vw,100%)] min-w-0 flex-col items-center sm:w-[377px]">
+                        <h2 className="w-full min-w-0 [overflow-wrap:anywhere] font-bold text-3xl sm:text-5xl leading-tight">Ride cancelled</h2>
+                        <p className="mt-1 w-full min-w-0 text-base sm:text-lg leading-snug text-[var(--text-muted)]">
+                            {charge > 0
+                                ? "Your scheduled advance has been settled."
+                                : refundPending
+                                    ? "Your advance refund has been started."
+                                    : refunded
+                                        ? "Your advance has been refunded."
+                                        : "No cancellation fee was deducted."}
+                        </p>
+                    </div>
+
+                    <div className="mt-4 w-[min(86vw,100%)] sm:w-[377px] rounded-2xl bg-[var(--background-muted)] px-4 py-3 text-left">
                         <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
                             {charge > 0 ? "Amount deducted" : "Cancellation charge"}
                         </p>
@@ -74,16 +101,14 @@ const RideCancelledToast = () => {
                             </p>
                         )}
                     </div>
+
+                    <div className="mt-3 w-[min(86vw,100%)] sm:w-[377px]">
+                        <Button onClick={dismiss} prop={{ width: "100%" }}>
+                            <span className="text-base sm:text-lg">Okay</span>
+                        </Button>
+                    </div>
                 </div>
-                <button
-                    type="button"
-                    aria-label="Dismiss cancellation summary"
-                    onClick={() => setShow(false)}
-                    className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full bg-[var(--background-muted)] transition-opacity hover:opacity-70"
-                >
-                    <Icon path={mdiClose} size={0.8} />
-                </button>
-            </div>
+            </BackgroundPanel>
         </div>
     );
 };

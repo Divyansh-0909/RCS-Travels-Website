@@ -550,7 +550,7 @@ const AdminDashboard = () => {
                             const [dropMain, dropRest] = splitAddress(booking.dropAddress)
                             const isOpen = expandedBooking === booking.id
                             return (
-                                <div key={booking.id} onClick={() => setExpandedBooking(isOpen ? null : booking.id)} className={`${booking.status === "cancelled" ? "opacity-60" : ""} cursor-pointer bg-[var(--foreground-muted)] py-5 px-5 sm:py-6 sm:px-8 rounded-2xl my-4 sm:my-6 flex flex-col justify-center items-start gap-4`}>
+                                <div key={booking.id} onClick={() => setExpandedBooking(isOpen ? null : booking.id)} className={`${booking.status === "cancelled" ? "opacity-60" : ""} my-2 flex cursor-pointer flex-col items-start justify-center gap-3 rounded-3xl bg-pastel-primary px-5 py-5 sm:px-6`}>
                                     <div className="flex justify-between items-start gap-4 w-full">
                                         {/* Route: pickup → drop */}
                                         <div className="flex flex-col gap-3 min-w-0">
@@ -562,7 +562,7 @@ const AdminDashboard = () => {
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-3">
-                                                <div className="w-3 h-3 rounded-full bg-primary relative shrink-0"><div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-[var(--foreground-muted)]" /></div>
+                                                <div className="w-3 h-3 rounded-full bg-primary relative shrink-0"><div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-[var(--foreground)]" /></div>
                                                 <div className="min-w-0">
                                                     <h4 className="font-semibold text-[var(--background-primary)] truncate">{dropMain}</h4>
                                                     {dropRest && <p className="text-sm text-gray-500 truncate">{dropRest}</p>}
@@ -593,7 +593,7 @@ const AdminDashboard = () => {
                                             inside don't bubble, so copying a number can't collapse the card. */}
                                         <div className={`grid w-full transition-[grid-template-rows] duration-300 ${isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
                                             <div className="overflow-hidden min-h-0 w-full" onClick={(e) => e.stopPropagation()}>
-                                                <div className={`${isOpen ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2"} transition-[opacity,transform] duration-300 flex flex-col gap-4 w-full pt-4 cursor-default`}>
+                                                <div className={`${isOpen ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2"} mt-4 flex w-full cursor-default flex-col gap-4 rounded-2xl bg-white/70 p-4 transition-[opacity,transform] duration-300`}>
                                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
                                                         <div>
                                                             <p className="text-xs uppercase tracking-wide text-gray-500 mb-0.5">Customer</p>
@@ -655,7 +655,7 @@ const AdminDashboard = () => {
                         )
                     ) : (
                         drivers.map((driver) => (
-                            <div key={driver.id} className="cursor-default bg-[var(--foreground-muted)] py-5 px-5 sm:py-6 sm:px-8 rounded-2xl my-4 sm:my-6 flex flex-col justify-center items-start gap-4"
+                            <div key={driver.id} className="my-2 flex cursor-default flex-col items-start justify-center gap-3 rounded-3xl bg-pastel-teal px-5 py-5 sm:px-6"
                                 data-suspended={Boolean(driver.suspendedAt)}>
                                 <div className="flex justify-between items-start gap-4 w-full">
                                     <div className="min-w-0">
@@ -745,7 +745,7 @@ const AdminDashboard = () => {
                         )
                     ) : (
                         users.map((user) => (
-                            <div key={user.id} className={`${user.deletedAt ? "opacity-60" : ""} cursor-default bg-[var(--foreground-muted)] py-5 px-5 sm:py-6 sm:px-8 rounded-2xl my-4 sm:my-6 flex flex-col justify-center items-start gap-4`}>
+                            <div key={user.id} className={`${user.deletedAt ? "opacity-60" : ""} my-2 flex cursor-default flex-col items-start justify-center gap-3 rounded-3xl bg-pastel-violet px-5 py-5 sm:px-6`}>
                                 <div className="flex justify-between items-start gap-4 w-full">
                                     <div className="min-w-0">
                                         <div className="flex items-center gap-2">

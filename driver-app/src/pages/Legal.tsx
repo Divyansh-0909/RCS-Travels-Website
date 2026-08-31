@@ -1,10 +1,8 @@
-import { Linking, Pressable, View } from 'react-native';
-import { ArrowSquareOutIcon, FileTextIcon, ShieldCheckIcon } from 'phosphor-react-native';
-import AppText from '../components/AppText';
+import { Linking } from 'react-native';
+import { FileTextIcon, ShieldCheckIcon } from 'phosphor-react-native';
+import AccountRow from '../components/ui/AccountRow';
 import AccountDetailScreen, {
-  ACCOUNT_HAIRLINE,
-  ACCOUNT_MUTED,
-  AccountSection,
+  AccountList,
   AccountSectionLabel,
 } from '../components/ui/AccountDetailScreen';
 
@@ -19,46 +17,20 @@ const documents = [
 
 const Legal = () => (
   <AccountDetailScreen title="Legal">
-    <AccountSection>
-      <AppText className="font-semibold text-[var(--background-primary)]">RCS Travels documents</AppText>
-      <AppText className={`text-sm mt-1 ${ACCOUNT_MUTED}`}>
-        These open on the RCS Travels website so you always read the latest published copy.
-      </AppText>
-    </AccountSection>
-
-    <AccountSectionLabel>Documents</AccountSectionLabel>
-    <View
-      className="mx-4 rounded-2xl px-4 bg-white"
-      style={{ borderWidth: 1, borderColor: ACCOUNT_HAIRLINE }}
-    >
+    <AccountSectionLabel>RCS Travels documents</AccountSectionLabel>
+    <AccountList>
       {documents.map(({ label, detail, path, Icon }, index) => (
-        <View
+        <AccountRow
           key={path}
-          style={index === documents.length - 1 ? undefined : {
-            borderBottomWidth: 1,
-            borderBottomColor: ACCOUNT_HAIRLINE,
-          }}
-        >
-          <Pressable
-            role="link"
-            aria-label={`${label}, opens website`}
-            onPress={() => Linking.openURL(`${BASE}${path}`)}
-            style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
-          >
-            <View className="flex-row items-center gap-3 py-3.5">
-              <View className="w-9 h-9 rounded-xl items-center justify-center bg-[var(--foreground-muted)]">
-                <Icon size={18} weight="regular" color="#121220" />
-              </View>
-              <View className="flex-1">
-                <AppText className="font-semibold text-[var(--background-primary)]">{label}</AppText>
-                <AppText className={`text-sm ${ACCOUNT_MUTED}`}>{detail}</AppText>
-              </View>
-              <ArrowSquareOutIcon size={17} weight="bold" color="#4B5563" />
-            </View>
-          </Pressable>
-        </View>
+          label={label}
+          detail={detail}
+          Icon={Icon}
+          external
+          onPress={() => Linking.openURL(`${BASE}${path}`)}
+          last={index === documents.length - 1}
+        />
       ))}
-    </View>
+    </AccountList>
   </AccountDetailScreen>
 );
 

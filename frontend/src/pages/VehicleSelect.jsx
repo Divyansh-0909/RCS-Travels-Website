@@ -6,6 +6,7 @@ import { INITIAL_SHEET_SNAP } from "../hooks/useBottomSheet";
 import { useData } from "../hooks/useData";
 import { useApi } from "../hooks/useApi";
 import { useState, useEffect, useRef } from "react";
+import { useLocation } from "react-router-dom";
 import ErrorMark from "../components/illustrations/ErrorMark";
 import SuccessCheck from "../components/illustrations/SuccessCheck";
 import { useViewNavigate } from "../hooks/useViewNavigate";
@@ -35,6 +36,10 @@ const NO_PRICE = "₹—";
 // Keep the visual runway aligned with the server's five-minute assignment
 // deadline. The previous one-minute bar reached 100% while searching continued.
 const SEARCH_DURATION = 5 * 60_000;
+// "See prices" already obtains this estimate for the outstation decision. Reuse
+// it only for the immediate matching navigation; old history state must never
+// become a stale fare quote after a later reload.
+const ESTIMATE_PREFETCH_MAX_AGE_MS = 60_000;
 
 // CSS owns every frame. Deriving width from Date.now() in VehicleSelect made
 // the bar move only when unrelated state re-rendered the page. Freeze the
@@ -150,6 +155,23 @@ const VehicleSelect = () => {
     const setStatus = useData(state => state.setStatus);
     const activeBooking = useData(state => state.activeBooking);
     const setActiveBooking = useData(state => state.setActiveBooking);
+    const location = useLocation();
+    const initialEstimateRef = useRef((() => {
+        const prefetch = location.state?.fareEstimate;
+        const matchesRoute = prefetch?.pickupLocation === pickupLocation
+            && prefetch?.dropLocation === dropLocation
+            && prefetch?.pickupCoords?.lat === pickupCoords?.lat
+            && prefetch?.pickupCoords?.lng === pickupCoords?.lng
+            && prefetch?.dropCoords?.lat === dropCoords?.lat
+            && prefetch?.dropCoords?.lng === dropCoords?.lng;
+        const ageMs = Date.now() - prefetch?.createdAt;
+        const isFresh = Number.isFinite(ageMs)
+            && ageMs >= 0
+            && ageMs <= ESTIMATE_PREFETCH_MAX_AGE_MS;
+        return matchesRoute && isFresh && prefetch?.data?.fares && prefetch?.data?.quote
+            ? prefetch.data
+            : null;
+    })());
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(false);
     const searchStartedAt = useData(state => state.searchStartedAt);
@@ -157,17 +179,19 @@ const VehicleSelect = () => {
     // { hatchback:{solo,sharing,source}, sedan:{...}, ... } from /api/fare/estimate.
     // Route-scoped and transient, so it stays local rather than going in the
     // store; the booked fare is what gets persisted.
-    const [serverFares, setServerFares] = useState(null);
+    const [serverFares, setServerFares] = useState(() => initialEstimateRef.current?.fares ?? null);
     // The signed form of those same fares. The server prices the booking from
     // this and ignores any amount we send, so it travels with serverFares
     // everywhere — a card shown from one estimate and booked against another
     // would be rejected as a stale price.
-    const [fareQuote, setFareQuote] = useState(null);
+    const [fareQuote, setFareQuote] = useState(() => initialEstimateRef.current?.quote ?? null);
     // serverFares === null covers three different situations — estimate in
     // flight, estimate failed, and route not priceable — and only the first
     // should show skeletons. Seeded from the same guard fetchEstimate uses, so
     // the cards don't paint a "₹—" frame before the mount fetch starts.
-    const [pricing, setPricing] = useState(() => Boolean(pickupLocation?.trim() && dropLocation?.trim()));
+    const [pricing, setPricing] = useState(() => (
+        !initialEstimateRef.current && Boolean(pickupLocation?.trim() && dropLocation?.trim())
+    ));
     // The estimate's own failure, kept separate from `error` (the ErrorPanel):
     // this one has to persist on the panel with a retry, where ErrorPanel's only
     // action is "Okay", which dismissed straight back onto unpriced cards.
@@ -189,7 +213,9 @@ const VehicleSelect = () => {
     // { available, applied, fee, waypoint }, or null before
     // the first estimate lands. Google's alternatives decide it, so it changes
     // with the route rather than with anything the rider set.
-    const [safeRouteInfo, setSafeRouteInfo] = useState(devSafeRoute);
+    const [safeRouteInfo, setSafeRouteInfo] = useState(
+        devSafeRoute ?? initialEstimateRef.current?.safeRoute ?? null
+    );
     const restoredScheduledTime = scheduledTime ?? activeBooking?.scheduledAt ?? null;
     const [panelState, setPanelState] = useState(
         devParams?.get("panel") ?? (bookingId && status === "confirmed" && restoredScheduledTime ? "confirmed" : "")
@@ -304,6 +330,17 @@ const VehicleSelect = () => {
         // A restored search already owns a created booking. Repricing cannot
         // change it and would wipe the route metrics used by Ride details.
         if (bookingId && (searchStartedAt || restoredScheduledTime)) return;
+        const initialEstimate = initialEstimateRef.current;
+        if (initialEstimate) {
+            setDistanceKm(initialEstimate.distanceKm ?? null);
+            setDurationMin(initialEstimate.durationMin ?? null);
+            setRoutePolyline(initialEstimate.polyline ?? null);
+            setFareSource(devParams?.get("fare") ?? initialEstimate.fareSource ?? null);
+            setFareToll(initialEstimate.toll ?? 0);
+            setFareCarrier(initialEstimate.carrier ?? 0);
+            setFareAirport(initialEstimate.airport ?? 0);
+            return;
+        }
         // wipe the previous route's metrics first — the map draws from the
         // store immediately, and a stale polyline would show the old booking's
         // path until the new estimate lands
@@ -572,8 +609,12 @@ const VehicleSelect = () => {
     // breakpoint hand-off, and — crucially — when the road polyline arrives
     // from the fare estimate (it resolves after the first draw, which would
     // otherwise leave the straight-line fallback on screen).
+    // This effect also reacts to late route/nearby-data updates. Remember the
+    // actual confirmation view so those updates cannot undo a rider's zoom.
+    const confirmViewRef = useRef(null);
     useEffect(() => {
         if (!mapApi) return;
+        if (step !== "confirmLocation") confirmViewRef.current = null;
         // With no addresses the endpoints are only the seed anchors, so drawing
         // them put a confident pickup→drop line on the map beside a panel
         // reading "No route set". The map stays (it is just context); the claim
@@ -584,11 +625,18 @@ const VehicleSelect = () => {
         }
         if (step === "confirmLocation") {
             clearRouteView();
-            mapApi.setCenter(confirmTarget === "pickup" ? pickupPoint : dropPoint);
-            // Individual Google building footprints are exposed at the closer
-            // street-level zooms. 17 mostly shows blocks, which is not precise
-            // enough when the rider is confirming a doorway/building.
-            mapApi.setZoom(19);
+            const previousView = confirmViewRef.current;
+            const isNewConfirmView = previousView?.map !== mapApi
+                || previousView?.target !== confirmTarget
+                || previousView?.isMobile !== isMobile;
+            if (isNewConfirmView) {
+                mapApi.setCenter(confirmTarget === "pickup" ? pickupPoint : dropPoint);
+                // Individual Google building footprints are exposed at the closer
+                // street-level zooms. 17 mostly shows blocks, which is not precise
+                // enough when the rider is confirming a doorway/building.
+                mapApi.setZoom(19);
+                confirmViewRef.current = { map: mapApi, target: confirmTarget, isMobile };
+            }
         } else {
             showRouteView(mapApi, {
                 pickupPoint, dropPoint, routePolyline,
@@ -607,7 +655,7 @@ const VehicleSelect = () => {
             clearNearbyVehicleMarkers();
             return undefined;
         }
-        setNearbyVehiclePositions(mapApi, nearbyVehicles, labelOf(vehicleClass));
+        setNearbyVehiclePositions(mapApi, nearbyVehicles, vehicleClass);
         return clearNearbyVehicleMarkers;
     }, [mapApi, scheduledTime, step, vehicleClass, nearbyVehicles, hasRoute]);
 
@@ -1181,11 +1229,13 @@ const VehicleSelect = () => {
                     {panelState === "noDriver"
                         ? <ErrorMark className="-mt-2" size={isMobile ? 120 : 140} />
                         : <SuccessCheck className="-mt-2" size={isMobile ? 120 : 140} />}
-                    <h2 className={TITLE}> {panelState === "noDriver" ? "No drivers nearby" : "All set"} </h2>
-                    {/* leading-snug, not -relaxed: at 1.625 the line box added
-                            5.6px of dead space above and below, which read as
-                            gap and swamped the container's own spacing */}
-                    <p className="text-base sm:text-lg leading-snug"> {panelState === "noDriver" ? "Try again in a few minutes." : <>We'll WhatsApp you <br /> when a driver is assigned.</>} </p>
+                    <div className="flex w-[min(86vw,520px)] min-w-0 flex-col items-center">
+                        <h2 className={`w-full min-w-0 [overflow-wrap:anywhere] ${TITLE}`}> {panelState === "noDriver" ? "No drivers nearby" : "All set"} </h2>
+                        {/* leading-snug, not -relaxed: at 1.625 the line box added
+                                5.6px of dead space above and below, which read as
+                                gap and swamped the container's own spacing */}
+                        <p className="w-full min-w-0 text-base sm:text-lg leading-snug"> {panelState === "noDriver" ? "Try again in a few minutes." : "We'll WhatsApp you when a driver is assigned."} </p>
+                    </div>
                     {/* COL goes on a wrapper, not on the Button: prop.width
                             is an inline style and would beat the class at every
                             breakpoint, stretching the button to the full sheet */}
@@ -1210,7 +1260,7 @@ const VehicleSelect = () => {
                     )}
 
                     <div className={`relative z-10 sm:order-1 flex flex-col justify-end sm:justify-center items-center sm:items-start ${STACK} w-full sm:w-auto h-full sm:h-auto`}>
-                        <h2 className={`w-full text-left ${TITLE}`}>Finding a driver</h2>
+                        <h2 className={`min-w-0 text-left [overflow-wrap:anywhere] ${TITLE} ${COL}`}>Finding a driver</h2>
 
                         <div className={`flex flex-col items-center sm:items-start justify-center gap-4 ${COL}`}>
                             {/* progress reads as one status block: bar, then
@@ -1297,8 +1347,8 @@ const VehicleSelect = () => {
 
                     <div className={`relative z-10 sm:order-1 flex flex-col justify-end sm:justify-center items-center sm:items-start ${STACK} w-full sm:w-auto h-full sm:h-auto py-2 sm:py-0`}>
                         <div className={`flex flex-col justify-center items-center sm:items-start ${PAIR} ${COL}`}>
-                            <h2 className={`w-full text-left ${TITLE}`}>Confirm {confirmTarget}</h2>
-                            <h3 className={`hidden sm:block w-full text-center sm:text-left ${SUBTITLE}`}>{confirmTarget === "pickup" ? "Place the pin where you'll wait" : "Place the pin where you're headed"}</h3>
+                            <h2 className={`w-full min-w-0 text-left [overflow-wrap:anywhere] ${TITLE}`}>Confirm {confirmTarget}</h2>
+                            <h3 className={`hidden sm:block w-full min-w-0 text-center sm:text-left ${SUBTITLE}`}>{confirmTarget === "pickup" ? "Place the pin where you'll wait" : "Place the pin where you're headed"}</h3>
                         </div>
 
                         <div className={`flex flex-col justify-center items-center sm:items-start gap-3 ${COL}`}>
@@ -1429,7 +1479,7 @@ const VehicleSelect = () => {
                             the title it hangs under. */}
                         <div className={`relative z-10 sm:order-1 flex flex-col justify-end sm:justify-center items-center sm:items-start gap-2 sm:gap-8 w-full sm:w-auto flex-1 min-h-0 sm:flex-initial sm:h-auto`}>
                             <div className={`flex flex-col justify-center items-center sm:items-start gap-3 sm:gap-2 ${COL}`}>
-                                <h2 className={`w-full text-left ${TITLE}`}>Choose a ride</h2>
+                                <h2 className={`w-full min-w-0 text-left [overflow-wrap:anywhere] ${TITLE}`}>Choose a ride</h2>
                                 {/* Route metrics land with the estimate, so the chip
                                     holds its place while that is in flight rather
                                     than popping in and pushing the cards down.

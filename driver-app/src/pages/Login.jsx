@@ -1,22 +1,17 @@
 import { useSignIn, useAuth } from "@clerk/clerk-expo";
 import { useState, useEffect, useRef } from "react";
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, TextInput, View } from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, TextInput, View } from "react-native";
 import Animated, { Easing, useAnimatedStyle, withTiming } from "react-native-reanimated";
 import { useNavigate } from "react-router-native";
-import { cssInterop } from "nativewind";
-import { ArrowLeftIcon } from "phosphor-react-native";
 import Input from "../components/ui/Input";
 import Button from "../components/ui/Button";
+import BackButton from "../components/ui/BackButton";
 import AppText from "../components/AppText";
 import { useApi } from "../hooks/useApi";
 import { useData } from "../hooks/useData";
 import { useOtpClipboard } from "../hooks/useOtpClipboard";
 import CheckMarkOutline from "../components/illustrations/CheckMarkOutline";
 import CrossOutline from "../components/illustrations/CrossOutline";
-
-const BackIcon = cssInterop(ArrowLeftIcon, {
-  className: { target: false, nativeStyleToProp: { color: true } },
-});
 
 const ERROR_TEXT = "#E86A6A";   
 const BOX_BG = "#1d1d27";     
@@ -359,14 +354,13 @@ const Login = () => {
       className="flex-1 w-full py-12"
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      <Pressable
-        role="button"
-        aria-label="Back"
+      <BackButton
         onPress={back}
-        className="absolute left-3 top-10 z-10 flex-row justify-center items-center p-2 active:opacity-60"
-      >
-        <BackIcon size={24} weight="regular" className="text-[var(--text)]" />
-      </Pressable>
+        className="absolute left-2 top-10 z-10"
+        iconClassName="text-[var(--text)]"
+        iconSize={24}
+        weight="regular"
+      />
 
       <ScrollView
         contentContainerClassName="flex-grow justify-center items-center px-6"

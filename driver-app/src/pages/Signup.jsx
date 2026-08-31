@@ -3,10 +3,9 @@ import { useState, useEffect, useRef } from "react";
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, TextInput, View } from "react-native";
 import Animated, { Easing, useAnimatedStyle, withTiming } from "react-native-reanimated";
 import { useNavigate, useLocation } from "react-router-native";
-import { cssInterop } from "nativewind";
-import { ArrowLeftIcon } from "phosphor-react-native";
 import Input from "../components/ui/Input";
 import Button from "../components/ui/Button";
+import BackButton from "../components/ui/BackButton";
 import AppText from "../components/AppText";
 import { useApi } from "../hooks/useApi";
 import { useData } from "../hooks/useData";
@@ -16,10 +15,6 @@ import { vehicleLabel } from "../constants/booking";
 import CheckMarkOutline from "../components/illustrations/CheckMarkOutline";
 import CrossOutline from "../components/illustrations/CrossOutline";
 
-
-const BackIcon = cssInterop(ArrowLeftIcon, {
-    className: { target: false, nativeStyleToProp: { color: true } },
-});
 
 const ERROR_TEXT = "#E86A6A";
 const BOX_BG = "#1d1d27";
@@ -459,14 +454,13 @@ const Signup = () => {
                 exists — so an arrow there would be a promise the screen cannot
                 keep. */}
             {isVehicle ? null : (
-                <Pressable
-                role="button"
-                aria-label="Back"
-                onPress={back}
-                className="absolute left-3 top-10 z-10 flex-row justify-center items-center p-2 active:opacity-60"
-            >
-                <BackIcon size={24} weight="regular" className="text-[var(--text)]" />
-                </Pressable>
+                <BackButton
+                    onPress={back}
+                    className="absolute left-2 top-10 z-10"
+                    iconClassName="text-[var(--text)]"
+                    iconSize={24}
+                    weight="regular"
+                />
             )}
 
             <ScrollView

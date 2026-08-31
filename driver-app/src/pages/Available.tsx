@@ -6,6 +6,7 @@ import { useLocation, useNavigate } from 'react-router-native';
 import AppText from '../components/AppText';
 import { useHideAppBarOnScroll } from '../components/AppBarVisibility';
 import MarketplaceRow, { type MarketplaceListing } from '../components/ui/MarketplaceRow';
+import MarketplacePostSheet from '../components/ui/MarketplacePostSheet';
 import { dayBucket } from '../constants/booking';
 import { marketplaceListings } from '../constants/marketplace';
 
@@ -43,7 +44,10 @@ const Marketplace = () => {
     const [scope, setScope] = useState<MarketplaceScope>(() => scopeFromSearch(location.search));
     const [searching, setSearching] = useState(false);
     const [query, setQuery] = useState('');
-    const listings = useMemo(marketplaceListings, []);
+    const [createdListings, setCreatedListings] = useState<MarketplaceListing[]>([]);
+    const sampleListings = useMemo(marketplaceListings, []);
+    const listings = useMemo(() => [...createdListings, ...sampleListings], [createdListings, sampleListings]);
+    const posting = new URLSearchParams(location.search).get('post') === 'new';
 
     useEffect(() => {
         setScope(scopeFromSearch(location.search));
@@ -76,6 +80,14 @@ const Marketplace = () => {
         setScope(next);
         navigate(pathForScope(next), { replace: true });
         setQuery('');
+    };
+
+    const closePostSheet = () => navigate(pathForScope(scope), { replace: true });
+
+    const addListing = (listing: MarketplaceListing) => {
+        setCreatedListings((current) => [listing, ...current]);
+        setScope('mine');
+        navigate(pathForScope('mine'), { replace: true });
     };
 
     return (
@@ -195,7 +207,7 @@ const Marketplace = () => {
                         {scope === 'mine' && !query ? (
                             <Pressable
                                 role="button"
-                                onPress={() => navigate('/post')}
+                                onPress={() => navigate('/available?tab=mine&post=new', { replace: true })}
                                 className="mt-4 rounded-full bg-[#121220] px-5 py-3"
                             >
                                 <AppText className="font-semibold text-white">Post a booking</AppText>
@@ -203,6 +215,12 @@ const Marketplace = () => {
                         ) : null}
                     </View>
                 }
+            />
+
+            <MarketplacePostSheet
+                visible={posting}
+                onClose={closePostSheet}
+                onSubmit={addListing}
             />
         </View>
     );

@@ -94,8 +94,6 @@ const ManageAccount = () => {
     const rideDebounceRef = useRef(undefined)
     const rideReqRef = useRef(0)
     const rideFilterDropdown = useExitAnim(rideFilterExpand, 300)
-    const bookingId = useData(state => state.bookingId)
-    const setBookingId = useData(state => state.setBookingId)
     const notifyRefreshFailed = useRefreshNotice(state => state.notifyRefreshFailed)
     const clearRefreshNotice = useRefreshNotice(state => state.clearRefreshNotice)
     // Guards the profile refresh (and its retry) against landing after unmount.
@@ -287,7 +285,10 @@ const ManageAccount = () => {
                 return;
             }
             if (data.ok) {
-                if (bookingId === id) setBookingId(null);
+                const rideState = useData.getState();
+                if (rideState.bookingId === id || rideState.activeBooking?.id === id) {
+                    rideState.clearActiveBooking();
+                }
                 sessionStorage.setItem("rideCancelled", JSON.stringify({
                     cancellationCharge: data.cancellationCharge ?? 0,
                     advanceDisposition: data.advanceDisposition ?? null,
@@ -758,7 +759,7 @@ const ManageAccount = () => {
                             const isOpen = expandedRide === booking.id
                             const upcoming = new Date(booking.scheduledAt) > new Date()
                             return (
-                                <div key={booking.id} className={`${booking.status === "cancelled" ? "opacity-60" : ""} cursor-default bg-[var(--foreground-muted)] py-5 px-5 sm:py-6 sm:px-8 rounded-2xl my-4 sm:my-6 flex flex-col justify-center items-start gap-4`}>
+                                <div key={booking.id} className={`${booking.status === "cancelled" ? "opacity-60" : ""} my-2 flex cursor-default flex-col items-start justify-center gap-3 rounded-3xl bg-pastel-primary px-5 py-5 sm:px-6`}>
                                     <div className="flex justify-between items-start gap-4 w-full">
                                         {/* Route: pickup → drop, with the car on its left on sm+ */}
                                         <div className="flex items-center gap-4 min-w-0">
@@ -776,7 +777,7 @@ const ManageAccount = () => {
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center gap-3">
-                                                    <div className="w-3 h-3 rounded-full bg-primary relative shrink-0"><div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-[var(--foreground-muted)]" /></div>
+                                                    <div className="w-3 h-3 rounded-full bg-primary relative shrink-0"><div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-[var(--foreground)]" /></div>
                                                     <div className="min-w-0">
                                                         <h4 className="font-semibold text-[var(--background-primary)] truncate">{dropMain}</h4>
                                                         {dropRest && <p className="text-sm text-gray-500 truncate">{dropRest}</p>}
@@ -807,7 +808,7 @@ const ManageAccount = () => {
                                         {/* Extra details — hidden until the toggle pops them down */}
                                         <div className={`grid w-full transition-[grid-template-rows] duration-300 ${isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
                                             <div className="overflow-hidden min-h-0 w-full">
-                                                <div className={`${isOpen ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2"} transition-[opacity,transform] duration-300 flex flex-col gap-4 w-full pt-4`}>
+                                                <div className={`${isOpen ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2"} mt-4 flex w-full flex-col gap-4 rounded-2xl bg-white/70 p-4 transition-[opacity,transform] duration-300`}>
                                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
                                                     <div>
                                                         <p className="text-xs uppercase tracking-wide text-gray-500 mb-0.5">Driver</p>
@@ -924,21 +925,21 @@ const ManageAccount = () => {
                 : <ul className="flex flex-col items-start gap-4 justify-center w-full">
                 {selected === 0
                     ? AccountInfo_items.map((item, i) => (
-                        <SettingRow key={i} trailing={<CircleIconButton icon={mdiPlus} onClick={() => setExpanded(item)} />}>
+                        <SettingRow key={i} tone="bg-pastel-primary" trailing={<CircleIconButton icon={mdiPlus} onClick={() => setExpanded(item)} />}>
                             <p className="flex items-center justify-start gap-1 text-base text-[var(--background-primary)]/50">{item[0]} <Icon className={`${lockedFields.includes(item[0]) ? "block" : "hidden"} -mt-0.5 opacity-[0.9]`} path={mdiLock} size={0.6} /> </p>
                             <h4 className="text-lg font-medium">{item[1] ? `${item[1]}` : "Not added yet"}</h4>
                         </SettingRow>
                     ))
                     : <>
-                        <SettingRow trailing={<CircleIconButton icon={mdiPlus} onClick={() => setExpanded('drivers')} />}>
+                        <SettingRow tone="bg-pastel-sand" trailing={<CircleIconButton icon={mdiPlus} onClick={() => setExpanded('drivers')} />}>
                             <h4 className="text-lg font-medium">What drivers see</h4>
                             <p className="flex items-center justify-start gap-1 text-base text-[var(--background-primary)]/50">The details a driver can see about you.</p>
                         </SettingRow>
-                        <SettingRow trailing={<CircleIconButton icon={mdiTrayArrowDown} size={0.85} disabled={downloading} onClick={handleDownload} />}>
+                        <SettingRow tone="bg-pastel-sand" trailing={<CircleIconButton icon={mdiTrayArrowDown} size={0.85} disabled={downloading} onClick={handleDownload} />}>
                             <h4 className="text-lg font-medium">Download my data</h4>
                             <p className={`flex items-center justify-start gap-1 text-base ${downloadError ? "text-[rgba(239,68,68,0.9)]" : "text-[var(--background-primary)]/50"}`}>{downloadError || (downloading ? "Preparing your download…" : "Get a copy of your profile and ride history.")}</p>
                         </SettingRow>
-                        <SettingRow trailing={<CircleIconButton icon={mdiPlus} onClick={() => setExpanded('deactivate')} />}>
+                        <SettingRow tone="bg-pastel-sand" trailing={<CircleIconButton icon={mdiPlus} onClick={() => setExpanded('deactivate')} />}>
                             <h4 className="text-lg font-medium">Deactivate your account</h4>
                             <p className="flex items-center justify-start gap-1 text-base text-[var(--background-primary)]/50">Find out how to deactivate your account</p>
                         </SettingRow>

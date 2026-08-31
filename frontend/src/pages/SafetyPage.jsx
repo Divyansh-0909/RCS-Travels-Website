@@ -11,6 +11,7 @@ import { supportTel } from "../constants/support";
 import { useRefreshNotice } from "../hooks/useRefreshNotice";
 
 const items = ["Emergency contact", "Live location", "Helpline"]
+const panelTones = ["bg-pastel-primary", "bg-pastel-teal", "bg-pastel-violet"]
 
 // tel: numbers reachable from the Helpline section.
 const helplines = [
@@ -86,7 +87,7 @@ const SafetyPage = () => {
             <ul className="flex flex-col items-start gap-4 justify-center w-full">
                 {selected === 0 && (
                     editingContact ? (
-                        <li className="w-full flex flex-col gap-2 select-none py-4 px-6 rounded-2xl bg-[var(--background-primary)]/5">
+                        <li className="w-full flex flex-col gap-2 select-none py-5 px-6 rounded-3xl bg-pastel-primary">
                             <div className="w-full flex items-center gap-2">
                                 <input
                                     autoFocus
@@ -106,7 +107,7 @@ const SafetyPage = () => {
                             {contactError && <p className="text-sm text-[rgba(239,68,68,0.9)] px-2">{contactError}</p>}
                         </li>
                     ) : (
-                        <SettingRow trailing={<CircleIconButton icon={emergencyContact ? mdiPencil : mdiPlus} size={emergencyContact ? 0.8 : 1} onClick={startEdit} />}>
+                        <SettingRow tone={panelTones[selected]} trailing={<CircleIconButton icon={emergencyContact ? mdiPencil : mdiPlus} size={emergencyContact ? 0.8 : 1} onClick={startEdit} />}>
                             <p className="text-base text-[var(--background-primary)]/50">Emergency contact</p>
                             <h4 className="text-lg font-medium">{emergencyContact || "Not added yet"}</h4>
                         </SettingRow>
@@ -117,7 +118,7 @@ const SafetyPage = () => {
                 )}
 
                 {selected === 1 && (
-                    <SettingRow trailing={<Toggle on={autoShare} onClick={() => setAutoShare(v => !v)} />}>
+                    <SettingRow tone={panelTones[selected]} trailing={<Toggle on={autoShare} onClick={() => setAutoShare(v => !v)} />}>
                         <h4 className="text-lg font-medium">Share my live location</h4>
                         <p className="text-base text-[var(--background-primary)]/50">Let your emergency contact follow your ride in real time when a trip starts.</p>
                     </SettingRow>
@@ -126,6 +127,7 @@ const SafetyPage = () => {
                 {selected === 2 && helplines.map(([title, desc, number]) => (
                     <SettingRow
                         key={title}
+                        tone={panelTones[selected]}
                         trailing={<CircleIconButton icon={mdiPhone} size={0.85} onClick={() => { window.location.href = `tel:${number}` }} />}
                     >
                         <h4 className="text-lg font-medium">{title}</h4>

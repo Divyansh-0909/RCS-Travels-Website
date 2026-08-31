@@ -10,6 +10,10 @@
     --color-negative: #B91C1C;
     --color-negative-dark: #7A0F0F;
     --color-negative-light: #E86A6A;
+    --color-pastel-primary: #E5E9FF;
+    --color-pastel-teal: #DFF3EF;
+    --color-pastel-violet: #EEE8FA;
+    --color-pastel-sand: #F3EEDD;
     --text-xs: 0.75rem;
     --text-xs--line-height: 1rem;
     --text-sm: 0.875rem;

@@ -7,6 +7,7 @@ import {
 import { verdictKey, readVerdict, writeVerdict } from './safeRouteCache.js'
 import { signQuote } from './fareQuote.js'
 import { VEHICLE_CLASS_NAMES } from '../constants/vehicles.js'
+import { projectOntoPath } from './geo.js'
 
 // ---------------------------------------------------------------------------
 // Every fare on this route is one number with a multiplier on it.
@@ -197,11 +198,24 @@ async function checkAndIncrementRoutesUsage() {
 // cached so the authenticated and shared views cannot race into duplicate
 // requests.
 const LIVE_ETA_TTL_MS = 60_000
+const LIVE_ROUTE_DEVIATION_KM = 0.08
 const liveEtaCache = new Map()
 
 const routeSeconds = (duration) => {
   const seconds = Number.parseFloat(String(duration ?? '').replace(/s$/, ''))
   return Number.isFinite(seconds) ? seconds : null
+}
+
+export function navigationRouteNeedsRefresh(route, origin, deviationKm = LIVE_ROUTE_DEVIATION_KM) {
+  if (!route?.polyline || origin?.lat == null || origin?.lng == null) return false
+  try {
+    const path = decodePolyline(route.polyline)
+    return projectOntoPath(origin, path).offRouteKm > deviationKm
+  } catch {
+    // A malformed cached path cannot safely guide either map. Treat it like a
+    // deviation so the next request replaces it with a fresh Routes response.
+    return true
+  }
 }
 
 /**
@@ -215,7 +229,14 @@ export async function getNavigationRoute({ cacheKey, origin, destination }) {
 
   const now = Date.now()
   const cached = liveEtaCache.get(cacheKey)
-  if (cached && cached.expiresAt > now) return cached.value
+  if (cached && cached.expiresAt > now) {
+    // While the request is in flight, preserve coalescing. Once it resolves,
+    // keep the normal one-minute cache only while the latest driver fix still
+    // lies on that road. A wrong turn therefore reroutes on the next five-second
+    // client poll rather than waiting for the TTL.
+    const pending = typeof cached.value?.then === 'function'
+    if (pending || !navigationRouteNeedsRefresh(cached.value, origin)) return cached.value
+  }
 
   const value = (async () => {
     await checkAndIncrementRoutesUsage()

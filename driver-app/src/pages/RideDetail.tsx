@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Linking, Pressable, ScrollView, View } from 'react-native';
+import { Linking, Pressable, ScrollView, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { cssInterop } from 'nativewind';
-import { ArrowLeftIcon, CheckIcon, CopyIcon } from 'phosphor-react-native';
+import { CheckIcon, CopyIcon } from 'phosphor-react-native';
 import { useNavigate, useParams } from 'react-router-native';
+import { RideDetailSectionsSkeleton } from '../components/ui/LoadingSkeletons';
 import AppText from '../components/AppText';
 import {
     ActionButton,
     CONTENT,
+    DetailPageHeader,
     DetailStatusBanner,
     FactPill,
     HAIRLINE,
@@ -22,6 +24,7 @@ import {
     paymentWords,
 } from '../components/ui/rideUi';
 import { useApi } from '../hooks/useApi';
+import { useDriver } from '../hooks/useDriver';
 import { UpcomingBooking } from '../types/enums';
 import {
     fareBreakdown,
@@ -38,7 +41,6 @@ import {
 import { openSupportWhatsApp } from '../constants/support';
 
 const asThemed = { className: { target: false, nativeStyleToProp: { color: true } } } as const;
-const Back = cssInterop(ArrowLeftIcon, asThemed);
 const Copy = cssInterop(CopyIcon, asThemed);
 const Check = cssInterop(CheckIcon, asThemed);
 
@@ -92,11 +94,13 @@ const RideDetail = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const api = useApi();
+    const { refresh: refreshDriver } = useDriver();
 
     const [booking, setBooking] = useState<UpcomingBooking | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [copied, setCopied] = useState(false);
+    const [cancelling, setCancelling] = useState(false);
 
     // Same reason as the Rides board: useApi memoises on Clerk's getToken, which is not
     // promised to keep its identity, and a refresh that re-ran on every render would
@@ -131,42 +135,27 @@ const RideDetail = () => {
         setTimeout(() => setCopied(false), 2000);
     };
 
-    const header = (
-        <View className="flex-row items-center gap-3">
-            <Pressable
-                role="button"
-                aria-label="Back"
-                onPress={() => navigate(-1)}
-                hitSlop={12}
-                className="w-9 h-9 items-center justify-center"
-            >
-                <Back size={22} weight="bold" className={INK_TEXT} />
-            </Pressable>
-            <AppText className={`text-xl font-semibold ${INK_TEXT}`} style={{ letterSpacing: -0.72 }}>
-                Ride details
-            </AppText>
-        </View>
-    );
+    const header = <DetailPageHeader title="Ride details" onBack={() => navigate(-1)} />;
 
     if (loading || !booking) {
         return (
             <View
-                className="flex-1 w-full px-5 gap-4"
+                className="flex-1 w-full gap-4"
                 style={{ backgroundColor: PAGE, marginTop: -SHELL_TOP_PAD, paddingTop: SHELL_TOP_PAD }}
             >
                 {header}
-                <View className="flex-1 items-center justify-center pb-24 gap-3">
-                    {error ? (
+                {error ? (
+                    <View className="flex-1 items-center justify-center px-5 pb-24 gap-3">
                         <>
                             <AppText className="text-sm text-center text-red-600">{error}</AppText>
                             <Pressable role="button" onPress={load} hitSlop={8}>
                                 <AppText className="text-sm font-semibold text-primary">Try again</AppText>
                             </Pressable>
                         </>
-                    ) : (
-                        <ActivityIndicator color={INK} />
-                    )}
-                </View>
+                    </View>
+                ) : (
+                    <RideDetailSectionsSkeleton />
+                )}
             </View>
         );
     }
@@ -175,23 +164,43 @@ const RideDetail = () => {
     const { minutes, estimated } = rideDuration(booking);
     const rider = booking.user?.name ?? 'Rider';
     const when = booking.completedAt ?? booking.scheduledAt;
+    const canCancel = booking.status === 'assigned' || booking.status === 'en_route';
+
+    const cancelRide = async () => {
+        if (cancelling) return;
+        setCancelling(true);
+        setError(null);
+        try {
+            const result = await apiRef.current.cancelRide(booking.id);
+            if (result?.error) {
+                setError(result.error);
+                return;
+            }
+            await refreshDriver();
+            navigate(-1);
+        } catch (e: unknown) {
+            setError(e instanceof Error ? e.message : 'Could not cancel this ride');
+        } finally {
+            setCancelling(false);
+        }
+    };
 
     return (
         <View
             className="flex-1 w-full"
             style={{ backgroundColor: PAGE, marginTop: -SHELL_TOP_PAD, paddingTop: SHELL_TOP_PAD }}
         >
+            {header}
             <ScrollView
                 style={{ flex: 1 }}
                 contentContainerStyle={{
                     paddingHorizontal: 20,
+                    paddingTop: 16,
                     paddingBottom: 16,
                     gap: 16,
                 }}
                 showsVerticalScrollIndicator={false}
             >
-                {header}
-
                 {/* The banner only on a ride that has actually happened — see
                     isFinished. "Payment due" on a job the captain is on his way to is
                     stating the obvious as a problem, and saying it on every ride is what
@@ -343,25 +352,36 @@ const RideDetail = () => {
 
             {/* This footer owns real layout space and an opaque surface. The details
                 viewport therefore ends above it instead of scrolling behind the actions. */}
-            <View
-                className="w-full flex-row gap-2 px-5 pt-3 pb-6"
-                style={{ backgroundColor: PAGE }}
-            >
-                {fareUnpaid(booking) && (
+            <View className="w-full gap-2 px-5 pt-3 pb-6" style={{ backgroundColor: PAGE }}>
+                {error ? (
+                    <AppText className="text-sm font-medium text-red-600">{error}</AppText>
+                ) : null}
+                <View className="w-full flex-row gap-2">
+                    {canCancel ? (
+                        <ActionButton
+                            label={cancelling ? 'Cancelling\u2026' : 'Cancel ride'}
+                            leading={null}
+                            tone="danger"
+                            disabled={cancelling}
+                            size="large"
+                            onPress={cancelRide}
+                        />
+                    ) : fareUnpaid(booking) ? (
+                        <ActionButton
+                            label="Call rider"
+                            leading={<PhoneMark />}
+                            solid
+                            size="large"
+                            onPress={() => Linking.openURL(`tel:${booking.customerPhone}`)}
+                        />
+                    ) : null}
                     <ActionButton
-                        label="Call rider"
-                        leading={<PhoneMark />}
-                        solid
+                        label="Contact support"
+                        leading={<WhatsappMark />}
                         size="large"
-                        onPress={() => Linking.openURL(`tel:${booking.customerPhone}`)}
+                        onPress={() => openSupportWhatsApp(`Hi, I need help with ride ${booking.reference}.`)}
                     />
-                )}
-                <ActionButton
-                    label="Contact support"
-                    leading={<WhatsappMark />}
-                    size="large"
-                    onPress={() => openSupportWhatsApp(`Hi, I need help with ride ${booking.reference}.`)}
-                />
+                </View>
             </View>
         </View>
     );

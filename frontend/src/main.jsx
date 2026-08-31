@@ -7,8 +7,7 @@ import './index.css'
 import App from './App'
 import {ThemeProvider} from './context/ThemeContext';
 import ErrorBoundary, { RouteErrorBoundary } from './components/ErrorBoundary';
-import OnBoarding from './pages/OnBoarding';
-import VehicleSelect from './pages/VehicleSelect';
+import BookingFlow from './pages/BookingFlow';
 import SignUpPage from './pages/SignUpPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import TrackingPage from './pages/TrackingPage';
@@ -72,7 +71,11 @@ const router = createBrowserRouter([{
   },
   {
     path: "/book",
-    element: <ProtectedRoute><VehicleSelect /></ProtectedRoute>,
+    // Route entry stays public, like the former home-page form: a rider can
+    // complete their route before we ask them to sign in. OnBoarding checks the
+    // account at the moment it advances to prices and sends unauthenticated
+    // riders through the existing login flow.
+    element: <BookingFlow />,
   },
   {
     // The id in the URL is what makes a ride reachable from a link, from ride

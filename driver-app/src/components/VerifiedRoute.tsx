@@ -1,6 +1,6 @@
-import { ActivityIndicator, View } from 'react-native';
 import { Navigate, Outlet, useLocation } from 'react-router-native';
 import { useDriver } from '../hooks/useDriver';
+import { HomeGateSkeleton } from './ui/LoadingSkeletons';
 
 // The gate.
 //
@@ -30,11 +30,7 @@ const VerifiedRoute = () => {
   // incomplete information would bounce an approved captain to the checklist for
   // half a second every time he opened the app.
   if (loading) {
-    return (
-      <View className="flex-1 items-center justify-center">
-        <ActivityIndicator />
-      </View>
-    );
+    return <HomeGateSkeleton />;
   }
 
   // Signed in with Clerk but no driver row — he verified his phone and closed
@@ -74,11 +70,7 @@ export const AssignedWorkRoute = () => {
   const location = useLocation();
 
   if (loading) {
-    return (
-      <View className="flex-1 items-center justify-center">
-        <ActivityIndicator />
-      </View>
-    );
+    return <HomeGateSkeleton />;
   }
 
   if (notRegistered) {

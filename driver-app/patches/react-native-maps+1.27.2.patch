@@ -1,0 +1,71 @@
+diff --git a/node_modules/react-native-maps/android/src/main/java/com/rnmaps/maps/MapMarker.java b/node_modules/react-native-maps/android/src/main/java/com/rnmaps/maps/MapMarker.java
+index 3e0250f..d630442 100644
+--- a/node_modules/react-native-maps/android/src/main/java/com/rnmaps/maps/MapMarker.java
++++ b/node_modules/react-native-maps/android/src/main/java/com/rnmaps/maps/MapMarker.java
+@@ -9,6 +9,7 @@ import android.graphics.drawable.Animatable;
+ import android.graphics.drawable.Drawable;
+ import android.net.Uri;
+ import android.view.View;
++import android.view.ViewGroup;
+ import android.widget.LinearLayout;
+ import android.animation.ObjectAnimator;
+ import android.util.Property;
+@@ -662,9 +663,58 @@ public class MapMarker extends MapFeature {
+         mLastBitmapCreated = null;
+     }
+ 
++    /**
++     * Expand bitmap bounds using sizes already produced by RN layout. Do not call {@link
++     * View#measure} on Catalyst/Fabric views — that triggers "must be measured before being added to
++     * a parent" (explicit MeasureSpec assertion).
++     */
++    private static void expandSnapshotSizeFromSubtree(View root, int[] maxWh) {
++        if (root == null || root.getVisibility() == View.GONE) {
++            return;
++        }
++        int w = root.getWidth();
++        int h = root.getHeight();
++        if (w <= 0) {
++            w = root.getMeasuredWidth();
++        }
++        if (h <= 0) {
++            h = root.getMeasuredHeight();
++        }
++        if (w > 0) {
++            maxWh[0] = Math.max(maxWh[0], w);
++        }
++        if (h > 0) {
++            maxWh[1] = Math.max(maxWh[1], h);
++        }
++        if (root instanceof ViewGroup) {
++            ViewGroup vg = (ViewGroup) root;
++            for (int i = 0; i < vg.getChildCount(); i++) {
++                View child = vg.getChildAt(i);
++                if (child instanceof MapCallout) {
++                    continue;
++                }
++                expandSnapshotSizeFromSubtree(child, maxWh);
++            }
++        }
++    }
++
+     private Bitmap createDrawable() {
+         int width = this.width <= 0 ? 100 : this.width;
+         int height = this.height <= 0 ? 100 : this.height;
++        // Yoga can report a small marker frame while children laid out larger — grow bitmap using
++        // laid-out dimensions only (Fabric-safe; see expandSnapshotSizeFromSubtree).
++        if (hasCustomMarkerView && getChildCount() > 0) {
++            int[] maxWh = new int[] {width, height};
++            for (int i = 0; i < getChildCount(); i++) {
++                View child = getChildAt(i);
++                if (child instanceof MapCallout) {
++                    continue;
++                }
++                expandSnapshotSizeFromSubtree(child, maxWh);
++            }
++            width = maxWh[0];
++            height = maxWh[1];
++        }
+ 
+         // Do not create the doublebuffer-bitmap each time. reuse it to save memory.
+         Bitmap bitmap = mLastBitmapCreated;

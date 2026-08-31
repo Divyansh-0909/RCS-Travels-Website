@@ -154,7 +154,7 @@ export const BottomSheet = ({
                             left: 0,
                             right: 0,
                             top: 0,
-                            height: 7,
+                            height: 5,
                         }}
                     />
 

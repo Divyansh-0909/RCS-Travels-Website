@@ -1,6 +1,6 @@
 import Button from "../components/ui/Button";
 import GoogleMap, { MAP_LAND_COLOR } from "../components/ui/GoogleMap";
-import { MAP_CLASSES, showRouteView, clearRouteView, setDriverPosition, clearDriverMarker } from "../components/ui/mapOverlays";
+import { MAP_CLASSES, showRouteView, clearRouteView, setDriverPosition, setRouteProgress, clearDriverMarker } from "../components/ui/mapOverlays";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { useData } from "../hooks/useData";
 import { useApi } from "../hooks/useApi";
@@ -225,6 +225,12 @@ const TrackingPage = () => {
         ? { lat: driver.latitude, lng: driver.longitude }
         : null;
     const hasDriverPoint = Boolean(driverPoint);
+    const hasRemainingRoute = Boolean(
+        driverPoint && navigationPolyline && (status === "en_route" || status === "started")
+    );
+    const displayedRoutePolyline = hasRemainingRoute ? navigationPolyline : routePolyline;
+    const displayedPickupPoint = hasRemainingRoute && status === "started" ? null : pickupPoint;
+    const displayedDropPoint = hasRemainingRoute && status === "en_route" ? null : dropPoint;
 
     // No map on the completed/cancelled screens (the ride is over); everything
     // else maps the booked route. The coords are persisted, so this no longer
@@ -238,9 +244,10 @@ const TrackingPage = () => {
     useEffect(() => {
         if (!mapApi || !mapVisible) return;
         showRouteView(mapApi, {
-            pickupPoint,
-            dropPoint,
-            routePolyline,
+            pickupPoint: displayedPickupPoint,
+            dropPoint: displayedDropPoint,
+            routePolyline: displayedRoutePolyline,
+            progressPoint: hasRemainingRoute ? driverPoint : null,
             framePoints: driverPoint ? [driverPoint] : [],
             // The phone sheet initially covers 60% of the viewport. Fit the
             // route and assigned captain into the map area that remains above it.
@@ -249,7 +256,7 @@ const TrackingPage = () => {
                 : 60,
         });
         return clearRouteView;
-    }, [mapApi, mapVisible, isMobile, routePolyline, pickupPoint?.lat, pickupPoint?.lng, dropPoint?.lat, dropPoint?.lng, hasDriverPoint]);
+    }, [mapApi, mapVisible, isMobile, displayedRoutePolyline, displayedPickupPoint?.lat, displayedPickupPoint?.lng, displayedDropPoint?.lat, displayedDropPoint?.lng, hasDriverPoint, hasRemainingRoute]);
 
     // Driver puck follows each poll; separate from the route overlays so
     // position updates don't redraw (or get cleared with) the route.
@@ -265,12 +272,13 @@ const TrackingPage = () => {
             clearDriverMarker();
             return;
         }
+        if (hasRemainingRoute) setRouteProgress(driverPoint);
         setDriverPosition(mapApi, driverPoint, {
             navigationPolyline,
             vehicleClass: driver?.vehicleClass,
             bearing: driver?.bearing,
         });
-    }, [mapApi, mapVisible, driverPoint?.lat, driverPoint?.lng, navigationPolyline, driver?.vehicleClass, driver?.bearing]);
+    }, [mapApi, mapVisible, driverPoint?.lat, driverPoint?.lng, navigationPolyline, driver?.vehicleClass, driver?.bearing, hasRemainingRoute]);
 
     // Leaving the page takes the puck with it. Empty deps, so this is the only
     // thing that ever removes it.
@@ -713,8 +721,8 @@ const TrackingPage = () => {
                             inside the column, and it now floats above the sheet */}
                         <div className={`relative z-10 sm:order-1 flex flex-col justify-end sm:justify-center items-center sm:items-start w-full sm:w-auto flex-1 min-h-0 sm:flex-initial sm:h-full ${STACK}`}>
                             <div className={`flex flex-col justify-center items-start ${PAIR} ${COL}`}>
-                                <h2 className={`text-left w-full ${TITLE}`}>{status === "payment_pending" ? "Pay advance" : status === "assigned" ? "Driver assigned" : "Not assigned yet"}</h2>
-                                <h3 className={`text-left w-full ${status === "confirmed" ? "text-base sm:text-xl font-normal leading-snug text-[var(--text-muted)]" : SUBTITLE}`}>{status === "payment_pending" ? "The 15% advance is part of your fare." : status === "assigned" ? "Give the driver a call to confirm" : "Assigned closer to your pickup time"}</h3>
+                                <h2 className={`text-left w-full min-w-0 [overflow-wrap:anywhere] ${TITLE}`}>{status === "payment_pending" ? "Pay advance" : status === "assigned" ? "Driver assigned" : "Not assigned yet"}</h2>
+                                <h3 className={`text-left w-full min-w-0 ${status === "confirmed" ? "text-base sm:text-xl font-normal leading-snug text-[var(--text-muted)]" : SUBTITLE}`}>{status === "payment_pending" ? "The 15% advance is part of your fare." : status === "assigned" ? "Give the driver a call to confirm" : "Assigned closer to your pickup time"}</h3>
                             </div>
 
                             {/* The scroll region, phones only: everything below the
@@ -813,8 +821,8 @@ const TrackingPage = () => {
                                     { panelState === "noDriver"
                                         ? <ErrorMark className="-mt-2 -mb-2" size={isMobile ? 120 : 140} />
                                         : <SuccessCheck className="-mt-2 -mb-2" size={isMobile ? 120 : 140} /> }
-                                    <div className="flex flex-col items-center sm:items-start gap-1">
-                                        <h3 className={SUBTITLE}>Ride has been completed</h3>
+                                    <div className="flex w-full min-w-0 flex-col items-center gap-1 sm:items-start">
+                                        <h3 className={`w-full min-w-0 ${SUBTITLE}`}>Ride has been completed</h3>
                                     </div>
                                     {tollNotice}
                                     {/* Desktop keeps the actions with the outcome
@@ -934,8 +942,8 @@ const TrackingPage = () => {
                                         </>
                                     ) : (
                                         <>
-                                            <h2 className={`text-left w-full ${TITLE}`}>{liveHeadline.title}</h2>
-                                            <h3 className={`text-left w-full ${SUBTITLE}`}>{liveHeadline.detail}</h3>
+                                            <h2 className={`text-left w-full min-w-0 [overflow-wrap:anywhere] ${TITLE}`}>{liveHeadline.title}</h2>
+                                            <h3 className={`text-left w-full min-w-0 ${SUBTITLE}`}>{liveHeadline.detail}</h3>
                                         </>
                                     )}
                                     <Button
@@ -1049,7 +1057,7 @@ const TrackingPage = () => {
                         show={shareSheetOpen}
                         duration={420}
                         contentKey={`${!!driver}-${shareBusy}`}
-                        className="z-50 sm:!h-auto sm:!rounded-t-4xl flex flex-col gap-4 px-[7vw] sm:px-8 pt-1 sm:pt-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:pb-8 text-left"
+                        className="z-50 sm:!h-auto sm:!rounded-t-4xl flex flex-col gap-4 px-[7vw] sm:px-8 pt-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:pb-8 text-left"
                     >
                         <button
                             type="button"
@@ -1061,8 +1069,8 @@ const TrackingPage = () => {
                         </button>
                         <div data-sheet-scroll className="min-h-0 flex-1 flex flex-col gap-4">
                             <div className="flex items-start justify-between gap-4">
-                                <div className="flex flex-col gap-0.5">
-                                    <h3 className="text-xl font-medium leading-tight text-[var(--text)]">Share ride</h3>
+                                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                                    <h3 className="w-full min-w-0 [overflow-wrap:anywhere] text-xl font-medium leading-tight text-[var(--text)]">Share ride</h3>
                                 </div>
                                 <button
                                     type="button"

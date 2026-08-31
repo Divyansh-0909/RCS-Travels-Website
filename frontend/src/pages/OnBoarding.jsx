@@ -17,9 +17,11 @@ import { DateTimeSelector } from "../components/ui/DateTimeSelector";
 import { useData } from "../hooks/useData";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { useExitAnim } from "../hooks/useExitAnim";
-import { useSignIn, useAuth, useUser } from "@clerk/clerk-react";
+import { useSignIn, useAuth } from "@clerk/clerk-react";
 import { statusLabels } from "../constants/statusLabels";
 import { useRefreshNotice } from "../hooks/useRefreshNotice";
+import GoogleMap from "../components/ui/GoogleMap";
+import BackgroundPanel from "../components/ui/BackgroundPanel";
 
 // ---- Shared layout + type scale -------------------------------------------
 // Same tokens as VehicleSelect / TrackingPage / RideDetails. 377px is the width
@@ -41,7 +43,7 @@ const FORM_W = "max-sm:w-[78vw]!";
 // typed chars, recent places when (near-)empty. select() resolves coords
 // (recents carry their own; Google picks cost one Details call); manual
 // edits clear them.
-function useAddressSuggestions(value, setValue, setCoords, api, exclusiveRef, closeOthers,allowCurrentLocation = false) {
+export function useAddressSuggestions(value, setValue, setCoords, api, exclusiveRef, closeOthers, allowCurrentLocation = false) {
   const recentPlaces = useData(state => state.recentPlaces);
   const savedPlaces = useData(state => state.savedPlaces);
   const addRecentPlace = useData(state => state.addRecentPlace);
@@ -248,16 +250,29 @@ function useAddressSuggestions(value, setValue, setCoords, api, exclusiveRef, cl
     setExpanded(false);
   }
 
-  return { items, dropdown, select, onFocus, onBlur, lookupError, typed };
+  return {
+    items,
+    dropdown,
+    select,
+    selectCurrentLocation: () => select(currentLocationItem),
+    onFocus,
+    onBlur,
+    lookupError,
+    typed,
+  };
 }
 
 // Suggestion panel for an address input. `above` opens it over the input and
 // reverses rows so the best match stays nearest the input. onMouseDown is
 // prevented panel-wide: blur fires before click and would close the panel
 // before a row's onClick could run.
-const SuggestionDropdown = ({ anim, items, onSelect, above = false, error = null, typed = false }) => {
+export const SuggestionDropdown = ({ anim, items, onSelect, above = false, error = null, typed = false, inline = false, className = "" }) => {
   const panelRef = useRef(null);
   const itemsKey = items.map(i => i.id).join("|");
+  const animationClass = anim.closing ? "animate-dropdown-out" : "animate-dropdown";
+  const panelClass = inline
+    ? `${animationClass} relative z-10 w-full max-w-full bg-transparent`
+    : `${animationClass} absolute z-10 ${above ? "bottom-13 sm:bottom-15 origin-bottom sm:origin-bottom-left" : "top-13 sm:top-15 sm:origin-top-left"} scale-[1] sm:scale-[1.3] max-sm:w-full sm:w-[290px] max-w-full bg-[var(--background-muted)] rounded-[16px] shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)]`;
 
   // Opening upward: start scrolled to the bottom, where the best matches sit.
   useEffect(() => {
@@ -275,10 +290,7 @@ const SuggestionDropdown = ({ anim, items, onSelect, above = false, error = null
     return (
       <div
         onMouseDown={(e) => e.preventDefault()}
-        className={`${anim.closing ? "animate-dropdown-out" : "animate-dropdown"
-          } absolute z-10 ${above ? "bottom-13 sm:bottom-15 origin-bottom sm:origin-bottom-left" : "top-13 sm:top-15 sm:origin-top-left"} scale-[1] sm:scale-[1.3]
-          max-sm:w-full sm:w-[290px] max-w-full bg-[var(--background-muted)]
-          rounded-[16px] shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)]`}
+        className={`${className} ${panelClass}`}
       >
         <div className="px-4 py-3 text-left">
           <h4 className="text-sm text-[var(--text)]">
@@ -297,13 +309,9 @@ const SuggestionDropdown = ({ anim, items, onSelect, above = false, error = null
     <div
       ref={panelRef}
       onMouseDown={(e) => e.preventDefault()}
-      className={`${anim.closing ? "animate-dropdown-out" : "animate-dropdown"
-        } absolute z-10 ${above ? "bottom-13 sm:bottom-15 origin-bottom sm:origin-bottom-left" : "top-13 sm:top-15 sm:origin-top-left"} scale-[1] sm:scale-[1.3]
-        max-sm:w-full sm:w-[290px] max-w-full max-h-[200px] overflow-y-auto scrollbar-inset
-        bg-[var(--background-muted)]
-        rounded-[16px] shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)]`}
+      className={`${className} ${panelClass} ${inline ? "" : "max-h-[200px] overflow-y-auto scrollbar-inset"}`}
     >
-      <ul className="w-full flex flex-col justify-center items-center py-2">
+      <ul className={`flex w-full flex-col items-center justify-center ${inline ? "py-1" : "py-2"}`}>
         {rows.map((item, index) => {
           const commaIndex = item.label.indexOf(",");
 
@@ -318,7 +326,7 @@ const SuggestionDropdown = ({ anim, items, onSelect, above = false, error = null
 
           return (
             <li
-              className="w-[97%] px-3 cursor-pointer rounded-xl transition-colors duration-250 hover:bg-[var(--background-primary)] active:bg-[var(--background-primary)]"
+              className={`${inline ? "w-full px-1" : "w-[97%] px-3 rounded-xl"} cursor-pointer transition-colors duration-250 hover:bg-[var(--background-primary)] active:bg-[var(--background-primary)]`}
               onClick={() => onSelect(item)}
               key={item.id}>
               <div
@@ -327,8 +335,8 @@ const SuggestionDropdown = ({ anim, items, onSelect, above = false, error = null
                   : ""
                   }`}
               >
-                <h4 className="text-left text-base">{mainLocation}</h4>
-                <p className="text-left text-xs text-[var(--text-muted)]">
+                <h4 className={`text-left text-base ${inline ? "font-medium" : ""}`}>{mainLocation}</h4>
+                <p className={`text-left text-[var(--text-muted)] ${inline ? "text-sm" : "text-xs"}`}>
                   {item.isCurrentLocation
                     ? "Use your current location"
                     : remainingLocation}
@@ -342,9 +350,25 @@ const SuggestionDropdown = ({ anim, items, onSelect, above = false, error = null
   );
 };
 
-const ACTIVE_STATUSES = ["pending", "confirmed", "assigned", "en_route", "reached", "started"];
+// The route form uses the same draggable booking sheet as the later vehicle
+// stage on phones. From sm upward it stays a regular content column so the
+// established form-and-map split is unchanged.
+const RoutePanel = ({ sheet, isMobile, className, children }) => {
+  if (sheet && isMobile) {
+    return (
+      <BackgroundPanel sheet className={className}>
+        {children}
+      </BackgroundPanel>
+    );
+  }
 
-const OnBoarding = () => {
+  return <div className={`relative ${className}`}>{children}</div>;
+};
+
+const ACTIVE_STATUSES = ["pending", "confirmed", "assigned", "en_route", "reached", "started"];
+const OUTSTATION_DISTANCE_KM = 200;
+
+const OnBoarding = ({ bookingStage = false }) => {
   const timing = useData(state => state.timing);
   const setTiming = useData(state => state.setTiming);
   const [expand, setExpand] = useState(false);
@@ -353,6 +377,8 @@ const OnBoarding = () => {
   const setPickup = useData(state => state.setPickup);
   const dropLocation = useData(state => state.dropLocation);
   const setDrop = useData(state => state.setDrop)
+  const pickupCoords = useData(state => state.pickupCoords);
+  const dropCoords = useData(state => state.dropCoords);
   const setPickupCoords = useData(state => state.setPickupCoords);
   const setDropCoords = useData(state => state.setDropCoords);
   const setDistanceKm = useData(state => state.setDistanceKm);
@@ -368,6 +394,7 @@ const OnBoarding = () => {
   const setBookingCode = useData(state => state.setBookingCode);
   const activeBooking = useData(state => state.activeBooking);
   const setActiveBooking = useData(state => state.setActiveBooking);
+  const clearActiveBooking = useData(state => state.clearActiveBooking);
   const mergeRecentPlaces = useData(state => state.mergeRecentPlaces);
   const setSavedPlaces = useData(state => state.setSavedPlaces);
   const { isSignedIn } = useAuth();
@@ -375,8 +402,6 @@ const OnBoarding = () => {
   // Render gate only; the hydration effect stays on real isSignedIn so the
   // dev preview never hits the API.
   const authed = isSignedIn || devAuthBypass;
-  const { user } = useUser();
-  const username = useData(state => state.username);
   const [showForm, setShowForm] = useState(false);
   const api = useApi();
   const navigate = useViewNavigate();
@@ -438,7 +463,13 @@ const OnBoarding = () => {
     if (isRetry) clearRefreshNotice();
     if (!data?.bookings) return;
     const active = data.bookings.find(b => ACTIVE_STATUSES.includes(b.status));
-    if (!active) return;
+    // The server is authoritative in both directions. Without this branch a
+    // cancelled ride persisted in sessionStorage survived every successful
+    // refresh because hydration only ever wrote a found booking.
+    if (!active) {
+      clearActiveBooking();
+      return;
+    }
     setActiveBooking({
       id: active.id,
       code: active.bookingCode,
@@ -487,6 +518,18 @@ const OnBoarding = () => {
   const pickupAutocomplete = useAddressSuggestions(pickupLocation, setPickup, setPickupCoords, api, suggestionCloserRef, closeTimingPanels,true)
   const dropAutocomplete = useAddressSuggestions(dropLocation, setDrop, setDropCoords, api, suggestionCloserRef, closeTimingPanels,false)
   const isMobile = useIsMobile();
+  const [activeSuggestion, setActiveSuggestion] = useState(null);
+  const currentLocationRequested = useRef(false);
+
+  // The route form now follows the destination-first landing bar. A pickup is
+  // therefore useful immediately, rather than asking the rider to re-enter
+  // where they already are. If permission is unavailable the existing field
+  // remains editable and its current-location row provides a retry.
+  useEffect(() => {
+    if (!bookingStage || pickupLocation?.trim() || currentLocationRequested.current) return;
+    currentLocationRequested.current = true;
+    pickupAutocomplete.selectCurrentLocation();
+  }, [bookingStage, pickupLocation]);
 
   // The calendar panel is portalled to the body (see its comment at the render
   // site), so it can no longer be anchored by CSS — it shares no positioned
@@ -571,7 +614,31 @@ const OnBoarding = () => {
       setError(null);
       setLoading(true);
 
-      const data = await api.getMe();
+      // Distance is decided at the moment the rider asks for prices. Run the
+      // route check beside the existing account check so local trips do not pay
+      // for two serial network waits. Fare estimation is deliberately best
+      // effort here: /book still owns the detailed pricing error state.
+      const [estimateResult, accountResult] = await Promise.allSettled([
+        api.estimateFare(
+          pickupLocation,
+          dropLocation,
+          "hatchback",
+          pickupCoords,
+          dropCoords,
+          false,
+          false,
+        ),
+        api.getMe(),
+      ]);
+
+      const estimate = estimateResult.status === "fulfilled" ? estimateResult.value : null;
+      if (Number.isFinite(estimate?.distanceKm) && estimate.distanceKm > OUTSTATION_DISTANCE_KM) {
+        navigate("/outstation");
+        return;
+      }
+
+      if (accountResult.status === "rejected") throw accountResult.reason;
+      const data = accountResult.value;
 
       if (data?.error) {
         navigate("/login");
@@ -580,7 +647,21 @@ const OnBoarding = () => {
       // Vehicle choice belongs to the new request. Both Ride Now and Schedule
       // enter the price screen with the economy class selected initially.
       setVehicleClass("hatchback");
-      navigate("/book");
+      navigate("/book", {
+        state: estimate && !estimate.error
+          ? {
+              stage: "vehicle",
+              fareEstimate: {
+                data: estimate,
+                pickupLocation,
+                dropLocation,
+                pickupCoords,
+                dropCoords,
+                createdAt: Date.now(),
+              },
+            }
+          : { stage: "vehicle" },
+      });
     } catch (err) {
       console.error(err);
       setError("Something went wrong");
@@ -590,8 +671,12 @@ const OnBoarding = () => {
   }
 
   return (
-    <div className="relative flex flex-col sm:flex-row h-[100dvh] sm:px-[9%] md:px-[5%] xl:px-[13%] sm:pt-16 sm:justify-center lg:justify-between items-center bg-[var(--background-primary)]">
-      <div className="relative z-10 py-8 flex flex-col items-center lg:items-start w-full max-w-[500px] h-[inherit] sm:h-fit justify-end sm:justify-center">
+    <div className={`relative flex h-[100dvh] flex-col items-center bg-[var(--background-primary)] sm:flex-row sm:justify-center sm:px-[9%] md:px-[5%] lg:justify-between xl:px-[13%] ${bookingStage ? "overflow-hidden" : "sm:pt-16"}`}>
+      <RoutePanel
+        sheet={bookingStage}
+        isMobile={isMobile}
+        className={`z-10 flex h-[inherit] w-full max-w-[500px] flex-col items-center py-8 sm:h-fit sm:justify-center lg:items-start ${bookingStage ? "max-sm:min-h-[calc(100dvh-56px)] max-sm:justify-start max-sm:px-[7vw] max-sm:py-6 max-sm:pb-[calc(1.25rem+env(safe-area-inset-bottom))]" : "justify-end"}`}
+      >
         {(activeBooking && authed && !activeBooking.scheduledAt)
           ? <div className={`flex w-full flex-col items-center justify-center lg:items-start ${TRIP_STEP}`}>
             <div className={`flex flex-col items-center ${COL}`}>
@@ -609,16 +694,7 @@ const OnBoarding = () => {
               </Button>
             </div>
           </div>
-          : <div className="flex flex-col text-center lg:text-left justify-center items-center lg:items-start gap-1 sm:gap-5">
-            {!(activeBooking && authed && activeBooking.scheduledAt && !showForm) && (
-              <div className="flex flex-col items-center lg:items-start gap-0 mb-2 sm:mb-0">
-                <h2 className="sm:text-3xl text-xl font-normal leading-tight text-[var(--text-muted)]">
-                  Hello {username?.split(" ")[0] || user?.firstName || "there"}!
-                </h2>
-                <h1 className="font-bold text-4xl sm:text-6xl lg:text-5xl xl:text-6xl leading-tight">Where to?</h1>
-              </div>
-            )}
-
+          : <div className={`flex flex-col text-center lg:text-left justify-center items-center lg:items-start gap-1 sm:gap-5 ${bookingStage ? "max-sm:min-h-0 max-sm:w-full max-sm:flex-1 max-sm:justify-start max-sm:gap-3" : ""}`}>
             {activeBooking && authed && activeBooking.scheduledAt && !showForm
               ? <div className={`flex w-[86vw] flex-col items-center justify-center sm:w-[377px] ${TRIP_STEP}`}>
                 <div className="flex w-full flex-col items-center">
@@ -648,11 +724,16 @@ const OnBoarding = () => {
               : ""}
 
             {(!(activeBooking && authed && activeBooking.scheduledAt) || showForm) && (<>
+              <h1 className={`shrink-0 text-center text-2xl font-semibold leading-tight tracking-[-0.03em] sm:text-left sm:text-4xl ${FORM_W} sm:w-[377px]`}>
+                Find a ride
+              </h1>
               <form
-                className="flex flex-col justify-center items-start gap-1 sm:gap-5 mt-1 sm:mt-1 sm:w-[377px]"
+                data-sheet-scroll={bookingStage ? "" : undefined}
+                className={`mt-1 flex flex-col items-start gap-1 sm:mt-1 sm:w-[377px] sm:justify-center sm:gap-5 ${bookingStage ? "max-sm:min-h-0 max-sm:w-full max-sm:flex-1 max-sm:items-center max-sm:overflow-hidden" : "justify-center"}`}
                 noValidate
                 onSubmit={handleSubmit}
               >
+                <div className="flex w-full shrink-0 flex-col items-center gap-1 sm:contents">
                 {error && (
                   <p className={`${error ? "opacity-[1]" : "opacity-[0]"} relative text-red-400 left-1/2 -translate-x-1/2 sm:left-0 sm:translate-x-0 text-sm`}>
                     {error}
@@ -683,7 +764,10 @@ const OnBoarding = () => {
                       error: error === "No Pickup Location",
                       bg: "var(--background-muted)",
                       autoComplete: "off",
-                      onFocusFn: pickupAutocomplete.onFocus,
+                      onFocusFn: () => {
+                        setActiveSuggestion("pickup");
+                        pickupAutocomplete.onFocus();
+                      },
                       onBlurFn: pickupAutocomplete.onBlur,
                     }}
                     className={`scale-[1] sm:scale-[1.3] sm:origin-left ${FORM_W}`}
@@ -706,14 +790,14 @@ const OnBoarding = () => {
                     }
                   />
 
-                  <SuggestionDropdown
+                  {(!bookingStage || !isMobile) && <SuggestionDropdown
                     anim={pickupAutocomplete.dropdown}
                     items={pickupAutocomplete.items}
                     onSelect={pickupAutocomplete.select}
                     above={isMobile}
                     error={pickupAutocomplete.lookupError}
                     typed={pickupAutocomplete.typed}
-                  />
+                  />}
                 </div>
 
 
@@ -734,7 +818,10 @@ const OnBoarding = () => {
                       error: error === "No Drop Location",
                       bg: "var(--background-muted)",
                       autoComplete: "off",
-                      onFocusFn: dropAutocomplete.onFocus,
+                      onFocusFn: () => {
+                        setActiveSuggestion("drop");
+                        dropAutocomplete.onFocus();
+                      },
                       onBlurFn: dropAutocomplete.onBlur,
                     }}
                     className={`scale-[1] sm:scale-[1.3] sm:origin-left ${FORM_W}`}
@@ -759,14 +846,14 @@ const OnBoarding = () => {
                     }
                   />
 
-                  <SuggestionDropdown
+                  {(!bookingStage || !isMobile) && <SuggestionDropdown
                     anim={dropAutocomplete.dropdown}
                     items={dropAutocomplete.items}
                     onSelect={dropAutocomplete.select}
                     above
                     error={dropAutocomplete.lookupError}
                     typed={dropAutocomplete.typed}
-                  />
+                  />}
                 </div>
 
                 <div className="flex flex-col relative">
@@ -964,44 +1051,84 @@ const OnBoarding = () => {
                     document.body,
                   )}
                 </div>
+                </div>
 
-                <Button
-                  prop={{
-                    type: "submit",
-                    disabled:
-                      (timing === "Schedule" && !scheduledTime) ||
-                      !pickupLocation?.trim() ||
-                      !dropLocation?.trim(),
-                  }}
-                  className={`scale-[1] sm:scale-[1.3] sm:origin-left ${FORM_W}`}
-                >
-                  {loading ? "Loading..." : "See prices"}
-                </Button>
+                {bookingStage && isMobile && (
+                  <div className="min-h-0 w-full flex-1 overflow-y-auto overscroll-contain scrollbar-inset" aria-live="polite">
+                    {activeSuggestion === "pickup" && (
+                      <SuggestionDropdown
+                        inline
+                        anim={pickupAutocomplete.dropdown}
+                        items={pickupAutocomplete.items}
+                        onSelect={pickupAutocomplete.select}
+                        error={pickupAutocomplete.lookupError}
+                        typed={pickupAutocomplete.typed}
+                      />
+                    )}
+                    {activeSuggestion === "drop" && (
+                      <SuggestionDropdown
+                        inline
+                        anim={dropAutocomplete.dropdown}
+                        items={dropAutocomplete.items}
+                        onSelect={dropAutocomplete.select}
+                        error={dropAutocomplete.lookupError}
+                        typed={dropAutocomplete.typed}
+                      />
+                    )}
+                  </div>
+                )}
+
+                <div className={`flex w-full shrink-0 flex-col items-center gap-2 sm:items-start sm:gap-5 ${bookingStage ? "max-sm:sticky max-sm:bottom-0 max-sm:z-20 max-sm:pt-6" : ""}`}>
+                  <Button
+                    prop={{
+                      type: "submit",
+                      disabled:
+                        loading ||
+                        (timing === "Schedule" && !scheduledTime) ||
+                        !pickupLocation?.trim() ||
+                        !dropLocation?.trim(),
+                    }}
+                    className={`scale-[1] sm:scale-[1.3] sm:origin-left ${FORM_W}`}
+                  >
+                    {loading ? "Loading..." : "See prices"}
+                  </Button>
+
+                  <p className="relative text-center text-[var(--text-muted)] sm:text-left sm:text-lg">
+                    {timing === "Now"
+                      ? "* Subject to availability"
+                      : "* 99% guaranteed cab allocation"}
+                  </p>
+                </div>
               </form>
-
-              <p className="relative sm:text-lg text-[var(--text-muted)] ">
-                {timing === "Now"
-                  ? "* Subject to availability"
-                  : "* 99% guaranteed cab allocation"}
-              </p>
             </>)}
           </div>
         }
-      </div>
+      </RoutePanel>
 
-      <div className="block sm:hidden absolute z-5 inset-x-0 top-0 h-[100dvh] bg-[linear-gradient(to_top,var(--background)_30%,var(--background-primary)_45%,transparent_90%)]" />
-
-      <img
-        src={mobileBackgroundIllustration}
-        alt="background-illustration"
-        className="absolute block sm:hidden z-0 w-full h-full object-top -top-20 object-cover bg-gradient"
-      />
-
-      <img
-        src={laptopBackgroundIllustration}
-        alt="background-illustration"
-        className="lg:w-[500px] lg:h-[430px] xl:w-[560px] xl:h-[440px] object-cover lg:block hidden rounded-lg"
-      />
+      {bookingStage ? <>
+        <GoogleMap
+          center={pickupCoords ?? { lat: 28.6315, lng: 77.2167 }}
+          zoom={12}
+          className="absolute inset-0 z-0 sm:hidden"
+        />
+        <GoogleMap
+          center={pickupCoords ?? { lat: 28.6315, lng: 77.2167 }}
+          zoom={12}
+          className="relative z-0 mr-[2vw] hidden h-[min(76vh,680px)] w-[min(46vw,720px)] overflow-hidden rounded-[24px] shadow-[0_12px_36px_rgba(0,0,0,0.25)] sm:block"
+        />
+      </> : <>
+        <div className="block sm:hidden absolute z-5 inset-x-0 top-0 h-[100dvh] bg-[linear-gradient(to_top,var(--background)_30%,var(--background-primary)_45%,transparent_90%)]" />
+        <img
+          src={mobileBackgroundIllustration}
+          alt="background-illustration"
+          className="absolute block sm:hidden z-0 w-full h-full object-top -top-20 object-cover bg-gradient"
+        />
+        <img
+          src={laptopBackgroundIllustration}
+          alt="background-illustration"
+          className="lg:w-[500px] lg:h-[430px] xl:w-[560px] xl:h-[440px] object-cover lg:block hidden rounded-lg"
+        />
+      </>}
     </div>
   );
 };

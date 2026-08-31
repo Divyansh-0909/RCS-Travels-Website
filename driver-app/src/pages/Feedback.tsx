@@ -1,14 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { StarIcon } from 'phosphor-react-native';
 import AppText from '../components/AppText';
+import AccountRow from '../components/ui/AccountRow';
 import AccountDetailScreen, {
-  ACCOUNT_HAIRLINE,
   ACCOUNT_MUTED,
+  AccountList,
   AccountSection,
   AccountSectionLabel,
 } from '../components/ui/AccountDetailScreen';
 import { useApi } from '../hooks/useApi';
+import { DetailSectionsSkeleton } from '../components/ui/LoadingSkeletons';
 
 type Review = {
   id: string;
@@ -42,6 +44,77 @@ const Stars = ({ value, size = 17 }: { value: number; size?: number }) => (
   </View>
 );
 
+type FeedbackViewProps = {
+  data: FeedbackResponse | null;
+  loading: boolean;
+  error: string | null;
+  onRetry: () => void;
+};
+
+export const FeedbackView = ({ data, loading, error, onRetry }: FeedbackViewProps) => (
+  <AccountDetailScreen title="Feedback">
+    {loading ? (
+      <DetailSectionsSkeleton cards={3} />
+    ) : error ? (
+      <AccountSection>
+        <AppText className={`text-sm ${ACCOUNT_MUTED}`}>{error}</AppText>
+        <Pressable
+          role="button"
+          onPress={onRetry}
+          hitSlop={8}
+          style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1, marginTop: 8 })}
+        >
+          <AppText className="text-sm font-semibold text-primary">Try again</AppText>
+        </Pressable>
+      </AccountSection>
+    ) : !data?.summary ? (
+      <AccountSection>
+        <View className="items-center py-6">
+          <View className="w-12 h-12 rounded-full items-center justify-center bg-white">
+            <StarIcon size={24} weight="regular" color="#121220" />
+          </View>
+          <AppText className="font-semibold mt-3 text-[var(--background-primary)]">
+            No feedback yet
+          </AppText>
+          <AppText className={`text-sm text-center mt-1 ${ACCOUNT_MUTED}`}>
+            Ratings and comments from completed rides will appear here.
+          </AppText>
+        </View>
+      </AccountSection>
+    ) : (
+      <>
+        <AccountSection>
+          <View className="flex-row items-center gap-4">
+            <AppText className="text-4xl font-semibold text-[var(--background-primary)]">
+              {data.summary.average.toFixed(1)}
+            </AppText>
+            <View className="flex-1 gap-1">
+              <Stars value={Math.round(data.summary.average)} size={19} />
+              <AppText className={`text-sm ${ACCOUNT_MUTED}`}>
+                From {data.summary.count} {data.summary.count === 1 ? 'ride' : 'rides'}
+              </AppText>
+            </View>
+          </View>
+        </AccountSection>
+
+        <AccountSectionLabel>Recent rider feedback</AccountSectionLabel>
+        <AccountList>
+          {data.reviews.map((review, index) => (
+            <AccountRow
+              key={review.id}
+              label={review.comment || 'Rating only'}
+              detail={`Ride ${review.booking.reference} · ${dateLabel(review.createdAt)}`}
+              value={`${review.rating}/5`}
+              Icon={StarIcon}
+              last={index === data.reviews.length - 1}
+            />
+          ))}
+        </AccountList>
+      </>
+    )}
+  </AccountDetailScreen>
+);
+
 const Feedback = () => {
   const api = useApi();
   const apiRef = useRef(api);
@@ -61,87 +134,7 @@ const Feedback = () => {
 
   useEffect(() => { load(); }, [load]);
 
-  return (
-    <AccountDetailScreen title="Feedback">
-      {loading ? (
-        <View className="items-center py-16">
-          <ActivityIndicator color="#121220" />
-        </View>
-      ) : error ? (
-        <AccountSection>
-          <AppText className={`text-sm ${ACCOUNT_MUTED}`}>{error}</AppText>
-          <Pressable
-            role="button"
-            onPress={load}
-            hitSlop={8}
-            style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1, marginTop: 8 })}
-          >
-            <AppText className="text-sm font-semibold text-primary">Try again</AppText>
-          </Pressable>
-        </AccountSection>
-      ) : !data?.summary ? (
-        <AccountSection>
-          <View className="items-center py-6">
-            <View className="w-12 h-12 rounded-full items-center justify-center bg-white">
-              <StarIcon size={24} weight="regular" color="#121220" />
-            </View>
-            <AppText className="font-semibold mt-3 text-[var(--background-primary)]">
-              No feedback yet
-            </AppText>
-            <AppText className={`text-sm text-center mt-1 ${ACCOUNT_MUTED}`}>
-              Ratings and comments from completed rides will appear here.
-            </AppText>
-          </View>
-        </AccountSection>
-      ) : (
-        <>
-          <AccountSection>
-            <View className="flex-row items-center gap-4">
-              <AppText className="text-4xl font-semibold text-[var(--background-primary)]">
-                {data.summary.average.toFixed(1)}
-              </AppText>
-              <View className="flex-1 gap-1">
-                <Stars value={Math.round(data.summary.average)} size={19} />
-                <AppText className={`text-sm ${ACCOUNT_MUTED}`}>
-                  From {data.summary.count} {data.summary.count === 1 ? 'ride' : 'rides'}
-                </AppText>
-              </View>
-            </View>
-          </AccountSection>
-
-          <AccountSectionLabel>Recent rider feedback</AccountSectionLabel>
-          <View
-            className="mx-4 rounded-2xl px-4 bg-white"
-            style={{ borderWidth: 1, borderColor: ACCOUNT_HAIRLINE }}
-          >
-            {data.reviews.map((review, index) => (
-              <View
-                key={review.id}
-                className="py-4 gap-2"
-                style={index === data.reviews.length - 1 ? undefined : {
-                  borderBottomWidth: 1,
-                  borderBottomColor: ACCOUNT_HAIRLINE,
-                }}
-              >
-                <View className="flex-row items-center justify-between gap-3">
-                  <Stars value={review.rating} />
-                  <AppText className={`text-xs ${ACCOUNT_MUTED}`}>
-                    {dateLabel(review.createdAt)}
-                  </AppText>
-                </View>
-                <AppText className={`text-sm ${review.comment ? 'text-[var(--background-primary)]' : ACCOUNT_MUTED}`}>
-                  {review.comment || 'Rating only'}
-                </AppText>
-                <AppText className={`text-xs ${ACCOUNT_MUTED}`}>
-                  Ride {review.booking.reference}
-                </AppText>
-              </View>
-            ))}
-          </View>
-        </>
-      )}
-    </AccountDetailScreen>
-  );
+  return <FeedbackView data={data} loading={loading} error={error} onRetry={load} />;
 };
 
 export default Feedback;

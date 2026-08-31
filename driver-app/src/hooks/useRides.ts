@@ -16,9 +16,9 @@ import type { UpcomingBooking } from '../types/enums';
 
 type Result = {
     rides: UpcomingBooking[];
-    /** en_route, reached or started — the ride he is out on. Null otherwise. */
+    /** The accepted ride shown on Home — assigned through started. */
     active: UpcomingBooking | null;
-    /** The soonest `assigned` ride: what Standby offers him a way to start. */
+    /** The soonest `assigned` ride, retained for list and transition callers. */
     next: UpcomingBooking | null;
     /** Every `assigned` ride, soonest first, for the board's "Next rides". */
     scheduled: UpcomingBooking[];
@@ -121,11 +121,12 @@ export function useRides(): Result {
         };
     }, [hasAssignedWork, refresh]);
 
-    const active = rides.find((r) => ACTIVE_RIDE_STATUSES.includes(r.status)) ?? null;
-
-    // `assigned` only. A ride he holds but has not set off for is the one Standby
-    // can offer to start; anything further along is the active ride above.
+    // A progressed ride wins if the captain holds multiple bookings. Otherwise
+    // the soonest accepted (`assigned`) ride becomes Active Ride's first step.
     const scheduled = rides.filter((r) => r.status === 'assigned');
+    const active = rides.find((r) => ACTIVE_RIDE_STATUSES.includes(r.status))
+        ?? scheduled[0]
+        ?? null;
 
     return { rides, active, next: scheduled[0] ?? null, scheduled, loading, error, refresh };
 }

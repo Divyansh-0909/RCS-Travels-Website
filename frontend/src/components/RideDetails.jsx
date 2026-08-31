@@ -77,6 +77,10 @@ const RideDetails = ({ prop }) => {
                     advanceDisposition: data.advanceDisposition ?? null,
                     refundStatus: data.refund?.status ?? null,
                 }));
+                // This store is persisted in sessionStorage. Clear the live
+                // transaction before the reload or onboarding would briefly
+                // restore the cancelled ride as "Current Trip".
+                useData.getState().clearActiveBooking();
                 window.location.href = '/';
             }
         } catch (err) {
@@ -105,10 +109,10 @@ const RideDetails = ({ prop }) => {
 
                 <div className={`flex flex-col gap-2 ${COL}`}>
                     <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">Ride cancellation</p>
-                    <h2 id="cancel-ride-title" className="text-3xl font-bold leading-tight tracking-[-0.03em] sm:text-5xl">
+                    <h2 id="cancel-ride-title" className="w-full min-w-0 [overflow-wrap:anywhere] text-3xl font-bold leading-tight tracking-[-0.03em] sm:text-5xl">
                         Cancel this ride?
                     </h2>
-                    <p className="text-base leading-snug text-[var(--text-muted)] sm:text-xl">
+                    <p className="w-full min-w-0 text-base leading-snug text-[var(--text-muted)] sm:text-xl">
                         Review what happens before you confirm.
                     </p>
                 </div>

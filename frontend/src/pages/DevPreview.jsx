@@ -66,6 +66,7 @@ import { useIsMobile } from "../hooks/useIsMobile";
 import EmptyState from "../components/ui/EmptyState";
 import FailureState from "../components/ui/FailureState";
 import RefreshNotice from "../components/ui/RefreshNotice";
+import RideCancelledToast from "../components/ui/RideCancelledToast";
 
 // Dev-only preview harness — registered in main.jsx behind import.meta.env.DEV.
 // Seeds the store with a mock booking and renders any booking-flow screen without
@@ -95,6 +96,7 @@ const PREVIEWS = [
     ["/dev/vehicle?step=confirmLocation", "VehicleSelect: confirm pickup point"],
     ["/dev/vehicle?step=searching", "VehicleSelect: requesting a ride"],
     ["/dev/vehicle?panel=noDriver", "VehicleSelect: no drivers nearby"],
+    ["/dev/cancellation?charge=150", "Ride cancellation: settlement bottom sheet"],
     ["/dev/vehicle?panel=confirmed&scheduled=1", "VehicleSelect: scheduled booking confirmed"],
     ["/dev/tracking?status=assigned", "TrackingPage: driver assigned"],
     ["/dev/tracking?status=en_route&driver=1", "TrackingPage: live map with driver puck"],
@@ -265,7 +267,7 @@ const DevPreview = () => {
             : null;
         // ?route=none clears the addresses, which is what /book looks like when
         // it is opened directly with nothing in the store.
-        const fresh = view === "home" || params.get("route") === "none"; // pre-booking: empty form, no trip card
+        const fresh = view === "home" || view === "cancellation" || params.get("route") === "none"; // pre-booking: empty form, no trip card
 
         const s = useData.getState();
         s.setActiveBooking(fresh ? null : { ...MOCK, status, scheduledAt: scheduled });
@@ -326,6 +328,15 @@ const DevPreview = () => {
     if (view === "safety") return <SafetyPage />;
     if (view === "help") return <HelpPage />;
     if (view === "admin") return <AdminDashboard key={search} />;
+    if (view === "cancellation") {
+        const charge = Number(new URLSearchParams(search).get("charge")) || 0;
+        return (
+            <>
+                <OnBoarding key={view + search} />
+                <RideCancelledToast outcome={{ cancellationCharge: charge }} dismissAfterMs={0} />
+            </>
+        );
+    }
     if (view === "home" || view === "trip") return <OnBoarding key={view + search} />;
     if (view === "vehicle") return <VehicleSelect key={search} />;
     if (view === "tracking") return <TrackingPage key={search} />;

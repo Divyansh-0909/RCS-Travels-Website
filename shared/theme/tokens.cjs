@@ -30,6 +30,11 @@ const colors = {
   negative: '#B91C1C',
   'negative-dark': '#7A0F0F',
   'negative-light': '#E86A6A',
+  // Quiet content-panel tones derived from the RCS blue and cool dark surfaces.
+  'pastel-primary': '#E5E9FF',
+  'pastel-teal': '#DFF3EF',
+  'pastel-violet': '#EEE8FA',
+  'pastel-sand': '#F3EEDD',
 };
 
 /**

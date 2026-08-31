@@ -5,8 +5,10 @@ import AppText from "../components/AppText";
 import ScheduledRide from "../components/ui/ScheduledRide";
 import MarketPromo from "../components/ui/MarketPromo";
 import DriverCouponPromo from "../components/ui/DriverCouponPromo";
+import { HomeRideListSkeleton } from "../components/ui/LoadingSkeletons";
 import { useNavigate } from "react-router-native";
-import { useRides } from "../hooks/useRides";
+import { useDriver } from "../hooks/useDriver";
+import type { UpcomingBooking } from "../types/enums";
 
 const Caret = cssInterop(CaretRightIcon, {
     className: { target: false, nativeStyleToProp: { color: true } },
@@ -17,9 +19,17 @@ const MAX_ROWS = 2;
 // the coupon panel visually separate while placing it directly above the bar.
 const BAR_CLEARANCE = 108;
 
-const Home = () => {
+type Props = {
+    scheduled: UpcomingBooking[];
+    loading: boolean;
+    error: string | null;
+    onRefresh: () => Promise<void>;
+};
+
+const Home = ({ scheduled, loading, error, onRefresh }: Props) => {
     const navigate = useNavigate()
-    const { scheduled, error, refresh } = useRides()
+    const { profile } = useDriver()
+    const online = profile?.isOnline ?? false
 
     return (
         <View
@@ -34,10 +44,10 @@ const Home = () => {
         >
             <View className="flex-1 items-center justify-center w-full rounded-2xl px-4 gap-0.5">
                 <AppText className="text-2xl font-semibold text-[var(--background-primary)]">
-                    You&apos;re offline
+                    You&apos;re {online ? 'online' : 'offline'}
                 </AppText>
                 <AppText className="text-base text-gray-600">
-                    Go online to start getting rides.
+                    {online ? 'Waiting for a new ride.' : 'Go online to start getting rides.'}
                 </AppText>
             </View>
 
@@ -47,7 +57,7 @@ const Home = () => {
                         <AppText numberOfLines={2} className="flex-1 text-sm text-red-600">{error}</AppText>
                         <Pressable
                             role="button"
-                            onPress={refresh}
+                            onPress={onRefresh}
                             style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
                         >
                             <AppText className="text-sm font-semibold text-primary">Try again</AppText>
@@ -71,7 +81,9 @@ const Home = () => {
                         </Pressable>
                     </View>
 
-                    {scheduled.length === 0 ? (
+                    {loading && scheduled.length === 0 ? (
+                        <HomeRideListSkeleton />
+                    ) : scheduled.length === 0 ? (
                         <View className="w-full rounded-2xl p-4 gap-0.5" style={{ backgroundColor: '#f3f3f3' }}>
                             <AppText className="font-semibold text-[var(--background-primary)]">No ride scheduled</AppText>
                             <AppText className="text-xs text-gray-600">Your next assigned ride shows up here.</AppText>

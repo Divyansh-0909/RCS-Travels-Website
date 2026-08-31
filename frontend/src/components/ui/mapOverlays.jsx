@@ -1,6 +1,5 @@
-import { mdiCar } from "@mdi/js";
 import { haversineKm } from "../../lib/trip";
-import { headingBetween, pointAlongPreparedPath, preparePathMotion, roadPathBetween } from "../../lib/routeMotion";
+import { headingBetween, pointAlongPreparedPath, preparePathMotion, remainingRoadPath, roadPathBetween } from "../../lib/routeMotion";
 import { labelOf } from "../../constants/vehicles";
 import topViewVehicle from "../../assets/top-view.webp";
 import topViewSedan from "../../assets/top-view-sedan.webp";
@@ -27,9 +26,6 @@ const ENDPOINT_CIRCLE_Y = 12;
 const ENDPOINT_TIP_Y = 32;
 const PICKUP_MARKER_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="${ENDPOINT_ICON_WIDTH}" height="${ENDPOINT_ICON_HEIGHT}">${MARKER_SHADOW}<g filter="url(#ms)"><path d="M${ENDPOINT_X} ${ENDPOINT_CIRCLE_Y}V${ENDPOINT_TIP_Y}" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/><circle cx="${ENDPOINT_X}" cy="${ENDPOINT_CIRCLE_Y}" r="8" fill="#ffffff"/></g></svg>`;
 const DROP_MARKER_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="${ENDPOINT_ICON_WIDTH}" height="${ENDPOINT_ICON_HEIGHT}">${MARKER_SHADOW}<g filter="url(#ms)"><path d="M${ENDPOINT_X} ${ENDPOINT_CIRCLE_Y}V${ENDPOINT_TIP_Y}" stroke="#243AFB" stroke-width="2" stroke-linecap="round"/><circle cx="${ENDPOINT_X}" cy="${ENDPOINT_CIRCLE_Y}" r="8" fill="#243AFB"/><circle cx="${ENDPOINT_X}" cy="${ENDPOINT_CIRCLE_Y}" r="3" fill="#0B0B14"/></g></svg>`;
-// mdiCar is a 24x24 path; 0.72 scale centres it in the 22px puck.
-const DRIVER_MARKER_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="44" height="44">${MARKER_SHADOW}<g filter="url(#ms)"><circle cx="22" cy="22" r="13" fill="#7A94FF"/><path d="${mdiCar}" fill="#0B0B14" transform="translate(13.4,13.4) scale(0.72)"/></g></svg>`;
-
 const LIVE_DRIVER_MARKER_SIZE = 72;
 const LIVE_VEHICLE_CLASSES = new Set(["hatchback", "sedan", "suv", "suv_premium"]);
 // These are the same top-view assets already used by the captain map. Sedan has
@@ -99,12 +95,6 @@ const imageIcon = (g, url, width, height) => ({
     anchor: new g.Point(width / 2, height / 2),
 });
 
-const svgIcon = (g, svg, size) => ({
-    url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
-    scaledSize: new g.Size(size, size),
-    anchor: new g.Point(size / 2, size / 2),
-});
-
 const endpointIcon = (g, svg) => ({
     url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
     scaledSize: new g.Size(ENDPOINT_ICON_WIDTH, ENDPOINT_ICON_HEIGHT),
@@ -127,59 +117,83 @@ export const CenterPin = ({ target }) => (
 );
 
 let routeOverlays = null;
+let progressRoutePath = null;
 
 export function clearRouteView() {
     if (!routeOverlays) return;
     Object.values(routeOverlays).forEach(o => o.setMap(null));
     routeOverlays = null;
+    progressRoutePath = null;
 }
 
 // Zoomed-out full-route view: both endpoints marked, connected by the real
 // road path from the fare estimate (straight-line fallback when it's missing),
 // and fitted in frame. onPickupClick/onDropClick make the markers tappable —
 // omit them where the route is already booked and can't be adjusted.
-export function showRouteView(map, { pickupPoint, dropPoint, routePolyline, onPickupClick, onDropClick, framePoints = [], padding = 60 }) {
+export function showRouteView(map, { pickupPoint, dropPoint, routePolyline, progressPoint = null, onPickupClick, onDropClick, framePoints = [], padding = 60 }) {
     clearRouteView();
     const g = window.google.maps;
     const routePath = routePolyline && g.geometry
         ? g.geometry.encoding.decodePath(routePolyline)
-        : [pickupPoint, dropPoint];
+        : [pickupPoint, dropPoint].filter(Boolean);
+    const visibleRoutePath = progressPoint
+        ? remainingRoadPath(routePath, progressPoint) ?? routePath
+        : routePath;
 
-    const pickupMarker = new g.Marker({ map, position: pickupPoint, icon: endpointIcon(g, PICKUP_MARKER_SVG) });
-    const dropMarker = new g.Marker({ map, position: dropPoint, icon: endpointIcon(g, DROP_MARKER_SVG) });
-    if (onPickupClick) pickupMarker.addListener("click", onPickupClick);
-    if (onDropClick) dropMarker.addListener("click", onDropClick);
+    const pickupMarker = pickupPoint
+        ? new g.Marker({ map, position: pickupPoint, icon: endpointIcon(g, PICKUP_MARKER_SVG) })
+        : null;
+    const dropMarker = dropPoint
+        ? new g.Marker({ map, position: dropPoint, icon: endpointIcon(g, DROP_MARKER_SVG) })
+        : null;
+    if (pickupMarker && onPickupClick) pickupMarker.addListener("click", onPickupClick);
+    if (dropMarker && onDropClick) dropMarker.addListener("click", onDropClick);
 
     const line = new g.Polyline({
-        map, path: routePath, geodesic: true,
+        map, path: visibleRoutePath, geodesic: true,
         strokeColor: "#7A94FF", strokeOpacity: 1, strokeWeight: 4,
     });
-    routeOverlays = { pickupMarker, dropMarker, line };
+    routeOverlays = { ...(pickupMarker ? { pickupMarker } : {}), ...(dropMarker ? { dropMarker } : {}), line };
+    progressRoutePath = progressPoint ? routePath : null;
 
     // fit over the whole path, not just the endpoints — a curving route can
     // swing well outside the straight-line bounding box
     const bounds = new g.LatLngBounds();
-    routePath.forEach(p => bounds.extend(p));
-    bounds.extend(pickupPoint);
-    bounds.extend(dropPoint);
+    visibleRoutePath.forEach(p => bounds.extend(p));
+    if (pickupPoint) bounds.extend(pickupPoint);
+    if (dropPoint) bounds.extend(dropPoint);
     framePoints.forEach(p => bounds.extend(p));
     map.fitBounds(bounds, padding);
+}
+
+// GPS fixes arrive more often than paid route recalculations. Trim the line at
+// each fix without rebuilding markers or moving the camera; a fresh polyline
+// from the server replaces progressRoutePath when the driver deviates.
+export function setRouteProgress(coords) {
+    if (!routeOverlays?.line || !progressRoutePath || !coords) return;
+    const remaining = remainingRoadPath(progressRoutePath, coords);
+    if (remaining) routeOverlays.line.setPath(remaining);
 }
 
 // Pre-booking fleet preview. Kept separate from the assigned-driver marker so
 // leaving VehicleSelect cannot disturb TrackingPage's live animated car.
 let nearbyVehicleMarkers = [];
 
-export function setNearbyVehiclePositions(map, positions, label) {
+export function setNearbyVehiclePositions(map, positions, vehicleClass) {
     clearNearbyVehicleMarkers();
     if (!positions?.length) return;
     const g = window.google.maps;
+    const nextClass = normaliseVehicleClass(vehicleClass);
+    const image = vehicleImageFor(nextClass);
     nearbyVehicleMarkers = positions.map((position) => new g.Marker({
         map,
         position,
         zIndex: 8,
-        title: `Nearby ${label}`,
-        icon: svgIcon(g, DRIVER_MARKER_SVG, 44),
+        title: `Nearby ${labelOf(nextClass)}`,
+        // Use the same top-view, class-aware artwork as the assigned-driver
+        // marker. These anonymous preview points do not expose a bearing, so
+        // they retain the source image's stable default orientation.
+        icon: imageIcon(g, image.src, image.width, image.height),
     }));
 }
 

@@ -63,9 +63,8 @@ export const isDrillDown = (pathname: string) =>
  * and the panel he actually needs wants the bottom of the screen the bar is
  * floating in.
  *
- * `assigned` is not enough to trigger this. He can hold a scheduled ride for
- * days; only en_route, reached and started mean he is out on the road, which is
- * why the server answers with the ride rather than with a count.
+ * `assigned` triggers it too: accepting a ride opens the map and first slider
+ * immediately, before the captain marks himself en route.
  *
  * ON THE RIDE SCREEN ONLY, AND THAT PART IS NOT A REFINEMENT — it is what keeps
  * the app escapable. Hiding the bar everywhere for the length of a ride would
@@ -104,9 +103,11 @@ export const useShellHidden = () => {
     const { pathname } = useLocation();
     const { profile } = useDriver();
 
-    // "/" is where HomeGate puts the ride screen, so this is "he is driving AND
-    // he is looking at the ride".
-    const onRideScreen = Boolean(profile?.activeRide) && pathname === '/';
+    // HomeGate opens Active Ride as soon as a booking is accepted (`assigned`),
+    // before the later-state activeRide snapshot exists on the profile.
+    const hasAcceptedRide = Boolean(profile?.activeRide)
+        || (profile?.onboarding?.assignedRides ?? 0) > 0;
+    const onRideScreen = hasAcceptedRide && pathname === '/';
 
     return { hidden: isDrillDown(pathname) || onRideScreen, onActiveRide: onRideScreen };
 };

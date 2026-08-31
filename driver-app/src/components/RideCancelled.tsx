@@ -1,8 +1,9 @@
 import { Pressable, View } from 'react-native';
 import { cssInterop } from 'nativewind';
 import { XIcon } from 'phosphor-react-native';
-import Animated, { FadeIn, SlideInDown } from 'react-native-reanimated';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import AppText from './AppText';
+import { useNoticeTop } from './AppBarVisibility';
 import { INK_TEXT, MUTED, PAGE, SURFACE } from './ui/rideUi';
 import { rupees, splitAddress } from '../constants/booking';
 import type { UpcomingBooking } from '../types/enums';
@@ -14,12 +15,9 @@ const Cross = cssInterop(XIcon, {
 /**
  * The rider called it off, and the captain is told where he stands.
  *
- * AT THE BOTTOM, unlike the offer card and the call prompt. Those are things to
- * answer, and they go to the top where they cannot be missed. This is the
- * opposite: nothing is being asked of him, the ride is already gone from his
- * screen, and the only job left is to say what happened and whether there is
- * money in it. A dismissible notice over the board he has just been returned to
- * is the right weight for that.
+ * It uses the same top notice rail and card shell as a new-ride offer. A ride
+ * disappearing is just as important to notice quickly, and keeping unbidden
+ * notices at the top leaves the captain's bottom controls unobstructed.
  *
  * THE FIGURE IS THE SERVER'S, never recomputed here. cancellationCharge is
  * written onto the booking at the moment it is cancelled
@@ -35,15 +33,16 @@ export const RideCancelled = ({
 }) => {
     const charge = ride.cancellationCharge ?? 0;
     const pickup = splitAddress(ride.pickupAddress);
+    const top = useNoticeTop();
 
     return (
-        <Animated.View
-            entering={FadeIn.duration(160)}
-            style={{ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 85 }}
+        <View
+            pointerEvents="box-none"
+            style={{ position: 'absolute', left: 0, right: 0, top, zIndex: 85, alignItems: 'center' }}
         >
             <Animated.View
-                entering={SlideInDown.duration(260)}
-                className="rounded-t-3xl px-5 pt-4 pb-8 gap-3"
+                entering={FadeInDown.duration(220)}
+                className="w-[92%] rounded-2xl p-4 gap-3"
                 style={{ backgroundColor: SURFACE }}
             >
                 <View className="flex-row items-start justify-between gap-3">
@@ -89,6 +88,6 @@ export const RideCancelled = ({
                     </AppText>
                 )}
             </Animated.View>
-        </Animated.View>
+        </View>
     );
 };

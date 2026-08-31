@@ -147,6 +147,7 @@ const Standby = ({ next, onChanged }: { next: UpcomingBooking | null; onChanged:
                 pickup={next ? { latitude: next.pickupLat, longitude: next.pickupLng } : null}
                 drop={next ? { latitude: next.dropLat, longitude: next.dropLng } : null}
                 driver={liveFix ? { latitude: liveFix.coords.latitude, longitude: liveFix.coords.longitude } : null}
+                driverBearing={liveFix?.coords.heading}
                 bottomSheetHeight={mapBottomInset}
                 carType={next?.vehicleClass}
                 routePolyline={next?.routePolyline}

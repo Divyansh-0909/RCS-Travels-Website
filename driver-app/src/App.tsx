@@ -1,6 +1,11 @@
 import { View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import Animated, { FadeIn } from 'react-native-reanimated';
+import Animated, {
+    Easing,
+    FadeInDown,
+    FadeOut,
+    ReduceMotion,
+} from 'react-native-reanimated';
 import SwipeBack from './components/SwipeBack';
 import { Outlet, useLocation } from 'react-router-native';
 import AppBar from './components/AppBar';
@@ -13,6 +18,19 @@ import { RideMenuDrawer, RideMenuProvider } from './components/RideMenu';
 import { homeScreenFor } from './components/HomeGate';
 import { useDriver } from './hooks/useDriver';
 import { useDriverLocation } from './hooks/useDriverLocation';
+
+// A route change should register immediately without making a frequently used
+// tab feel theatrical. The eight-point lift supplies continuity while the short
+// fade hides the mount seam; both animations honour the system motion setting.
+const PAGE_ENTER = FadeInDown
+    .duration(180)
+    .easing(Easing.out(Easing.cubic))
+    .reduceMotion(ReduceMotion.System)
+    .withInitialValues({ opacity: 0, transform: [{ translateY: 8 }] });
+const PAGE_EXIT = FadeOut
+    .duration(90)
+    .easing(Easing.in(Easing.quad))
+    .reduceMotion(ReduceMotion.System);
 
 const App = () => {
     const { pathname } = useLocation();
@@ -59,7 +77,8 @@ const App = () => {
                 <OnlineToggle />
                 <Animated.View
                     key={pathname}
-                    entering={FadeIn.duration(220)}
+                    entering={PAGE_ENTER}
+                    exiting={PAGE_EXIT}
                     pointerEvents="box-none"
                     style={{ flex: 1, width: '100%', alignItems: 'center', justifyContent: 'center' }}
                 >

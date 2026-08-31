@@ -26,7 +26,7 @@
 
     const AppBar = () => {
         const navigate = useNavigate();
-        const { pathname } = useLocation();
+        const { pathname, search } = useLocation();
         const { hidden } = useAppBarVisibility();
         const { hidden: shellHidden } = useShellHidden();
         const { profile } = useDriver();
@@ -91,10 +91,15 @@
                         renderItem={({ item }) => {
                             const isPost = item.name === "Post";
                             const isSelected = !isPost && pathname === item.path;
+                            const postPath = pathname === '/available' && new URLSearchParams(search).get('tab') === 'mine'
+                                ? '/available?tab=mine&post=new'
+                                : '/available?post=new';
 
                             return (
                                 <Pressable
-                                    onPress={() => navigate(item.path, { replace: true })}
+                                    role="button"
+                                    aria-label={isPost ? 'Post a marketplace booking' : item.name}
+                                    onPress={() => navigate(isPost ? postPath : item.path, { replace: true })}
                                     className={`flex gap-1 items-center justify-center ${isPost ? "bg-[var(--foreground)] w-12 h-12 my-1.5 rounded-full mx-1" : "w-[14vw]"}`}>
                                     {isPost ? (
                                         <item.Icon size={24} weight="bold" className="text-[var(--background-primary)]" />

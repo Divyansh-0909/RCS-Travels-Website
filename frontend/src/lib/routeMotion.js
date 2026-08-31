@@ -83,6 +83,28 @@ export function roadPathBetween(routePath, fromFix, toFix, offsetLimitKm = ROUTE
     };
 }
 
+/**
+ * Keep only the road still ahead of a moving vehicle.
+ *
+ * A live navigation polyline is refreshed periodically rather than for every
+ * GPS fix. Projecting the newer fixes onto that path lets the visible line
+ * shrink between route refreshes. If the vehicle is no longer close to the
+ * path, return null so the caller keeps the last honest route until the server
+ * supplies a recalculation instead of snapping the line onto an unrelated road.
+ */
+export function remainingRoadPath(routePath, currentFix, offsetLimitKm = ROUTE_OFFSET_LIMIT_KM) {
+    const path = routePath.map(asPoint).filter(Boolean);
+    const current = asPoint(currentFix);
+    if (path.length < 2 || !current) return null;
+
+    const start = projectOntoPath(path, current);
+    if (!start || start.distanceKm > offsetLimitKm) return null;
+
+    const points = [start.point, ...path.slice(start.segmentIndex + 1)];
+    const cleanPoints = withoutAdjacentDuplicates(points);
+    return cleanPoints.length >= 2 ? cleanPoints : [start.point, path[path.length - 1]];
+}
+
 export function preparePathMotion(path) {
     const points = path.map(asPoint).filter(Boolean);
     if (points.length < 2) return null;

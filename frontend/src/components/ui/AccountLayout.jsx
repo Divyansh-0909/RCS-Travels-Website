@@ -5,7 +5,6 @@ import { mdiHome, mdiMenu } from '@mdi/js';
 import { useViewNavigate } from "../../hooks/useViewNavigate";
 import { useExitAnim } from "../../hooks/useExitAnim";
 
-
 // Every panel these pages float over their content gets the same dim behind it
 // as Outstation's booking panel: the page recedes instead of competing with the
 // panel for attention, and there is somewhere obvious to click to get out.
@@ -59,21 +58,23 @@ const AccountLayout = ({ items, selected, onSelect, title, children, startOnCont
                 )}
             </div>
             <div className="w-full flex-1 min-h-0 flex gap-5 justify-center items-center">
-                <div className={`${menuOpen ? "flex animate-account-menu" : "hidden"} w-full sm:flex sm:w-[16%] justify-center items-start h-full`}>
-                    <ul className="flex flex-col items-start justify-center w-full">
+                <div className={`${menuOpen ? "flex animate-account-menu" : "hidden"} w-full sm:flex sm:w-[16%] justify-start items-start h-full sm:pt-2`}>
+                    <div className="flex w-full flex-col items-start gap-4">
+                    <ul className="flex w-full flex-col items-start gap-2">
                         {items.map((item, i) => (
-                            <li key={i} onClick={() => { onSelect(i); setMenuOpen(false); }} className={`font-normal text-3xl w-full cursor-pointer select-none py-3 px-4 rounded-2xl flex justify-start gap-2 transition-color duration-300 items-center ${selected === i ? "text-[var(--text-foreground)] hover:bg-[var(--background-primary)]/5 sm:bg-[var(--background-primary)] sm:hover:bg-[var(--background-primary)] sm:text-[var(--text)]" : "hover:bg-[var(--background-primary)]/5 text-[var(--text-foreground)]"}`}>
-                                <h4 className="text-2xl sm:text-lg max-sm:font-semibold">{item}</h4>
+                            <li key={i} onClick={() => { onSelect(i); setMenuOpen(false); }} className={`flex w-fit max-w-full cursor-pointer select-none items-center justify-start rounded-full px-4 py-2 transition-opacity duration-200 hover:opacity-80 focus-within:opacity-80 ${selected === i ? "bg-[var(--background)] text-[var(--text)]" : "bg-[var(--foreground-muted)] text-[var(--text-foreground)]"}`}>
+                                <h4 className="truncate text-2xl font-semibold sm:text-lg">{item}</h4>
                             </li>
                         ))}
                     </ul>
+                    </div>
                 </div>
-                <div className={`${menuOpen ? "hidden" : "flex animate-account-content"} w-full sm:flex sm:w-[84%] flex-col rounded-3xl justify-start items-start h-full min-h-0`}>
-                    <div className="flex items-center gap-3 pb-6 px-4 max-sm:px-0 max-sm:w-full max-sm:pt-3">
-                        <button type="button" aria-label="Show sections" onClick={() => setMenuOpen(true)} className="sm:hidden cursor-pointer rounded-lg text-[var(--text-foreground)] opacity-[0.85] transition-opacity duration-300 hover:opacity-[1] active:opacity-[0.7] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--background-primary)]">
+                <div className={`${menuOpen ? "hidden" : "flex animate-account-content"} w-full sm:flex sm:w-[84%] flex-col justify-start items-start h-full min-h-0 overflow-hidden bg-[var(--foreground)] pb-5 [&>ul]:px-4 sm:[&>ul]:px-5`}>
+                    <div className="flex items-center gap-3 pb-6 px-5 max-sm:px-4 max-sm:w-full max-sm:pt-3">
+                        <button type="button" aria-label="Show sections" onClick={() => setMenuOpen(true)} className="sm:hidden shrink-0 cursor-pointer rounded-lg text-[var(--text-foreground)] opacity-[0.85] transition-opacity duration-300 hover:opacity-[1] active:opacity-[0.7] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--background-primary)]">
                             <Icon path={mdiMenu} size={1.2} />
                         </button>
-                        <h3 className="text-3xl sm:text-4xl text-[var(--text-foreground)] font-semibold">{items[selected]}</h3>
+                        <h3 className="min-w-0 flex-1 break-words text-4xl sm:text-5xl text-[var(--text-foreground)] font-semibold leading-tight tracking-[-0.04em]">{items[selected]}</h3>
                     </div>
                     {children}
                 </div>

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
 import GoogleMap, { MAP_LAND_COLOR } from "../components/ui/GoogleMap";
-import { MAP_CLASSES, showRouteView, clearRouteView, setDriverPosition, clearDriverMarker } from "../components/ui/mapOverlays";
+import { MAP_CLASSES, showRouteView, clearRouteView, setDriverPosition, setRouteProgress, clearDriverMarker } from "../components/ui/mapOverlays";
 import BackgroundPanel from "../components/ui/BackgroundPanel";
 import Button from "../components/ui/Button";
 import Skeleton from "../components/ui/Skeleton";
@@ -113,6 +113,11 @@ const SharedTrip = () => {
     const driverPoint = trip?.driver?.latitude != null && trip?.driver?.longitude != null
         ? { lat: trip.driver.latitude, lng: trip.driver.longitude }
         : null;
+    const hasRemainingRoute = Boolean(
+        driverPoint && trip?.navigationPolyline && (trip?.status === "en_route" || trip?.status === "started")
+    );
+    const displayedPickupPoint = hasRemainingRoute && trip?.status === "started" ? null : pickupPoint;
+    const displayedDropPoint = hasRemainingRoute && trip?.status === "en_route" ? null : dropPoint;
 
     // No map once the trip is over — there is no longer anything moving on it,
     // and a static route to a finished journey is just decoration.
@@ -120,9 +125,15 @@ const SharedTrip = () => {
 
     useEffect(() => {
         if (!mapApi || !mapVisible) return;
-        showRouteView(mapApi, { pickupPoint, dropPoint });
+        showRouteView(mapApi, {
+            pickupPoint: displayedPickupPoint,
+            dropPoint: displayedDropPoint,
+            routePolyline: hasRemainingRoute ? trip.navigationPolyline : null,
+            progressPoint: hasRemainingRoute ? driverPoint : null,
+            framePoints: driverPoint ? [driverPoint] : [],
+        });
         return clearRouteView;
-    }, [mapApi, mapVisible, isMobile, pickupPoint?.lat, pickupPoint?.lng, dropPoint?.lat, dropPoint?.lng]);
+    }, [mapApi, mapVisible, isMobile, displayedPickupPoint?.lat, displayedPickupPoint?.lng, displayedDropPoint?.lat, displayedDropPoint?.lng, trip?.navigationPolyline, hasRemainingRoute]);
 
     // Same split as TrackingPage: updating the position and removing the marker
     // have different lifetimes. Cleaning up on every re-run rebuilt the puck at
@@ -130,12 +141,13 @@ const SharedTrip = () => {
     // setDriverPosition nothing to interpolate from.
     useEffect(() => {
         if (!mapApi || !mapVisible || !driverPoint) return;
+        if (hasRemainingRoute) setRouteProgress(driverPoint);
         setDriverPosition(mapApi, driverPoint, {
             navigationPolyline: trip?.navigationPolyline,
             vehicleClass: trip?.driver?.vehicleClass,
             bearing: trip?.driver?.bearing,
         });
-    }, [mapApi, mapVisible, driverPoint?.lat, driverPoint?.lng, trip?.navigationPolyline, trip?.driver?.vehicleClass, trip?.driver?.bearing]);
+    }, [mapApi, mapVisible, driverPoint?.lat, driverPoint?.lng, trip?.navigationPolyline, trip?.driver?.vehicleClass, trip?.driver?.bearing, hasRemainingRoute]);
 
     useEffect(() => clearDriverMarker, []);
 
@@ -255,8 +267,8 @@ const SharedTrip = () => {
                                 </>
                             ) : (
                                 <>
-                                    <h2 className={`text-left w-full ${TITLE}`}>{headline.title}</h2>
-                                    <h3 className={`text-left w-full ${SUBTITLE}`}>{headline.detail}</h3>
+                                    <h2 className={`text-left w-full min-w-0 [overflow-wrap:anywhere] ${TITLE}`}>{headline.title}</h2>
+                                    <h3 className={`text-left w-full min-w-0 ${SUBTITLE}`}>{headline.detail}</h3>
                                 </>
                             )}
                         </div>

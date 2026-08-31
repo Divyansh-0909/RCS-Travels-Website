@@ -1,7 +1,5 @@
-import { Alert, Pressable, ScrollView, View } from 'react-native';
-import { cssInterop } from 'nativewind';
+import { Alert, ScrollView, View } from 'react-native';
 import {
-    ArrowLeftIcon,
     LockKeyIcon,
     PencilSimpleIcon,
 } from 'phosphor-react-native';
@@ -9,6 +7,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-native';
 import AppText from '../components/AppText';
 import {
     ActionButton,
+    DetailPageHeader,
     DetailStatusBanner,
     type DetailStatusTone,
     HAIRLINE,
@@ -29,9 +28,6 @@ import {
     type MarketplaceStatus,
 } from '../constants/marketplace';
 import { openSupportWhatsApp } from '../constants/support';
-
-const asThemed = { className: { target: false, nativeStyleToProp: { color: true } } } as const;
-const Back = cssInterop(ArrowLeftIcon, asThemed);
 
 const SHELL_TOP_PAD = 40;
 const MONEY_LINE = 'text-sm font-semibold text-black';
@@ -84,31 +80,16 @@ const MarketplaceDetail = () => {
         ? stateListing
         : marketplaceListings().find((candidate) => candidate.id === id);
 
-    const header = (
-        <View className="flex-row items-center gap-3">
-            <Pressable
-                role="button"
-                aria-label="Back"
-                onPress={() => navigate(-1)}
-                hitSlop={12}
-                className="w-9 h-9 items-center justify-center"
-            >
-                <Back size={22} weight="bold" className={INK_TEXT} />
-            </Pressable>
-            <AppText className={`text-xl font-semibold ${INK_TEXT}`} style={{ letterSpacing: -0.72 }}>
-                Booking details
-            </AppText>
-        </View>
-    );
+    const header = <DetailPageHeader title="Booking details" onBack={() => navigate(-1)} />;
 
     if (!listing) {
         return (
             <View
-                className="flex-1 w-full px-5 gap-4"
+                className="flex-1 w-full gap-4"
                 style={{ backgroundColor: PAGE, marginTop: -SHELL_TOP_PAD, paddingTop: SHELL_TOP_PAD }}
             >
                 {header}
-                <View className="flex-1 items-center justify-center pb-24 gap-1 px-6">
+                <View className="flex-1 items-center justify-center mx-5 pb-24 gap-1 px-6">
                     <AppText className={`font-semibold text-center ${INK_TEXT}`}>Booking not available</AppText>
                     <AppText className={`text-sm text-center ${MUTED}`}>
                         It may have been claimed, cancelled or removed.
@@ -139,17 +120,17 @@ const MarketplaceDetail = () => {
             className="flex-1 w-full"
             style={{ backgroundColor: PAGE, marginTop: -SHELL_TOP_PAD, paddingTop: SHELL_TOP_PAD }}
         >
+            {header}
             <ScrollView
                 style={{ flex: 1 }}
                 contentContainerStyle={{
                     paddingHorizontal: 20,
+                    paddingTop: 16,
                     paddingBottom: 16,
                     gap: 16,
                 }}
                 showsVerticalScrollIndicator={false}
             >
-                {header}
-
                 <Card
                     banner={(
                         <DetailStatusBanner

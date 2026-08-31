@@ -8,9 +8,9 @@ import { useRefreshNotice } from "../../hooks/useRefreshNotice";
 // main.jsx (same as RideCancelledToast) and driven by the useRefreshNotice
 // store, so any page can raise it without threading props.
 //
-// Anchored bottom-centre, sitting one step above RideCancelledToast and the
-// "Copied to clipboard" pills (both bottom-8 / sm:bottom-10) so the three stack
-// instead of colliding.
+// Anchored bottom-centre, sitting above the "Copied to clipboard" pills so the
+// two stack instead of colliding. The cancellation result now owns a modal
+// bottom-sheet layer above this notice while it is open.
 //
 // Top-centre was tried first and does not work globally. The landing page needs
 // ~106px of clearance for its floating NavBar (measured at 24–72px on phones,

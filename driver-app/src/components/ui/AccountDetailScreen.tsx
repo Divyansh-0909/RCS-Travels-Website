@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react';
-import { Pressable, ScrollView, View, type ScrollViewProps } from 'react-native';
-import { CaretLeftIcon } from 'phosphor-react-native';
+import { ScrollView, View, type ScrollViewProps } from 'react-native';
 import { useNavigate } from 'react-router-native';
 import AppText from '../AppText';
+import BackButton from './BackButton';
 
 export const ACCOUNT_CARD = '#f3f3f3';
 export const ACCOUNT_HAIRLINE = 'rgba(18,18,32,0.1)';
@@ -36,15 +36,7 @@ const AccountDetailScreen = ({ title, children, contentContainerStyle }: Props) 
       keyboardShouldPersistTaps="handled"
     >
       <View className="flex-row items-center gap-2 px-4 pt-4" style={{ paddingBottom: 12 }}>
-        <Pressable
-          role="button"
-          aria-label="Back"
-          onPress={() => navigate(-1)}
-          hitSlop={8}
-          style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
-        >
-          <CaretLeftIcon size={22} weight="bold" color={ACCOUNT_INK} />
-        </Pressable>
+        <BackButton onPress={() => navigate(-1)} icon="caret" className="-ml-3 -mr-3" />
         <AppText
           className="text-xl font-semibold text-[var(--background-primary)]"
           style={TITLE_TRACKING}
@@ -62,6 +54,11 @@ export const AccountSection = ({ children }: { children: ReactNode }) => (
   <View className="mx-4 rounded-2xl p-4" style={{ backgroundColor: ACCOUNT_CARD }}>
     {children}
   </View>
+);
+
+/** Flat, inset menu used by Account and its drill-downs. */
+export const AccountList = ({ children }: { children: ReactNode }) => (
+  <View className="mx-4">{children}</View>
 );
 
 export const AccountSectionLabel = ({ children }: { children: ReactNode }) => (

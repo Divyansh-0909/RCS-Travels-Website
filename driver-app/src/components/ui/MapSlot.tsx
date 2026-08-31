@@ -1,16 +1,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AppState, Image, Pressable, View } from 'react-native';
+import { AppState, Image, Pressable, useColorScheme, View } from 'react-native';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE, type MapStyleElement } from 'react-native-maps';
 import { CrosshairSimpleIcon } from 'phosphor-react-native';
-import { decodeGooglePolyline } from '../../lib/polyline';
+import { decodeGooglePolyline, remainingRoutePoints } from '../../lib/polyline';
+import { MapLoadingSkeleton } from './Skeleton';
 
 type Point = { latitude: number; longitude: number };
 type Props = {
     pickup?: Point | null;
     drop?: Point | null;
     driver?: Point | null;
+    driverBearing?: number | null;
     carType?: string | null;
     routePolyline?: string | null;
+    followRouteProgress?: boolean;
     cameraMode?: 'follow-driver' | 'fit-route';
     bottomSheetHeight?: number;
 };
@@ -23,6 +26,17 @@ const INITIAL_REGION_DELTA = 0.003;
 const ROUTE_EDGE_PADDING = { top: 64, right: 64, bottom: 64, left: 64 };
 const MAP_CONTROL_GAP = 16;
 const MAP_CONTROL_SIZE = 48;
+// Keep these in lockstep with frontend/src/components/ui/mapOverlays.jsx. The
+// native views have explicit outer bounds because Android rasterizes every
+// custom marker into a bitmap before handing it to Google Maps.
+const ENDPOINT_MARKER_WIDTH = 40;
+const ENDPOINT_MARKER_HEIGHT = 42;
+const ENDPOINT_CIRCLE_SIZE = 16;
+const ENDPOINT_CIRCLE_TOP = 4;
+const ENDPOINT_STEM_TOP = 12;
+const ENDPOINT_STEM_HEIGHT = 20;
+const ENDPOINT_TIP_Y = ENDPOINT_STEM_TOP + ENDPOINT_STEM_HEIGHT;
+const DRIVER_MARKER_SIZE = 72;
 const GOOGLE_MAP_ID = process.env.EXPO_PUBLIC_GOOGLE_MAPS_MAP_ID?.trim() || undefined;
 const FALLBACK_POINT: Point = { latitude: 28.6315, longitude: 77.2167 };
 
@@ -84,22 +98,58 @@ const EndpointPin = ({ kind }: { kind: 'pickup' | 'drop' }) => {
     const pickup = kind === 'pickup';
     const color = pickup ? '#ffffff' : '#243AFB';
     return (
-        <View style={{ width: 48, height: 52, alignItems: 'center' }}>
-            <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: color, alignItems: 'center', justifyContent: 'center', elevation: 5 }}>
-                {!pickup ? <View style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: '#0B0B14' }} /> : null}
+        <View
+            collapsable={false}
+            style={{ width: ENDPOINT_MARKER_WIDTH, height: ENDPOINT_MARKER_HEIGHT }}
+        >
+            <View
+                style={{
+                    position: 'absolute',
+                    top: ENDPOINT_STEM_TOP,
+                    left: (ENDPOINT_MARKER_WIDTH - 2) / 2,
+                    width: 2,
+                    height: ENDPOINT_STEM_HEIGHT,
+                    borderBottomLeftRadius: 2,
+                    borderBottomRightRadius: 2,
+                    backgroundColor: color,
+                }}
+            />
+            <View
+                style={{
+                    position: 'absolute',
+                    top: ENDPOINT_CIRCLE_TOP,
+                    left: (ENDPOINT_MARKER_WIDTH - ENDPOINT_CIRCLE_SIZE) / 2,
+                    width: ENDPOINT_CIRCLE_SIZE,
+                    height: ENDPOINT_CIRCLE_SIZE,
+                    borderRadius: ENDPOINT_CIRCLE_SIZE / 2,
+                    backgroundColor: color,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    elevation: 5,
+                }}
+            >
+                {!pickup ? <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#0B0B14' }} /> : null}
             </View>
-            <View style={{ width: 3, height: 22, borderBottomLeftRadius: 2, borderBottomRightRadius: 2, backgroundColor: color }} />
         </View>
     );
 };
 
 
 function DriverPin({ carType }: { carType: string | null }) {
+    const sedan = carType === 'sedan';
     return (
-        <View>
+        <View
+            collapsable={false}
+            style={{
+                width: DRIVER_MARKER_SIZE,
+                height: DRIVER_MARKER_SIZE,
+                alignItems: 'center',
+                justifyContent: 'center',
+            }}
+        >
             <Image
-                source={carType === 'sedan' ? topViewSedan : topView}
-                style={{ width: 60, height: 60 }}
+                source={sedan ? topViewSedan : topView}
+                style={{ width: 60, height: sedan ? 28 : 33 }}
                 resizeMode="contain"
             />
         </View>
@@ -111,11 +161,16 @@ const MapSlot = ({
     pickup,
     drop,
     driver,
+    driverBearing,
     carType,
     routePolyline,
+    followRouteProgress = false,
     cameraMode = 'follow-driver',
     bottomSheetHeight = 0,
 }: Props) => {
+    const deviceColorScheme = useColorScheme();
+    const mapInterfaceStyle = deviceColorScheme === 'dark' ? 'dark' : 'light';
+    const mapAppearance = `${GOOGLE_MAP_ID ?? 'local'}:${mapInterfaceStyle}`;
     const mapRef = useRef<MapView>(null);
     const mapReadyRef = useRef(false);
     const followsDriverRef = useRef(cameraMode === 'follow-driver');
@@ -129,6 +184,7 @@ const MapSlot = ({
     const visibleLatitudeDeltaRef = useRef(INITIAL_REGION_DELTA);
     const initialBottomSheetHeightRef = useRef(bottomSheetHeight);
     const [mapHeight, setMapHeight] = useState(0);
+    const [loadedMapAppearance, setLoadedMapAppearance] = useState<string | null>(null);
     const [recenterPressed, setRecenterPressed] = useState(false);
     const pickupLatitude = pickup?.latitude;
     const pickupLongitude = pickup?.longitude;
@@ -149,6 +205,12 @@ const MapSlot = ({
         [driverLatitude, driverLongitude],
     );
     const driverKey = driverPoint ? `${driverPoint.latitude}:${driverPoint.longitude}` : null;
+    const numericDriverBearing = Number(driverBearing);
+    // The shared source artwork faces west. Match the customer website's
+    // bearing convention by rotating it +90 degrees onto compass north.
+    const driverRotation = Number.isFinite(numericDriverBearing)
+        ? (numericDriverBearing % 360 + 450) % 360
+        : 90;
     const currentDriverKeyRef = useRef(driverKey);
     currentDriverKeyRef.current = driverKey;
     const endpointPoints = useMemo(
@@ -160,9 +222,14 @@ const MapSlot = ({
         [routePolyline],
     );
     const routePoints = useMemo(() => {
-        if (decodedRoute.length >= 2) return decodedRoute;
+        if (decodedRoute.length >= 2) {
+            if (followRouteProgress && driverPoint) {
+                return remainingRoutePoints(decodedRoute, driverPoint) ?? decodedRoute;
+            }
+            return decodedRoute;
+        }
         return endpointPoints;
-    }, [decodedRoute, endpointPoints]);
+    }, [decodedRoute, driverPoint, endpointPoints, followRouteProgress]);
     const points = useMemo(() => {
         const framePoints = driverPoint ? [...routePoints, driverPoint] : routePoints;
         return framePoints.length > 0 ? framePoints : [FALLBACK_POINT];
@@ -310,13 +377,14 @@ const MapSlot = ({
     return (
         <View style={{ position: 'absolute', inset: 0 }}>
         <MapView
+            key={mapAppearance}
             ref={mapRef}
             provider={PROVIDER_GOOGLE}
             style={{ position: 'absolute', inset: 0 }}
             googleMapId={GOOGLE_MAP_ID}
             googleRenderer="LATEST"
-            customMapStyle={GOOGLE_MAP_ID ? undefined : LIGHT_MAP_STYLE}
-            userInterfaceStyle="light"
+            customMapStyle={GOOGLE_MAP_ID ? undefined : (mapInterfaceStyle === 'dark' ? DARK_MAP_STYLE : LIGHT_MAP_STYLE)}
+            userInterfaceStyle={mapInterfaceStyle}
             mapType="standard"
             showsBuildings={true}
             showsIndoors={false}
@@ -358,15 +426,19 @@ const MapSlot = ({
                 fittedRouteKeyRef.current = null;
                 fit(false);
             }}
+            // onMapReady means the native view exists; onMapLoaded means the
+            // visible tiles have rendered. Keep this section's skeleton until
+            // then so slow tiles never expose an empty map surface.
+            onMapLoaded={() => setLoadedMapAppearance(mapAppearance)}
         >
             {routePoints.length >= 2 ? <Polyline coordinates={routePoints} strokeColor="#7A94FF" strokeWidth={4} /> : null}
             {pickupPoint ? (
-                <Marker coordinate={pickupPoint} anchor={{ x: 0.5, y: 0.885 }} tracksViewChanges={false}>
+                <Marker coordinate={pickupPoint} anchor={{ x: 0.5, y: ENDPOINT_TIP_Y / ENDPOINT_MARKER_HEIGHT }} tracksViewChanges={false}>
                     <EndpointPin kind="pickup" />
                 </Marker>
             ) : null}
             {dropPoint ? (
-                <Marker coordinate={dropPoint} anchor={{ x: 0.5, y: 0.885 }} tracksViewChanges={false}>
+                <Marker coordinate={dropPoint} anchor={{ x: 0.5, y: ENDPOINT_TIP_Y / ENDPOINT_MARKER_HEIGHT }} tracksViewChanges={false}>
                     <EndpointPin kind="drop" />
                 </Marker>
             ) : null}
@@ -374,11 +446,19 @@ const MapSlot = ({
                 // Keep view tracking enabled for this single live marker. On
                 // Android the WebP is decoded after the custom marker first
                 // mounts; disabling tracking freezes that first blank bitmap.
-                <Marker coordinate={driverPoint} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={true} zIndex={10}>
+                <Marker
+                    coordinate={driverPoint}
+                    anchor={{ x: 0.5, y: 0.5 }}
+                    rotation={driverRotation}
+                    tracksViewChanges={true}
+                    zIndex={10}
+                >
                     <DriverPin carType={carType ?? null} />
                 </Marker>
             ) : null}
         </MapView>
+
+        {loadedMapAppearance !== mapAppearance ? <MapLoadingSkeleton dark={mapInterfaceStyle === 'dark'} /> : null}
 
         {driverPoint ? (
             <Pressable

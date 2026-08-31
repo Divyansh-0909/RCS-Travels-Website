@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
-import { CarIcon, CaretDownIcon, CaretLeftIcon } from 'phosphor-react-native';
+import { CarIcon, CaretDownIcon } from 'phosphor-react-native';
 import { useNavigate, useSearchParams } from 'react-router-native';
 import AppText from '../components/AppText';
+import BackButton from '../components/ui/BackButton';
 import DocumentRow, { type DocumentRowState } from '../components/ui/DocumentRow';
 import DocumentDetailsSheet from '../components/ui/DocumentDetailsSheet';
 import DocumentSourceSheet, { type DocumentSource } from '../components/ui/DocumentSourceSheet';
+import AccountDetailScreen from '../components/ui/AccountDetailScreen';
+import { DetailSectionsSkeleton } from '../components/ui/LoadingSkeletons';
 import { useApi } from '../hooks/useApi';
 import {
   captureDocumentPhoto,
@@ -396,9 +399,9 @@ const Documents = () => {
 
   if (loading) {
     return (
-      <View className="flex-1 items-center justify-center bg-white">
-        <ActivityIndicator />
-      </View>
+      <AccountDetailScreen title="Documents">
+        <DetailSectionsSkeleton cards={4} />
+      </AccountDetailScreen>
     );
   }
 
@@ -478,15 +481,7 @@ const Documents = () => {
       contentContainerStyle={{ paddingBottom: TAIL_PADDING, gap: 8 }}
     >
       <View className="flex-row items-center gap-2 px-4 pt-4" style={{ paddingBottom: HEADING_GAP }}>
-        <Pressable
-          role="button"
-          aria-label="Back"
-          onPress={() => navigate(-1)}
-          hitSlop={8}
-          style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
-        >
-          <CaretLeftIcon size={22} weight="bold" color="#121220" />
-        </Pressable>
+        <BackButton onPress={() => navigate(-1)} icon="caret" className="-ml-3 -mr-3" />
         <AppText className={`text-xl font-semibold ${INK}`} style={TITLE_TRACKING}>
           Documents
         </AppText>
@@ -509,7 +504,7 @@ const Documents = () => {
             : `${totalMissing} still to upload`}
         </AppText>
         <AppText className={`text-sm mt-1 ${MUTED}`}>
-          Every document is checked automatically, then reviewed by the Raju.
+          Every document is checked automatically, then reviewed by the RCS team.
           Both have to pass before you can go online.
         </AppText>
       </View>
@@ -521,10 +516,7 @@ const Documents = () => {
       <View className="mx-4 mt-2">
         <AppText className={`text-sm font-semibold ${INK}`}>Your documents</AppText>
       </View>
-      <View
-        className="mx-4 rounded-2xl px-4"
-        style={{ backgroundColor: '#fff', borderWidth: 1, borderColor: HAIRLINE }}
-      >
+      <View className="mx-4">
         {personalTypes.map((info, i) => renderRow(info, i, personalTypes, base ?? undefined, null))}
       </View>
 

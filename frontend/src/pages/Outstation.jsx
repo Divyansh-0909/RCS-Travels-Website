@@ -181,17 +181,17 @@ const Outstation = () => {
 
     return (
         <>
-            <div className="fixed inset-x-0 z-100 flex justify-center top-6 sm:top-10 pointer-events-none">
+            <div className="fixed inset-x-0 top-0 z-100 flex justify-center pointer-events-none">
                 <NavBar invert hideExpanded className="pointer-events-auto" />
             </div>
 
             <div id="smooth-wrapper">
                 <div id="smooth-content" className="min-h-[100dvh] bg-[var(--foreground)] text-[var(--text-foreground)]">
 
-                    {/* pt clears the fixed navbar (top-6/sm:top-10 plus its own
-                        height) and no more — the hero carries its air in the
-                        header's own gaps, not in a deep top pad. */}
-                    <div className="flex flex-col items-center gap-15 sm:gap-20 pt-28 sm:pt-38">
+                    {/* Clear the destination-first navbar in its expanded state.
+                        It now shares the flush-to-top position used on Home and
+                        Booking; the hero keeps its own air in the gaps below. */}
+                    <div className="flex flex-col items-center gap-15 pt-44 sm:gap-20 sm:pt-48">
 
                         <header className={`${RAIL} text-left flex flex-col items-start justify-center gap-6 sm:gap-8`}>
                             <h1 className="font-bold text-4xl sm:text-6xl max-w-[16ch]">Going further than a city ride?</h1>

@@ -17,8 +17,10 @@ const ErrorPanel = ({ prop }) => {
         <>
             <BackgroundPanel show={!!prop.error} className={` z-4 sm:z-3 gap-2 sm:gap-3 py-6 text-center flex flex-col justify-center items-center`}>
                 <ErrorMark className="-my-8" size={140} />
-                <h2 className="w-[70%]"> {lastError} </h2>
-                <p> Please try again or reach out to<br /> us if this keeps happening. </p>
+                <div className="flex w-[min(86vw,100%)] min-w-0 flex-col items-center gap-1 sm:w-[377px]">
+                    <h2 className="w-full min-w-0 [overflow-wrap:anywhere]"> {lastError} </h2>
+                    <p className="w-full min-w-0"> Please try again or reach out to us if this keeps happening. </p>
+                </div>
                 <Button
                     onClick={() => {
                         if (prop.onOkay) {

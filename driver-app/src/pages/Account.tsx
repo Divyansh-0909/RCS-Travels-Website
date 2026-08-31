@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, AppState, Image, Pressable, Share, View } from 'react-native';
+import { AppState, Image, Pressable, Share, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { cssInterop } from 'nativewind';
 import {
@@ -25,6 +25,7 @@ import MonthEarningsCard from '../components/ui/MonthEarningsCard';
 import { TILE_GAP } from '../components/ui/tile';
 import JoinFleetCard from '../components/ui/JoinFleetCard';
 import WalletCard from '../components/ui/WalletCard';
+import { AccountIdentitySkeleton, AccountOverviewSkeleton } from '../components/ui/LoadingSkeletons';
 import { useApi } from '../hooks/useApi';
 import { initials } from '../constants/booking';
 import { canJoinFleet, formatPhone, formatRating, groupLabel, isFleet, verificationLabel } from '../constants/driver';
@@ -229,7 +230,7 @@ const Account = () => {
           The cost is the space itself, which is now permanent: roughly the avatar's
           height off the top of every scroll. That is the trade for keeping the
           captain's own name and standing on screen while he reads the rest. */}
-      {profile && (
+      {loading && !profile ? <AccountIdentitySkeleton /> : profile && (
         <View className="w-full flex-row items-center gap-4" style={{ paddingBottom: 4 }}>
           {/* Who he is. The avatar is the only primary-blue circle in the app, so
               it reads as him rather than as a control.
@@ -348,11 +349,7 @@ const Account = () => {
             not remount under the captain's thumb when the first load lands. Only a
             first load earns this: a refresh over a profile already on screen leaves
             it alone. */}
-        {loading && !profile && (
-          <View className="flex-1 items-center justify-center pb-24">
-            <ActivityIndicator color="#121220" />
-          </View>
-        )}
+        {loading && !profile ? <AccountOverviewSkeleton /> : null}
 
         {profile && (
           <>

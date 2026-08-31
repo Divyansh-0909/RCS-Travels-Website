@@ -1,12 +1,12 @@
 import { useState } from "react";
   import { useNavigate } from "react-router-native";
-import { ActivityIndicator, ScrollView, View, Pressable} from "react-native";
+import { ScrollView, View } from "react-native";
 import AppText from "../components/AppText";
-import { cssInterop } from 'nativewind';
+import BackButton from "../components/ui/BackButton";
 import { OfferCard } from "../components/ui/offerCard";
 import { INK_TEXT, MUTED } from "../components/ui/rideUi";
 import { useOffers } from "../hooks/useOffers";
-import { ArrowLeftIcon } from 'phosphor-react-native';
+import { OfferListSkeleton } from "../components/ui/LoadingSkeletons";
 
 /**
  * The record of every ride currently offered to him.
@@ -22,9 +22,6 @@ import { ArrowLeftIcon } from 'phosphor-react-native';
  */
 
 const TITLE_TRACKING = { letterSpacing: -0.72 };
-const CARD = '#f3f3f3';   
-const asThemed = { className: { target: false, nativeStyleToProp: { color: true } } } as const;
-const Back = cssInterop(ArrowLeftIcon, asThemed);  
 
 const Notifications = () => {
     const navigate = useNavigate();
@@ -38,14 +35,6 @@ const Notifications = () => {
         const failure = await action(offerId);
         setError(failure?.error ?? null);
     };
-
-    if (loading && offers.length === 0) {
-        return (
-            <View className="w-[92%] flex-1 justify-center items-center">
-                <ActivityIndicator />
-            </View>
-        );
-    }
 
     return (
         <ScrollView
@@ -64,23 +53,14 @@ const Notifications = () => {
                         </AppText>
                     ) : null}
                 </View>
-                <Pressable
-                    className="absolute -top-2 left-0"
-                    role="button"
-                    aria-label="back"
+                <BackButton
+                    className="absolute -top-2 left-0 rounded-full bg-[#f3f3f3]"
                     // Notifications can be opened from any signed-in screen. Follow
                     // the same router entry as Android and swipe-back instead of
                     // hard-coding Home and discarding the captain's context.
                     onPress={() => navigate(-1)}
-                    style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
-                >
-                    <View
-                        className="w-11 h-11 rounded-full items-center justify-center"
-                        style={{ backgroundColor: CARD }}
-                    >
-                        <Back size={22} weight="bold" className={INK_TEXT} />
-                    </View>
-                </Pressable>
+                    iconClassName={INK_TEXT}
+                />
             </View>
 
 
@@ -100,7 +80,9 @@ const Notifications = () => {
                 </View>
             ) : null}
 
-            {offers.length === 0 ? (
+            {loading && offers.length === 0 ? (
+                <OfferListSkeleton />
+            ) : offers.length === 0 ? (
                 <View className="items-center justify-center h-full py-16 pt-20 gap-1">
                     <AppText className={`text-base font-semibold ${INK_TEXT}`}>
                         No notifications

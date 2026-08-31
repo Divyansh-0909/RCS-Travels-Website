@@ -1,10 +1,22 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, View } from 'react-native';
-import { CaretLeftIcon, CarIcon, CheckCircleIcon, PlusIcon, TrashIcon } from 'phosphor-react-native';
+import {
+  Alert,
+  Keyboard,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  useWindowDimensions,
+  View,
+} from 'react-native';
+import { CarIcon, PlusIcon, TrashIcon, XIcon } from 'phosphor-react-native';
 import { useNavigate } from 'react-router-native';
 import AppText from '../components/AppText';
+import BackButton from '../components/ui/BackButton';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
+import AccountDetailScreen from '../components/ui/AccountDetailScreen';
+import { DetailSectionsSkeleton } from '../components/ui/LoadingSkeletons';
 import { useApi } from '../hooks/useApi';
 import { verificationLabel, type Vehicle, type VehiclesResponse } from '../lib/documentState';
 import { vehicleClassLabel } from '../constants/documents';
@@ -18,11 +30,14 @@ import { vehicleClassLabel } from '../constants/documents';
 // dispatch offers him, what a rider is shown, and whether his papers are in order.
 //
 // Which is why the switch is not a segmented control at the top of Home. It is a
-// deliberate action on a screen he had to navigate to, with the consequence
-// spelled out next to it.
+// deliberate action on a screen he had to navigate to, with the selected car
+// kept unmistakable in the list.
 
 const CARD = '#f3f3f3';
 const HAIRLINE = 'rgba(18,18,32,0.1)';
+const PRIMARY = '#243AFB';
+const SCRIM = 'rgba(18,18,32,0.45)';
+const WELL = 'rgba(18,18,32,0.04)';
 const INK = 'text-[var(--background-primary)]';
 const MUTED = 'text-gray-600';
 const TITLE_TRACKING = { letterSpacing: -0.72 };
@@ -34,7 +49,7 @@ const ERROR_TEXT = '#B91C1C';
 // Not the 132 the boards reserve, for the reason Documents gives: this screen is a
 // drill-down (see isDrillDown), so there is no floating bar at the foot of it and no
 // scrim either. The clearance those needed would just be an inch of white under the
-// add-a-car form. What is left is the ordinary breathing room at the end of a list.
+// add-another row. What is left is the ordinary breathing room at the end of a list.
 const TAIL_PADDING = 32;
 
 // Under the title band only, and the same 12 the Documents screen uses. The
@@ -59,6 +74,7 @@ const toneFor = (status: Vehicle['verificationStatus']) =>
 const Vehicles = () => {
   const api = useApi();
   const navigate = useNavigate();
+  const { height: windowHeight } = useWindowDimensions();
 
   const [data, setData] = useState<VehiclesResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -77,6 +93,8 @@ const Vehicles = () => {
   const [vehicleClass, setVehicleClass] = useState<string | null>(null);
   const [vehicleNumber, setVehicleNumber] = useState('');
   const [vehicleModel, setVehicleModel] = useState('');
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [closePressed, setClosePressed] = useState(false);
 
   const load = useCallback(async () => {
     const result = await api.getVehicles();
@@ -89,6 +107,41 @@ const Vehicles = () => {
   }, [api]);
 
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    if (!adding) return;
+
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const shown = Keyboard.addListener(showEvent, (event) => {
+      setKeyboardHeight(event.endCoordinates.height);
+    });
+    const hidden = Keyboard.addListener(hideEvent, () => setKeyboardHeight(0));
+
+    return () => { shown.remove(); hidden.remove(); };
+  }, [adding]);
+
+  const openAddSheet = useCallback(() => {
+    setVehicleClass(null);
+    setVehicleNumber('');
+    setVehicleModel('');
+    setFormError(null);
+    setClosePressed(false);
+    setKeyboardHeight(0);
+    setAdding(true);
+  }, []);
+
+  const closeAddSheet = useCallback(() => {
+    if (busy) return;
+
+    Keyboard.dismiss();
+    setAdding(false);
+    setVehicleClass(null);
+    setVehicleNumber('');
+    setVehicleModel('');
+    setFormError(null);
+    setKeyboardHeight(0);
+  }, [busy]);
 
   const switchTo = useCallback(async (vehicle: Vehicle) => {
     if (vehicle.isActive || busy) return;
@@ -161,7 +214,9 @@ const Vehicles = () => {
 
     if (result.error) { setFormError(result.error); return; }
 
+    Keyboard.dismiss();
     setAdding(false);
+    setKeyboardHeight(0);
     setVehicleClass(null);
     setVehicleNumber('');
     setVehicleModel('');
@@ -176,32 +231,25 @@ const Vehicles = () => {
 
   if (loading) {
     return (
-      <View className="flex-1 items-center justify-center bg-white">
-        <ActivityIndicator />
-      </View>
+      <AccountDetailScreen title="Your cars">
+        <DetailSectionsSkeleton cards={3} />
+      </AccountDetailScreen>
     );
   }
 
   const vehicles = data?.vehicles ?? [];
 
   return (
-    <ScrollView
-      // Same reason as Documents: the shell centres its Outlet, so without an
-      // explicit width this scroller sizes to its content and takes every card
-      // below in with it.
-      className="flex-1 w-full bg-white"
-      contentContainerStyle={{ paddingBottom: TAIL_PADDING, gap: 8 }}
-    >
+    <>
+      <ScrollView
+        // Same reason as Documents: the shell centres its Outlet, so without an
+        // explicit width this scroller sizes to its content and takes every card
+        // below in with it.
+        className="flex-1 w-full bg-white"
+        contentContainerStyle={{ paddingBottom: TAIL_PADDING, gap: 8 }}
+      >
       <View className="flex-row items-center gap-2 px-4 pt-4" style={{ paddingBottom: HEADING_GAP }}>
-        <Pressable
-          role="button"
-          aria-label="Back"
-          onPress={() => navigate(-1)}
-          hitSlop={8}
-          style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
-        >
-          <CaretLeftIcon size={22} weight="bold" color={ICON_INK} />
-        </Pressable>
+        <BackButton onPress={() => navigate(-1)} icon="caret" className="-ml-3 -mr-3" />
         <AppText className={`text-xl font-semibold ${INK}`} style={TITLE_TRACKING}>
           Your cars
         </AppText>
@@ -213,17 +261,6 @@ const Vehicles = () => {
         </View>
       ) : null}
 
-      {/* Only worth saying once he has more than one. With a single car the
-          sentence describes a situation he is not in. */}
-      {vehicles.length > 1 ? (
-        <View className="mx-4 rounded-2xl p-4" style={{ backgroundColor: CARD }}>
-          <AppText className={`text-sm ${MUTED}`}>
-            You take rides in the car marked &ldquo;Driving now&rdquo;. Its papers are the
-            ones that decide whether you can go online — the others wait until you switch.
-          </AppText>
-        </View>
-      ) : null}
-
       <View className="mx-4 gap-2">
         {vehicles.map((vehicle) => (
           <View
@@ -231,13 +268,13 @@ const Vehicles = () => {
             className="rounded-2xl p-4"
             // Muted, the same --foreground-muted every other panel in the app sits
             // on. A car is a thing to READ here; white-on-white left the card
-            // outlined onto the page rather than resting on it, and the ink ring
+            // outlined onto the page rather than resting on it, and the primary ring
             // that marks the one he is driving had to fight a hairline around every
             // other card to say so.
             style={{
               backgroundColor: CARD,
               borderWidth: vehicle.isActive ? 2 : 1,
-              borderColor: vehicle.isActive ? ICON_INK : HAIRLINE,
+              borderColor: vehicle.isActive ? PRIMARY : HAIRLINE,
             }}
           >
             <View className="flex-row items-center gap-3">
@@ -256,19 +293,23 @@ const Vehicles = () => {
                   {vehicle.model ? ` · ${vehicle.model}` : ''}
                 </AppText>
               </View>
-              {vehicle.isActive ? (
-                <View className="flex-row items-center gap-1">
-                  <CheckCircleIcon size={16} weight="fill" color={ICON_INK} />
-                  <AppText className={`text-xs font-semibold ${INK}`}>Driving now</AppText>
-                </View>
-              ) : null}
             </View>
 
-            <View className="flex-row items-center justify-between mt-3">
-              <AppText className={`text-sm ${toneFor(vehicle.verificationStatus)}`}>
+            <View className="flex-row items-center justify-between gap-2 mt-3">
+              <AppText className={`flex-1 text-sm ${toneFor(vehicle.verificationStatus)}`}>
                 {verificationLabel(vehicle.verificationStatus)}
                 {vehicle.missing?.length ? ` · ${vehicle.missing.length} to upload` : ''}
               </AppText>
+              {vehicle.isActive ? (
+                <View
+                  className="shrink-0 rounded-lg px-2.5 py-1"
+                  style={{ backgroundColor: PRIMARY }}
+                >
+                  <AppText className="text-xs font-semibold uppercase tracking-wide text-white">
+                    Driving now
+                  </AppText>
+                </View>
+              ) : null}
             </View>
 
             <View className="flex-row items-center gap-4 mt-3">
@@ -276,9 +317,15 @@ const Vehicles = () => {
                 role="button"
                 onPress={() => navigate(`/account/documents?vehicleId=${vehicle.id}`)}
                 hitSlop={8}
-                style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
+                style={({ pressed }) => ({
+                  backgroundColor: ICON_INK,
+                  borderRadius: 999,
+                  paddingHorizontal: 12,
+                  paddingVertical: 8,
+                  opacity: pressed ? 0.7 : 1,
+                })}
               >
-                <AppText className={`text-sm font-semibold ${INK}`}>Documents</AppText>
+                <AppText className="text-sm font-semibold text-white">Documents</AppText>
               </Pressable>
 
               {!vehicle.isActive ? (
@@ -287,9 +334,15 @@ const Vehicles = () => {
                   disabled={busy}
                   onPress={() => switchTo(vehicle)}
                   hitSlop={8}
-                  style={({ pressed }) => ({ opacity: pressed || busy ? 0.6 : 1 })}
+                  style={({ pressed }) => ({
+                    backgroundColor: ICON_INK,
+                    borderRadius: 999,
+                    paddingHorizontal: 12,
+                    paddingVertical: 8,
+                    opacity: pressed || busy ? 0.6 : 1,
+                  })}
                 >
-                  <AppText className={`text-sm font-semibold ${INK}`}>Drive this one</AppText>
+                  <AppText className="text-sm font-semibold text-white">Drive this one</AppText>
                 </Pressable>
               ) : null}
 
@@ -314,119 +367,150 @@ const Vehicles = () => {
         ))}
       </View>
 
-      {adding ? (
-        <View className="mx-4 rounded-2xl p-4 gap-3" style={{ backgroundColor: CARD }}>
-          <AppText className={`font-semibold ${INK}`}>Add a car</AppText>
-
-          <View className="flex-row flex-wrap gap-2">
-            {CLASSES.map((option) => {
-              const selected = vehicleClass === option;
-              return (
-                <Pressable
-                  key={option}
-                  role="radio"
-                  aria-checked={selected}
-                  onPress={() => { setVehicleClass(option); setFormError(null); }}
-                  className="rounded-xl px-3 py-2"
-                  style={{
-                    backgroundColor: selected ? ICON_INK : '#fff',
-                    borderWidth: 1,
-                    borderColor: selected ? ICON_INK : HAIRLINE,
-                  }}
-                >
-                  <AppText className={`text-sm font-semibold ${selected ? 'text-white' : INK}`}>
-                    {vehicleClassLabel(option)}
-                  </AppText>
-                </Pressable>
-              );
-            })}
-          </View>
-
-          {/* Upper-cased on the way in rather than on submit, so what he types is
-              what he checks against the plate in front of him. The server
-              normalises again — this is for his eyes, not for the database. */}
-          {/* variant: 'light' on both, and it is not cosmetic. Input's default is
-              the dark auth shell — a white border, a translucent white fill and
-              #ffffff text — so on this card the edge, the placeholder AND the
-              captain's own typing were all invisible. He could fill the plate in
-              perfectly and watch nothing appear. */}
-          <Input
-            prop={{
-              variant: 'light',
-              type: 'text',
-              placeholder: 'Number plate',
-              value: vehicleNumber,
-              onChangeFn: (value: string) => { setVehicleNumber(value.toUpperCase()); setFormError(null); },
-            }}
-          />
-          <Input
-            prop={{
-              variant: 'light',
-              type: 'text',
-              placeholder: 'Model',
-              value: vehicleModel,
-              onChangeFn: (value: string) => { setVehicleModel(value); setFormError(null); },
-            }}
-          />
-
-          {/* Stacked, not side by side. Button's solid variant is width: '100%'
-              (see its `width` line), so in a row it took the whole card and pushed
-              Cancel off the right edge — and boxing it into a flex-1 only traded
-              that for a full-width blue slab beside a two-word grey link, which is
-              two controls on one line that agree about nothing.
-
-              Full width each, one under the other, and the FILL is what ranks
-              them: solid primary for the thing he opened the form to do, white
-              fill for the way back out. Nothing here is destructive — cancelling an
-              unsaved car costs him two fields — so the two being the same size is
-              honest rather than dangerous. */}
-          <View>
-            {/* Directly above the button that produced it, where he is already
-                looking. The slot holds no height when there is nothing to say —
-                unlike Account's sign-out error, this one appears under the
-                captain's thumb rather than under a control he is reaching for, so
-                reserving the line would only be permanent empty space. */}
-            {formError ? (
-              <AppText className="text-sm" style={{ color: ERROR_TEXT, marginBottom: 4 }}>
-                {formError}
-              </AppText>
-            ) : null}
-
-            <Button prop={{ disabled: busy }} onPress={submitNew}>
-              {busy ? 'Adding...' : 'Add car'}
-            </Button>
-            {/* The shared secondary action, not a hand-rolled Pressable. It takes its width,
-                radius, padding and centring from the same component the button
-                above it does, so the two cannot drift apart the way a copy of
-                those numbers would. */}
-            <Button
-              prop={{ variant: 'secondary' }}
-              onPress={() => { setAdding(false); setFormError(null); }}
-            >
-              Cancel
-            </Button>
-          </View>
-        </View>
-      ) : (
-        <Pressable
-          role="button"
-          onPress={() => { setAdding(true); setFormError(null); }}
-          className="mx-4 rounded-2xl p-4 flex-row items-center gap-3"
-          style={({ pressed }) => ({
-            backgroundColor: CARD,
-            opacity: pressed ? 0.6 : 1,
-          })}
+      <Pressable
+        role="button"
+        onPress={openAddSheet}
+        className="mx-4 rounded-2xl p-4 flex-row items-center gap-3"
+        style={({ pressed }) => ({
+          backgroundColor: CARD,
+          opacity: pressed ? 0.6 : 1,
+        })}
+      >
+        <View
+          className="w-9 h-9 rounded-xl items-center justify-center"
+          style={{ backgroundColor: WELL }}
         >
-          <View
-            className="w-9 h-9 rounded-xl items-center justify-center"
-            style={{ backgroundColor: 'rgba(18,18,32,0.04)' }}
+          <PlusIcon size={18} weight="bold" color={ICON_INK} />
+        </View>
+        <AppText className={`font-semibold ${INK}`}>Add another car</AppText>
+      </Pressable>
+      </ScrollView>
+
+      <Modal
+        visible={adding}
+        transparent
+        animationType="fade"
+        onRequestClose={closeAddSheet}
+      >
+        <Pressable
+          className="flex-1 justify-end"
+          style={{ backgroundColor: SCRIM, paddingBottom: keyboardHeight }}
+          onPress={closeAddSheet}
+        >
+          <Pressable
+            accessibilityViewIsModal
+            className="bg-white rounded-t-3xl px-5 pt-5"
+            style={{ maxHeight: Math.max(windowHeight - keyboardHeight - 16, 240) }}
+            onPress={() => {}}
           >
-            <PlusIcon size={18} weight="bold" color={ICON_INK} />
-          </View>
-          <AppText className={`font-semibold ${INK}`}>Add another car</AppText>
+            <View className="flex-row items-start gap-3 pb-4">
+              <View className="flex-1 gap-1">
+                <AppText className={`text-lg font-semibold ${INK}`}>Add a car</AppText>
+                <AppText className={`text-sm ${MUTED}`}>
+                  Choose the type, then enter the number plate and model.
+                </AppText>
+              </View>
+
+              <Pressable
+                role="button"
+                aria-label="Close"
+                disabled={busy}
+                hitSlop={10}
+                onPress={closeAddSheet}
+                onPressIn={() => setClosePressed(true)}
+                onPressOut={() => setClosePressed(false)}
+                className="rounded-full items-center justify-center"
+                style={{
+                  width: 32,
+                  height: 32,
+                  backgroundColor: WELL,
+                  opacity: busy ? 0.4 : closePressed ? 0.6 : 1,
+                }}
+              >
+                <XIcon size={16} weight="bold" color={ICON_INK} />
+              </Pressable>
+            </View>
+
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              contentContainerStyle={{ gap: 12, paddingBottom: 32 }}
+            >
+              <View className="gap-2">
+                <AppText className={`text-sm font-semibold ${INK}`}>Car type</AppText>
+                <View className="flex-row flex-wrap gap-2">
+                  {CLASSES.map((option) => {
+                    const selected = vehicleClass === option;
+                    return (
+                      <Pressable
+                        key={option}
+                        role="radio"
+                        aria-checked={selected}
+                        onPress={() => { setVehicleClass(option); setFormError(null); }}
+                        className="rounded-xl px-3 py-2"
+                        style={{
+                          backgroundColor: selected ? ICON_INK : '#fff',
+                          borderWidth: 1,
+                          borderColor: selected ? ICON_INK : HAIRLINE,
+                        }}
+                      >
+                        <AppText className={`text-sm font-semibold ${selected ? 'text-white' : INK}`}>
+                          {vehicleClassLabel(option)}
+                        </AppText>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </View>
+
+              <View className="gap-1">
+                <AppText className={`text-sm font-semibold ${INK}`}>Number plate</AppText>
+                <Input
+                  prop={{
+                    variant: 'light',
+                    type: 'text',
+                    placeholder: 'Number plate',
+                    value: vehicleNumber,
+                    onChangeFn: (value: string) => {
+                      setVehicleNumber(value.toUpperCase());
+                      setFormError(null);
+                    },
+                  }}
+                />
+              </View>
+
+              <View className="gap-1">
+                <AppText className={`text-sm font-semibold ${INK}`}>Model</AppText>
+                <Input
+                  prop={{
+                    variant: 'light',
+                    type: 'text',
+                    placeholder: 'Model',
+                    value: vehicleModel,
+                    onChangeFn: (value: string) => {
+                      setVehicleModel(value);
+                      setFormError(null);
+                    },
+                  }}
+                />
+              </View>
+
+              <View className="pt-1">
+                {formError ? (
+                  <AppText className="text-sm" style={{ color: ERROR_TEXT, marginBottom: 4 }}>
+                    {formError}
+                  </AppText>
+                ) : null}
+
+                <Button prop={{ disabled: busy }} onPress={submitNew}>
+                  {busy ? 'Adding...' : 'Add car'}
+                </Button>
+              </View>
+            </ScrollView>
+          </Pressable>
         </Pressable>
-      )}
-    </ScrollView>
+      </Modal>
+    </>
   );
 };
 

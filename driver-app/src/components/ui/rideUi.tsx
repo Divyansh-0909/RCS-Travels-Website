@@ -5,6 +5,7 @@ import Animated, { useAnimatedStyle , SharedValue } from 'react-native-reanimate
 import { cssInterop } from 'nativewind';
 import { PhoneIcon } from 'phosphor-react-native';
 import AppText from '../AppText';
+import BackButton from './BackButton';
 import { splitAddress } from '../../constants/booking';
 
 const asThemed = { className: { target: false, nativeStyleToProp: { color: true } } } as const;
@@ -28,6 +29,20 @@ export const CONTENT = 'text-black';
 // label naming it or the small print qualifying it. A place name and a fare line are the
 // same kind of thing to him, so they are set once here.
 export const PRIMARY_LINE = `text-base font-semibold ${CONTENT}`;
+
+/**
+ * Persistent chrome for the ride and marketplace detail screens. It deliberately
+ * lives outside their ScrollViews so the captain never loses the page title or the
+ * way back while reading a long fare breakdown.
+ */
+export const DetailPageHeader = ({ title, onBack }: { title: string; onBack: () => void }) => (
+    <View className="w-full flex-row items-center gap-2 px-4" style={{ backgroundColor: PAGE }}>
+        <BackButton onPress={onBack} iconClassName={INK_TEXT} />
+        <AppText className={`text-xl font-semibold ${INK_TEXT}`} style={{ letterSpacing: -0.72 }}>
+            {title}
+        </AppText>
+    </View>
+);
 
 // The status pill's fill says which KIND of state the ride is in rather than which
 // state exactly — the three working statuses share a colour because the word on the
@@ -162,6 +177,8 @@ export const ActionButton = ({
     leading,
     onPress,
     solid,
+    tone = 'default',
+    disabled = false,
     padY = 'py-3',
     size = 'default',
     progress,
@@ -170,21 +187,33 @@ export const ActionButton = ({
     leading: ReactNode;
     onPress: () => void;
     solid?: boolean;
+    tone?: 'default' | 'danger';
+    disabled?: boolean;
     padY?: string;
     size?: 'default' | 'large';
     progress?: SharedValue<number>;
 }) => {
     const large = size === 'large';
+    const danger = tone === 'danger';
     const progressStyle = useAnimatedStyle(() => ({
         width: progress ? `${progress.value * 100}%` : '100%',
     }));
 
     return (
-        <Pressable role="button" onPress={onPress} className="flex-1">
+        <Pressable
+            role="button"
+            onPress={onPress}
+            disabled={disabled}
+            aria-disabled={disabled}
+            className="flex-1"
+            style={{ flexBasis: 0, flexGrow: 1, flexShrink: 1, minWidth: 0, opacity: disabled ? 0.45 : 1 }}
+        >
             <View
                 className={`relative flex-row items-center justify-center overflow-hidden ${large ? 'gap-2 py-3.5' : `gap-1 ${padY}`} ${
                     progress
                         ? 'bg-primary-light'
+                        : danger
+                            ? 'bg-negative'
                         : solid
                             ? 'bg-[var(--background-primary)]'
                             : 'bg-[var(--foreground)]'
@@ -205,7 +234,7 @@ export const ActionButton = ({
                     {leading}
                     <AppText
                         className={`${large ? 'text-base' : 'text-sm'} font-semibold ${
-                            solid || progress ? 'text-white' : INK_TEXT
+                            solid || progress || danger ? 'text-white' : INK_TEXT
                         }`}
                     >
                         {label}

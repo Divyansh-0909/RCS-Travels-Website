@@ -34,11 +34,12 @@ const NavArrow = cssInterop(NavigationArrowIcon, asThemed);
  */
 
 /**
- * What each status is waiting for him to do. `assigned` is absent on purpose —
- * a ride he has not set off for is Standby's business, and it is Standby's "Go
- * to pickup" that moves it to en_route and lands him here.
+ * What each status is waiting for him to do. `assigned` is the first step: an
+ * accepted ride opens here immediately, and the first slider records when the
+ * captain actually sets off for the pickup.
  */
 const STEP: Record<string, { to: string; label: string }> = {
+    assigned: { to: 'en_route', label: 'Slide to go to pickup' },
     en_route: { to: 'reached', label: 'Slide when you arrive' },
     reached: { to: 'started', label: 'Slide to start the ride' },
     started: { to: 'completed', label: 'Slide to finish the ride' },
@@ -65,6 +66,9 @@ const PICKUP_RADIUS_KM = 0.5;
 const DROP_SUPPORT_RADIUS_KM = 2;
 const MAX_FIX_ACCURACY_M = 100;
 const MAX_FIX_AGE_MS = 30_000;
+// Leave enough time for a watched fix to reach the server before its freshness
+// window closes.
+const FIX_SUBMIT_BUFFER_MS = 5_000;
 
 const distanceKmBetween = (from: { latitude: number; longitude: number }, to: { lat: number; lng: number }) => {
     const rad = (degrees: number) => degrees * Math.PI / 180;
@@ -94,6 +98,9 @@ const ActiveRide = ({ ride, onChanged }: { ride: UpcomingBooking; onChanged: () 
     const [dropOverrideReason, setDropOverrideReason] = useState<string | null>(null);
     const [dropOtpOpen, setDropOtpOpen] = useState(false);
     const [liveFix, setLiveFix] = useState<Location.LocationObject | null>(getRememberedDriverLocation);
+    // Reflect a successful server transition while the ride-list refresh catches
+    // up. Arrival can then open the OTP screen without another network round trip.
+    const [confirmedStatus, setConfirmedStatus] = useState<string | null>(null);
     const [mapBottomInset, setMapBottomInset] = useState(PEEK + BOTTOM_SAFE);
     const [locationIssue, setLocationIssue] = useState<string | null>(null);
     const [locationClock, setLocationClock] = useState(() => Date.now());
@@ -165,13 +172,23 @@ const ActiveRide = ({ ride, onChanged }: { ride: UpcomingBooking; onChanged: () 
             subscription?.remove();
         };
     }, []);
+    const currentStatus = confirmedStatus ?? ride.status;
+
     useEffect(() => {
-        if (ride.status === 'reached') {
+        if (confirmedStatus === ride.status) setConfirmedStatus(null);
+    }, [confirmedStatus, ride.status]);
+
+    useEffect(() => {
+        setConfirmedStatus(null);
+    }, [ride.id]);
+
+    useEffect(() => {
+        if (currentStatus === 'reached') {
             setOtpOpen(true);
         }
-    }, [ride.status]);
+    }, [currentStatus]);
 
-    const leg = activeLeg(ride.status);
+    const leg = activeLeg(currentStatus);
     // Which end the navigation button aims at. Exact booked coordinates avoid
     // asking Google Maps to geocode the customer's address a second time.
     const navigationDestination = leg.endpoint === 'drop'
@@ -183,39 +200,51 @@ const ActiveRide = ({ ride, onChanged }: { ride: UpcomingBooking; onChanged: () 
         && ride.safeWaypointLng != null
         ? { lat: ride.safeWaypointLat, lng: ride.safeWaypointLng }
         : null;
-    const step = STEP[ride.status];
+    const step = STEP[currentStatus];
+    const expectedNavigationLeg = currentStatus === 'en_route'
+        ? 'pickup'
+        : currentStatus === 'started'
+            ? 'drop'
+            : null;
+    // A successful local status transition can render before the refreshed
+    // ride payload arrives. Never reuse the previous leg's path during that
+    // brief hand-off (for example, a pickup-bound path after Start ride).
+    const liveRoutePolyline = expectedNavigationLeg && ride.navigationLeg === expectedNavigationLeg
+        ? ride.navigationPolyline
+        : null;
+    const showsRemainingRoute = Boolean(liveRoutePolyline && liveFix);
 
     // The rider hands over a code to start the ride, and only then. It is her
     // bookingCode; the server compares it and refuses with 403 rather than
     // telling the app what it should have been.
-    const needsOtp = ride.status === 'reached';
+    const needsOtp = currentStatus === 'reached';
 
     const geofenceAction = (() => {
         if (!step || !['reached', 'started', 'completed'].includes(step.to)) return { disabled: false, hint: undefined };
         if (!liveFix) return {
             disabled: true,
-            hint: `Geofence unavailable · ${locationIssue ?? 'Waiting for GPS…'}`,
+            hint: locationIssue === 'Enable location to continue' ? 'Turn on location' : 'Finding your location…',
         };
         if ((liveFix.coords.accuracy ?? Infinity) > MAX_FIX_ACCURACY_M)
-            return { disabled: true, hint: 'Geofence unavailable · Improve GPS accuracy' };
+            return { disabled: true, hint: 'Finding your location…' };
         if (locationClock - liveFix.timestamp > MAX_FIX_AGE_MS)
-            return { disabled: true, hint: 'Geofence unavailable · Refreshing location…' };
+            return { disabled: true, hint: 'Updating your location…' };
 
         const target = step.to === 'completed'
             ? { lat: ride.dropLat, lng: ride.dropLng }
             : { lat: ride.pickupLat, lng: ride.pickupLng };
         const distance = distanceKmBetween(liveFix.coords, target);
         if (step.to !== 'completed' && distance > PICKUP_RADIUS_KM)
-            return { disabled: true, hint: `Outside pickup geofence · ${distanceLabel(distance)}` };
+            return { disabled: true, hint: `Move closer to pickup · ${distanceLabel(distance)}` };
         if (step.to === 'completed' && distance > DROP_SUPPORT_RADIUS_KM)
-            return { disabled: true, hint: `Outside drop geofence · ${distanceLabel(distance)}` };
+            return { disabled: true, hint: `Move closer to drop · ${distanceLabel(distance)}` };
         return { disabled: false, hint: undefined };
     })();
 
     // Mirrors DRIVER_CANCELLABLE_STATUSES on the server. Both `assigned` and
     // `en_route` count, so a scheduled ride he has taken but not set off for can
     // be handed back the same way as one he is already driving to.
-    const canCancel = ride.status === 'assigned' || ride.status === 'en_route';
+    const canCancel = currentStatus === 'assigned' || currentStatus === 'en_route';
     const [cancelling, setCancelling] = useState(false);
 
     const cancelRide = async () => {
@@ -244,11 +273,24 @@ const ActiveRide = ({ ride, onChanged }: { ride: UpcomingBooking; onChanged: () 
         if (!step) return;
         setError(null);
 
-        // Sent when there is one to send. The server measures it against the
+        // Sent when the transition requires it. The server measures it against the
         // pickup or the drop and stores the distance — the record of whether he
         // was actually there when he said so. The server requires this evidence
         // for arrival, start and completion and rejects missing or mocked fixes.
-        const fix = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High }).catch(() => null);
+        //
+        // The enabled slider already proves the watcher has a recent, accurate
+        // fix. Reuse it instead of blocking on another high-accuracy lookup,
+        // which can take several seconds on Android. Fall back to a new lookup
+        // only if the watched fix is too close to expiring.
+        const needsLocation = ['reached', 'started', 'completed'].includes(step.to);
+        const watchedFixIsReady = liveFix
+            && (liveFix.coords.accuracy ?? Infinity) <= MAX_FIX_ACCURACY_M
+            && Date.now() - liveFix.timestamp <= MAX_FIX_AGE_MS - FIX_SUBMIT_BUFFER_MS;
+        const fix = !needsLocation
+            ? null
+            : watchedFixIsReady
+                ? liveFix
+                : await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High }).catch(() => null);
         const where = fix
             ? {
                 lat: fix.coords.latitude,
@@ -271,10 +313,14 @@ const ActiveRide = ({ ride, onChanged }: { ride: UpcomingBooking; onChanged: () 
             return;
         }
 
+        // The server has accepted this transition. Show it immediately; the
+        // list/profile requests below reconcile shared state in the background.
+        setConfirmedStatus(result.status ?? step.to);
+
         // Only once the server has taken it. A wrong code comes back 403 and the
         // screen has to stay up with the message on it, not close as though it
         // had worked.
-        setOtpOpen(false);
+        setOtpOpen(step.to === 'reached');
         setDropOtpOpen(false);
         setDropOverrideOpen(false);
         setDropOverrideReason(null);
@@ -313,12 +359,18 @@ const ActiveRide = ({ ride, onChanged }: { ride: UpcomingBooking; onChanged: () 
     return (
         <View style={{ flex: 1, width: '100%' }}>
             <MapSlot
-                pickup={{ latitude: ride.pickupLat, longitude: ride.pickupLng }}
-                drop={{ latitude: ride.dropLat, longitude: ride.dropLng }}
+                pickup={showsRemainingRoute && currentStatus === 'started'
+                    ? null
+                    : { latitude: ride.pickupLat, longitude: ride.pickupLng }}
+                drop={showsRemainingRoute && currentStatus === 'en_route'
+                    ? null
+                    : { latitude: ride.dropLat, longitude: ride.dropLng }}
                 driver={liveFix ? { latitude: liveFix.coords.latitude, longitude: liveFix.coords.longitude } : null}
+                driverBearing={liveFix?.coords.heading}
                 bottomSheetHeight={mapBottomInset}
                 carType={ride.vehicleClass}
-                routePolyline={ride.routePolyline}
+                routePolyline={liveRoutePolyline ?? ride.routePolyline}
+                followRouteProgress={showsRemainingRoute}
                 cameraMode="fit-route"
             />
 
@@ -370,18 +422,36 @@ const ActiveRide = ({ ride, onChanged }: { ride: UpcomingBooking; onChanged: () 
                                 </View>
                             </Pressable>
 
-                            <Pressable
-                                className='w-[49%]'
-                                role="button"
-                                aria-label={`Call ${ride.user?.name ?? 'the rider'}`}
-                                onPress={() => Linking.openURL(`tel:${ride.customerPhone}`)}
-                                style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
-                            >
-                                <View className="rounded-xl w-full flex flex-row gap-2 p-3 items-center justify-center bg-[var(--foreground-muted)]">
-                                    <Phone size={20} weight="fill" className="text-[var(--background-primary)]" />
-                                    <AppText className='text-base font-semibold text-[var(--background-primary)]'>Call Rider</AppText>
-                                </View>
-                            </Pressable>
+                            {canCancel ? (
+                                <Pressable
+                                    className='w-[49%]'
+                                    role="button"
+                                    aria-label="Cancel ride"
+                                    aria-disabled={cancelling}
+                                    disabled={cancelling}
+                                    onPress={cancelRide}
+                                    style={({ pressed }) => ({ opacity: cancelling ? 0.45 : pressed ? 0.8 : 1 })}
+                                >
+                                    <View className="rounded-xl w-full flex flex-row gap-2 p-3 items-center justify-center bg-negative">
+                                        <AppText className='text-base font-semibold text-white'>
+                                            {cancelling ? 'Cancelling\u2026' : 'Cancel ride'}
+                                        </AppText>
+                                    </View>
+                                </Pressable>
+                            ) : (
+                                <Pressable
+                                    className='w-[49%]'
+                                    role="button"
+                                    aria-label={`Call ${ride.user?.name ?? 'the rider'}`}
+                                    onPress={() => Linking.openURL(`tel:${ride.customerPhone}`)}
+                                    style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+                                >
+                                    <View className="rounded-xl w-full flex flex-row gap-2 p-3 items-center justify-center bg-[var(--foreground-muted)]">
+                                        <Phone size={20} weight="fill" className="text-[var(--background-primary)]" />
+                                        <AppText className='text-base font-semibold text-[var(--background-primary)]'>Call Rider</AppText>
+                                    </View>
+                                </Pressable>
+                            )}
                         </View>
                     </View>
 

@@ -1,0 +1,63 @@
+diff --git a/node_modules/expo-dev-launcher/android/src/debug/java/expo/modules/devlauncher/DevLauncherController.kt b/node_modules/expo-dev-launcher/android/src/debug/java/expo/modules/devlauncher/DevLauncherController.kt
+index a6b8358..d35e3f3 100644
+--- a/node_modules/expo-dev-launcher/android/src/debug/java/expo/modules/devlauncher/DevLauncherController.kt
++++ b/node_modules/expo-dev-launcher/android/src/debug/java/expo/modules/devlauncher/DevLauncherController.kt
+@@ -47,6 +47,10 @@ import expo.modules.updatesinterface.UpdatesDevLauncherInterface
+ import kotlinx.coroutines.CoroutineScope
+ import kotlinx.coroutines.Dispatchers
+ import kotlinx.coroutines.launch
++import kotlinx.coroutines.withContext
++import kotlin.coroutines.resume
++import kotlin.coroutines.resumeWithException
++import kotlin.coroutines.suspendCoroutine
+ 
+ private const val NEW_ACTIVITY_FLAGS = Intent.FLAG_ACTIVITY_NEW_TASK or
+   Intent.FLAG_ACTIVITY_CLEAR_TASK or
+@@ -131,7 +135,7 @@ class DevLauncherController private constructor(
+     }
+ 
+     try {
+-      ensureHostWasCleared(appHost, activityToBeInvalidated = mainActivity)
++      ensureHostWasClearedBeforeLaunch(appHost, activityToBeInvalidated = mainActivity)
+       val devLauncherUrl = DevLauncherUrl(url)
+       val parsedUrl = devLauncherUrl.url
+       var parsedProjectUrl = projectUrl ?: url
+@@ -308,6 +312,38 @@ class DevLauncherController private constructor(
+     }
+   }
+ 
++  /**
++   * A headless task can initialize React before the development client opens its app Activity.
++   * ReactHost.destroy() is asynchronous, so starting that Activity immediately races the old
++   * context and makes DevLauncherAppLoader reject it. Wait for teardown before relaunching.
++   */
++  private suspend fun ensureHostWasClearedBeforeLaunch(
++    host: ReactHost,
++    activityToBeInvalidated: ReactActivity? = null
++  ) = withContext(Dispatchers.Main) {
++    if (host.currentReactContext == null) {
++      return@withContext
++    }
++
++    networkInterceptor?.close()
++    networkInterceptor = null
++
++    suspendCoroutine { continuation ->
++      host.destroy("DevLauncher reloading app", null) { instanceDestroyedSuccessfully ->
++        if (instanceDestroyedSuccessfully) {
++          continuation.resume(Unit)
++        } else {
++          continuation.resumeWithException(
++            IllegalStateException("DevLauncher could not clear the existing React context")
++          )
++        }
++      }
++      activityToBeInvalidated?.let {
++        invalidateActivity(it)
++      }
++    }
++  }
++
+   @UiThread
+   private fun clearHost(host: ReactHost, activityToBeInvalidated: ReactActivity?) {
+     host.destroy("DevLauncher reloading app", null)

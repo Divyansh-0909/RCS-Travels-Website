@@ -1,10 +1,15 @@
 import { Pressable, View } from 'react-native';
 import { cssInterop } from 'nativewind';
-import { CaretRightIcon, type Icon as PhosphorIcon } from 'phosphor-react-native';
+import {
+  ArrowSquareOutIcon,
+  CaretRightIcon,
+  type Icon as PhosphorIcon,
+} from 'phosphor-react-native';
 import AppText from '../AppText';
 
 const asThemed = { className: { target: false, nativeStyleToProp: { color: true } } } as const;
 const Caret = cssInterop(CaretRightIcon, asThemed);
+const External = cssInterop(ArrowSquareOutIcon, asThemed);
 
 const HAIRLINE = 'rgba(18,18,32,0.1)';
 const WELL = 'rgba(18,18,32,0.04)';
@@ -25,6 +30,8 @@ const WARN = 'text-[#92400E]';
 
 type Props = {
   label: string;
+  /** Optional secondary line for context that should remain attached to the row. */
+  detail?: string | null;
   Icon: PhosphorIcon;
   /** The right-hand detail: an account handle, a rating, "2 expiring". */
   value?: string | null;
@@ -38,12 +45,29 @@ type Props = {
    * inside this one and then hand the captain to another application.
    */
   caret?: boolean;
+  /** Marks a tap that opens a system or website surface. */
+  external?: boolean;
+  /** Reserved for genuinely destructive or emergency actions. */
+  tone?: 'default' | 'danger';
   /** Last row in its group draws no rule under itself. */
   last?: boolean;
 };
 
-const AccountRow = ({ label, Icon, value, warn, onPress, caret, last }: Props) => {
-  const showCaret = onPress != null && caret !== false;
+const AccountRow = ({
+  label,
+  detail,
+  Icon,
+  value,
+  warn,
+  onPress,
+  caret,
+  external,
+  tone = 'default',
+  last,
+}: Props) => {
+  const showExternal = onPress != null && external === true;
+  const showCaret = onPress != null && caret !== false && !showExternal;
+  const danger = tone === 'danger';
 
   const body = (
     <View className="w-full flex-row items-center gap-3 py-3.5">
@@ -52,14 +76,24 @@ const AccountRow = ({ label, Icon, value, warn, onPress, caret, last }: Props) =
           read as one list, which is what they are. */}
       <View
         className="w-9 h-9 rounded-xl items-center justify-center"
-        style={{ backgroundColor: WELL }}
+        style={{ backgroundColor: danger ? 'rgba(185,28,28,0.08)' : WELL }}
       >
-        <Icon size={18} weight="regular" color={ICON_INK} />
+        <Icon size={18} weight="regular" color={danger ? '#B91C1C' : ICON_INK} />
       </View>
 
-      <AppText numberOfLines={1} className={`flex-1 font-semibold ${INK}`}>
-        {label}
-      </AppText>
+      <View className="flex-1">
+        <AppText
+          numberOfLines={detail ? 2 : 1}
+          className={`font-semibold ${danger ? 'text-[#B91C1C]' : INK}`}
+        >
+          {label}
+        </AppText>
+        {detail ? (
+          <AppText numberOfLines={2} className={`text-sm mt-0.5 ${MUTED}`}>
+            {detail}
+          </AppText>
+        ) : null}
+      </View>
 
       {value ? (
         <AppText numberOfLines={1} className={`text-sm ${warn ? WARN : MUTED}`}>
@@ -70,6 +104,7 @@ const AccountRow = ({ label, Icon, value, warn, onPress, caret, last }: Props) =
       {/* Drawn only where the tap opens another screen. A row that hands the captain
           to a system surface such as Share can opt out with caret={false}. */}
       {showCaret ? <Caret size={16} weight="bold" className={MUTED} /> : null}
+      {showExternal ? <External size={17} weight="bold" className={MUTED} /> : null}
     </View>
   );
 
@@ -81,7 +116,7 @@ const AccountRow = ({ label, Icon, value, warn, onPress, caret, last }: Props) =
       {onPress ? (
         <Pressable
           role="button"
-          aria-label={value ? `${label}, ${value}` : label}
+          aria-label={[label, detail, value].filter(Boolean).join(', ')}
           onPress={onPress}
           style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
         >

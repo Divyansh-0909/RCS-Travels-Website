@@ -66,7 +66,7 @@ const HelpPage = () => {
                     <li
                         key={q}
                         onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                        className="font-normal w-full select-none cursor-pointer py-4 px-6 rounded-2xl flex flex-col bg-[var(--background-primary)]/5 text-[var(--text-foreground)] transition-color duration-300 hover:bg-[var(--background-primary)]/10"
+                        className="font-normal w-full select-none cursor-pointer py-5 px-6 rounded-3xl flex flex-col bg-pastel-primary text-[var(--text-foreground)] transition-opacity duration-200 hover:opacity-80"
                     >
                         <div className="w-full flex justify-between items-center gap-3">
                             <h4 className="text-lg font-medium">{q}</h4>
@@ -84,7 +84,7 @@ const HelpPage = () => {
                 )}
 
                 {selected === 1 && contacts.map(([title, desc, value, icon, onClick]) => (
-                    <SettingRow key={title} trailing={<CircleIconButton icon={icon} size={0.85} onClick={onClick} />}>
+                    <SettingRow key={title} tone="bg-pastel-teal" trailing={<CircleIconButton icon={icon} size={0.85} onClick={onClick} />}>
                         <h4 className="text-lg font-medium">{title}</h4>
                         <p className="text-base text-[var(--background-primary)]/50">{desc}</p>
                         <p className="text-sm text-[var(--background-primary)]/70 pt-1">{value}</p>
@@ -92,7 +92,7 @@ const HelpPage = () => {
                 ))}
 
                 {selected === 2 && cancellationPolicy.map(([title, desc]) => (
-                    <SettingRow key={title}>
+                    <SettingRow key={title} tone="bg-pastel-sand">
                         <h4 className="text-lg font-medium">{title}</h4>
                         <p className="text-base text-[var(--background-primary)]/50">{desc}</p>
                     </SettingRow>

@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 import {
   ClockIcon,
   ShieldCheckIcon,
@@ -8,6 +8,7 @@ import {
   XCircleIcon,
 } from 'phosphor-react-native';
 import { useNavigate } from 'react-router-native';
+import { HomeGateSkeleton } from '../components/ui/LoadingSkeletons';
 import AppText from '../components/AppText';
 import Button from '../components/ui/Button';
 import { useDriver } from '../hooks/useDriver';
@@ -147,11 +148,7 @@ const OnboardingStatus = () => {
   }, [blockedBy, profile, refresh]);
 
   if (loading && !profile) {
-    return (
-      <View className="flex-1 items-center justify-center bg-white">
-        <ActivityIndicator />
-      </View>
-    );
+    return <HomeGateSkeleton />;
   }
 
   const face = FACES[blockedBy] ?? FACES.notUploaded;

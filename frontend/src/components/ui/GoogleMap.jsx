@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import Icon from "@mdi/react";
 import { mdiAlertCircleOutline } from "@mdi/js";
-import Skeleton from "./Skeleton";
+import MapSkeleton from "./MapSkeleton";
 import googleLogo from "../../assets/google-logo.webp";
 import googleAttribution from "../../assets/google-ad.webp";
+import { ThemeContext } from "../../context/ThemeContext";
 
 // Usage:
 //   <GoogleMap center={{ lat, lng }} zoom={17} onIdle={(c) => ...} className="...">
@@ -15,42 +16,57 @@ import googleAttribution from "../../assets/google-ad.webp";
 let loaderPromise = null;
 let mapDiv = null;
 let mapInstance = null;
+let activeMapAppearance = null;
 // Tiles are only "first paint" once per session — the singleton keeps them
 // afterwards, so later mounts must not flash the skeleton again.
 let tilesEverLoaded = false;
 
-export const MAP_LAND_COLOR = "#b9b9bf";
-const MAP_BUILDING_COLOR = "#e1e1e5";
-const MAP_BUILDING_STROKE = "#c9c9d0";
+const GOOGLE_MAP_ID = import.meta.env.VITE_GOOGLE_MAPS_MAP_ID?.trim() || undefined;
+const DARK_MAP_LAND_COLOR = "#2e2e38";
+const LIGHT_MAP_LAND_COLOR = "#b9b9bf";
 
-const MAP_STYLES = [
-    { elementType: "geometry", stylers: [{ color: MAP_LAND_COLOR }] },
+// The exported colour is the dark shell fallback used behind full-bleed maps.
+// GoogleMap selects its mode-specific background before tiles paint.
+export const MAP_LAND_COLOR = DARK_MAP_LAND_COLOR;
+
+// Keep both fallback palettes aligned with
+// driver-app/src/components/ui/MapSlot.tsx. A configured JavaScript Map ID
+// delegates all colours to Google Cloud and these arrays are not combined with
+// the cloud style.
+const DARK_MAP_STYLES = [
+    { elementType: "geometry", stylers: [{ color: DARK_MAP_LAND_COLOR }] },
+    { elementType: "labels.text.fill", stylers: [{ color: "#d6d6db" }] },
+    { elementType: "labels.text.stroke", stylers: [{ color: DARK_MAP_LAND_COLOR }] },
+    { featureType: "landscape.man_made", elementType: "geometry", stylers: [{ color: "#41414d" }] },
+    { featureType: "water", elementType: "geometry", stylers: [{ color: "#1d1d27" }] },
+    { featureType: "road", elementType: "geometry", stylers: [{ color: "#16161f" }] },
+    { featureType: "road", elementType: "geometry.stroke", stylers: [{ visibility: "off" }] },
+    { featureType: "road", elementType: "labels.text.fill", stylers: [{ color: "#9a9ab2" }] },
+    { featureType: "road.local", elementType: "geometry", stylers: [{ color: "#1d1d26" }] },
+    { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#101018" }] },
+    { featureType: "poi", stylers: [{ visibility: "off" }] },
+    { featureType: "poi.park", stylers: [{ visibility: "on" }] },
+    { featureType: "poi.park", elementType: "geometry", stylers: [{ color: "#1b1b26" }] },
+    { featureType: "transit", stylers: [{ visibility: "off" }] },
+];
+
+const LIGHT_MAP_STYLES = [
+    { elementType: "geometry", stylers: [{ color: LIGHT_MAP_LAND_COLOR }] },
     { elementType: "labels.text.fill", stylers: [{ color: "#565660" }] },
     { elementType: "labels.text.stroke", stylers: [{ color: "#f4f4f6" }, { weight: 2 }] },
-    { featureType: "administrative.locality", elementType: "labels.text.fill", stylers: [{ color: "#4f4f58" }] },
-    { featureType: "administrative.neighborhood", elementType: "labels.text.fill", stylers: [{ color: "#686872" }] },
-    // At close zoom Google renders building footprints as man-made landscape.
-    // Keep them visibly separate from the surrounding land so a rider can
-    // place the pickup pin on the correct house/building.
-    { featureType: "landscape.man_made", elementType: "geometry.fill", stylers: [{ color: MAP_BUILDING_COLOR }] },
-    { featureType: "landscape.man_made", elementType: "geometry.stroke", stylers: [{ color: MAP_BUILDING_STROKE }, { weight: 1 }] },
-    // Named campuses and businesses move into POI geometry at detailed zooms.
-    // Hide their labels, not the polygons themselves, or buildings disappear
-    // just when the rider zooms in to place a precise pin.
-    { featureType: "poi", elementType: "geometry.fill", stylers: [{ visibility: "on" }, { color: MAP_BUILDING_COLOR }] },
-    { featureType: "poi", elementType: "geometry.stroke", stylers: [{ visibility: "on" }, { color: MAP_BUILDING_STROKE }, { weight: 1 }] },
+    { featureType: "landscape.man_made", elementType: "geometry.fill", stylers: [{ color: "#e1e1e5" }] },
+    { featureType: "landscape.man_made", elementType: "geometry.stroke", stylers: [{ color: "#c9c9d0" }, { weight: 1 }] },
+    { featureType: "poi", elementType: "geometry.fill", stylers: [{ visibility: "on" }, { color: "#e1e1e5" }] },
+    { featureType: "poi", elementType: "geometry.stroke", stylers: [{ visibility: "on" }, { color: "#c9c9d0" }, { weight: 1 }] },
     { featureType: "poi", elementType: "labels", stylers: [{ visibility: "off" }] },
     { featureType: "water", elementType: "geometry", stylers: [{ color: "#dbe4ed" }] },
-    { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#687687" }] },
     { featureType: "road", elementType: "geometry", stylers: [{ color: "#ffffff" }] },
-    { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#eeeeF2" }] },
+    { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#eeeef2" }] },
     { featureType: "road", elementType: "labels.text.fill", stylers: [{ color: "#55555f" }] },
     { featureType: "road.local", elementType: "geometry", stylers: [{ color: "#f8f8fa" }] },
-    { featureType: "road.arterial", elementType: "geometry", stylers: [{ color: "#ffffff" }] },
     { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#ffffff" }] },
     { featureType: "poi.park", stylers: [{ visibility: "on" }] },
     { featureType: "poi.park", elementType: "geometry", stylers: [{ color: "#e4efdf" }] },
-    { featureType: "poi.park", elementType: "labels.text.fill", stylers: [{ color: "#667060" }] },
     { featureType: "transit", stylers: [{ visibility: "off" }] },
 ];
 
@@ -70,9 +86,17 @@ function loadMapsScript() {
 
 const GoogleMap = ({ center, zoom = 16, onMapReady, onIdle, className, children }) => {
     const hostRef = useRef(null);
+    const { darkMode } = useContext(ThemeContext);
+    const mapColorScheme = darkMode ? "DARK" : "LIGHT";
+    const mapBackgroundColor = darkMode ? DARK_MAP_LAND_COLOR : LIGHT_MAP_LAND_COLOR;
+    const fallbackStyles = darkMode ? DARK_MAP_STYLES : LIGHT_MAP_STYLES;
+    const mapAppearance = `${GOOGLE_MAP_ID ?? "local"}:${mapColorScheme}`;
     // covers the map with a shimmer until Google reports the first tiles
     // painted — otherwise tiles pop in over white
     const [ready, setReady] = useState(tilesEverLoaded);
+    // Kept for the 200ms fade only, then unmounted so an invisible skeleton
+    // does not keep animating behind an interactive map for the rest of a trip.
+    const [showSkeleton, setShowSkeleton] = useState(!tilesEverLoaded);
     // Maps JS never loaded (blocked, offline, bad key). The container used to be
     // left as a bare grey rectangle, which reads as a broken page rather than a
     // missing map.
@@ -100,14 +124,19 @@ const GoogleMap = ({ center, zoom = 16, onMapReady, onIdle, className, children 
             }
             if (cancelled || !hostRef.current) return;
 
-            if (!mapInstance) {
+            if (!mapInstance || activeMapAppearance !== mapAppearance) {
                 mapDiv = document.createElement("div");
                 mapDiv.style.width = "100%";
                 mapDiv.style.height = "100%";
                 mapInstance = new window.google.maps.Map(mapDiv, {
                     center: center ?? { lat: 28.6315, lng: 77.2167 },
                     zoom,
-                    renderingType: window.google.maps.RenderingType.RASTER,
+                    ...(GOOGLE_MAP_ID
+                        ? { mapId: GOOGLE_MAP_ID, colorScheme: mapColorScheme }
+                        : {
+                            renderingType: window.google.maps.RenderingType.RASTER,
+                            styles: fallbackStyles,
+                        }),
                     mapTypeId: "roadmap",
                     tilt: 0,
                     heading: 0,
@@ -119,9 +148,9 @@ const GoogleMap = ({ center, zoom = 16, onMapReady, onIdle, className, children 
                     clickableIcons: false,
                     // the surface under not-yet-loaded tiles; Google's default
                     // is white, which flashes hard against this theme
-                    backgroundColor: MAP_LAND_COLOR,
-                    styles: MAP_STYLES,
+                    backgroundColor: mapBackgroundColor,
                 });
+                activeMapAppearance = mapAppearance;
             } else {
                 if (center) mapInstance.setCenter(center);
                 mapInstance.setZoom(zoom);
@@ -134,8 +163,8 @@ const GoogleMap = ({ center, zoom = 16, onMapReady, onIdle, className, children 
                 zoomControl: window.matchMedia("(min-width: 640px)").matches,
                 gestureHandling: "greedy",
                 scrollwheel: true,
-                styles: MAP_STYLES,
-                backgroundColor: MAP_LAND_COLOR,
+                ...(!GOOGLE_MAP_ID ? { styles: fallbackStyles } : {}),
+                backgroundColor: mapBackgroundColor,
             });
 
             hostRef.current.appendChild(mapDiv);
@@ -156,7 +185,17 @@ const GoogleMap = ({ center, zoom = 16, onMapReady, onIdle, className, children 
             tilesListener?.remove();
             if (mapDiv?.parentNode === hostRef.current) hostRef.current.removeChild(mapDiv);
         };
-    }, []);
+    }, [darkMode]);
+
+    useEffect(() => {
+        if (!ready) {
+            setShowSkeleton(true);
+            return;
+        }
+
+        const timer = setTimeout(() => setShowSkeleton(false), 220);
+        return () => clearTimeout(timer);
+    }, [ready]);
 
     // re-center when the caller's target moves (e.g. locate-me)
     useEffect(() => {
@@ -197,9 +236,16 @@ const GoogleMap = ({ center, zoom = 16, onMapReady, onIdle, className, children 
                 </>
             )}
             {/* above children too: a pin floating on a shimmer reads as broken */}
-            {!ready && (
-                <div className="absolute inset-0 z-20" style={{ background: MAP_LAND_COLOR }}>
-                    <Skeleton className="w-full h-full" rounded="rounded-none" />
+            {showSkeleton && (
+                <div
+                    className={`absolute inset-0 z-20 pointer-events-none transition-opacity duration-200 motion-reduce:transition-none ${ready ? "opacity-0" : "opacity-100"}`}
+                    style={{ background: mapBackgroundColor }}
+                    role="status"
+                    aria-live="polite"
+                    aria-label={ready ? undefined : "Loading map"}
+                    aria-hidden={ready}
+                >
+                    <MapSkeleton />
                 </div>
             )}
             {/* Names the gap rather than filling it. pointer-events-none on
@@ -208,7 +254,7 @@ const GoogleMap = ({ center, zoom = 16, onMapReady, onIdle, className, children 
                 trip itself is unaffected, and the copy says so — every screen
                 that shows a map states the same facts in text beside it. */}
             {loadFailed && (
-                <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-1.5 px-6 text-center pointer-events-none" style={{ background: MAP_LAND_COLOR }}>
+                <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-1.5 px-6 text-center pointer-events-none" style={{ background: mapBackgroundColor }}>
                     <Icon path={mdiAlertCircleOutline} size={1} className="text-[var(--text-muted)]/70" />
                     <h4 className="text-sm sm:text-base font-medium text-[var(--text)]/80">Map unavailable</h4>
                     {/* No "below": this panel sits beside the content on

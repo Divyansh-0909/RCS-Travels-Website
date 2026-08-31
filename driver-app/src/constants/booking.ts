@@ -25,16 +25,17 @@ const STATUS_LABELS: Record<string, string> = {
 
 export const rideStatusLabel = (status: string) => STATUS_LABELS[status] ?? status.replace('_', ' ');
 
-// A ride being worked, as opposed to `assigned`, which is taken but not started.
-// GET /driver/rides returns both, so the split happens here.
+// A ride already under way, as opposed to the accepted `assigned` state. Home's
+// Active Ride screen handles both, while callers asking whether the car has
+// actually departed keep using this narrower list.
 export const ACTIVE_RIDE_STATUSES = ['en_route', 'reached', 'started'];
 
 // A ride in progress has two ends, but only ever one that the captain is driving
 // to. The active panel names that leg rather than the ride, so the three working
 // statuses each pick their own words and their own end of the trip. The statuses
-// outside this map never reach the panel — `assigned` is the upcoming ride and the
-// terminal two are off Home entirely — so the fallback is a guard, not a case.
+// The terminal states never reach the panel, so the fallback is only a guard.
 const ACTIVE_LEGS: Record<string, { label: string; endpoint: 'pickup' | 'drop' }> = {
+    assigned: { label: 'Pickup at', endpoint: 'pickup' },
     en_route: { label: 'Pickup at', endpoint: 'pickup' },
     reached: { label: 'Arrived at', endpoint: 'pickup' },
     started: { label: 'Dropping at', endpoint: 'drop' },

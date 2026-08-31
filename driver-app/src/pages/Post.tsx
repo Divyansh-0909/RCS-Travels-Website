@@ -1,12 +1,7 @@
-import { View } from "react-native";
-import AppText from "../components/AppText";
+import { Navigate } from 'react-router-native';
 
 const Post = () => {
-    return (
-        <View>
-            <AppText>Post</AppText>
-        </View>
-    )
-}
+    return <Navigate to="/available?post=new" replace />;
+};
 
-export default Post
+export default Post;

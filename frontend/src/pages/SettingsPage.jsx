@@ -9,6 +9,7 @@ import CircleIconButton from "../components/ui/CircleIconButton";
 import Toggle from "../components/ui/Toggle";
 
 const items = ["Language", "Notifications", "Saved places"]
+const panelTones = ["bg-pastel-primary", "bg-pastel-teal", "bg-pastel-violet"]
 
 const languages = [
     { code: "English", label: "English", sub: "Default" },
@@ -123,6 +124,7 @@ const SettingsPage = () => {
                 {selected === 0 && languages.map(({ code, label, sub }) => (
                     <SettingRow
                         key={code}
+                        tone={panelTones[selected]}
                         onClick={() => setLanguage(code)}
                         trailing={
                             <div className={`p-1 rounded-full ${language === code ? "bg-[var(--background-primary)] text-[var(--foreground)]" : "border border-[var(--background-primary)]/25 text-transparent"}`}>
@@ -136,7 +138,7 @@ const SettingsPage = () => {
                 ))}
 
                 {selected === 1 && notifRows.map(([title, desc, key]) => (
-                    <SettingRow key={key} trailing={<Toggle on={notifs[key]} onClick={() => toggleNotif(key)} />}>
+                    <SettingRow key={key} tone={panelTones[selected]} trailing={<Toggle on={notifs[key]} onClick={() => toggleNotif(key)} />}>
                         <h4 className="text-lg font-medium">{title}</h4>
                         <p className="text-base text-[var(--background-primary)]/50">{desc}</p>
                     </SettingRow>
@@ -146,7 +148,7 @@ const SettingsPage = () => {
                     <>
                         {places.map((p, i) => (
                             editingPlace === i ? (
-                                <li key={i} className="w-full select-none py-4 px-6 rounded-2xl flex items-center justify-between gap-3 bg-[var(--background-primary)]/5">
+                                <li key={i} className="w-full select-none py-5 px-6 rounded-3xl flex items-center justify-between gap-3 bg-pastel-violet">
                                     <input
                                         autoFocus
                                         value={placeInput}
@@ -165,6 +167,7 @@ const SettingsPage = () => {
                             ) : (
                                 <SettingRow
                                     key={i}
+                                    tone={panelTones[selected]}
                                     trailing={
                                         <div className="flex items-center gap-2 shrink-0">
                                             {/* Home and Work are fixed slots — only extra places can be removed. */}
@@ -183,7 +186,7 @@ const SettingsPage = () => {
                             )
                         ))}
                         {placeError && <p className="text-sm text-[rgba(239,68,68,0.9)] px-2">{placeError}</p>}
-                        <li onClick={addPlace} className="font-medium text-lg w-full cursor-pointer select-none py-4 px-6 rounded-2xl flex justify-center items-center gap-2 bg-[var(--background-primary)]/5 text-[var(--background-primary)] transition-color duration-300 hover:bg-[var(--background-primary)]/10">
+                        <li onClick={addPlace} className="font-medium text-lg w-full cursor-pointer select-none py-5 px-6 rounded-3xl flex justify-center items-center gap-2 bg-pastel-violet text-[var(--background-primary)] transition-opacity duration-200 hover:opacity-80">
                             <Icon path={mdiPlus} size={0.9} /> Add a place
                         </li>
                     </>

@@ -1,53 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
-import { AppState, Linking, Platform, Pressable, View } from 'react-native';
+import { AppState, Linking, Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
-import { BellIcon, CaretRightIcon, GlobeIcon, MoonIcon } from 'phosphor-react-native';
-import AppText from '../components/AppText';
+import { BellIcon, GlobeIcon, MoonIcon } from 'phosphor-react-native';
+import AccountRow from '../components/ui/AccountRow';
 import AccountDetailScreen, {
-  ACCOUNT_HAIRLINE,
-  ACCOUNT_MUTED,
-  AccountSection,
+  AccountList,
   AccountSectionLabel,
 } from '../components/ui/AccountDetailScreen';
 
 type Permission = 'checking' | 'granted' | 'denied' | 'undetermined' | 'unavailable';
-
-const SettingRow = ({
-  label,
-  detail,
-  Icon,
-  onPress,
-  last,
-}: {
-  label: string;
-  detail: string;
-  Icon: typeof BellIcon;
-  onPress?: () => void;
-  last?: boolean;
-}) => {
-  const body = (
-    <View className="flex-row items-center gap-3 py-3.5">
-      <View className="w-9 h-9 rounded-xl items-center justify-center bg-white">
-        <Icon size={18} weight="regular" color="#121220" />
-      </View>
-      <View className="flex-1">
-        <AppText className="font-semibold text-[var(--background-primary)]">{label}</AppText>
-        <AppText className={`text-sm ${ACCOUNT_MUTED}`}>{detail}</AppText>
-      </View>
-      {onPress ? <CaretRightIcon size={16} weight="bold" color="#4B5563" /> : null}
-    </View>
-  );
-
-  return (
-    <View style={last ? undefined : { borderBottomWidth: 1, borderBottomColor: ACCOUNT_HAIRLINE }}>
-      {onPress ? (
-        <Pressable role="button" onPress={onPress} style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}>
-          {body}
-        </Pressable>
-      ) : body}
-    </View>
-  );
-};
 
 const Settings = () => {
   const [permission, setPermission] = useState<Permission>('checking');
@@ -87,23 +48,16 @@ const Settings = () => {
   return (
     <AccountDetailScreen title="Settings">
       <AccountSectionLabel>App preferences</AccountSectionLabel>
-      <AccountSection>
-        <SettingRow
+      <AccountList>
+        <AccountRow
           label="Notifications"
           detail={notificationDetail}
           Icon={BellIcon}
           onPress={permission === 'checking' || permission === 'unavailable' ? undefined : manageNotifications}
         />
-        <SettingRow label="Language" detail="English" Icon={GlobeIcon} />
-        <SettingRow label="Appearance" detail="Follows your device" Icon={MoonIcon} last />
-      </AccountSection>
-
-      <View className="mx-4 mt-2">
-        <AppText className={`text-sm ${ACCOUNT_MUTED}`}>
-          Ride alerts use your device notification permission. Language selection will
-          appear here when translated captain screens are ready.
-        </AppText>
-      </View>
+        <AccountRow label="Language" value="English" Icon={GlobeIcon} />
+        <AccountRow label="Appearance" value="Device" Icon={MoonIcon} last />
+      </AccountList>
     </AccountDetailScreen>
   );
 };

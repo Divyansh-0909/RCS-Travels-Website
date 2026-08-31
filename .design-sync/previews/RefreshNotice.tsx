@@ -6,8 +6,8 @@ import { RefreshNotice } from 'rcs-travels-frontend';
 //
 // It exists for the case between FailureState and silence: a background fetch
 // failed, but usable content (persisted profile, the last poll's status) is
-// still on screen. Anchored top-centre, since the bottom slot belongs to
-// RideCancelledToast and the "Copied to clipboard" pills.
+// still on screen. It stays above the "Copied to clipboard" pills; the ride
+// cancellation result uses a separate modal bottom-sheet layer.
 
 const Stage = ({ children }: { children?: any }) => (
   <div className="relative w-[420px] h-[260px] overflow-hidden bg-[var(--background)] text-[var(--text)]">

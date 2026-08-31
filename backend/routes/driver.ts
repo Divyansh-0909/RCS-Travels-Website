@@ -48,6 +48,7 @@ import { completionGeofence, locationProblem, PICKUP_RADIUS_KM } from '../servic
 import { applyDriverCancellationConsequences } from '../services/driverCancellations.js'
 import { isDriverDispatchReady, restoreIdleDriverCapacity } from '../services/driverAvailability.ts'
 import { notifyWhatsAppDriverCancelled, notifyWhatsAppRideStatus } from '../services/notification.js'
+import { getNavigationRoute } from '../services/rideEstimate.js'
 import { locationSchema, UploadUrlRequest, ConfirmDocumentsRequest, rideParamsSchema, driverOnlineSchema, driverAccountInformationSchema, addVehicleSchema, activeVehicleSchema, fcmTokenSchema, rideStatusSchema, driverRidesQuerySchema } from '../types.ts'
 
 // The driver-facing API. Nothing calls it yet — the driver app is Phase 5, and until
@@ -1618,6 +1619,42 @@ driverRouter.get('/rides', protect, async (req, res) => {
         ...(isHistory ? { skip: (page - 1) * limit, take: limit } : {}),
     })
 
+    // The list is already polled while a captain holds work, so return the
+    // traffic-aware path for the leg he is actually driving here instead of
+    // adding a second polling endpoint. getNavigationRoute caches each leg for
+    // one minute: GPS fixes shorten the line locally between those refreshes,
+    // while the next uncached result reroutes from the new position after a
+    // wrong turn.
+    const navigationByBooking = new Map<string, { navigationLeg: 'pickup' | 'drop'; navigationEtaMinutes: number | null; navigationPolyline: string | null }>()
+    if (!isHistory) {
+        const location = await prisma.driverLocation.findUnique({ where: { driverId: driver.id } })
+        if (location) {
+            await Promise.all(bookings.map(async (booking) => {
+                const target = booking.status === 'en_route'
+                    ? { leg: 'pickup' as const, lat: booking.pickupLat, lng: booking.pickupLng }
+                    : booking.status === 'started'
+                        ? { leg: 'drop' as const, lat: booking.dropLat, lng: booking.dropLng }
+                        : null
+                if (!target) return
+
+                try {
+                    const route = await getNavigationRoute({
+                        cacheKey: `${booking.id}:${target.leg}`,
+                        origin: { lat: location.latitude, lng: location.longitude },
+                        destination: target,
+                    })
+                    navigationByBooking.set(booking.id, {
+                        navigationLeg: target.leg,
+                        navigationEtaMinutes: route?.minutes ?? null,
+                        navigationPolyline: route?.polyline ?? null,
+                    })
+                } catch (error) {
+                    console.warn(`Captain navigation route unavailable for ${booking.id}:`, (error as Error)?.message)
+                }
+            }))
+        }
+    }
+
     // Aggregated in the database rather than summed from `bookings` above. The rows
     // sent back are one page of at most `limit`, so adding them up would quietly stop
     // counting the moment a captain had a better week than the page size — and it
@@ -1642,6 +1679,9 @@ driverRouter.get('/rides', protect, async (req, res) => {
             completedAt,
             durationMin: drivenMinutes(startedAt, completedAt),
             paymentState: paymentStateOf(booking),
+            navigationLeg: navigationByBooking.get(booking.id)?.navigationLeg ?? null,
+            navigationEtaMinutes: navigationByBooking.get(booking.id)?.navigationEtaMinutes ?? null,
+            navigationPolyline: navigationByBooking.get(booking.id)?.navigationPolyline ?? null,
         })),
         // Null on the upcoming board, which has nothing to total. `earned` is what
         // reached the captain — the same fare-minus-commission the expanded row calls

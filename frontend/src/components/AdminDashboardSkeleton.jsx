@@ -10,7 +10,7 @@ const Line = ({ h, bar, w }) => (
 
 // One placeholder booking card — clones the admin booking card's structure.
 const BookingCardSkeleton = () => (
-    <div className="bg-[var(--foreground-muted)] bg-[linear-gradient(to_bottom,transparent_50%,rgba(146,146,139,0.10)_100%)] shadow-[inset_0_2px_2px_rgba(255,255,255,0.25)] py-5 px-5 sm:py-6 sm:px-8 rounded-2xl my-4 sm:my-6 flex flex-col justify-center items-start gap-4">
+    <div className="my-2 flex flex-col justify-center items-start gap-3 rounded-3xl bg-pastel-primary px-5 py-5 sm:px-6">
         <div className="flex justify-between items-start gap-4 w-full">
             {/* route: pickup → drop */}
             <div className="flex flex-col gap-3">
@@ -59,8 +59,8 @@ const BookingCardSkeleton = () => (
 );
 
 // One placeholder driver card — name + online dot, phone, divider, meta line, chip.
-const DriverCardSkeleton = () => (
-    <div className="bg-[var(--foreground-muted)] bg-[linear-gradient(to_bottom,transparent_50%,rgba(146,146,139,0.10)_100%)] shadow-[inset_0_2px_2px_rgba(255,255,255,0.25)] py-5 px-5 sm:py-6 sm:px-8 rounded-2xl my-4 sm:my-6 flex flex-col justify-center items-start gap-4">
+const DriverCardSkeleton = ({ tone = "bg-pastel-teal" }) => (
+    <div className={`my-2 flex flex-col justify-center items-start gap-3 rounded-3xl ${tone} px-5 py-5 sm:px-6`}>
         <div className="flex justify-between items-start gap-4 w-full">
             <div>
                 {/* name (h3) + online dot + status (text-sm) */}
@@ -86,7 +86,9 @@ const DriverCardSkeleton = () => (
 const AdminDashboardSkeleton = ({ variant = "bookings" }) => (
     <div className="w-full">
         {[0, 1, 2].map((i) =>
-            variant === "bookings" ? <BookingCardSkeleton key={i} /> : <DriverCardSkeleton key={i} />
+            variant === "bookings"
+                ? <BookingCardSkeleton key={i} />
+                : <DriverCardSkeleton key={i} tone={variant === "users" ? "bg-pastel-violet" : "bg-pastel-teal"} />
         )}
     </div>
 );
