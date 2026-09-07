@@ -1,3 +1,5 @@
+import { useTranslation as useCopyLanguage } from "react-i18next";
+import { websiteCopy as dc } from "../i18nCopy";
 import { useState, useEffect } from "react"
 import Icon from '@mdi/react';
 import { mdiCheck, mdiPlus, mdiPencil, mdiClose, mdiTrashCanOutline } from '@mdi/js';
@@ -7,15 +9,11 @@ import AccountLayout from "../components/ui/AccountLayout";
 import SettingRow from "../components/ui/SettingRow";
 import CircleIconButton from "../components/ui/CircleIconButton";
 import Toggle from "../components/ui/Toggle";
+import LanguageSelector from "../components/LanguageSelector";
+import { useTranslation } from "react-i18next";
+import { useWebsiteCopy } from "../hooks/useWebsiteCopy";
 
-const items = ["Language", "Notifications", "Saved places"]
 const panelTones = ["bg-pastel-primary", "bg-pastel-teal", "bg-pastel-violet"]
-
-const languages = [
-    { code: "English", label: "English", sub: "Default" },
-    { code: "Hindi", label: "हिन्दी", sub: "Hindi" },
-    { code: "Hinglish", label: "Hinglish", sub: "Hindi in Roman script" },
-]
 
 const notifRows = [
     ["Ride updates", "Booking confirmations and ride status on WhatsApp.", "whatsapp"],
@@ -24,8 +22,9 @@ const notifRows = [
 ]
 
 const SettingsPage = () => {
-    const language = useData(state => state.language)
-    const setLanguage = useData(state => state.setLanguage)
+    useCopyLanguage();
+    const { t } = useTranslation("website")
+    const tr = useWebsiteCopy()
     const [selected, setSelected] = useState(0)
 
     // Notifications have no backend yet — local UI state for now.
@@ -72,7 +71,7 @@ const SettingsPage = () => {
         const p = places[editingPlace]
         if (!p || savingPlace) return
         const address = placeInput.trim()
-        if (!address) { setPlaceError("Enter an address"); return }
+        if (!address) { setPlaceError(t("settings.enterAddress")); return }
         setSavingPlace(true)
         setPlaceError(null)
         try {
@@ -85,7 +84,7 @@ const SettingsPage = () => {
             setEditingPlace(null)
             setPlaceInput("")
         } catch {
-            setPlaceError("Something went wrong. Please try again.")
+            setPlaceError(t("errors.tryAgain"))
         } finally {
             setSavingPlace(false)
         }
@@ -114,33 +113,24 @@ const SettingsPage = () => {
             if (editingPlace === i) cancelEdit()
             else if (editingPlace !== null && editingPlace > i) setEditingPlace(editingPlace - 1)
         } catch {
-            setPlaceError("Couldn't delete this place. Please try again.")
+            setPlaceError(t("settings.deletePlaceError"))
         }
     }
 
     return (
-        <AccountLayout items={items} selected={selected} onSelect={setSelected} title="Settings">
+        <AccountLayout
+            items={[t("settings.language"), t("settings.notifications"), t("settings.savedPlaces")]}
+            selected={selected}
+            onSelect={setSelected}
+            title={t("settings.title")}
+        >
             <ul className="flex flex-col items-start gap-4 justify-center w-full">
-                {selected === 0 && languages.map(({ code, label, sub }) => (
-                    <SettingRow
-                        key={code}
-                        tone={panelTones[selected]}
-                        onClick={() => setLanguage(code)}
-                        trailing={
-                            <div className={`p-1 rounded-full ${language === code ? "bg-[var(--background-primary)] text-[var(--foreground)]" : "border border-[var(--background-primary)]/25 text-transparent"}`}>
-                                <Icon path={mdiCheck} size={0.85} />
-                            </div>
-                        }
-                    >
-                        <h4 className="text-lg font-medium">{label}</h4>
-                        <p className="text-base text-[var(--background-primary)]/50">{sub}</p>
-                    </SettingRow>
-                ))}
+                {selected === 0 && <li className="w-full"><LanguageSelector /></li>}
 
                 {selected === 1 && notifRows.map(([title, desc, key]) => (
                     <SettingRow key={key} tone={panelTones[selected]} trailing={<Toggle on={notifs[key]} onClick={() => toggleNotif(key)} />}>
-                        <h4 className="text-lg font-medium">{title}</h4>
-                        <p className="text-base text-[var(--background-primary)]/50">{desc}</p>
+                        <h4 className="break-words text-lg font-medium">{tr(title)}</h4>
+                        <p className="break-words text-base text-[var(--background-primary)]/50">{tr(desc)}</p>
                     </SettingRow>
                 ))}
 
@@ -154,7 +144,7 @@ const SettingsPage = () => {
                                         value={placeInput}
                                         onChange={(e) => setPlaceInput(e.target.value)}
                                         onKeyDown={(e) => { if (e.key === "Enter") savePlace(); if (e.key === "Escape") cancelEdit() }}
-                                        placeholder={`${p.label} address`}
+                                        placeholder={t("settings.addressPlaceholder", { place: p.label })}
                                         className="flex-1 min-w-0 rounded-xl py-2 px-3 text-base text-[var(--text-foreground)] bg-transparent outline-none placeholder:text-[var(--background-primary)]/40 border border-[var(--background-primary)]/30"
                                     />
                                     <div className="flex items-center gap-2 shrink-0">
@@ -180,14 +170,14 @@ const SettingsPage = () => {
                                         </div>
                                     }
                                 >
-                                    <p className="text-base text-[var(--background-primary)]/50">{p.label}</p>
-                                    <h4 className="text-lg font-medium">{p.address || "Not added yet"}</h4>
+                                    <p className="text-base text-[var(--background-primary)]/50">{tr(p.label)}</p>
+                                    <h4 className="break-words text-lg font-medium">{p.address || t("settings.notAdded")}</h4>
                                 </SettingRow>
                             )
                         ))}
                         {placeError && <p className="text-sm text-[rgba(239,68,68,0.9)] px-2">{placeError}</p>}
                         <li onClick={addPlace} className="font-medium text-lg w-full cursor-pointer select-none py-5 px-6 rounded-3xl flex justify-center items-center gap-2 bg-pastel-violet text-[var(--background-primary)] transition-opacity duration-200 hover:opacity-80">
-                            <Icon path={mdiPlus} size={0.9} /> Add a place
+                            <Icon path={mdiPlus} size={0.9} /> {t("settings.addPlace")}
                         </li>
                     </>
                 )}

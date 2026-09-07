@@ -1,3 +1,5 @@
+import { useTranslation as useCopyLanguage } from "react-i18next";
+import { websiteCopy as dc } from "../i18nCopy";
 import { useState, useEffect, useRef } from "react"
 import Icon from '@mdi/react';
 import { mdiCheck, mdiClose, mdiPencil, mdiPlus, mdiPhone } from '@mdi/js';
@@ -9,6 +11,7 @@ import CircleIconButton from "../components/ui/CircleIconButton";
 import Toggle from "../components/ui/Toggle";
 import { supportTel } from "../constants/support";
 import { useRefreshNotice } from "../hooks/useRefreshNotice";
+import { useWebsiteCopy } from "../hooks/useWebsiteCopy";
 
 const items = ["Emergency contact", "Live location", "Helpline"]
 const panelTones = ["bg-pastel-primary", "bg-pastel-teal", "bg-pastel-violet"]
@@ -21,6 +24,8 @@ const helplines = [
 ]
 
 const SafetyPage = () => {
+    useCopyLanguage();
+    const tr = useWebsiteCopy()
     const emergencyContact = useData(state => state.emergencyContact)
     const setEmergencyContact = useData(state => state.setEmergencyContact)
     const [selected, setSelected] = useState(0)
@@ -44,7 +49,7 @@ const SafetyPage = () => {
         } catch {
             if (!mountedRef.current) return
             notifyRefreshFailed(
-                "Couldn't refresh your safety details. Showing the last saved copy.",
+                dc("Couldn't refresh your safety details. Showing the last saved copy."),
                 () => hydrateContact({ isRetry: true }),
             )
         }
@@ -64,7 +69,7 @@ const SafetyPage = () => {
     const startEdit = () => { setEditingContact(true); setContactError(null); setContactInput(emergencyContact || "") }
     const cancelEdit = () => { setEditingContact(false); setContactError(null) }
     const saveContact = async () => {
-        if (!/^\d{10}$/.test(contactInput)) { setContactError("Enter a 10-digit number"); return }
+        if (!/^\d{10}$/.test(contactInput)) { setContactError(tr("Enter a 10-digit number")); return }
         setSavingContact(true)
         setContactError(null)
         try {
@@ -73,7 +78,7 @@ const SafetyPage = () => {
             setEmergencyContact(contactInput)
             setEditingContact(false)
         } catch {
-            setContactError("Something went wrong. Please try again.")
+            setContactError(tr("Something went wrong. Please try again."))
         } finally {
             setSavingContact(false)
         }
@@ -83,7 +88,7 @@ const SafetyPage = () => {
     const [autoShare, setAutoShare] = useState(true)
 
     return (
-        <AccountLayout items={items} selected={selected} onSelect={setSelected} title="Safety">
+        <AccountLayout items={items.map(tr)} selected={selected} onSelect={setSelected} title={tr("Safety")}>
             <ul className="flex flex-col items-start gap-4 justify-center w-full">
                 {selected === 0 && (
                     editingContact ? (
@@ -96,7 +101,7 @@ const SafetyPage = () => {
                                     value={contactInput}
                                     onChange={(e) => setContactInput(e.target.value.replace(/\D/g, "").slice(0, 10))}
                                     onKeyDown={(e) => { if (e.key === "Enter") saveContact(); if (e.key === "Escape") cancelEdit() }}
-                                    placeholder="XXXXX XXXXX"
+                                    placeholder={dc("XXXXX XXXXX")}
                                     className={`w-full rounded-xl py-2 px-3 text-base text-[var(--text-foreground)] bg-transparent outline-none placeholder:text-[var(--background-primary)]/40 border ${contactError ? "border-[rgba(239,68,68,0.5)]" : "border-[var(--background-primary)]/30"}`}
                                 />
                                 <CircleIconButton icon={mdiCheck} size={0.9} disabled={savingContact} onClick={saveContact} />
@@ -108,19 +113,19 @@ const SafetyPage = () => {
                         </li>
                     ) : (
                         <SettingRow tone={panelTones[selected]} trailing={<CircleIconButton icon={emergencyContact ? mdiPencil : mdiPlus} size={emergencyContact ? 0.8 : 1} onClick={startEdit} />}>
-                            <p className="text-base text-[var(--background-primary)]/50">Emergency contact</p>
-                            <h4 className="text-lg font-medium">{emergencyContact || "Not added yet"}</h4>
+                            <p className="text-base text-[var(--background-primary)]/50">{tr("Emergency contact")}</p>
+                            <h4 className="text-lg font-medium">{emergencyContact || tr("Not added yet")}</h4>
                         </SettingRow>
                     )
                 )}
                 {selected === 0 && (
-                    <p className="text-sm text-[var(--background-primary)]/50 px-2">We'll reach this person if something goes wrong during a ride.</p>
+                    <p className="text-sm text-[var(--background-primary)]/50 px-2">{tr("We'll reach this person if something goes wrong during a ride.")}</p>
                 )}
 
                 {selected === 1 && (
                     <SettingRow tone={panelTones[selected]} trailing={<Toggle on={autoShare} onClick={() => setAutoShare(v => !v)} />}>
-                        <h4 className="text-lg font-medium">Share my live location</h4>
-                        <p className="text-base text-[var(--background-primary)]/50">Let your emergency contact follow your ride in real time when a trip starts.</p>
+                        <h4 className="text-lg font-medium">{tr("Share my live location")}</h4>
+                        <p className="text-base text-[var(--background-primary)]/50">{tr("Let your emergency contact follow your ride in real time when a trip starts.")}</p>
                     </SettingRow>
                 )}
 
@@ -130,8 +135,8 @@ const SafetyPage = () => {
                         tone={panelTones[selected]}
                         trailing={<CircleIconButton icon={mdiPhone} size={0.85} onClick={() => { window.location.href = `tel:${number}` }} />}
                     >
-                        <h4 className="text-lg font-medium">{title}</h4>
-                        <p className="text-base text-[var(--background-primary)]/50">{desc}</p>
+                        <h4 className="break-words text-lg font-medium">{tr(title)}</h4>
+                        <p className="break-words text-base text-[var(--background-primary)]/50">{tr(desc)}</p>
                     </SettingRow>
                 ))}
             </ul>

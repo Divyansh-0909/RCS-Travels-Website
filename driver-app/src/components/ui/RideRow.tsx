@@ -1,3 +1,5 @@
+import { useLanguage as useCopyLanguage } from "../../i18n";
+import { driverCopy as dc } from "../../lib/copy";
 import { Pressable, View } from 'react-native';
 import { cssInterop } from 'nativewind';
 import { CaretRightIcon } from 'phosphor-react-native';
@@ -35,12 +37,13 @@ type Props = {
  * the tap does now.
  */
 const RideRow = ({ booking, onPress, historic }: Props) => {
+    useCopyLanguage();
     const chip = paymentChip(booking);
 
     return (
         <Pressable
             role="button"
-            aria-label={`${booking.user?.name ?? 'Rider'}, ${booking.dropAddress}. ${rideStatusLabel(booking.status)}. ${chip.label}.`}
+            aria-label={dc("{{value0}}, {{value1}}. {{value2}}. {{value3}}.", {value0: (booking.user?.name ?? 'Rider'), value1: (booking.dropAddress), value2: (rideStatusLabel(booking.status)), value3: (chip.label)})}
             onPress={onPress}
             className="w-full rounded-2xl px-4 py-3 gap-3"
             style={{ backgroundColor: PAGE }}

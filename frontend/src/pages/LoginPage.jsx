@@ -1,3 +1,5 @@
+import { useTranslation as useCopyLanguage } from "react-i18next";
+import { websiteCopy as dc } from "../i18nCopy";
 import { useSignIn, useAuth } from "@clerk/clerk-react";
 import { useState, useEffect, useRef } from "react";
 import { useViewNavigate } from "../hooks/useViewNavigate";
@@ -10,8 +12,11 @@ import { useData } from "../hooks/useData";
 import { useOtpClipboard } from "../hooks/useOtpClipboard";
 import CheckMarkOutline from "../components/illustrations/CheckMarkOutline";
 import CrossOutline from "../components/illustrations/CrossOutline";
+import { useWebsiteCopy } from "../hooks/useWebsiteCopy";
 
 const LoginPage = () => {
+    useCopyLanguage();
+  const tr = useWebsiteCopy();
   const { signIn, setActive } = useSignIn();
   const { isSignedIn } = useAuth();
   const navigate = useViewNavigate();
@@ -61,12 +66,12 @@ const LoginPage = () => {
     e.preventDefault();
 
     if (!phone) {
-      setError("Enter a Phone Number");
+      setError(tr("Enter a Phone Number"));
       return;
     }
 
     if (!(phone.length === 10)) {
-      setError("Number should be exactly 10 digits");
+      setError(tr("Number should be exactly 10 digits"));
       return;
     }
 
@@ -76,7 +81,7 @@ const LoginPage = () => {
       await sendOtp()
     } catch (err) {
       console.error(err);
-      setError(err?.message || "Something went wrong");
+      setError(err?.message || tr("Something went wrong"));
     } finally {
       setLoading(false);
     }
@@ -86,12 +91,12 @@ const LoginPage = () => {
     e.preventDefault();
 
     if (!otp) {
-      setError("Enter OTP");
+      setError(tr("Enter OTP"));
       return;
     }
 
     if (!(otp.length === OTP_LENGTH)) {
-      setError("OTP should be exactly 6 digit");
+      setError(tr("OTP should be exactly 6 digit"));
       return;
     }
 
@@ -102,7 +107,7 @@ const LoginPage = () => {
       await verifyOtp()
     } catch (err) {
       console.error(err);
-      setError(err?.message || "Something went wrong");
+      setError(err?.message || tr("Something went wrong"));
       // A throw after the code was accepted leaves the verdict on "pass", which
       // would sit a tick above the error message.
       setVerdict("fail");
@@ -158,7 +163,7 @@ const LoginPage = () => {
       setExpiresIn(OTP_TTL);
     } catch (err) {
       console.error(err);
-      setError("Something went wrong");
+      setError(tr("Something went wrong"));
     } finally {
       setResending(false);
     }
@@ -180,7 +185,7 @@ const LoginPage = () => {
     if (!isSignedIn) {
       const result = await signIn.create({ strategy: "ticket", ticket: data.ticket });
       if (result.status !== "complete") {
-        setError("Sign in failed. Please try again.");
+        setError(tr("Sign in failed. Please try again."));
         // The code was right, so the verdict was already "pass" — but the sign-in
         // it was standing in for did not happen, and leaving a tick over an error
         // message reports the wrong thing.
@@ -215,8 +220,8 @@ const LoginPage = () => {
     setShowSignUp(false);
 
     if (
-      error === "Enter a Phone Number" ||
-      error === "Number should be exactly 10 digits"
+      error === tr("Enter a Phone Number") ||
+      error === tr("Number should be exactly 10 digits")
     ) {
       setError(null);
     }
@@ -306,7 +311,7 @@ const LoginPage = () => {
       {isSignedIn && !redirecting
         ? <div className="flex flex-col justify-center items-center">
           <h2 className="font-bold text-[var(--text)]">
-            You are already <br /> logged in.
+            {tr("You are already logged in.")}
           </h2>
           <Button
             onClick={() => navigate('/')}
@@ -315,7 +320,7 @@ const LoginPage = () => {
             }}
             className="scale-[1] sm:scale-[1.3] mt-6 sm:mt-9"
           >
-            Back
+            {tr("Back")}
           </Button>
         </div>
 
@@ -326,12 +331,12 @@ const LoginPage = () => {
         >
           <div className="flex flex-col justify-center items-center gap-2 sm:gap-3">
             <h2 className="font-bold text-[var(--text)]">
-              {isPhone ? <>Let's get you back <br /> on the road.</> : "Confirm your code."}
+              {isPhone ? tr("Let's get you back on the road.") : tr("Confirm your code.")}
             </h2>
             <p className="text-base sm:text-lg text-[var(--text-muted)]">
               {isPhone
-                ? "We'll send a OTP to this number."
-                : <>Enter the 6-digit code <br className="sm:hidden block" /> we sent to <span className="font-semibold text-[var(--text)]">{phoneDisplay}</span></>}
+                ? tr("We'll send a OTP to this number.")
+                : <>{tr("Enter the 6-digit code we sent to")} <span className="font-semibold text-[var(--text)]">{phoneDisplay}</span></>}
             </p>
           </div>
           <div className="flex flex-col justify-center items-center">
@@ -394,8 +399,8 @@ const LoginPage = () => {
                 </div>
                 <p className={`text-[var(--text-muted)] text-sm mt-1 sm:mt-2 mb-3 sm:mb-5 ${busy ? "invisible" : ""}`}>
                   {expiresIn > 0
-                    ? <>Code expires in <span className="tabular-nums text-[var(--text)]">{formatMMSS(expiresIn)}</span></>
-                    : "Your code has expired."}
+                    ? <>{tr("Code expires in")} <span className="tabular-nums text-[var(--text)]">{formatMMSS(expiresIn)}</span></>
+                    : tr("Your code has expired.")}
                   {/* Chrome fills the boxes on its own once the clipboard
                       permission is granted; this is where that gets granted,
                       and it stays for the browsers that never grant it. Not
@@ -407,7 +412,7 @@ const LoginPage = () => {
                         type="button"
                         onClick={pasteOtp}
                         className="cursor-pointer text-[var(--text)] underline underline-offset-4 decoration-[var(--foreground)]/40 hover:decoration-[var(--foreground)] transition-colors duration-300 rounded-sm outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]/70"
-                      >Paste code</button>
+                      >{tr("Paste code")}</button>
                     </>
                   )}
                 </p>
@@ -418,11 +423,11 @@ const LoginPage = () => {
                   type: "tel",
                   name: "phone-number",
                   id: "phone-number",
-                  placeholder: "XXXXX XXXXX",
+                  get "placeholder"() { return dc("XXXXX XXXXX"); },
                   value: phone,
                   onChangeFn: handlePhoneChange,
-                  error: error === "Enter a Phone Number" ||
-                    error === "Number should be exactly 10 digits",
+                  error: error === tr("Enter a Phone Number") ||
+                    error === tr("Number should be exactly 10 digits"),
                   bg: "var(--background-muted)",
                 }}
                 className="scale-[1] sm:scale-[1.3]"
@@ -443,37 +448,37 @@ const LoginPage = () => {
               className="scale-[1] sm:scale-[1.3] mt-1 sm:mt-5"
             >
               {isPhone
-                ? (showSignUp ? "Sign Up" : (loading ? "Sending OTP..." : "Continue"))
-                : (loading ? "Redirecting..." : "Confirm")}
+                ? (showSignUp ? tr("Sign Up") : (loading ? tr("Sending OTP...") : tr("Continue")))
+                : (loading ? tr("Redirecting...") : tr("Confirm"))}
             </Button>
             {/* Hidden once the 404 flips the main button into "Sign Up" —
                 two sign-up actions on one screen would compete. */}
             {isPhone && !showSignUp && (
               <p className="mt-3 sm:mt-6 text-sm text-[var(--text-muted)]">
-                <span className="text-[var(--text)]">No account?</span>{" "}
+                <span className="text-[var(--text)]">{tr("No account?")}</span>{" "}
                 <button
                   type="button"
                   onClick={() => navigate('/signup')}
                   className="cursor-pointer text-[var(--text)] underline underline-offset-4 decoration-[var(--foreground)]/40 hover:decoration-[var(--foreground)] transition-colors duration-300 rounded-sm outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]/70"
-                >Sign up</button>
+                >{tr("Sign up")}</button>
               </p>
             )}
             {!isPhone && (
               <p className={`mt-3 sm:mt-6 text-sm text-[var(--text-muted)] ${busy ? "invisible" : ""}`}>
-                <span className="text-[var(--text)]">Didn't get it?</span>{" "}
+                <span className="text-[var(--text)]">{dc("Didn't get it?")}</span>{" "}
                 {resending
-                  ? "Sending..."
+                  ? dc("Sending...")
                   : resendIn > 0
-                    ? <span className="tabular-nums">Resend in {resendIn}s</span>
+                    ? <span className="tabular-nums">{dc("Resend in") + " "}{resendIn}s</span>
                     : <button
                       type="button"
                       onClick={handleResend}
                       className="cursor-pointer text-[var(--text)] underline underline-offset-4 decoration-[var(--foreground)]/40 hover:decoration-[var(--foreground)] transition-colors duration-300 rounded-sm outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]/70"
-                    >Resend</button>}
+                    >{dc("Resend")}</button>}
               </p>
             )}
 
-            <p className="text-[var(--text-muted)] text-sm mt-3 sm:mt-5">You consent to receive a OTP <br /> by text or WhatsApp.</p>
+            <p className="text-[var(--text-muted)] text-sm mt-3 sm:mt-5">{dc("You consent to receive a OTP") + " "}<br />{" " + dc("by text or WhatsApp.")}</p>
           </div>
         </form>}
     </div>

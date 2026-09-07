@@ -1,3 +1,5 @@
+import { useLanguage as useCopyLanguage } from "../i18n";
+import { driverCopy as dc } from "../lib/copy";
 import { useEffect, useState } from 'react';
 import { Linking, Pressable, View } from 'react-native';
 import { cssInterop } from 'nativewind';
@@ -41,6 +43,7 @@ const isBusyWith = (bookings: UpcomingBooking[], exceptId: string) =>
     bookings.some((b) => b.id !== exceptId && ACTIVE_RIDE_STATUSES.includes(b.status));
 
 const RideAcceptedSheet = () => {
+    useCopyLanguage();
     const { accepted, clearAccepted } = useOffers();
     const api = useApi();
     const top = useNoticeTop();
@@ -81,7 +84,7 @@ const RideAcceptedSheet = () => {
                 own view so the card never inherits the dim. */}
             <Pressable
                 onPress={clearAccepted}
-                accessibilityLabel="Close"
+                accessibilityLabel={dc("Close")}
                 style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(11,11,20,0.45)' }}
             />
 
@@ -99,12 +102,10 @@ const RideAcceptedSheet = () => {
                     <AppText
                         className={`text-2xl font-semibold ${INK_TEXT}`}
                         style={{ letterSpacing: -0.6 }}
-                    >
-                        Contact the rider
-                    </AppText>
+                    >{dc("Contact the rider")}</AppText>
                     <Pressable
                         role="button"
-                        accessibilityLabel="Close"
+                        accessibilityLabel={dc("Close")}
                         onPress={clearAccepted}
                         hitSlop={12}
                         style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}
@@ -114,15 +115,12 @@ const RideAcceptedSheet = () => {
                     </Pressable>
                 </View>
 
-                <AppText className={`text-base ${MUTED}`}>
-                    Tell them you are on the way. A rider who has heard from you is far
-                    less likely to cancel.
-                </AppText>
+                <AppText className={`text-base ${MUTED}`}>{dc("Tell them you are on the way. A rider who has heard from you is far less likely to cancel.")}</AppText>
 
                 <View className="mt-2 flex-row items-center gap-3">
                     <Pressable
                         role="button"
-                        accessibilityLabel={`Call ${accepted.customerPhone}`}
+                        accessibilityLabel={dc("Call {{value0}}", {value0: (accepted.customerPhone)})}
                         onPress={() => {
                             Linking.openURL(`tel:${accepted.customerPhone}`);
                             // Closed on the way out. He is leaving for the dialler,
@@ -134,7 +132,7 @@ const RideAcceptedSheet = () => {
                         className="w-full h-12 rounded-xl flex flex-row gap-2 items-center justify-center bg-primary"
                     >
                         <Phone size={22} weight="fill" className="text-[var(--foreground)]" />
-                        <AppText className='font-semibold text-lg'>Call Rider</AppText>
+                        <AppText className='font-semibold text-lg'>{dc("Call Rider")}</AppText>
                     </Pressable>
                 </View>
                 

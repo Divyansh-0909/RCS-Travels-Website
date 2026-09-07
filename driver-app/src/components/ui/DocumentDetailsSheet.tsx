@@ -1,3 +1,5 @@
+import { useLanguage as useCopyLanguage } from "../../i18n";
+import { driverCopy as dc } from "../../lib/copy";
 import { useEffect, useState } from 'react';
 import { Keyboard, Modal, Platform, Pressable, TextInput, View } from 'react-native';
 import { XIcon } from 'phosphor-react-native';
@@ -70,6 +72,7 @@ const toIso = (masked: string): string | null => {
 };
 
 const DocumentDetailsSheet = ({ visible, type, label, needsNumber, needsExpiry, onCancel, onSubmit }: Props) => {
+    useCopyLanguage();
   const numberField = numberFieldFor(type);
 
   const [number, setNumber] = useState('');
@@ -157,14 +160,12 @@ const DocumentDetailsSheet = ({ visible, type, label, needsNumber, needsExpiry, 
                   of its own. Both halves fit inside the narrowest column this sheet
                   has (a 360pt phone, less px-5 and the close button), so the break
                   is the only one either line takes. */}
-              <AppText className={`text-sm ${MUTED}`}>
-                Copy these from the document{'\n'}exactly as they are printed.
-              </AppText>
+              <AppText className={`text-sm ${MUTED}`}>{dc("Copy these from the document")}{'\n'}{dc("exactly as they are printed.")}</AppText>
             </View>
 
             <Pressable
               role="button"
-              aria-label="Close"
+              aria-label={dc("Close")}
               onPress={onCancel}
               onPressIn={() => setClosePressed(true)}
               onPressOut={() => setClosePressed(false)}
@@ -209,20 +210,18 @@ const DocumentDetailsSheet = ({ visible, type, label, needsNumber, needsExpiry, 
                   headed "Policy number" is the app forgetting what it just asked
                   for. */}
               {touched && numberBad ? (
-                <AppText className="text-sm" style={{ color: ERROR }}>
-                  Enter the {numberField.label.toLowerCase()} printed on it.
-                </AppText>
+                <AppText className="text-sm" style={{ color: ERROR }}>{dc("Enter the") + " "}{numberField.label.toLowerCase()}{" " + dc("printed on it.")}</AppText>
               ) : null}
             </View>
           ) : null}
 
           {needsExpiry ? (
             <View className="gap-1.5">
-              <AppText className={`text-sm font-semibold ${INK}`}>Valid until</AppText>
+              <AppText className={`text-sm font-semibold ${INK}`}>{dc("Valid until")}</AppText>
               <TextInput
                 value={expiry}
                 onChangeText={(raw) => setExpiry(maskDate(raw))}
-                placeholder="DD/MM/YYYY"
+                placeholder={dc("DD/MM/YYYY")}
                 placeholderTextColor="#9CA3AF"
                 keyboardType="number-pad"
                 maxLength={10}
@@ -236,7 +235,7 @@ const DocumentDetailsSheet = ({ visible, type, label, needsNumber, needsExpiry, 
               />
               {touched && expiryBad ? (
                 <AppText className="text-sm" style={{ color: ERROR }}>
-                  {iso ? 'That date has already passed — check the year.' : 'Enter the date as DD/MM/YYYY.'}
+                  {iso ? dc("That date has already passed — check the year.") : dc("Enter the date as DD/MM/YYYY.")}
                 </AppText>
               ) : null}
             </View>
@@ -270,7 +269,7 @@ const DocumentDetailsSheet = ({ visible, type, label, needsNumber, needsExpiry, 
                 opacity: submitPressed ? 0.85 : 1,
               }}
             >
-              <AppText className="font-semibold text-white">Upload</AppText>
+              <AppText className="font-semibold text-white">{dc("Upload")}</AppText>
             </Pressable>
           </View>
         </View>

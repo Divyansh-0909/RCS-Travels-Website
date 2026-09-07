@@ -289,8 +289,6 @@ const fareAmount = z.number().int().positive().max(100000);
 
 const zoneFares = z.object({
   hatchback: fareAmount,
-  sedan: fareAmount,
-  suv: fareAmount,
 }).partial();
 
 const position = z.tuple([

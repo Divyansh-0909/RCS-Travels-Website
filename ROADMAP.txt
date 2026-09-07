@@ -242,45 +242,32 @@ IMPORTANT:
   will actually quote and get a yes or no on each one. Everything below is a place
   where the card and the code currently disagree, and none of it is guesswork we
   can settle ourselves.
-    1. QUOTED PER-CLASS ZONE FARES ARE DEAD DATA. zones.geojson stores hatchback,
-       sedan, suv and suv_premium for all 45 zones, but rideEstimate.js reads
-       `zone.fares.hatchback` and derives every other class from
-       CLASS_FROM_HATCHBACK. So a price Raju quoted for a specific car in a
-       specific zone loses to the multiplier every time. It is already wrong in
-       production: IGI stores the Ertiga at his 2400, the app charges 1400×1.6 =
-       2250. Connaught Place stores his premium 3000, the app charges 1200×2.75 =
-       3300. THE FIX is small — have hatchbackFrom('zone') return the stored fare
-       for the class being priced and fall back to the multiplier when the zone
-       has none — but it reprices sedan and Ertiga across every zone at once, so
-       confirm the stored numbers with him BEFORE flipping it, not after.
-    2. Premium SUV ×2.75 (August 2026) is fitted to exactly four Innova Crysta
-       quotes: IGI 4000, Connaught Place 3000, Botanical 2200, Advant 2000. Three
-       of them agree at 2.75-2.86; CP alone implies 2.50 and is probably a rounded
-       "3k". Ask him CP again — if it is really 3300 the multiplier is exact and
-       the stored override can go.
-    3. PREMIUM TOLL AND PARKING ARE ALWAYS EXTRA, even on a zone fare — his rule,
-       and NOT what the code does. Today `toll` is a per-zone number added
-       identically to every class and only IGI has one (200). Premium needs a
-       per-class policy: leave the itemised toll at 0, add a `tollsAtActuals`
-       flag, and show "tolls and parking payable to the driver" instead of a
-       fabricated amount. Do NOT invent a parking figure — it varies with how long
-       the car waits, and signQuote would bind us to it. Also: apply the
-       multiplier to the 1400, not to 1400+200, or the toll gets charged twice.
+    1. [DONE 4 Sep 2026] HATCHBACK IS THE ONLY SAVED ZONE PRICE. The user
+       explicitly confirmed that Sedan (+100), SUV (×1.6) and Premium SUV
+       (×2.75) must all be calculated from it. The old per-class values were
+       competing dead data, not overrides; zones.geojson, the admin payload
+       schema, border blending and EditFares now persist one hatchback source
+       and derive the four customer cards from it.
+    2. [DECIDED 4 Sep 2026] Premium SUV ×2.75 is the rule everywhere. There are
+       no per-zone Premium overrides, including Connaught Place. Direct pricing
+       and signed-quote tests cover the rule.
+    3. [DECIDED 5 Sep 2026] Toll and parking are one fixed ₹200 combined charge
+       wherever the rate card specifies it, for every vehicle class. This matches
+       the existing pricing order: derive the class from the base fare first, then
+       add the same ₹200 once. Do not add an actuals flag or a Premium-only rule.
     4. PREMIUM ROUND TRIP = base × 1.5 (second leg at half price), against the
        ×1.64 that Phase 3 records for everyone else. Two things to pin down: does
        ×1.5 cover all classes or only premium, and does "the half fare includes
        toll and parking" mean the return leg only, or the whole round trip? On an
        IGI run that second question is worth about ₹450.
-    5. EditFares has no premium column — CLASSES in frontend/src/pages/EditFares.jsx
-       is hardcoded to hatchback/sedan/suv, so an admin cannot see or edit
-       suv_premium and editing a hatchback re-derives sedan and Ertiga while
-       leaving the premium stale. Add the column and its derive rule with the same
-       ×2.75, or the map editor quietly drifts from the file.
-    6. There is no Botanical Garden zone, despite two `notes` in zones.geojson
-       claiming trips are priced "via the Botanical zone". The metro falls inside
-       Noida central (Sector 18), which happens to carry the same 800, so nothing
-       is mispriced today — but the notes are lying and the next person to redraw
-       Sector 18 will break Botanical without knowing it.
+    5. [DONE 4 Sep 2026] EditFares shows all four calculated prices and edits
+       only the Wagon R source. Its desktop and mobile interactions were visually
+       verified, including a live recalculation and save-review flow.
+    6. [DECIDED 4 Sep 2026] Botanical Garden remains inside the current Noida
+       central (Sector 18) zone. There is intentionally no separate Botanical
+       zone; the misleading file notes were corrected.
+    7. [DECIDED 4 Sep 2026] Kashmiri Gate's removal from the live 44-zone card
+       was intentional. The repository fallback now matches that live zone set.
 - !! GET THE LEGAL DOCS REVIEWED BY A LAWYER. Terms, Privacy, Refunds and Grievance
   in frontend/src/constants/legal.js are a DRAFT written from what the code does,
   not legal advice. Before they can count as published:
@@ -1030,7 +1017,7 @@ Goal: Live tracking, ride history, and multi-language support.
     15% scheduled-advance quote when the driver is within 500 m
     if driver has already reached pickup
   - Multi-language → wrap all strings with i18next, add Hindi translation file
-  - Homepage → hero, vehicle pricing, trust indicators, language switcher
+  - Homepage → hero, vehicle pricing, trust indicators; language control only in Settings
 
 
 LANGUAGE DECISION
@@ -1125,9 +1112,9 @@ reload and change nothing server-side. Each needs an API endpoint + persistence
     [x] Saved places — wired to the saved_places table via
         /api/users/me/saved-places (GET/PUT/DELETE, capped at 12). Home/Work are
         fixed slots; the booking form suggests saved places above recents.
-    [~] Language — persists to the zustand store (partialize) and survives
-        reload, BUT is not actually connected to i18next, so switching it does
-        not change the app language yet. Wire it into the i18n provider.
+    [x] Language — connected to i18next; English, Hindi, and Hinglish persist
+        across reloads. Website control appears only in Settings. Verified all
+        three selections at 390px and 1440px without horizontal overflow.
 
   Safety page (pages/SafetyPage.jsx)
     [ ] Live location — "Share my live location" toggle. Local `autoShare` state.
@@ -1271,13 +1258,10 @@ each numbered block unblocks the ones after it. Outstation is PARKED (see bottom
    provider's own rate-card rules, so they hold everywhere rather than only where
    a column happens to exist.
    !! suv_premium is x2.75 IN THE CODE, not the x3.2 this block originally
-   specified. [SUPERSEDED Aug 2026] The 3.2 was a placeholder of ours and it
-   quoted every premium fare high; 2.75 is fitted to four Innova Crysta quotes
-   Raju gave (IGI 4000, Connaught Place 3000, Botanical 2200, Advant 2000) —
-   three of them agree at 2.74-2.86 and 2.75 rounds to the same card on the ₹50
-   grid. CP alone implies 2.50 and is probably a rounded "3k", which is the one
-   thing still worth asking him. See item 2 of the rate-card block at the top.
-   Do not restore 3.2 anywhere, including the open-questions log.
+   specified. [CONFIRMED 4 Sep 2026] The 3.2 was a placeholder of ours; the user
+   confirmed that Premium must be calculated from hatchback everywhere and that
+   there are no per-zone overrides. Do not restore 3.2 or the old stored Premium
+   values anywhere, including the open-questions log.
 
    Seats are no longer a column: seatsOf(vehicleClass) in constants/vehicles.js
    is the single source, and vehicleCapacity is measured against it — so no
@@ -1285,8 +1269,7 @@ each numbered block unblocks the ones after it. Outstation is PARKED (see bottom
    Driver matching is now EXACT on class, never widened.
    Backfill: 6 -> suv, everything else (4 and the old ANY 1) -> hatchback.
 
-   STILL TO DO: run the migration (prisma/migrations/20260729120000_vehicle_class_enum),
-   reseed, and confirm the premium multiplier with Raju.
+   The migration is applied and the premium multiplier is confirmed.
 
 2. ROUND TRIP (point-to-point only — outstation has no round-trip concept)
    Price: roundTrip = base × 1.64 (18% off the doubled one-way), computed on the
@@ -1338,7 +1321,23 @@ each numbered block unblocks the ones after it. Outstation is PARKED (see bottom
    recipient per leg) so restarts / overlapping ticks can't double-send.
    Scheduler choice (external cron vs Supabase pg_cron) STILL OPEN.
 
-5. PAYMENTS + MONTHLY ACCOUNTS — RAZORPAY CHOSEN 14 Aug 2026. NOT BUILT.
+5. PAYMENTS + MONTHLY ACCOUNTS — PARTLY BUILT; RAZORPAY NOT ACTIVATED.
+   [DONE 18 Aug 2026] The reusable payment foundation and scheduled-customer
+   flow are implemented: server-owned amounts, idempotent Orders, Checkout,
+   server signature/API verification, raw-body signed webhooks, refunds, the
+   15% scheduled advance, and the post-completion remaining payment.
+   [LIVE AUDIT 4 Sep 2026] Production has no RAZORPAY_KEY_ID,
+   RAZORPAY_KEY_SECRET or RAZORPAY_WEBHOOK_SECRET binding, and the Payment table
+   is empty. Add the three Secret Manager values, configure and test the live
+   webhook, and complete one test-mode payment/refund before enabling customers.
+   [LOCAL CHECK 5 Sep 2026] Standard Checkout is configured with gitignored Test
+   Mode credentials and Razorpay accepted a real ₹1 test Order. Checkout no
+   longer incorrectly requires the separate Dashboard webhook secret; order
+   creation enforces Razorpay's ₹1 minimum and maps gateway failures safely.
+   Test credentials have NOT been deployed to production. A webhook secret and
+   an end-to-end Checkout payment/refund are still required before activation.
+   Marketplace deposits, RazorpayX payouts, negative-wallet debt clearing and
+   the monthly-account statement/collection cycle below are still not built.
    Pay later to driver or to Raju. Dues cycle for EVERYONE: statement on the
    1st of the month -> one week to pay -> one WhatsApp reminder per day (~7pm)
    -> bookings blocked on day 8. Monthly-account users (picked by admin from
@@ -1495,8 +1494,8 @@ each numbered block unblocks the ones after it. Outstation is PARKED (see bottom
    INTER-TERMINAL TRIPS are standalone fixed fares (T1<->T3 200, T2<->T1 200,
    T2<->T3 100): both endpoints inside terminals -> pair-price lookup, NO
    airport surcharge, NO marketFare. Telling T2 from T3 needs the Places
-   address string, not a radius. Still open with Raju: is toll/parking inside
-   those prices?
+   address string, not a radius. [DECIDED 5 Sep 2026] Toll and parking are
+   included in those fixed prices; do not add the separate ₹200 again.
 
 9. ASSIGNMENT ENGINE — THREE PRIORITY GROUPS
    PRIORITY GROUPS DONE 8 Aug 2026 (schema + engine, migrated).
@@ -1660,7 +1659,18 @@ each numbered block unblocks the ones after it. Outstation is PARKED (see bottom
    sick leave). Ride returns to the pool and the engine restarts from the top.
 
 10. DRIVER WALLET + RIDE ACCEPTANCE DEPOSIT
-   SCHEMA DONE AND MIGRATED 8 Aug 2026. NO CODE WRITES IT YET.
+   PARTLY BUILT AND MIGRATED. The append-only writer updates the ledger and
+   cached balance atomically with deterministic event keys. Scheduled accept
+   writes the 15% hold, completion/cancellation releases or compensates it,
+   completion writes coupon reimbursement and commission, and complaints write
+   their fine. Balance checks run both before and inside scheduled acceptance.
+   [LIVE AUDIT 4 Sep 2026] There are no wallet entries; the only captain has a
+   ₹0 balance. Because acceptance requires balance >= the 15% hold, that captain
+   cannot accept a scheduled ride. Before launch, add a controlled platform-funded
+   opening-credit/admin-adjustment path and credit the captain appropriately.
+   Still missing: captain transaction/held-balance UI, admin ledger/adjustments,
+   reconciliation of the balance cache against the ledger, negative-debt Razorpay
+   settlement, payout account execution/batching and RazorpayX settlement.
    WalletEntry (append-only ledger, SIGNED amount so the balance is a plain sum),
    WalletEntryType (deposit_hold, deposit_refund, coupon_reimbursement, fine,
    commission, payout, adjustment), PaymentMethod (wallet | cash | upi — the
@@ -1922,18 +1932,12 @@ OUTSTATION — PARKED until the driver app exists. When it returns: per-day
    or the Booking/Trip/Waypoint split. Revisit when MAX_BOOKINGS_PER_VEHICLE
    moves off 2.
 
-OPEN QUESTIONS LOG (updated 20 Aug 2026)
+OPEN QUESTIONS LOG (updated 5 Sep 2026)
    For Raju: (a) 5% commission / ₹800 floor redistribution vs his ₹25-₹100
-   sheet — confirm; (b) inter-terminal prices: toll/parking included?;
-   (c) [REVISED Aug 2026 — the number is now x2.75, fitted to his own four Innova
-   quotes, not the x3.2 placeholder] premium SUV: confirm Connaught Place, which
-   is the one quote of the four that disagrees (it implies 2.50 and is probably a
-   rounded "3k"). If it is really 3300 the multiplier is exact and the stored
-   override can go. See item 2 of the rate-card block at the top;
+   sheet — confirm;
    (d) outstation, whenever it comes back: Wagon R rate, the >250 km/day rate,
    calendar day vs 24h, and the plain/hills split;
-   (e) NEW 8 Aug — ride acceptance deposit: what percentage of the fare?
-   (block 10); (f) ANSWERED 20 Aug — complaint fine is ₹200 at the third
+   (f) ANSWERED 20 Aug — complaint fine is ₹200 at the third
    unique booking complaint; five complaints suspend (block 11);
    For us: (h) NEW 8 Aug — is lifting a driver's suspension Raju-only, or any
    of the three admins? protectAdmin cannot tell them apart today (block 9).
@@ -1953,6 +1957,11 @@ OPEN QUESTIONS LOG (updated 20 Aug 2026)
    ride count (block 12). Driver wallet top-up REFUSED again, and the
    per-ride payment-authorisation alternative refused with it — the ride
    acceptance deposit is a LEDGER DEBIT (block 10).
+   ANSWERED 4 Sep: Premium SUV is always hatchback ×2.75 with no zone override;
+   the scheduled-acceptance deposit is 15% of authoritative fare; Kashmiri Gate
+   stays removed; Botanical Garden remains under Noida central (Sector 18).
+   ANSWERED 5 Sep: the configured ₹200 is the combined toll-and-parking charge
+   for every vehicle; inter-terminal fixed fares already include both.
    NEW 14 Aug, for us: (i) does commission's ₹800 floor test the fare before
    or after the coupon? (block 12 — the tier change makes this worth real
    money); (j) do coupons expire, and if so after how long? No `expiresAt`

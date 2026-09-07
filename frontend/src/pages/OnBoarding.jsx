@@ -1,3 +1,5 @@
+import { useTranslation as useCopyLanguage } from "react-i18next";
+import { websiteCopy as dc } from "../i18nCopy";
 import mobileBackgroundIllustration from "../assets/Mobile.webp";
 import laptopBackgroundIllustration from "../assets/Laptop.webp";
 import Button from "../components/ui/Button";
@@ -9,6 +11,9 @@ import {
   mdiChevronDown,
   mdiCalendarMonthOutline,
   mdiClose,
+  mdiKeyboardBackspace,
+  mdiMapMarkerOutline,
+  mdiBookmarkOutline,
 } from "@mdi/js";
 import Input from "../components/ui/Input";
 import { useApi } from "../hooks/useApi";
@@ -22,6 +27,10 @@ import { statusLabels } from "../constants/statusLabels";
 import { useRefreshNotice } from "../hooks/useRefreshNotice";
 import GoogleMap from "../components/ui/GoogleMap";
 import BackgroundPanel from "../components/ui/BackgroundPanel";
+import { INITIAL_SHEET_SNAP } from "../hooks/useBottomSheet";
+import { CenterPin } from "../components/ui/mapOverlays";
+import { useWebsiteCopy } from "../hooks/useWebsiteCopy";
+import { useTranslation } from "react-i18next";
 
 // ---- Shared layout + type scale -------------------------------------------
 // Same tokens as VehicleSelect / TrackingPage / RideDetails. 377px is the width
@@ -37,6 +46,11 @@ const TRIP_STEP = "gap-4 sm:gap-5";
 // it has to beat the 86vw default Button and Input carry for every other
 // screen. sm+ is untouched — the components keep their fixed widths there.
 const FORM_W = "max-sm:w-[78vw]!";
+const ROUTE_FORM_ID = "route-details-form";
+
+const firstAddressSegment = (address) => typeof address === "string"
+  ? address.split(",")[0].trim()
+  : "";
 
 
 // Autocomplete state for one address field: debounced Google matches at 3+
@@ -84,7 +98,7 @@ export function useAddressSuggestions(value, setValue, setCoords, api, exclusive
 
   const currentLocationItem = {
     id: "__current_location__",
-    label: "Current location",
+    get "label"() { return dc("Current location"); },
     name: "Current location",
     isCurrentLocation: true,
   };
@@ -112,6 +126,15 @@ export function useAddressSuggestions(value, setValue, setCoords, api, exclusive
       .map(s => ({ id: s.placePrediction?.placeId, label: s.placePrediction?.text?.text }))
       .filter(item => typeof item.label === "string" && item.label.trim())
     : [...(allowCurrentLocation ? [currentLocationItem] : []), ...saved, ...recents.map(p => ({ id: p.label, label: p.label, lat: p.lat, lng: p.lng }))];
+
+  function selectResolvedAddress(label, coords) {
+    if (typeof label !== "string" || !label.trim() || !coords) return;
+    justSelectedRef.current = true;
+    setCoords(coords);
+    setValue(label);
+    setExpanded(false);
+    addRecentPlace(label, coords);
+  }
 
   // Only react to actual value CHANGES: a store-prefilled value on mount (and
   // StrictMode's double effect run) must not auto-open the panel or wipe
@@ -152,7 +175,7 @@ export function useAddressSuggestions(value, setValue, setCoords, api, exclusive
       if (data.error) {
         // errors are not cached — the next keystroke should retry
         setGoogleSuggestions([]);
-        setLookupError("Couldn't load suggestions. You can still type the address in full.");
+        setLookupError(dc("Couldn't load suggestions. You can still type the address in full."));
         open();
         return;
       }
@@ -168,7 +191,7 @@ export function useAddressSuggestions(value, setValue, setCoords, api, exclusive
   async function select(item) {
     if (item.isCurrentLocation) {
       if (!navigator.geolocation) {
-        setLookupError("Location isn't available on this device.");
+        setLookupError(dc("Location isn't available on this device."));
         return;
       }
 
@@ -186,7 +209,7 @@ export function useAddressSuggestions(value, setValue, setCoords, api, exclusive
 
           const address = data?.formattedAddress;
           if (data?.error || !address) {
-            setLookupError("Couldn't determine your current address.");
+            setLookupError(dc("Couldn't determine your current address."));
             return;
           }
 
@@ -205,7 +228,7 @@ export function useAddressSuggestions(value, setValue, setCoords, api, exclusive
           });
         },
         () => {
-          setLookupError("Couldn't access your current location.");
+          setLookupError(dc("Couldn't access your current location."));
         },
         {
           enableHighAccuracy: true,
@@ -241,9 +264,9 @@ export function useAddressSuggestions(value, setValue, setCoords, api, exclusive
   }
 
   function onFocus() {
-    // Also opens for a typed query with nothing to show, so returning to the
-    // field re-states why it is empty instead of silently showing nothing.
-    if (items.length || typed) open();
+    // The action rows are useful even before a query or recent place exists,
+    // so a focused address field always owns an open suggestion region.
+    open();
   }
 
   function onBlur() {
@@ -252,8 +275,10 @@ export function useAddressSuggestions(value, setValue, setCoords, api, exclusive
 
   return {
     items,
+    savedItems: saved,
     dropdown,
     select,
+    selectResolvedAddress,
     selectCurrentLocation: () => select(currentLocationItem),
     onFocus,
     onBlur,
@@ -266,7 +291,8 @@ export function useAddressSuggestions(value, setValue, setCoords, api, exclusive
 // reverses rows so the best match stays nearest the input. onMouseDown is
 // prevented panel-wide: blur fires before click and would close the panel
 // before a row's onClick could run.
-export const SuggestionDropdown = ({ anim, items, onSelect, above = false, error = null, typed = false, inline = false, className = "" }) => {
+export const SuggestionDropdown = ({ anim, items, onSelect, actions = [], above = false, error = null, typed = false, inline = false, className = "", emptyTitle, emptyMessage }) => {
+    useCopyLanguage();
   const panelRef = useRef(null);
   const itemsKey = items.map(i => i.id).join("|");
   const animationClass = anim.closing ? "animate-dropdown-out" : "animate-dropdown";
@@ -285,33 +311,26 @@ export const SuggestionDropdown = ({ anim, items, onSelect, above = false, error
   // Nothing to list. A typed query still gets a panel — saying "no matches" or
   // why the lookup failed — but an untouched field with no recents stays silent
   // rather than popping an empty box on focus.
-  if (items.length === 0) {
-    if (!typed && !error) return null;
-    return (
-      <div
-        onMouseDown={(e) => e.preventDefault()}
-        className={`${className} ${panelClass}`}
-      >
-        <div className="px-4 py-3 text-left">
-          <h4 className="text-sm text-[var(--text)]">
-            {error ? "Suggestions unavailable" : "No matching places"}
-          </h4>
-          <p className="text-xs leading-snug text-[var(--text-muted)] mt-0.5">
-            {error || "Check the spelling, or type the address in full and we'll find it."}
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   const rows = above ? [...items].reverse() : items;
+  const showEmptyState = items.length === 0 && (typed || error || emptyTitle);
   return (
     <div
       ref={panelRef}
       onMouseDown={(e) => e.preventDefault()}
       className={`${className} ${panelClass} ${inline ? "" : "max-h-[200px] overflow-y-auto scrollbar-inset"}`}
     >
-      <ul className={`flex w-full flex-col items-center justify-center ${inline ? "py-1" : "py-2"}`}>
+      {showEmptyState && (
+        <div className="px-4 py-3 text-left">
+          <h4 className="text-sm text-[var(--text)]">
+            {emptyTitle || (error ? dc("Suggestions unavailable") : dc("No matching places"))}
+          </h4>
+          <p className="mt-0.5 text-xs leading-snug text-[var(--text-muted)]">
+            {emptyMessage || error || dc("Check the spelling, or type the address in full and we'll find it.")}
+          </p>
+        </div>
+      )}
+
+      {rows.length > 0 && <ul className={`flex w-full flex-col items-center justify-center ${inline ? "py-1" : "py-2"}`}>
         {rows.map((item, index) => {
           const commaIndex = item.label.indexOf(",");
 
@@ -326,7 +345,7 @@ export const SuggestionDropdown = ({ anim, items, onSelect, above = false, error
 
           return (
             <li
-              className={`${inline ? "w-full px-1" : "w-[97%] px-3 rounded-xl"} cursor-pointer transition-colors duration-250 hover:bg-[var(--background-primary)] active:bg-[var(--background-primary)]`}
+              className={`${inline ? "w-full px-4" : "w-[97%] px-3 rounded-xl"} cursor-pointer transition-colors duration-250 hover:bg-[var(--background-primary)] active:bg-[var(--background-primary)]`}
               onClick={() => onSelect(item)}
               key={item.id}>
               <div
@@ -338,14 +357,36 @@ export const SuggestionDropdown = ({ anim, items, onSelect, above = false, error
                 <h4 className={`text-left text-base ${inline ? "font-medium" : ""}`}>{mainLocation}</h4>
                 <p className={`text-left text-[var(--text-muted)] ${inline ? "text-sm" : "text-xs"}`}>
                   {item.isCurrentLocation
-                    ? "Use your current location"
+                    ? dc("Use your current location")
                     : remainingLocation}
                 </p>
               </div>
             </li>
           );
         })}
-      </ul>
+      </ul>}
+
+      {actions.length > 0 && (
+        <ul className={`flex w-full flex-col ${rows.length > 0 || showEmptyState ? "border-t border-[var(--foreground)]/15" : ""} ${inline ? "px-4 py-2" : "px-3 py-2"}`}>
+          {actions.map((action) => (
+            <li key={action.id}>
+              <button
+                type="button"
+                onClick={action.onClick}
+                className="flex min-h-12 w-full cursor-pointer items-center gap-3 rounded-xl px-1 py-2 text-left transition-colors duration-200 hover:bg-[var(--background-primary)] active:bg-[var(--background-primary)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]/70"
+              >
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[var(--background-muted)] text-[var(--text)]">
+                  <Icon path={action.icon} size={0.9} aria-hidden="true" />
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-base font-medium text-[var(--text)]">{action.label}</span>
+                  {action.description && <span className="block text-xs leading-snug text-[var(--text-muted)]">{action.description}</span>}
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 };
@@ -353,10 +394,19 @@ export const SuggestionDropdown = ({ anim, items, onSelect, above = false, error
 // The route form uses the same draggable booking sheet as the later vehicle
 // stage on phones. From sm upward it stays a regular content column so the
 // established form-and-map split is unchanged.
-const RoutePanel = ({ sheet, isMobile, className, children }) => {
+const RoutePanel = ({ sheet, isMobile, className, children, bottomInset = 0, contentKey, fillAvailable = true, onSnapChange }) => {
+    useCopyLanguage();
   if (sheet && isMobile) {
     return (
-      <BackgroundPanel sheet className={className}>
+      <BackgroundPanel
+        sheet
+        fillAvailable={fillAvailable}
+        duration={420}
+        bottomInset={bottomInset}
+        contentKey={contentKey}
+        onSnapChange={onSnapChange}
+        className={className}
+      >
         {children}
       </BackgroundPanel>
     );
@@ -368,7 +418,12 @@ const RoutePanel = ({ sheet, isMobile, className, children }) => {
 const ACTIVE_STATUSES = ["pending", "confirmed", "assigned", "en_route", "reached", "started"];
 const OUTSTATION_DISTANCE_KM = 200;
 
-const OnBoarding = ({ bookingStage = false }) => {
+const OnBoarding = ({ bookingStage = false, timingStep = false, highlightRideNow = false, onMapPickerChange }) => {
+    useCopyLanguage();
+  const tr = useWebsiteCopy();
+  const { i18n } = useTranslation();
+  const dateLocale = i18n.language === "hi" ? "hi-IN" : "en-IN";
+  const formWidth = bookingStage ? "max-sm:w-full!" : FORM_W;
   const timing = useData(state => state.timing);
   const setTiming = useData(state => state.setTiming);
   const [expand, setExpand] = useState(false);
@@ -519,7 +574,146 @@ const OnBoarding = ({ bookingStage = false }) => {
   const dropAutocomplete = useAddressSuggestions(dropLocation, setDrop, setDropCoords, api, suggestionCloserRef, closeTimingPanels,false)
   const isMobile = useIsMobile();
   const [activeSuggestion, setActiveSuggestion] = useState(null);
+  const [editingLocation, setEditingLocation] = useState(null);
+  const [savedSuggestionTarget, setSavedSuggestionTarget] = useState(null);
+  const [mapPickerTarget, setMapPickerTarget] = useState(null);
+  const [mapPickerCoords, setMapPickerCoords] = useState(null);
+  const [mapPickerLoading, setMapPickerLoading] = useState(false);
+  const [mapPickerError, setMapPickerError] = useState(null);
+  const dropInputRef = useRef(null);
+  const dropAutoFocusedRef = useRef(false);
   const currentLocationRequested = useRef(false);
+
+  useEffect(() => {
+    onMapPickerChange?.(Boolean(mapPickerTarget));
+    return () => onMapPickerChange?.(false);
+  }, [mapPickerTarget, onMapPickerChange]);
+
+  const selectPickupSuggestion = (item) => {
+    document.activeElement?.blur();
+    setEditingLocation(null);
+    setActiveSuggestion(null);
+    setSavedSuggestionTarget(null);
+    return pickupAutocomplete.select(item);
+  };
+
+  const selectDropSuggestion = (item) => {
+    document.activeElement?.blur();
+    setEditingLocation(null);
+    setActiveSuggestion(null);
+    setSavedSuggestionTarget(null);
+    return dropAutocomplete.select(item);
+  };
+
+  const autocompleteFor = (target) => target === "pickup" ? pickupAutocomplete : dropAutocomplete;
+
+  const startMapPicker = (target) => {
+    document.activeElement?.blur();
+    closeSuggestions();
+    setEditingLocation(null);
+    setActiveSuggestion(null);
+    setSavedSuggestionTarget(null);
+    setMapPickerError(null);
+    setMapPickerCoords(
+      (target === "pickup" ? pickupCoords : dropCoords)
+      ?? pickupCoords
+      ?? dropCoords
+      ?? { lat: 28.6315, lng: 77.2167 },
+    );
+    setMapPickerTarget(target);
+  };
+
+  const closeMapPicker = () => {
+    const target = mapPickerTarget;
+    setMapPickerTarget(null);
+    setMapPickerError(null);
+    window.setTimeout(() => document.getElementById(`${target}-location`)?.focus(), 0);
+  };
+
+  const confirmMapPicker = async () => {
+    if (!mapPickerTarget || !mapPickerCoords || mapPickerLoading) return;
+    setMapPickerLoading(true);
+    setMapPickerError(null);
+    try {
+      const data = await api.reverseGeocode(mapPickerCoords.lat, mapPickerCoords.lng);
+      if (data?.error || !data?.formattedAddress) {
+        setMapPickerError(dc("Couldn't find an address at this point. Move the map and try again."));
+        return;
+      }
+      autocompleteFor(mapPickerTarget).selectResolvedAddress(data.formattedAddress, mapPickerCoords);
+      setMapPickerTarget(null);
+    } catch {
+      setMapPickerError(dc("Couldn't find an address at this point. Move the map and try again."));
+    } finally {
+      setMapPickerLoading(false);
+    }
+  };
+
+  const suggestionActions = (target) => [
+    {
+      id: `${target}-map`,
+      get "label"() { return dc("Set location on map"); },
+      get "description"() { return dc("Choose a precise point"); },
+      icon: mdiMapMarkerOutline,
+      onClick: () => startMapPicker(target),
+    },
+    {
+      id: `${target}-saved`,
+      get "label"() { return dc("See saved places"); },
+      get "description"() { return dc("Home, Work and saved addresses"); },
+      icon: mdiBookmarkOutline,
+      onClick: () => setSavedSuggestionTarget(target),
+    },
+  ];
+
+  const suggestionItemsFor = (target, autocomplete) => {
+    if (savedSuggestionTarget === target) return autocomplete.savedItems;
+    if (autocomplete.typed) return autocomplete.items;
+    const oppositeLocation = target === "pickup" ? dropLocation : pickupLocation;
+    return autocomplete.items.filter(item => (
+      item.saved || !oppositeLocation?.trim() || item.label !== oppositeLocation
+    ));
+  };
+
+  // The route step uses the same mobile sheet contract as vehicle selection:
+  // the primary action lives in a measured bar below the sheet, and the sheet
+  // reports its settled stop so secondary copy can disappear when collapsed.
+  const showsCurrentTrip = !!(activeBooking && authed && !activeBooking.scheduledAt);
+  const showsRouteForm = !showsCurrentTrip
+    && (!(activeBooking && authed && activeBooking.scheduledAt) || showForm);
+  const pinPriceBar = bookingStage && isMobile && showsRouteForm && !mapPickerTarget;
+  const priceBarRef = useRef(null);
+  const [priceBarHeight, setPriceBarHeight] = useState(0);
+  const [sheetSnap, setSheetSnap] = useState(INITIAL_SHEET_SNAP);
+
+  useEffect(() => {
+    const el = priceBarRef.current;
+    if (!el) {
+      setPriceBarHeight(0);
+      return;
+    }
+    setPriceBarHeight(el.offsetHeight);
+    const observer = new ResizeObserver(([entry]) => {
+      setPriceBarHeight(entry.borderBoxSize?.[0]?.blockSize ?? entry.contentRect.height);
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [pinPriceBar]);
+
+  useEffect(() => {
+    if (!pinPriceBar) setSheetSnap(INITIAL_SHEET_SNAP);
+  }, [pinPriceBar]);
+
+  const priceBarCollapsed = pinPriceBar && sheetSnap === "collapsed";
+
+  useEffect(() => {
+    if (!bookingStage || !isMobile || timingStep || mapPickerTarget || !showsRouteForm || dropAutoFocusedRef.current) return undefined;
+    const frame = window.requestAnimationFrame(() => {
+      dropInputRef.current?.focus({ preventScroll: true });
+      if (document.activeElement === dropInputRef.current) dropAutoFocusedRef.current = true;
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [bookingStage, isMobile, timingStep, mapPickerTarget, showsRouteForm]);
 
   // The route form now follows the destination-first landing bar. A pickup is
   // therefore useful immediately, rather than asking the rider to re-enter
@@ -564,13 +758,8 @@ const OnBoarding = ({ bookingStage = false }) => {
     return () => window.removeEventListener("resize", update);
   }, [calendarDropdown.mounted, isMobile]);
 
-  async function handleSubmit(e) {
+  function handleSubmit(e) {
     e.preventDefault();
-
-    if (timing === "Schedule" && !scheduledTime) {
-      setError("No Scheduled Time");
-      return;
-    }
 
     if (!pickupLocation?.trim()) {
       setError("No Pickup Location");
@@ -581,6 +770,31 @@ const OnBoarding = ({ bookingStage = false }) => {
       setError("No Drop Location");
       return;
     }
+
+    setError(null);
+    if (timing === "Schedule") {
+      closeSuggestions();
+      setExpand(false);
+      navigate("/book", { state: { stage: "timing" } });
+      return;
+    }
+
+    continueToPrices();
+  }
+
+  function handleTimingContinue() {
+    if (!scheduledTime) {
+      setError("No Scheduled Time");
+      return;
+    }
+    if (scheduledTime.getTime() < Date.now() + 30 * 60 * 1000) {
+      setError("Scheduled Time Too Soon");
+      return;
+    }
+    continueToPrices();
+  }
+
+  async function continueToPrices() {
 
     // Guard against booking a ride that collides with the current active one.
     if (activeBooking) {
@@ -597,15 +811,15 @@ const OnBoarding = ({ bookingStage = false }) => {
       if (sameSlot) {
         setError(
           activeBooking.scheduledAt
-            ? "You already have a ride scheduled around this time"
-            : "You already have a ride active right now"
+            ? dc("You already have a ride scheduled around this time")
+            : dc("You already have a ride active right now")
         );
         return;
       }
 
       // Same route at a different time is almost certainly a duplicate.
       if (sameRoute) {
-        setError("You already have an active booking for this route");
+        setError(dc("You already have an active booking for this route"));
         return;
       }
     }
@@ -664,98 +878,258 @@ const OnBoarding = ({ bookingStage = false }) => {
       });
     } catch (err) {
       console.error(err);
-      setError("Something went wrong");
+      setError(tr("Something went wrong"));
     } finally {
       setLoading(false);
     }
   }
 
+  // One action definition serves the desktop form and the mobile bar. The
+  // `form` attribute lets the pinned mobile button submit the form inside the
+  // sheet, exactly like the vehicle step's Book button.
+  const scheduledTimeIsBookable = scheduledTime instanceof Date
+    && scheduledTime.getTime() >= Date.now() + 30 * 60 * 1000;
+
+  const priceAction = (
+    <div className={`flex w-full shrink-0 flex-col gap-2 sm:items-start sm:gap-5 ${bookingStage ? "items-start" : "items-center"}`}>
+      <Button
+        onClick={timingStep ? handleTimingContinue : undefined}
+        prop={{
+          type: timingStep ? "button" : "submit",
+          form: timingStep ? undefined : ROUTE_FORM_ID,
+          disabled:
+            loading ||
+            (timingStep && !scheduledTimeIsBookable) ||
+            !pickupLocation?.trim() ||
+            !dropLocation?.trim(),
+        }}
+        className={`scale-[1] sm:scale-[1.3] sm:origin-left ${formWidth}`}
+      >
+        {loading ? tr("Loading...") : tr("See prices")}
+      </Button>
+
+      {!priceBarCollapsed && (
+        <p className={`relative text-[var(--text-muted)] sm:order-first sm:text-left sm:text-lg ${bookingStage ? "w-full text-center sm:w-auto" : "order-first text-center"}`}>
+          {timingStep && error === "Scheduled Time Too Soon"
+            ? tr("* Choose a time at least 30 minutes from now")
+            : timing === "Now"
+            ? tr("* Subject to availability")
+            : tr("* 99% guaranteed cab allocation")}
+        </p>
+      )}
+    </div>
+  );
+
   return (
     <div className={`relative flex h-[100dvh] flex-col items-center bg-[var(--background-primary)] sm:flex-row sm:justify-center sm:px-[9%] md:px-[5%] lg:justify-between xl:px-[13%] ${bookingStage ? "overflow-hidden" : "sm:pt-16"}`}>
       <RoutePanel
+        key={mapPickerTarget ? `map-${mapPickerTarget}` : timingStep ? "timing" : "details"}
         sheet={bookingStage}
         isMobile={isMobile}
-        className={`z-10 flex h-[inherit] w-full max-w-[500px] flex-col items-center py-8 sm:h-fit sm:justify-center lg:items-start ${bookingStage ? "max-sm:min-h-[calc(100dvh-56px)] max-sm:justify-start max-sm:px-[7vw] max-sm:py-6 max-sm:pb-[calc(1.25rem+env(safe-area-inset-bottom))]" : "justify-end"}`}
+        bottomInset={pinPriceBar ? priceBarHeight : 0}
+        contentKey={`${showsRouteForm}-${timingStep}-${timing}-${activeSuggestion ?? "none"}-${mapPickerTarget ?? "form"}`}
+        fillAvailable={!mapPickerTarget}
+        onSnapChange={setSheetSnap}
+        className={`z-10 flex h-[inherit] w-full max-w-[500px] flex-col items-center py-8 sm:h-fit sm:justify-center lg:items-start ${bookingStage ? mapPickerTarget ? "max-sm:h-auto max-sm:items-start max-sm:justify-start max-sm:px-[7vw] max-sm:py-6" : "max-sm:items-start max-sm:justify-start max-sm:px-[5vw] max-[359px]:px-2! max-sm:py-6 max-sm:pb-0" : "justify-end"}`}
       >
-        {(activeBooking && authed && !activeBooking.scheduledAt)
+        {bookingStage && !mapPickerTarget && (
+          <button
+            type="button"
+            onClick={() => timingStep
+              ? navigate("/book", { replace: true })
+              : navigate("/")}
+            aria-label={timingStep ? tr("Back to route details") : tr("Back to home")}
+            className="absolute -top-12 left-4 z-20 my-1 flex h-9 cursor-pointer items-center justify-center rounded-full border border-[var(--foreground)]/30 bg-[var(--background-muted)] px-3 text-[var(--text)] shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)] transition-opacity duration-300 hover:opacity-100 active:opacity-70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)] sm:hidden"
+          >
+            <Icon path={mdiKeyboardBackspace} size={1.2} aria-hidden="true" />
+          </button>
+        )}
+        {mapPickerTarget
+          ? <div className={`flex w-full flex-col items-start gap-4 ${COL}`}>
+              <div className="flex w-full flex-col items-start gap-1">
+                <h1 className={`text-left ${TITLE}`}>{tr("Confirm")} {mapPickerTarget === "pickup" ? tr("pickup") : tr("drop")} {tr("location")}</h1>
+                <p className="text-left text-base leading-snug text-[var(--text-muted)] sm:text-lg">
+                  {tr("Move the map until the pin is exactly where you want it.")}
+                </p>
+              </div>
+              {mapPickerError && <p className="text-left text-sm leading-snug text-red-400">{mapPickerError}</p>}
+              <Button
+                onClick={confirmMapPicker}
+                prop={{ type: "button", width: "100%", disabled: mapPickerLoading || !mapPickerCoords }}
+                className="my-0! w-full"
+              >
+                <span className="text-base sm:text-lg">{mapPickerLoading ? tr("Finding address...") : dc("{{value0}} {{value1}} {{value2}}", {value0: (tr("Confirm")), value1: (mapPickerTarget === "pickup" ? tr("pickup") : tr("drop")), value2: (tr("location"))})}</span>
+              </Button>
+            </div>
+          : (activeBooking && authed && !activeBooking.scheduledAt)
           ? <div className={`flex w-full flex-col items-center justify-center lg:items-start ${TRIP_STEP}`}>
             <div className={`flex flex-col items-center ${COL}`}>
-              <h1 className="w-full text-center text-2xl font-semibold leading-tight tracking-[-0.03em] sm:text-4xl">Current Trip</h1>
+              <h1 className="w-full text-center text-2xl font-semibold leading-tight tracking-[-0.03em] sm:text-4xl">{tr("Current Trip")}</h1>
             </div>
 
             <div className={`flex flex-col items-stretch gap-3 text-left ${COL}`}>
               <div className="rounded-2xl bg-[var(--background-muted)] px-5 py-4 text-center" aria-live="polite">
                 <p className="text-lg font-semibold leading-tight sm:text-xl">
-                  {statusLabels[activeBooking.status] || "On trip"}
+                  {tr(statusLabels[activeBooking.status] || "On trip")}
                 </p>
               </div>
               <Button onClick={openActiveBooking} className="my-0!" prop={{ variant: "", width: "100%" }}>
-                <span className="text-base sm:text-lg">Track Ride</span>
+                <span className="text-base sm:text-lg">{tr("Track Ride")}</span>
               </Button>
             </div>
           </div>
-          : <div className={`flex flex-col text-center lg:text-left justify-center items-center lg:items-start gap-1 sm:gap-5 ${bookingStage ? "max-sm:min-h-0 max-sm:w-full max-sm:flex-1 max-sm:justify-start max-sm:gap-3" : ""}`}>
+          : <div className={`flex flex-col text-center lg:text-left justify-center items-center lg:items-start gap-1 sm:gap-5 ${bookingStage ? "max-sm:min-h-0 max-sm:w-full max-sm:flex-1 max-sm:items-start max-sm:justify-start max-sm:gap-3 max-sm:text-left" : ""}`}>
             {activeBooking && authed && activeBooking.scheduledAt && !showForm
               ? <div className={`flex w-[86vw] flex-col items-center justify-center sm:w-[377px] ${TRIP_STEP}`}>
                 <div className="flex w-full flex-col items-center">
-                  <h1 className="w-full text-center text-2xl font-semibold leading-tight tracking-[-0.03em] sm:text-4xl">Scheduled Ride</h1>
+                  <h1 className="w-full text-center text-2xl font-semibold leading-tight tracking-[-0.03em] sm:text-4xl">{tr("Scheduled Ride")}</h1>
                 </div>
                 <div className="flex w-full flex-col items-stretch gap-3 text-left">
                   <div className="rounded-2xl bg-[var(--background-muted)] px-5 py-4 text-center" aria-live="polite">
                     <p className="text-sm leading-snug text-[var(--text-muted)] sm:text-base">
-                      {new Date(activeBooking.scheduledAt).toLocaleString("en-GB", {
+                      {new Date(activeBooking.scheduledAt).toLocaleString(dateLocale, {
                         day: "numeric", month: "short", hour: "numeric", minute: "2-digit", hour12: true,
                       })}
                     </p>
                     <p className="mt-1 text-lg font-semibold leading-tight sm:text-xl">
-                      {statusLabels[activeBooking.status] || activeBooking.status}
+                      {tr(statusLabels[activeBooking.status] || activeBooking.status)}
                     </p>
                   </div>
 
                   <Button onClick={openActiveBooking} className="my-0!" prop={{ variant: "", width: "100%" }}>
-                    <span className="text-base sm:text-lg">View Ride</span>
+                    <span className="text-base sm:text-lg">{tr("View Ride")}</span>
                   </Button>
 
                   <Button onClick={() => setShowForm(true)} className="my-0!" prop={{ variant: "input", width: "100%", bg: "var(--background-primary)" }}>
-                    <span className="text-base sm:text-lg">Book another ride</span>
+                    <span className="text-base sm:text-lg">{tr("Book another ride")}</span>
                   </Button>
                 </div>
               </div>
               : ""}
 
-            {(!(activeBooking && authed && activeBooking.scheduledAt) || showForm) && (<>
-              <h1 className={`shrink-0 text-center text-2xl font-semibold leading-tight tracking-[-0.03em] sm:text-left sm:text-4xl ${FORM_W} sm:w-[377px]`}>
-                Find a ride
+            {(!(activeBooking && authed && activeBooking.scheduledAt) || showForm) && (timingStep ? (
+              <section className={`flex w-full min-h-0 flex-1 flex-col items-center gap-4 sm:w-[377px] sm:flex-none sm:items-start sm:gap-5`}>
+                <div className="w-full shrink-0">
+                  <h1 className={`text-left ${TITLE}`}>{tr("Choose date & time")}</h1>
+                  <p className={`mt-1 text-left ${SUBTITLE}`}>{tr("When should your driver arrive?")}</p>
+                </div>
+
+                <div data-sheet-scroll className="min-h-0 w-full flex-1 overflow-y-auto overscroll-contain px-1 pb-2 scrollbar-inset sm:flex-none sm:overflow-visible sm:px-0 sm:pb-0">
+                  <DateTimeSelector
+                    page
+                    initial={scheduledTime}
+                    showClose={false}
+                    showConfirm={false}
+                    onChange={(dt) => {
+                      setScheduledTime(dt);
+                      if (error === "No Scheduled Time" || error === "Scheduled Time Too Soon") setError(null);
+                    }}
+                  />
+                </div>
+
+                {(!bookingStage || !isMobile) && priceAction}
+              </section>
+            ) : <>
+              <h1 className={`shrink-0 text-left ${TITLE} ${formWidth} sm:w-[377px]`}>
+                {tr("Find a ride")}
               </h1>
               <form
-                data-sheet-scroll={bookingStage ? "" : undefined}
-                className={`mt-1 flex flex-col items-start gap-1 sm:mt-1 sm:w-[377px] sm:justify-center sm:gap-5 ${bookingStage ? "max-sm:min-h-0 max-sm:w-full max-sm:flex-1 max-sm:items-center max-sm:overflow-hidden" : "justify-center"}`}
+                id={ROUTE_FORM_ID}
+                className={`mt-1 flex flex-col items-start gap-1 sm:mt-1 sm:w-[377px] sm:justify-center sm:gap-5 ${bookingStage ? "max-sm:min-h-0 max-sm:w-full max-sm:flex-1 max-sm:items-start max-sm:overflow-clip" : "justify-center"}`}
                 noValidate
                 onSubmit={handleSubmit}
               >
-                <div className="flex w-full shrink-0 flex-col items-center gap-1 sm:contents">
+                <div className="flex w-full shrink-0 flex-col items-start gap-2 sm:contents">
                 {error && (
                   <p className={`${error ? "opacity-[1]" : "opacity-[0]"} relative text-red-400 left-1/2 -translate-x-1/2 sm:left-0 sm:translate-x-0 text-sm`}>
-                    {error}
+                    {dc(error)}
                   </p>
                 )}
-                <div className="flex bg-[var(--background-muted)] mb-1 sm:mb-0 outline outline-[var(--foreground)]/40 rounded-full gap-1 sm:gap-2 p-1.5 sm:p-2 [&>*]:text-base [&>*]:sm:text-xl [&>*]:py-1 [&>*]:px-3 [&>*]:sm:py-2 [&>*]:sm:px-3 [&>*]:cursor-pointer [&>*]:rounded-full">
-                  <h3 onClick={() => setIsRoundTrip(false)} className={`transition-color duration-300 text-[var(--text)] ${isRoundTrip ? "" : "bg-primary"}`}>
-                    One way
-                  </h3>
-                  <h3 onClick={() => setIsRoundTrip(true)} className={`transition-color duration-300 text-[var(--text)] ${isRoundTrip ? "bg-primary" : ""}`}>
-                    Round trip
-                  </h3>
+                <div className={`mb-2 flex items-center justify-start gap-1 px-1 max-[335px]:flex-wrap max-[335px]:gap-y-2 ${formWidth} sm:mb-0 sm:w-[377px] sm:gap-2 sm:px-0`}>
+                  <div className="flex shrink-0 gap-1 rounded-full bg-[var(--background-muted)] p-1.5 outline outline-[var(--foreground)]/40 sm:gap-2 sm:p-2 [&>*]:cursor-pointer [&>*]:rounded-full [&>*]:px-3 [&>*]:py-1 [&>*]:text-base [&>*]:sm:px-3 [&>*]:sm:py-2 [&>*]:sm:text-xl">
+                    <button type="button" aria-pressed={!isRoundTrip} onClick={() => setIsRoundTrip(false)} className={`transition-colors duration-300 text-[var(--text)] ${isRoundTrip ? "" : "bg-primary"}`}>
+                      {tr("One way")}
+                    </button>
+                    <button type="button" aria-pressed={isRoundTrip} onClick={() => setIsRoundTrip(true)} className={`transition-colors duration-300 text-[var(--text)] ${isRoundTrip ? "bg-primary" : ""}`}>
+                      {tr("Round trip")}
+                    </button>
+                  </div>
+
+                  <div className="relative shrink-0">
+                    <Button
+                      onClick={() => {
+                        closeSuggestions();
+                        setExpandCalendar(false);
+                        setExpand(!expand);
+                      }}
+                      prop={{
+                        variant: "input",
+                        bg: highlightRideNow && timing === "Now"
+                          ? "var(--foreground)"
+                          : expand ? "var(--background-primary)" : "var(--background-muted)",
+                      }}
+                      className={`relative my-0! px-2 sm:origin-left sm:scale-[1.2] ${highlightRideNow && timing === "Now"
+                        ? "text-[var(--text-foreground)]! hover:bg-[var(--foreground)]! active:bg-[var(--foreground)]/90!"
+                        : ""
+                      }`}
+                    >
+                      <div className="flex w-full items-center justify-center gap-1 whitespace-nowrap">
+                        <Icon path={mdiClockTimeFourOutline} size={isMobile ? 0.8 : 0.9} />
+                        {timing === "Schedule" ? tr("Later") : tr(timing)}
+                        <Icon
+                          className="opacity-70 transition-opacity duration-300 hover:opacity-100"
+                          path={mdiChevronDown}
+                          size={isMobile ? 0.8 : 0.9}
+                          style={{ transform: expand ? "rotate(180deg)" : "rotate(0deg)" }}
+                        />
+                      </div>
+                    </Button>
+
+                    {timingDropdown.mounted && (
+                      <Button
+                        prop={{ variant: "dropdown", width: "155px" }}
+                        className={`absolute right-0 top-12 z-10 block origin-top-right scale-[1] active:opacity-[1] hover:opacity-[1] sm:left-0 sm:right-auto sm:top-14 sm:origin-top-left sm:scale-[1.2] ${timingDropdown.closing ? "animate-dropdown-out" : "animate-dropdown"}`}
+                      >
+                        <div className="flex flex-col items-start">
+                          <div
+                            onClick={() => {
+                              setTiming("Schedule");
+                              setExpandCalendar(false);
+                              setExpand(false);
+                            }}
+                            className={`flex w-full items-center gap-2 border-b border-[var(--foreground)]/40 py-1 pb-2 ${timing === "Schedule" ? "text-white-muted" : "text-white"}`}
+                          >
+                            {tr("Schedule a ride")}
+                          </div>
+                          <div
+                            onClick={() => {
+                              setTiming("Now");
+                              setExpand(false);
+                              setError(null);
+                              setExpandCalendar(false);
+                              setScheduledTime(null);
+                            }}
+                            className={`flex w-full items-center gap-2 py-1 pt-2 ${timing === "Now" ? "text-white-muted" : "text-white"}`}
+                          >
+                            {tr("Ride now")}
+                          </div>
+                        </div>
+                      </Button>
+                    )}
+                  </div>
                 </div>
-                <div className="relative">
+                <div className={`relative ${bookingStage ? "max-sm:w-full" : ""}`}>
                   <Input
                     prop={{
                       type: "text",
                       id: "pickup-location",
                       name: "pickup-location",
-                      placeholder: "Pickup Location",
-                      value: pickupLocation,
+                      placeholder: tr("Pickup Location"),
+                      value: editingLocation === "pickup"
+                        ? pickupLocation
+                        : firstAddressSegment(pickupLocation),
                       onChangeFn: (value) => {
+                        setSavedSuggestionTarget(null);
                         setPickup(value);
                         if (error === "No Pickup Location") {
                           setError(null);
@@ -765,12 +1139,16 @@ const OnBoarding = ({ bookingStage = false }) => {
                       bg: "var(--background-muted)",
                       autoComplete: "off",
                       onFocusFn: () => {
+                        setEditingLocation("pickup");
                         setActiveSuggestion("pickup");
                         pickupAutocomplete.onFocus();
                       },
-                      onBlurFn: pickupAutocomplete.onBlur,
+                      onBlurFn: () => {
+                        setEditingLocation(null);
+                        pickupAutocomplete.onBlur();
+                      },
                     }}
-                    className={`scale-[1] sm:scale-[1.3] sm:origin-left ${FORM_W}`}
+                    className={`scale-[1] sm:scale-[1.3] sm:origin-left ${formWidth}`}
                     leading={
                       <div className="w-3 h-3 rounded-full bg-[var(--foreground)]" />
                     }
@@ -778,7 +1156,7 @@ const OnBoarding = ({ bookingStage = false }) => {
                       pickupLocation?.trim() ? (
                         <button
                           type="button"
-                          aria-label="Clear pickup location"
+                          aria-label={tr("Clear pickup location")}
                           onClick={() => setPickup("")}
                           className="flex items-center justify-center cursor-pointer rounded-full
                             text-[var(--text-muted)] hover:text-[var(--text)] active:opacity-70
@@ -792,24 +1170,30 @@ const OnBoarding = ({ bookingStage = false }) => {
 
                   {(!bookingStage || !isMobile) && <SuggestionDropdown
                     anim={pickupAutocomplete.dropdown}
-                    items={pickupAutocomplete.items}
-                    onSelect={pickupAutocomplete.select}
+                    items={suggestionItemsFor("pickup", pickupAutocomplete)}
+                    onSelect={selectPickupSuggestion}
+                    actions={suggestionActions("pickup")}
                     above={isMobile}
-                    error={pickupAutocomplete.lookupError}
-                    typed={pickupAutocomplete.typed}
+                    error={savedSuggestionTarget === "pickup" ? null : pickupAutocomplete.lookupError}
+                    typed={savedSuggestionTarget === "pickup" ? false : pickupAutocomplete.typed}
+                    emptyTitle={savedSuggestionTarget === "pickup" ? dc("No saved places yet") : undefined}
+                    emptyMessage={savedSuggestionTarget === "pickup" ? dc("Save Home, Work or another address from Settings.") : undefined}
                   />}
                 </div>
 
 
-                <div className="relative">
+                <div className={`relative ${bookingStage ? "max-sm:w-full" : ""}`}>
                   <Input
                     prop={{
                       type: "text",
                       id: "drop-location",
                       name: "drop-location",
-                      placeholder: "Drop Location",
-                      value: dropLocation,
+                      placeholder: tr("Drop Location"),
+                      value: editingLocation === "drop"
+                        ? dropLocation
+                        : firstAddressSegment(dropLocation),
                       onChangeFn: (value) => {
+                        setSavedSuggestionTarget(null);
                         setDrop(value);
                         if (error === "No Drop Location") {
                           setError(null);
@@ -817,14 +1201,19 @@ const OnBoarding = ({ bookingStage = false }) => {
                       },
                       error: error === "No Drop Location",
                       bg: "var(--background-muted)",
+                      inputRef: dropInputRef,
                       autoComplete: "off",
                       onFocusFn: () => {
+                        setEditingLocation("drop");
                         setActiveSuggestion("drop");
                         dropAutocomplete.onFocus();
                       },
-                      onBlurFn: dropAutocomplete.onBlur,
+                      onBlurFn: () => {
+                        setEditingLocation(null);
+                        dropAutocomplete.onBlur();
+                      },
                     }}
-                    className={`scale-[1] sm:scale-[1.3] sm:origin-left ${FORM_W}`}
+                    className={`scale-[1] sm:scale-[1.3] sm:origin-left ${formWidth}`}
                     leading={
                       <div className="w-3 h-3 rounded-full bg-primary relative">
                         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-[var(--background)]" />
@@ -834,7 +1223,7 @@ const OnBoarding = ({ bookingStage = false }) => {
                       dropLocation?.trim() ? (
                         <button
                           type="button"
-                          aria-label="Clear drop location"
+                          aria-label={tr("Clear drop location")}
                           onClick={() => setDrop("")}
                           className="flex items-center justify-center cursor-pointer rounded-full
                             text-[var(--text-muted)] hover:text-[var(--text)] active:opacity-70
@@ -848,82 +1237,19 @@ const OnBoarding = ({ bookingStage = false }) => {
 
                   {(!bookingStage || !isMobile) && <SuggestionDropdown
                     anim={dropAutocomplete.dropdown}
-                    items={dropAutocomplete.items}
-                    onSelect={dropAutocomplete.select}
+                    items={suggestionItemsFor("drop", dropAutocomplete)}
+                    onSelect={selectDropSuggestion}
+                    actions={suggestionActions("drop")}
                     above
-                    error={dropAutocomplete.lookupError}
-                    typed={dropAutocomplete.typed}
+                    error={savedSuggestionTarget === "drop" ? null : dropAutocomplete.lookupError}
+                    typed={savedSuggestionTarget === "drop" ? false : dropAutocomplete.typed}
+                    emptyTitle={savedSuggestionTarget === "drop" ? dc("No saved places yet") : undefined}
+                    emptyMessage={savedSuggestionTarget === "drop" ? dc("Save Home, Work or another address from Settings.") : undefined}
                   />}
                 </div>
 
-                <div className="flex flex-col relative">
-                  <div className={`flex scale-[1] sm:scale-[1.3] sm:origin-left justify-start gap-2 justify-center items-center max-sm:max-w-full sm:w-[290px] ${FORM_W}`}>
-                    <Button
-                      onClick={() => {
-                        closeSuggestions();
-                        setExpandCalendar(false);
-                        setExpand(!expand);
-                      }}
-                      prop={{
-                        variant: "input",
-                        bg: expand ? "var(--background-primary)" : "var(--background-muted)",
-                      }}
-                      className="relative px-2"
-                    >
-                      <div
-
-                        className="w-full flex justify-between items-center gap-1"
-                      >
-                        <div className="flex justify-center items-center gap-1">
-                          {scheduledTime && timing === "Schedule" ? (
-
-                            <span className="flex justify-center items-center gap-1 whitespace-nowrap uppercase">
-                              <Icon
-                                path={mdiClockTimeFourOutline}
-                                size={0.9}
-                              />
-                              {scheduledTime.toLocaleString("en-GB", {
-                                hour: "numeric",
-                                minute: "2-digit",
-                                hour12: true,
-                                day: "numeric",
-                                month: "numeric",
-                              })}
-                              <Icon
-                                path={mdiClose}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  e.preventDefault();
-                                  setScheduledTime(null);
-                                }}
-                                size={0.7}
-                                className="mx-1 ml-1.5 transition-opcaity duration-300 opacity-[0.7] hover:opacity-[1]" />
-                            </span>
-                          ) : (
-                            <div className="flex justify-center items-center gap-1">
-                              <Icon
-                                path={mdiClockTimeFourOutline}
-                                size={0.9}
-                              />
-                              {timing}
-                              <Icon
-                                className="transition-opacity duration-300 opacity-[0.7] hover:opacity-[1]"
-                                path={mdiChevronDown}
-                                size={0.9}
-                                style={{
-                                  transform: expand
-                                    ? "rotate(180deg)"
-                                    : "rotate(0deg)",
-                                }}
-                              />
-                            </div>
-                          )}
-                        </div>
-
-
-                      </div>
-                    </Button>
-
+                {!bookingStage && timing === "Schedule" && (<div className="relative flex w-full flex-col items-start">
+                  <div className={`flex items-center justify-start sm:origin-left sm:scale-[1.3] sm:w-[290px] ${formWidth}`}>
                     <Button
                       containerRef={calendarBtnRef}
                       onClick={() => {
@@ -937,8 +1263,7 @@ const OnBoarding = ({ bookingStage = false }) => {
                         bg: expandCalendar ? "var(--background-primary)" : "var(--background-muted)",
                         error: error === "No Scheduled Time",
                       }}
-                      className={`relative px-2 pr-3 ${timing === "Schedule" ? "block" : "hidden"
-                        }`}
+                      className="relative px-2 pr-3"
                     >
                       <div
 
@@ -951,66 +1276,18 @@ const OnBoarding = ({ bookingStage = false }) => {
                               <Icon
                                 path={mdiCalendarMonthOutline}
                                 size={0.9}
-                              />
-                              Edit
-                            </span>
+                              />{dc("Edit")}</span>
                           ) : (
                             <div className="flex justify-center items-center gap-1">
                               <Icon
                                 path={mdiCalendarMonthOutline}
                                 size={0.9}
-                              />
-                              When
-                            </div>
+                              />{dc("When")}</div>
                           )}
                         </div>
                       </div>
                     </Button>
                   </div>
-
-                  {/* Timing dropdown */}
-                  {timingDropdown.mounted && (
-                    <Button
-                      prop={{
-                        variant: "dropdown",
-                        width: "155px",
-                      }}
-                      className={`block ${timingDropdown.closing ? "animate-dropdown-out" : "animate-dropdown"
-                        } absolute z-10 scale-[1] sm:scale-[1.2] bottom-13 origin-bottom sm:bottom-auto sm:top-15 sm:origin-top-left active:opacity-[1] hover:opacity-[1]`}
-                    >
-                      <div className="flex flex-col items-start">
-                        <div
-                          onClick={() => {
-                            setTiming("Schedule");
-                            setExpandCalendar(false)
-                            setExpand(false);
-                          }}
-                          className={`w-full flex items-center gap-2 py-1 pb-2 border-b-1 border-[var(--foreground)]/40 ${timing === "Schedule"
-                            ? "text-white-muted"
-                            : "text-white"
-                            }`}
-                        >
-                          Schedule a ride
-                        </div>
-
-                        <div
-                          onClick={() => {
-                            setTiming("Now");
-                            setExpand(false);
-                            setError(null);
-                            setExpandCalendar(false);
-                            setScheduledTime(null);
-                          }}
-                          className={`w-full flex items-center gap-2 py-1 pt-2 ${timing === "Now"
-                            ? "text-white-muted"
-                            : "text-white"
-                            }`}
-                        >
-                          Ride now
-                        </div>
-                      </div>
-                    </Button>
-                  )}
 
                   {/* Calendar dropdown. Portalled to the body: the column at the
                       top of this page is `relative z-10`, which opens a stacking
@@ -1050,82 +1327,94 @@ const OnBoarding = ({ bookingStage = false }) => {
                     </Button>,
                     document.body,
                   )}
-                </div>
+                </div>)}
                 </div>
 
                 {bookingStage && isMobile && (
-                  <div className="min-h-0 w-full flex-1 overflow-y-auto overscroll-contain scrollbar-inset" aria-live="polite">
+                  <div data-sheet-scroll className="min-h-0 w-full flex-1 overflow-y-auto overscroll-contain scrollbar-inset" aria-live="polite">
                     {activeSuggestion === "pickup" && (
                       <SuggestionDropdown
                         inline
                         anim={pickupAutocomplete.dropdown}
-                        items={pickupAutocomplete.items}
-                        onSelect={pickupAutocomplete.select}
-                        error={pickupAutocomplete.lookupError}
-                        typed={pickupAutocomplete.typed}
+                        items={suggestionItemsFor("pickup", pickupAutocomplete)}
+                        onSelect={selectPickupSuggestion}
+                        actions={suggestionActions("pickup")}
+                        error={savedSuggestionTarget === "pickup" ? null : pickupAutocomplete.lookupError}
+                        typed={savedSuggestionTarget === "pickup" ? false : pickupAutocomplete.typed}
+                        emptyTitle={savedSuggestionTarget === "pickup" ? dc("No saved places yet") : undefined}
+                        emptyMessage={savedSuggestionTarget === "pickup" ? dc("Save Home, Work or another address from Settings.") : undefined}
                       />
                     )}
                     {activeSuggestion === "drop" && (
                       <SuggestionDropdown
                         inline
                         anim={dropAutocomplete.dropdown}
-                        items={dropAutocomplete.items}
-                        onSelect={dropAutocomplete.select}
-                        error={dropAutocomplete.lookupError}
-                        typed={dropAutocomplete.typed}
+                        items={suggestionItemsFor("drop", dropAutocomplete)}
+                        onSelect={selectDropSuggestion}
+                        actions={suggestionActions("drop")}
+                        error={savedSuggestionTarget === "drop" ? null : dropAutocomplete.lookupError}
+                        typed={savedSuggestionTarget === "drop" ? false : dropAutocomplete.typed}
+                        emptyTitle={savedSuggestionTarget === "drop" ? dc("No saved places yet") : undefined}
+                        emptyMessage={savedSuggestionTarget === "drop" ? dc("Save Home, Work or another address from Settings.") : undefined}
                       />
                     )}
                   </div>
                 )}
 
-                <div className={`flex w-full shrink-0 flex-col items-center gap-2 sm:items-start sm:gap-5 ${bookingStage ? "max-sm:sticky max-sm:bottom-0 max-sm:z-20 max-sm:pt-6" : ""}`}>
-                  <Button
-                    prop={{
-                      type: "submit",
-                      disabled:
-                        loading ||
-                        (timing === "Schedule" && !scheduledTime) ||
-                        !pickupLocation?.trim() ||
-                        !dropLocation?.trim(),
-                    }}
-                    className={`scale-[1] sm:scale-[1.3] sm:origin-left ${FORM_W}`}
-                  >
-                    {loading ? "Loading..." : "See prices"}
-                  </Button>
-
-                  <p className="relative text-center text-[var(--text-muted)] sm:text-left sm:text-lg">
-                    {timing === "Now"
-                      ? "* Subject to availability"
-                      : "* 99% guaranteed cab allocation"}
-                  </p>
-                </div>
+                {(!bookingStage || !isMobile) && priceAction}
               </form>
             </>)}
           </div>
         }
       </RoutePanel>
 
+      {pinPriceBar && (
+        <div
+          ref={priceBarRef}
+          className="absolute inset-x-0 bottom-0 z-20 flex justify-center border-t border-[var(--foreground)]/10 bg-panel-gradient px-[7vw] pt-3 pb-[calc(1.25rem+env(safe-area-inset-bottom))]"
+        >
+          <div className={COL}>{priceAction}</div>
+        </div>
+      )}
+
       {bookingStage ? <>
         <GoogleMap
-          center={pickupCoords ?? { lat: 28.6315, lng: 77.2167 }}
-          zoom={12}
+          center={mapPickerTarget ? mapPickerCoords : pickupCoords ?? { lat: 28.6315, lng: 77.2167 }}
+          zoom={mapPickerTarget ? 17 : 12}
+          onIdle={mapPickerTarget ? setMapPickerCoords : undefined}
           className="absolute inset-0 z-0 sm:hidden"
-        />
+        >
+          {mapPickerTarget && <CenterPin target={mapPickerTarget} />}
+        </GoogleMap>
         <GoogleMap
-          center={pickupCoords ?? { lat: 28.6315, lng: 77.2167 }}
-          zoom={12}
+          center={mapPickerTarget ? mapPickerCoords : pickupCoords ?? { lat: 28.6315, lng: 77.2167 }}
+          zoom={mapPickerTarget ? 17 : 12}
+          onIdle={mapPickerTarget ? setMapPickerCoords : undefined}
           className="relative z-0 mr-[2vw] hidden h-[min(76vh,680px)] w-[min(46vw,720px)] overflow-hidden rounded-[24px] shadow-[0_12px_36px_rgba(0,0,0,0.25)] sm:block"
-        />
+        >
+          {mapPickerTarget && <CenterPin target={mapPickerTarget} />}
+        </GoogleMap>
+
+        {mapPickerTarget && (
+          <button
+            type="button"
+            onClick={closeMapPicker}
+            aria-label={tr("Back to location search")}
+            className="absolute left-4 top-[calc(1rem+env(safe-area-inset-top))] z-30 flex h-10 cursor-pointer items-center justify-center rounded-full border border-[var(--foreground)]/30 bg-[var(--background-muted)] px-3 text-[var(--text)] shadow-[0_4px_20px_2px_rgba(0,0,0,0.45)] transition-opacity duration-300 hover:opacity-100 active:opacity-70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)] sm:left-8 sm:top-8"
+          >
+            <Icon path={mdiKeyboardBackspace} size={1.2} aria-hidden="true" />
+          </button>
+        )}
       </> : <>
         <div className="block sm:hidden absolute z-5 inset-x-0 top-0 h-[100dvh] bg-[linear-gradient(to_top,var(--background)_30%,var(--background-primary)_45%,transparent_90%)]" />
         <img
           src={mobileBackgroundIllustration}
-          alt="background-illustration"
+          alt={dc("background-illustration")}
           className="absolute block sm:hidden z-0 w-full h-full object-top -top-20 object-cover bg-gradient"
         />
         <img
           src={laptopBackgroundIllustration}
-          alt="background-illustration"
+          alt={dc("background-illustration")}
           className="lg:w-[500px] lg:h-[430px] xl:w-[560px] xl:h-[440px] object-cover lg:block hidden rounded-lg"
         />
       </>}

@@ -1,4 +1,6 @@
+import { driverCopy as dc } from "../lib/copy";
 // Mirrors backend/constants/driverDocuments.js. The server is the authority on
+import { driverDocumentLabel } from '../lib/localizedLabels';
 // all of it — it re-reads every uploaded object's real size and mime type before
 // it writes a DriverDocument row — and these exist so the phone fails BEFORE it
 // spends a captain's data on an upload that was always going to be rejected.
@@ -60,17 +62,17 @@ export const isImageOnly = (type: string) => IMAGE_ONLY_DOCUMENTS.includes(type)
 export const DRIVER_DOCUMENTS = {
   // The captain himself — the one file a RIDER is shown, and the reason it is
   // reviewed like paperwork rather than treated as an avatar.
-  profile_photo: { label: 'Your photo', required: true, expires: false, owner: 'driver' },
-  dl: { label: 'Driving licence', required: true, expires: true, owner: 'driver' },
-  rc: { label: 'RC (registration)', required: true, expires: true, owner: 'vehicle' },
-  insurance: { label: 'Insurance', required: true, expires: true, owner: 'vehicle' },
-  tax: { label: 'Road tax', required: true, expires: true, owner: 'vehicle' },
-  fitness: { label: 'Fitness certificate', required: true, expires: true, owner: 'vehicle' },
-  permit_all_india: { label: 'All India permit', required: true, expires: true, owner: 'vehicle' },
-  permit_one_year: { label: 'One-year permit', required: false, expires: true, owner: 'vehicle' },
-  cng_test: { label: 'CNG cylinder test', required: false, expires: true, owner: 'vehicle' },
-  car_photo_front: { label: 'Car photo (front)', required: true, expires: false, owner: 'vehicle' },
-  car_photo_back: { label: 'Car photo (back)', required: true, expires: false, owner: 'vehicle' },
+  profile_photo: { get "label"() { return dc("Your photo"); }, required: true, expires: false, owner: 'driver' },
+  dl: { get "label"() { return dc("Driving licence"); }, required: true, expires: true, owner: 'driver' },
+  rc: { get "label"() { return dc("RC (registration)"); }, required: true, expires: true, owner: 'vehicle' },
+  insurance: { get "label"() { return dc("Insurance"); }, required: true, expires: true, owner: 'vehicle' },
+  tax: { get "label"() { return dc("Road tax"); }, required: true, expires: true, owner: 'vehicle' },
+  fitness: { get "label"() { return dc("Fitness certificate"); }, required: true, expires: true, owner: 'vehicle' },
+  permit_all_india: { get "label"() { return dc("All India permit"); }, required: true, expires: true, owner: 'vehicle' },
+  permit_one_year: { get "label"() { return dc("One-year permit"); }, required: false, expires: true, owner: 'vehicle' },
+  cng_test: { get "label"() { return dc("CNG cylinder test"); }, required: false, expires: true, owner: 'vehicle' },
+  car_photo_front: { get "label"() { return dc("Car photo (front)"); }, required: true, expires: false, owner: 'vehicle' },
+  car_photo_back: { get "label"() { return dc("Car photo (back)"); }, required: true, expires: false, owner: 'vehicle' },
 } as const;
 
 export type DriverDocumentType = keyof typeof DRIVER_DOCUMENTS;
@@ -99,20 +101,20 @@ export type DocumentOwner = 'driver' | 'vehicle';
 export const DOCUMENT_NUMBER_FIELDS: Partial<
   Record<DriverDocumentType, { label: string; placeholder: string }>
 > = {
-  dl: { label: 'Driving licence number', placeholder: 'e.g. UP16 20110149646' },
-  rc: { label: 'Registration number', placeholder: 'e.g. UP16 AB 1234' },
-  insurance: { label: 'Policy number', placeholder: 'e.g. 3001/1234567/00/000' },
-  tax: { label: 'Road tax receipt number', placeholder: 'As printed on the receipt' },
-  fitness: { label: 'Fitness certificate number', placeholder: 'As printed on the certificate' },
-  permit_all_india: { label: 'Permit number', placeholder: 'As printed on the permit' },
-  permit_one_year: { label: 'Permit number', placeholder: 'As printed on the permit' },
-  cng_test: { label: 'Test certificate number', placeholder: 'As printed on the certificate' },
+  dl: { get "label"() { return dc("Driving licence number"); }, get "placeholder"() { return dc("e.g. UP16 20110149646"); } },
+  rc: { get "label"() { return dc("Registration number"); }, get "placeholder"() { return dc("e.g. UP16 AB 1234"); } },
+  insurance: { get "label"() { return dc("Policy number"); }, get "placeholder"() { return dc("e.g. 3001/1234567/00/000"); } },
+  tax: { get "label"() { return dc("Road tax receipt number"); }, get "placeholder"() { return dc("As printed on the receipt"); } },
+  fitness: { get "label"() { return dc("Fitness certificate number"); }, get "placeholder"() { return dc("As printed on the certificate"); } },
+  permit_all_india: { get "label"() { return dc("Permit number"); }, get "placeholder"() { return dc("As printed on the permit"); } },
+  permit_one_year: { get "label"() { return dc("Permit number"); }, get "placeholder"() { return dc("As printed on the permit"); } },
+  cng_test: { get "label"() { return dc("Test certificate number"); }, get "placeholder"() { return dc("As printed on the certificate"); } },
 };
 
 /** The generic pair, for a numbered type added on the server before it is named here. */
 const FALLBACK_NUMBER_FIELD = {
-  label: 'Number on the document',
-  placeholder: 'As printed on the document',
+  get "label"() { return dc("Number on the document"); },
+  get "placeholder"() { return dc("As printed on the document"); },
 };
 
 export const numberFieldFor = (type: DriverDocumentType) =>
@@ -121,16 +123,17 @@ export const numberFieldFor = (type: DriverDocumentType) =>
 export const DRIVER_DOCUMENT_TYPES = Object.keys(DRIVER_DOCUMENTS) as DriverDocumentType[];
 
 export const documentLabelOf = (type: DriverDocumentType) => DRIVER_DOCUMENTS[type].label;
+export const localizedDocumentLabelOf = (type: DriverDocumentType, locale?: string) => driverDocumentLabel(locale, type);
 
 export const isVehicleDocument = (type: DriverDocumentType) =>
   DRIVER_DOCUMENTS[type].owner === 'vehicle';
 
 // What a rider is shown, and what the vehicle list labels each car with.
 export const VEHICLE_CLASS_LABELS: Record<string, string> = {
-  hatchback: 'Hatchback',
-  sedan: 'Sedan',
+  get "hatchback"() { return dc("Hatchback"); },
+  get "sedan"() { return dc("Sedan"); },
   suv: 'SUV',
-  suv_premium: 'Premium SUV',
+  get "suv_premium"() { return dc("Premium SUV"); },
 };
 
 export const vehicleClassLabel = (cls: string) => VEHICLE_CLASS_LABELS[cls] ?? cls;

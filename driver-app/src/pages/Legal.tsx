@@ -1,3 +1,4 @@
+import { driverCopy as dc } from "../lib/copy";
 import { Linking } from 'react-native';
 import { FileTextIcon, ShieldCheckIcon } from 'phosphor-react-native';
 import AccountRow from '../components/ui/AccountRow';
@@ -9,15 +10,15 @@ import AccountDetailScreen, {
 const BASE = 'https://www.rcstravels.co.in';
 
 const documents = [
-  { label: 'Terms of service', detail: 'Rules for using RCS Travels', path: '/terms', Icon: FileTextIcon },
-  { label: 'Privacy policy', detail: 'How account and ride data is handled', path: '/privacy', Icon: ShieldCheckIcon },
-  { label: 'Refunds & cancellation', detail: 'When charges are kept or returned', path: '/refunds', Icon: FileTextIcon },
-  { label: 'Grievance redressal', detail: 'How to make and escalate a complaint', path: '/grievance', Icon: ShieldCheckIcon },
+  { get "label"() { return dc("Terms of service"); }, get "detail"() { return dc("Rules for using RCS Travels"); }, path: '/terms', Icon: FileTextIcon },
+  { get "label"() { return dc("Privacy policy"); }, get "detail"() { return dc("How account and ride data is handled"); }, path: '/privacy', Icon: ShieldCheckIcon },
+  { get "label"() { return dc("Refunds & cancellation"); }, get "detail"() { return dc("When charges are kept or returned"); }, path: '/refunds', Icon: FileTextIcon },
+  { get "label"() { return dc("Grievance redressal"); }, get "detail"() { return dc("How to make and escalate a complaint"); }, path: '/grievance', Icon: ShieldCheckIcon },
 ] as const;
 
 const Legal = () => (
-  <AccountDetailScreen title="Legal">
-    <AccountSectionLabel>RCS Travels documents</AccountSectionLabel>
+  <AccountDetailScreen title={dc("Legal")}>
+    <AccountSectionLabel>{dc("RCS Travels documents")}</AccountSectionLabel>
     <AccountList>
       {documents.map(({ label, detail, path, Icon }, index) => (
         <AccountRow

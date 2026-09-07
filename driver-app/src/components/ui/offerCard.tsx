@@ -1,3 +1,5 @@
+import { useLanguage as useCopyLanguage } from "../../i18n";
+import { driverCopy as dc } from "../../lib/copy";
 import { useState } from 'react';
 import { View } from 'react-native';
 import { cssInterop } from 'nativewind';
@@ -77,6 +79,7 @@ export const OfferCard = ({
     onReject: () => void | Promise<void>;
     timerProgress?: SharedValue<number>;
 }) => {
+    useCopyLanguage();
     // Guards a double-tap into two requests, and dims the pair while one is in
     // flight. Accept and Reject share it: answering an offer twice, either way,
     // is the same mistake.
@@ -105,11 +108,11 @@ export const OfferCard = ({
             </View>
 
             <View className="flex-row flex-wrap items-center gap-2">
-                <Chip label={offer.additionalPickup ? 'Additional pickup' : offer.sharing ? 'Sharing' : 'Solo'} />
+                <Chip label={offer.additionalPickup ? dc("Additional pickup") : offer.sharing ? 'Sharing' : 'Solo'} />
                 <Chip strong label={vehicleLabel(offer.vehicleClass)} />
-                {offer.isOutstation ? <Chip label="Outstation" strong /> : null}
-                {offer.needsCarrier ? <Chip label="Carrier" /> : null}
-                {offer.safeRoute ? <Chip label="Safer route" /> : null}
+                {offer.isOutstation ? <Chip label={dc("Outstation")} strong /> : null}
+                {offer.needsCarrier ? <Chip label={dc("Carrier")} /> : null}
+                {offer.safeRoute ? <Chip label={dc("Safer route")} /> : null}
             </View>
 
             <View className="gap-3 mt-4">
@@ -117,7 +120,7 @@ export const OfferCard = ({
                     <View className="flex-1">
                         <RouteLeg address={offer.pickup.address} />
                     </View>
-                    {toPickup != null ? <FactPill>{formatDistance(toPickup)} away</FactPill> : null}
+                    {toPickup != null ? <FactPill>{formatDistance(toPickup)}{" " + dc("away")}</FactPill> : null}
                 </View>
 
                 <View className="flex-row items-center justify-between gap-3">
@@ -135,12 +138,12 @@ export const OfferCard = ({
                     fill and Accept the solid one: the pair has to read as one
                     decision with an obvious default, not two equal options. */}
                 <ActionButton
-                    label="Reject"
+                    label={dc("Reject")}
                     leading={<Cross size={18} weight="bold" className={INK_TEXT} />}
                     onPress={() => run(onReject)}
                 />
                 <ActionButton
-                    label={canAccept ? 'Accept' : 'Go online'}
+                    label={canAccept ? dc("Accept") : dc("Go online")}
                     leading={
                         <Check
                             size={18}

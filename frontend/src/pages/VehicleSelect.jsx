@@ -1,3 +1,5 @@
+import { useTranslation as useCopyLanguage } from "react-i18next";
+import { websiteCopy as dc } from "../i18nCopy";
 import Button from "../components/ui/Button";
 import GoogleMap, { MAP_LAND_COLOR } from "../components/ui/GoogleMap";
 import { MAP_CLASSES, CenterPin, showRouteView, clearRouteView, setNearbyVehiclePositions, clearNearbyVehicleMarkers } from "../components/ui/mapOverlays";
@@ -8,7 +10,6 @@ import { useApi } from "../hooks/useApi";
 import { useState, useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import ErrorMark from "../components/illustrations/ErrorMark";
-import SuccessCheck from "../components/illustrations/SuccessCheck";
 import { useViewNavigate } from "../hooks/useViewNavigate";
 import PriceIllustration from "../components/illustrations/RadarScanIllustration";
 import SafetyIllustration from "../components/illustrations/DriverEnRouteIllustration";
@@ -27,6 +28,14 @@ import EmptyState from "../components/ui/EmptyState";
 import FailureState from "../components/ui/FailureState";
 import { VEHICLE_CATEGORIES, VEHICLE_CLASS_NAMES, labelOf, seatsOf } from "../constants/vehicles";
 import { openRazorpayCheckout } from "../services/razorpayCheckout";
+import { useWebsiteCopy } from "../hooks/useWebsiteCopy";
+import CustomerPaymentPanel from "../components/CustomerPaymentPanel";
+import {
+    PAYMENT_PHASE,
+    paymentIsBusy,
+    paymentIsSatisfied,
+    paymentPhaseForError,
+} from "../lib/paymentUi";
 
 // Every price on this screen comes from /api/fare/estimate, which resolves each
 // seat type through zones -> the fixed fare table -> the per-km formula. There is
@@ -46,6 +55,7 @@ const ESTIMATE_PREFETCH_MAX_AGE_MS = 60_000;
 // starting point per mount, then let a transform run continuously on the
 // compositor. Returning from Ride details resumes from elapsed wall time.
 const SearchingProgressBar = ({ startedAt }) => {
+    useCopyLanguage();
     const [{ progress, remaining }] = useState(() => {
         const elapsed = startedAt ? Math.min(Date.now() - startedAt, SEARCH_DURATION) : 0;
         return {
@@ -117,6 +127,8 @@ const Illustration = ({ children }) => (
 );
 
 const VehicleSelect = () => {
+    useCopyLanguage();
+    const tr = useWebsiteCopy();
     const phone = useData(state => state.phone)
     const scheduledTime = useData(state => state.scheduledTime)
     const dropLocation = useData(state => state.dropLocation)
@@ -201,6 +213,11 @@ const VehicleSelect = () => {
 
     // Dev-only: /dev/vehicle?step=|?panel=|?safe= force internal states for previews.
     const devParams = import.meta.env.DEV ? new URLSearchParams(window.location.search) : null;
+    const [bookingReference, setBookingReference] = useState(activeBooking?.reference ?? null);
+    const [paymentPhase, setPaymentPhase] = useState(() => {
+        const preview = devParams?.get("payment");
+        return Object.values(PAYMENT_PHASE).includes(preview) ? preview : PAYMENT_PHASE.IDLE;
+    });
     // ?safe=1 pins the verdict on for the life of the preview, so the toggle and
     // the three-column pinned bar can be seen without a backend and without a
     // destination whose default route happens to cross a shady zone. It has to
@@ -218,7 +235,9 @@ const VehicleSelect = () => {
     );
     const restoredScheduledTime = scheduledTime ?? activeBooking?.scheduledAt ?? null;
     const [panelState, setPanelState] = useState(
-        devParams?.get("panel") ?? (bookingId && status === "confirmed" && restoredScheduledTime ? "confirmed" : "")
+        devParams?.get("panel") ?? (bookingId && restoredScheduledTime
+            ? status === "confirmed" ? "confirmed" : status === "payment_pending" ? "payment" : ""
+            : "")
     );  // "confirm" | "error"
     const [step, setStep] = useState(() => {
         const devStep = devParams?.get("step");
@@ -253,6 +272,53 @@ const VehicleSelect = () => {
     const [nearbyFramePoints, setNearbyFramePoints] = useState([]);
     const [nearbyEta, setNearbyEta] = useState(null);
 
+    // A scheduled payment survives the page that opened Checkout. Reconcile this
+    // sheet from the backend on refresh/re-entry, and keep watching while a
+    // capture is still pending so a webhook can finish what the browser could not.
+    useEffect(() => {
+        if (!bookingId || !restoredScheduledTime || !["payment", "confirmed"].includes(panelState)) return;
+        let cancelled = false;
+        let timer = null;
+
+        async function refreshPayment() {
+            let latest;
+            try { latest = await api.getBookingStatus(bookingId); }
+            catch { latest = null; }
+            if (cancelled) return;
+            if (latest && !latest.error) {
+                setScheduledFinancials(latest.financials ?? null);
+                setBookingReference(latest.reference ?? null);
+                if (latest.status) setStatus(latest.status);
+                const paid = paymentIsSatisfied("advance", latest.financials);
+                setPanelState(paid || latest.status === "confirmed" ? "confirmed" : "payment");
+                if (paid) return;
+            }
+            timer = setTimeout(refreshPayment, 5000);
+        }
+
+        refreshPayment();
+        return () => { cancelled = true; clearTimeout(timer); };
+    }, [bookingId, restoredScheduledTime, panelState]);
+
+    // Payment previews use the same component and real layout as production,
+    // while staying entirely inside the dev-only route.
+    useEffect(() => {
+        if (!devParams || !restoredScheduledTime || !["payment", "confirmed"].includes(devParams.get("panel"))) return;
+        const paid = devParams.get("payment") === "success";
+        setBookingReference("RCS-DEV-4829");
+        setScheduledFinancials({
+            fare: 20000,
+            coupon: 1000,
+            finalFare: 19000,
+            advance: 2900,
+            advancePaid: paid ? 2900 : 0,
+            remaining: 16100,
+            finalPaid: 0,
+            advanceDisposition: paid ? "paid" : "awaiting_payment",
+        });
+        if (paid) setPanelState("confirmed");
+    }, []);
+
     const searchMessages = [
         "Finding drivers near you...",
         "Notifying nearby drivers...",
@@ -262,7 +328,7 @@ const VehicleSelect = () => {
         "Reaching out to more drivers...",
         "Almost there...",
         "Hang tight...",
-    ];
+    ].map(tr);
 
     // Route metrics (distance/time/polyline) for display + booking payload,
     // preferring pin-adjusted coords over the typed addresses. Vehicle type
@@ -319,7 +385,7 @@ const VehicleSelect = () => {
             setServerFares(null);
             setFareQuote(null);
             setSafeRouteInfo(devSafeRoute);
-            setEstimateError("Couldn't reach the server to price this route.");
+            setEstimateError(dc("Couldn't reach the server to price this route."));
             return null;
         } finally {
             setPricing(false);
@@ -667,12 +733,12 @@ const VehicleSelect = () => {
         e.preventDefault();
 
         if (!vehicleClass) {
-            setError("Select a vehicle");
+            setError(dc("Select a vehicle"));
             return;
         }
 
         if (fareFor(vehicleClass) == null) {
-            setError("Still pricing this route. One moment.");
+            setError(dc("Still pricing this route. One moment."));
             return;
         }
 
@@ -728,7 +794,7 @@ const VehicleSelect = () => {
         // screen a hardcoded table stood in here, which quietly charged ₹400 for
         // destinations the rate card prices at ₹1800.
         if (rideFare == null || !quote) {
-            setError("Couldn't price this route. Check the addresses and try again.");
+            setError(dc("Couldn't price this route. Check the addresses and try again."));
             setLoading(false);
             return;
         }
@@ -792,17 +858,19 @@ const VehicleSelect = () => {
                     fetchEstimate();
                     return;
                 }
-                setError("Can't create booking, try again");
+                setError(dc("Can't create booking, try again"));
                 return;
             }
             if (data.bookingId) setBookingId(data.bookingId)
             if (data.bookingCode) setBookingCode(data.bookingCode)
+            if (data.reference) setBookingReference(data.reference)
             if (data.status) setStatus(data.status)
 
             // Optimistic: OnBoarding's cards show immediately; its next mount
             // reconciles with the server.
             setActiveBooking({
                 id: data.bookingId,
+                reference: data.reference,
                 code: data.bookingCode,
                 status: data.status,
                 pickupAddress: pickupLocation,
@@ -814,6 +882,7 @@ const VehicleSelect = () => {
             if (scheduledTime) {
                 setScheduledCheckout(data.payment ?? null);
                 setScheduledFinancials(data.financials ?? null);
+                setPaymentPhase(data.paymentError ? PAYMENT_PHASE.FAILED : PAYMENT_PHASE.IDLE);
                 setPanelState(data.status === "confirmed" ? "confirmed" : "payment");
             }
             else if (data.status === "assigned") {
@@ -829,30 +898,39 @@ const VehicleSelect = () => {
         } catch (err) {
             console.error(err);
 
-            setError("Something went wrong");
+            setError(dc("Something went wrong"));
         } finally {
             setLoading(false);
         }
     }
 
     async function payScheduledAdvance() {
-        if (!bookingId) return;
+        if (!bookingId || paymentIsBusy(paymentPhase) || paymentIsSatisfied("advance", scheduledFinancials)) return;
         try {
-            setLoading(true); setError(null);
+            setLoading(true); setError(null); setPaymentPhase(PAYMENT_PHASE.CREATING);
             const checkout = scheduledCheckout ?? await api.createScheduledAdvanceOrder(bookingId);
             if (checkout?.error) throw new Error(checkout.error);
             setScheduledCheckout(checkout);
-            const response = await openRazorpayCheckout(checkout, { description: "15% scheduled ride advance" });
+            setPaymentPhase(PAYMENT_PHASE.OPENING);
+            const response = await openRazorpayCheckout(checkout, { get "description"() { return dc("15% scheduled ride advance"); } });
+            setPaymentPhase(PAYMENT_PHASE.VERIFYING);
             const verified = await api.verifyPayment(checkout.paymentId, response);
             if (verified?.error) throw new Error(verified.error);
             const latest = await api.getBookingStatus(bookingId);
             if (latest?.error) throw new Error(latest.error);
             setStatus(latest.status);
+            setScheduledFinancials(latest.financials ?? null);
+            setBookingReference(latest.reference ?? bookingReference);
             setActiveBooking({ ...(activeBooking ?? {}), id: bookingId, status: latest.status,
-                scheduledAt: scheduledTime, fare: (latest.financials?.finalFare ?? 0) / 100 });
-            setPanelState(latest.status === "confirmed" ? "confirmed" : "payment");
+                reference: latest.reference ?? bookingReference,
+                scheduledAt: restoredScheduledTime, fare: (latest.financials?.finalFare ?? 0) / 100 });
+            const paid = paymentIsSatisfied("advance", latest.financials);
+            setPanelState(paid ? "confirmed" : "payment");
+            // `authorized` is intentionally left in the confirming state. Only
+            // the backend-paid amount above can turn this into success.
+            if (!paid) setPaymentPhase(PAYMENT_PHASE.VERIFYING);
         } catch (err) {
-            if (err.message !== "Payment cancelled") setError(err.message || "Payment failed. Try again.");
+            setPaymentPhase(paymentPhaseForError(err));
         } finally { setLoading(false); }
     }
 
@@ -906,12 +984,12 @@ const VehicleSelect = () => {
     const safeRouteAvailable = !!safeRouteInfo?.available;
     const fareNotices = [
         safeRoute && safeRouteAvailable && (isDistancePriced(selectedSource)
-            ? `₹${safeRouteInfo.fee} safer route, plus the longer drive`
-            : `₹${safeRouteInfo.fee} safer route, detour and tolls included`),
-        isDistancePriced(selectedSource) && "Tolls payable to driver separately",
-        selectedFare?.toll > 0 && `Includes the ₹${selectedFare.toll} highway toll`,
-        selectedFare?.airport > 0 && `Includes the ₹${selectedFare.airport} airport pickup charge`,
-        selectedFare?.carrierWaived && "Roof carrier included free on this route",
+            ? dc("₹{{fee}} safer route, plus the longer drive", { fee: safeRouteInfo.fee })
+            : dc("₹{{fee}} safer route, detour and tolls included", { fee: safeRouteInfo.fee })),
+        isDistancePriced(selectedSource) && tr("Tolls payable to driver separately"),
+        selectedFare?.toll > 0 && dc("Includes the ₹{{amount}} highway toll", { amount: selectedFare.toll }),
+        selectedFare?.airport > 0 && dc("Includes the ₹{{amount}} airport pickup charge", { amount: selectedFare.airport }),
+        selectedFare?.carrierWaived && tr("Roof carrier included free on this route"),
     ].filter(Boolean);
 
     // The form only renders in the happy path; the three states before it are
@@ -991,33 +1069,33 @@ const VehicleSelect = () => {
     const sharePrice = fareOf(vehicleClass, "sharing");
     const soloPrice = fareOf(vehicleClass, "solo");
     const sharingNote = sharePrice != null && soloPrice != null
-        ? `₹${sharePrice} if someone shares your ride · ₹${soloPrice} if not`
-        : "Cheaper if someone shares your ride.";
+        ? dc("₹{{sharePrice}} if someone shares your ride · ₹{{soloPrice}} if not", { sharePrice, soloPrice })
+        : tr("Cheaper if someone shares your ride.");
 
     const rideOptions = [
         {
             key: "sharing",
-            label: "Share ride",
-            short: "sharing",
+            label: tr("Share ride"),
+            short: tr("sharing"),
             note: sharingNote,
             on: sharing,
             onToggle: () => setSharing(!sharing),
         },
         {
             key: "carrier",
-            label: "Roof carrier",
-            short: "roof carrier",
+            label: tr("Roof carrier"),
+            short: tr("roof carrier"),
             // Never promise a charge that isn't made: the provider throws the
             // carrier in above a threshold, and the estimate is what knows
             // whether this route is over it.
-            note: selectedFare?.carrierWaived ? "Free on this route." : `Adds ₹${CARRIER_CHARGE}.`,
+            note: selectedFare?.carrierWaived ? tr("Free on this route.") : dc("Adds ₹{{amount}}.", { amount: CARRIER_CHARGE }),
             on: needsCarrier,
             onToggle: () => setNeedsCarrier(!needsCarrier),
         },
         {
             key: "safeRoute",
-            label: "Safer route",
-            short: "safer route",
+            label: tr("Safer route"),
+            short: tr("safer route"),
             // The fee is the server's, not a constant here: it's priced per
             // route from the detour it actually needs.
             //
@@ -1028,8 +1106,8 @@ const VehicleSelect = () => {
             // destination saw "9.2 km, 4 min longer" — the same option described
             // two different ways depending on who got there first.
             note: safeRouteAvailable
-                ? `Adds ₹${safeRouteInfo.fee}.`
-                : "This route has no safer alternative.",
+                ? dc("Adds ₹{{amount}}.", { amount: safeRouteInfo.fee })
+                : tr("This route has no safer alternative."),
             // Whether one exists at all is Google's answer, not the rider's:
             // most destinations never cross a shady zone. Shown either way and
             // switched off where there is nothing to switch on, so the option
@@ -1100,7 +1178,7 @@ const VehicleSelect = () => {
                     disabled: !vehicleClass || fareFor(vehicleClass) == null,
                 }}
             >
-                <span className="text-base sm:text-lg">{loading ? "Booking..." : "Book ride"}</span>
+                <span className="text-base sm:text-lg">{loading ? tr("Booking...") : tr("Book ride")}</span>
             </Button>
             {/* Names the exact point the fee starts — "until the driver arrives"
                 was ambiguous about en_route, which is still free.
@@ -1111,8 +1189,8 @@ const VehicleSelect = () => {
             {!barCollapsed && (
                 <p className="text-xs sm:text-sm leading-snug text-center sm:text-left text-[var(--text-muted)]">
                     {scheduledTime
-                        ? `Cancel free while your driver is more than 500 m from pickup. Within 500 m, the paid ${CANCELLATION_CHARGE_PCT}% advance is retained.`
-                        : "Ride Now cancellation is free before the trip starts."}
+                        ? tr("Cancel free while your driver is more than 500 m from pickup. Within 500 m, the paid 15% advance is retained.")
+                        : tr("Ride Now cancellation is free before the trip starts.")}
                 </p>
             )}
         </div>
@@ -1152,7 +1230,7 @@ const VehicleSelect = () => {
                         {!scheduledTime && nearbyEta?.vehicleClass === cls && (
                             <>
                                 {seats && <span aria-hidden="true">·</span>}
-                                <span>{nearbyEta.minutes} min away</span>
+                                <span>{nearbyEta.minutes}{" " + dc("min away")}</span>
                             </>
                         )}
                     </p>
@@ -1170,8 +1248,8 @@ const VehicleSelect = () => {
                     </div>
                 ) : (
                     <div key={sharing ? "share" : "solo"} className="animate-fade-swap text-right flex flex-col justify-center items-end gap-1.5">
-                        <span className={`flex gap-1 leading-tight ${solo}`}> <span className={`${soloVisiblity}`}>Not shared: </span>{priceSolo}</span>
-                        <span className={`flex gap-1 leading-tight ${share}`}> <span className={`${shareVisiblity}`}>Sharing: </span>{priceSharing}</span>
+                        <span className={`flex gap-1 leading-tight ${solo}`}> <span className={`${soloVisiblity}`}>{tr("Not shared:")} </span>{priceSolo}</span>
+                        <span className={`flex gap-1 leading-tight ${share}`}> <span className={`${shareVisiblity}`}>{tr("Sharing:")} </span>{priceSharing}</span>
                     </div>
                 )}
             </div>
@@ -1209,32 +1287,31 @@ const VehicleSelect = () => {
                         {step === "confirmLocation" && <CenterPin target={confirmTarget} />}
                     </GoogleMap>
                 )}
-                <BackgroundPanel show={panelState === "payment" && restoredScheduledTime} className={`z-4 sm:z-3 bottom-0 gap-4 py-6 text-left flex flex-col justify-center items-center`}>
+                <BackgroundPanel
+                    show={["payment", "confirmed"].includes(panelState) && Boolean(restoredScheduledTime)}
+                    contentKey={`${panelState}-${paymentPhase}-${scheduledFinancials?.advancePaid ?? "loading"}`}
+                    className="z-4 sm:z-3 bottom-0 gap-4 py-6 text-left flex flex-col justify-center items-center"
+                >
                     <div className={COL}>
-                        <h2 className={TITLE}>Pay advance</h2>
-                        <p className="mt-1 text-base sm:text-lg text-[var(--text-muted)]">This is part of your fare, not an extra charge.</p>
-                        {scheduledFinancials && <div className="mt-5 flex flex-col gap-2 text-base sm:text-lg">
-                            <div className="flex justify-between"><span>Fare</span><span>₹{scheduledFinancials.fare / 100}</span></div>
-                            <div className="flex justify-between"><span>Coupon</span><span>-₹{scheduledFinancials.coupon / 100}</span></div>
-                            <div className="flex justify-between font-medium"><span>Final fare</span><span>₹{scheduledFinancials.finalFare / 100}</span></div>
-                            <div className="flex justify-between"><span>Pay now (15%)</span><span>₹{scheduledFinancials.advance / 100}</span></div>
-                            <div className="flex justify-between"><span>Pay after ride</span><span>₹{scheduledFinancials.remaining / 100}</span></div>
-                        </div>}
-                        <Button onClick={payScheduledAdvance} className="mt-5 w-full" prop={{ width: "100%" }}>
-                            <span className="text-base sm:text-lg">{loading ? "Opening payment..." : `Pay ₹${(scheduledFinancials?.advance ?? 0) / 100}`}</span>
-                        </Button>
+                        <CustomerPaymentPanel
+                            purpose="advance"
+                            financials={scheduledFinancials}
+                            phase={paymentPhase}
+                            bookingReference={bookingReference}
+                            bookingId={bookingId}
+                            onPay={payScheduledAdvance}
+                            onViewBooking={() => navigate(`/booking/${bookingId}`, { state: { freshStatus: true } })}
+                        />
                     </div>
                 </BackgroundPanel>
-                <BackgroundPanel show={panelState === "noDriver" || (panelState === "confirmed" && restoredScheduledTime)} className={`z-4 sm:z-3 bottom-0 gap-1.5 sm:gap-2 py-6 text-center flex flex-col justify-center items-center`}>
-                    {panelState === "noDriver"
-                        ? <ErrorMark className="-mt-2" size={isMobile ? 120 : 140} />
-                        : <SuccessCheck className="-mt-2" size={isMobile ? 120 : 140} />}
+                <BackgroundPanel show={panelState === "noDriver"} className={`z-4 sm:z-3 bottom-0 gap-1.5 sm:gap-2 py-6 text-center flex flex-col justify-center items-center`}>
+                    <ErrorMark className="-mt-2" size={isMobile ? 120 : 140} />
                     <div className="flex w-[min(86vw,520px)] min-w-0 flex-col items-center">
-                        <h2 className={`w-full min-w-0 [overflow-wrap:anywhere] ${TITLE}`}> {panelState === "noDriver" ? "No drivers nearby" : "All set"} </h2>
+                        <h2 className={`w-full min-w-0 [overflow-wrap:anywhere] ${TITLE}`}>{dc("No drivers nearby")}</h2>
                         {/* leading-snug, not -relaxed: at 1.625 the line box added
                                 5.6px of dead space above and below, which read as
                                 gap and swamped the container's own spacing */}
-                        <p className="w-full min-w-0 text-base sm:text-lg leading-snug"> {panelState === "noDriver" ? "Try again in a few minutes." : "We'll WhatsApp you when a driver is assigned."} </p>
+                        <p className="w-full min-w-0 text-base sm:text-lg leading-snug">{dc("Try again in a few minutes.")}</p>
                     </div>
                     {/* COL goes on a wrapper, not on the Button: prop.width
                             is an inline style and would beat the class at every
@@ -1247,7 +1324,7 @@ const VehicleSelect = () => {
                                 width: "100%",
                             }}
                         >
-                            <span className="text-base sm:text-lg">{loading ? "Loading..." : "Go back"}</span>
+                            <span className="text-base sm:text-lg">{loading ? dc("Loading...") : dc("Go back")}</span>
                         </Button>
                     </div>
                 </BackgroundPanel>
@@ -1260,7 +1337,7 @@ const VehicleSelect = () => {
                     )}
 
                     <div className={`relative z-10 sm:order-1 flex flex-col justify-end sm:justify-center items-center sm:items-start ${STACK} w-full sm:w-auto h-full sm:h-auto`}>
-                        <h2 className={`min-w-0 text-left [overflow-wrap:anywhere] ${TITLE} ${COL}`}>Finding a driver</h2>
+                        <h2 className={`min-w-0 text-left [overflow-wrap:anywhere] ${TITLE} ${COL}`}>{tr("Finding a driver")}</h2>
 
                         <div className={`flex flex-col items-center sm:items-start justify-center gap-4 ${COL}`}>
                             {/* progress reads as one status block: bar, then
@@ -1268,11 +1345,11 @@ const VehicleSelect = () => {
                             <SearchingProgressBar key={searchStartedAt ?? "new-search"} startedAt={searchStartedAt} />
 
                             <div className="w-full flex justify-between items-center gap-3">
-                                <p className="text-left text-base sm:text-lg text-[var(--text-muted)]">{searchMessages[msgIndex]}</p>
+                                <p className="text-left text-base sm:text-lg text-[var(--text-muted)]">{tr(searchMessages[msgIndex])}</p>
                                 {/* same pill as TrackingPage's — content-sized
                                         and fully rounded, not a fixed 110px box */}
                                 <Button onClick={() => setDetialsVisibility(true)} prop={{ variant: "input", bg: "var(--background-muted)", rounded: "999px" }} className="cursor-pointer px-3 shrink-0" >
-                                    <p className="text-sm sm:text-base text-[var(--text)] whitespace-nowrap">Ride details</p>
+                                    <p className="text-sm sm:text-base text-[var(--text)] whitespace-nowrap">{tr("Ride details")}</p>
                                 </Button>
                             </div>
                         </div>
@@ -1286,8 +1363,8 @@ const VehicleSelect = () => {
                                 <>
                                     <Illustration><PriceIllustration /></Illustration>
                                     <div className="w-full text-center flex flex-col gap-1 px-1 pb-1">
-                                        <h3 className="text-lg sm:text-xl font-medium text-[var(--text)] leading-tight">Lowest fares on campus.</h3>
-                                        <p className="text-sm sm:text-base leading-relaxed text-[var(--text-muted)]">Save up to 40% over cabs, every ride.</p>
+                                        <h3 className="text-lg sm:text-xl font-medium text-[var(--text)] leading-tight">{tr("Lowest fares on campus.")}</h3>
+                                        <p className="text-sm sm:text-base leading-relaxed text-[var(--text-muted)]">{tr("Save up to 40% over cabs, every ride.")}</p>
                                     </div>
                                 </>
                             )}
@@ -1295,8 +1372,8 @@ const VehicleSelect = () => {
                                 <>
                                     <Illustration><SafetyIllustration /></Illustration>
                                     <div className="w-full text-center flex flex-col gap-1 px-1 pb-1">
-                                        <h3 className="text-lg sm:text-xl font-medium text-[var(--text)] leading-tight">Every ride, verified safe.</h3>
-                                        <p className="text-sm sm:text-base leading-relaxed text-[var(--text-muted)]">Background-checked drivers. Real-time GPS.</p>
+                                        <h3 className="text-lg sm:text-xl font-medium text-[var(--text)] leading-tight">{tr("Every ride, verified safe.")}</h3>
+                                        <p className="text-sm sm:text-base leading-relaxed text-[var(--text-muted)]">{tr("Background-checked drivers. Real-time GPS.")}</p>
                                     </div>
                                 </>
                             )}
@@ -1304,8 +1381,8 @@ const VehicleSelect = () => {
                                 <>
                                     <Illustration><WhatsAppIllustration /></Illustration>
                                     <div className="w-full text-center flex flex-col gap-1 px-1 pb-1">
-                                        <h3 className="text-lg sm:text-xl font-medium text-[var(--text)] leading-tight">Same WhatsApp. Zero effort.</h3>
-                                        <p className="text-sm sm:text-base leading-relaxed text-[var(--text-muted)]">Book like you always have. We handle the rest.</p>
+                                        <h3 className="text-lg sm:text-xl font-medium text-[var(--text)] leading-tight">{tr("Same WhatsApp. Zero effort.")}</h3>
+                                        <p className="text-sm sm:text-base leading-relaxed text-[var(--text-muted)]">{tr("Book like you always have. We handle the rest.")}</p>
                                     </div>
                                 </>
                             )}
@@ -1347,8 +1424,8 @@ const VehicleSelect = () => {
 
                     <div className={`relative z-10 sm:order-1 flex flex-col justify-end sm:justify-center items-center sm:items-start ${STACK} w-full sm:w-auto h-full sm:h-auto py-2 sm:py-0`}>
                         <div className={`flex flex-col justify-center items-center sm:items-start ${PAIR} ${COL}`}>
-                            <h2 className={`w-full min-w-0 text-left [overflow-wrap:anywhere] ${TITLE}`}>Confirm {confirmTarget}</h2>
-                            <h3 className={`hidden sm:block w-full min-w-0 text-center sm:text-left ${SUBTITLE}`}>{confirmTarget === "pickup" ? "Place the pin where you'll wait" : "Place the pin where you're headed"}</h3>
+                            <h2 className={`w-full min-w-0 text-left [overflow-wrap:anywhere] ${TITLE}`}>{tr("Confirm")} {confirmTarget === "pickup" ? tr("pickup") : tr("drop")}</h2>
+                            <h3 className={`hidden sm:block w-full min-w-0 text-center sm:text-left ${SUBTITLE}`}>{confirmTarget === "pickup" ? tr("Place the pin where you'll wait") : tr("Place the pin where you're headed")}</h3>
                         </div>
 
                         <div className={`flex flex-col justify-center items-center sm:items-start gap-3 ${COL}`}>
@@ -1356,8 +1433,8 @@ const VehicleSelect = () => {
                                     card, split by a hairline */}
                             <div className="w-full rounded-2xl bg-[var(--background-muted)] px-5 text-left">
                                 <div className="flex flex-col gap-0.5 py-3">
-                                    <p className="text-xs sm:text-sm text-[var(--text-muted)]">{confirmTarget === "pickup" ? "Pickup" : "Drop"}</p>
-                                    <h4 className="truncate w-full text-base sm:text-xl font-medium text-[var(--text)]">{confirmTarget === "pickup" ? pickupLocation : dropLocation}</h4>
+                                    <p className="text-xs sm:text-sm text-[var(--text-muted)]">{confirmTarget === "pickup" ? tr("Pickup") : tr("Drop")}</p>
+                                    <h4 className="w-full break-words text-base sm:text-xl font-medium text-[var(--text)]">{confirmTarget === "pickup" ? pickupLocation : dropLocation}</h4>
                                 </div>
                                 {/* Only when a ride is actually selected. This
                                         screen is also reached by clicking a map
@@ -1375,7 +1452,7 @@ const VehicleSelect = () => {
                                                     was chosen and priced, and the
                                                     category alone couldn't say which
                                                     of its two cars is coming. */}
-                                            <h4 className="text-sm sm:text-base text-[var(--text-muted)]">{labelOf(vehicleClass)}{sharing ? " · Sharing" : " · Solo"}{safeRoute && safeRouteInfo?.available ? " · Safer route" : ""}{needsCarrier ? " · Carrier" : ""}</h4>
+                                            <h4 className="text-sm sm:text-base text-[var(--text-muted)]">{tr(labelOf(vehicleClass))}{sharing ? dc("· {{value0}}", {value0: (tr("Sharing"))}) : dc("· {{value0}}", {value0: (tr("Solo"))})}{safeRoute && safeRouteInfo?.available ? dc("· {{value0}}", {value0: (tr("Safer route"))}) : ""}{needsCarrier ? dc("· {{value0}}", {value0: (tr("Carrier"))}) : ""}</h4>
                                             {/* re-priced on every pin adjust, so it
                                                     skeletons rather than flashing ₹— */}
                                             {pricing && fareFor(vehicleClass) == null
@@ -1390,15 +1467,15 @@ const VehicleSelect = () => {
                                 prop={{ type: "button", width: "100%", disabled: loading }}
                                 className="w-full"
                             >
-                                <span className="text-base sm:text-lg">{loading ? "Booking..." : bookAfterConfirm ? "Confirm pickup" : `Confirm ${confirmTarget} location`}</span>
+                                <span className="text-base sm:text-lg">{loading ? tr("Booking...") : bookAfterConfirm ? tr("Confirm pickup") : `${tr("Confirm")} ${confirmTarget === "pickup" ? tr("pickup") : tr("drop")} ${tr("location")}`}</span>
                             </Button>
                             {/* Same wording as the booking step — this is the
                                     last screen before the ride is created, so it
                                     must not state softer terms than the one before. */}
                             <p className="text-xs sm:text-sm leading-snug text-[var(--text-muted)]">
                                 {scheduledTime
-                                    ? `Cancel free while your driver is more than 500 m from pickup. Within 500 m, the paid ${CANCELLATION_CHARGE_PCT}% advance is retained.`
-                                    : "Ride Now cancellation is free before the trip starts."}
+                                    ? tr("Cancel free while your driver is more than 500 m from pickup. Within 500 m, the paid 15% advance is retained.")
+                                    : tr("Ride Now cancellation is free before the trip starts.")}
                             </p>
                         </div>
                     </div>
@@ -1479,7 +1556,7 @@ const VehicleSelect = () => {
                             the title it hangs under. */}
                         <div className={`relative z-10 sm:order-1 flex flex-col justify-end sm:justify-center items-center sm:items-start gap-2 sm:gap-8 w-full sm:w-auto flex-1 min-h-0 sm:flex-initial sm:h-auto`}>
                             <div className={`flex flex-col justify-center items-center sm:items-start gap-3 sm:gap-2 ${COL}`}>
-                                <h2 className={`w-full min-w-0 text-left [overflow-wrap:anywhere] ${TITLE}`}>Choose a ride</h2>
+                                <h2 className={`w-full min-w-0 text-left [overflow-wrap:anywhere] ${TITLE}`}>{tr("Choose a ride")}</h2>
                                 {/* Route metrics land with the estimate, so the chip
                                     holds its place while that is in flight rather
                                     than popping in and pushing the cards down.
@@ -1510,7 +1587,7 @@ const VehicleSelect = () => {
                                             <Skeleton rounded="rounded-full" className="h-[30px] sm:h-[34px] w-[130px] sm:w-[145px]" />
                                         ) : distanceKm != null && (
                                             <div className="rounded-xl bg-[var(--background-muted)] px-3 py-1.5 text-sm sm:text-base whitespace-nowrap text-[var(--text-muted)]">
-                                                {Math.round(distanceKm * 10) / 10} km{durationMin != null ? ` · ${durationMin} min` : ""}
+                                                {Math.round(distanceKm * 10) / 10}{" " + dc("km")}{durationMin != null ? dc("· {{value0}} min", {value0: (durationMin)}) : ""}
                                             </div>
                                         )}
                                         {/* Only alongside a form: on the unpriced and
@@ -1541,9 +1618,9 @@ const VehicleSelect = () => {
                                         <EmptyState
                                             tone="dark"
                                             align="sm-left"
-                                            title="No route set"
-                                            message="Tell us where you're starting from and where you're headed, and we'll price it."
-                                            action={{ label: "Set your route", onClick: () => navigate('/') }}
+                                            title={tr("No route set")}
+                                            message={tr("Tell us where you're starting from and where you're headed, and we'll price it.")}
+                                            action={{ label: tr("Set your route"), onClick: () => navigate('/') }}
                                         />
                                     </div>
                                 ) : estimateError ? (
@@ -1551,11 +1628,11 @@ const VehicleSelect = () => {
                                         <FailureState
                                             tone="dark"
                                             align="sm-left"
-                                            title="Couldn't price this route"
+                                            title={tr("Couldn't price this route")}
                                             detail={estimateError}
                                             onRetry={() => fetchEstimate()}
                                             retrying={pricing}
-                                            secondaryAction={{ label: "Change your route", onClick: () => navigate('/') }}
+                                            secondaryAction={{ label: tr("Change your route"), onClick: () => navigate('/') }}
                                         />
                                     </div>
                                 ) : routeUnpriced ? (
@@ -1567,15 +1644,15 @@ const VehicleSelect = () => {
                                         <EmptyState
                                             tone="dark"
                                             align="sm-left"
-                                            title="We don't price this route yet"
-                                            message="This drop-off isn't on our rate card. Message us and we'll quote it by hand."
+                                            title={tr("We don't price this route yet")}
+                                            message={tr("This drop-off isn't on our rate card. Message us and we'll quote it by hand.")}
                                             action={{
-                                                label: "Ask us for a fare",
+                                                label: tr("Ask us for a fare"),
                                                 onClick: () => openSupportWhatsApp(
                                                     `Hi, I'd like a fare for ${pickupLocation} to ${dropLocation}.`
                                                 ),
                                             }}
-                                            secondaryAction={{ label: "Change your route", onClick: () => navigate('/') }}
+                                            secondaryAction={{ label: tr("Change your route"), onClick: () => navigate('/') }}
                                         />
                                     </div>
                                 ) : (
@@ -1635,7 +1712,7 @@ const VehicleSelect = () => {
                                                 in view. */}
                                                     {isMobile && (
                                                         <h3 className="px-1 text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                                                            {group.category}
+                                                            {tr(group.category)}
                                                         </h3>
                                                     )}
                                                     {group.classes.map(cls => vehicleCard(

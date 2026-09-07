@@ -1,3 +1,5 @@
+import { useLanguage as useCopyLanguage } from "../../i18n";
+import { driverCopy as dc } from "../../lib/copy";
 import { Image, Pressable, View } from 'react-native';
 import { useNavigate } from 'react-router-native';
 import AppText from '../AppText';
@@ -11,6 +13,7 @@ const TITLE = { letterSpacing: -0.4, lineHeight: 24 };
 const PANEL_WIDTH = '34%';
 
 const MarketPromo = () => {
+    useCopyLanguage();
     const navigate = useNavigate();
 
     return (
@@ -20,24 +23,18 @@ const MarketPromo = () => {
         >
             <View className="flex-1 px-5 py-5 gap-1">
                 <View>
-                    <AppText className="text-xl font-semibold" style={{ ...TITLE, color: INK }}>
-                        Take a ride.
-                    </AppText>
-                    <AppText className="text-xl font-semibold" style={{ ...TITLE, color: INK }}>
-                        Or pass one on.
-                    </AppText>
+                    <AppText className="text-xl font-semibold" style={{ ...TITLE, color: INK }}>{dc("Take a ride.")}</AppText>
+                    <AppText className="text-xl font-semibold" style={{ ...TITLE, color: INK }}>{dc("Or pass one on.")}</AppText>
                 </View>
 
-                <AppText className="text-sm" style={{ color: SUBTLE }}>
-                    Rides captains can&apos;t make
-                </AppText>
+                <AppText className="text-sm" style={{ color: SUBTLE }}>{dc("Rides captains can't make")}</AppText>
 
                 <Pressable
                     role="button"
                     onPress={() => navigate('/available')}
                     className="self-start mt-1 rounded-full px-5 py-2 bg-[var(--background-primary)] active:opacity-80"
                 >
-                    <AppText className="font-semibold text-[var(--foreground)]">Open Market</AppText>
+                    <AppText className="font-semibold text-[var(--foreground)]">{dc("Open Market")}</AppText>
                 </Pressable>
             </View>
 
@@ -45,7 +42,7 @@ const MarketPromo = () => {
                 <Image
                     source={MarketIllustration}
                     accessibilityIgnoresInvertColors
-                    alt="One captain handing car keys to another"
+                    alt={dc("One captain handing car keys to another")}
                     resizeMode="contain"
                     style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 }}
                 />

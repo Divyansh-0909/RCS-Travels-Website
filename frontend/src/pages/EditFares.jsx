@@ -1,3 +1,5 @@
+import { useTranslation as useCopyLanguage } from "react-i18next";
+import { websiteCopy as dc } from "../i18nCopy";
 import { useCallback, useEffect, useRef, useState } from 'react'
 import L from 'leaflet'
 import '@geoman-io/leaflet-geoman-free'
@@ -15,21 +17,27 @@ import './EditFares.css'
 // request. The copy that described the file round trip had to follow.
 
 // ---------- pricing rules, mirrored from the website ----------
-// Sedan and Ertiga follow the Wagon R everywhere except the handful of places
-// the provider quoted individually, so the form asks for one number and works
-// the rest out. Any value that is not the worked-out one counts as quoted.
-const derive = { sedan: (h) => h + 100, suv: (h) => Math.round((h * 1.6) / 50) * 50 }
+// The provider edits one source number only. Every other class is calculated
+// from the Wagon R fare, exactly as rideEstimate.js prices the customer cards.
+// Keeping the derivation here lets the owner inspect every class without
+// creating override fields that the live estimator deliberately ignores.
+const derive = {
+    hatchback: (h) => h,
+    sedan: (h) => h + 100,
+    suv: (h) => Math.round((h * 1.6) / 50) * 50,
+    suv_premium: (h) => Math.round((h * 2.75) / 50) * 50,
+}
 
-const isAuto = (props, cls) => {
-    const h = props.fares?.hatchback
-    const v = props.fares?.[cls]
-    return h != null && v != null && v === derive[cls](h)
+const fareFor = (props, cls) => {
+    const hatchback = props.fares?.hatchback
+    return hatchback == null ? null : derive[cls]?.(hatchback) ?? null
 }
 
 const CLASSES = [
-    { key: 'hatchback', label: 'Wagon R', scale: (n) => n },
-    { key: 'sedan', label: 'Sedan', scale: (n) => n + 100 },
-    { key: 'suv', label: 'Ertiga', scale: (n) => Math.round((n * 1.6) / 50) * 50 },
+    { key: 'hatchback', get "label"() { return dc("Wagon R"); }, shortLabel: 'Wagon R', scale: derive.hatchback },
+    { key: 'sedan', get "label"() { return dc("Sedan"); }, shortLabel: 'Sedan', scale: derive.sedan },
+    { key: 'suv', get "label"() { return dc("Ertiga"); }, shortLabel: 'Ertiga', scale: derive.suv },
+    { key: 'suv_premium', get "label"() { return dc("Innova Crysta"); }, shortLabel: 'Premium', scale: derive.suv_premium },
 ]
 
 // Fare bands drive zone colors so the pricing geography is visible at a glance.
@@ -92,6 +100,7 @@ const field =
 const labelCls = 'block text-xs text-gray-500 mt-3 mb-1'
 
 const EditFares = () => {
+    useCopyLanguage();
     const api = useApi()
 
     const mapRef = useRef(null)
@@ -121,8 +130,6 @@ const EditFares = () => {
     const [, setTick] = useState(0)
     const bump = useCallback(() => setTick((t) => t + 1), [])
 
-    const activeDef = CLASSES.find((c) => c.key === activeClass)
-
     const bandColor = useCallback(
         (fare) => {
             if (fare == null) return '#8b8b9d'
@@ -134,7 +141,7 @@ const EditFares = () => {
 
     const zoneStyle = useCallback(
         (z, active) => {
-            const c = bandColor(z.props.fares?.[activeClass])
+            const c = bandColor(fareFor(z.props, activeClass))
             return {
                 color: active ? '#ffffff' : c,
                 weight: active ? 3 : 2,
@@ -146,7 +153,7 @@ const EditFares = () => {
     )
 
     const labelHtml = useCallback(
-        (z) => `${escapeHtml(z.props.name)} <span class="rs">${fmt(z.props.fares?.[activeClass])}</span>`,
+        (z) => `${escapeHtml(z.props.name)} <span class="rs">${fmt(fareFor(z.props, activeClass))}</span>`,
         [activeClass],
     )
 
@@ -169,12 +176,12 @@ const EditFares = () => {
         const out = []
         const live = new Set(zonesRef.current)
         for (const [z] of baselineRef.current)
-            if (!live.has(z)) out.push({ kind: 'del', text: `<strong>${escapeHtml(z.props.name)}</strong> hata diya` })
+            if (!live.has(z)) out.push({ kind: 'del', get "text"() { return dc("<strong>{{value0}}</strong> hata diya", {value0: (escapeHtml(z.props.name))}); } })
         for (const z of zonesRef.current) {
             if (!baselineRef.current.has(z)) {
                 out.push({
                     kind: 'add',
-                    text: `Naya area <strong>${escapeHtml(z.props.name)}</strong> — ${fmt(z.props.fares?.hatchback)}`,
+                    get "text"() { return dc("Naya area <strong>{{value0}}</strong> — {{value1}}", {value0: (escapeHtml(z.props.name)), value1: (fmt(z.props.fares?.hatchback))}); },
                 })
                 continue
             }
@@ -182,15 +189,13 @@ const EditFares = () => {
             if (snapshot(z) === baselineRef.current.get(z)) continue
             const bits = []
             if (was.p.name !== z.props.name) bits.push(`naam pehle “${escapeHtml(was.p.name)}” tha`)
-            for (const { key, label } of CLASSES) {
-                const a = was.p.fares?.[key]
-                const b = z.props.fares?.[key]
-                if (a !== b) bits.push(`${label} ${fmt(a)} → ${fmt(b)}`)
-            }
+            const oldHatchback = was.p.fares?.hatchback
+            const newHatchback = z.props.fares?.hatchback
+            if (oldHatchback !== newHatchback) bits.push(`Wagon R ${fmt(oldHatchback)} → ${fmt(newHatchback)}`)
             if ((was.p.toll ?? 0) !== (z.props.toll ?? 0)) bits.push(`toll ${fmt(was.p.toll ?? 0)} → ${fmt(z.props.toll ?? 0)}`)
             if (JSON.stringify(was.r) !== JSON.stringify(roundRing(ringOf(z)))) bits.push('shape badli')
             if ((was.p.notes ?? '') !== (z.props.notes ?? '')) bits.push('notes badle')
-            if (bits.length) out.push({ kind: 'mod', text: `<strong>${escapeHtml(z.props.name)}</strong> — ${bits.join(', ')}` })
+            if (bits.length) out.push({ kind: 'mod', get "text"() { return dc("<strong>{{value0}}</strong> — {{value1}}", {value0: (escapeHtml(z.props.name)), value1: (bits.join(', '))}); } })
         }
         return out
     }, [])
@@ -220,11 +225,8 @@ const EditFares = () => {
             second.fares.hatchback !== top.fares.hatchback
         if (!isBorder) return top
 
-        const fares = {}
-        for (const { key } of CLASSES) {
-            if (top.fares[key] != null && second.fares[key] != null)
-                fares[key] = Math.round((top.fares[key] + second.fares[key]) / 2 / 50) * 50
-            else if (top.fares[key] != null) fares[key] = top.fares[key]
+        const fares = {
+            hatchback: Math.round((top.fares.hatchback + second.fares.hatchback) / 2 / 50) * 50,
         }
         return {
             name: `${top.name} / ${second.name} border`,
@@ -251,7 +253,18 @@ const EditFares = () => {
 
     const addZone = useCallback(
         (feature, layer) => {
-            const z = { props: feature.properties ?? {}, layer }
+            const incoming = feature.properties ?? {}
+            // Old cards may still carry the three now-dead derived columns.
+            // Drop them on load so each subsequent save persists one source of
+            // truth while preserving the rest of the zone exactly as received.
+            const hatchback = incoming.fares?.hatchback
+            const z = {
+                props: {
+                    ...incoming,
+                    fares: hatchback == null ? {} : { hatchback },
+                },
+                layer,
+            }
             layer.addTo(mapRef.current)
             layer.setStyle(zoneStyle(z, false))
             layer.bindTooltip(labelHtml(z), { permanent: true, direction: 'center', className: 'zone-label' })
@@ -418,37 +431,13 @@ const EditFares = () => {
     }, [ready, matchZone, addZone, select])
 
     // ---------- form bindings ----------
-    // The Wagon R box drags the other two along, but only the ones that were
-    // following it — a price the provider quoted separately stays put.
+    // One editable source. Sedan, Ertiga and Innova Crysta are always derived
+    // for display and are never persisted as competing prices.
     const onHatchback = (value) => {
         const z = selectedRef.current
         const f = (z.props.fares = z.props.fares ?? {})
-        const following = { sedan: isAuto(z.props, 'sedan'), suv: isAuto(z.props, 'suv') }
         if (value === '') delete f.hatchback
         else f.hatchback = +value
-        for (const cls of ['sedan', 'suv']) {
-            if (!following[cls]) continue
-            if (f.hatchback == null) delete f[cls]
-            else f[cls] = derive[cls](f.hatchback)
-        }
-        refreshZone(z)
-        bump()
-    }
-
-    const onDerived = (cls, value) => {
-        const z = selectedRef.current
-        const f = (z.props.fares = z.props.fares ?? {})
-        if (value === '') delete f[cls]
-        else f[cls] = +value
-        refreshZone(z)
-        bump()
-    }
-
-    const resetDerived = (cls) => {
-        const z = selectedRef.current
-        const f = z.props.fares ?? {}
-        if (f.hatchback == null) return
-        f[cls] = derive[cls](f.hatchback)
         refreshZone(z)
         bump()
     }
@@ -472,7 +461,7 @@ const EditFares = () => {
     // ---------- save ----------
     const openSave = () => {
         if (!zonesRef.current.length) {
-            window.alert('Abhi save karne ko kuch nahi hai.')
+            window.alert(dc("Abhi save karne ko kuch nahi hai."))
             return
         }
         setSaveError(null)
@@ -515,7 +504,7 @@ const EditFares = () => {
     const q = search.trim().toLowerCase()
     const visible = [...zonesRef.current]
         .filter((z) => !q || (z.props.name ?? '').toLowerCase().includes(q) || (z.props.notes ?? '').toLowerCase().includes(q))
-        .sort((a, b) => (a.props.fares?.[activeClass] ?? 1e9) - (b.props.fares?.[activeClass] ?? 1e9))
+        .sort((a, b) => (fareFor(a.props, activeClass) ?? 1e9) - (fareFor(b.props, activeClass) ?? 1e9))
 
     const savedAt = meta?.updatedAt
         ? new Date(meta.updatedAt).toLocaleString('en-GB', {
@@ -529,15 +518,10 @@ const EditFares = () => {
     return (
         <div className="w-full flex-1 min-h-0 flex flex-col-reverse sm:flex-row gap-4 px-5 max-sm:px-0 pb-1">
             {/* ---------- sidebar ---------- */}
-            <aside className="w-full sm:w-[340px] sm:shrink-0 flex flex-col min-h-0 max-sm:h-[45%] rounded-2xl bg-[var(--foreground-muted)] overflow-hidden">
+            <aside className="w-full sm:w-[340px] sm:shrink-0 flex flex-col min-h-0 max-sm:h-[70%] rounded-2xl bg-[var(--foreground-muted)] overflow-hidden">
                 <div className="px-5 pt-4 pb-3 border-b border-[var(--background-primary)]/10">
-                    <h4 className="font-semibold text-[var(--background-primary)]">
-                        Kiraya zone editor
-                    </h4>
-                    <p className="text-xs text-gray-500 leading-relaxed mt-1">
-                        Kisi bhi area par tap karke uska rate badlein. Safed golon ko kheench kar area ki shape badlein.
-                        Map par kahin bhi tap karke dekhein wahan ka kiraya kitna banta hai.
-                    </p>
+                    <h4 className="font-semibold text-[var(--background-primary)]">{dc("Kiraya zone editor")}</h4>
+                    <p className="text-xs text-gray-500 leading-relaxed mt-1">{dc("Kisi bhi area par tap karke uska rate badlein. Safed golon ko kheench kar area ki shape badlein. Map par kahin bhi tap karke dekhein wahan ka kiraya kitna banta hai.")}</p>
                 </div>
 
                 <div className="flex gap-2 px-5 py-3 border-b border-[var(--background-primary)]/10">
@@ -546,21 +530,17 @@ const EditFares = () => {
                         onClick={startDraw}
                         disabled={loading || !!loadError}
                         className="flex-1 rounded-xl border border-[var(--background-primary)]/20 px-3 py-2 text-sm font-semibold text-[var(--text-foreground)] cursor-pointer transition-colors duration-300 hover:bg-[var(--background-primary)]/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary active:opacity-[0.7] disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        Naya area banayein
-                    </button>
+                    >{dc("Naya area banayein")}</button>
                     <button
                         type="button"
                         onClick={openSave}
                         disabled={loading || !!loadError}
                         className="flex-1 rounded-xl bg-primary px-3 py-2 text-sm font-semibold text-[var(--foreground)] cursor-pointer transition-opacity duration-300 hover:opacity-[0.9] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary active:opacity-[0.7] disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        Save karke live karein
-                    </button>
+                    >{dc("Save karke live karein")}</button>
                 </div>
 
-                {/* Which car the map is coloured and labelled for. He quotes three,
-                    so the map has to be able to show all three — not just the Wagon R. */}
+                {/* All four customer prices remain inspectable, even though only
+                    the Wagon R source fare is editable. */}
                 <div className="flex px-5 py-3 border-b border-[var(--background-primary)]/10">
                     {CLASSES.map((c, i) => (
                         <button
@@ -573,20 +553,20 @@ const EditFares = () => {
                                     : 'text-gray-500 hover:bg-[var(--background-primary)]/5'
                             }`}
                         >
-                            {c.label}
+                            {c.shortLabel}
                         </button>
                     ))}
                 </div>
 
                 {loading ? (
                     <div className="flex-1 flex items-center justify-center px-5">
-                        <p className="text-sm text-gray-500">Load ho raha hai…</p>
+                        <p className="text-sm text-gray-500">{dc("Load ho raha hai…")}</p>
                     </div>
                 ) : loadError ? (
                     <div className="flex-1 min-h-0 overflow-y-auto">
                         <FailureState
                             tone="light"
-                            title="Rate card load nahi hua"
+                            title={dc("Rate card load nahi hua")}
                             detail={loadError}
                             onRetry={() => setReloadKey((k) => k + 1)}
                         />
@@ -594,7 +574,7 @@ const EditFares = () => {
                 ) : selected ? (
                     /* ---------- edit form ---------- */
                     <div className="flex-1 min-h-0 overflow-y-auto px-5 py-1">
-                        <label className={labelCls} htmlFor="f-name">Area ka naam</label>
+                        <label className={labelCls} htmlFor="f-name">{dc("Area ka naam")}</label>
                         <input
                             id="f-name"
                             type="text"
@@ -608,48 +588,30 @@ const EditFares = () => {
                             }}
                         />
 
-                        <label className={labelCls}>Rate (₹, Shiv Nadar se one way)</label>
-                        <div className="grid grid-cols-3 gap-2">
-                            {CLASSES.map(({ key, label }) => {
-                                const auto = key !== 'hatchback' && isAuto(selected.props, key)
-                                return (
-                                    <div key={key}>
-                                        <label className="block text-xs text-gray-500 mb-1" htmlFor={`f-${key}`}>{label}</label>
-                                        <input
-                                            id={`f-${key}`}
-                                            type="number"
-                                            min="0"
-                                            step="50"
-                                            inputMode="numeric"
-                                            /* An auto-filled price is shown greyed so it reads as
-                                               "worked out for you" rather than as something he
-                                               typed and must maintain. */
-                                            className={`${field} ${auto ? 'text-gray-500 italic' : ''}`}
-                                            value={selected.props.fares?.[key] ?? ''}
-                                            onChange={(e) =>
-                                                key === 'hatchback' ? onHatchback(e.target.value) : onDerived(key, e.target.value)
-                                            }
-                                        />
-                                        {key !== 'hatchback' && !auto && selected.props.fares?.hatchback != null && (
-                                            <button
-                                                type="button"
-                                                onClick={() => resetDerived(key)}
-                                                className="mt-1 w-full text-left text-[10.5px] text-primary cursor-pointer hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-                                            >
-                                                normal rate lagayein
-                                            </button>
-                                        )}
+                        <label className={labelCls} htmlFor="f-hatchback">{dc("Wagon R base rate (₹, Shiv Nadar se one way)")}</label>
+                        <input
+                            id="f-hatchback"
+                            type="number"
+                            min="0"
+                            step="50"
+                            inputMode="numeric"
+                            className={field}
+                            value={selected.props.fares?.hatchback ?? ''}
+                            onChange={(e) => onHatchback(e.target.value)}
+                        />
+                        <div className="mt-3 grid grid-cols-2 gap-2" aria-label={dc("Calculated fares")}>
+                            {CLASSES.map(({ key, label }) => (
+                                <div key={key} className="rounded-xl bg-[var(--background-primary)]/[0.045] px-3 py-2">
+                                    <div className="text-[10.5px] text-gray-500">{label}</div>
+                                    <div className="mt-0.5 text-sm font-semibold tabular-nums text-[var(--text-foreground)]">
+                                        {fmt(fareFor(selected.props, key))}
                                     </div>
-                                )
-                            })}
+                                </div>
+                            ))}
                         </div>
-                        <p className="text-[11.5px] text-gray-500 leading-relaxed mt-2">
-                            Sirf Wagon R ka rate likhein, baaki dono apne aap bhar jaayenge — Sedan ₹100 zyada, Ertiga
-                            1.6×. Agar is jagah ka rate alag hai to uske upar apna number likh dein. Kisi box ko khaali
-                            chhod dein to wahan wo gaadi nahi chalegi; tab website distance ke hisaab se kiraya batayegi.
-                        </p>
+                        <p className="text-[11.5px] text-gray-500 leading-relaxed mt-2">{dc("Sirf Wagon R ka rate badlein. Website hamesha Sedan +₹100, Ertiga 1.6× aur Innova Crysta 2.75× calculate karegi; alag car rate save nahi hota.")}</p>
 
-                        <label className={labelCls} htmlFor="f-toll">Raste mein toll (₹)</label>
+                        <label className={labelCls} htmlFor="f-toll">{dc("Raste mein toll (₹)")}</label>
                         <input
                             id="f-toll"
                             type="number"
@@ -664,11 +626,9 @@ const EditFares = () => {
                                 bump()
                             }}
                         />
-                        <p className="text-[11.5px] text-gray-500 leading-relaxed mt-2">
-                            Yeh kiraye mein jud kar customer ko dikhta hai. Toll nahi hai to khaali chhod dein.
-                        </p>
+                        <p className="text-[11.5px] text-gray-500 leading-relaxed mt-2">{dc("Yeh kiraye mein jud kar customer ko dikhta hai. Toll nahi hai to khaali chhod dein.")}</p>
 
-                        <label className={labelCls} htmlFor="f-notes">Notes (is area mein kaun kaun si jagah aati hain)</label>
+                        <label className={labelCls} htmlFor="f-notes">{dc("Notes (is area mein kaun kaun si jagah aati hain)")}</label>
                         <textarea
                             id="f-notes"
                             rows={3}
@@ -686,16 +646,12 @@ const EditFares = () => {
                                 type="button"
                                 onClick={() => select(null)}
                                 className="flex-1 rounded-xl bg-primary px-3 py-2 text-sm font-semibold text-[var(--foreground)] cursor-pointer transition-opacity duration-300 hover:opacity-[0.9] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary active:opacity-[0.7]"
-                            >
-                                Ho gaya
-                            </button>
+                            >{dc("Ho gaya")}</button>
                             <button
                                 type="button"
                                 onClick={deleteZone}
                                 className="rounded-xl border border-[var(--background-primary)]/20 px-3 py-2 text-sm font-semibold text-negative-light cursor-pointer transition-colors duration-300 hover:border-negative-light focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-negative-light active:opacity-[0.7]"
-                            >
-                                Hata dein
-                            </button>
+                            >{dc("Hata dein")}</button>
                         </div>
                     </div>
                 ) : (
@@ -705,7 +661,7 @@ const EditFares = () => {
                                 type="search"
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
-                                placeholder="Jagah ka naam dhoondhein…"
+                                placeholder={dc("Jagah ka naam dhoondhein…")}
                                 autoComplete="off"
                                 className={field}
                             />
@@ -715,9 +671,9 @@ const EditFares = () => {
                                 <EmptyState
                                     tone="light"
                                     glyph="search"
-                                    title="Is naam ka koi area nahi mila"
-                                    message="Spelling dekh lein, ya poora naam hatakar dobara dhoondhein."
-                                    secondaryAction={search ? { label: 'Search hatayein', onClick: () => setSearch('') } : undefined}
+                                    title={dc("Is naam ka koi area nahi mila")}
+                                    message={dc("Spelling dekh lein, ya poora naam hatakar dobara dhoondhein.")}
+                                    secondaryAction={search ? { get "label"() { return dc("Search hatayein"); }, onClick: () => setSearch('') } : undefined}
                                 />
                             ) : (
                                 visible.map((z, i) => (
@@ -732,14 +688,14 @@ const EditFares = () => {
                                     >
                                         <span
                                             className="w-3 h-3 rounded shrink-0"
-                                            style={{ background: bandColor(z.props.fares?.[activeClass]) }}
+                                            style={{ background: bandColor(fareFor(z.props, activeClass)) }}
                                         />
                                         <span className="flex-1 min-w-0 truncate text-sm font-semibold text-[var(--text-foreground)]">
                                             {z.props.name}
                                             {isChanged(z) && <span className="text-primary"> •</span>}
                                         </span>
                                         <span className="text-sm text-gray-500 tabular-nums">
-                                            {fmt(z.props.fares?.[activeClass])}
+                                            {fmt(fareFor(z.props, activeClass))}
                                         </span>
                                     </button>
                                 ))
@@ -751,34 +707,30 @@ const EditFares = () => {
                 <div className="px-5 py-3 border-t border-[var(--background-primary)]/10">
                     <p className="text-[11.5px] text-gray-500 leading-relaxed">{status}</p>
                     {savedAt && (
-                        <p className="text-[11.5px] text-gray-400 mt-1">Aakhri baar live kiya: {savedAt}</p>
+                        <p className="text-[11.5px] text-gray-400 mt-1">{dc("Aakhri baar live kiya:") + " "}{savedAt}</p>
                     )}
                 </div>
             </aside>
 
             {/* ---------- map ---------- */}
-            <main className="relative flex-1 min-h-0 max-sm:h-[55%] rounded-2xl overflow-hidden">
+            <main className="relative flex-1 min-h-0 max-sm:h-[30%] rounded-2xl overflow-hidden">
                 <div ref={mapNodeRef} className="absolute inset-0 bg-[#e8e8e8]" />
 
                 {/* ---------- price checker ---------- */}
                 <div className="absolute right-3 top-3 z-[800] w-[234px] max-sm:w-[190px] rounded-xl border border-[var(--background-primary)]/10 bg-[var(--foreground)]/95 px-3.5 py-3 text-xs shadow-[0_4px_16px_rgba(18,18,32,0.18)]">
-                    <h2 className="text-[11px] font-bold text-gray-500 mb-2">YAHAN KA KIRAYA KITNA?</h2>
+                    <h2 className="text-[11px] font-bold text-gray-500 mb-2">{dc("YAHAN KA KIRAYA KITNA?")}</h2>
                     {probe === null ? (
-                        <p className="text-gray-500 leading-relaxed">Map par kahin bhi tap karein.</p>
+                        <p className="text-gray-500 leading-relaxed">{dc("Map par kahin bhi tap karein.")}</p>
                     ) : probe === 'none' ? (
                         <>
-                            <div className="text-[13px] font-bold leading-snug text-[var(--text-foreground)]">
-                                Kisi bhi area mein nahi hai
-                            </div>
-                            <p className="mt-2 text-[11px] leading-relaxed text-amber-600">
-                                Yahan ki ride aapke rate card se nahi, distance ke hisaab se lagegi.
-                            </p>
+                            <div className="text-[13px] font-bold leading-snug text-[var(--text-foreground)]">{dc("Kisi bhi area mein nahi hai")}</div>
+                            <p className="mt-2 text-[11px] leading-relaxed text-amber-600">{dc("Yahan ki ride aapke rate card se nahi, distance ke hisaab se lagegi.")}</p>
                         </>
                     ) : (
                         <>
                             <div className="text-[13px] font-bold leading-snug text-[var(--text-foreground)]">{probe.name}</div>
                             {CLASSES.map(({ key, label }) => {
-                                const base = probe.fares[key]
+                                const base = fareFor({ fares: probe.fares }, key)
                                 return (
                                     <div key={key} className="flex justify-between mt-1 tabular-nums">
                                         <span className="text-gray-500">{label}</span>
@@ -789,16 +741,10 @@ const EditFares = () => {
                                 )
                             })}
                             {probe.toll > 0 && (
-                                <p className="mt-2 text-[11px] leading-relaxed text-amber-600">
-                                    Ismein {fmt(probe.toll)} ka toll shaamil hai.
-                                </p>
+                                <p className="mt-2 text-[11px] leading-relaxed text-amber-600">{dc("Ismein") + " "}{fmt(probe.toll)}{" " + dc("ka toll shaamil hai.")}</p>
                             )}
                             {probe.blended && (
-                                <p className="mt-2 text-[11px] leading-relaxed text-amber-600">
-                                    Yeh jagah <strong>{probe.pair[0]}</strong> aur <strong>{probe.pair[1]}</strong> dono
-                                    mein aati hai, isliye rate dono ka average liya gaya hai. Agar aisa nahi chahiye to
-                                    kisi ek ki boundary hata dein.
-                                </p>
+                                <p className="mt-2 text-[11px] leading-relaxed text-amber-600">{dc("Yeh jagah") + " "}<strong>{probe.pair[0]}</strong>{" " + dc("aur") + " "}<strong>{probe.pair[1]}</strong>{" " + dc("dono mein aati hai, isliye rate dono ka average liya gaya hai. Agar aisa nahi chahiye to kisi ek ki boundary hata dein.")}</p>
                             )}
                         </>
                     )}
@@ -816,18 +762,13 @@ const EditFares = () => {
                         onClick={(e) => e.stopPropagation()}
                     >
                         <h2 className="text-base font-semibold text-[var(--background-primary)]">
-                            {modal.changes.length ? `${modal.changes.length} badlaav live karein` : 'Abhi tak kuch nahi badla'}
+                            {modal.changes.length ? dc("{{value0}} badlaav live karein", {value0: (modal.changes.length)}) : dc("Abhi tak kuch nahi badla")}
                         </h2>
-                        <p className="mt-1 text-[12.5px] leading-relaxed text-gray-500">
-                            List ek baar dekh lein. Save karte hi website par yeh rates chalu ho jaayenge — har nayi ride
-                            inhi par lagegi.
-                        </p>
+                        <p className="mt-1 text-[12.5px] leading-relaxed text-gray-500">{dc("List ek baar dekh lein. Save karte hi website par yeh rates chalu ho jaayenge — har nayi ride inhi par lagegi.")}</p>
 
                         <ul className="my-3.5 flex-1 overflow-y-auto text-[12.5px] leading-relaxed">
                             {modal.changes.length === 0 && (
-                                <li className="border-b border-[var(--background-primary)]/10 py-1.5 text-gray-500">
-                                    Kisi area mein koi badlaav nahi hua, isliye save karne ko kuch nahi hai.
-                                </li>
+                                <li className="border-b border-[var(--background-primary)]/10 py-1.5 text-gray-500">{dc("Kisi area mein koi badlaav nahi hua, isliye save karne ko kuch nahi hai.")}</li>
                             )}
                             {modal.changes.map((c, i) => (
                                 <li key={i} className="border-b border-[var(--background-primary)]/10 py-1.5 text-[var(--text-foreground)]">
@@ -836,17 +777,16 @@ const EditFares = () => {
                                             c.kind === 'add' ? 'text-green-600' : c.kind === 'del' ? 'text-negative-light' : 'text-primary'
                                         }`}
                                     >
-                                        {c.kind === 'add' ? 'NAYA' : c.kind === 'del' ? 'HATAYA' : 'BADLA'}
+                                        {c.kind === 'add' ? dc("NAYA") : c.kind === 'del' ? 'HATAYA' : 'BADLA'}
                                     </span>
                                     <span dangerouslySetInnerHTML={{ __html: c.text }} />
                                 </li>
                             ))}
                             {modal.unpriced > 0 && (
                                 <li className="border-b border-[var(--background-primary)]/10 py-1.5 text-[var(--text-foreground)]">
-                                    <span className="mr-1.5 font-bold text-negative-light">DHYAN DEIN</span>
-                                    {modal.unpriced} area ka naam ya Wagon R ka rate nahi bhara hai, isliye{' '}
-                                    {modal.unpriced > 1 ? 'unka' : 'uska'} kiraya distance ke hisaab se lagega.
-                                </li>
+                                    <span className="mr-1.5 font-bold text-negative-light">{dc("DHYAN DEIN")}</span>
+                                    {modal.unpriced}{" " + dc("area ka naam ya Wagon R ka rate nahi bhara hai, isliye")}{' '}
+                                    {modal.unpriced > 1 ? dc("unka") : dc("uska")}{" " + dc("kiraya distance ke hisaab se lagega.")}</li>
                             )}
                         </ul>
 
@@ -862,16 +802,14 @@ const EditFares = () => {
                                 onClick={() => setModal(null)}
                                 disabled={saving}
                                 className="rounded-xl border border-[var(--background-primary)]/20 px-3 py-2 text-sm font-semibold text-[var(--text-foreground)] cursor-pointer transition-colors duration-300 hover:bg-[var(--background-primary)]/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary active:opacity-[0.7] disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                Abhi aur badlein
-                            </button>
+                            >{dc("Abhi aur badlein")}</button>
                             <button
                                 type="button"
                                 onClick={confirmSave}
                                 disabled={saving}
                                 className="flex-1 rounded-xl bg-primary px-3 py-2 text-sm font-semibold text-[var(--foreground)] cursor-pointer transition-opacity duration-300 hover:opacity-[0.9] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary active:opacity-[0.7] disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                {saving ? 'Live kiya ja raha hai…' : 'Live karein'}
+                                {saving ? dc("Live kiya ja raha hai…") : dc("Live karein")}
                             </button>
                         </div>
                     </div>

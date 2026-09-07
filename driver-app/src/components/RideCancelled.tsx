@@ -1,3 +1,5 @@
+import { useLanguage as useCopyLanguage } from "../i18n";
+import { driverCopy as dc } from "../lib/copy";
 import { Pressable, View } from 'react-native';
 import { cssInterop } from 'nativewind';
 import { XIcon } from 'phosphor-react-native';
@@ -31,6 +33,7 @@ export const RideCancelled = ({
     ride: UpcomingBooking;
     onDismiss: () => void;
 }) => {
+    useCopyLanguage();
     const charge = ride.cancellationCharge ?? 0;
     const pickup = splitAddress(ride.pickupAddress);
     const top = useNoticeTop();
@@ -48,7 +51,7 @@ export const RideCancelled = ({
                 <View className="flex-row items-start justify-between gap-3">
                     <View className="flex-1 gap-0.5">
                         <AppText className={`text-lg font-bold ${INK_TEXT}`} style={{ letterSpacing: -0.4 }}>
-                            {ride.cancelledBy === 'user' ? 'Rider cancelled' : 'Ride cancelled'}
+                            {ride.cancelledBy === 'user' ? dc("Rider cancelled") : dc("Ride cancelled")}
                         </AppText>
                         <AppText numberOfLines={1} className={`text-sm ${MUTED}`}>
                             {pickup.main} · {ride.reference}
@@ -56,7 +59,7 @@ export const RideCancelled = ({
                     </View>
                     <Pressable
                         role="button"
-                        accessibilityLabel="Dismiss"
+                        accessibilityLabel={dc("Dismiss")}
                         onPress={onDismiss}
                         hitSlop={12}
                         style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}
@@ -72,20 +75,14 @@ export const RideCancelled = ({
                     he did wrong. */}
                 {charge > 0 ? (
                     <View className="rounded-2xl px-4 py-3 gap-0.5" style={{ backgroundColor: PAGE }}>
-                        <AppText className={`text-xs font-semibold uppercase tracking-wide ${MUTED}`}>
-                            Your compensation
-                        </AppText>
+                        <AppText className={`text-xs font-semibold uppercase tracking-wide ${MUTED}`}>{dc("Your compensation")}</AppText>
                         <AppText className={`text-2xl font-bold ${INK_TEXT}`} style={{ letterSpacing: -0.5 }}>
                             {rupees(charge)}
                         </AppText>
-                        <AppText className={`text-xs ${MUTED}`}>
-                            Credited from the rider&apos;s advance because this was a late cancellation.
-                        </AppText>
+                        <AppText className={`text-xs ${MUTED}`}>{dc("Credited from the rider's advance because this was a late cancellation.")}</AppText>
                     </View>
                 ) : (
-                    <AppText className={`text-sm ${MUTED}`}>
-                        Nothing is owed on this one. You&apos;re back online for new rides.
-                    </AppText>
+                    <AppText className={`text-sm ${MUTED}`}>{dc("Nothing is owed on this one. You're back online for new rides.")}</AppText>
                 )}
             </Animated.View>
         </View>

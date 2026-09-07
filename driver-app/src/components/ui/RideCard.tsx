@@ -1,3 +1,5 @@
+import { useLanguage as useCopyLanguage } from "../../i18n";
+import { driverCopy as dc } from "../../lib/copy";
 import { Linking, Pressable, View } from 'react-native';
 import { cssInterop } from 'nativewind';
 import { PhoneIcon } from 'phosphor-react-native';
@@ -20,6 +22,7 @@ type Props = {
 };
 
 const RideCard = ({ booking, onPress }: Props) => {
+    useCopyLanguage();
     const leg = activeLeg(booking.status);
     const address = leg.endpoint === 'drop' ? booking.dropAddress : booking.pickupAddress;
     const { main, rest } = splitAddress(address);
@@ -72,11 +75,11 @@ const RideCard = ({ booking, onPress }: Props) => {
                         </AppText>
                     </View>
                     <AppText numberOfLines={1} className="flex-1 text-xl font-semibold text-white">
-                        {booking.user?.name ?? 'Rider'}
+                        {booking.user?.name ?? dc("Rider")}
                     </AppText>
                     <Pressable
                         role="button"
-                        aria-label={`Call ${booking.user?.name ?? 'the rider'}`}
+                        aria-label={dc("Call {{value0}}", {value0: (booking.user?.name ?? 'the rider')})}
                         onPress={() => Linking.openURL(`tel:${booking.customerPhone}`)}
                         style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
                     >
@@ -95,7 +98,7 @@ const RideCard = ({ booking, onPress }: Props) => {
                     style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
                 >
                     <View className="w-full rounded-2xl bg-[var(--background-primary)] py-3.5 items-center">
-                        <AppText className="text-base font-semibold text-[var(--foreground)]">Navigate</AppText>
+                        <AppText className="text-base font-semibold text-[var(--foreground)]">{dc("Navigate")}</AppText>
                     </View>
                 </Pressable>
             </View>

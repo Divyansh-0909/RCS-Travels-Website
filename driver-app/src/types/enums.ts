@@ -54,7 +54,19 @@ export type UpcomingBooking = {
   durationMin: number | null;
   // Derived server-side (routes/driver.ts). 'void' is a cancelled ride that owes
   // nothing. The app renders this and decides nothing about money itself.
-  paymentState: 'paid' | 'due' | 'void';
+  paymentState: 'paid' | 'due' | 'void' | 'retained';
+  // Customer-facing money is server-authoritative. `customerPayment` is rupees;
+  // scheduled amounts remain paise, just like the customer booking financials.
+  // The captain app uses these only to explain collection — never to launch checkout.
+  customerPayment?: number;
+  collectionMode?: 'direct' | 'online';
+  scheduledPayment?: {
+    advanceAmount: number;
+    advancePaidAmount: number;
+    advanceDisposition: 'not_applicable' | 'awaiting_payment' | 'paid' | 'refund_pending' | 'refunded' | 'forfeited_to_driver';
+    remainingAmount: number;
+    finalPaidAmount: number;
+  } | null;
 };
 
 export type RidesScope = 'upcoming' | 'history';

@@ -1,3 +1,4 @@
+import { driverCopy as dc } from "./copy";
 import { AppState, Linking, Platform } from 'react-native';
 import { requireOptionalNativeModule } from 'expo';
 import { showPermissionPrompt } from '../components/ui/PermissionPrompt';
@@ -36,10 +37,9 @@ export async function openDriverNavigation(destination: NavigationPoint, waypoin
   if (!overlay.canDrawOverlays()) {
     const accepted = await showPermissionPrompt({
       kind: 'overlay',
-      title: 'Keep the return button handy',
-      message:
-        'Allow “Display over other apps” so a small RCS button can bring you back from Google Maps during a ride.',
-      actionLabel: 'Open display settings',
+      get "title"() { return dc("Keep the return button handy"); },
+      get "message"() { return dc("Allow “Display over other apps” so a small RCS button can bring you back from Google Maps during a ride."); },
+      get "actionLabel"() { return dc("Open display settings"); },
     });
 
     if (accepted) await overlay.requestPermission();

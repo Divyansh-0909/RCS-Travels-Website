@@ -1,3 +1,5 @@
+import { useTranslation as useCopyLanguage } from "react-i18next";
+import { websiteCopy as dc } from "../../i18nCopy";
 /* ErrorMark — animated error badge (Lottie).
    Red circle with an exclamation mark; the error counterpart to SuccessCheck. */
 
@@ -15,12 +17,13 @@ const ErrorMark = ({
     className = "",
     style,
 }) => {
+    useCopyLanguage();
     return (
         <div
             className={className}
             style={{ width: size, height: size, ...style }}
             role="img"
-            aria-label="Error"
+            aria-label={dc("Error")}
         >
             <DotLottieReact
                 data={ERROR_DATA}

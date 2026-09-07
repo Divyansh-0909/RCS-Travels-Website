@@ -1,23 +1,25 @@
+
+import { driverCopy as dc } from "../lib/copy";
 import { useEffect, useState } from 'react';
 import { AppState, Linking, Pressable, View } from 'react-native';
 import { cssInterop } from 'nativewind';
 import { NavigationArrowIcon, PhoneIcon } from 'phosphor-react-native';
 import * as Location from 'expo-location';
 import { openDriverNavigation } from '../lib/navigation';
-import { splitAddress, activeLeg, initials, rupees } from '../constants/booking';
+import { splitAddress, activeLeg, customerPaymentNotice } from '../constants/booking';
 import { useNavigate } from 'react-router-native';
 import AppText from '../components/AppText';
 import { OtpEntry } from '../components/OtpEntry';
 import { BottomSheet } from '../components/ui/BottomSheet';
 import MapSlot from '../components/ui/MapSlot';
 import { SlideAction } from '../components/ui/SlideAction';
-import { INK_TEXT, MUTED, RouteLeg, SURFACE } from '../components/ui/rideUi';
-import { useData } from '../hooks/useData';
+import { CustomerPaymentPanel, INK_TEXT, MUTED, SURFACE } from '../components/ui/rideUi';
 
 import { useApi } from '../hooks/useApi';
 import { useDriver } from '../hooks/useDriver';
 import type { UpcomingBooking } from '../types/enums';
 import { getRememberedDriverLocation, rememberDriverLocation } from '../lib/driverLocationCache';
+import { useLanguage } from '../i18n';
 
 const asThemed = { className: { target: false, nativeStyleToProp: { color: true } } } as const;
 const Phone = cssInterop(PhoneIcon, asThemed);
@@ -38,13 +40,6 @@ const NavArrow = cssInterop(NavigationArrowIcon, asThemed);
  * accepted ride opens here immediately, and the first slider records when the
  * captain actually sets off for the pickup.
  */
-const STEP: Record<string, { to: string; label: string }> = {
-    assigned: { to: 'en_route', label: 'Slide to go to pickup' },
-    en_route: { to: 'reached', label: 'Slide when you arrive' },
-    reached: { to: 'started', label: 'Slide to start the ride' },
-    started: { to: 'completed', label: 'Slide to finish the ride' },
-};
-
 // Enough to keep the slider clear of the gesture bar at the bottom edge. There is
 // no tab bar on this screen to clear — the shell hides it for the ride.
 const BOTTOM_SAFE = 24;
@@ -54,13 +49,6 @@ const BOTTOM_SAFE = 24;
 // address became a proper two-ended route — at the old height the drop would
 // have been cut through the middle, which is worse than not showing it.
 const PEEK = 172;
-
-const DROP_OVERRIDE_REASONS = [
-    { value: 'customer_requested_early_drop', label: 'Customer requested an earlier drop' },
-    { value: 'drop_inaccessible', label: 'Booked drop is inaccessible' },
-    { value: 'road_or_security_restriction', label: 'Road or security restriction' },
-    { value: 'incorrect_drop_pin', label: 'Drop pin is incorrect' },
-] as const;
 
 const PICKUP_RADIUS_KM = 0.5;
 const DROP_SUPPORT_RADIUS_KM = 2;
@@ -79,12 +67,16 @@ const distanceKmBetween = (from: { latitude: number; longitude: number }, to: { 
     return 6371 * 2 * Math.asin(Math.sqrt(a));
 };
 
-const distanceLabel = (km: number) => km < 1 ? `${Math.round(km * 1000)} m away` : `${km.toFixed(1)} km away`;
+const distanceLabel = (km: number) => km < 1
+    ? dc("{{value0}} m away", { value0: Math.round(km * 1000) })
+    : dc("{{value0}} km away", { value0: km.toFixed(1) });
 
 const ActiveRide = ({ ride, onChanged }: { ride: UpcomingBooking; onChanged: () => void }) => {
+
     const navigate = useNavigate()
     const api = useApi();
     const { refresh: refreshDriver } = useDriver();
+    const { t } = useLanguage();
     const [error, setError] = useState<string | null>(null);
 
     // The code screen opens ITSELF the moment he marks himself arrived, because
@@ -142,7 +134,7 @@ const ActiveRide = ({ ride, onChanged }: { ride: UpcomingBooking; onChanged: () 
         const watch = async () => {
             const permission = await Location.getForegroundPermissionsAsync().catch(() => null);
             if (!permission?.granted) {
-                if (!stopped) setLocationIssue('Enable location to continue');
+                if (!stopped) setLocationIssue(t('driver.active.location'));
                 return;
             }
             if (stopped) return;
@@ -155,7 +147,7 @@ const ActiveRide = ({ ride, onChanged }: { ride: UpcomingBooking; onChanged: () 
 
             const initial = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High }).catch(() => null);
             if (initial) acceptFix(initial);
-            else if (!stopped) setLocationIssue('Waiting for an accurate GPS fix…');
+            else if (!stopped) setLocationIssue(t('driver.active.gps'));
             if (stopped) return;
             subscription = await Location.watchPositionAsync({
                 accuracy: Location.Accuracy.High,
@@ -171,7 +163,7 @@ const ActiveRide = ({ ride, onChanged }: { ride: UpcomingBooking; onChanged: () 
             appStateSubscription.remove();
             subscription?.remove();
         };
-    }, []);
+    }, [t]);
     const currentStatus = confirmedStatus ?? ride.status;
 
     useEffect(() => {
@@ -200,7 +192,20 @@ const ActiveRide = ({ ride, onChanged }: { ride: UpcomingBooking; onChanged: () 
         && ride.safeWaypointLng != null
         ? { lat: ride.safeWaypointLat, lng: ride.safeWaypointLng }
         : null;
-    const step = STEP[currentStatus];
+    const steps: Record<string, { to: string; label: string }> = {
+        assigned: { to: 'en_route', label: t('driver.active.goPickupSlide') },
+        en_route: { to: 'reached', label: t('driver.active.arriveSlide') },
+        reached: { to: 'started', label: t('driver.active.startSlide') },
+        started: { to: 'completed', label: t('driver.active.finishSlide') },
+    };
+    const step = steps[currentStatus];
+    const payment = customerPaymentNotice(ride);
+    const dropOverrideReasons = [
+        { value: 'customer_requested_early_drop', label: t('driver.active.earlyDrop') },
+        { value: 'drop_inaccessible', label: t('driver.active.inaccessible') },
+        { value: 'road_or_security_restriction', label: t('driver.active.restriction') },
+        { value: 'incorrect_drop_pin', label: t('driver.active.wrongPin') },
+    ] as const;
     const expectedNavigationLeg = currentStatus === 'en_route'
         ? 'pickup'
         : currentStatus === 'started'
@@ -223,48 +228,27 @@ const ActiveRide = ({ ride, onChanged }: { ride: UpcomingBooking; onChanged: () 
         if (!step || !['reached', 'started', 'completed'].includes(step.to)) return { disabled: false, hint: undefined };
         if (!liveFix) return {
             disabled: true,
-            hint: locationIssue === 'Enable location to continue' ? 'Turn on location' : 'Finding your location…',
+            hint: locationIssue === t('driver.active.location') ? t('driver.active.location') : t('driver.active.finding'),
         };
         if ((liveFix.coords.accuracy ?? Infinity) > MAX_FIX_ACCURACY_M)
-            return { disabled: true, hint: 'Finding your location…' };
+            return { disabled: true, hint: t('driver.active.finding') };
         if (locationClock - liveFix.timestamp > MAX_FIX_AGE_MS)
-            return { disabled: true, hint: 'Updating your location…' };
+            return { disabled: true, hint: t('driver.active.updating') };
 
         const target = step.to === 'completed'
             ? { lat: ride.dropLat, lng: ride.dropLng }
             : { lat: ride.pickupLat, lng: ride.pickupLng };
         const distance = distanceKmBetween(liveFix.coords, target);
         if (step.to !== 'completed' && distance > PICKUP_RADIUS_KM)
-            return { disabled: true, hint: `Move closer to pickup · ${distanceLabel(distance)}` };
+            return { disabled: true, get "hint"() { return dc("Move closer to pickup · {{value0}}", {value0: (distanceLabel(distance))}); } };
         if (step.to === 'completed' && distance > DROP_SUPPORT_RADIUS_KM)
-            return { disabled: true, hint: `Move closer to drop · ${distanceLabel(distance)}` };
+            return { disabled: true, get "hint"() { return dc("Move closer to drop · {{value0}}", {value0: (distanceLabel(distance))}); } };
         return { disabled: false, hint: undefined };
     })();
 
-    // Mirrors DRIVER_CANCELLABLE_STATUSES on the server. Both `assigned` and
-    // `en_route` count, so a scheduled ride he has taken but not set off for can
-    // be handed back the same way as one he is already driving to.
-    const canCancel = currentStatus === 'assigned' || currentStatus === 'en_route';
-    const [cancelling, setCancelling] = useState(false);
-
-    const cancelRide = async () => {
-        if (cancelling) return;
-        setCancelling(true);
-        setError(null);
-        try {
-            const result = await api.cancelRide(ride.id);
-            if (result?.error) { setError(result.error); return; }
-            // Both, for the same reason advance() moves both: the list drives this
-            // screen and the profile drives the shell and the GPS cadence.
-            await Promise.all([onChanged(), refreshDriver()]);
-        } finally {
-            setCancelling(false);
-        }
-    };
-
     const openMaps = () => {
         openDriverNavigation(navigationDestination, navigationWaypoint)
-            .catch(() => setError('Google Maps could not be opened.'));
+            .catch(() => setError(t('driver.active.maps')));
     };
 
     const place = ride ? splitAddress(ride.pickupAddress) : null;
@@ -350,7 +334,7 @@ const ActiveRide = ({ ride, onChanged }: { ride: UpcomingBooking; onChanged: () 
                     className="text-[var(--foreground)]"
                 />
                 <AppText className="text-base font-semibold text-[var(--foreground)]">
-                    {leg.endpoint === 'drop' ? 'Go to drop' : 'Go to pickup'}
+                    {leg.endpoint === 'drop' ? t('driver.active.goDrop') : t('driver.active.goPickup')}
                 </AppText>
             </View>
         </Pressable>
@@ -417,46 +401,32 @@ const ActiveRide = ({ ride, onChanged }: { ride: UpcomingBooking; onChanged: () 
                             >
                                 <View className="flex-row items-center justify-center gap-2 rounded-xl p-3 bg-[var(--foreground-muted)]">
                                     <AppText className="text-base font-semibold text-[var(--background-primary)]">
-                                        Ride details
+                                        {t('driver.active.details')}
                                     </AppText>
                                 </View>
                             </Pressable>
 
-                            {canCancel ? (
-                                <Pressable
-                                    className='w-[49%]'
-                                    role="button"
-                                    aria-label="Cancel ride"
-                                    aria-disabled={cancelling}
-                                    disabled={cancelling}
-                                    onPress={cancelRide}
-                                    style={({ pressed }) => ({ opacity: cancelling ? 0.45 : pressed ? 0.8 : 1 })}
-                                >
-                                    <View className="rounded-xl w-full flex flex-row gap-2 p-3 items-center justify-center bg-negative">
-                                        <AppText className='text-base font-semibold text-white'>
-                                            {cancelling ? 'Cancelling\u2026' : 'Cancel ride'}
-                                        </AppText>
-                                    </View>
-                                </Pressable>
-                            ) : (
-                                <Pressable
-                                    className='w-[49%]'
-                                    role="button"
-                                    aria-label={`Call ${ride.user?.name ?? 'the rider'}`}
-                                    onPress={() => Linking.openURL(`tel:${ride.customerPhone}`)}
-                                    style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
-                                >
-                                    <View className="rounded-xl w-full flex flex-row gap-2 p-3 items-center justify-center bg-[var(--foreground-muted)]">
-                                        <Phone size={20} weight="fill" className="text-[var(--background-primary)]" />
-                                        <AppText className='text-base font-semibold text-[var(--background-primary)]'>Call Rider</AppText>
-                                    </View>
-                                </Pressable>
-                            )}
+                            <Pressable
+                                className='w-[49%]'
+                                role="button"
+                                aria-label={`${t('driver.active.call')} ${ride.user?.name ?? ''}`.trim()}
+                                onPress={() => Linking.openURL(`tel:${ride.customerPhone}`)}
+                                style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+                            >
+                                <View className="rounded-xl w-full flex flex-row gap-2 p-3 items-center justify-center bg-[var(--foreground-muted)]">
+                                    <Phone size={20} weight="fill" className="text-[var(--background-primary)]" />
+                                    <AppText className='text-base font-semibold text-[var(--background-primary)]'>{t('driver.active.call')}</AppText>
+                                </View>
+                            </Pressable>
                         </View>
                     </View>
 
                     {error && !otpOpen ? (
                         <AppText className="text-sm font-medium text-red-600">{error}</AppText>
+                    ) : null}
+
+                    {(ride.collectionMode === 'online' || ride.scheduledAt != null) ? (
+                        <CustomerPaymentPanel {...payment} />
                     ) : null}
 
                     {step ? (
@@ -489,11 +459,11 @@ const ActiveRide = ({ ride, onChanged }: { ride: UpcomingBooking; onChanged: () 
                     className="justify-end"
                 >
                     <View className="rounded-t-3xl px-5 pt-5 pb-8 gap-3" style={{ backgroundColor: SURFACE }}>
-                        <AppText className={`text-xl font-bold ${INK_TEXT}`}>Confirm a different drop</AppText>
+                        <AppText className={`text-xl font-bold ${INK_TEXT}`}>{t('driver.active.differentDrop')}</AppText>
                         <AppText className={`text-sm ${MUTED}`}>
-                            You are outside the normal drop area. Choose the reason, then ask the rider for their OTP.
+                            {t('driver.active.outsideDrop')}
                         </AppText>
-                        {DROP_OVERRIDE_REASONS.map((reason) => (
+                        {dropOverrideReasons.map((reason) => (
                             <Pressable
                                 key={reason.value}
                                 role="button"
@@ -515,7 +485,7 @@ const ActiveRide = ({ ride, onChanged }: { ride: UpcomingBooking; onChanged: () 
                             onPress={() => { setDropOverrideOpen(false); setError(null); }}
                             className="items-center py-3"
                         >
-                            <AppText className={`text-base font-semibold ${INK_TEXT}`}>Back</AppText>
+                        <AppText className={`text-base font-semibold ${INK_TEXT}`}>{t('common.actions.back')}</AppText>
                         </Pressable>
                     </View>
                 </View>
@@ -525,9 +495,9 @@ const ActiveRide = ({ ride, onChanged }: { ride: UpcomingBooking; onChanged: () 
                 <OtpEntry
                     riderName={ride.user?.name ?? null}
                     error={error}
-                    title="Confirm this drop"
-                    description="Ask the rider for their 4-digit code to confirm finishing away from the booked drop."
-                    submitLabel="Confirm and finish ride"
+                    title={t('driver.active.confirmDrop')}
+                    description={t('driver.active.confirmDropBody')}
+                    submitLabel={t('driver.active.finish')}
                     onSubmit={(code) => advance(code, dropOverrideReason)}
                     onClose={() => { setError(null); setDropOtpOpen(false); setDropOverrideReason(null); }}
                 />

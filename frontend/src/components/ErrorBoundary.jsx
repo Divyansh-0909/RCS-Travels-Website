@@ -1,3 +1,5 @@
+import { useTranslation as useCopyLanguage } from "react-i18next";
+import { websiteCopy as dc } from "../i18nCopy";
 import { Component } from "react";
 import { useRouteError } from "react-router-dom";
 import FailureState from "./ui/FailureState";
@@ -28,18 +30,18 @@ const CrashScreen = ({ error }) => (
     <div className="w-[100vw] h-[100dvh] flex flex-col justify-center items-center bg-[var(--background)] text-[var(--text)]">
         <FailureState
             tone="dark"
-            title="This page stopped responding"
+            title={dc("This page stopped responding")}
             // A rider can't act on a stack trace, so it stays in the console in
             // production and only surfaces while developing.
             detail={
                 import.meta.env.DEV
                     ? (error?.message || String(error))
-                    : "Reloading usually clears it. Your booking is safe and nothing was lost."
+                    : dc("Reloading usually clears it. Your booking is safe and nothing was lost.")
             }
             onRetry={() => window.location.reload()}
-            retryLabel="Reload the page"
+            retryLabel={dc("Reload the page")}
             secondaryAction={{
-                label: "Go to the home page",
+                get "label"() { return dc("Go to the home page"); },
                 // A hard assignment, not a router navigate: the router is part
                 // of what just broke.
                 onClick: () => { window.location.href = "/"; },
@@ -49,6 +51,7 @@ const CrashScreen = ({ error }) => (
 );
 
 export function RouteErrorBoundary() {
+    useCopyLanguage();
     const error = useRouteError();
     console.error("Route render error:", error);
     return <CrashScreen error={error} />;

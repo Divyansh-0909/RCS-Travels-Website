@@ -7,6 +7,7 @@ const Input = ({ prop, className, leading, trailing }) => {
   return (
     <div className={`${className} relative w-fit max-sm:w-[86vw] max-sm:max-w-full my-1 sm:scale-y-[1.3]`}>
       <input
+        ref={prop.inputRef}
         id={prop.id}
         name={prop.name}
         value={prop.value ? `${prop.value}` : ""}

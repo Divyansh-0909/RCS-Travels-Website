@@ -57,7 +57,7 @@ export const useData = create(persist(set => ({
     username: null,
     setUsername: (name) => set(state => ({ username: name })),
 
-    language: "English",
+    language: "en",
     setLanguage: (lang) => set(state => ({ language: lang })),
 
     gender: null,

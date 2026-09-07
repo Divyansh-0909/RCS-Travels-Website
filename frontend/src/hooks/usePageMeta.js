@@ -1,6 +1,7 @@
 import { useEffect } from "react"
 import { useLocation } from "react-router-dom"
 import { metaForPath, SITE_NAME } from "../constants/pageMeta"
+import { useTranslation } from "react-i18next"
 
 /* Router-driven <head> tags. This is a single-page app, so the document only
    ever loads index.html — without this, every route would share the one title
@@ -34,9 +35,14 @@ const setMeta = (key, attr, content) => {
 
 const usePageMeta = () => {
     const { pathname } = useLocation()
+    const { t, i18n } = useTranslation("website")
 
     useEffect(() => {
-        const { title, description, noindex } = metaForPath(pathname)
+        const source = metaForPath(pathname)
+        const copy = t("auto", { returnObjects: true })
+        const title = copy?.[source.title] || source.title
+        const description = copy?.[source.description] || source.description
+        const { noindex } = source
         const url = window.location.origin + pathname
 
         document.title = title
@@ -70,7 +76,7 @@ const usePageMeta = () => {
         setMeta("twitter:card", "name", "summary_large_image")
         setMeta("twitter:title", "name", title)
         setMeta("twitter:description", "name", description)
-    }, [pathname])
+    }, [pathname, i18n.language])
 }
 
 export default usePageMeta

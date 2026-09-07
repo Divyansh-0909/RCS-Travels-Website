@@ -1,3 +1,5 @@
+import { useLanguage as useCopyLanguage } from "../i18n";
+import { driverCopy as dc } from "../lib/copy";
     import { View, Pressable, FlatList, type LayoutChangeEvent } from "react-native"
     import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
     import { useLocation, useNavigate } from "react-router-native";
@@ -25,6 +27,7 @@
     const BAR_HEIGHT = 68;
 
     const AppBar = () => {
+    useCopyLanguage();
         const navigate = useNavigate();
         const { pathname, search } = useLocation();
         const { hidden } = useAppBarVisibility();
@@ -98,7 +101,7 @@
                             return (
                                 <Pressable
                                     role="button"
-                                    aria-label={isPost ? 'Post a marketplace booking' : item.name}
+                                    aria-label={isPost ? dc("Post a marketplace booking") : item.name}
                                     onPress={() => navigate(isPost ? postPath : item.path, { replace: true })}
                                     className={`flex gap-1 items-center justify-center ${isPost ? "bg-[var(--foreground)] w-12 h-12 my-1.5 rounded-full mx-1" : "w-[14vw]"}`}>
                                     {isPost ? (

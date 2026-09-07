@@ -1,3 +1,4 @@
+import { driverCopy as dc } from "../lib/copy";
 import { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
@@ -30,7 +31,7 @@ async function ensureChannel() {
   if (Platform.OS !== 'android') return;
 
   await Notifications.setNotificationChannelAsync('default', {
-    name: 'Rides and documents',
+    get "name"() { return dc("Rides and documents"); },
     importance: Notifications.AndroidImportance.HIGH,
     vibrationPattern: [0, 250, 250, 250],
     lightColor: '#243AFB',
@@ -65,9 +66,9 @@ export function usePushRegistration(enabled: boolean) {
         if (!existing.granted && existing.canAskAgain) {
           const accepted = await promptForPermission({
             kind: 'notifications',
-            title: 'Do not miss a ride',
-            message: 'Allow notifications for new ride offers and document approval updates.',
-            actionLabel: 'Continue',
+            get "title"() { return dc("Do not miss a ride"); },
+            get "message"() { return dc("Allow notifications for new ride offers and document approval updates."); },
+            actionLabel: dc("Continue"),
           });
           if (!accepted || cancelled) return;
           granted = await Notifications.requestPermissionsAsync();

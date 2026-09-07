@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from 'node:crypto'
 import Razorpay from 'razorpay'
-import { getRazorpayConfig } from '../config/razorpay.js'
+import { getRazorpayConfig, getRazorpayWebhookSecret } from '../config/razorpay.js'
 
 const validHexSignature = (value) => typeof value === 'string' && /^[a-f0-9]{64}$/i.test(value)
 const verifyHmac = (payload, signature, secret) => {
@@ -27,6 +27,14 @@ export function createRazorpayGateway({ config = getRazorpayConfig(), client } =
     fetchPayment: (paymentId) => sdk.payments.fetch(paymentId),
     createRefund: (paymentId, options) => sdk.payments.refund(paymentId, options),
     verifyPaymentSignature: (input) => verifyPaymentSignature({ ...input, secret: config.keySecret }),
-    verifyWebhookSignature: (rawBody, signature) => verifyWebhookSignature({ rawBody, signature, secret: config.webhookSecret }),
+  }
+}
+
+// Incoming webhooks use a separate Dashboard secret and do not call Razorpay's
+// API. Keeping this verifier independent means the webhook endpoint never needs
+// Checkout credentials merely to authenticate a delivery.
+export function createRazorpayWebhookVerifier({ secret = getRazorpayWebhookSecret() } = {}) {
+  return {
+    verifyWebhookSignature: (rawBody, signature) => verifyWebhookSignature({ rawBody, signature, secret }),
   }
 }

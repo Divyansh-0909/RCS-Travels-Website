@@ -1,12 +1,13 @@
+import { websiteCopy as dc } from "../i18nCopy";
 // Mirrors backend/constants/vehicles.js — the keys are what crosses the wire, so
 // the two files must agree. Everything here is display: the seat counts and the
 // prices themselves are the server's answer, never re-derived on the client.
 
 export const VEHICLE_CLASSES = {
-    hatchback:   { label: "Hatchback",   category: "Cab Economy", seats: 4 },
-    sedan:       { label: "Sedan",       category: "Cab Economy", seats: 4 },
+    hatchback:   { get "label"() { return dc("Hatchback"); },   category: "Cab Economy", seats: 4 },
+    sedan:       { get "label"() { return dc("Sedan"); },       category: "Cab Economy", seats: 4 },
     suv:         { label: "SUV",         category: "Cab XL",      seats: 6 },
-    suv_premium: { label: "Premium SUV", category: "Cab XL",      seats: 6 },
+    suv_premium: { get "label"() { return dc("Premium SUV"); }, category: "Cab XL",      seats: 6 },
 };
 
 // Every class, in display order. A rider always picks a specific car, so this is

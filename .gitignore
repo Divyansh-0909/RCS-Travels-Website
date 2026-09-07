@@ -157,6 +157,12 @@ ds-bundle/
 .agents/skills/*
 !.agents/skills/rcs-ui/
 !.agents/skills/rcs-ui/**
+# Project-owned CI workflows. Keep other machine-generated .github content
+# ignored by default while allowing reviewable automation to be committed.
+!.github/
+.github/*
+!.github/workflows/
+!.github/workflows/**
 # These are the non-dotted leftovers: skill installs write a lockfile and an
 # empty root package-lock.json, neither of which describes this app's deps.
 /skills-lock.json
@@ -191,3 +197,8 @@ temporary screenshots/
 # Not committed on purpose: it is a copy of the rate card, and a committed copy
 # is one somebody sends after it has gone stale. Rebuild before every send.
 /tools/rcs-fare-zones.html
+
+# Share the token guard hook; keep other local Codex state ignored.
+!/.codex/
+/.codex/*
+!/.codex/hooks.json

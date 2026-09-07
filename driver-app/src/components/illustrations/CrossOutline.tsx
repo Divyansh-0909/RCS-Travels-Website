@@ -1,3 +1,5 @@
+import { useLanguage as useCopyLanguage } from "../../i18n";
+import { driverCopy as dc } from "../../lib/copy";
 /* CrossOutline — self-contained animated cross/error mark.
    Draws the two cross strokes. No external deps / network.
    Same port notes as CheckMarkOutline. */
@@ -28,6 +30,7 @@ interface Props {
 }
 
 const CrossOutline = ({ size = 72, color = '#FFFFFF', strokeWidth = 6, delay = 0 }: Props) => {
+    useCopyLanguage();
     const first = useSharedValue(LINE_LENGTH);
     const second = useSharedValue(LINE_LENGTH);
 
@@ -44,7 +47,7 @@ const CrossOutline = ({ size = 72, color = '#FFFFFF', strokeWidth = 6, delay = 0
         <Animated.View
             entering={ZoomIn.duration(400).delay(delay)}
             accessibilityRole="image"
-            accessibilityLabel="Error"
+            accessibilityLabel={dc("Error")}
         >
             <Svg width={size} height={size} viewBox="0 0 52 52" fill="none">
                 <AnimatedPath

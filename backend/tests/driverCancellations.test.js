@@ -2,11 +2,19 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
   cancellationWindowStart,
+  assignmentWindowStartedAt,
   DRIVER_CANCELLATION_BENEFIT_THRESHOLD,
   DRIVER_CANCELLATION_SUSPEND_THRESHOLD,
   DRIVER_CANCELLATION_WINDOW_DAYS,
   applyDriverCancellationConsequences,
 } from '../services/driverCancellations.js'
+
+test('a captain hand-back starts a fresh assignment timeout window', () => {
+  const bookedAt = new Date('2026-08-20T10:00:00.000Z')
+  const handedBackAt = new Date('2026-08-20T12:00:00.000Z')
+  assert.equal(assignmentWindowStartedAt(bookedAt, null), bookedAt)
+  assert.equal(assignmentWindowStartedAt(bookedAt, { createdAt: handedBackAt }), handedBackAt)
+})
 
 test('driver cancellation thresholds are ordered and explicit', () => {
   assert.equal(DRIVER_CANCELLATION_WINDOW_DAYS, 30)

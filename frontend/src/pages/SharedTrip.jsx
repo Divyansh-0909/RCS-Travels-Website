@@ -1,3 +1,5 @@
+import { useTranslation as useCopyLanguage } from "react-i18next";
+import { websiteCopy as dc } from "../i18nCopy";
 import { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
 import GoogleMap, { MAP_LAND_COLOR } from "../components/ui/GoogleMap";
@@ -43,6 +45,7 @@ const FULL_PANEL = "py-6 h-[100dvh] rounded-t-none flex justify-center items-cen
 const possessive = (name) => (name ? `${name}${name.endsWith("s") ? "'" : "'s"} ride` : "this ride");
 
 const SharedTrip = () => {
+    useCopyLanguage();
     const { token } = useParams();
     const isMobile = useIsMobile();
     const [trip, setTrip] = useState(null);
@@ -88,7 +91,7 @@ const SharedTrip = () => {
                 if (isFirst) setError(data.error);
                 else if (!staleNotifiedRef.current) {
                     staleNotifiedRef.current = true;
-                    notifyRefreshFailed("Couldn't refresh this trip. Showing the last update we got.");
+                    notifyRefreshFailed(dc("Couldn't refresh this trip. Showing the last update we got."));
                 }
             } else {
                 staleNotifiedRef.current = false;
@@ -161,21 +164,21 @@ const SharedTrip = () => {
     const headline = (() => {
         switch (trip?.status) {
             case "confirmed":
-                return { title: "Driver not assigned yet", detail: "Assigned closer to the pickup time" };
+                return { get "title"() { return dc("Driver not assigned yet"); }, get "detail"() { return dc("Assigned closer to the pickup time"); } };
             case "assigned":
-                return { title: "Driver assigned", detail: `On the way to ${placeName(trip.pickupAddress)}` };
+                return { get "title"() { return dc("Driver assigned"); }, detail: dc("On the way to {{place}}", { place: placeName(trip.pickupAddress) }) };
             case "en_route":
-                return { title: <>Driver arriving in <br />{pickupTime}</>, detail: `Meeting ${who ?? "them"} at ${placeName(trip.pickupAddress)}` };
+                return { title: <>{dc("Driver arriving in") + " "}<br />{pickupTime}</>, detail: dc("Meeting {{who}} at {{place}}", { who: who ?? dc("them"), place: placeName(trip.pickupAddress) }) };
             case "reached":
-                return { title: "Driver has arrived", detail: `Waiting at ${placeName(trip.pickupAddress)}` };
+                return { get "title"() { return dc("Driver has arrived"); }, detail: dc("Waiting at {{place}}", { place: placeName(trip.pickupAddress) }) };
             case "started":
-                return { title: <>Reaching in <br />{dropTime}</>, detail: `On the way to ${placeName(trip.dropAddress)}` };
+                return { title: <>{dc("Reaching in") + " "}<br />{dropTime}</>, detail: dc("On the way to {{place}}", { place: placeName(trip.dropAddress) }) };
             case "completed":
-                return { title: "Trip completed", detail: `${who ?? "They"} reached ${placeName(trip.dropAddress)}` };
+                return { get "title"() { return dc("Trip completed"); }, detail: dc("{{who}} reached {{place}}", { who: who ?? dc("They"), place: placeName(trip.dropAddress) }) };
             case "cancelled":
-                return { title: "Ride cancelled", detail: "This trip didn't go ahead" };
+                return { get "title"() { return dc("Ride cancelled"); }, get "detail"() { return dc("This trip didn't go ahead"); } };
             default:
-                return { title: "No driver found", detail: "This trip didn't go ahead" };
+                return { get "title"() { return dc("No driver found"); }, get "detail"() { return dc("This trip didn't go ahead"); } };
         }
     })();
 
@@ -185,9 +188,7 @@ const SharedTrip = () => {
             prop={{ variant: "input", width: "100%", bg: "var(--background-muted)" }}
         >
             <span className="flex items-center justify-center gap-2 text-base sm:text-lg">
-                <img src={waLogo} alt="WhatsApp" className="w-6 h-6" />
-                Message support
-            </span>
+                <img src={waLogo} alt="WhatsApp" className="w-6 h-6" />{dc("Message support")}</span>
         </Button>
     );
 
@@ -197,8 +198,8 @@ const SharedTrip = () => {
                 <BackgroundPanel className={FULL_PANEL}>
                     <EmptyState
                         tone="dark"
-                        title="This link has expired"
-                        message="Shared trips stop working after a while. Ask them to send you a fresh link."
+                        title={dc("This link has expired")}
+                        message={dc("Shared trips stop working after a while. Ask them to send you a fresh link.")}
                     />
                 </BackgroundPanel>
             </div>
@@ -214,12 +215,12 @@ const SharedTrip = () => {
                 <BackgroundPanel className={FULL_PANEL}>
                     <FailureState
                         tone="dark"
-                        title="Couldn't open this trip"
+                        title={dc("Couldn't open this trip")}
                         detail={error}
                         onRetry={() => { setError(null); setLoading(true); setRetryTick(t => t + 1); }}
                         retrying={loading}
                         secondaryAction={{
-                            label: "Message support",
+                            get "label"() { return dc("Message support"); },
                             onClick: () => openSupportWhatsApp("Hi, a shared trip link isn't opening for me."),
                         }}
                     />
@@ -255,8 +256,7 @@ const SharedTrip = () => {
                                 news itself. */}
                             {loading
                                 ? <Skeleton className="h-[18px] sm:h-[22px] w-32 mb-1" />
-                                : <p className="w-full text-left text-sm sm:text-base text-[var(--text-muted)] mb-1">
-                                    You're following {possessive(who)}
+                                : <p className="w-full text-left text-sm sm:text-base text-[var(--text-muted)] mb-1">{dc("You're following") + " "}{possessive(who)}
                                   </p>}
 
                             {loading ? (
@@ -324,12 +324,12 @@ const SharedTrip = () => {
                                 {!loading && (
                                     <div className="w-full rounded-xl border border-[var(--foreground)]/30 bg-[var(--background-muted)] px-4 py-3 text-left flex flex-col gap-2.5">
                                         <div>
-                                            <p className="text-xs sm:text-sm text-[var(--text-muted)] leading-tight">Pickup</p>
+                                            <p className="text-xs sm:text-sm text-[var(--text-muted)] leading-tight">{dc("Pickup")}</p>
                                             <p className="text-sm sm:text-base leading-snug">{trip.pickupAddress}</p>
                                         </div>
                                         <div className="w-full h-px bg-[var(--foreground)]/10" />
                                         <div>
-                                            <p className="text-xs sm:text-sm text-[var(--text-muted)] leading-tight">Drop</p>
+                                            <p className="text-xs sm:text-sm text-[var(--text-muted)] leading-tight">{dc("Drop")}</p>
                                             <p className="text-sm sm:text-base leading-snug">{trip.dropAddress}</p>
                                         </div>
                                     </div>
@@ -342,9 +342,7 @@ const SharedTrip = () => {
                                             ride and that the link is temporary, so
                                             a watcher who bookmarks it isn't
                                             surprised later. */}
-                                        <p className="text-xs sm:text-sm text-[var(--text-muted)] leading-snug text-center sm:text-left">
-                                            This is a shared view of someone else's trip. The link stops working once it expires.
-                                        </p>
+                                        <p className="text-xs sm:text-sm text-[var(--text-muted)] leading-snug text-center sm:text-left">{dc("This is a shared view of someone else's trip. The link stops working once it expires.")}</p>
                                     </div>
                                 )}
                             </div>

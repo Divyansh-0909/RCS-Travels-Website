@@ -1,3 +1,5 @@
+import { useLanguage as useCopyLanguage } from "../i18n";
+import { driverCopy as dc } from "../lib/copy";
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { StarIcon } from 'phosphor-react-native';
@@ -32,7 +34,7 @@ const dateLabel = (value: string) => new Intl.DateTimeFormat('en-IN', {
 }).format(new Date(value));
 
 const Stars = ({ value, size = 17 }: { value: number; size?: number }) => (
-  <View className="flex-row gap-0.5" accessibilityLabel={`${value} out of 5 stars`}>
+  <View className="flex-row gap-0.5" accessibilityLabel={dc("{{value0}} out of 5 stars", {value0: (value)})}>
     {[1, 2, 3, 4, 5].map((star) => (
       <StarIcon
         key={star}
@@ -52,7 +54,7 @@ type FeedbackViewProps = {
 };
 
 export const FeedbackView = ({ data, loading, error, onRetry }: FeedbackViewProps) => (
-  <AccountDetailScreen title="Feedback">
+  <AccountDetailScreen title={dc("Feedback")}>
     {loading ? (
       <DetailSectionsSkeleton cards={3} />
     ) : error ? (
@@ -64,7 +66,7 @@ export const FeedbackView = ({ data, loading, error, onRetry }: FeedbackViewProp
           hitSlop={8}
           style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1, marginTop: 8 })}
         >
-          <AppText className="text-sm font-semibold text-primary">Try again</AppText>
+          <AppText className="text-sm font-semibold text-primary">{dc("Try again")}</AppText>
         </Pressable>
       </AccountSection>
     ) : !data?.summary ? (
@@ -73,12 +75,8 @@ export const FeedbackView = ({ data, loading, error, onRetry }: FeedbackViewProp
           <View className="w-12 h-12 rounded-full items-center justify-center bg-white">
             <StarIcon size={24} weight="regular" color="#121220" />
           </View>
-          <AppText className="font-semibold mt-3 text-[var(--background-primary)]">
-            No feedback yet
-          </AppText>
-          <AppText className={`text-sm text-center mt-1 ${ACCOUNT_MUTED}`}>
-            Ratings and comments from completed rides will appear here.
-          </AppText>
+          <AppText className="font-semibold mt-3 text-[var(--background-primary)]">{dc("No feedback yet")}</AppText>
+          <AppText className={`text-sm text-center mt-1 ${ACCOUNT_MUTED}`}>{dc("Ratings and comments from completed rides will appear here.")}</AppText>
         </View>
       </AccountSection>
     ) : (
@@ -90,19 +88,18 @@ export const FeedbackView = ({ data, loading, error, onRetry }: FeedbackViewProp
             </AppText>
             <View className="flex-1 gap-1">
               <Stars value={Math.round(data.summary.average)} size={19} />
-              <AppText className={`text-sm ${ACCOUNT_MUTED}`}>
-                From {data.summary.count} {data.summary.count === 1 ? 'ride' : 'rides'}
+              <AppText className={`text-sm ${ACCOUNT_MUTED}`}>{dc("From") + " "}{data.summary.count} {data.summary.count === 1 ? dc("ride") : dc("rides")}
               </AppText>
             </View>
           </View>
         </AccountSection>
 
-        <AccountSectionLabel>Recent rider feedback</AccountSectionLabel>
+        <AccountSectionLabel>{dc("Recent rider feedback")}</AccountSectionLabel>
         <AccountList>
           {data.reviews.map((review, index) => (
             <AccountRow
               key={review.id}
-              label={review.comment || 'Rating only'}
+              label={review.comment || dc("Rating only")}
               detail={`Ride ${review.booking.reference} · ${dateLabel(review.createdAt)}`}
               value={`${review.rating}/5`}
               Icon={StarIcon}
@@ -116,6 +113,7 @@ export const FeedbackView = ({ data, loading, error, onRetry }: FeedbackViewProp
 );
 
 const Feedback = () => {
+    useCopyLanguage();
   const api = useApi();
   const apiRef = useRef(api);
   apiRef.current = api;

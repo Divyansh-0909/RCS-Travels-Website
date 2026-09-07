@@ -1,3 +1,4 @@
+import { websiteCopy as dc } from "../../i18nCopy";
 // Shared chrome for EmptyState and FailureState: the tone map and the secondary
 // action, kept in one place so the two can't drift apart.
 //
@@ -6,15 +7,15 @@
 
 export const STATE_TONE = {
     dark: {
-        title: "text-[var(--text)]",
-        body: "text-[var(--text-muted)]",
+        get "title"() { return "text-[var(--text)]"; },
+        get "body"() { return "text-[var(--text-muted)]"; },
         glyph: "text-[var(--text-muted)]/60",
         ring: "border-[var(--foreground)]/15",
         secondary: "border-[var(--foreground)]/30 text-[var(--text)] hover:bg-[var(--foreground)]/10 focus-visible:outline-[var(--foreground)]/70",
     },
     light: {
-        title: "text-[var(--background-primary)]",
-        body: "text-[var(--background-primary)]/50",
+        get "title"() { return "text-[var(--background-primary)]"; },
+        get "body"() { return "text-[var(--background-primary)]/50"; },
         glyph: "text-[var(--background-primary)]/40",
         ring: "border-[var(--background-primary)]/15",
         // The account pages sit on --foreground (white), so a border keyed to

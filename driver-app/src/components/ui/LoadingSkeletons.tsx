@@ -1,8 +1,11 @@
+import { driverCopy as dc } from "../../lib/copy";
 import { ScrollView, View } from 'react-native';
 import { SkeletonBlock, SkeletonSection } from './Skeleton';
 
 const CARD = '#f3f3f3';
+const SURFACE = '#ffffff';
 const HAIRLINE = 'rgba(18,18,32,0.1)';
+const PRIMARY_BLOCK = 'rgba(255,255,255,0.24)';
 
 const Card = ({ children }: { children: React.ReactNode }) => (
   <SkeletonSection
@@ -31,7 +34,7 @@ const ListRow = ({ last = false }: { last?: boolean }) => (
 export const DetailSectionsSkeleton = ({ cards = 3 }: { cards?: number }) => (
   <View
     accessible
-    accessibilityLabel="Loading page sections"
+    accessibilityLabel={dc("Loading page sections")}
     accessibilityState={{ busy: true }}
     className="mx-4 gap-2"
   >
@@ -50,7 +53,7 @@ export const DetailSectionsSkeleton = ({ cards = 3 }: { cards?: number }) => (
 export const AccountOverviewSkeleton = () => (
   <View
     accessible
-    accessibilityLabel="Loading account sections"
+    accessibilityLabel={dc("Loading account sections")}
     accessibilityState={{ busy: true }}
     className="w-full gap-3"
   >
@@ -88,7 +91,7 @@ export const AccountOverviewSkeleton = () => (
 export const AccountIdentitySkeleton = () => (
   <View
     accessible
-    accessibilityLabel="Loading captain profile"
+    accessibilityLabel={dc("Loading captain profile")}
     accessibilityState={{ busy: true }}
     className="w-full"
   >
@@ -106,7 +109,7 @@ export const AccountIdentitySkeleton = () => (
 export const OfferListSkeleton = ({ cards = 3 }: { cards?: number }) => (
   <View
     accessible
-    accessibilityLabel="Loading ride offers"
+    accessibilityLabel={dc("Loading ride offers")}
     accessibilityState={{ busy: true }}
     className="w-full gap-3"
   >
@@ -136,7 +139,7 @@ export const OfferListSkeleton = ({ cards = 3 }: { cards?: number }) => (
 export const HomeRideListSkeleton = () => (
   <View
     accessible
-    accessibilityLabel="Loading next rides"
+    accessibilityLabel={dc("Loading next rides")}
     accessibilityState={{ busy: true }}
     className="w-full gap-2"
   >
@@ -179,11 +182,165 @@ export const RideDetailSectionsSkeleton = () => (
   </ScrollView>
 );
 
+const MarketplaceRowSkeleton = () => (
+  <SkeletonSection
+    className="w-full rounded-2xl px-4 py-3 gap-3"
+    style={{ backgroundColor: CARD }}
+  >
+    <View className="w-full flex-row items-center gap-3">
+      <View className="gap-1 items-center">
+        <SkeletonBlock width={58} height={15} />
+        <SkeletonBlock width={34} height={11} />
+      </View>
+      <View className="w-px h-9" style={{ backgroundColor: HAIRLINE }} />
+      <View className="flex-1 gap-1.5">
+        <SkeletonBlock width="68%" height={15} />
+        <SkeletonBlock width="48%" height={12} />
+      </View>
+      <View className="items-end gap-1.5">
+        <SkeletonBlock width={52} height={15} />
+        <SkeletonBlock width={42} height={11} />
+      </View>
+    </View>
+    <View className="h-px w-full" style={{ backgroundColor: HAIRLINE }} />
+    <View className="flex-row items-center justify-between gap-3">
+      <View className="flex-1 flex-row items-center gap-2">
+        <SkeletonBlock width={104} height={14} />
+        <SkeletonBlock width={42} height={14} />
+      </View>
+      <SkeletonBlock width={8} height={13} />
+    </View>
+  </SkeletonSection>
+);
+
+/** Cold-start fallback for the marketplace board, matched to its final panels. */
+export const MarketplacePageSkeleton = () => (
+  <View
+    accessible
+    accessibilityLabel={dc("Loading marketplace bookings")}
+    accessibilityState={{ busy: true }}
+    className="flex-1 w-[92%] gap-3 overflow-hidden"
+  >
+    <SkeletonSection className="w-full h-11 flex-row items-center justify-between px-1">
+      <SkeletonBlock width={44} height={44} radius={22} />
+      <SkeletonBlock width={118} height={20} />
+      <SkeletonBlock width={44} height={44} radius={22} />
+    </SkeletonSection>
+
+    <SkeletonSection
+      className="w-full flex-row gap-2 rounded-full p-1"
+      style={{ backgroundColor: CARD }}
+    >
+      <SkeletonBlock width="48%" height={36} radius={18} />
+      <SkeletonBlock width="48%" height={36} radius={18} />
+    </SkeletonSection>
+
+    <SkeletonSection className="w-full min-h-16 rounded-2xl p-3 gap-2 bg-primary">
+      <SkeletonBlock width="58%" height={14} style={{ backgroundColor: PRIMARY_BLOCK }} />
+      <SkeletonBlock width="88%" height={11} style={{ backgroundColor: PRIMARY_BLOCK }} />
+      <SkeletonBlock width="70%" height={11} style={{ backgroundColor: PRIMARY_BLOCK }} />
+    </SkeletonSection>
+
+    <View className="w-full gap-2">
+      <SkeletonSection className="px-1 pt-2">
+        <SkeletonBlock width={62} height={11} />
+      </SkeletonSection>
+      <MarketplaceRowSkeleton />
+      <MarketplaceRowSkeleton />
+      <MarketplaceRowSkeleton />
+    </View>
+  </View>
+);
+
+const DetailMoneyCardSkeleton = ({ rows = 2 }: { rows?: number }) => (
+  <SkeletonSection
+    className="w-full rounded-2xl p-5 gap-3"
+    style={{ backgroundColor: SURFACE }}
+  >
+    {Array.from({ length: rows }, (_, index) => (
+      <View key={index} className="flex-row items-start justify-between gap-3">
+        <View className="flex-1 gap-1.5">
+          <SkeletonBlock width={index % 2 === 0 ? '58%' : '72%'} height={14} />
+          <SkeletonBlock width={index % 2 === 0 ? '76%' : '64%'} height={11} />
+        </View>
+        <SkeletonBlock width={54} height={14} />
+      </View>
+    ))}
+    <View className="h-px w-full" style={{ backgroundColor: HAIRLINE }} />
+    <View className="flex-row items-center justify-between gap-3">
+      <SkeletonBlock width="38%" height={20} />
+      <SkeletonBlock width={72} height={20} />
+    </View>
+  </SkeletonSection>
+);
+
+/** Cold-start fallback for a marketplace booking's detail route. */
+export const MarketplaceDetailPageSkeleton = () => (
+  <View
+    accessible
+    accessibilityLabel={dc("Loading booking details")}
+    accessibilityState={{ busy: true }}
+    className="flex-1 w-full"
+    style={{ backgroundColor: CARD, marginTop: -40, paddingTop: 40 }}
+  >
+    <SkeletonSection className="w-full h-11 flex-row items-center gap-2 px-4">
+      <SkeletonBlock width={40} height={40} radius={20} />
+      <SkeletonBlock width={132} height={20} />
+    </SkeletonSection>
+
+    <ScrollView
+      style={{ flex: 1 }}
+      contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 16, gap: 16 }}
+      showsVerticalScrollIndicator={false}
+    >
+      <SkeletonSection
+        className="w-full rounded-2xl overflow-hidden"
+        style={{ backgroundColor: SURFACE }}
+      >
+        <SkeletonBlock width="100%" height={32} radius={0} />
+        <View className="p-5 gap-4">
+          <View className="gap-2">
+            <SkeletonBlock width="54%" height={23} />
+            <SkeletonBlock width="42%" height={12} />
+            <SkeletonBlock width="32%" height={29} />
+          </View>
+          <View className="h-px w-full" style={{ backgroundColor: HAIRLINE }} />
+          <View className="gap-3">
+            {[0, 1].map((index) => (
+              <View key={index} className="flex-row items-center gap-3">
+                <SkeletonBlock width={12} height={12} radius={6} />
+                <View className="flex-1 gap-1.5">
+                  <SkeletonBlock width={index === 0 ? '68%' : '74%'} height={15} />
+                  <SkeletonBlock width="46%" height={11} />
+                </View>
+              </View>
+            ))}
+          </View>
+          <SkeletonBlock width="100%" height={56} radius={16} />
+        </View>
+      </SkeletonSection>
+
+      <View className="gap-2">
+        <SkeletonSection className="px-1"><SkeletonBlock width={104} height={11} /></SkeletonSection>
+        <DetailMoneyCardSkeleton />
+      </View>
+      <View className="gap-2">
+        <SkeletonSection className="px-1"><SkeletonBlock width={152} height={11} /></SkeletonSection>
+        <DetailMoneyCardSkeleton rows={2} />
+      </View>
+    </ScrollView>
+
+    <SkeletonSection className="w-full px-5 pt-3 pb-6" style={{ backgroundColor: CARD }}>
+      <SkeletonBlock width="100%" height={52} radius={16} />
+    </SkeletonSection>
+  </View>
+);
+
 /** A structured cold-start placeholder for the home gate, never a page-sized slab. */
 export const HomeGateSkeleton = () => (
   <View
     accessible
-    accessibilityLabel="Loading captain home"
+    accessibilityLabel={dc("Loading captain home")}
     accessibilityState={{ busy: true }}
     className="flex-1 w-[92%] gap-4 pt-2 pb-28"
   >

@@ -15,6 +15,7 @@ import { walletEvent } from '../services/walletKeys.js'
 import { scheduledDepositFor } from '../services/scheduledDeposit.js'
 import { commissionWithReward, loyaltyRewardsEarned } from '../services/loyalty.js'
 import { createScheduledFinalIntent } from '../services/scheduledPayments.js'
+import { driverPaymentView } from '../services/driverPaymentView.js'
 import { isStorageConfigured, signedUploadUrl, stat, remove } from '../lib/storage.js'
 import { sniffUpload, scanDocument, discardUpload, DRIVER_SCAN_MESSAGE } from '../services/documentScan.js'
 import { enqueueDocumentScan } from '../lib/tasks.js'
@@ -122,24 +123,6 @@ function getBearing(lat1: number, lon1: number, lat2: number, lon2: number): num
 }
 
 const HISTORY_STATUSES = ['completed', 'cancelled'] as const satisfies readonly BookingStatus[]
-
-// PAYMENT IS NOT MODELLED YET. There is no payment column anywhere on Booking, no
-// User.paymentTerms, and no gateway — that whole block is still open in ROADMAP.txt
-// ("PAYMENTS + MONTHLY ACCOUNTS", gateway undecided). What is true today is that
-// every ride is cash handed to the captain at the drop, so completion IS collection.
-//
-// It is derived here rather than in the app so there is exactly one place to change
-// when the real thing lands: swap the body for a read of the payment row, and add
-// the 'on_account' arm the roadmap already calls for ("Driver's ride card for
-// account customers must say 'do not collect'"). The app renders whatever this says
-// and decides nothing itself.
-type PaymentState = 'paid' | 'due' | 'void'
-
-const paymentStateOf = (booking: { status: BookingStatus; cancellationCharge: number | null }): PaymentState => {
-    if (booking.status === 'completed') return 'paid'
-    if (booking.status === 'cancelled') return booking.cancellationCharge ? 'due' : 'void'
-    return 'due'
-}
 
 const drivenMinutes = (startedAt: Date | null, completedAt: Date | null): number | null =>
     startedAt && completedAt
@@ -1532,6 +1515,12 @@ driverRouter.get('/upcoming-ride', protect, async (req, res) => {
             safeWaypointLng: true,
             scheduledAt: true,
             fare: true,
+            customerPayment: true,
+            scheduledAdvanceAmount: true,
+            scheduledAdvancePaidAmount: true,
+            scheduledRemainingAmount: true,
+            scheduledFinalPaidAmount: true,
+            scheduledAdvanceDisposition: true,
             vehicleClass: true,
             sharing: true,
             isOutstation: true,
@@ -1539,7 +1528,7 @@ driverRouter.get('/upcoming-ride', protect, async (req, res) => {
         orderBy: [{ scheduledAt: 'asc' }, { createdAt: 'asc' }],
     })
 
-    return res.json({ booking })
+    return res.json({ booking: booking ? { ...booking, ...driverPaymentView(booking) } : null })
 })
 
 driverRouter.get('/rides', protect, async (req, res) => {
@@ -1578,6 +1567,7 @@ driverRouter.get('/rides', protect, async (req, res) => {
             safeWaypointLng: true,
             scheduledAt: true,
             fare: true,
+            customerPayment: true,
             vehicleClass: true,
             sharing: true,
             isOutstation: true,
@@ -1600,6 +1590,11 @@ driverRouter.get('/rides', protect, async (req, res) => {
             commissionAmt: true,
             cancelledBy: true,
             cancellationCharge: true,
+            scheduledAdvanceAmount: true,
+            scheduledAdvancePaidAmount: true,
+            scheduledRemainingAmount: true,
+            scheduledFinalPaidAmount: true,
+            scheduledAdvanceDisposition: true,
             startedAt: true,
             completedAt: true,
             createdAt: true,
@@ -1678,7 +1673,7 @@ driverRouter.get('/rides', protect, async (req, res) => {
             ...booking,
             completedAt,
             durationMin: drivenMinutes(startedAt, completedAt),
-            paymentState: paymentStateOf(booking),
+            ...driverPaymentView(booking),
             navigationLeg: navigationByBooking.get(booking.id)?.navigationLeg ?? null,
             navigationEtaMinutes: navigationByBooking.get(booking.id)?.navigationEtaMinutes ?? null,
             navigationPolyline: navigationByBooking.get(booking.id)?.navigationPolyline ?? null,
@@ -1757,7 +1752,7 @@ driverRouter.get('/rides/:id', protect, async (req, res) => {
         completedAt: booking.completedAt,
         createdAt: booking.createdAt,
         durationMin: drivenMinutes(booking.startedAt, booking.completedAt),
-        paymentState: paymentStateOf(booking),
+        ...driverPaymentView(booking),
         // The number the Call rider button dials. customerPhone is the one captured on
         // the booking; user.phone is the account's. They are usually the same and the
         // booking's is the one that ride was made with.

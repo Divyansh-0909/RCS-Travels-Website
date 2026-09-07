@@ -1,29 +1,24 @@
+import { driverCopy as dc } from "../lib/copy";
 import type { UpcomingBooking } from '../types/enums';
+import { driverLabel, driverMonths } from '../lib/localizedLabels';
 
 // Mirrors backend/constants/vehicles.js and the website's constants/statusLabels.js,
 // the way frontend/src/constants/vehicles.js does: the keys cross the wire, the
 // words do not. The words here are the captain's — a rider reads "Driver on the
 // way" about someone else.
 
-const VEHICLE_LABELS: Record<string, string> = {
-    hatchback: 'Hatchback',
-    sedan: 'Sedan',
-    suv: 'SUV',
-    suv_premium: 'Premium SUV',
-};
-
-export const vehicleLabel = (vehicleClass: string) => VEHICLE_LABELS[vehicleClass] ?? '—';
+export const vehicleLabel = (vehicleClass: string, locale?: string) => driverLabel(locale, `vehicle.${vehicleClass}`) || '—';
 
 const STATUS_LABELS: Record<string, string> = {
     assigned: 'Assigned',
-    en_route: 'On the way',
-    reached: 'At pickup',
-    started: 'On trip',
+    get "en_route"() { return dc("On the way"); },
+    get "reached"() { return dc("At pickup"); },
+    get "started"() { return dc("On trip"); },
     completed: 'Completed',
     cancelled: 'Cancelled',
 };
 
-export const rideStatusLabel = (status: string) => STATUS_LABELS[status] ?? status.replace('_', ' ');
+export const rideStatusLabel = (status: string, locale?: string) => driverLabel(locale, `status.${status}`) || (STATUS_LABELS[status] ?? status.replace('_', ' '));
 
 // A ride already under way, as opposed to the accepted `assigned` state. Home's
 // Active Ride screen handles both, while callers asking whether the car has
@@ -35,14 +30,13 @@ export const ACTIVE_RIDE_STATUSES = ['en_route', 'reached', 'started'];
 // statuses each pick their own words and their own end of the trip. The statuses
 // The terminal states never reach the panel, so the fallback is only a guard.
 const ACTIVE_LEGS: Record<string, { label: string; endpoint: 'pickup' | 'drop' }> = {
-    assigned: { label: 'Pickup at', endpoint: 'pickup' },
-    en_route: { label: 'Pickup at', endpoint: 'pickup' },
-    reached: { label: 'Arrived at', endpoint: 'pickup' },
-    started: { label: 'Dropping at', endpoint: 'drop' },
+    assigned: { get "label"() { return dc("Pickup at"); }, endpoint: 'pickup' },
+    en_route: { get "label"() { return dc("Pickup at"); }, endpoint: 'pickup' },
+    reached: { get "label"() { return dc("Arrived at"); }, endpoint: 'pickup' },
+    started: { get "label"() { return dc("Dropping at"); }, endpoint: 'drop' },
 };
 
-export const activeLeg = (status: string) =>
-    ACTIVE_LEGS[status] ?? { label: rideStatusLabel(status), endpoint: 'pickup' as const };
+export const activeLeg = (status: string, locale?: string) => ACTIVE_LEGS[status] ? { ...ACTIVE_LEGS[status], label: driverLabel(locale, status === 'reached' ? 'leg.arrived' : status === 'started' ? 'leg.drop' : 'leg.pickup') } : { label: rideStatusLabel(status, locale), endpoint: 'pickup' as const };
 
 // "5 Aug • 09:30 AM", matching the website's formatDateTime. Built by hand rather
 // than with toLocaleString because Hermes ships a trimmed Intl, and a date that
@@ -50,13 +44,13 @@ export const activeLeg = (status: string) =>
 // format that is merely fixed.
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-export const formatDateTime = (value: string) => {
+export const formatDateTime = (value: string, locale?: string) => {
     const date = new Date(value);
     const hours = date.getHours();
     const hour12 = String(hours % 12 || 12).padStart(2, '0');
     const minutes = String(date.getMinutes()).padStart(2, '0');
 
-    return `${date.getDate()} ${MONTHS[date.getMonth()]} • ${hour12}:${minutes} ${hours < 12 ? 'AM' : 'PM'}`;
+    return `${date.getDate()} ${driverMonths(locale)[date.getMonth()]} • ${hour12}:${minutes} ${driverLabel(locale, hours < 12 ? 'time.am' : 'time.pm')}`;
 };
 
 export const splitAddress = (address: string) => {
@@ -67,14 +61,14 @@ export const splitAddress = (address: string) => {
 // The scheduled row sets the clock and the day at two different sizes, so it needs
 // the pieces rather than the joined string formatDateTime returns. Same hand-rolled
 // arithmetic, and for the same reason: Hermes ships a trimmed Intl.
-export const clockParts = (value: string) => {
+export const clockParts = (value: string, locale?: string) => {
     const date = new Date(value);
     const hours = date.getHours();
 
     return {
         clock: `${String(hours % 12 || 12).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`,
-        meridiem: hours < 12 ? 'AM' : 'PM',
-        day: `${date.getDate()} ${MONTHS[date.getMonth()]}`,
+        meridiem: driverLabel(locale, hours < 12 ? 'time.am' : 'time.pm'),
+        day: `${date.getDate()} ${driverMonths(locale)[date.getMonth()]}`,
     };
 };
 
@@ -104,11 +98,11 @@ const DAY_MS = 86_400_000;
 // "TODAY" / "TOMORROW" / "YESTERDAY" / "9 AUG". Named days only reach one day out in
 // either direction on purpose: "in 2 days" is a phrase a captain has to do
 // arithmetic on, and a date is not.
-export const dayBucket = (date: Date, now = new Date()) => {
+export const dayBucket = (date: Date, now = new Date(), locale?: string) => {
     const offset = Math.round((startOfDay(date) - startOfDay(now)) / DAY_MS);
-    if (offset === 0) return 'TODAY';
-    if (offset === 1) return 'TOMORROW';
-    if (offset === -1) return 'YESTERDAY';
+    if (offset === 0) return driverLabel(locale, 'time.today');
+    if (offset === 1) return driverLabel(locale, 'time.tomorrow');
+    if (offset === -1) return driverLabel(locale, 'time.yesterday');
 
     // The year only earns its place once it stops being obvious, which for a ride
     // list is the moment the ride is not in the year you are standing in.
@@ -173,15 +167,17 @@ export const matchesQuery = (booking: UpcomingBooking, query: string) => {
 // identifier should show the reference instead.
 
 export const formatDistance = (km: number | null) =>
-    km == null ? '—' : `${km >= 100 ? Math.round(km) : km.toFixed(1)} km`;
+    km == null ? '—' : dc("{{value0}} km", { value0: km >= 100 ? Math.round(km) : km.toFixed(1) });
 
 export const formatDuration = (minutes: number | null) => {
     if (minutes == null) return '—';
-    if (minutes < 60) return `${minutes} min`;
+    if (minutes < 60) return dc("{{value0}} min", { value0: minutes });
 
     const hours = Math.floor(minutes / 60);
     const rest = minutes % 60;
-    return rest ? `${hours}h ${rest}m` : `${hours}h`;
+    return rest
+        ? dc("{{value0}}h {{value1}}m", { value0: hours, value1: rest })
+        : dc("{{value0}}h", { value0: hours });
 };
 
 // Average door-to-door speed across the routes this fleet actually runs — campus to
@@ -233,13 +229,13 @@ export type FareBreakdown = { lines: FareLine[]; total: number; totalLabel: stri
  * `fare` and `rideFare` survive on the booking — so listing them separately would
  * mean inventing the division.
  */
-export const fareBreakdown = (booking: UpcomingBooking): FareBreakdown => {
+export const fareBreakdown = (booking: UpcomingBooking, locale?: string): FareBreakdown => {
     if (booking.status === 'cancelled') {
         const charge = booking.cancellationCharge ?? 0;
         return {
-            lines: [{ label: 'Ride cancelled', amount: 0, note: 'Fare not charged' }],
+            lines: [{ label: driverLabel(locale, 'money.cancelled'), amount: 0, note: driverLabel(locale, 'money.notCharged') }],
             total: charge,
-            totalLabel: charge ? 'Cancellation charge' : 'Nothing owed',
+            totalLabel: charge ? driverLabel(locale, 'money.cancellationCharge') : driverLabel(locale, 'money.nothingOwed'),
         };
     }
 
@@ -252,25 +248,25 @@ export const fareBreakdown = (booking: UpcomingBooking): FareBreakdown => {
     // twice under two labels invites the captain to check whether he misread one.
     const lines: FareLine[] = addOns > 0
         ? [
-            { label: 'Ride fare', amount: rideFare },
+            { get "label"() { return dc("Ride fare"); }, amount: rideFare },
             {
-                label: 'Tolls & extras',
+                get "label"() { return dc("Tolls & extras"); },
                 amount: addOns,
-                note: booking.needsCarrier ? 'Includes roof carrier' : 'Passed through to you',
+                note: booking.needsCarrier ? dc("Includes roof carrier") : dc("Passed through to you"),
             },
-            { label: 'Collected from rider', amount: booking.fare },
+            { get "label"() { return dc("Collected from rider"); }, amount: booking.fare },
         ]
-        : [{ label: 'Collected from rider', amount: booking.fare }];
+        : [{ get "label"() { return dc("Collected from rider"); }, amount: booking.fare }];
 
     if (commission > 0) {
         lines.push({
-            label: 'Provider commission',
+            get "label"() { return dc("Provider commission"); },
             amount: -commission,
-            note: `${booking.commissionPct}% of the ride fare`,
+            note: dc("{{value0}}% of the ride fare", { value0: booking.commissionPct }),
         });
     }
 
-    return { lines, total: booking.fare - commission, totalLabel: 'You keep' };
+    return { lines, total: booking.fare - commission, get "totalLabel"() { return dc("You keep"); } };
 };
 
 // ---------------------------------------------------------------------------
@@ -293,6 +289,120 @@ export const isFinished = (booking: UpcomingBooking) =>
 
 export type PaymentChip = { label: string; tone: 'paid' | 'due' | 'void' };
 
+export type CustomerPaymentNotice = {
+    label: string;
+    detail: string;
+    tone: 'primary' | 'warning' | 'danger' | 'success' | 'neutral';
+};
+
+const scheduledRupees = (amount: number | undefined) =>
+    amount == null ? null : amount / 100;
+
+// During a rolling deploy an older API may not send the derived mode yet. A
+// scheduled timestamp is still an authoritative safety signal: this ride must
+// never fall back to the captain's direct cash-collection path.
+const isOnlineCollection = (booking: UpcomingBooking) =>
+    booking.collectionMode === 'online' || booking.scheduledAt != null;
+
+/**
+ * Payment collection belongs to the customer booking, not this app. The API tells
+ * the captain which mode applies; this function only turns that fact into short,
+ * one-handed guidance. In particular, never infer a scheduled final payment from
+ * a completed ride — it may still be pending on the customer side.
+ */
+export const customerPaymentNotice = (booking: UpcomingBooking): CustomerPaymentNotice => {
+    const scheduled = booking.scheduledPayment;
+
+    if (isOnlineCollection(booking)) {
+        if (booking.status === 'cancelled') {
+            if (scheduled?.advanceDisposition === 'forfeited_to_driver') {
+                const retained = scheduledRupees(scheduled.advancePaidAmount);
+                return {
+                    label: retained != null
+                        ? dc("Advance retained · {{value0}}", { value0: rupees(retained) })
+                        : dc("Advance retained"),
+                    detail: dc("The customer advance was credited after cancellation. Do not collect again."),
+                    tone: 'success',
+                };
+            }
+            if (scheduled?.advanceDisposition === 'refund_pending') {
+                return {
+                    label: dc("Advance refund pending"),
+                    detail: dc("The customer refund is being processed. Do not collect."),
+                    tone: 'warning',
+                };
+            }
+            if (scheduled?.advanceDisposition === 'refunded') {
+                return {
+                    label: dc("Advance refunded"),
+                    detail: dc("The customer is not charged. Do not collect."),
+                    tone: 'neutral',
+                };
+            }
+            return {
+                label: dc("No customer collection"),
+                detail: dc("This cancelled scheduled ride has no payment to collect."),
+                tone: 'neutral',
+            };
+        }
+
+        const advance = scheduledRupees(scheduled?.advancePaidAmount);
+        const remaining = scheduledRupees(scheduled?.remainingAmount);
+        const finalPaid = scheduledRupees(scheduled?.finalPaidAmount);
+
+        if (booking.status !== 'completed') {
+            return advance && advance > 0
+                ? {
+                    label: dc("Advance paid · {{value0}}", { value0: rupees(advance) }),
+                    detail: dc("The customer completes the remaining payment after the ride."),
+                    tone: 'success',
+                }
+                : {
+                    label: dc("Customer payment"),
+                    detail: dc("Payment is handled in the customer booking. Do not collect in this app."),
+                    tone: 'primary',
+                };
+        }
+
+        if (remaining != null && finalPaid != null && finalPaid >= remaining) {
+            return {
+                label: dc("Payment complete"),
+                detail: dc("The customer’s remaining payment has been received."),
+                tone: 'success',
+            };
+        }
+
+        return {
+            label: remaining != null
+                ? dc("Remaining payment pending · {{value0}}", { value0: rupees(remaining) })
+                : dc("Remaining payment pending"),
+            detail: dc("The customer completes payment from their booking. Do not collect in this app."),
+            tone: 'warning',
+        };
+    }
+
+    if (booking.status === 'cancelled') {
+        return booking.paymentState === 'void'
+            ? { label: dc("No charge"), detail: dc("No customer payment is required."), tone: 'neutral' }
+            : { label: dc("Cancellation charge"), detail: dc("Contact support to settle this cancellation charge."), tone: 'danger' };
+    }
+
+    const amount = booking.customerPayment ?? booking.fare;
+    if (booking.paymentState === 'paid') {
+        return {
+            label: dc("Payment complete"),
+            detail: dc("Customer payment has been recorded."),
+            tone: 'success',
+        };
+    }
+
+    return {
+        label: dc("Collect {{value0}}", { value0: rupees(amount) }),
+        detail: dc("Collect directly from the customer after the ride."),
+        tone: 'danger',
+    };
+};
+
 /**
  * The chip on the collapsed row. `paymentState` is decided server-side
  * (backend/routes/driver.ts) — all that happens here is choosing the captain's
@@ -300,14 +410,22 @@ export type PaymentChip = { label: string; tone: 'paid' | 'due' | 'void' };
  * an instruction on a ride ahead of him and as a problem on one behind him.
  */
 export const paymentChip = (booking: UpcomingBooking): PaymentChip => {
-    if (booking.paymentState === 'paid') return { label: 'Paid', tone: 'paid' };
-    if (booking.paymentState === 'void') return { label: 'No charge', tone: 'void' };
+    const notice = customerPaymentNotice(booking);
+    if (isOnlineCollection(booking)) {
+        return {
+            get "label"() { return notice.label; },
+            tone: notice.tone === 'success' ? 'paid' : notice.tone === 'neutral' ? 'void' : 'due',
+        };
+    }
+    if (booking.paymentState === 'paid') return { get "label"() { return dc("Paid"); }, tone: 'paid' };
+    if (booking.paymentState === 'retained') return { get "label"() { return dc("Advance retained"); }, tone: 'paid' };
+    if (booking.paymentState === 'void') return { get "label"() { return dc("No charge"); }, tone: 'void' };
 
     if (booking.status === 'cancelled') {
-        return { label: `Charge ${rupees(booking.cancellationCharge ?? 0)}`, tone: 'due' };
+        return { get "label"() { return dc("Charge {{value0}}", {value0: (rupees(booking.cancellationCharge ?? 0))}); }, tone: 'due' };
     }
 
-    return { label: `Collect ${rupees(booking.fare)}`, tone: 'due' };
+    return { get "label"() { return dc("Collect {{value0}}", {value0: (rupees(booking.customerPayment ?? booking.fare))}); }, tone: 'due' };
 };
 
 /**
@@ -321,4 +439,4 @@ export const paymentChip = (booking: UpcomingBooking): PaymentChip => {
  * whether it is offered.
  */
 export const fareUnpaid = (booking: UpcomingBooking) =>
-    booking.paymentState === 'due' && booking.status !== 'cancelled';
+    !isOnlineCollection(booking) && booking.paymentState === 'due' && booking.status !== 'cancelled';

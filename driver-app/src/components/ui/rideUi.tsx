@@ -1,3 +1,4 @@
+import { driverCopy as dc } from "../../lib/copy";
 import type { ReactNode } from 'react';
 import { Image, Pressable, View } from 'react-native';
 import Animated, { useAnimatedStyle , SharedValue } from 'react-native-reanimated';
@@ -65,8 +66,14 @@ export const statusFill = (status: string) => STATUS_FILLS[status] ?? INK;
 // have gone with the words they dressed: the detail screen banners this across the head
 // of its card now and pairs its own ink to its own fill, which is a decision that cannot
 // be made one half at a time. DetailStatusBanner owns those pairs below.
-export const paymentWords = (state: 'paid' | 'due' | 'void') =>
-    state === 'paid' ? 'Paid' : state === 'void' ? 'No charge' : 'Payment due';
+export const paymentWords = (state: 'paid' | 'due' | 'void' | 'retained') =>
+    state === 'paid'
+        ? dc("Paid")
+        : state === 'retained'
+            ? dc("Advance retained")
+            : state === 'void'
+                ? dc("No charge")
+                : dc("Payment due");
 
 export type DetailStatusTone = 'primary' | 'warning' | 'danger' | 'success' | 'neutral';
 
@@ -97,6 +104,27 @@ export const DetailStatusBanner = ({ label, tone }: { label: string; tone: Detai
             <AppText className={`text-xs font-semibold uppercase tracking-wide ${colours.ink}`}>
                 {label}
             </AppText>
+        </View>
+    );
+};
+
+/** A compact, non-interactive payment explanation. Captains can read it at a
+ * glance, but cannot accidentally enter a customer checkout flow. */
+export const CustomerPaymentPanel = ({
+    label,
+    detail,
+    tone,
+}: {
+    label: string;
+    detail: string;
+    tone: DetailStatusTone;
+}) => {
+    const colours = DETAIL_STATUS_TONES[tone];
+
+    return (
+        <View className="w-full rounded-xl px-3 py-2.5 gap-0.5" style={{ backgroundColor: colours.fill }}>
+            <AppText className={`text-sm font-semibold ${colours.ink}`}>{label}</AppText>
+            <AppText className={`text-xs leading-4 ${colours.ink}`}>{detail}</AppText>
         </View>
     );
 };

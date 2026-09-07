@@ -1,3 +1,5 @@
+import { useLanguage as useCopyLanguage } from "../i18n";
+import { driverCopy as dc } from "../lib/copy";
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Dimensions, PanResponder, View } from 'react-native';
 import Animated, {
@@ -47,6 +49,7 @@ const PANEL_SECONDS = 30;
 const PANEL_Z = 60;
 
 const OfferPanel = () => {
+    useCopyLanguage();
     const { panelOffer, canAccept, here, accept, reject, dismiss } = useOffers();
     // Pinned to the top with everything else the app raises on its own. See
     // useNoticeTop for why the bottom is the wrong end of this screen for it.
@@ -171,9 +174,7 @@ const OfferPanel = () => {
                         <AppText className="text-sm font-medium text-red-400">{error}</AppText>
                     </View>
                 ) : (
-                    <AppText className="text-xs text-center mt-2 text-[var(--background-primary)] opacity-60">
-                        Swipe away to hide, it stays in Notifications
-                    </AppText>
+                    <AppText className="text-xs text-center mt-2 text-[var(--background-primary)] opacity-60">{dc("Swipe away to hide, it stays in Notifications")}</AppText>
                 )}
             </Animated.View>
         </View>

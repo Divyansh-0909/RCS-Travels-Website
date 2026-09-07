@@ -1,7 +1,13 @@
 const { getDefaultConfig } = require('expo/metro-config');
 const { withNativeWind } = require('nativewind/metro');
+const path = require('path');
 
 const config = getDefaultConfig(__dirname);
+
+// i18n resources are shared with the customer surface. Metro otherwise confines
+// its dependency graph to driver-app and rejects JSON imported from ../shared.
+config.watchFolders = [path.resolve(__dirname, '../shared')];
+config.resolver.nodeModulesPaths = [path.resolve(__dirname, 'node_modules')];
 
 config.transformer = {
   ...config.transformer,

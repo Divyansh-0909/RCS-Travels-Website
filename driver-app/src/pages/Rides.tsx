@@ -1,3 +1,5 @@
+import { useLanguage as useCopyLanguage } from "../i18n";
+import { driverCopy as dc } from "../lib/copy";
 import { useCallback, useEffect, useMemo, useRef, useState, type ComponentType } from 'react';
 import { ActivityIndicator, AppState, Pressable, SectionList, TextInput, View, type SectionListProps } from 'react-native';
 import Animated from 'react-native-reanimated';
@@ -56,8 +58,8 @@ const AnimatedSectionList = Animated.createAnimatedComponent(
 ) as unknown as ComponentType<RideListProps>;
 
 const TABS: { key: RidesScope; label: string }[] = [
-    { key: 'upcoming', label: 'Upcoming' },
-    { key: 'history', label: 'History' },
+    { key: 'upcoming', get "label"() { return dc("Upcoming"); } },
+    { key: 'history', get "label"() { return dc("History"); } },
 ];
 
 const scopeFromSearch = (search: string): RidesScope =>
@@ -67,6 +69,7 @@ const pathForScope = (scope: RidesScope) =>
     scope === 'history' ? '/rides?tab=history' : '/rides';
 
 const Rides = () => {
+    useCopyLanguage();
     const api = useApi();
     const location = useLocation();
     const navigate = useNavigate();
@@ -134,7 +137,7 @@ const Rides = () => {
             }
         } catch (e: unknown) {
             if (requestId !== latestRequest.current) return;
-            setError(e instanceof Error ? e.message : 'Something went wrong');
+            setError(e instanceof Error ? e.message : dc("Something went wrong"));
         } finally {
             if (requestId === latestRequest.current) setLoading(false);
         }
@@ -219,7 +222,7 @@ const Rides = () => {
                             autoFocus
                             value={query}
                             onChangeText={setQuery}
-                            placeholder="Place, rider or ride number"
+                            placeholder={dc("Place, rider or ride number")}
                             placeholderTextColor="#6B7280"
                             returnKeyType="search"
                             className={`flex-1 font-sans ${INK_TEXT}`}
@@ -227,7 +230,7 @@ const Rides = () => {
                         />
                         <Pressable
                             role="button"
-                            aria-label="Close search"
+                            aria-label={dc("Close search")}
                             onPress={() => { setSearching(false); setQuery(''); }}
                             hitSlop={8}
                             style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
@@ -240,12 +243,10 @@ const Rides = () => {
                         {/* Spacer, so the title stays optically centred against the
                             search button rather than being pushed off by it. */}
                         <View className="w-11 h-11" />
-                        <AppText className={`text-xl font-semibold ${INK_TEXT}`} style={TITLE_TRACKING}>
-                            Rides
-                        </AppText>
+                        <AppText className={`text-xl font-semibold ${INK_TEXT}`} style={TITLE_TRACKING}>{dc("Rides")}</AppText>
                         <Pressable
                             role="button"
-                            aria-label="Search rides"
+                            aria-label={dc("Search rides")}
                             onPress={() => setSearching(true)}
                             style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
                         >
@@ -297,7 +298,7 @@ const Rides = () => {
                         onPress={() => refresh(scope)}
                         style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
                     >
-                        <AppText className="text-sm font-semibold text-primary">Try again</AppText>
+                        <AppText className="text-sm font-semibold text-primary">{dc("Try again")}</AppText>
                     </Pressable>
                 </View>
             )}
@@ -336,9 +337,9 @@ const Rides = () => {
                 <RidesSkeleton withPanel={scope === 'history' && !summary && !searching} />
             ) : failedFirstLoad ? (
                 <ErrorState
-                    title="Can't load your rides"
+                    title={dc("Can't load your rides")}
                     message={error}
-                    actionLabel="Try again"
+                    actionLabel={dc("Try again")}
                     onAction={() => refresh(scope)}
                 />
             ) : (
@@ -373,17 +374,17 @@ const Rides = () => {
                         <View className="flex-1 items-center justify-center gap-1 pb-24 px-6">
                             <AppText className={`text-base font-semibold text-center ${INK_TEXT}`}>
                                 {query
-                                    ? 'No rides match that'
+                                    ? dc("No rides match that")
                                     : scope === 'upcoming'
-                                        ? 'No rides booked yet'
-                                        : 'No finished rides yet'}
+                                        ? dc("No rides booked yet")
+                                        : dc("No finished rides yet")}
                             </AppText>
                             <AppText className={`text-sm text-center ${MUTED}`}>
                                 {query
-                                    ? 'Try a place, a rider name, or a ride ID.'
+                                    ? dc("Try a place, a rider name, or a ride ID.")
                                     : scope === 'upcoming'
-                                        ? 'Go online and rides you accept will queue up here.'
-                                        : 'Rides you complete or cancel are kept here.'}
+                                        ? dc("Go online and rides you accept will queue up here.")
+                                        : dc("Rides you complete or cancel are kept here.")}
                             </AppText>
                         </View>
                     }

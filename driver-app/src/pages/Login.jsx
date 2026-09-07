@@ -1,3 +1,5 @@
+
+import { driverCopy as dc } from "../lib/copy";
 import { useSignIn, useAuth } from "@clerk/clerk-expo";
 import { useState, useEffect, useRef } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, TextInput, View } from "react-native";
@@ -12,6 +14,7 @@ import { useData } from "../hooks/useData";
 import { useOtpClipboard } from "../hooks/useOtpClipboard";
 import CheckMarkOutline from "../components/illustrations/CheckMarkOutline";
 import CrossOutline from "../components/illustrations/CrossOutline";
+import { useLanguage } from '../i18n';
 
 const ERROR_TEXT = "#E86A6A";   
 const BOX_BG = "#1d1d27";     
@@ -39,6 +42,7 @@ const CONVERGE = { duration: 600, easing: Easing.inOut(Easing.ease) };
 // A component rather than inline, because useAnimatedStyle is a hook and the row
 // builds its boxes with .map().
 const OtpBox = ({ index, count, collapsed, children }) => {
+
     const slide = useAnimatedStyle(() => ({
         transform: [{
             translateX: withTiming(
@@ -58,6 +62,7 @@ const OtpBox = ({ index, count, collapsed, children }) => {
 };
 
 const Login = () => {
+
   const { isLoaded, signIn, setActive } = useSignIn();
   const { isSignedIn } = useAuth();
   const navigate = useNavigate();
@@ -80,6 +85,7 @@ const Login = () => {
   const [redirecting, setRedirecting] = useState(false);
 
   const api = useApi();
+  const { t } = useLanguage();
 
   useEffect(() => {
     if (resendIn <= 0) return;
@@ -103,12 +109,12 @@ const Login = () => {
 
   async function handleSubmit() {
     if (!phone) {
-      setError("Enter a Phone Number");
+      setError(t('driver.auth.phoneRequired'));
       return;
     }
 
     if (!(phone.length === 10)) {
-      setError("Number should be exactly 10 digits");
+      setError(t('driver.auth.phoneInvalid'));
       return;
     }
 
@@ -118,7 +124,7 @@ const Login = () => {
       await sendOtp()
     } catch (err) {
       console.error(err);
-      setError(err?.message || "Something went wrong");
+      setError(err?.message || t('driver.auth.generic'));
     } finally {
       setLoading(false);
     }
@@ -126,12 +132,12 @@ const Login = () => {
 
   async function handleOTPSubmit() {
     if (!otp) {
-      setError("Enter OTP");
+      setError(t('driver.auth.otpRequired'));
       return;
     }
 
     if (!(otp.length === OTP_LENGTH)) {
-      setError("OTP should be exactly 6 digit");
+      setError(t('driver.auth.otpInvalid'));
       return;
     }
 
@@ -139,7 +145,7 @@ const Login = () => {
     // hands back a 60s ticket, so bailing out further down would cost the user
     // their code and force a resend for something that resolves on its own.
     if (!isLoaded) {
-      setError("Still connecting. Try again in a moment.");
+      setError(t('driver.auth.connecting'));
       return;
     }
 
@@ -150,7 +156,7 @@ const Login = () => {
       await verifyOtp()
     } catch (err) {
       console.error(err);
-      setError(err?.message || "Something went wrong");
+      setError(err?.message || t('driver.auth.generic'));
       // A throw after the code was accepted leaves the verdict on "pass", which
       // would sit a tick above the error message.
       setVerdict("fail");
@@ -201,7 +207,7 @@ const Login = () => {
       setExpiresIn(OTP_TTL);
     } catch (err) {
       console.error(err);
-      setError("Something went wrong");
+      setError(t('driver.auth.generic'));
     } finally {
       setResending(false);
     }
@@ -223,7 +229,7 @@ const Login = () => {
     if (!isSignedIn) {
       const result = await signIn.create({ strategy: "ticket", ticket: data.ticket });
       if (result.status !== "complete") {
-        setError("Sign in failed. Please try again.");
+        setError(t('driver.auth.signInFailed'));
         // The code was right, so the verdict was already "pass" — but the sign-in
         // it was standing in for did not happen, and leaving a tick over an error
         // message reports the wrong thing.
@@ -263,8 +269,8 @@ const Login = () => {
     setShowSignUp(false);
 
     if (
-      error === "Enter a Phone Number" ||
-      error === "Number should be exactly 10 digits"
+      error === dc("Enter a Phone Number") ||
+      error === dc("Number should be exactly 10 digits")
     ) {
       setError(null);
     }
@@ -369,26 +375,26 @@ const Login = () => {
         {isSignedIn && !redirecting
           ? <View className="justify-center items-center">
             <AppText className="text-2xl font-semibold text-center">
-              {"You are already\nlogged in."}
+              {t('driver.auth.alreadyIn')}
             </AppText>
             <Button
               onPress={() => navigate("/")}
               prop={{ width: 220 }}
               className="mt-6"
             >
-              Back
+              {t('common.actions.back')}
             </Button>
           </View>
 
           : <View className="w-full justify-center items-center">
             <View className="justify-center items-center gap-3">
               <AppText className="text-2xl font-semibold text-center">
-                {isPhone ? "Let's get you back\non the road." : "Confirm your code."}
+                {isPhone ? t('driver.auth.loginTitle') : t('driver.auth.confirmTitle')}
               </AppText>
               <AppText className="text-base text-center text-[var(--text-muted)]">
                 {isPhone
-                  ? "We'll send a OTP to this number."
-                  : <>Enter the 6-digit code{"\n"}we sent to <AppText className="font-semibold text-[var(--text)]">{phoneDisplay}</AppText></>}
+                  ? t('driver.auth.phoneBody')
+                  : t('driver.auth.otpBody', { phone: phoneDisplay })}
               </AppText>
             </View>
 
@@ -466,8 +472,8 @@ const Login = () => {
 
                   <AppText className={`text-sm text-[var(--text-muted)] mt-2 mb-5 ${busy ? "opacity-0" : ""}`}>
                     {expiresIn > 0
-                      ? <>Code expires in <AppText className="text-[var(--text)]" style={{ fontVariant: ["tabular-nums"] }}>{formatMMSS(expiresIn)}</AppText></>
-                      : "Your code has expired."}
+                      ? t('driver.auth.expires', { time: formatMMSS(expiresIn) })
+                      : t('driver.auth.expired')}
                     {/* iOS only — Android fills the boxes on its own. Not
                         offered on an expired code, which pastes to nothing. */}
                     {canPaste && expiresIn > 0 && (
@@ -477,7 +483,7 @@ const Login = () => {
                           onPress={pasteOtp}
                           className="font-semibold text-[var(--text)] underline"
                         >
-                          Paste code
+                          {t('driver.auth.paste')}
                         </AppText>
                       </>
                     )}
@@ -487,12 +493,11 @@ const Login = () => {
                 <Input
                   prop={{
                     type: "tel",
-                    placeholder: "XXXXX XXXXX",
+                    get "placeholder"() { return dc("XXXXX XXXXX"); },
                     value: phone,
                     onChangeFn: handlePhoneChange,
                     maxLength: 10,
-                    error: error === "Enter a Phone Number" ||
-                      error === "Number should be exactly 10 digits",
+                    error: error === t('driver.auth.phoneRequired') || error === t('driver.auth.phoneInvalid'),
                     bg: BOX_BG,
                   }}
                 />
@@ -510,40 +515,40 @@ const Login = () => {
                 className="mt-5"
               >
                 {isPhone
-                  ? (showSignUp ? "Sign Up" : (loading ? "Sending OTP..." : "Continue"))
-                  : (loading ? "Redirecting..." : "Confirm")}
+                  ? (showSignUp ? t('driver.auth.signUp') : (loading ? t('driver.auth.sendingOtp') : t('common.actions.continue')))
+                  : (loading ? t('driver.auth.redirecting') : t('driver.auth.confirm'))}
               </Button>
 
               {isPhone && !showSignUp && (
                 <AppText className="mt-6 text-sm text-center text-[var(--text-muted)]">
-                  <AppText className="text-[var(--text)]">No account?</AppText>{" "}
+                  <AppText className="text-[var(--text)]">{t('driver.auth.noAccount')}</AppText>{" "}
                   <AppText
                     onPress={() => navigate("/signup")}
                     className="font-semibold text-[var(--text)] underline"
                   >
-                    Sign up
+                    {t('driver.auth.signUp')}
                   </AppText>
                 </AppText>
               )}
 
               {!isPhone && (
                 <AppText className={`mt-6 text-sm text-center text-[var(--text-muted)] ${busy ? "opacity-0" : ""}`}>
-                  <AppText className="text-[var(--text)]">Didn&apos;t get it?</AppText>{" "}
+                  <AppText className="text-[var(--text)]">{t('driver.auth.didntGet')}</AppText>{" "}
                   {resending
-                    ? "Sending..."
+                    ? t('driver.auth.sending')
                     : resendIn > 0
-                      ? <AppText style={{ fontVariant: ["tabular-nums"] }}>Resend in {resendIn}s</AppText>
+                      ? <AppText style={{ fontVariant: ["tabular-nums"] }}>{t('driver.auth.resendIn', { seconds: resendIn })}</AppText>
                       : <AppText
                         onPress={handleResend}
                         className="font-semibold text-[var(--text)] underline"
                       >
-                        Resend
+                        {t('driver.auth.resend')}
                       </AppText>}
                 </AppText>
               )}
 
               <AppText className="text-sm text-center text-[var(--text-muted)] mt-5">
-                {"You consent to receive a OTP\nby text or WhatsApp."}
+                {t('driver.auth.consent')}
               </AppText>
             </View>
           </View>}

@@ -1,3 +1,5 @@
+import { useLanguage as useCopyLanguage } from "../../i18n";
+import { driverCopy as dc } from "../../lib/copy";
 import { Pressable, View } from 'react-native';
 import { cssInterop } from 'nativewind';
 import {
@@ -63,19 +65,19 @@ type Props = {
 };
 
 const PRESENTATION: Record<DocumentRowState, { Icon: typeof ClockIcon; color: string; word: string }> = {
-  missing: { Icon: PlusCircleIcon, color: ICON_INK, word: 'Not uploaded' },
+  missing: { Icon: PlusCircleIcon, color: ICON_INK, get "word"() { return dc("Not uploaded"); } },
   uploading: { Icon: ClockIcon, color: BLUE, word: 'Uploading' },
   // The file check, in the captain's words. He is not told it is a security scan
   // — that invites him to wonder what was suspected of his licence — only that it
   // is being checked, which is true and is all he can act on.
   scanning: { Icon: ShieldCheckIcon, color: BLUE, word: 'Checking' },
-  pending: { Icon: ClockIcon, color: AMBER, word: 'Waiting for review' },
-  approved: { Icon: CheckCircleIcon, color: GREEN, word: 'Approved' },
-  rejected: { Icon: XCircleIcon, color: RED, word: 'Rejected' },
+  pending: { Icon: ClockIcon, color: AMBER, get "word"() { return dc("Waiting for review"); } },
+  approved: { Icon: CheckCircleIcon, color: GREEN, get "word"() { return dc("Approved"); } },
+  rejected: { Icon: XCircleIcon, color: RED, get "word"() { return dc("Rejected"); } },
   // A scan that could not be completed. Deliberately worded as a problem with
   // the file rather than a verdict on the driver — most of these are a truncated
   // upload over bad signal, not anybody trying anything.
-  unverified: { Icon: WarningCircleIcon, color: RED, word: "Couldn't be checked" },
+  unverified: { Icon: WarningCircleIcon, color: RED, get "word"() { return dc("Couldn't be checked"); } },
 };
 
 const DocumentRow = ({
@@ -91,6 +93,7 @@ const DocumentRow = ({
   onRetry,
   last,
 }: Props) => {
+    useCopyLanguage();
   const { Icon, color, word } = PRESENTATION[state];
   const showProgress = state === 'uploading' && typeof progress === 'number';
   const showRetry = (state === 'rejected' || state === 'unverified') && onRetry != null;
@@ -113,7 +116,7 @@ const DocumentRow = ({
               that cannot. A captain with a petrol car should not spend a second
               wondering about the CNG certificate. */}
           {required ? null : (
-            <AppText className={`text-xs ${MUTED}`}>Optional</AppText>
+            <AppText className={`text-xs ${MUTED}`}>{dc("Optional")}</AppText>
           )}
         </View>
 
@@ -139,9 +142,7 @@ const DocumentRow = ({
             already sent looks exactly like an approved row with nothing done —
             and the captain uploads his insurance a second time. */}
         {renewing ? (
-          <AppText className="text-sm" style={{ color: BLUE }}>
-            Renewal sent — being checked
-          </AppText>
+          <AppText className="text-sm" style={{ color: BLUE }}>{dc("Renewal sent — being checked")}</AppText>
         ) : null}
 
         {showProgress ? (
@@ -160,7 +161,7 @@ const DocumentRow = ({
       {showRetry ? (
         <Pressable
           role="button"
-          aria-label={`Retry ${label}`}
+          aria-label={dc("Retry {{value0}}", {value0: (label)})}
           onPress={onRetry}
           hitSlop={8}
           style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
@@ -179,7 +180,7 @@ const DocumentRow = ({
       {onPress ? (
         <Pressable
           role="button"
-          aria-label={`${label}, ${word}`}
+          aria-label={dc("{{value0}}, {{value1}}", {value0: (label), value1: (word)})}
           onPress={onPress}
           style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
         >

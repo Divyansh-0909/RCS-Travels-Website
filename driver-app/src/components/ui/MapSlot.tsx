@@ -1,9 +1,15 @@
+import { useLanguage as useCopyLanguage } from "../../i18n";
+import { driverCopy as dc } from "../../lib/copy";
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AppState, Image, Pressable, useColorScheme, View } from 'react-native';
+import { AppState, Pressable, useColorScheme, View } from 'react-native';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE, type MapStyleElement } from 'react-native-maps';
 import { CrosshairSimpleIcon } from 'phosphor-react-native';
 import { decodeGooglePolyline, remainingRoutePoints } from '../../lib/polyline';
-import { MapLoadingSkeleton } from './Skeleton';
+import {
+    DARK_MAP_LAND_COLOR,
+    LIGHT_MAP_LAND_COLOR,
+    MapLoadingSkeleton,
+} from './Skeleton';
 
 type Point = { latitude: number; longitude: number };
 type Props = {
@@ -18,8 +24,8 @@ type Props = {
     bottomSheetHeight?: number;
 };
 
-const topView = require('../../../assets/top-view.webp');
-const topViewSedan = require('../../../assets/top-view-sedan.webp');
+const topView = require('../../../assets/captain-car-marker.png');
+const topViewSedan = require('../../../assets/captain-sedan-marker.png');
 
 
 const INITIAL_REGION_DELTA = 0.003;
@@ -36,7 +42,6 @@ const ENDPOINT_CIRCLE_TOP = 4;
 const ENDPOINT_STEM_TOP = 12;
 const ENDPOINT_STEM_HEIGHT = 20;
 const ENDPOINT_TIP_Y = ENDPOINT_STEM_TOP + ENDPOINT_STEM_HEIGHT;
-const DRIVER_MARKER_SIZE = 72;
 const GOOGLE_MAP_ID = process.env.EXPO_PUBLIC_GOOGLE_MAPS_MAP_ID?.trim() || undefined;
 const FALLBACK_POINT: Point = { latitude: 28.6315, longitude: 77.2167 };
 
@@ -58,9 +63,9 @@ const validPoint = (latitude: unknown, longitude: unknown): Point | null => {
 // Dark mirrors the passenger website. Light stays in the same blue-grey family,
 // with lifted shades instead of switching to an unrelated stock Google theme.
 export const DARK_MAP_STYLE: MapStyleElement[] = [
-    { elementType: 'geometry', stylers: [{ color: '#2e2e38' }] },
+    { elementType: 'geometry', stylers: [{ color: DARK_MAP_LAND_COLOR }] },
     { elementType: 'labels.text.fill', stylers: [{ color: '#d6d6db' }] },
-    { elementType: 'labels.text.stroke', stylers: [{ color: '#2e2e38' }] },
+    { elementType: 'labels.text.stroke', stylers: [{ color: DARK_MAP_LAND_COLOR }] },
     { featureType: 'landscape.man_made', elementType: 'geometry', stylers: [{ color: '#41414d' }] },
     { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#1d1d27' }] },
     { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#16161f' }] },
@@ -75,7 +80,7 @@ export const DARK_MAP_STYLE: MapStyleElement[] = [
 ];
 
 const LIGHT_MAP_STYLE: MapStyleElement[] = [
-    { elementType: 'geometry', stylers: [{ color: '#b9b9bf' }] },
+    { elementType: 'geometry', stylers: [{ color: LIGHT_MAP_LAND_COLOR }] },
     { elementType: 'labels.text.fill', stylers: [{ color: '#565660' }] },
     { elementType: 'labels.text.stroke', stylers: [{ color: '#f4f4f6' }, { weight: 2 }] },
     { featureType: 'landscape.man_made', elementType: 'geometry.fill', stylers: [{ color: '#e1e1e5' }] },
@@ -95,6 +100,7 @@ const LIGHT_MAP_STYLE: MapStyleElement[] = [
 ];
 
 const EndpointPin = ({ kind }: { kind: 'pickup' | 'drop' }) => {
+    useCopyLanguage();
     const pickup = kind === 'pickup';
     const color = pickup ? '#ffffff' : '#243AFB';
     return (
@@ -135,27 +141,6 @@ const EndpointPin = ({ kind }: { kind: 'pickup' | 'drop' }) => {
 };
 
 
-function DriverPin({ carType }: { carType: string | null }) {
-    const sedan = carType === 'sedan';
-    return (
-        <View
-            collapsable={false}
-            style={{
-                width: DRIVER_MARKER_SIZE,
-                height: DRIVER_MARKER_SIZE,
-                alignItems: 'center',
-                justifyContent: 'center',
-            }}
-        >
-            <Image
-                source={sedan ? topViewSedan : topView}
-                style={{ width: 60, height: sedan ? 28 : 33 }}
-                resizeMode="contain"
-            />
-        </View>
-    );
-}
-
 /** Full-bleed active-ride map. Booking endpoints are facts, never draggable. */
 const MapSlot = ({
     pickup,
@@ -168,6 +153,7 @@ const MapSlot = ({
     cameraMode = 'follow-driver',
     bottomSheetHeight = 0,
 }: Props) => {
+    useCopyLanguage();
     const deviceColorScheme = useColorScheme();
     const mapInterfaceStyle = deviceColorScheme === 'dark' ? 'dark' : 'light';
     const mapAppearance = `${GOOGLE_MAP_ID ?? 'local'}:${mapInterfaceStyle}`;
@@ -443,18 +429,16 @@ const MapSlot = ({
                 </Marker>
             ) : null}
             {driverPoint ? (
-                // Keep view tracking enabled for this single live marker. On
-                // Android the WebP is decoded after the custom marker first
-                // mounts; disabling tracking freezes that first blank bitmap.
+                // Let the native map load the bundled bitmap. Android can
+                // snapshot a custom marker view before its image has decoded.
                 <Marker
                     coordinate={driverPoint}
                     anchor={{ x: 0.5, y: 0.5 }}
+                    image={carType === 'sedan' ? topViewSedan : topView}
                     rotation={driverRotation}
-                    tracksViewChanges={true}
+                    tracksViewChanges={false}
                     zIndex={10}
-                >
-                    <DriverPin carType={carType ?? null} />
-                </Marker>
+                />
             ) : null}
         </MapView>
 
@@ -463,8 +447,8 @@ const MapSlot = ({
         {driverPoint ? (
             <Pressable
                 role="button"
-                aria-label="Recenter map on your location"
-                accessibilityHint="Moves the map back to the captain vehicle"
+                aria-label={dc("Recenter map on your location")}
+                accessibilityHint={dc("Moves the map back to the captain vehicle")}
                 hitSlop={4}
                 onPress={recenter}
                 onPressIn={() => setRecenterPressed(true)}

@@ -1,5 +1,9 @@
-import { useEffect, type ReactNode } from 'react';
+import { useLanguage as useCopyLanguage } from "../../i18n";
+import { driverCopy as dc } from "../../lib/copy";
+import { useEffect, useState, type ReactNode } from 'react';
+import { LinearGradient } from 'expo-linear-gradient';
 import {
+  useColorScheme,
   View,
   type DimensionValue,
   type StyleProp,
@@ -14,13 +18,15 @@ import Animated, {
   useReducedMotion,
   useSharedValue,
   withRepeat,
+  withSequence,
   withTiming,
 } from 'react-native-reanimated';
 
 const BLOCK = 'rgba(18,18,32,0.08)';
-const MAP_BLOCK = 'rgba(255,255,255,0.52)';
 const STILL_OPACITY = 0.72;
 const DIM_OPACITY = 0.42;
+export const DARK_MAP_LAND_COLOR = '#2e2e38';
+export const LIGHT_MAP_LAND_COLOR = '#b9b9bf';
 
 type SectionProps = {
   children: ReactNode;
@@ -34,6 +40,7 @@ type SectionProps = {
  * animations while the JS thread is already processing a response.
  */
 export const SkeletonSection = ({ children, className, style }: SectionProps) => {
+    useCopyLanguage();
   const reducedMotion = useReducedMotion();
   const opacity = useSharedValue(STILL_OPACITY);
 
@@ -75,13 +82,11 @@ export const SkeletonBlock = ({
   width = '100%',
   height,
   radius,
-  map = false,
   style,
 }: {
   width?: DimensionValue;
   height: number;
   radius?: number;
-  map?: boolean;
   style?: StyleProp<ViewStyle>;
 }) => (
   <View
@@ -90,60 +95,87 @@ export const SkeletonBlock = ({
         width,
         height,
         borderRadius: radius ?? Math.min(height / 2, 12),
-        backgroundColor: map ? MAP_BLOCK : BLOCK,
+        backgroundColor: BLOCK,
       },
       style,
     ]}
   />
 );
 
-/** The map is one section, so its skeleton covers only the map surface. */
-export const MapLoadingSkeleton = ({ dark = false }: { dark?: boolean }) => (
-  <Animated.View
-    pointerEvents="none"
-    accessible
-    accessibilityLabel="Loading map"
-    accessibilityState={{ busy: true }}
-    exiting={FadeOut.duration(160).reduceMotion(ReduceMotion.System)}
-    style={{
-      position: 'absolute',
-      inset: 0,
-      zIndex: 20,
-      overflow: 'hidden',
-      backgroundColor: dark ? '#2e2e38' : '#b9b9bf',
-    }}
-  >
-    <SkeletonSection style={{ flex: 1 }}>
-      {/* Broad, quiet route shapes make this read as the map region without
-          pretending to know the eventual streets or pin positions. */}
-      <SkeletonBlock
-        map
-        width="130%"
-        height={18}
-        radius={9}
-        style={{ position: 'absolute', top: '24%', left: '-18%', transform: [{ rotate: '-13deg' }] }}
-      />
-      <SkeletonBlock
-        map
-        width="118%"
-        height={12}
-        radius={6}
-        style={{ position: 'absolute', top: '56%', left: '-4%', transform: [{ rotate: '18deg' }] }}
-      />
-      <SkeletonBlock
-        map
-        width="82%"
-        height={8}
-        radius={4}
-        style={{ position: 'absolute', top: '76%', left: '-8%', transform: [{ rotate: '-28deg' }] }}
-      />
-      <SkeletonBlock
-        map
-        width={54}
-        height={54}
-        radius={27}
-        style={{ position: 'absolute', top: '43%', left: '43%' }}
-      />
-    </SkeletonSection>
-  </Animated.View>
-);
+/** A plain map-coloured field with one soft highlight sweeping across it. */
+export const MapLoadingSkeleton = ({ dark }: { dark?: boolean }) => {
+    useCopyLanguage();
+  const systemScheme = useColorScheme();
+  const reducedMotion = useReducedMotion();
+  const [width, setWidth] = useState(0);
+  const translateX = useSharedValue(0);
+  const isDark = dark ?? systemScheme === 'dark';
+
+  useEffect(() => {
+    if (reducedMotion || width <= 0) {
+      cancelAnimation(translateX);
+      translateX.value = 0;
+      return;
+    }
+
+    const timing = {
+      easing: Easing.inOut(Easing.quad),
+      reduceMotion: ReduceMotion.System,
+    } as const;
+
+    // Begin with the highlight already entering the screen. Native map tiles
+    // often load before a full skeleton cycle could travel in from off-screen.
+    translateX.value = -width * 0.35;
+    translateX.value = withSequence(
+      withTiming(width, {
+        ...timing,
+        duration: 1100,
+      }),
+      withTiming(-width, { ...timing, duration: 0 }),
+      withRepeat(withTiming(width, {
+        ...timing,
+        duration: 1600,
+      }), -1, false, undefined, ReduceMotion.System),
+    );
+
+    return () => cancelAnimation(translateX);
+  }, [reducedMotion, translateX, width]);
+
+  const sheen = useAnimatedStyle(() => ({
+    transform: [{ translateX: translateX.value }],
+  }));
+
+  return (
+    <Animated.View
+      pointerEvents="none"
+      accessible
+      accessibilityLabel={dc("Loading map")}
+      accessibilityState={{ busy: true }}
+      exiting={FadeOut.duration(160).reduceMotion(ReduceMotion.System)}
+      onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
+      style={{
+        position: 'absolute',
+        inset: 0,
+        zIndex: 20,
+        overflow: 'hidden',
+        backgroundColor: isDark ? DARK_MAP_LAND_COLOR : LIGHT_MAP_LAND_COLOR,
+      }}
+    >
+      {!reducedMotion && width > 0 ? (
+        <Animated.View style={[{ position: 'absolute', inset: 0 }, sheen]}>
+          <LinearGradient
+            colors={[
+              'rgba(255,255,255,0)',
+              isDark ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.70)',
+              'rgba(255,255,255,0)',
+            ]}
+            locations={[0.36, 0.5, 0.64]}
+            start={{ x: 0, y: 0.5 }}
+            end={{ x: 1, y: 0.5 }}
+            style={{ flex: 1 }}
+          />
+        </Animated.View>
+      ) : null}
+    </Animated.View>
+  );
+};

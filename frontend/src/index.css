@@ -16,6 +16,38 @@
     descent-override: 35%;
     line-gap-override: 0%;
 }
+
+@font-face {
+    font-family: "Noto Sans Devanagari";
+    src: url("./assets/fonts/NotoSansDevanagari-Regular.ttf") format("truetype");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Noto Sans Devanagari";
+    src: url("./assets/fonts/NotoSansDevanagari-SemiBold.ttf") format("truetype");
+    font-weight: 500 600;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Noto Sans Devanagari";
+    src: url("./assets/fonts/NotoSansDevanagari-Bold.ttf") format("truetype");
+    font-weight: 700 900;
+    font-style: normal;
+    font-display: swap;
+}
+
+html[lang="hi"] body {
+    font-family: "Noto Sans Devanagari", "PP Mori", sans-serif;
+    line-height: 1.55;
+}
+
+/* Native Hindi choices must render correctly before Hindi is selected. */
+:lang(hi) {
+    font-family: "Noto Sans Devanagari", "PP Mori", sans-serif;
+}
 @font-face {
     font-family: "PP Mori";
     src: url("./assets/fonts/PPMori-ExtralightItalic.woff2") format("woff2");
@@ -416,9 +448,34 @@
         will-change: transform;
     }
 
+    /* Full-map equivalent of the skeleton sheen. It paints on the loader
+       surface itself so Google Maps cannot establish a layer above it. */
+    @keyframes map-loading-sheen {
+        from { background-position: 100% 0; }
+        to { background-position: 0 0; }
+    }
+
+    .map-loading-sheen {
+        background-image: linear-gradient(
+            100deg,
+            transparent 42%,
+            rgba(255, 255, 255, var(--map-sheen-opacity)) 50%,
+            transparent 58%
+        );
+        background-repeat: no-repeat;
+        background-size: 200% 100%;
+        animation: map-loading-sheen 1.6s ease-in-out infinite;
+        will-change: background-position;
+    }
+
     @media (prefers-reduced-motion: reduce) {
         .animate-skeleton-sheen {
             animation: none;
+        }
+
+        .map-loading-sheen {
+            animation: none;
+            background-image: none;
         }
     }
 

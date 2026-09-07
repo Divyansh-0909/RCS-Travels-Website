@@ -1,3 +1,5 @@
+import { useLanguage as useCopyLanguage } from "../i18n";
+import { driverCopy as dc } from "../lib/copy";
 import { Alert, ScrollView, View } from 'react-native';
 import {
     LockKeyIcon,
@@ -71,6 +73,7 @@ const MoneyLine = ({ label, amount, note }: {
 );
 
 const MarketplaceDetail = () => {
+    useCopyLanguage();
     const { id } = useParams();
     const location = useLocation();
     const navigate = useNavigate();
@@ -80,7 +83,7 @@ const MarketplaceDetail = () => {
         ? stateListing
         : marketplaceListings().find((candidate) => candidate.id === id);
 
-    const header = <DetailPageHeader title="Booking details" onBack={() => navigate(-1)} />;
+    const header = <DetailPageHeader title={dc("Booking details")} onBack={() => navigate(-1)} />;
 
     if (!listing) {
         return (
@@ -90,10 +93,8 @@ const MarketplaceDetail = () => {
             >
                 {header}
                 <View className="flex-1 items-center justify-center mx-5 pb-24 gap-1 px-6">
-                    <AppText className={`font-semibold text-center ${INK_TEXT}`}>Booking not available</AppText>
-                    <AppText className={`text-sm text-center ${MUTED}`}>
-                        It may have been claimed, cancelled or removed.
-                    </AppText>
+                    <AppText className={`font-semibold text-center ${INK_TEXT}`}>{dc("Booking not available")}</AppText>
+                    <AppText className={`text-sm text-center ${MUTED}`}>{dc("It may have been claimed, cancelled or removed.")}</AppText>
                 </View>
             </View>
         );
@@ -110,8 +111,8 @@ const MarketplaceDetail = () => {
         }
 
         Alert.alert(
-            listing.mine ? 'Listing management is not connected yet' : 'Claiming is not connected yet',
-            'This screen is ready for the marketplace payment service. No booking or wallet balance has been changed.',
+            listing.mine ? dc("Listing management is not connected yet") : dc("Claiming is not connected yet"),
+            dc("This screen is ready for the marketplace payment service. No booking or wallet balance has been changed."),
         );
     };
 
@@ -134,7 +135,7 @@ const MarketplaceDetail = () => {
                 <Card
                     banner={(
                         <DetailStatusBanner
-                            label={listing.mine ? `Your listing · ${status.label}` : `${status.label} booking`}
+                            label={listing.mine ? dc("Your listing · {{value0}}", {value0: (status.label)}) : dc("{{value0}} booking", {value0: (status.label)})}
                             tone={MARKETPLACE_BANNER_TONE[listing.status]}
                         />
                     )}
@@ -145,8 +146,7 @@ const MarketplaceDetail = () => {
                             className={`text-2xl font-semibold ${INK_TEXT}`}
                             style={{ letterSpacing: -0.5 }}
                         >
-                            {vehicleLabel(listing.vehicleClass)} booking
-                        </AppText>
+                            {vehicleLabel(listing.vehicleClass)}{" " + dc("booking")}</AppText>
                         <AppText className={`text-sm ${MUTED}`}>{formatDateTime(listing.scheduledAt)}</AppText>
                         <AppText className="text-3xl font-semibold text-black" style={{ letterSpacing: -0.9 }}>
                             {rupees(listing.fare)}
@@ -164,40 +164,38 @@ const MarketplaceDetail = () => {
                         <View className="w-8 h-8 shrink-0 rounded-full items-center justify-center" style={{ backgroundColor: 'rgba(255,255,255,0.16)' }}>
                             <LockKeyIcon size={17} weight="bold" color="#ffffff" />
                         </View>
-                        <AppText className="flex-1 text-xs leading-4 text-white">
-                            Pay the marketplace deposit to unlock the contact details of the booking owner and customer.
-                        </AppText>
+                        <AppText className="flex-1 text-xs leading-4 text-white">{dc("Pay the marketplace deposit to unlock the contact details of the booking owner and customer.")}</AppText>
                     </View>
                 </Card>
 
                 <View className="gap-2">
-                    <View className="px-1"><Label>Your breakdown</Label></View>
+                    <View className="px-1"><Label>{dc("Your breakdown")}</Label></View>
                     <Card gap="gap-3">
                         <View className="gap-2">
                             {listing.mine ? (
                                 <>
                                     <MoneyLine
-                                        label="Marketplace deposit"
+                                        label={dc("Marketplace deposit")}
                                         amount={listing.deposit}
-                                        note="Set by you when the booking was posted"
+                                        note={dc("Set by you when the booking was posted")}
                                     />
                                     <MoneyLine
-                                        label="Marketplace fee"
+                                        label={dc("Marketplace fee")}
                                         amount={-money.posterFee}
-                                        note={`${posterFeePercent}% of your deposit`}
+                                        note={dc("{{value0}}% of your deposit", { value0: posterFeePercent })}
                                     />
                                 </>
                             ) : (
                                 <>
                                     <MoneyLine
-                                        label="Customer fare"
+                                        label={dc("Customer fare")}
                                         amount={listing.fare}
-                                        note="Paid directly to you after the ride"
+                                        note={dc("Paid directly to you after the ride")}
                                     />
                                     <MoneyLine
-                                        label="Marketplace deposit"
+                                        label={dc("Marketplace deposit")}
                                         amount={-listing.deposit}
-                                        note="Held when you claim"
+                                        note={dc("Held when you claim")}
                                     />
                                 </>
                             )}
@@ -208,10 +206,10 @@ const MarketplaceDetail = () => {
                         <View className="flex-row items-center justify-between gap-3">
                             <View className="flex-1">
                                 <AppText className={`text-xl font-semibold ${INK_TEXT}`}>
-                                    {listing.mine ? 'You receive' : 'You get'}
+                                    {listing.mine ? dc("You receive") : dc("You get")}
                                 </AppText>
                                 {listing.mine ? (
-                                    <AppText className={`text-xs ${MUTED}`}>After the ride is completed</AppText>
+                                    <AppText className={`text-xs ${MUTED}`}>{dc("After the ride is completed")}</AppText>
                                 ) : null}
                             </View>
                             <AppText className={`text-xl font-semibold ${INK_TEXT}`}>
@@ -222,32 +220,32 @@ const MarketplaceDetail = () => {
                 </View>
 
                 <View className="gap-2">
-                    <View className="px-1"><Label>If the booking is cancelled</Label></View>
+                    <View className="px-1"><Label>{dc("If the booking is cancelled")}</Label></View>
                     <Card gap="gap-3">
                         {listing.mine ? (
                             <>
                                 <MoneyLine
-                                    label="If you cancel after it is claimed"
+                                    label={dc("If you cancel after it is claimed")}
                                     amount={0}
-                                    note="The claiming captain gets the full held deposit back"
+                                    note={dc("The claiming captain gets the full held deposit back")}
                                 />
                                 <MoneyLine
-                                    label="If the claiming captain cancels"
+                                    label={dc("If the claiming captain cancels")}
                                     amount={0}
-                                    note={`${rupees(money.cancellationFee)} goes to the platform and ${rupees(money.cancellationRefund)} returns to them`}
+                                    note={dc("{{value0}} goes to the platform and {{value1}} returns to them", { value0: rupees(money.cancellationFee), value1: rupees(money.cancellationRefund) })}
                                 />
                             </>
                         ) : (
                             <>
                                 <MoneyLine
-                                    label="If you cancel after claiming"
+                                    label={dc("If you cancel after claiming")}
                                     amount={money.cancellationRefund}
-                                    note={`${rupees(money.cancellationFee)} is the 12% cancellation fee`}
+                                    note={dc("{{value0}} is the 12% cancellation fee", { value0: rupees(money.cancellationFee) })}
                                 />
                                 <MoneyLine
-                                    label="If the posting captain cancels"
+                                    label={dc("If the posting captain cancels")}
                                     amount={listing.deposit}
-                                    note="Your full marketplace deposit is returned"
+                                    note={dc("Your full marketplace deposit is returned")}
                                 />
                             </>
                         )}
@@ -262,10 +260,10 @@ const MarketplaceDetail = () => {
                 <ActionButton
                     label={
                         listing.status !== 'open'
-                            ? 'Contact support'
+                            ? dc("Contact support")
                             : listing.mine
-                                ? 'Manage listing'
-                                : `Claim for ${rupees(listing.deposit)}`
+                                ? dc("Manage listing")
+                                : dc("Claim for {{value0}}", { value0: rupees(listing.deposit) })
                     }
                     leading={
                         listing.status !== 'open'

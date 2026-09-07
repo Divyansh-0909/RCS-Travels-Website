@@ -1,3 +1,4 @@
+import { driverCopy as dc } from "./copy";
 import type { DocumentRowState } from '../components/ui/DocumentRow';
 import { type DocumentOwner, type DriverDocumentType } from '../constants/documents';
 
@@ -78,12 +79,12 @@ export type DocumentsResponse = {
  */
 export function verificationLabel(status: VerificationStatus): string {
   switch (status) {
-    case 'approved': return 'Ready to drive';
-    case 'rejected': return 'Needs your attention';
-    case 'scanning': return 'Checking documents';
-    case 'pending': return 'With the office';
-    case 'uploading': return 'Documents incomplete';
-    default: return 'No documents yet';
+    case 'approved': return dc("Ready to drive");
+    case 'rejected': return dc("Needs your attention");
+    case 'scanning': return dc("Checking documents");
+    case 'pending': return dc("With the office");
+    case 'uploading': return dc("Documents incomplete");
+    default: return dc("No documents yet");
   }
 }
 
@@ -136,10 +137,10 @@ export function expiryLabel(expiresAt: string | null, warningDays: number): {
 
   if (days < 0) {
     const ago = Math.abs(days);
-    return { text: ago === 1 ? 'Expired yesterday' : `Expired ${ago} days ago`, warn: true };
+    return { text: ago === 1 ? dc("Expired yesterday") : dc("Expired {{value0}} days ago", { value0: ago }), warn: true };
   }
-  if (days === 0) return { text: 'Expires today', warn: true };
-  if (days === 1) return { text: 'Expires tomorrow', warn: true };
+  if (days === 0) return { get "text"() { return dc("Expires today"); }, warn: true };
+  if (days === 1) return { get "text"() { return dc("Expires tomorrow"); }, warn: true };
 
-  return { text: `Expires in ${days} days`, warn: days <= warningDays };
+  return { get "text"() { return dc("Expires in {{value0}} days", {value0: (days)}); }, warn: days <= warningDays };
 }

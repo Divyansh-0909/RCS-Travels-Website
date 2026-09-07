@@ -1,11 +1,16 @@
+import { useTranslation as useCopyLanguage } from "react-i18next";
+import { websiteCopy as dc } from "../i18nCopy";
 import { useLocation } from "react-router-dom";
 import { useViewNavigate } from "../hooks/useViewNavigate";
 import { scrollToSection, scrollToTop } from "../hooks/useSmoothScroll";
 import { callSupport, emailSupport, openSupportWhatsApp } from "../constants/support";
+import { useWebsiteCopy } from "../hooks/useWebsiteCopy";
 
 const linkClass = "text-left text-[var(--text)]/90 hover:text-[var(--text)] active:opacity-70 cursor-pointer transition-colors duration-300 rounded focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-current";
 
 const Footer = () => {
+    useCopyLanguage();
+    const tr = useWebsiteCopy();
     const navigate = useViewNavigate();
     // The footer also sits on routes that don't have the home page's sections
     // (Outstation). Scrolling to an id that isn't in the document is a dead
@@ -30,41 +35,41 @@ const Footer = () => {
         {
             heading: "Pages",
             links: [
-                { label: "Book a ride", onClick: () => goToTopOf("/") },
-                { label: "How it works", onClick: goToSection("how-it-works") },
-                { label: "Services", onClick: goToSection("services") },
+                { get "label"() { return dc("Book a ride"); }, onClick: () => goToTopOf("/") },
+                { get "label"() { return dc("How it works"); }, onClick: goToSection("how-it-works") },
+                { get "label"() { return dc("Services"); }, onClick: goToSection("services") },
                 // A route, not a section — the only entry here that leaves the
                 // page, because outstation is the one product with nowhere on
                 // the home page to scroll to.
-                { label: "Outstation", onClick: () => goToTopOf("/outstation") },
-                { label: "Why us", onClick: goToSection("why-us") },
-                { label: "About", onClick: goToSection("about") },
+                { get "label"() { return dc("Outstation"); }, onClick: () => goToTopOf("/outstation") },
+                { get "label"() { return dc("Why us"); }, onClick: goToSection("why-us") },
+                { get "label"() { return dc("About"); }, onClick: goToSection("about") },
             ],
         },
         {
             heading: "Support",
             links: [
-                { label: "Call Us", onClick: callSupport },
-                { label: "WhatsApp Us", onClick: () => openSupportWhatsApp() },
-                { label: "Email Us", onClick: emailSupport },
-                { label: "Help", onClick: () => navigate("/help") },
+                { get "label"() { return dc("Call Us"); }, onClick: callSupport },
+                { get "label"() { return dc("WhatsApp Us"); }, onClick: () => openSupportWhatsApp() },
+                { get "label"() { return dc("Email Us"); }, onClick: emailSupport },
+                { get "label"() { return dc("Help"); }, onClick: () => navigate("/help") },
             ],
         },
         {
             heading: "Legal",
             links: [
-                { label: "Terms of Service", onClick: () => navigate("/terms") },
-                { label: "Privacy Policy", onClick: () => navigate("/privacy") },
-                { label: "Refund & Cancellation", onClick: () => navigate("/refunds") },
-                { label: "Grievance Redressal", onClick: () => navigate("/grievance") },
+                { get "label"() { return dc("Terms of Service"); }, onClick: () => navigate("/terms") },
+                { get "label"() { return dc("Privacy Policy"); }, onClick: () => navigate("/privacy") },
+                { get "label"() { return dc("Refund & Cancellation"); }, onClick: () => navigate("/refunds") },
+                { get "label"() { return dc("Grievance Redressal"); }, onClick: () => navigate("/grievance") },
             ],
         },
         {
             heading: "Register",
             links: [
-                { label: "Sign Up", onClick: () => navigate("/signup") },
-                { label: "Login", onClick: () => navigate("/login") },
-                { label: "Manage Account", onClick: () => navigate("/manage-account") },
+                { get "label"() { return dc("Sign Up"); }, onClick: () => navigate("/signup") },
+                { get "label"() { return dc("Login"); }, onClick: () => navigate("/login") },
+                { get "label"() { return dc("Manage Account"); }, onClick: () => navigate("/manage-account") },
             ],
         },
     ];
@@ -85,7 +90,7 @@ const Footer = () => {
                 <div className="w-full mt-6 sm:mt-8 grid grid-cols-2 sm:grid-cols-4 gap-x-8 gap-y-12 sm:gap-x-20">
                     {columns.map((col) => (
                         <div key={col.heading} className="flex flex-col gap-8">
-                            <h4 className="text-base sm:text-lg font-semibold">{col.heading}</h4>
+                            <h4 className="break-words text-base sm:text-lg font-semibold">{tr(col.heading)}</h4>
                             <ul className="flex flex-col gap-5">
                                 {col.links.map((link) => (
                                     <li key={link.label}>
@@ -94,8 +99,8 @@ const Footer = () => {
                                                 href={link.href}
                                                 {...(link.href.startsWith("http") && { target: "_blank", rel: "noreferrer" })}
                                                 className={linkClass}
-                                            >{link.label}</a>
-                                            : <button type="button" onClick={link.onClick} className={linkClass}>{link.label}</button>
+                                            >{tr(link.label)}</a>
+                                            : <button type="button" onClick={link.onClick} className={linkClass}>{tr(link.label)}</button>
                                         }
                                     </li>
                                 ))}
@@ -105,9 +110,7 @@ const Footer = () => {
                 </div>
 
                 {/* Copyright */}
-                <p className="text-sm sm:text-base text-[var(--text-muted)]/50 leading-relaxed text-center">
-                    © copyright RCS Travels {new Date().getFullYear()}. All rights reserved.
-                </p>
+                <p className="text-sm sm:text-base text-[var(--text-muted)]/50 leading-relaxed text-center">{dc("© copyright RCS Travels") + " "}{new Date().getFullYear()}{dc(". All rights reserved.")}</p>
             </div>
         </footer>
     );

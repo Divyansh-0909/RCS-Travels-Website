@@ -1,3 +1,5 @@
+import { useLanguage as useCopyLanguage } from "../../i18n";
+import { driverCopy as dc } from "../../lib/copy";
 import { useEffect } from 'react';
 import { View, type DimensionValue, type ViewStyle } from 'react-native';
 import Animated, {
@@ -100,6 +102,7 @@ const CardSkeleton = ({ breathe }: { breathe: Breathe }) => (
  * unknown, so the rows do not shunt down the moment it lands.
  */
 const RidesSkeleton = ({ withPanel = false }: { withPanel?: boolean }) => {
+    useCopyLanguage();
     // Honoured rather than assumed: a pulsing screen is exactly the kind of ambient
     // motion this setting exists to turn off, and the skeleton still does its whole job
     // held at a fixed value.
@@ -134,7 +137,7 @@ const RidesSkeleton = ({ withPanel = false }: { withPanel?: boolean }) => {
         <View
             className="flex-1 w-full gap-2 overflow-hidden"
             aria-busy
-            aria-label="Loading rides"
+            aria-label={dc("Loading rides")}
         >
             {withPanel && (
                 // The panel's own box — rounded-3xl, p-5 — drawn in the neutral rather

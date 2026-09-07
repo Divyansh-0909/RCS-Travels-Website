@@ -1,3 +1,5 @@
+import { useTranslation as useCopyLanguage } from "react-i18next";
+import { websiteCopy as dc } from "../../i18nCopy";
 import { useEffect, useState } from "react";
 import Icon from "@mdi/react";
 import { mdiAlertCircleOutline, mdiRefresh, mdiClose } from "@mdi/js";
@@ -33,6 +35,7 @@ const DISMISS_MS = 8000;
  *   use (same shape as ErrorPanel taking its message as a prop).
  */
 const RefreshNotice = ({ notice: noticeOverride }) => {
+    useCopyLanguage();
     const storeNotice = useRefreshNotice(state => state.notice);
     const clearFromStore = useRefreshNotice(state => state.clearRefreshNotice);
     const notice = noticeOverride ?? storeNotice;
@@ -91,14 +94,12 @@ const RefreshNotice = ({ notice: noticeOverride }) => {
                     onClick={() => { lastNotice.onRetry(); dismiss(); }}
                     className="shrink-0 flex items-center gap-1 cursor-pointer rounded-full px-2.5 py-1 text-xs sm:text-sm font-semibold text-[var(--text)] bg-[var(--foreground)]/10 transition-colors duration-300 hover:bg-[var(--foreground)]/20 active:opacity-70 outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]/70"
                 >
-                    <Icon path={mdiRefresh} size={0.6} />
-                    Retry
-                </button>
+                    <Icon path={mdiRefresh} size={0.6} />{dc("Retry")}</button>
             )}
 
             <button
                 type="button"
-                aria-label="Dismiss"
+                aria-label={dc("Dismiss")}
                 onClick={dismiss}
                 className="shrink-0 flex items-center justify-center cursor-pointer rounded-full p-1 text-[var(--text-muted)] transition-colors duration-300 hover:text-[var(--text)] active:opacity-70 outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]/70"
             >

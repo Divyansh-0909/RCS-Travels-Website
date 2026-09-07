@@ -5,6 +5,7 @@ import AccountLayout from "../components/ui/AccountLayout";
 import SettingRow from "../components/ui/SettingRow";
 import CircleIconButton from "../components/ui/CircleIconButton";
 import { supportPhoneDisplay, supportEmail, callSupport, emailSupport, openSupportWhatsApp } from "../constants/support";
+import { useWebsiteCopy } from "../hooks/useWebsiteCopy";
 
 const items = ["FAQ", "Contact Us", "Cancellation"]
 
@@ -56,11 +57,12 @@ const cancellationPolicy = [
 ]
 
 const HelpPage = () => {
+    const tr = useWebsiteCopy()
     const [selected, setSelected] = useState(0)
     const [openFaq, setOpenFaq] = useState(null)
 
     return (
-        <AccountLayout items={items} selected={selected} onSelect={(i) => { setSelected(i); setOpenFaq(null) }} title="Help">
+        <AccountLayout items={items.map(tr)} selected={selected} onSelect={(i) => { setSelected(i); setOpenFaq(null) }} title={tr("Help")}>
             <ul className="flex flex-col items-start gap-4 justify-start w-full overflow-y-auto min-h-0 pb-6">
                 {selected === 0 && faqs.map(({ q, a }, i) => (
                     <li
@@ -69,36 +71,36 @@ const HelpPage = () => {
                         className="font-normal w-full select-none cursor-pointer py-5 px-6 rounded-3xl flex flex-col bg-pastel-primary text-[var(--text-foreground)] transition-opacity duration-200 hover:opacity-80"
                     >
                         <div className="w-full flex justify-between items-center gap-3">
-                            <h4 className="text-lg font-medium">{q}</h4>
+                            <h4 className="break-words text-lg font-medium">{tr(q)}</h4>
                             <Icon path={mdiChevronDown} size={1} className={`shrink-0 text-[var(--background-primary)]/60 transition-transform duration-300 ${openFaq === i ? "rotate-180" : ""}`} />
                         </div>
                         <div className={`grid transition-[grid-template-rows] duration-300 ${openFaq === i ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
                             <div className="overflow-hidden">
-                                <p className={`text-base text-[var(--background-primary)]/60 pt-2 pr-8 transition-opacity duration-300 ${openFaq === i ? "opacity-100" : "opacity-0"}`}>{a}</p>
+                                <p className={`break-words text-base text-[var(--background-primary)]/60 pt-2 pr-8 transition-opacity duration-300 ${openFaq === i ? "opacity-100" : "opacity-0"}`}>{tr(a)}</p>
                             </div>
                         </div>
                     </li>
                 ))}
                 {selected === 0 && (
-                    <p className="text-sm text-[var(--background-primary)]/50 px-2">Didn't find your answer? <span onClick={() => setSelected(1)} className="cursor-pointer underline underline-offset-2 hover:text-[var(--background-primary)] transition-color duration-300">Contact us</span>, we're happy to help.</p>
+                    <p className="text-sm text-[var(--background-primary)]/50 px-2">{tr("Didn't find your answer?")} <span onClick={() => setSelected(1)} className="cursor-pointer underline underline-offset-2 hover:text-[var(--background-primary)] transition-color duration-300">{tr("Contact us")}</span>, {tr("we're happy to help.")}</p>
                 )}
 
                 {selected === 1 && contacts.map(([title, desc, value, icon, onClick]) => (
                     <SettingRow key={title} tone="bg-pastel-teal" trailing={<CircleIconButton icon={icon} size={0.85} onClick={onClick} />}>
-                        <h4 className="text-lg font-medium">{title}</h4>
-                        <p className="text-base text-[var(--background-primary)]/50">{desc}</p>
+                        <h4 className="break-words text-lg font-medium">{tr(title)}</h4>
+                        <p className="break-words text-base text-[var(--background-primary)]/50">{tr(desc)}</p>
                         <p className="text-sm text-[var(--background-primary)]/70 pt-1">{value}</p>
                     </SettingRow>
                 ))}
 
                 {selected === 2 && cancellationPolicy.map(([title, desc]) => (
                     <SettingRow key={title} tone="bg-pastel-sand">
-                        <h4 className="text-lg font-medium">{title}</h4>
-                        <p className="text-base text-[var(--background-primary)]/50">{desc}</p>
+                        <h4 className="break-words text-lg font-medium">{tr(title)}</h4>
+                        <p className="break-words text-base text-[var(--background-primary)]/50">{tr(desc)}</p>
                     </SettingRow>
                 ))}
                 {selected === 2 && (
-                    <p className="text-sm text-[var(--background-primary)]/50 px-2">If your driver cancels or doesn't show up, you're never charged, and we'll help you rebook right away.</p>
+                    <p className="text-sm text-[var(--background-primary)]/50 px-2">{tr("If your driver cancels or doesn't show up, you're never charged, and we'll help you rebook right away.")}</p>
                 )}
             </ul>
         </AccountLayout>

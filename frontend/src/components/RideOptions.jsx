@@ -3,6 +3,7 @@ import Icon from "@mdi/react";
 import { mdiChevronRight, mdiClose } from "@mdi/js";
 import BackgroundPanel from "./ui/BackgroundPanel";
 import { useExitAnim } from "../hooks/useExitAnim";
+import { useWebsiteCopy } from "../hooks/useWebsiteCopy";
 
 // The three settings that re-price a ride — sharing, roof carrier, safer route.
 //
@@ -62,19 +63,21 @@ const OptionRow = ({ label, note, on, onToggle, disabled = false }) => (
 );
 
 // Everything inside the popover and the sheet, so the two shells can't drift.
-const OptionsBody = ({ options, onClose, titleId, showClose = true }) => (
+const OptionsBody = ({ options, onClose, titleId, showClose = true }) => {
+  const tr = useWebsiteCopy();
+  return (
     <>
         {/* text-left explicitly: the vehicle page centres its text, and the
             sheet is a child of that page — inherited, the title and its line
             underneath each centre on their own width and stop agreeing with
             each other or with the rows below. */}
         <div className="flex items-start justify-between gap-4 text-left">
-            <h3 id={titleId} className="min-w-0 flex-1 [overflow-wrap:anywhere] text-xl sm:text-2xl font-medium leading-tight text-[var(--text)]">Ride options</h3>
+            <h3 id={titleId} className="min-w-0 flex-1 [overflow-wrap:anywhere] text-xl sm:text-2xl font-medium leading-tight text-[var(--text)]">{tr("Ride options")}</h3>
             {showClose && (
                 <button
                     type="button"
                     onClick={onClose}
-                    aria-label="Close ride options"
+                    aria-label={tr("Close ride options")}
                     className="shrink-0 cursor-pointer rounded-full p-1 opacity-60 transition-opacity duration-300 hover:opacity-100 active:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]/70"
                 >
                     <Icon path={mdiClose} size={0.9} aria-hidden="true" />
@@ -98,16 +101,18 @@ const OptionsBody = ({ options, onClose, titleId, showClose = true }) => (
             ))}
         </div>
     </>
-);
+  );
+};
 
 // The line that stands in for the three switches. Its second line is the state,
 // not a prompt: with nothing on it names what is inside (the only reason to open
 // it), and with something on it names what is set — so a rider who has already
 // chosen sharing never has to open the panel to check.
 export const RideOptionsTrigger = ({ options, open, onClick, buttonRef }) => {
+    const tr = useWebsiteCopy();
     const active = options.filter(option => option.on).map(option => option.short);
     const summary = active.length
-        ? `On: ${active.join(", ")}`
+        ? `${tr("On:")} ${active.join(", ")}`
         // Only what this trip can actually have: an option that is disabled
         // inside the panel would be an offer here, where there is no room to
         // say it isn't one.
@@ -123,7 +128,7 @@ export const RideOptionsTrigger = ({ options, open, onClick, buttonRef }) => {
             className="group w-full flex items-center justify-between gap-3 py-1 text-left cursor-pointer rounded-lg outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]/70"
         >
             <span className="min-w-0 flex flex-col gap-0.5">
-                <span className="text-sm sm:text-base font-medium leading-tight text-[var(--text)]">Ride options</span>
+                <span className="text-sm sm:text-base font-medium leading-tight text-[var(--text)]">{tr("Ride options")}</span>
                 {/* truncate rather than wrap: this sits directly above the Book
                     button on phones, where a second line would push the CTA
                     down by a row every time an option is switched on. */}
@@ -199,6 +204,7 @@ export const RideOptionsPopover = ({ options, open, onClose, anchorRef }) => {
 // half-open state worth resting at for three rows, so it is either open or
 // thrown away (see useBottomSheet's `dismissible`).
 export const RideOptionsSheet = ({ options, open, onClose }) => {
+    const tr = useWebsiteCopy();
     // Matches the sheet's spring exit, which takes longer to settle than the
     // panel wipe BackgroundPanel uses elsewhere.
     const { mounted, closing } = useExitAnim(open, 420);
@@ -232,7 +238,7 @@ export const RideOptionsSheet = ({ options, open, onClose }) => {
                 <button
                     type="button"
                     onClick={onClose}
-                    aria-label="Close ride options"
+                    aria-label={tr("Close ride options")}
                     className="absolute z-20 -top-12 right-4 h-9 my-1 w-9 rounded-full border border-[var(--foreground)]/30 bg-[var(--background-muted)] shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)] flex items-center justify-center cursor-pointer transition-opacity duration-300 active:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]/70"
                 >
                     <Icon path={mdiClose} size={0.8} aria-hidden="true" />

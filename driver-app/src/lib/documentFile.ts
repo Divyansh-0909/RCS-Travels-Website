@@ -1,3 +1,4 @@
+import { driverCopy as dc } from "./copy";
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { File } from 'expo-file-system';
@@ -97,13 +98,13 @@ async function compressImage(
     if (size <= TARGET_IMAGE_BYTES) break;
   }
 
-  if (!best) return { error: 'Could not process that photo. Try taking it again.' };
+  if (!best) return { get "error"() { return dc("Could not process that photo. Try taking it again."); } };
 
   // Only reachable if the last rung is still over the image ceiling, which for a
   // 1600px JPEG would take something pathological. Caught anyway: discovering it
   // as a 413 after the upload is the worst place to find out.
   if (best.size > MAX_IMAGE_BYTES) {
-    return { error: `That photo is still ${mb(best.size)} after compressing. Try a clearer, closer shot.` };
+    return { error: dc("That photo is still {{value0}} after compressing. Try a clearer, closer shot.", { value0: mb(best.size) }) };
   }
 
   return { uri: best.uri, contentType: 'image/jpeg', size: best.size, name: null };
@@ -121,11 +122,11 @@ export async function captureDocumentPhoto(): Promise<PrepareResult> {
     const canRequest = existing.canAskAgain;
     const accepted = await showPermissionPrompt({
       kind: 'camera',
-      title: canRequest ? 'Use your camera' : 'Turn on camera access',
+      title: canRequest ? dc("Use your camera") : dc("Turn on camera access"),
       message: canRequest
-        ? 'RCS Captains uses the camera only when you choose to photograph a document.'
-        : 'Camera access is off. Turn it on in app settings to photograph this document.',
-      actionLabel: canRequest ? 'Continue' : 'Open app settings',
+        ? dc("RCS Captains uses the camera only when you choose to photograph a document.")
+        : dc("Camera access is off. Turn it on in app settings to photograph this document."),
+      actionLabel: canRequest ? dc("Continue") : dc("Open app settings"),
     });
 
     if (!accepted) return null;
@@ -170,11 +171,11 @@ export async function pickDocumentPhoto(): Promise<PrepareResult> {
     const canRequest = existing.canAskAgain;
     const accepted = await showPermissionPrompt({
       kind: 'photos',
-      title: canRequest ? 'Choose from your photos' : 'Turn on photo access',
+      title: canRequest ? dc("Choose from your photos") : dc("Turn on photo access"),
       message: canRequest
-        ? 'RCS Captains needs access only so you can select a document photo to upload.'
-        : 'Photo access is off. Turn it on in app settings to choose this document.',
-      actionLabel: canRequest ? 'Continue' : 'Open app settings',
+        ? dc("RCS Captains needs access only so you can select a document photo to upload.")
+        : dc("Photo access is off. Turn it on in app settings to choose this document."),
+      actionLabel: canRequest ? dc("Continue") : dc("Open app settings"),
     });
 
     if (!accepted) return null;
@@ -226,7 +227,7 @@ export async function pickDocumentPdf(): Promise<PrepareResult> {
   // came from a cloud provider. Read the copy.
   const file = new File(asset.uri);
   if (!file.exists) {
-    return { error: 'That file could not be opened. Try picking it again.' };
+    return { get "error"() { return dc("That file could not be opened. Try picking it again."); } };
   }
 
   // The picker's `type` filter is a hint the system file browser is free to
@@ -234,14 +235,12 @@ export async function pickDocumentPdf(): Promise<PrepareResult> {
   // than assumed — the bucket rejects anything that is not a PDF, and finding
   // out here costs nothing.
   if (asset.mimeType && asset.mimeType !== 'application/pdf') {
-    return { error: 'That file is not a PDF. Pick a PDF, or photograph the document instead.' };
+    return { get "error"() { return dc("That file is not a PDF. Pick a PDF, or photograph the document instead."); } };
   }
 
   if (file.size > MAX_PDF_BYTES) {
     return {
-      error:
-        `That PDF is ${mb(file.size)} — the limit is ${mb(MAX_PDF_BYTES)}. ` +
-        `Re-scan it at a lower quality, or just photograph the document.`,
+      error: dc("That PDF is {{value0}} — the limit is {{value1}}. Re-scan it at a lower quality, or just photograph the document.", { value0: mb(file.size), value1: mb(MAX_PDF_BYTES) }),
     };
   }
 

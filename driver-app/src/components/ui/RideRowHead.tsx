@@ -1,3 +1,5 @@
+import { useLanguage as useCopyLanguage } from "../../i18n";
+import { driverCopy as dc } from "../../lib/copy";
 import { View } from 'react-native';
 import AppText from '../AppText';
 import { UpcomingBooking } from '../../types/enums';
@@ -24,6 +26,7 @@ type Props = {
 };
 
 const RideRowHead = ({ booking, at }: Props) => {
+    useCopyLanguage();
     const stamp = at ?? booking.scheduledAt;
     const when = stamp ? clockParts(stamp) : null;
     const drop = splitAddress(booking.dropAddress).main;
@@ -37,12 +40,12 @@ const RideRowHead = ({ booking, at }: Props) => {
                     add a wrapper and a gap to re-space what a space already does.
                     The 'Now' fallback is not a clock reading, so it takes no AM/PM. */}
                 <AppText className={`font-semibold ${INK}`}>
-                    {when ? `${when.clock} ${when.meridiem}` : 'Now'}
+                    {when ? dc("{{value0}} {{value1}}", {value0: (when.clock), value1: (when.meridiem)}) : dc("Now")}
                 </AppText>
                 {/* Centred under a line it never matches the width of — the date
                     is the shorter of the two, so left-aligning left it hanging. */}
                 <AppText className={`text-xs font-semibold uppercase tracking-wide text-center ${MUTED}`}>
-                    {when?.day ?? 'Today'}
+                    {when?.day ?? dc("Today")}
                 </AppText>
             </View>
 
@@ -50,7 +53,7 @@ const RideRowHead = ({ booking, at }: Props) => {
 
             <View className="flex-1">
                 <AppText numberOfLines={1} className={`font-semibold ${INK}`}>{drop}</AppText>
-                <AppText numberOfLines={1} className={`text-sm ${MUTED}`}>from {pickup}</AppText>
+                <AppText numberOfLines={1} className={`text-sm ${MUTED}`}>{dc("from") + " "}{pickup}</AppText>
             </View>
 
             <View className="items-end">

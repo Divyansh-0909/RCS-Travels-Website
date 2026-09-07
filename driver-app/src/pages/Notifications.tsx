@@ -1,3 +1,5 @@
+import { useLanguage as useCopyLanguage } from "../i18n";
+import { driverCopy as dc } from "../lib/copy";
 import { useState } from "react";
   import { useNavigate } from "react-router-native";
 import { ScrollView, View } from "react-native";
@@ -24,6 +26,7 @@ import { OfferListSkeleton } from "../components/ui/LoadingSkeletons";
 const TITLE_TRACKING = { letterSpacing: -0.72 };
 
 const Notifications = () => {
+    useCopyLanguage();
     const navigate = useNavigate();
     const { offers, canAccept, here, loading, accept, reject } = useOffers();
     const [error, setError] = useState<string | null>(null);
@@ -44,12 +47,10 @@ const Notifications = () => {
         >
             <View className="relative">
                 <View className="flex-row h-full items-baseline justify-center pt-1 gap-2 mb-1">
-                    <AppText className={`text-xl font-semibold ${INK_TEXT}`} style={TITLE_TRACKING}>
-                        Notifications
-                    </AppText>
+                    <AppText className={`text-xl font-semibold ${INK_TEXT}`} style={TITLE_TRACKING}>{dc("Notifications")}</AppText>
                     {offers.length > 0 ? (
                         <AppText className={`text-sm font-semibold ${MUTED}`}>
-                            {offers.length} {offers.length === 1 ? "ride" : "rides"}
+                            {offers.length} {offers.length === 1 ? dc("ride") : dc("rides")}
                         </AppText>
                     ) : null}
                 </View>
@@ -69,9 +70,7 @@ const Notifications = () => {
                 all of them, and repeating it per ride reads as each one being
                 separately unavailable. */}
             {!canAccept && offers.length > 0 ? (
-                <AppText className={`text-sm ${MUTED} mb-3`}>
-                    Go online to accept any of these.
-                </AppText>
+                <AppText className={`text-sm ${MUTED} mb-3`}>{dc("Go online to accept any of these.")}</AppText>
             ) : null}
 
             {error ? (
@@ -84,12 +83,8 @@ const Notifications = () => {
                 <OfferListSkeleton />
             ) : offers.length === 0 ? (
                 <View className="items-center justify-center h-full py-16 pt-20 gap-1">
-                    <AppText className={`text-base font-semibold ${INK_TEXT}`}>
-                        No notifications
-                    </AppText>
-                    <AppText className={`text-sm text-center ${MUTED}`}>
-                        Rides you are offered {"\n"} will wait here until you answer them.
-                    </AppText>
+                    <AppText className={`text-base font-semibold ${INK_TEXT}`}>{dc("No notifications")}</AppText>
+                    <AppText className={`text-sm text-center ${MUTED}`}>{dc("Rides you are offered") + " "}{"\n"}{" " + dc("will wait here until you answer them.")}</AppText>
                 </View>
             ) : (
                 <View className="gap-3">

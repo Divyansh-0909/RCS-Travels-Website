@@ -1,12 +1,18 @@
 import { createHash } from 'node:crypto'
 import { prisma } from '../db/prisma.js'
-import { createRazorpayGateway } from './razorpay.js'
+import { createRazorpayGateway, createRazorpayWebhookVerifier } from './razorpay.js'
 import { PaymentError } from './paymentErrors.js'
-import { createPaymentIntent, toSubunits } from './paymentIntents.js'
+import { createPaymentIntent, MIN_PAYMENT_SUBUNITS, toSubunits } from './paymentIntents.js'
 import { applyCapturedPaymentEffect, applyRefundedPaymentEffect } from './scheduledPayments.js'
 import { notifyWhatsAppScheduledPaymentConfirmed } from './notification.js'
 
 export { PaymentError, createPaymentIntent, toSubunits }
+
+const gatewayOrderError = (error) => {
+  if (error?.statusCode === 401 || error?.status === 401)
+    return new PaymentError('RAZORPAY_AUTH_FAILED', 'Payment service authentication failed', 401)
+  return new PaymentError('RAZORPAY_ORDER_FAILED', 'Could not create payment order', 500)
+}
 
 const TERMINAL_OR_REFUNDING = new Set(['refund_pending', 'refunded'])
 export function statusAfterGatewayPayment(current, gatewayStatus) {
@@ -24,6 +30,8 @@ const checkoutOf = (payment, keyId) => ({
 export async function createOrderForPayment({ paymentId, userId, gateway = createRazorpayGateway(), db = prisma }) {
   const payment = await db.payment.findFirst({ where: { id: paymentId, userId } })
   if (!payment) throw new PaymentError('PAYMENT_NOT_FOUND', 'Payment not found', 404)
+  if (!Number.isInteger(payment.amount) || payment.amount < MIN_PAYMENT_SUBUNITS)
+    throw new PaymentError('INVALID_AMOUNT', 'Payment amount must be at least 100 subunits', 400)
   if (payment.razorpayOrderId) return checkoutOf(payment, gateway.keyId)
   const claimed = await db.payment.updateMany({ where: { id: payment.id, status: 'created', razorpayOrderId: null },
     data: { status: 'order_creating', failureCode: null, failureDescription: null } })
@@ -41,7 +49,7 @@ export async function createOrderForPayment({ paymentId, userId, gateway = creat
     await db.payment.updateMany({ where: { id: payment.id, status: 'order_creating' }, data: {
       status: 'created', failureCode: error.code ?? 'ORDER_CREATION_FAILED', failureDescription: String(error.message).slice(0, 500),
     } })
-    throw error
+    throw error instanceof PaymentError ? error : gatewayOrderError(error)
   }
 }
 
@@ -71,7 +79,7 @@ export async function verifyCheckoutPayment({ paymentId, userId, razorpayPayment
   return { paymentId: updated.id, status: updated.status }
 }
 
-export async function processRazorpayWebhook({ rawBody, signature, eventId, gateway = createRazorpayGateway(),
+export async function processRazorpayWebhook({ rawBody, signature, eventId, gateway = createRazorpayWebhookVerifier(),
   db = prisma, notifyPayment = null }) {
   if (!gateway.verifyWebhookSignature(rawBody, signature)) throw new PaymentError('INVALID_WEBHOOK_SIGNATURE', 'Invalid webhook signature', 400)
   let event

@@ -1,3 +1,5 @@
+import { useLanguage as useCopyLanguage } from "../../i18n";
+import { driverCopy as dc } from "../../lib/copy";
 import { useState } from 'react';
 import { Modal, Pressable, View } from 'react-native';
 import { CameraIcon, FilePdfIcon, ImageIcon, XIcon } from 'phosphor-react-native';
@@ -31,6 +33,7 @@ type OptionProps = {
 };
 
 const Option = ({ Icon, label, onPress }: OptionProps) => {
+    useCopyLanguage();
   // Held rather than read from Pressable's style callback. This row carries a
   // className, and NativeWind merges an inline style into its own computation and
   // understands objects and arrays only — a function is collected, applied, and
@@ -66,6 +69,7 @@ type Props = {
 };
 
 const DocumentSourceSheet = ({ visible, label, allowPdf, onCancel, onPick }: Props) => {
+    useCopyLanguage();
   const [closePressed, setClosePressed] = useState(false);
 
   return (
@@ -86,12 +90,12 @@ const DocumentSourceSheet = ({ visible, label, allowPdf, onCancel, onPick }: Pro
           <View className="flex-row items-start gap-3">
             <View className="flex-1 gap-1">
               <AppText className={`text-lg font-semibold ${INK}`}>{label}</AppText>
-              <AppText className={`text-sm ${MUTED}`}>How would you like to add this?</AppText>
+              <AppText className={`text-sm ${MUTED}`}>{dc("How would you like to add this?")}</AppText>
             </View>
 
             <Pressable
               role="button"
-              aria-label="Close"
+              aria-label={dc("Close")}
               onPress={onCancel}
               onPressIn={() => setClosePressed(true)}
               onPressOut={() => setClosePressed(false)}
@@ -114,10 +118,10 @@ const DocumentSourceSheet = ({ visible, label, allowPdf, onCancel, onPick }: Pro
           </View>
 
           <View className="gap-2">
-            <Option Icon={CameraIcon} label="Take a photo" onPress={() => onPick('camera')} />
-            <Option Icon={ImageIcon} label="Choose a photo" onPress={() => onPick('library')} />
+            <Option Icon={CameraIcon} label={dc("Take a photo")} onPress={() => onPick('camera')} />
+            <Option Icon={ImageIcon} label={dc("Choose a photo")} onPress={() => onPick('library')} />
             {allowPdf ? (
-              <Option Icon={FilePdfIcon} label="Choose a PDF" onPress={() => onPick('pdf')} />
+              <Option Icon={FilePdfIcon} label={dc("Choose a PDF")} onPress={() => onPick('pdf')} />
             ) : null}
           </View>
         </Pressable>

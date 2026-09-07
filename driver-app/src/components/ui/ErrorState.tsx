@@ -1,3 +1,4 @@
+import { driverCopy as dc } from "../../lib/copy";
 import { Pressable, View } from 'react-native';
 import { cssInterop } from 'nativewind';
 import { WarningIcon } from 'phosphor-react-native';
@@ -39,7 +40,7 @@ type Props = {
 const ErrorState = ({
     title,
     message,
-    actionLabel = 'Try again',
+    actionLabel = dc("Try again"),
     onAction,
     secondaryLabel,
     onSecondary,

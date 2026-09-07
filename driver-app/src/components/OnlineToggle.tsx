@@ -1,3 +1,5 @@
+import { useLanguage as useCopyLanguage } from "../i18n";
+import { driverCopy as dc } from "../lib/copy";
 import { cssInterop } from "nativewind";
 import { BellIcon } from "phosphor-react-native";
 import { useState } from "react";
@@ -20,6 +22,7 @@ const KNOB_OFF = 20;   // web: left-5
 const KNOB_ON = -8;    // web: -left-2
 
 const OnlineToggle = () => {
+    useCopyLanguage();
     const hidden = useData((state) => state.hidden);
     const [error, setError] = useState<string | null>(null)
     const navigate = useNavigate();
@@ -93,8 +96,8 @@ const OnlineToggle = () => {
             const permission = await ensureLocationPermission()
             if (permission !== "granted") {
                 setError(permission === "deniedBackground"
-                    ? "Set location to \"Allow all the time\" so rides reach you while you drive"
-                    : "Allow location access to go online")
+                    ? dc("Set location to \"Allow all the time\" so rides reach you while you drive")
+                    : dc("Allow location access to go online"))
                 return
             }
         }
@@ -134,7 +137,7 @@ const OnlineToggle = () => {
                 <View className="flex-row items-center gap-3 rounded-full bg-[var(--background-primary)] p-3">
                     <Pressable
                         role="button"
-                        aria-label="Notifications"
+                        aria-label={dc("Notifications")}
                         onPress={() => navigate("/notifications")}
                         className="w-[22px] h-[22px] items-center justify-center"
                     >
@@ -151,7 +154,7 @@ const OnlineToggle = () => {
                         numberOfLines={1}
                         className="w-[70px] text-lg text-[var(--foreground)] font-semibold"
                     >
-                        {online ? "Online" : "Offline"}
+                        {online ? dc("Online") : dc("Offline")}
                     </AppText>
 
                     <Pressable
@@ -187,9 +190,7 @@ const OnlineToggle = () => {
             {connecting && !error ? (
                 <View className="mt-2 self-end flex-row items-center gap-2 rounded-full bg-[var(--background-primary)] px-4 py-2 border border-[var(--background-muted)]">
                     <ActivityIndicator size="small" color="#243AFB" />
-                    <AppText className="text-sm font-semibold text-[var(--foreground)]">
-                        Connecting to GPS…
-                    </AppText>
+                    <AppText className="text-sm font-semibold text-[var(--foreground)]">{dc("Connecting to GPS…")}</AppText>
                 </View>
             ) : null}
 

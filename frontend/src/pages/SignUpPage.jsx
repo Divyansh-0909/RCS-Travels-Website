@@ -1,3 +1,5 @@
+import { useTranslation as useCopyLanguage } from "react-i18next";
+import { websiteCopy as dc } from "../i18nCopy";
 import { useSignIn, useAuth } from "@clerk/clerk-react";
 import { useState, useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
@@ -11,11 +13,14 @@ import { useData } from "../hooks/useData";
 import { useOtpClipboard } from "../hooks/useOtpClipboard";
 import CheckMarkOutline from "../components/illustrations/CheckMarkOutline";
 import CrossOutline from "../components/illustrations/CrossOutline";
+import { useWebsiteCopy } from "../hooks/useWebsiteCopy";
 
 // Signing up never touches Clerk's signUp — the account already exists by the time
 // we get here, created backend-side against the fake phone email during verify-otp.
 // This page only redeems the ticket and attaches a name.
 const SignUpPage = () => {
+    useCopyLanguage();
+  const tr = useWebsiteCopy();
   const { signIn, setActive } = useSignIn();
   const { isSignedIn } = useAuth();
   const navigate = useViewNavigate();
@@ -70,11 +75,11 @@ const SignUpPage = () => {
     e.preventDefault();
 
     if (!username?.trim()) {
-      setError("Enter your name");
+      setError(dc("Enter your name"));
       return;
     }
     if (username.trim().length < 2) {
-      setError("Name must be at least 2 characters");
+      setError(dc("Name must be at least 2 characters"));
       return;
     }
 
@@ -92,12 +97,12 @@ const SignUpPage = () => {
       e.preventDefault();
 
       if (!phone) {
-        setError("Enter a Phone Number");
+        setError(tr("Enter a Phone Number"));
         return;
       }
 
       if(!(phone.length === 10) ){
-        setError("Number should be exactly 10 digits");
+        setError(tr("Number should be exactly 10 digits"));
         return;
       }
 
@@ -107,7 +112,7 @@ const SignUpPage = () => {
         await sendOtp()
       } catch (err) {
         console.error(err);
-        setError("Something went wrong");
+        setError(tr("Something went wrong"));
       } finally {
         setLoading(false);
       }
@@ -117,12 +122,12 @@ const SignUpPage = () => {
       e.preventDefault();
 
       if (!otp) {
-        setError("Enter OTP");
+        setError(dc("Enter OTP"));
         return;
       }
 
       if(!(otp.length === OTP_LENGTH) ){
-        setError("OTP should be exactly 6 digit");
+        setError(tr("OTP should be exactly 6 digit"));
         return;
       }
 
@@ -133,7 +138,7 @@ const SignUpPage = () => {
         await verifyOtp()
       } catch (err) {
         console.error(err);
-        setError("Something went wrong");
+        setError(tr("Something went wrong"));
         // A throw after the code was accepted leaves the verdict on "pass", which
         // would sit a tick above the error message.
         setVerdict("fail");
@@ -187,7 +192,7 @@ const SignUpPage = () => {
       setExpiresIn(OTP_TTL);
     } catch (err) {
       console.error(err);
-      setError("Something went wrong");
+      setError(tr("Something went wrong"));
     } finally {
       setResending(false);
     }
@@ -210,7 +215,7 @@ const SignUpPage = () => {
     // ends up sitting under a success mark.
     const result = await signIn.create({ strategy: "ticket", ticket: data.ticket });
     if (result.status !== "complete") {
-      setError("Verification failed. Please try again.");
+      setError(dc("Verification failed. Please try again."));
       setVerdict("fail");
       return;
     }
@@ -259,8 +264,8 @@ const SignUpPage = () => {
     setShowLogin(false);
 
     if (
-      error === "Enter a Phone Number" ||
-      error === "Number should be exactly 10 digits"
+      error === tr("Enter a Phone Number") ||
+      error === tr("Number should be exactly 10 digits")
     ) {
       setError(null);
     }
@@ -344,18 +349,14 @@ const SignUpPage = () => {
         { isSignedIn && !loading
         ?
         <div className="flex flex-col justify-center items-center">
-          <h2 className="font-bold text-[var(--text)]">
-            You are already <br /> logged in.
-          </h2>
+          <h2 className="font-bold text-[var(--text)]">{dc("You are already") + " "}<br />{" " + dc("logged in.")}</h2>
           <Button
             onClick={() => navigate('/')}
             prop={{
               type: "button",
             }}
             className="scale-[1] sm:scale-[1.3] mt-6 sm:mt-9"
-          >
-            Back
-          </Button>
+          >{dc("Back")}</Button>
         </div>
         :
           <form
@@ -366,17 +367,17 @@ const SignUpPage = () => {
             <div className="flex flex-col justify-center items-center gap-2 sm:gap-3">
               <h2 className="font-bold text-[var(--text)]">
                 {isUsername
-                  ? <>Make it yours.</>
+                  ? <>{tr("Make it yours.")}</>
                   : isPhone
-                  ? <>Looks like <br className="sm:hidden block"/> you're new here.</>
-                  : <>One code away.</>}
+                  ? <>{tr("Looks like you're new here.")}</>
+                  : <>{tr("One code away.")}</>}
               </h2>
               <p className="text-base sm:text-lg text-[var(--text-muted)]">
                 {isUsername
-                  ? <>This is how drivers will identify you.</>
+                  ? <>{tr("This is how drivers will identify you.")}</>
                   : isPhone
-                  ? <>Let's get you set up. <br className="sm:hidden block"/> We'll send an OTP to verify.</>
-                  : <>Enter the 6-digit code <br className="sm:hidden block" /> we sent to <span className="font-semibold text-[var(--text)]">{phoneDisplay}</span></>}
+                  ? <>{tr("Let's get you set up. We'll send an OTP to verify.")}</>
+                  : <>{tr("Enter the 6-digit code we sent to")} <span className="font-semibold text-[var(--text)]">{phoneDisplay}</span></>}
               </p>
             </div>
             <div className="flex flex-col justify-center items-center">
@@ -439,8 +440,8 @@ const SignUpPage = () => {
                   </div>
                   <p className={`text-[var(--text-muted)] text-sm mt-1 sm:mt-2 mb-3 sm:mb-5 ${busy ? "invisible" : ""}`}>
                     {expiresIn > 0
-                      ? <>Code expires in <span className="tabular-nums text-[var(--text)]">{formatMMSS(expiresIn)}</span></>
-                      : "Your code has expired."}
+                      ? <>{tr("Code expires in")} <span className="tabular-nums text-[var(--text)]">{formatMMSS(expiresIn)}</span></>
+                      : tr("Your code has expired.")}
                     {/* Chrome fills the boxes on its own once the clipboard
                         permission is granted; this is where that gets granted,
                         and it stays for the browsers that never grant it. Not
@@ -452,7 +453,7 @@ const SignUpPage = () => {
                           type="button"
                           onClick={pasteOtp}
                           className="cursor-pointer text-[var(--text)] underline underline-offset-4 decoration-[var(--foreground)]/40 hover:decoration-[var(--foreground)] transition-colors duration-300 rounded-sm outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]/70"
-                        >Paste code</button>
+                        >{tr("Paste code")}</button>
                       </>
                     )}
                   </p>
@@ -462,12 +463,12 @@ const SignUpPage = () => {
                     type: isUsername ? "text" : "tel",
                     name: isUsername ? "username" : "phone-number",
                     id: isUsername ? "username" : "phone-number",
-                    placeholder: isUsername ? "Full Name" : "Phone Number",
+                    placeholder: isUsername ? tr("Full Name") : tr("Phone Number"),
                     value: isUsername ? username : phone,
                     onChangeFn: isUsername ? handleUsernameChange : handlePhoneChange,
                     error: isUsername
                       ? error === "Enter your name" || error === "Name must be at least 2 characters" || error === "Username is already taken"
-                      : error === "Enter a Phone Number" || error === "Number should be exactly 10 digits",
+                      : error === tr("Enter a Phone Number") || error === tr("Number should be exactly 10 digits"),
                     bg: "var(--background-muted)",
                   }}
                   className="scale-[1] sm:scale-[1.3]"
@@ -488,10 +489,10 @@ const SignUpPage = () => {
                 className="scale-[1] sm:scale-[1.3] mt-1 sm:mt-5"
               >
                 {isUsername
-                  ? "Continue"
+                  ? tr("Continue")
                   : isPhone
-                  ? (showLogin ? "Login" : (loading ? "Sending OTP..." : "Continue"))
-                  : (loading ? "Verifying..." : "Verify")}
+                  ? (showLogin ? tr("Login") : (loading ? tr("Sending OTP...") : tr("Continue")))
+                  : (loading ? tr("Verifying...") : tr("Verify"))}
               </Button>
 
               {/* Mirror of login's "No account?" link, on both pre-OTP steps
@@ -500,39 +501,39 @@ const SignUpPage = () => {
                   one screen would compete. */}
               {!isOtp && !showLogin && (
                 <p className="mt-3 sm:mt-6 text-sm text-[var(--text-muted)]">
-                  <span className="text-[var(--text)]">Have an account?</span>{" "}
+                  <span className="text-[var(--text)]">{tr("Have an account?")}</span>{" "}
                   <button
                     type="button"
                     onClick={() => navigate('/login')}
                     className="cursor-pointer text-[var(--text)] underline underline-offset-4 decoration-[var(--foreground)]/40 hover:decoration-[var(--foreground)] transition-colors duration-300 rounded-sm outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]/70"
-                  >Log in</button>
+                  >{tr("Log in")}</button>
                 </p>
               )}
               {isOtp && (
                 <p className={`mt-3 sm:mt-6 text-sm text-[var(--text-muted)] ${busy ? "invisible" : ""}`}>
-                  <span className="text-[var(--text)]">Didn't get it?</span>{" "}
+                  <span className="text-[var(--text)]">{tr("Didn't get it?")}</span>{" "}
                   {resending
-                    ? "Sending..."
+                    ? tr("Sending...")
                     : resendIn > 0
-                      ? <span className="tabular-nums">Resend in {resendIn}s</span>
+                      ? <span className="tabular-nums">{tr("Resend in")} {resendIn}s</span>
                       : <button
                         type="button"
                         onClick={handleResend}
                         className="cursor-pointer text-[var(--text)] underline underline-offset-4 decoration-[var(--foreground)]/40 hover:decoration-[var(--foreground)] transition-colors duration-300 rounded-sm outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]/70"
-                      >Resend</button>}
+                      >{tr("Resend")}</button>}
                 </p>
               )}
 
               {isUsername && (
-                <p className="text-[var(--text-muted)] text-sm mt-3 sm:mt-5">Your name can't be changed later, <br /> so we suggest using your full name.</p>
+                <p className="text-[var(--text-muted)] text-sm mt-3 sm:mt-5">{tr("Your name can't be changed later, so we suggest using your full name.")}</p>
               )}
 
               {isPhone && (
-                <p className="text-[var(--text-muted)] text-sm mt-3 sm:mt-5 max-sm:max-w-[min(86vw,100%)] sm:max-w-[340px]">Your number can't be changed later. By continuing, you consent to receive an OTP by text or WhatsApp.</p>
+                <p className="text-[var(--text-muted)] text-sm mt-3 sm:mt-5 max-sm:max-w-[min(86vw,100%)] sm:max-w-[340px]">{tr("Your number can't be changed later. By continuing, you consent to receive an OTP by text or WhatsApp.")}</p>
               )}
 
               {isOtp && (
-                <p className="text-[var(--text-muted)] text-sm mt-3 sm:mt-5">You consent to receive a OTP <br /> by text or WhatsApp.</p>
+                <p className="text-[var(--text-muted)] text-sm mt-3 sm:mt-5">{tr("You consent to receive a OTP by text or WhatsApp.")}</p>
               )}
             </div>
           </form>

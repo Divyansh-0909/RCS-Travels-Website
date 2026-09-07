@@ -1,3 +1,4 @@
+import { driverCopy as dc } from "../lib/copy";
 import { Linking } from 'react-native';
 import { ChatCircleIcon, EnvelopeIcon, PhoneIcon, WarningCircleIcon } from 'phosphor-react-native';
 import AccountRow from '../components/ui/AccountRow';
@@ -13,25 +14,25 @@ import {
 } from '../constants/support';
 
 const Help = () => (
-  <AccountDetailScreen title="Help">
-    <AccountSectionLabel>RCS support</AccountSectionLabel>
+  <AccountDetailScreen title={dc("Help")}>
+    <AccountSectionLabel>{dc("RCS support")}</AccountSectionLabel>
     <AccountList>
       <AccountRow
-        label="Message on WhatsApp"
-        detail="Usually the quickest way to get help"
+        label={dc("Message on WhatsApp")}
+        detail={dc("Usually the quickest way to get help")}
         Icon={ChatCircleIcon}
         caret={false}
-        onPress={() => openSupportWhatsApp('Hi, I need help with my captain account.')}
+        onPress={() => openSupportWhatsApp(dc("Hi, I need help with my captain account."))}
       />
       <AccountRow
-        label="Call support"
+        label={dc("Call support")}
         value={supportPhoneDisplay()}
         Icon={PhoneIcon}
         caret={false}
         onPress={callSupport}
       />
       <AccountRow
-        label="Email support"
+        label={dc("Email support")}
         detail={supportEmail()}
         Icon={EnvelopeIcon}
         caret={false}
@@ -40,11 +41,11 @@ const Help = () => (
       />
     </AccountList>
 
-    <AccountSectionLabel>Emergency</AccountSectionLabel>
+    <AccountSectionLabel>{dc("Emergency")}</AccountSectionLabel>
     <AccountList>
       <AccountRow
-        label="Call 112"
-        detail="If you are in immediate danger, call emergency services first"
+        label={dc("Call 112")}
+        detail={dc("If you are in immediate danger, call emergency services first")}
         Icon={WarningCircleIcon}
         tone="danger"
         caret={false}

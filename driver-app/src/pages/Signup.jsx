@@ -1,3 +1,5 @@
+
+import { driverCopy as dc } from "../lib/copy";
 import { useSignIn, useAuth } from "@clerk/clerk-expo";
 import { useState, useEffect, useRef } from "react";
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, TextInput, View } from "react-native";
@@ -14,6 +16,8 @@ import { useDriver } from "../hooks/useDriver";
 import { vehicleLabel } from "../constants/booking";
 import CheckMarkOutline from "../components/illustrations/CheckMarkOutline";
 import CrossOutline from "../components/illustrations/CrossOutline";
+import LanguageSelector from '../components/LanguageSelector';
+import { useLanguage } from '../i18n';
 
 
 const ERROR_TEXT = "#E86A6A";
@@ -46,6 +50,7 @@ const CONVERGE = { duration: 600, easing: Easing.inOut(Easing.ease) };
 // A component rather than inline, because useAnimatedStyle is a hook and the row
 // builds its boxes with .map().
 const OtpBox = ({ index, count, collapsed, children }) => {
+
     const slide = useAnimatedStyle(() => ({
         transform: [{
             translateX: withTiming(
@@ -65,6 +70,7 @@ const OtpBox = ({ index, count, collapsed, children }) => {
 };
 
 const Signup = () => {
+
     const { isLoaded, signIn, setActive } = useSignIn();
     const { isSignedIn } = useAuth();
     const navigate = useNavigate();
@@ -76,7 +82,7 @@ const Signup = () => {
     const OTP_TTL = 300; // seconds until the OTP expires — matches the backend's 5-minute window
     const RESEND_COOLDOWN = 45; // matches the backend's per-phone cooldown, which 429s early resends
     const [expiresIn, setExpiresIn] = useState(0);
-    const [step, setStep] = useState("username"); // "username" | "phone" | "otp" | "vehicle"
+    const [step, setStep] = useState("language"); // "language" | "username" | "phone" | "otp" | "vehicle"
     const [verdict, setVerdict] = useState(null); // null | "pass" | "fail"
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(false);
@@ -92,6 +98,7 @@ const Signup = () => {
 
     const api = useApi();
     const { profile, notRegistered, loading: driverLoading, refresh } = useDriver();
+    const { language, setLanguage, t } = useLanguage();
 
     useEffect(() => {
         if (resendIn <= 0) return;
@@ -141,6 +148,7 @@ const Signup = () => {
         if (step === "vehicle") return;
         if (step === "otp") { setStep("phone"); return; }
         if (step === "phone") { setStep("username"); return; }
+        if (step === "username") { setStep("language"); return; }
         navigate("/");
     };
 
@@ -151,11 +159,11 @@ const Signup = () => {
     // GestureResponderEvent which has no such method to call.
     function handleUsernameSubmit() {
         if (!username?.trim()) {
-            setError("Enter your name");
+            setError(t('driver.signup.nameRequired'));
             return;
         }
         if (username.trim().length < 2) {
-            setError("Name must be at least 2 characters");
+            setError(t('driver.signup.nameShort'));
             return;
         }
 
@@ -165,12 +173,12 @@ const Signup = () => {
 
     async function handleSubmit() {
         if (!phone) {
-            setError("Enter a Phone Number");
+            setError(t('driver.signup.phoneRequired'));
             return;
         }
 
         if (!(phone.length === 10)) {
-            setError("Number should be exactly 10 digits");
+            setError(t('driver.signup.phoneInvalid'));
             return;
         }
 
@@ -180,7 +188,7 @@ const Signup = () => {
             await sendOtp()
         } catch (err) {
             console.error(err);
-            setError(err?.message || "Something went wrong");
+            setError(err?.message || t('driver.auth.generic'));
         } finally {
             setLoading(false);
         }
@@ -188,12 +196,12 @@ const Signup = () => {
 
     async function handleOTPSubmit() {
         if (!otp) {
-            setError("Enter OTP");
+            setError(t('driver.auth.otpRequired'));
             return;
         }
 
         if (!(otp.length === OTP_LENGTH)) {
-            setError("OTP should be exactly 6 digit");
+            setError(t('driver.auth.otpInvalid'));
             return;
         }
 
@@ -201,7 +209,7 @@ const Signup = () => {
         // hands back a 60s ticket, so bailing out further down would cost the user
         // their code and force a resend for something that resolves on its own.
         if (!isLoaded) {
-            setError("Still connecting. Try again in a moment.");
+            setError(t('driver.auth.connecting'));
             return;
         }
 
@@ -212,7 +220,7 @@ const Signup = () => {
             await verifyOtp()
         } catch (err) {
             console.error(err);
-            setError(err?.message || "Something went wrong");
+            setError(err?.message || t('driver.auth.generic'));
             // A throw after the code was accepted leaves the verdict on "pass", which
             // would sit a tick above the error message.
             setVerdict("fail");
@@ -263,7 +271,7 @@ const Signup = () => {
             setExpiresIn(OTP_TTL);
         } catch (err) {
             console.error(err);
-            setError("Something went wrong");
+            setError(t('driver.auth.generic'));
         } finally {
             setResending(false);
         }
@@ -283,7 +291,7 @@ const Signup = () => {
         setRedirecting(true);
 
         const result = await signIn.create({ strategy: "ticket", ticket: data.ticket });
-        if (result.status !== "complete") { setError("Verification failed. Please try again."); setVerdict("fail"); return; }
+        if (result.status !== "complete") { setError(t('driver.auth.verification')); setVerdict("fail"); return; }
 
         await setActive({ session: result.createdSessionId });
 
@@ -296,12 +304,12 @@ const Signup = () => {
     };
 
     const handleVehicleSubmit = async () => {
-        if (!vehicleClass) { setError("Pick the kind of car you drive"); return; }
-        if (vehicleNumber.trim().length < 4) { setError("Enter the number on the plate"); return; }
+        if (!vehicleClass) { setError(t('driver.auth.vehicleClass')); return; }
+        if (vehicleNumber.trim().length < 4) { setError(t('driver.auth.plate')); return; }
         // Required, like the plate. A rider meeting this car at a gate is looking
         // for "the white Innova Crysta" — the class alone does not pick it out of
         // a queue, and this is the one moment the captain is already typing.
-        if (vehicleModel.trim().length < 2) { setError("Enter the car's model"); return; }
+        if (vehicleModel.trim().length < 2) { setError(t('driver.auth.model')); return; }
 
         try {
             setError(null);
@@ -323,12 +331,13 @@ const Signup = () => {
             navigate("/onboarding/status", { replace: true });
         } catch (err) {
             console.error(err);
-            setError(err?.message || "Something went wrong");
+            setError(err?.message || t('driver.auth.generic'));
         } finally {
             setLoading(false);
         }
     };
 
+    const isLanguage = step === "language";
     const isUsername = step === "username";
     const isPhone = step === "phone";
     const isOtp = step === "otp";
@@ -358,8 +367,8 @@ const Signup = () => {
         setShowLoginUp(false);
 
         if (
-            error === "Enter a Phone Number" ||
-            error === "Number should be exactly 10 digits"
+            error === dc("Enter a Phone Number") ||
+            error === dc("Number should be exactly 10 digits")
         ) {
             setError(null);
         }
@@ -472,39 +481,52 @@ const Signup = () => {
                     screen exists to finish, and `driverLoading` holds the answer
                     back rather than flashing "already logged in" at him for the
                     length of one request. */}
-                {isSignedIn && !redirecting && !isVehicle && !driverLoading && profile
+                {isLanguage
+                    ? <View className="w-full max-w-[440px] justify-center items-center">
+                        <View className="w-full items-center gap-3 mb-7">
+                            <AppText className="text-2xl font-semibold text-center">{t('driver.language.title')}</AppText>
+                            <AppText className="text-base text-center text-[var(--text-muted)]">{t('driver.language.body')}</AppText>
+                        </View>
+                        <LanguageSelector
+                            value={language}
+                            onSelect={async (next) => {
+                                try { await setLanguage(next); } catch { /* use this session's selected language */ }
+                                if (location.state?.entry === 'login') navigate('/login', { replace: true });
+                                else setStep('username');
+                            }}
+                        />
+                    </View>
+                    : isSignedIn && !redirecting && !isVehicle && !driverLoading && profile
                     ? <View className="justify-center items-center">
                         <AppText className="text-2xl font-semibold text-center">
-                            {"You are already\nlogged in."}
+                            {dc("You are already logged in.")}
                         </AppText>
                         <Button
                             onPress={() => navigate("/")}
                             prop={{ width: 220 }}
                             className="mt-6"
-                        >
-                            Back
-                        </Button>
+                        >{dc("Back")}</Button>
                     </View>
 
                     : <View className="w-full justify-center items-center">
                         <View className="justify-center items-center gap-3">
                             <AppText className="text-2xl font-semibold text-center">
                                 {isUsername
-                                    ? "Make it yours."
+                                    ? t('driver.signup.nameTitle')
                                     : isPhone
-                                        ? "Looks like you're new here."
+                                        ? t('driver.signup.phoneTitle')
                                         : isOtp
-                                            ? "One code away."
-                                            : "Now the car."}
+                                            ? t('driver.signup.otpTitle')
+                                            : t('driver.signup.vehicleTitle')}
                             </AppText>
                             <AppText className="text-base text-center text-[var(--text-muted)]">
                                 {isUsername
-                                    ? "This is how riders will identify you."
+                                    ? t('driver.signup.nameBody')
                                     : isPhone
-                                        ? "We'll send a OTP to this number."
+                                        ? t('driver.signup.phoneBody')
                                         : isVehicle
-                                            ? "Riders are shown this when you pick them up."
-                                            : <>Enter the 6-digit code{"\n"}we sent to <AppText className="font-semibold text-[var(--text)]">{phoneDisplay}</AppText></>}
+                                            ? t('driver.signup.vehicleBody')
+                                            : t('driver.auth.otpBody', { phone: phoneDisplay })}
                             </AppText>
                         </View>
 
@@ -588,8 +610,8 @@ const Signup = () => {
 
                                     <AppText className={`text-sm text-[var(--text-muted)] mt-2 mb-5 ${busy ? "opacity-0" : ""}`}>
                                         {expiresIn > 0
-                                            ? <>Code expires in <AppText className="text-[var(--text)]" style={{ fontVariant: ["tabular-nums"] }}>{formatMMSS(expiresIn)}</AppText></>
-                                            : "Your code has expired."}
+                      ? t('driver.auth.expires', { time: formatMMSS(expiresIn) })
+                      : t('driver.auth.expired')}
                                         {/* iOS only — Android fills the boxes on its own. Not
                                             offered on an expired code, which pastes to nothing. */}
                                         {canPaste && expiresIn > 0 && (
@@ -599,7 +621,7 @@ const Signup = () => {
                                                     onPress={pasteOtp}
                                                     className="font-semibold text-[var(--text)] underline"
                                                 >
-                                                    Paste code
+                          {t('driver.auth.paste')}
                                                 </AppText>
                                             </>
                                         )}
@@ -638,11 +660,11 @@ const Signup = () => {
                                         <Input
                                             prop={{
                                                 type: "text",
-                                                placeholder: "Registration number",
+                                                get "placeholder"() { return dc("Registration number"); },
                                                 value: vehicleNumber,
                                                 onChangeFn: (value) => { setVehicleNumber(value); if (error) setError(null); },
                                                 maxLength: 20,
-                                                error: error === "Enter the number on the plate",
+                                                error: error === dc("Enter the number on the plate"),
                                                 bg: BOX_BG,
                                             }}
                                         />
@@ -650,11 +672,11 @@ const Signup = () => {
                                         <Input
                                             prop={{
                                                 type: "text",
-                                                placeholder: "Model",
+                                                get "placeholder"() { return dc("Model"); },
                                                 value: vehicleModel,
                                                 onChangeFn: setVehicleModel,
                                                 maxLength: 60,
-                                                error: error === "Enter the car's model",
+                                                error: error === dc("Enter the car's model"),
                                                 bg: BOX_BG,
                                             }}
                                         />
@@ -662,13 +684,13 @@ const Signup = () => {
                                 : <Input
                                     prop={{
                                         type: isUsername ? "text" : "tel",
-                                        placeholder: isUsername ? "Full Name" : "Phone Number",
+                                        placeholder: isUsername ? dc("Full Name") : dc("Phone Number"),
                                         value: isUsername ? username : phone,
                                         onChangeFn: isUsername ? handleUsernameChange : handlePhoneChange,
                                         maxLength: isUsername ? null : 10,
                                         error: isUsername
-                                            ? error === "Enter your name" || error === "Name must be at least 2 characters" || error === "Username is already taken"
-                                            : error === "Enter a Phone Number" || error === "Number should be exactly 10 digits",
+                                            ? error === dc("Enter your name") || error === dc("Name must be at least 2 characters") || error === dc("Username is already taken")
+                                            : error === dc("Enter a Phone Number") || error === dc("Number should be exactly 10 digits"),
                                         bg: BOX_BG,
                                     }}
                                 />
@@ -704,56 +726,56 @@ const Signup = () => {
                                 className="mt-5"
                             >
                                 {isPhone
-                                    ? (showLoginUp ? "Login Up" : (loading ? "Sending OTP..." : "Continue"))
+                                    ? (showLoginUp ? dc("Login Up") : (loading ? dc("Sending OTP...") : t('common.actions.continue')))
                                     : isUsername
-                                        ? "Continue"
+                                        ? t('common.actions.continue')
                                         : isVehicle
-                                            ? (loading ? "Saving..." : "Finish")
-                                            : (loading ? "Redirecting..." : "Confirm")}
+                                            ? (loading ? t('driver.auth.saving') : t('driver.signup.finish'))
+                                            : (loading ? t('driver.auth.redirecting') : t('driver.auth.confirm'))}
                             </Button>
 
                             {isPhone && !showLoginUp && (
                                 <AppText className="mt-6 text-sm text-center text-[var(--text-muted)]">
-                                    <AppText className="text-[var(--text)]">Have an account?</AppText>{" "}
+                                    <AppText className="text-[var(--text)]">{t('driver.signup.haveAccount')}</AppText>{" "}
                                     <AppText
                                         onPress={() => navigate("/login")}
                                         className="font-semibold text-[var(--text)] underline"
                                     >
-                                        Log in
+                                        {t('driver.signup.logIn')}
                                     </AppText>
                                 </AppText>
                             )}
 
                             {isOtp && (
                                 <AppText className={`mt-6 text-sm text-center text-[var(--text-muted)] ${busy ? "opacity-0" : ""}`}>
-                                    <AppText className="text-[var(--text)]">Didn&apos;t get it?</AppText>{" "}
+                                    <AppText className="text-[var(--text)]">{t('driver.auth.didntGet')}</AppText>{" "}
                                     {resending
-                                        ? "Sending..."
+                                        ? t('driver.auth.sending')
                                         : resendIn > 0
-                                            ? <AppText style={{ fontVariant: ["tabular-nums"] }}>Resend in {resendIn}s</AppText>
+                                            ? <AppText style={{ fontVariant: ["tabular-nums"] }}>{t('driver.auth.resendIn', { seconds: resendIn })}</AppText>
                                             : <AppText
                                                 onPress={handleResend}
                                                 className="font-semibold text-[var(--text)] underline"
                                             >
-                                                Resend
+                                                {t('driver.auth.resend')}
                                             </AppText>}
                                 </AppText>
                             )}
 
                             {isUsername && (<AppText className="text-sm text-center text-[var(--text-muted)] mt-5">
-                                {"Your name can't be changed later, so we suggest using your full name."}
+                                {t('driver.auth.usernameHint')}
                             </AppText>)}
 
                             {isPhone && (<AppText className="text-sm text-center text-[var(--text-muted)] mt-5">
-                                {"Your number can't be changed later. By continuing, you consent to receive an OTP by text or WhatsApp."}
+                                {t('driver.auth.phoneHint')}
                             </AppText>)}
 
                             {isOtp && (<AppText className="text-sm text-center text-[var(--text-muted)] mt-5">
-                                {"You consent to receive a OTP\nby text or WhatsApp."}
+                                {t('driver.auth.consent')}
                             </AppText>)}
 
                             {isVehicle && (<AppText className="text-sm text-center text-[var(--text-muted)] mt-5">
-                                {"Next you'll add your photo and the car's documents."}
+                                {t('driver.auth.vehicleHint')}
                             </AppText>)}
                         </View>
                     </View>}

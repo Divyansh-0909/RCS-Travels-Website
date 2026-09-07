@@ -1,3 +1,5 @@
+import { useLanguage as useCopyLanguage } from "../i18n";
+import { driverCopy as dc } from "../lib/copy";
 import { useEffect } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import {
@@ -63,31 +65,31 @@ const FACES: Record<string, Face> = {
   notUploaded: {
     Icon: UploadSimpleIcon,
     tone: PRIMARY,
-    title: 'Add your documents',
-    body: 'We need your photo, your licence and the car’s papers before you can take rides. It takes about five minutes.',
+    get "title"() { return dc("Add your documents"); },
+    get "body"() { return dc("We need your photo, your licence and the car’s papers before you can take rides. It takes about five minutes."); },
     action: 'documents',
-    actionLabel: 'Start',
+    get "actionLabel"() { return dc("Start"); },
   },
   uploading: {
     Icon: UploadSimpleIcon,
     tone: PRIMARY,
-    title: 'Nearly there',
-    body: 'A few documents are still missing. Add the rest and we’ll get them reviewed.',
+    get "title"() { return dc("Nearly there"); },
+    get "body"() { return dc("A few documents are still missing. Add the rest and we’ll get them reviewed."); },
     action: 'documents',
     // Names the job, not the navigation. "Continue" describes what the app does
     // when tapped; this describes what he does when he gets there, in the same
     // words the sentence above just used.
-    actionLabel: 'Add the rest',
+    get "actionLabel"() { return dc("Add the rest"); },
   },
   // Seconds, not days. Said plainly so he does not close the app thinking it has
   // hung, and so he does not ring the office about a machine check.
   scanning: {
     Icon: ShieldCheckIcon,
     tone: PRIMARY,
-    title: 'Checking your documents',
-    body: 'This usually takes a few seconds. You don’t need to do anything.',
+    get "title"() { return dc("Checking your documents"); },
+    get "body"() { return dc("This usually takes a few seconds. You don’t need to do anything."); },
     action: 'documents',
-    actionLabel: 'See documents',
+    get "actionLabel"() { return dc("See documents"); },
   },
   // The long one, and the only state where the honest answer is "wait". It says
   // who has it and that he will be told, because those are the two things that
@@ -95,38 +97,39 @@ const FACES: Record<string, Face> = {
   pending: {
     Icon: ClockIcon,
     tone: AMBER,
-    title: 'With the office',
-    body: 'Your documents passed our checks and someone is reviewing them now. We’ll message you as soon as it’s done — you can close the app.',
+    get "title"() { return dc("With the office"); },
+    get "body"() { return dc("Your documents passed our checks and someone is reviewing them now. We’ll message you as soon as it’s done — you can close the app."); },
     action: 'documents',
-    actionLabel: 'See documents',
+    get "actionLabel"() { return dc("See documents"); },
   },
   rejected: {
     Icon: XCircleIcon,
     tone: RED,
-    title: 'Something needs fixing',
-    body: 'One or more of your documents couldn’t be accepted. Open the list to see which, and what to change.',
+    get "title"() { return dc("Something needs fixing"); },
+    get "body"() { return dc("One or more of your documents couldn’t be accepted. Open the list to see which, and what to change."); },
     action: 'documents',
-    actionLabel: 'Fix documents',
+    get "actionLabel"() { return dc("Fix documents"); },
   },
   suspended: {
     Icon: WarningCircleIcon,
     tone: RED,
-    title: 'Your account is on hold',
-    body: 'You can’t take rides at the moment. Talk to the office and they’ll tell you what’s needed.',
+    get "title"() { return dc("Your account is on hold"); },
+    get "body"() { return dc("You can’t take rides at the moment. Talk to the office and they’ll tell you what’s needed."); },
     action: 'support',
-    actionLabel: 'Contact the office',
+    get "actionLabel"() { return dc("Contact the office"); },
   },
   inactive: {
     Icon: WarningCircleIcon,
     tone: RED,
-    title: 'Your account is closed',
-    body: 'This account can’t take rides. If you think that’s wrong, get in touch.',
+    get "title"() { return dc("Your account is closed"); },
+    get "body"() { return dc("This account can’t take rides. If you think that’s wrong, get in touch."); },
     action: 'support',
-    actionLabel: 'Contact the office',
+    get "actionLabel"() { return dc("Contact the office"); },
   },
 };
 
 const OnboardingStatus = () => {
+    useCopyLanguage();
   const { profile, loading, refresh } = useDriver();
   const navigate = useNavigate();
 
@@ -214,11 +217,11 @@ const OnboardingStatus = () => {
           <View className="w-full rounded-2xl p-4 gap-3" style={{ backgroundColor: CARD }}>
             <AppText className={`text-sm ${MUTED}`}>
               {owedRides === 1
-                ? 'You still have one ride to finish. Please complete it as normal — someone is waiting for it.'
-                : `You still have ${owedRides} rides to finish. Please complete them as normal — people are waiting for them.`}
+                ? dc("You still have one ride to finish. Please complete it as normal — someone is waiting for it.")
+                : dc("You still have {{value0}} rides to finish. Please complete them as normal — people are waiting for them.", {value0: (owedRides)})}
             </AppText>
             <Button prop={{ variant: 'secondary' }} onPress={() => navigate('/rides')}>
-              {owedRides === 1 ? 'Go to my ride' : 'Go to my rides'}
+              {owedRides === 1 ? dc("Go to my ride") : dc("Go to my rides")}
             </Button>
           </View>
         ) : null}
@@ -269,14 +272,11 @@ const OnboardingStatus = () => {
               style alone would leave two colours on the element and stylesheet
               order to pick between them. The underline is safe in style — an
               object merges. */}
-          <AppText className={`text-sm text-center ${MUTED}`}>
-            Need help?{' '}
+          <AppText className={`text-sm text-center ${MUTED}`}>{dc("Need help?")}{' '}
             <AppText
               className="text-sm font-medium text-primary"
               style={{ textDecorationLine: 'underline' }}
-            >
-              Talk to Raju
-            </AppText>
+            >{dc("Talk to Raju")}</AppText>
           </AppText>
         </Pressable>
       ) : null}

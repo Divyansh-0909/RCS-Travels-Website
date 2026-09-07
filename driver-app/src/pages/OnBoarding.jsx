@@ -1,6 +1,9 @@
+
+import { driverCopy as dc } from "../lib/copy";
 import { Image, Pressable, View } from "react-native";
 import { useNavigate } from "react-router-native";
 import AppText from "../components/AppText";
+import { useLanguage } from '../i18n';
 
 const backgroundIllustration = require("../../assets/app-mobile.webp");
 
@@ -8,19 +11,17 @@ const SCRIMBOTTOM = "linear-gradient(to top, #0B0B14 5%, #121220 15%, rgba(18,18
 
 const TITLE_TRACKING = { letterSpacing: -0.72 };
 
-const text = "Don't have an account yet?"
-
-const heading = "Ready To Take The Captain's Seat?"
-
 const OnBoarding = () => {
+
     const navigate = useNavigate();
+    const { t } = useLanguage();
 
     return (
         <View className="relative flex-1 w-full h-full  overflow-hidden items-center justify-between bg-[var(--background-primary)]">
             <Image
                 source={backgroundIllustration}
                 accessibilityIgnoresInvertColors
-                alt="background-illustration"
+                alt={dc("background-illustration")}
                 resizeMode="cover"
                 className="absolute left-0 right-0 -top-20 w-full h-full"
             />
@@ -40,10 +41,10 @@ const OnBoarding = () => {
                     </AppText>
                     <View className="flex justify-center items-left gap-2 w-[85%] h-fit">
                         <AppText className="text-4xl text-black font-semibold text-left" style={TITLE_TRACKING}>
-                            {heading}
+                            {t('driver.onboarding.title')}
                         </AppText>
                         <AppText className="text-lg text-left text-black">
-                            Every ride and handoff tracked. No diary, no phone chains, no chasing your pay.
+                            {t('driver.onboarding.body')}
                         </AppText>
                     </View>
                 </View>
@@ -51,19 +52,19 @@ const OnBoarding = () => {
                 <View className="w-full max-w-[500px] justify-end items-center gap-2">
                     <Pressable
                         role="button"
-                        onPress={() => navigate("/login")}
+                        onPress={() => navigate("/signup", { state: { entry: 'login' } })}
                         className="w-[82%] my-1 py-3 rounded-xl bg-primary items-center justify-center active:opacity-80"
                     >
-                        <AppText className="text-base font-semibold">Access your account</AppText>
+                        <AppText className="text-base font-semibold">{t('driver.onboarding.access')}</AppText>
                     </Pressable>
 
                     <AppText className="text-base text-[var(--text-muted)]">
-                        {text}{" "}
+                        {t('driver.onboarding.noAccount')}{" "}
                         <AppText
                             onPress={() => navigate("/signup")}
                             className="font-semibold text-[var(--text)]"
                         >
-                            Sign Up
+                            {t('driver.onboarding.signUp')}
                         </AppText>
                     </AppText>
                 </View>

@@ -1,3 +1,5 @@
+import { useLanguage as useCopyLanguage } from "../../i18n";
+import { driverCopy as dc } from "../../lib/copy";
 import { Image, Pressable, View } from 'react-native';
 import { useState } from 'react';
 import AppText from '../AppText';
@@ -14,6 +16,7 @@ const TITLE = { letterSpacing: -0.4, lineHeight: 24 };
 const PANEL_WIDTH = '34%';
 
 const DriverCouponPromo = () => {
+    useCopyLanguage();
     const api = useApi();
     const { patchProfile } = useDriver();
     const [goingOnline, setGoingOnline] = useState(false);
@@ -44,24 +47,18 @@ const DriverCouponPromo = () => {
         >
             <View className="flex-1 px-5 py-5 gap-1">
                 <View>
-                    <AppText className="text-xl font-semibold" style={{ ...TITLE, color: INK }}>
-                        Complete 20 rides.
-                    </AppText>
-                    <AppText className="text-xl font-semibold" style={{ ...TITLE, color: INK }}>
-                        No service fee on next 3 rides.
-                    </AppText>
+                    <AppText className="text-xl font-semibold" style={{ ...TITLE, color: INK }}>{dc("Complete 20 rides.")}</AppText>
+                    <AppText className="text-xl font-semibold" style={{ ...TITLE, color: INK }}>{dc("No service fee on next 3 rides.")}</AppText>
                 </View>
 
-                <AppText className="text-sm" style={{ color: SUBTLE }}>
-                    Keep driving to unlock your reward.
-                </AppText>
+                <AppText className="text-sm" style={{ color: SUBTLE }}>{dc("Keep driving to unlock your reward.")}</AppText>
             </View>
 
             <View style={{ width: PANEL_WIDTH, backgroundColor: AMBER_PANEL }}>
                 <Image
                     source={CouponIllustration}
                     accessibilityIgnoresInvertColors
-                    alt="Driver receiving a reward coupon"
+                    alt={dc("Driver receiving a reward coupon")}
                     resizeMode="contain"
                     style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 }}
                 />

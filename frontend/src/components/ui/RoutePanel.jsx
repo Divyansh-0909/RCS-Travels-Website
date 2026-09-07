@@ -1,3 +1,5 @@
+import { useTranslation as useCopyLanguage } from "react-i18next";
+import { websiteCopy as dc } from "../../i18nCopy";
 // Shared pickup → drop route summary. First comma segment is the stop title,
 // the rest a muted subtitle. `header` renders above the route behind its own
 // divider (ride status); children render below one (meta rows).
@@ -9,9 +11,9 @@ const splitAddress = (address) => {
 
 // Type scales; dot offsets keep each marker centred on its title line.
 const SIZES = {
-    md: { title: "", subtitle: "text-sm sm:text-base", dot: "mt-2" },
-    sm: { title: "text-base sm:text-lg", subtitle: "text-xs sm:text-sm", dot: "mt-1.5 sm:mt-2" },
-    xs: { title: "text-sm sm:text-base", subtitle: "text-xs", dot: "mt-1 sm:mt-1.5" },
+    md: { title: "", get "subtitle"() { return "text-sm sm:text-base"; }, dot: "mt-2" },
+    sm: { get "title"() { return "text-base sm:text-lg"; }, get "subtitle"() { return "text-xs sm:text-sm"; }, dot: "mt-1.5 sm:mt-2" },
+    xs: { get "title"() { return "text-sm sm:text-base"; }, get "subtitle"() { return "text-xs"; }, dot: "mt-1 sm:mt-1.5" },
 };
 
 const Address = ({ title, subtitle, size }) => (
@@ -22,6 +24,7 @@ const Address = ({ title, subtitle, size }) => (
 );
 
 const RoutePanel = ({ pickup, drop, className = "", size = "md", header, children, plain = false }) => {
+    useCopyLanguage();
     const from = splitAddress(pickup);
     const to = splitAddress(drop);
     const dotOffset = SIZES[size].dot;

@@ -1,0 +1,13 @@
+{
+  "hooks": {
+    "PreToolUse": [{
+      "matcher": "^(Bash|exec_command|shell_command|shell|Read|read_file)$",
+      "hooks": [{
+        "type": "command",
+        "command": "node \"$(git rev-parse --show-toplevel)/tools/token-guard/hook.mjs\"",
+        "commandWindows": "powershell.exe -NoProfile -Command \"$guardRoot = git rev-parse --show-toplevel; node (Join-Path $guardRoot 'tools/token-guard/hook.mjs')\"",
+        "timeout": 5
+      }]
+    }]
+  }
+}

@@ -161,18 +161,7 @@ export function isAirportPickup(coords) {
   return IGI_TERMINALS.some((t) => kmBetween(coords, t) <= IGI_RADIUS_KM)
 }
 
-const FARE_CLASSES = ['hatchback', 'sedan', 'suv', 'suv_premium']
-
-// Zones overlap, so pick one. Highest priority wins, which lets exception zones
-// (IIT, Pari Chowk, Sarai Kale Khan) override the broad areas they sit inside.
-//
-// The exception: when the top two are siblings — priority within 1 — and disagree
-// on price, the point is in an accidental border overlap rather than a deliberate
-// carve-out. Neither zone is more right there, so charge the midpoint (the
-// Ashram/Lajpat strip, 1100/1200 → 1150).
-export function matchZone(coords) {
-  if (!coords) return null
-  const hits = zones.filter((z) => pointInRing(coords, z.ring))
+export function resolveZoneHits(hits) {
   if (hits.length === 0) return null
   hits.sort((a, b) => b.priority - a.priority)
 
@@ -185,15 +174,27 @@ export function matchZone(coords) {
 
   if (!isBorder) return top
 
-  const fares = {}
-  for (const cls of FARE_CLASSES) {
-    if (top.fares[cls] != null && second.fares[cls] != null)
-      fares[cls] = Math.round((top.fares[cls] + second.fares[cls]) / 2 / 50) * 50
-    else if (top.fares[cls] != null) fares[cls] = top.fares[cls]
+  // Hatchback is the only rate-card input. Every other class is derived later
+  // in rideEstimate, after this one authoritative border price is settled.
+  const fares = {
+    hatchback: Math.round((top.fares.hatchback + second.fares.hatchback) / 2 / 50) * 50,
   }
   // A toll is a road that either is or isn't on the way — averaging it would
   // invent a half-toll nobody pays. The higher of the two stands: charging the
   // toll and not driving it is a refund, the reverse is the driver out of pocket.
   const toll = Math.max(top.toll, second.toll)
   return { name: `${top.name} / ${second.name} border`, priority: top.priority, fares, toll, blended: true }
+}
+
+// Zones overlap, so pick one. Highest priority wins, which lets exception zones
+// (IIT, Pari Chowk, Sarai Kale Khan) override the broad areas they sit inside.
+//
+// The exception: when the top two are siblings — priority within 1 — and disagree
+// on price, the point is in an accidental border overlap rather than a deliberate
+// carve-out. Neither zone is more right there, so charge the midpoint (the
+// Ashram/Lajpat strip, 1100/1200 → 1150).
+export function matchZone(coords) {
+  if (!coords) return null
+  const hits = zones.filter((z) => pointInRing(coords, z.ring))
+  return resolveZoneHits(hits)
 }

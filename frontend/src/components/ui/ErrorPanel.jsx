@@ -3,8 +3,10 @@ import Button from "./Button";
 import { useViewNavigate } from "../../hooks/useViewNavigate";
 import BackgroundPanel from "./BackgroundPanel";
 import { useState, useEffect } from "react";
+import { useWebsiteCopy } from "../../hooks/useWebsiteCopy";
 
 const ErrorPanel = ({ prop }) => {
+    const tr = useWebsiteCopy()
     const navigate = useViewNavigate()
 
     // Keep the last message so it stays visible while the panel animates out.
@@ -19,7 +21,7 @@ const ErrorPanel = ({ prop }) => {
                 <ErrorMark className="-my-8" size={140} />
                 <div className="flex w-[min(86vw,100%)] min-w-0 flex-col items-center gap-1 sm:w-[377px]">
                     <h2 className="w-full min-w-0 [overflow-wrap:anywhere]"> {lastError} </h2>
-                    <p className="w-full min-w-0"> Please try again or reach out to us if this keeps happening. </p>
+                    <p className="w-full min-w-0">{tr("Please try again or reach out to us if this keeps happening.")}</p>
                 </div>
                 <Button
                     onClick={() => {
@@ -35,7 +37,7 @@ const ErrorPanel = ({ prop }) => {
                     }}
                     className="mt-4 scale-[1] sm:scale-[1.1] "
                 >
-                    Okay
+                    {tr("Okay")}
                 </Button>
             </BackgroundPanel>
             <div className={`${prop.error ? "block" : "hidden"} absolute z-2 sm:z-1 bottom-0 bg-black/40 w-[100vw] h-[100dvh]`} />

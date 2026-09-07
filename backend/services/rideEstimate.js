@@ -50,20 +50,9 @@ const MARKET_RATE = { pickup: 60, perKm: 4.7, perMin: 5.3, minimum: 130 }
 // their rate card. Note the +₹100 is worth watching on short city fares, where it
 // lands as +30% rather than the ~+8% it means on a campus run.
 //
-// The premium SUV's ×2.75 is the provider's now, not ours: fitted to the four
-// Innova Crysta quotes they gave in August 2026 — IGI 4000 against a 1400
-// hatchback, Connaught Place 3000 against 1200, Botanical 2200 against 800, Advant
-// 2000 against 700. Least squares through the origin lands on 2.73 and the mean of
-// the four ratios on 2.74; 2.75 rounds to the same card on the ₹50 grid and is
-// exact on Botanical. It replaces the ×3.2 placeholder, which quoted every premium
-// fare about 16% over what they actually charge.
-//
-// !! Connaught Place is the one quote that argues — alone it implies 2.50, against
-// 2.75-2.86 everywhere else — so this multiplier quotes it at 3300 against their
-// 3000. Their number is in zones.geojson as a quoted `suv_premium`, but no stored
-// per-class zone fare is read yet (see the rate-card audit in ROADMAP.txt); until
-// one is, this constant is the only thing pricing a premium seat.
-const CLASS_FROM_HATCHBACK = {
+// The premium SUV uses the same rule as every other class: it is calculated
+// from the hatchback source fare, never overridden per zone.
+export const CLASS_FROM_HATCHBACK = {
   hatchback:   (fare) => fare,
   sedan:       (fare) => fare + 100,
   suv:         (fare) => fare * 1.6,
@@ -74,6 +63,12 @@ const CLASS_FROM_HATCHBACK = {
 // in 50s, city fares in 10s (see the rounding note in marketFare).
 const gridOf = (source) => (source === 'per_km' ? 10 : 50)
 const roundTo = (value, step) => Math.round(value / step) * step
+
+export function classFareFromHatchback(hatchbackFare, vehicleClass, source) {
+  const modify = CLASS_FROM_HATCHBACK[vehicleClass]
+  if (!Number.isFinite(hatchbackFare) || !modify) return null
+  return roundTo(modify(hatchbackFare), gridOf(source))
+}
 
 // Both apps charge to be picked up at IGI, and by almost the same amount —
 // holding the airport rides out of each fit and then predicting them gave Uber
@@ -88,7 +83,7 @@ const roundTo = (value, step) => Math.round(value / step) * step
 export const AIRPORT_PICKUP_SURCHARGE = 200
 
 // The hatchback price for a trip that never touches campus.
-function marketFare(distanceKm, durationMin) {
+export function marketFare(distanceKm, durationMin) {
   const r = MARKET_RATE
   // Duration is best-effort from Routes. Without it the time component is
   // dropped rather than estimated — quoting a little low beats inventing traffic
@@ -126,7 +121,7 @@ const rawCurve = (km) => {
 }
 
 // The hatchback price for a campus trip that matched no zone.
-function formulaFare(distanceKm) {
+export function formulaFare(distanceKm) {
   // A band's +50 is a step, so leaving a band used to make the fare FALL: 25.0 km
   // quoted 700 and 25.1 km quoted 650, a longer trip for less money. Clamping the
   // curve to its own running maximum fixes that without touching any price at or
@@ -165,7 +160,23 @@ const CARRIER_WAIVED_AT = 2000
 // !! NEEDS PROVIDER CONFIRMATION — this number is ours, not theirs. The rate card
 // quotes solo fares only, so it was backed out of the placeholder the UI used to
 // hardcode (400 solo / 300 sharing). One constant reprices every sharing fare.
-const SHARING_DISCOUNT_PCT = 25
+export const SHARING_DISCOUNT_PCT = 25
+
+export function priceFareCard({ base, source, toll = 0, airport = 0, surcharge = 0, needsCarrier = false }) {
+  // The carrier waiver is tested on the undiscounted ride plus toll. Sharing
+  // and optional add-ons must not decide whether the carrier becomes free.
+  const carrier = needsCarrier && base + toll < CARRIER_WAIVED_AT ? CARRIER_CHARGE : 0
+  const extras = surcharge + toll + airport + carrier
+  return {
+    solo: base + extras,
+    sharing: Math.round((base * (100 - SHARING_DISCOUNT_PCT)) / 100 / 10) * 10 + extras,
+    source,
+    toll,
+    airport,
+    carrier,
+    carrierWaived: Boolean(needsCarrier) && carrier === 0,
+  }
+}
 
 const GOOGLE_ROUTES_MONTHLY_LIMIT = 10_000
 
@@ -638,36 +649,16 @@ export async function getRideEstimate({ pickupAddress, dropAddress, vehicleClass
   // rather than of the seat — the toll is one barrier however many riders are
   // behind it, the carrier goes on the roof once, the safer route is a longer
   // road — so all three are added AFTER the discount instead of being split.
-  const priced = ({ base, source, toll, airport }) => {
-    // Tested on ride + toll only. The waiver is the provider's concession on
-    // their own big-ticket runs, and those are never the trips that carry an
-    // airport pickup fee — folding it in would just blur what "reaches 2000" means.
-    const carrier = needsCarrier && base + toll < CARRIER_WAIVED_AT ? CARRIER_CHARGE : 0
-    const extras = surcharge + toll + airport + carrier
-    return {
-      solo: base + extras,
-      sharing: Math.round((base * (100 - SHARING_DISCOUNT_PCT)) / 100 / 10) * 10 + extras,
-      source,
-      // Itemised so the ride-details breakdown can show what the total is made
-      // of instead of re-deriving it from a copy of the rate card.
-      toll,
-      airport,
-      carrier,
-      carrierWaived: Boolean(needsCarrier) && carrier === 0,
-    }
-  }
-
   // Every class, keyed by class name — one card each on the booking screen. They
   // now stand or fall together: either a source priced the hatchback and all four
   // cards are quoted off it, or nothing could be priced at all.
   if (!hatchback) throw new Error('No route found between the given addresses')
 
   const fares = {}
-  const grid = gridOf(hatchback.source)
   for (const cls of VEHICLE_CLASS_NAMES) {
-    const modify = CLASS_FROM_HATCHBACK[cls]
-    if (!modify) continue
-    fares[cls] = priced({ ...hatchback, base: roundTo(modify(hatchback.base), grid) })
+    const base = classFareFromHatchback(hatchback.base, cls, hatchback.source)
+    if (base == null) continue
+    fares[cls] = priceFareCard({ ...hatchback, base, surcharge, needsCarrier })
   }
 
   // `fares` prices every card; the flat fare/fareSource fields answer for the one

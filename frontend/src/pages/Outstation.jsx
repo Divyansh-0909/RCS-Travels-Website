@@ -1,3 +1,5 @@
+import { useTranslation as useCopyLanguage } from "react-i18next";
+import { websiteCopy as dc } from "../i18nCopy";
 import Icon from "@mdi/react";
 import { mdiPhone, mdiWhatsapp, mdiClose, mdiArrowRight } from "@mdi/js";
 import { useEffect, useRef, useState } from "react";
@@ -32,19 +34,19 @@ const summary = [
 const sections = [
     {
         heading: "The return is already in it",
-        body: "The package covers the whole trip, however many days you're there and back. There's no separate return to book and no round-trip discount to work out.",
+        get "body"() { return dc("The package covers the whole trip, however many days you're there and back. There's no separate return to book and no round-trip discount to work out."); },
     },
     {
         heading: "Plains and hills are priced apart",
-        body: "The same distance costs more when it climbs. Hill routes are slower and harder on the vehicle, so they carry their own rate. We'll tell you which one your route falls under.",
+        get "body"() { return dc("The same distance costs more when it climbs. Hill routes are slower and harder on the vehicle, so they carry their own rate. We'll tell you which one your route falls under."); },
     },
     {
         heading: "The vehicle matters more than it does in the city",
-        body: "Hatchback, sedan and SUV are all available. On a long trip the extra room is for luggage and for the hours, not just for the seats.",
+        get "body"() { return dc("Hatchback, sedan and SUV are all available. On a long trip the extra room is for luggage and for the hours, not just for the seats."); },
     },
     {
         heading: "Booked ahead, not on the spot",
-        body: "A driver is committed hours before you leave, not minutes. Give us a day's notice where you can, and more around festivals and long weekends.",
+        get "body"() { return dc("A driver is committed hours before you leave, not minutes. Give us a day's notice where you can, and more around festivals and long weekends."); },
     },
 ];
 
@@ -60,9 +62,9 @@ const confirmed = [
 // the panel the header's Book a trip button opens. `bookLabel` is the panel's
 // wording — by then you've asked to book, so the row names who picks up.
 const contacts = [
-    { label: "Call us", bookLabel: "Call Raju", icon: mdiPhone, onClick: callSupport },
+    { get "label"() { return dc("Call us"); }, bookLabel: "Call Raju", icon: mdiPhone, onClick: callSupport },
     {
-        label: "WhatsApp us",
+        get "label"() { return dc("WhatsApp us"); },
         bookLabel: "WhatsApp Raju",
         icon: mdiWhatsapp,
         onClick: () => openSupportWhatsApp("Hi, I'd like to book an outstation trip."),
@@ -88,6 +90,7 @@ const ContactButton = ({ label, icon, onClick, surface }) => (
 // re-anchors position:fixed to itself, so an overlay inside it would scroll
 // with the page instead of covering the viewport.
 const BookPanel = ({ open, onClose }) => {
+    useCopyLanguage();
     // 300ms = the length of animate-datetime-out, the slower of the two exits.
     const { mounted, closing } = useExitAnim(open, 300);
     const panelRef = useRef(null);
@@ -128,25 +131,22 @@ const BookPanel = ({ open, onClose }) => {
                     className={`pointer-events-auto w-full max-w-md outline-none rounded-3xl border border-[var(--foreground)]/15 bg-[var(--background-primary)] text-[var(--text)] p-6 sm:p-8 flex flex-col gap-5 shadow-[0_24px_60px_rgba(0,0,0,0.45)] ${closing ? "animate-datetime-out" : "animate-datetime"} motion-reduce:animate-none`}
                 >
                     <div className="flex items-start justify-between gap-4">
-                        <h2 id="book-panel-title" className="text-2xl font-semibold">Book an outstation trip</h2>
+                        <h2 id="book-panel-title" className="text-2xl font-semibold">{dc("Book an outstation trip")}</h2>
                         <button
                             type="button"
                             onClick={onClose}
-                            aria-label="Close"
+                            aria-label={dc("Close")}
                             className="shrink-0 cursor-pointer rounded-full p-1 opacity-60 transition-opacity duration-300 hover:opacity-100 active:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]"
                         >
                             <Icon path={mdiClose} size={1} aria-hidden="true" />
                         </button>
                     </div>
-                    <p className="text-base sm:text-lg leading-[1.6] text-[var(--text-muted)]">
-                        Send us the destination, your dates and how many of you are travelling. You'll
-                        get the full cost back before anything is confirmed.
-                    </p>
+                    <p className="text-base sm:text-lg leading-[1.6] text-[var(--text-muted)]">{dc("Send us the destination, your dates and how many of you are travelling. You'll get the full cost back before anything is confirmed.")}</p>
                     <ul className="flex flex-col gap-3">
                         {contacts.map(({ bookLabel, icon, onClick }) => (
                             <li key={bookLabel}>
                                 <ContactButton
-                                    label={bookLabel}
+                                    label={dc(bookLabel)}
                                     icon={icon}
                                     onClick={onClick}
                                     surface="bg-[var(--foreground)]/8 hover:bg-[var(--foreground)]/14"
@@ -162,6 +162,7 @@ const BookPanel = ({ open, onClose }) => {
 };
 
 const Outstation = () => {
+    useCopyLanguage();
     const navigate = useViewNavigate();
     const [booking, setBooking] = useState(false);
     // Focus goes back to the button that opened the panel, so closing doesn't
@@ -194,22 +195,18 @@ const Outstation = () => {
                     <div className="flex flex-col items-center gap-15 pt-44 sm:gap-20 sm:pt-48">
 
                         <header className={`${RAIL} text-left flex flex-col items-start justify-center gap-6 sm:gap-8`}>
-                            <h1 className="font-bold text-4xl sm:text-6xl max-w-[16ch]">Going further than a city ride?</h1>
+                            <h1 className="font-bold text-4xl sm:text-6xl max-w-[16ch]">{dc("Going further than a city ride?")}</h1>
                             {/* The pills read as a caption on the heading, so they sit
                                 closer to the subhead than the header's own gap allows. */}
                             <div className="flex flex-col items-start gap-4">
                                 <ul className="flex flex-wrap gap-2">
                                     {summary.map((item) => (
                                         <li key={item} className="rounded-full bg-[var(--foreground-muted)] px-4 py-2 text-sm sm:text-base text-[var(--background-primary)]/70">
-                                            {item}
+                                            {dc(item)}
                                         </li>
                                     ))}
                                 </ul>
-                                <h2 className="text-lg sm:text-2xl leading-[1.6] text-[var(--background-primary)]/60 max-w-[52ch]">
-                                    Outstation trips leave the city and come back with you. They're priced by the
-                                    day rather than by the route, so they're arranged with us directly instead of
-                                    through the booking form.
-                                </h2>
+                                <h2 className="text-lg sm:text-2xl leading-[1.6] text-[var(--background-primary)]/60 max-w-[52ch]">{dc("Outstation trips leave the city and come back with you. They're priced by the day rather than by the route, so they're arranged with us directly instead of through the booking form.")}</h2>
                             </div>
                             {/* The page's one action, so it carries its own weight: the
                                 ask on top, what happens when you press it underneath,
@@ -222,10 +219,8 @@ const Outstation = () => {
                                 className="group w-full sm:w-auto cursor-pointer rounded-2xl bg-primary text-[var(--text)] px-6 py-5 sm:px-8 flex items-center justify-between gap-8 text-left transition-opacity duration-300 hover:opacity-90 active:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--background-primary)]"
                             >
                                 <span className="min-w-0">
-                                    <span className="block text-lg sm:text-xl font-semibold">Book an outstation trip</span>
-                                    <span className="block text-sm sm:text-base text-[var(--text)]/85">
-                                        Call or WhatsApp Raju. You'll have the price before you confirm.
-                                    </span>
+                                    <span className="block text-lg sm:text-xl font-semibold">{dc("Book an outstation trip")}</span>
+                                    <span className="block text-sm sm:text-base text-[var(--text)]/85">{dc("Call or WhatsApp Raju. You'll have the price before you confirm.")}</span>
                                 </span>
                                 <Icon
                                     path={mdiArrowRight}
@@ -241,32 +236,23 @@ const Outstation = () => {
                     white column so it can't be skimmed past. */}
                         <section className="w-full flex items-center justify-center bg-[var(--background-primary)] text-[var(--text)] py-12 sm:py-16">
                             <div className={`${RAIL} text-left flex flex-col items-start justify-center gap-8 sm:gap-12`}>
-                                <h2 className={`${SECTION_TITLE} max-w-[20ch]`}>A day is the unit, not the kilometre</h2>
+                                <h2 className={`${SECTION_TITLE} max-w-[20ch]`}>{dc("A day is the unit, not the kilometre")}</h2>
                                 <div className="flex flex-col sm:flex-row gap-8 sm:gap-16">
-                                    <p className={`flex-1 ${BODY} text-[var(--text-muted)]`}>
-                                        City rides are priced route by route, you tell us where you're going and
-                                        the fare is fixed before you book. An outstation trip is priced by the day
-                                        instead: the vehicle and the driver are yours for it, and each day covers a
-                                        set distance.
-                                    </p>
-                                    <p className={`flex-1 ${BODY} text-[var(--text-muted)]`}>
-                                        Go past the 250KM per day limit and the extra is charged on top, at a rate you'll
-                                        know before you leave. It's the difference between hiring a cab and hiring
-                                        a car with someone to drive it.
-                                    </p>
+                                    <p className={`flex-1 ${BODY} text-[var(--text-muted)]`}>{dc("City rides are priced route by route, you tell us where you're going and the fare is fixed before you book. An outstation trip is priced by the day instead: the vehicle and the driver are yours for it, and each day covers a set distance.")}</p>
+                                    <p className={`flex-1 ${BODY} text-[var(--text-muted)]`}>{dc("Go past the 250KM per day limit and the extra is charged on top, at a rate you'll know before you leave. It's the difference between hiring a cab and hiring a car with someone to drive it.")}</p>
                                 </div>
                             </div>
                         </section>
 
                         <section className={`${RAIL} text-left flex flex-col items-start justify-center gap-8 sm:gap-12`}>
-                            <h2 className={`${SECTION_TITLE} max-w-[18ch]`}>What to know before you book one</h2>
+                            <h2 className={`${SECTION_TITLE} max-w-[18ch]`}>{dc("What to know before you book one")}</h2>
                             <ul className="w-full flex flex-wrap items-start justify-left gap-10">
                                 {sections.map(({ heading, body }) => (
                                     <li
                                         key={heading}
                                         className="w-full lg:w-[calc(50%-1.25rem)] bg-[var(--foreground-muted)] rounded-xl p-6 sm:p-8 flex flex-col items-start justify-start gap-3"
                                     >
-                                        <h3 className={PANEL_TITLE}>{heading}</h3>
+                                         <h3 className={PANEL_TITLE}>{dc(heading)}</h3>
                                         <p className={`${BODY} text-[var(--background-primary)]/65`}>{body}</p>
                                     </li>
                                 ))}
@@ -277,13 +263,13 @@ const Outstation = () => {
                     rows as WhyUs — it is one checklist, and cards would suggest
                     five separate things to chase rather than one conversation. */}
                         <section className={`${RAIL} text-left flex flex-col items-start justify-center gap-8 sm:gap-12`}>
-                            <h2 className={`${SECTION_TITLE} max-w-[20ch]`}>What we'll settle with you</h2>
+                            <h2 className={`${SECTION_TITLE} max-w-[20ch]`}>{dc("What we'll settle with you")}</h2>
                             <ul className="w-full flex flex-col items-start justify-center gap-10">
                                 {confirmed.map((item, index) => (
                                     <li key={item} className="w-full border-b-2 pb-10 flex flex-col items-start justify-center gap-0 border-dashed">
                                         <div className="flex h-full text-2xl sm:text-3xl gap-2 justify-start items-start font-normal">
                                             <h2 className="text-2xl h-full sm:text-3xl font-normal">0{index + 1}.</h2>
-                                            <h2 className="text-2xl h-full sm:text-3xl font-normal">{item}</h2>
+                                             <h2 className="text-2xl h-full sm:text-3xl font-normal">{dc(item)}</h2>
                                         </div>
                                     </li>
                                 ))}
@@ -295,25 +281,16 @@ const Outstation = () => {
                     make it on the other. */}
                         <section className="w-full flex items-center justify-center bg-primary-dark text-[var(--text)] py-12 sm:py-16">
                             <div className={`${RAIL} text-left flex flex-col items-start justify-center gap-8 sm:gap-12`}>
-                                <h2 className={`${SECTION_TITLE} max-w-[20ch]`}>Tell us where you're headed</h2>
+                                <h2 className={`${SECTION_TITLE} max-w-[20ch]`}>{dc("Tell us where you're headed")}</h2>
                                 <div className="w-full flex flex-col sm:flex-row gap-8 sm:gap-16">
                                     <div className="flex-1 flex flex-col gap-4">
-                                        <p className={`${BODY} text-[var(--text)]/80`}>
-                                            Outstation trips are booked with us, not through the app. Send us the
-                                            destination, your dates and how many of you are travelling, and you'll get
-                                            the full cost back before anything is confirmed.
-                                        </p>
-                                        <p className="text-sm sm:text-base text-[var(--text)]/70">
-                                            Travelling inside the city instead?{" "}
+                                        <p className={`${BODY} text-[var(--text)]/80`}>{dc("Outstation trips are booked with us, not through the app. Send us the destination, your dates and how many of you are travelling, and you'll get the full cost back before anything is confirmed.")}</p>
+                                        <p className="text-sm sm:text-base text-[var(--text)]/70">{dc("Travelling inside the city instead?")}{" "}
                                             <button
                                                 type="button"
                                                 onClick={() => navigate("/")}
                                                 className="cursor-pointer rounded underline underline-offset-2 text-[var(--text)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]"
-                                            >
-                                                Book that here
-                                            </button>
-                                            , with the fare fixed before you confirm.
-                                        </p>
+                                            >{dc("Book that here")}</button>{dc(", with the fare fixed before you confirm.")}</p>
                                     </div>
                                     <ul className="flex-1 flex flex-col gap-3">
                                         {contacts.map(({ label, icon, onClick }) => (

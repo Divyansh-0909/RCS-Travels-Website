@@ -3,6 +3,7 @@
 import * as React from "react"
 import Icon from '@mdi/react';
 import { mdiClose } from '@mdi/js';
+import { useTranslation } from "react-i18next";
 
 // ─── Utility ─────────────────────────────────────────────────────────────────
 
@@ -10,22 +11,22 @@ function cn(...classes) {
   return classes.filter(Boolean).join(" ")
 }
 
-function formatDate(date) {
+function formatDate(date, locale) {
   if (!date) return null
-  return date.toLocaleDateString("en-GB", {
+  return date.toLocaleDateString(locale, {
     year: "numeric",
     month: "short",
     day: "numeric",
   })
 }
 
-function formatTime(time) {
+function formatTime(time, locale) {
   if (!time) return ""
   const [h, m] = time.split(":")
   const hour = parseInt(h, 10)
-  const ampm = hour >= 12 ? "PM" : "AM"
-  const h12 = hour % 12 || 12
-  return `${h12}:${m} ${ampm}`
+  return new Date(2000, 0, 1, hour, Number(m)).toLocaleTimeString(locale, {
+    hour: "numeric", minute: "2-digit", hour12: true,
+  })
 }
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
@@ -54,7 +55,7 @@ const MONTHS = [
   "July", "August", "September", "October", "November", "December",
 ]
 
-function Calendar({ selected, onSelect }) {
+function Calendar({ selected, onSelect, locale }) {
   const today = new Date()
   const [view, setView] = React.useState(() => {
     const d = selected ?? today
@@ -114,7 +115,7 @@ function Calendar({ selected, onSelect }) {
           <ChevronLeftIcon className="size-4" />
         </button>
         <span className="text-sm font-medium text-white tabular-nums">
-          {MONTHS[month]} '{String(year).slice(-2)}
+          {new Intl.DateTimeFormat(locale, { month: "long", year: "2-digit" }).format(new Date(year, month, 1))}
         </span>
         <button
           type="button"
@@ -127,9 +128,9 @@ function Calendar({ selected, onSelect }) {
 
       {/* Weekday headers */}
       <div className="grid grid-cols-7 gap-x-1 mb-1">
-        {DAYS.map((d) => (
+        {DAYS.map((d, index) => (
           <div key={d} className="flex items-center justify-center h-9 text-xs text-white/40 font-medium">
-            {d}
+            {new Intl.DateTimeFormat(locale, { weekday: "short" }).format(new Date(2024, 0, 7 + index)).slice(0, 2)}
           </div>
         ))}
       </div>
@@ -169,10 +170,21 @@ function Calendar({ selected, onSelect }) {
 }
 
 // ─── DateTimeSelector ─────────────────────────────────────────────────────────
-// Content only — no trigger button or outer shell; drop inside the dropdown Button.
-// onChange(Date) fires when date or time changes (both set); onConfirm(Date) on Confirm.
+// Content only: it can live in the compact legacy dropdown or in a full booking
+// step. onChange(Date) fires once date and time are both set; the surrounding
+// page may own the primary action by hiding this component's Confirm button.
 
-export function DateTimeSelector({ onClick, onChange, onConfirm, initial }) {
+export function DateTimeSelector({
+  onClick,
+  onChange,
+  onConfirm,
+  initial,
+  page = false,
+  showClose = true,
+  showConfirm = true,
+}) {
+  const { t, i18n } = useTranslation("website")
+  const locale = i18n.language === "hi" ? "hi-IN" : "en-IN"
   const today = new Date()
   const [date, setDate] = React.useState(initial ?? undefined)
   const [time, setTime] = React.useState(
@@ -230,13 +242,20 @@ export function DateTimeSelector({ onClick, onChange, onConfirm, initial }) {
   })()
 
   return (
-    <div className="flex flex-col gap-3 pt-6 pb-3 w-full p-2">
-      <div onClick={onClick} className="absolute right-3 top-3"><Icon path={mdiClose} size={0.9} /></div>
+    <div className={cn(
+      "flex w-full flex-col",
+      page ? "gap-4 pb-1" : "gap-3 p-2 pt-6 pb-3",
+    )}>
+      {showClose && (
+        <button type="button" aria-label={t("dateTime.close")} onClick={onClick} className="absolute right-3 top-3">
+          <Icon path={mdiClose} size={0.9} />
+        </button>
+      )}
 
       {/* ── Time ── */}
       <div className="flex flex-col justify-center items-center gap-1.5">
         <label className="text-sm font-semibold text-white/40 uppercase tracking-wider">
-          Time
+          {t("dateTime.time")}
         </label>
         <div className="flex gap-2 justify-center items-center">
           <input
@@ -267,9 +286,9 @@ export function DateTimeSelector({ onClick, onChange, onConfirm, initial }) {
       {/* ── Date / Calendar ── */}
       <div className="flex flex-col gap-2">
         <label className="text-sm font-semibold text-white/40 uppercase tracking-wider">
-          Date
+          {t("dateTime.date")}
         </label>
-        <Calendar selected={date} onSelect={handleDateSelect} />
+        <Calendar selected={date} onSelect={handleDateSelect} locale={locale} />
       </div>
 
       {/* ── Divider ── */}
@@ -280,23 +299,25 @@ export function DateTimeSelector({ onClick, onChange, onConfirm, initial }) {
         <p className="text-sm text-white/60 text-center tabular-nums">
           {combined
             ? isTooSoon
-              ? "Min. 30 mins from now"
-              : `${formatDate(date)} · ${formatTime(time)}`
-            : "Select a date to confirm"}
+              ? t("dateTime.minimumLead")
+              : `${formatDate(date, locale)} · ${formatTime(time, locale)}`
+            : t("dateTime.selectDate")}
         </p>
-        <button
-          type="button"
-          onClick={(e) => { e.stopPropagation(); handleConfirm() }}
-          disabled={!combined || isTooSoon}
-          className={cn(
-            "w-full h-9 rounded-xl text-sm font-semibold transition-all active:scale-[0.98]",
-            combined && !isTooSoon
-              ? "bg-white text-black hover:bg-white/90 cursor-pointer"
-              : "bg-white/10 text-white/30 cursor-not-allowed"
-          )}
-        >
-          Confirm
-        </button>
+        {showConfirm && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); handleConfirm() }}
+            disabled={!combined || isTooSoon}
+            className={cn(
+              "w-full h-9 rounded-xl text-sm font-semibold transition-colors active:scale-[0.98]",
+              combined && !isTooSoon
+                ? "bg-white text-black hover:bg-white/90 cursor-pointer"
+                : "bg-white/10 text-white/30 cursor-not-allowed"
+            )}
+          >
+            {t("dateTime.confirm")}
+          </button>
+        )}
       </div>
     </div>
   )

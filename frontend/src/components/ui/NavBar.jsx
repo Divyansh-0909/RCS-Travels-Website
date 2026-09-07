@@ -1,5 +1,7 @@
+import { useTranslation as useCopyLanguage } from "react-i18next";
+import { websiteCopy as dc } from "../../i18nCopy";
 import Icon from '@mdi/react';
-import { mdiMenu, mdiClose, mdiAccountCircle, mdiChevronDown, mdiCog, mdiInformation, mdiShieldCheck, mdiArrowRight, mdiMapMarkerOutline } from '@mdi/js';
+import { mdiMenu, mdiClose, mdiAccountCircle, mdiChevronDown, mdiCog, mdiInformation, mdiShieldCheck, mdiMapMarkerOutline, mdiClockTimeFourOutline } from '@mdi/js';
 import { useViewNavigate } from "../../hooks/useViewNavigate";
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -16,7 +18,8 @@ import { angledVehicleImageOf } from "../../constants/vehicleImages"
 import { labelOf } from "../../constants/vehicles"
 import Skeleton from './Skeleton';
 import ErrorPanel from './ErrorPanel';
-import { SuggestionDropdown, useAddressSuggestions } from '../../pages/OnBoarding';
+import BorderGlow from './BorderGlow';
+import { useTranslation } from 'react-i18next';
 
 
 // The initial-in-a-circle, at whatever size the surface needs.
@@ -29,6 +32,8 @@ const Avatar = ({ invert, initial, box, text }) => (
 )
 
 const NavBar = ({ invert = false, hideExpanded = false, hideDestinationInput = false, className = "" }) => {
+    useCopyLanguage();
+    const { t } = useTranslation("website");
     const { user: clerkUser } = useUser();
     const navigate = useViewNavigate();
     const { signIn } = useSignIn();
@@ -36,35 +41,27 @@ const NavBar = ({ invert = false, hideExpanded = false, hideDestinationInput = f
     const isMobile = useIsMobile();
     const { pathname } = useLocation();
     const scheduledTime = useData(state => state.scheduledTime);
+    const setTiming = useData(state => state.setTiming);
+    const setScheduledTime = useData(state => state.setScheduledTime);
     const bookingId = useData(state => state.bookingId);
     const bookingCode = useData(state => state.bookingCode);
     const status = useData(state => state.status);
     const sharing = useData(state => state.sharing);
     const vehicleClass = useData(state => state.vehicleClass);
     const fare = useData(state => state.fare);
-    const dropLocation = useData(state => state.dropLocation);
     const setDrop = useData(state => state.setDrop);
     const setDropCoords = useData(state => state.setDropCoords);
     const pickupLocation = useData(state => state.pickupLocation);
+    const setPickup = useData(state => state.setPickup);
+    const setPickupCoords = useData(state => state.setPickupCoords);
     const [expand, setExpand] = useState(false)
     const api = useApi();
     const [user, setUser] = useState(null)
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState(null)
     const drawerRef = useRef(null)
-    const destinationRef = useRef(null)
     const [collapsed, setCollapsed] = useState(false)
     const destinationOnly = collapsed && !hideDestinationInput
-    const destinationCloserRef = useRef(null)
-    const destinationAutocomplete = useAddressSuggestions(
-        dropLocation,
-        setDrop,
-        setDropCoords,
-        api,
-        destinationCloserRef,
-        () => setExpand(false),
-        false,
-    )
 
     // The home rail begins as a clear destination-first control. Once the
     // reader has moved into the page it becomes compact, while retaining the
@@ -90,7 +87,7 @@ const NavBar = ({ invert = false, hideExpanded = false, hideDestinationInput = f
                 }
                 catch (err) {
                     console.error(err);
-                    setError("Something went wrong")
+                    setError(dc("Something went wrong"))
                 }
                 finally {
                     setLoading(false)
@@ -135,7 +132,7 @@ const NavBar = ({ invert = false, hideExpanded = false, hideDestinationInput = f
             navigate('/')
         } catch (err) {
             console.error(err)
-            setError("Couldn't sign you out. Please try again.")
+            setError(dc("Couldn't sign you out. Please try again."))
         }
     }
 
@@ -157,14 +154,26 @@ const NavBar = ({ invert = false, hideExpanded = false, hideDestinationInput = f
 
     const goHome = () => goToTopOf('/')
 
-    const openBooking = () => {
-        if (!dropLocation?.trim()) {
-            destinationRef.current?.focus()
-            destinationAutocomplete.onFocus()
-            return
-        }
-        navigate('/book', { state: { stage: 'route' } })
+    const startBooking = (nextTiming) => {
+        // The landing rail is a route-entry button now. Start the next screen
+        // with a genuinely fresh route so its pickup can resolve from the
+        // rider's current position and its drop-off remains theirs to enter.
+        setPickup("")
+        setPickupCoords(null)
+        setDrop("")
+        setDropCoords(null)
+        setTiming(nextTiming)
+        setScheduledTime(null)
+        navigate('/book', {
+            state: {
+                stage: 'route',
+                highlightRideNow: nextTiming === "Now",
+            },
+        })
     }
+
+    const openBooking = () => startBooking("Schedule")
+    const openRideNow = () => startBooking("Now")
 
     // Close first, act on the next task — the scroll lock has to be released
     // before goToSection's smooth scroll can move the page.
@@ -174,25 +183,32 @@ const NavBar = ({ invert = false, hideExpanded = false, hideDestinationInput = f
     }
 
     const primaryNavLinks = [
-        ["About", () => goToSection('about')],
-        ["Outstation", () => goToTopOf('/outstation')],
-        ["Help", () => navigate('/help')],
+        [t("nav.about"), () => goToSection('about')],
+        [t("nav.outstation"), () => goToTopOf('/outstation')],
+        [t("nav.help"), () => navigate('/help')],
     ]
     const accountNavLinks = [
-        ...(isSignedIn ? [["Ride History", () => navigate('/manage-account', { state: { tab: "Ride History" } })]] : []),
-        ...(clerkUser?.publicMetadata?.role === "admin" ? [["Dashboard", () => navigate('/dashboard')]] : []),
+        ...(isSignedIn ? [[t("nav.rideHistory"), () => navigate('/manage-account', { state: { tab: "Ride History" } })]] : []),
+        ...(clerkUser?.publicMetadata?.role === "admin" ? [[t("nav.dashboard"), () => navigate('/dashboard')]] : []),
     ]
     // The drawer keeps every destination in one list; desktop separates
     // account destinations so they sit beside the profile control.
     const navLinks = [...primaryNavLinks, ...accountNavLinks]
 
-    const userDropDownList = [[<Icon path={mdiAccountCircle} size={1.2} />, "Manage Account", "/manage-account"], [<Icon path={mdiCog} size={1.1} />, "Settings", "/settings"], [<Icon path={mdiShieldCheck} size={1.1} />, "Safety", "/safety"], [<Icon path={mdiInformation} size={1.1} />, "Legal", "/"]]
+    const userDropDownList = [[<Icon path={mdiAccountCircle} size={1.2} />, t("nav.manageAccount"), "/manage-account"], [<Icon path={mdiCog} size={1.1} />, t("nav.settings"), "/settings"], [<Icon path={mdiShieldCheck} size={1.1} />, t("nav.safety"), "/safety"], [<Icon path={mdiInformation} size={1.1} />, t("nav.legal"), "/"]]
 
     const displayName = user?.name?.length > 15 ? `${user.name.slice(0, 15)}...` : user?.name
 
     const rowHover = invert
         ? "hover:bg-[var(--foreground)]/8 active:bg-[var(--foreground)]/12"
         : "hover:bg-[var(--foreground-muted)] active:bg-[var(--foreground-muted)]"
+
+    const desktopSecondaryButton = `cursor-pointer rounded-full px-3 py-2 text-base font-medium outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${invert
+        ? "bg-[var(--foreground)]/10 text-[var(--text)] hover:bg-[var(--foreground)]/15 active:bg-[var(--foreground)]/20"
+        : "bg-[var(--background)]/10 text-[var(--text-foreground)] hover:bg-[var(--background)]/20 active:bg-[var(--background)]/15"
+        }`
+
+    const desktopPrimaryButton = "cursor-pointer rounded-full bg-primary px-3 py-2 text-base font-medium text-white outline-none transition-opacity duration-200 hover:opacity-90 active:opacity-80 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
 
     const drawer = (
         <>
@@ -205,7 +221,7 @@ const NavBar = ({ invert = false, hideExpanded = false, hideDestinationInput = f
                 tabIndex={-1}
                 role="dialog"
                 aria-modal="true"
-                aria-label="Menu"
+                aria-label={t("nav.menu")}
                 className={`fixed right-0 top-0 z-100 h-dvh w-[82%] max-w-[320px] flex flex-col overflow-y-auto overscroll-contain outline-none border-l shadow-[-8px_0_24px_rgba(0,0,0,0.35)] ${menuClosing ? "animate-sheet-out" : "animate-sheet"} motion-reduce:animate-none ${invert ? "bg-[var(--background-primary)] text-[var(--text)] border-[var(--foreground)]/15" : "bg-[var(--foreground)] text-[var(--text-foreground)] border-black/10"}`}
             >
                 <div className='flex items-center justify-between gap-2 px-5 pt-6 pb-5'>
@@ -216,7 +232,7 @@ const NavBar = ({ invert = false, hideExpanded = false, hideDestinationInput = f
                                 <Skeleton tone={dropdownTone} className='h-8 w-32' />
                             </div>
                             : <div className='flex min-w-0 items-center gap-3'>
-                                <Avatar invert={invert} initial={user?.name?.charAt(0)} box='w-12 h-12 shrink-0' text='text-2xl' />
+                                <Avatar invert={invert} initial={user?.name?.charAt(0)} box='w-12 h-12 shrink-0' text={"text-2xl"} />
                                 <h3 className='truncate text-xl font-semibold'>{displayName}</h3>
                             </div>
                         : <h3
@@ -274,19 +290,19 @@ const NavBar = ({ invert = false, hideExpanded = false, hideDestinationInput = f
 
                 <div className='mt-auto px-5 pt-6 pb-6'>
                     {isSignedIn
-                        ? <Button onClick={handleSignOut} prop={{ variant: "negative", width: "100%" }}>Sign out</Button>
+                        ? <Button onClick={handleSignOut} prop={{ variant: "negative", width: "100%" }}>{t("nav.signout")}</Button>
                         : <div className='flex flex-col gap-2'>
                             <h4
                                 onClick={() => go(() => navigate('/login'))}
                                 className={`cursor-pointer rounded-xl border py-3 text-center text-base font-medium transition-colors duration-300 ${invert ? "border-[var(--foreground)]/25 hover:bg-[var(--foreground)]/10 active:bg-[var(--foreground)]/15" : "border-black/15 hover:bg-[var(--foreground-muted)] active:bg-[var(--foreground-muted)]"}`}
                             >
-                                Log in
+                                {t("nav.login")}
                             </h4>
                             <h4
                                 onClick={() => go(() => navigate('/signup'))}
                                 className='cursor-pointer rounded-xl bg-[var(--background-primary)] py-3 text-center text-base font-semibold text-[var(--text)] transition-opacity duration-300 hover:opacity-90 active:opacity-80'
                             >
-                                Sign up
+                                {t("nav.signup")}
                             </h4>
                         </div>
                     }
@@ -296,14 +312,16 @@ const NavBar = ({ invert = false, hideExpanded = false, hideDestinationInput = f
     )
 
     return (
-        <div className={`${className} flex justify-center items-center ${destinationOnly ? "mt-2 w-[calc(89vw-2px)] rounded-full shadow-[0_8px_28px_rgba(0,0,0,0.18)] sm:w-[min(620px,calc(78vw-2px))]" : `border ${invert ? "bg-[var(--background-muted)] border-[var(--foreground)]/20" : "bg-[var(--foreground-muted)] border-[var(--background)]/20"} ${hideDestinationInput ? "w-full px-[5.5vw] py-3 sm:px-[11vw] sm:py-4" : "w-full flex-col gap-3 px-[5.5vw] sm:px-[11vw] py-4 pb-5"}`} transition-[width,padding,margin,border-radius,box-shadow,background-color] duration-300 motion-reduce:transition-none`}>
+        <div className={`${className} flex justify-center items-center ${destinationOnly ? "mt-4 w-[calc(89vw-2px)] rounded-full shadow-[0_8px_28px_rgba(0,0,0,0.18)] sm:w-[min(620px,calc(78vw-2px))]" : `border ${invert ? "bg-[var(--background)] border-[var(--foreground)]/20" : "bg-[var(--foreground-muted)] border-[var(--background)]/20"} ${hideDestinationInput ? "w-full px-[5.5vw] py-3 sm:px-5 sm:py-4 lg:px-[11vw]" : "w-full flex-col gap-3 px-[5.5vw] py-4 pb-6 sm:px-5 sm:pb-7 lg:px-[11vw]"}`} transition-[width,padding,margin,border-radius,box-shadow,background-color] duration-300 motion-reduce:transition-none`}>
             <div className={`${destinationOnly ? "hidden" : "flex w-full justify-between px-1 sm:grid sm:grid-cols-[1fr_auto_1fr] sm:gap-6"} items-center ${invert ? "text-[var(--text)]" : "text-[var(--text-foreground)]"} transition-colors duration-300 motion-reduce:transition-none [&>*]:select-none`}>
                 <h3 onClick={goHome} className='shrink-0 cursor-pointer pl-1 opacity-[1] transition-opacity duration-300 hover:opacity-[1] sm:order-2 sm:justify-self-center sm:text-2xl sm:opacity-[0.85]'><span className='font-semibold'>RCS</span> travels</h3>
 
                 <div className='hidden sm:order-1 sm:block sm:justify-self-start'>
-                    <ul className={`flex gap-1 [&>li]:cursor-pointer [&>li]:text-base [&>li]:transition-all [&>li]:duration-300 [&>*]:px-2.5 [&>*]:py-1.5 [&>*]:rounded-full ${invert ? "[&>*]:text-[var(--text)]/80 [&>*]:hover:text-[var(--text)] [&>*]:bg-[var(--background-muted)] [&>*]:hover:bg-[var(--foreground)]/10" : "[&>*]:text-[var(--text-foreground)]/80 [&>*]:hover:text-[var(--text-foreground)] [&>*]:bg-[var(--foreground-muted)] [&>*]:hover:bg-[var(--background-primary)]/10"}`}>
+                    <ul className="flex gap-2">
                         {primaryNavLinks.map(([label, action], i) => (
-                            <li key={i} onClick={action}>{label}</li>
+                            <li key={i}>
+                                <button type="button" onClick={action} className={desktopSecondaryButton}>{label}</button>
+                            </li>
                         ))}
                     </ul>
                 </div>
@@ -311,9 +329,11 @@ const NavBar = ({ invert = false, hideExpanded = false, hideDestinationInput = f
                 <div className='order-3 relative -mr-1.5 hidden items-center justify-center gap-3 sm:flex sm:justify-self-end'>
                     {isSignedIn
                         ? <>
-                            <ul className={`flex gap-1 [&>li]:cursor-pointer [&>li]:text-base [&>li]:transition-all [&>li]:duration-300 [&>*]:px-2.5 [&>*]:py-1.5 [&>*]:rounded-full ${invert ? "[&>*]:text-[var(--text)]/80 [&>*]:hover:text-[var(--text)] [&>*]:bg-[var(--background-muted)] [&>*]:hover:bg-[var(--foreground)]/10" : "[&>*]:text-[var(--text-foreground)]/80 [&>*]:hover:text-[var(--text-foreground)] [&>*]:bg-[var(--foreground-muted)] [&>*]:hover:bg-[var(--background-primary)]/10"}`}>
+                            <ul className="flex gap-2">
                                 {accountNavLinks.map(([label, action], i) => (
-                                    <li key={i} onClick={action}>{label}</li>
+                                    <li key={i}>
+                                        <button type="button" onClick={action} className={desktopSecondaryButton}>{label}</button>
+                                    </li>
                                 ))}
                             </ul>
                             <div onClick={() => setExpand(!expand)} className={`flex ${invert ? "text-[var(--text)] bg-[var(--background-primary)] hover:bg-[var(--foreground)]/10" : "text-[var(--text-foreground)] bg-[var(--foreground)] hover:bg-[var(--background-primary)]/10"} jusityf-center items-center px-1 py-1 rounded-3xl justify-center items-center gap-1 cursor-pointer transition-colors duration-300 motion-reduce:transition-none`}>
@@ -326,12 +346,9 @@ const NavBar = ({ invert = false, hideExpanded = false, hideDestinationInput = f
                             </div>
                         </>
                         :
-                        <div className='flex gap-1 justify-center items-center [&>*]:opacity-[1] [&>*]:hover:opacity-[0.8] [&>*]:cursor-pointer [&>*]:transition-all [&>*]:duration-300'>
-                            {/* Both follow the bar rather than the theme: the
-                                Sign up chip used to be dark unconditionally,
-                                which is invisible once the bar itself is dark. */}
-                            <h4 onClick={() => navigate('/login')} className={`text-base font-medium px-3 py-2 rounded-full ${invert ? "hover:bg-[var(--foreground)]/10" : "hover:bg-[var(--background-primary)]/10"}`}>Log in</h4>
-                            <h4 onClick={() => navigate('/signup')} className={`text-base font-medium px-3 py-2 rounded-full ${invert ? "text-[var(--text-foreground)] bg-[var(--foreground)]" : "text-[var(--text)] bg-[var(--background-primary)]"}`}>Sign up</h4>
+                        <div className='flex items-center justify-center gap-2'>
+                            <button type="button" onClick={() => navigate('/login')} className={desktopSecondaryButton}>{t("nav.login")}</button>
+                            <button type="button" onClick={() => navigate('/signup')} className={desktopPrimaryButton}>{t("nav.signup")}</button>
                         </div>
                     }
                     {menuMounted && !isMobile &&
@@ -356,7 +373,7 @@ const NavBar = ({ invert = false, hideExpanded = false, hideDestinationInput = f
                                 : <>
                                     <div className={`${invert ? "text-[var(--text)]" : "text-[var(--text-foreground)]"} flex items-center w-full justify-between`}>
                                         <h3 className='text-3xl font-semibold'>{displayName}</h3>
-                                        <Avatar invert={invert} initial={user?.name?.charAt(0)} box='w-14 h-14' text='text-3xl' />
+                                        <Avatar invert={invert} initial={user?.name?.charAt(0)} box='w-14 h-14' text={"text-3xl"} />
                                     </div>
                                     <div className='w-full'>
                                         <ul className='flex flex-col items-start justify-center gap-1 w-full'>
@@ -368,7 +385,7 @@ const NavBar = ({ invert = false, hideExpanded = false, hideDestinationInput = f
                                                     </li>
                                                 )
                                             })}
-                                            <Button onClick={handleSignOut} className="mt-5" prop={{ variant: "negative", width: "345px" }}>Sign out</Button>
+                                            <Button onClick={handleSignOut} className="mt-5" prop={{ variant: "negative", width: "345px" }}>{t("nav.signout")}</Button>
                                         </ul>
                                     </div>
                                 </>
@@ -386,44 +403,42 @@ const NavBar = ({ invert = false, hideExpanded = false, hideDestinationInput = f
             </div>
 
             {!hideDestinationInput && <div className='relative order-2 flex w-full min-w-0 items-center justify-center sm:max-w-[620px]'>
-                <form
-                    onSubmit={(event) => {
-                        event.preventDefault()
-                        openBooking()
-                    }}
-                    className={`flex w-full items-center rounded-full border px-4 py-2 ${invert ? "border-[var(--foreground)]/20 bg-[var(--background)] text-[var(--foreground)]" : "border-[var(--background)]/15 bg-[var(--foreground)] text-[var(--background)]"}`}
+                <BorderGlow
+                    animated
+                    glowColor={invert ? "var(--foreground)" : "var(--background)"}
+                    darkGlowColor={invert ? "var(--foreground)" : "var(--background)"}
+                    borderRadius={999}
+                    edgeSensitivity={24}
+                    glowRadius={24}
+                    glowIntensity={0.72}
+                    coneSpread={15}
+                    className="w-full"
                 >
-                    <Icon path={mdiMapMarkerOutline} size={0.95} className="shrink-0 opacity-60" />
-                    <input
-                        ref={destinationRef}
-                        id="nav-drop-location"
-                        type="text"
-                        value={dropLocation}
-                        onChange={(event) => setDrop(event.target.value)}
-                        onFocus={destinationAutocomplete.onFocus}
-                        onBlur={destinationAutocomplete.onBlur}
-                        autoComplete="off"
-                        aria-label="Drop location"
-                        placeholder="Enter drop location"
-                        className='min-w-0 flex-1 bg-transparent px-2 text-base outline-none placeholder:opacity-55 sm:text-lg'
-                    />
-                    <button
-                        type="submit"
-                        onMouseDown={(event) => event.preventDefault()}
-                        aria-label="Continue to trip details"
-                        className='flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-white transition-opacity hover:opacity-90 active:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary'
+                    <div
+                        className={`flex w-full shadow-[-3.5px_7px_0_rgba(0,0,0,0.3)] sm:shadow-[-4.5px_8px_0_rgba(0,0,0,0.3)] hover:sm:shadow-[0_0_0_rgba(0,0,0,0)] transition-all duration-300 items-stretch rounded-full border-2 p-1.5 pl-3 ${invert ? "border-[var(--foreground)]/40 bg-[var(--background-muted)] text-[var(--foreground)]" : "border-[var(--background)]/40 bg-[var(--foreground)] text-[var(--background)]"}`}
                     >
-                        <Icon path={mdiArrowRight} size={0.95} />
-                    </button>
-                </form>
-                <SuggestionDropdown
-                    anim={destinationAutocomplete.dropdown}
-                    items={destinationAutocomplete.items}
-                    onSelect={destinationAutocomplete.select}
-                    error={destinationAutocomplete.lookupError}
-                    typed={destinationAutocomplete.typed}
-                    className="left-0! top-[calc(100%+8px)]! sm:top-[calc(100%+8px)]! sm:w-full! sm:scale-100!"
-                />
+                        <button
+                            type="button"
+                            onClick={openBooking}
+                            aria-label={t("nav.destination")}
+                            className="flex min-w-0 flex-1 cursor-pointer items-center rounded-l-full pr-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                        >
+                            <Icon path={mdiMapMarkerOutline} size={1.1} className="shrink-0 mr-1" />
+                            <span className="min-w-0 flex-1 break-words px-1 text-lg leading-5">{t("nav.destination")}</span>
+                        </button>
+                        <div className="relative flex shrink-0 items-center">
+                            <button
+                                type="button"
+                                onClick={openRideNow}
+                                aria-label={t("nav.now")}
+                                className="mx-0.2 flex h-10 min-w-[78px] cursor-pointer items-center justify-center gap-2 rounded-full bg-[var(--background)] px-3 py-2 text-sm font-semibold text-[var(--text)] outline-none transition-opacity duration-200 hover:opacity-90 active:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary sm:text-base"
+                            >
+                                <Icon path={mdiClockTimeFourOutline} size={0.8} aria-hidden="true" />
+                                {t("nav.now")}
+                            </button>
+                        </div>
+                    </div>
+                </BorderGlow>
             </div>}
 
             <ErrorPanel prop={{ error: expand ? error : null, setError, onOkay: () => navigate('/') }} />

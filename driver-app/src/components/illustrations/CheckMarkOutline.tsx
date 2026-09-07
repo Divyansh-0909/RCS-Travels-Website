@@ -1,3 +1,5 @@
+import { useLanguage as useCopyLanguage } from "../../i18n";
+import { driverCopy as dc } from "../../lib/copy";
 /* CheckMarkOutline — self-contained animated success checkmark.
    Draws the check stroke. No external deps / network.
 
@@ -33,6 +35,7 @@ interface Props {
 }
 
 const CheckMarkOutline = ({ size = 72, color = '#FFFFFF', strokeWidth = 6, delay = 0 }: Props) => {
+    useCopyLanguage();
     const offset = useSharedValue(CHECK_LENGTH);
 
     useEffect(() => {
@@ -48,7 +51,7 @@ const CheckMarkOutline = ({ size = 72, color = '#FFFFFF', strokeWidth = 6, delay
         <Animated.View
             entering={ZoomIn.duration(400).delay(delay)}
             accessibilityRole="image"
-            accessibilityLabel="Success"
+            accessibilityLabel={dc("Success")}
         >
             <Svg width={size} height={size} viewBox="0 0 52 52" fill="none">
                 <AnimatedPath

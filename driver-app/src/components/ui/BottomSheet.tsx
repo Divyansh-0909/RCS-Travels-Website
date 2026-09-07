@@ -35,6 +35,11 @@ const FLING = 0.5;
 // a separate neutral-grey gradient so it stays distinct on the light surface.
 const SHEET_DROP_SHADOW = '0px -10px 32px rgba(18,18,32,0.10)';
 
+// MapLoadingSkeleton occupies layer 20 while AppBarScrim and AppBar occupy 40
+// and 50. The sheet belongs between them: it must cover every map state without
+// ever covering the floating navigation chrome.
+const SHEET_Z = 30;
+
 export const BottomSheet = ({
     children,
     peek = DEFAULT_PEEK,
@@ -113,7 +118,7 @@ export const BottomSheet = ({
                 onHeightChange?.(nextHeight);
             }}
             className="absolute left-0 right-0 bottom-0 rounded-t-3xl"
-            style={[slide]}
+            style={[{ zIndex: SHEET_Z }, slide]}
         >
             {above}
             {/* The grab area. Padded well beyond the bar itself — the bar is the

@@ -5,7 +5,12 @@ module.exports = function (api) {
     api.cache(true);
     return {
         presets: [
-            ['babel-preset-expo', { jsxImportSource: 'nativewind' }],
+            ['babel-preset-expo', {
+                jsxImportSource: 'nativewind',
+                // Zustand's web export uses import.meta, while Metro serves a
+                // classic script. Expo provides the compatible transformation.
+                web: { unstable_transformImportMeta: true },
+            }],
             'nativewind/babel',
         ],
     };

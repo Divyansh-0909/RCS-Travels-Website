@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { TextInput, View, type KeyboardTypeOptions, type TextInputProps } from 'react-native';
+import { useLanguage } from '../../i18n';
+import { devanagariFonts } from '../../theme/fonts';
 
 const BORDER = 'rgba(255,255,255,0.3)';
 const BORDER_FOCUS = 'rgba(255,255,255,0.6)';
@@ -58,6 +60,7 @@ interface Props {
 }
 
 const Input = ({ prop, className = '', leading, trailing }: Props) => {
+    const { language } = useLanguage();
     const [focused, setFocused] = useState(false);
     const hasError = prop.error === true;
     const light = prop.variant === 'light';
@@ -94,7 +97,7 @@ const Input = ({ prop, className = '', leading, trailing }: Props) => {
                 keyboardType={KEYBOARD[type]}
                 maxLength={prop.maxLength}
                 className={`font-sans text-base ${light ? 'text-[var(--background-primary)]' : 'text-[var(--text)]'} w-full px-4 py-3 rounded-xl border ${leading ? 'pl-9' : ''} ${trailing ? 'pr-10' : ''}`}
-                style={{ borderColor, backgroundColor }}
+                style={{ borderColor, backgroundColor, ...(language === 'hi' ? { fontFamily: devanagariFonts.normal } : {}) }}
             />
 
             {leading && (

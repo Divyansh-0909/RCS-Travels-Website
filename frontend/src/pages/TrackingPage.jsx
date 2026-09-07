@@ -1,10 +1,12 @@
+import { useTranslation as useCopyLanguage } from "react-i18next";
+import { websiteCopy as dc } from "../i18nCopy";
 import Button from "../components/ui/Button";
 import GoogleMap, { MAP_LAND_COLOR } from "../components/ui/GoogleMap";
 import { MAP_CLASSES, showRouteView, clearRouteView, setDriverPosition, setRouteProgress, clearDriverMarker } from "../components/ui/mapOverlays";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { useData } from "../hooks/useData";
 import { useApi } from "../hooks/useApi";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation, useParams } from "react-router-dom";
 import ErrorMark from "../components/illustrations/ErrorMark";
 import SuccessCheck from "../components/illustrations/SuccessCheck";
@@ -32,6 +34,18 @@ import { LIVE_STATUSES, minsLabel, formatPlate } from "../lib/trip";
 import { useExitAnim } from "../hooks/useExitAnim";
 import { useStableDriverPhoto } from "../hooks/useStableDriverPhoto";
 import { openRazorpayCheckout } from "../services/razorpayCheckout";
+import { useWebsiteCopy } from "../hooks/useWebsiteCopy";
+import CustomerPaymentPanel from "../components/CustomerPaymentPanel";
+import {
+    PAYMENT_PHASE,
+    paymentIsBusy,
+    paymentIsSatisfied,
+    paymentNeedsRefresh,
+    paymentPhaseForError,
+} from "../lib/paymentUi";
+
+const DRIVER_CANCELLATION_SEEN_PREFIX = "driverCancellationSeen:";
+const DRIVER_CANCELLATION_DISMISS_MS = 10_000;
 
 // ---- Shared layout + type scale -------------------------------------------
 // The desktop content column is 377px — OnBoarding's effective control width
@@ -47,7 +61,29 @@ const STACK = "gap-6 sm:gap-8";
 const GROUP = "gap-2 sm:gap-3";
 const PAIR = "gap-0.5 sm:gap-1";
 
+const SearchingProgressBar = ({ startedAt }) => {
+    useCopyLanguage();
+    const searchDuration = 5 * 60_000;
+    const elapsed = startedAt ? Math.min(Date.now() - new Date(startedAt).getTime(), searchDuration) : 0;
+    const progress = Math.max(0, elapsed / searchDuration);
+    const remaining = Math.max(0, searchDuration - elapsed);
+
+    return (
+        <div className="relative h-[6px] w-full overflow-hidden rounded-full bg-gray-500">
+            <div
+                className="absolute inset-0 origin-left bg-primary animate-searching-bar"
+                style={{
+                    "--search-progress-start": progress,
+                    "--search-progress-duration": `${remaining}ms`,
+                }}
+            />
+        </div>
+    );
+};
+
 const TrackingPage = () => {
+    useCopyLanguage();
+    const tr = useWebsiteCopy();
     const phone = useData(state => state.phone)
     const scheduledTime = useData(state => state.scheduledTime)
     const activeBooking = useData(state => state.activeBooking)
@@ -79,7 +115,6 @@ const TrackingPage = () => {
     const setBookingCode = useData(state => state.setBookingCode);
     const status = useData(state => state.status);
     const setStatus = useData(state => state.setStatus);
-    const cancelledBy = useData(state => state.cancelledBy);
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(false);
     // Only set when the FIRST status fetch fails with nothing already on screen —
@@ -94,11 +129,8 @@ const TrackingPage = () => {
     // Raise the stale notice once per outage, not once per 5s tick — otherwise
     // an offline rider gets a pill whose dismiss timer restarts forever.
     const staleNotifiedRef = useRef(false);
-    const [panelState, setPanelState] = useState("");  // "confirm" | "error"
-    const [step, setStep] = useState("searching"); // "vehicleType" | "searching"
+    const [panelState] = useState("");
     const [detialsVisibility, setDetialsVisibility] = useState(false)
-    const [msgIndex, setMsgIndex] = useState(0);
-    const [illusIndex, setIllusIndex] = useState(0);
     const navigate = useViewNavigate();
     const api = useApi();
     const location = useLocation();
@@ -137,8 +169,21 @@ const TrackingPage = () => {
     // puts a puck on the map. A real /booking/:id carries no query string, so it
     // still starts null even in dev.
     const devParams = import.meta.env.DEV ? new URLSearchParams(window.location.search) : null;
+    const [bookingReference, setBookingReference] = useState(activeBooking?.reference ?? null);
+    const [paymentPhase, setPaymentPhase] = useState(() => {
+        const preview = devParams?.get("payment");
+        return Object.values(PAYMENT_PHASE).includes(preview) ? preview : PAYMENT_PHASE.IDLE;
+    });
+    const devDriverCancellation = devParams?.get("driverCancelled") === "1"
+        ? { id: "dev-driver-cancellation", createdAt: new Date().toISOString() }
+        : null;
+    const [driverCancellation, setDriverCancellation] = useState(devDriverCancellation);
+    const [driverCancellationOpen, setDriverCancellationOpen] = useState(
+        Boolean(devDriverCancellation && ["pending", "confirmed"].includes(devParams?.get("status"))),
+    );
     const [driver, setDriver] = useState(() => {
-        if (!devParams?.get("status") && !devParams?.get("driver")) return null;
+        const devStatus = devParams?.get("status");
+        if (!devParams?.get("driver") && !["assigned", "en_route", "reached", "started", "completed"].includes(devStatus)) return null;
         return {
             name: "Ramesh Kumar",
             phone: "+919876543210",
@@ -151,13 +196,24 @@ const TrackingPage = () => {
     const { stabilizeDriverPhoto, markDriverPhotoFailed } = useStableDriverPhoto();
     const [navigationEtaMinutes, setNavigationEtaMinutes] = useState(null);
     const [navigationPolyline, setNavigationPolyline] = useState(null);
-    const [financials, setFinancials] = useState(null);
+    const [financials, setFinancials] = useState(() => {
+        if (!devParams?.get("scheduled") && !devParams?.get("payment")) return null;
+        const advancePaid = devParams?.get("status") === "payment_pending" ? 0 : 2900;
+        const finalPaid = devParams?.get("payment") === "success" ? 16100 : 0;
+        return {
+            fare: 20000,
+            coupon: 1000,
+            finalFare: 19000,
+            advance: 2900,
+            advancePaid,
+            remaining: 16100,
+            finalPaid,
+            advanceDisposition: "paid",
+            payments: [],
+        };
+    });
     const [bookingScheduledAt, setBookingScheduledAt] = useState(activeBooking?.scheduledAt ?? scheduledTime ?? null);
     const [mapApi, setMapApi] = useState(null);
-
-    useEffect(() => {
-        if (status === "cancelled" && cancelledBy === "driver") setError("Driver canceled the ride");
-    }, [status, cancelledBy]);
 
     // Fetch live status on mount (skeleton until it resolves), then keep
     // polling while the ride is live so the driver marker moves and status
@@ -186,18 +242,32 @@ const TrackingPage = () => {
                     setStatusError(data.error);
                 } else if (!staleNotifiedRef.current) {
                     staleNotifiedRef.current = true;
-                    notifyRefreshFailed("Couldn't refresh your ride. Showing the last update we got.");
+                    notifyRefreshFailed(dc("Couldn't refresh your ride. Showing the last update we got."));
                 }
             } else {
                 staleNotifiedRef.current = false;
                 setStatusError(null);
                 clearRefreshNotice();
                 if (data.status) setStatus(data.status);
+                if (data.bookingCode) setBookingCode(data.bookingCode);
+                if (data.reference) setBookingReference(data.reference);
                 setDriver(stabilizeDriverPhoto(data.driver ?? null));
                 setNavigationEtaMinutes(data.navigationEtaMinutes ?? null);
                 setNavigationPolyline(data.navigationPolyline ?? null);
                 setFinancials(data.financials ?? null);
                 setBookingScheduledAt(data.scheduledAt ?? null);
+                if (data.driverCancellation?.id) {
+                    const seenKey = `${DRIVER_CANCELLATION_SEEN_PREFIX}${bookingId}:${data.driverCancellation.id}`;
+                    let seen = false;
+                    try { seen = sessionStorage.getItem(seenKey) === "1"; } catch { /* storage can be unavailable */ }
+                    setDriverCancellation(data.driverCancellation);
+                    // Only interrupt while the ride is actually back in a
+                    // dispatch lane. An old audit row must not cover a later
+                    // reassignment, completed ride, or history-page deep link.
+                    if (!seen && ["pending", "confirmed"].includes(data.status) && !data.driver) {
+                        setDriverCancellationOpen(true);
+                    }
+                }
                 // Server-computed, so the cancel warning and the actual charge
                 // are always the same number.
                 setCancellationCharge(data.cancellationCharge);
@@ -208,7 +278,12 @@ const TrackingPage = () => {
             arrivedFresh.current = false;
             // schedule the next tick from the response, not an interval, so a
             // slow request can never stack up overlapping polls
-            if (!cancelled && (!data?.status || LIVE_STATUSES.includes(data.status) || ["payment_pending", "confirmed"].includes(data.status))) {
+            if (!cancelled && (
+                !data?.status
+                || LIVE_STATUSES.includes(data.status)
+                || ["payment_pending", "pending", "confirmed"].includes(data.status)
+                || paymentNeedsRefresh(data)
+            )) {
                 timer = setTimeout(() => poll(false), 5000);
             }
         }
@@ -238,6 +313,31 @@ const TrackingPage = () => {
     // screen while the driver fields are still resolving.
     const mapVisible = status !== "completed" && status !== "cancelled"
         && !!pickupPoint && !!dropPoint;
+    // Once a captain has been assigned, keep the customer's code visible for
+    // the whole active ride. It starts the trip and may be needed again to
+    // confirm an alternate drop, so `started` must not make it disappear.
+    const showBookingOtp = LIVE_STATUSES.includes(status);
+
+    const dismissDriverCancellation = useCallback(() => {
+        if (bookingId && driverCancellation?.id) {
+            try {
+                sessionStorage.setItem(
+                    `${DRIVER_CANCELLATION_SEEN_PREFIX}${bookingId}:${driverCancellation.id}`,
+                    "1",
+                );
+            } catch { /* the panel can still be dismissed without storage */ }
+        }
+        setDriverCancellationOpen(false);
+    }, [bookingId, driverCancellation?.id]);
+
+    // This is an interruption, not a decision screen. Leave it long enough to
+    // read, then clear it without putting a countdown or progress treatment in
+    // the UI. Marking it seen also prevents the next status poll reopening it.
+    useEffect(() => {
+        if (!driverCancellationOpen) return;
+        const timer = setTimeout(dismissDriverCancellation, DRIVER_CANCELLATION_DISMISS_MS);
+        return () => clearTimeout(timer);
+    }, [driverCancellationOpen, dismissDriverCancellation]);
 
     // Route overlays live on the shared singleton map, so this owns drawing
     // AND clearing them for this page.
@@ -296,15 +396,15 @@ const TrackingPage = () => {
     // The time is what a waiting rider actually wants, so the ETA takes the
     // headline and the status/place drops to the line beneath it.
     const liveHeadline = status === "en_route"
-        ? { title: <>Arriving in <br />{pickupTime}</>, detail: `Meet at ${pickupLocation?.split(",")[0]}` }
+        ? { title: <>{tr("Arriving in")} <br />{pickupTime}</>, detail: `${tr("Meet at")} ${pickupLocation?.split(",")[0]}` }
         : status === "reached"
-            ? { title: "Arrived", detail: `Waiting at ${pickupLocation?.split(",")[0]}` }
+            ? { title: tr("Arrived"), detail: `${tr("Waiting at")} ${pickupLocation?.split(",")[0]}` }
             : status === "assigned"
-                ? { title: "Assigned", detail: "Heading your way" }
+                ? { title: tr("Assigned"), detail: tr("Heading your way") }
                 // "Reaching in", not "Driver arriving in": on the pickup leg the
                 // headline is about the driver reaching you, here it is about
                 // reaching the destination — which the detail line below names.
-                : { title: <>Reaching in <br />{dropTime}</>, detail: `Driving towards ${dropLocation?.split(",")[0]}` };
+                : { title: <>{tr("Reaching in")} <br />{dropTime}</>, detail: `${tr("Driving towards")} ${dropLocation?.split(",")[0]}` };
 
     // Mobile: floats over the map just above the sheet, mirroring the Share pill
     // on the opposite edge — same -top-12, same muted fill and shadow, and a
@@ -333,13 +433,13 @@ const TrackingPage = () => {
     // a fare with.
     const extraFareNotice = (
         <NoticePill>
-            Driver asking extra?{" "}
+            {tr("Driver asking extra?")}{" "}
             <button
                 type="button"
                 onClick={() => openSupportWhatsApp(`Hi, the driver assigned to my booking${bookingId ? ` (ID: ${bookingId})` : ""} is asking for extra money over the fixed fare of ₹${fare}.`)}
                 className="rounded-sm underline underline-offset-2 text-[var(--text)] cursor-pointer transition-opacity duration-300 hover:opacity-70 active:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
             >
-                Contact support
+                {tr("Contact support")}
             </button>
         </NoticePill>
     );
@@ -347,7 +447,7 @@ const TrackingPage = () => {
     // Per-km (formula) pricing covers the drive only; zone and fixed-table
     // destinations are quoted all-in.
     const tollNotice = isDistancePriced(fareSource) && (
-        <NoticePill>Tolls payable to driver separately</NoticePill>
+        <NoticePill>{tr("Tolls payable to driver separately")}</NoticePill>
     );
 
     // Puts the call in the OS dialer rather than dialling anything itself, the
@@ -387,7 +487,7 @@ const TrackingPage = () => {
         try {
             if (navigator.share) {
                 try {
-                    await navigator.share({ title: "My RCS Travels driver", text: details });
+                    await navigator.share({ get "title"() { return dc("My RCS Travels driver"); }, text: details });
                     setShareSheetOpen(false);
                     return;
                 } catch (err) {
@@ -395,10 +495,10 @@ const TrackingPage = () => {
                 }
             }
             await navigator.clipboard.writeText(details);
-            setShareNote("Details copied");
+            setShareNote(dc("Details copied"));
             setShareSheetOpen(false);
         } catch {
-            setShareNote("Couldn't share details");
+            setShareNote(dc("Couldn't share details"));
         } finally {
             setShareBusy(false);
         }
@@ -419,7 +519,7 @@ const TrackingPage = () => {
                 // A cancelled share sheet rejects with AbortError. That is the
                 // rider changing their mind, not a failure, so it says nothing.
                 try {
-                    await navigator.share({ title: "My RCS Travels ride", text, url: data.url });
+                    await navigator.share({ get "title"() { return dc("My RCS Travels ride"); }, text, url: data.url });
                     setShareSheetOpen(false);
                     return;
                 } catch (err) {
@@ -427,7 +527,7 @@ const TrackingPage = () => {
                 }
             }
             await navigator.clipboard.writeText(data.url);
-            setShareNote("Link copied");
+        setShareNote(dc("Link copied"));
             setShareSheetOpen(false);
         } catch {
             setShareNote("Couldn't create a link");
@@ -472,7 +572,7 @@ const TrackingPage = () => {
                             markDriverPhotoFailed(driver?.photoUrl);
                             e.currentTarget.src = pfpPlaceholder;
                         }}
-                        alt={driver?.name ? `${driver.name}, your driver` : ""}
+                        alt={driver?.name ? dc("{{value0}}, your driver", {value0: (driver.name)}) : ""}
                         className="w-full h-full object-cover"
                     />
                 </div>
@@ -505,44 +605,67 @@ const TrackingPage = () => {
     // the extra-fare notice below already carries the route to support, so a
     // second support button would compete with the primary one.
     async function payScheduledFinal() {
+        if (!bookingId || paymentIsBusy(paymentPhase) || paymentIsSatisfied("final", financials)) return;
         try {
-            setLoading(true); setError(null);
+            setLoading(true); setError(null); setPaymentPhase(PAYMENT_PHASE.CREATING);
             const checkout = await api.createScheduledFinalOrder(bookingId);
             if (checkout?.error) throw new Error(checkout.error);
-            const response = await openRazorpayCheckout(checkout, { description: "Remaining scheduled ride fare" });
+            setPaymentPhase(PAYMENT_PHASE.OPENING);
+            const response = await openRazorpayCheckout(checkout, { get "description"() { return dc("Remaining scheduled ride fare"); } });
+            setPaymentPhase(PAYMENT_PHASE.VERIFYING);
             const verified = await api.verifyPayment(checkout.paymentId, response);
             if (verified?.error) throw new Error(verified.error);
             const latest = await api.getBookingStatus(bookingId);
             if (latest?.error) throw new Error(latest.error);
             setFinancials(latest.financials ?? null);
+            setBookingReference(latest.reference ?? bookingReference);
+            // An authorized gateway response is not success. The status poll
+            // keeps this in "Confirming" until the backend records finalPaid.
+            if (!paymentIsSatisfied("final", latest.financials)) setPaymentPhase(PAYMENT_PHASE.VERIFYING);
         } catch (err) {
-            if (err.message !== "Payment cancelled") setError(err.message || "Payment failed. Try again.");
+            setPaymentPhase(paymentPhaseForError(err));
         } finally { setLoading(false); }
     }
 
     async function payScheduledAdvance() {
+        if (!bookingId || paymentIsBusy(paymentPhase) || paymentIsSatisfied("advance", financials)) return;
         try {
-            setLoading(true); setError(null);
+            setLoading(true); setError(null); setPaymentPhase(PAYMENT_PHASE.CREATING);
             const checkout = await api.createScheduledAdvanceOrder(bookingId);
             if (checkout?.error) throw new Error(checkout.error);
-            const response = await openRazorpayCheckout(checkout, { description: "15% scheduled ride advance" });
+            setPaymentPhase(PAYMENT_PHASE.OPENING);
+            const response = await openRazorpayCheckout(checkout, { get "description"() { return dc("15% scheduled ride advance"); } });
+            setPaymentPhase(PAYMENT_PHASE.VERIFYING);
             const verified = await api.verifyPayment(checkout.paymentId, response);
             if (verified?.error) throw new Error(verified.error);
             const latest = await api.getBookingStatus(bookingId);
             if (latest?.error) throw new Error(latest.error);
             setStatus(latest.status); setFinancials(latest.financials ?? null);
+            setBookingReference(latest.reference ?? bookingReference);
+            if (!paymentIsSatisfied("advance", latest.financials)) setPaymentPhase(PAYMENT_PHASE.VERIFYING);
         } catch (err) {
-            if (err.message !== "Payment cancelled") setError(err.message || "Payment failed. Try again.");
+            setPaymentPhase(paymentPhaseForError(err));
         } finally { setLoading(false); }
     }
 
-    const finalPaymentDue = financials && financials.finalPaid < financials.remaining;
-    const completedActions = (
-        <Button onClick={finalPaymentDue ? payScheduledFinal : () => navigate("/")}
+    const completedActions = bookingScheduledAt != null ? (
+        <CustomerPaymentPanel
+            compact
+            purpose="final"
+            financials={financials}
+            phase={paymentPhase}
+            bookingReference={bookingReference}
+            bookingId={bookingId}
+            onPay={payScheduledFinal}
+            onViewBooking={() => setDetialsVisibility(true)}
+        />
+    ) : (
+        <Button
+            onClick={() => navigate("/")}
             className="w-full"
             prop={{ variant: "", width: "100%", innerClassName: "flex gap-2 items-center justify-center text-base sm:text-lg" }}
         >
-            {finalPaymentDue ? (loading ? "Opening payment..." : `Pay remaining ₹${financials.remaining / 100}`) : "Payment complete"}
+            {dc("Done")}
         </Button>
     );
 
@@ -588,7 +711,7 @@ const TrackingPage = () => {
             prop={{ variant: "input", bg: "var(--background-muted)", rounded: "999px", border: false }}
             className="cursor-pointer px-3 shrink-0"
         >
-            <p className="text-sm sm:text-base text-[var(--text)] whitespace-nowrap">Ride details</p>
+            <p className="text-sm sm:text-base text-[var(--text)] whitespace-nowrap">{tr("Ride details")}</p>
         </Button>
     );
 
@@ -597,7 +720,7 @@ const TrackingPage = () => {
     const dropSummary = (
         <div className="flex w-full justify-between items-center gap-2.5 sm:gap-3">
             <div className="min-w-0 flex-1 text-left">
-                <p className="text-xs sm:text-sm text-[var(--text-muted)] leading-relaxed">Drop to:</p>
+                <p className="text-xs sm:text-sm text-[var(--text-muted)] leading-relaxed">{tr("Drop to:")}</p>
                 {dropLocation
                     ? <p title={dropLocation} className="truncate text-sm sm:text-lg text-[var(--text)] leading-relaxed">{dropLocation}</p>
                     : <Skeleton className="mt-1 h-[21px] sm:h-[27px] w-28" />}
@@ -637,9 +760,9 @@ const TrackingPage = () => {
                     {stateBackArrow}
                     <EmptyState
                         tone="dark"
-                        title="No ride to track"
-                        message="Once you book, this is where you'll watch your driver arrive and follow the trip."
-                        action={{ label: "Book a ride", onClick: () => navigate('/') }}
+                        title={dc("No ride to track")}
+                        message={dc("Once you book, this is where you'll watch your driver arrive and follow the trip.")}
+                        action={{ get "label"() { return dc("Book a ride"); }, onClick: () => navigate('/') }}
                     />
                 </BackgroundPanel>
             </div>
@@ -656,17 +779,37 @@ const TrackingPage = () => {
                     {stateBackArrow}
                     <FailureState
                         tone="dark"
-                        title="Couldn't load your ride"
+                        title={dc("Couldn't load your ride")}
                         detail={statusError}
                         onRetry={() => { setStatusError(null); setRetryTick(t => t + 1); }}
                         retrying={bookingLoading}
                         secondaryAction={{
-                            label: "Message support",
+                            get "label"() { return dc("Message support"); },
                             onClick: () => openSupportWhatsApp(
                                 `Hi, I can't open my ride's tracking page${bookingId ? ` (ID: ${bookingId})` : ""}.`
                             ),
                         }}
                     />
+                </BackgroundPanel>
+            </div>
+        );
+    }
+
+    if (status === "no_driver") {
+        return (
+            <div className={SHELL}>
+                <BackgroundPanel className={FULL_PANEL}>
+                    {stateBackArrow}
+                    <div className={`flex min-w-0 flex-col items-center gap-2 ${COL}`}>
+                        <ErrorMark className="-my-6" size={isMobile ? 120 : 140} />
+                        <div className="flex w-full min-w-0 flex-col items-center gap-1">
+                            <h2 className={`w-full min-w-0 [overflow-wrap:anywhere] ${TITLE}`}>{tr("No drivers nearby")}</h2>
+                            <p className="w-full text-base leading-snug text-[var(--text-muted)] sm:text-lg">{dc("We couldn't find another driver. You can try booking again.")}</p>
+                        </div>
+                        <Button onClick={() => navigate("/")} className="mt-2" prop={{ width: "100%" }}>
+                            <span className="text-base sm:text-lg">{tr("Book another ride")}</span>
+                        </Button>
+                    </div>
                 </BackgroundPanel>
             </div>
         );
@@ -678,6 +821,49 @@ const TrackingPage = () => {
     return (
         <div className={SHELL}>
             <ErrorPanel prop={{ error: error, setError: setError }} />
+
+            {driverCancellation && (
+                <div className={`fixed inset-0 z-[120] ${driverCancellationOpen ? "pointer-events-auto" : "pointer-events-none"}`}>
+                    <button
+                        type="button"
+                        aria-label={dc("Dismiss driver cancellation notice")}
+                        onClick={dismissDriverCancellation}
+                        className={`${driverCancellationOpen ? "opacity-100" : "opacity-0"} absolute inset-0 h-full w-full cursor-default bg-black/50 transition-opacity duration-300 motion-reduce:transition-none`}
+                    />
+                    <BackgroundPanel
+                        show={driverCancellationOpen}
+                        duration={420}
+                        className="z-1 gap-2 py-6 text-center flex flex-col justify-center items-center"
+                    >
+                        <button
+                            type="button"
+                            onClick={dismissDriverCancellation}
+                            aria-label={dc("Close driver cancellation notice")}
+                            className="absolute right-4 top-4 z-20 flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-[var(--background-muted)] text-[var(--text-muted)] transition-colors duration-300 hover:text-[var(--text)] active:opacity-70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]/70"
+                        >
+                            <Icon path={mdiClose} size={0.85} aria-hidden="true" />
+                        </button>
+                        <div role="dialog" aria-modal="true" aria-labelledby="driver-cancelled-title" className="flex w-full flex-col items-center gap-2">
+                            <ErrorMark className="-mt-2 -mb-2" size={isMobile ? 120 : 140} />
+                            <div className={`flex min-w-0 flex-col items-center gap-1 ${COL}`}>
+                                <h2 id="driver-cancelled-title" className={`w-full min-w-0 [overflow-wrap:anywhere] ${TITLE}`}>{tr("Driver cancelled the ride")}</h2>
+                                <p className="w-full min-w-0 text-base leading-snug text-[var(--text-muted)] sm:text-lg">
+                                    {bookingScheduledAt != null
+                                        ? dc("We'll assign another driver closer to your pickup time.")
+                                        : dc("We're searching for a new driver now.")}
+                                </p>
+                            </div>
+                            <div className={`mt-2 ${COL}`}>
+                                <Button onClick={dismissDriverCancellation} prop={{ width: "100%" }}>
+                                    <span className="text-base sm:text-lg">
+                                        {bookingScheduledAt != null ? dc("View booking") : dc("Continue search")}
+                                    </span>
+                                </Button>
+                            </div>
+                        </div>
+                    </BackgroundPanel>
+                </div>
+            )}
 
             {/* Mobile: land-coloured backdrop + persistent page-background map,
                 with the opaque bottom-sheet panels riding over it. */}
@@ -693,7 +879,39 @@ const TrackingPage = () => {
                 fields still waiting on the status fetch shimmer in place. With
                 no status at all this falls through to the live panel, which is
                 the shell those per-field skeletons hang on. */}
-            {bookingScheduledAt != null && (["payment_pending", "confirmed", "assigned"].includes(status))
+            {bookingScheduledAt == null && status === "pending"
+                    ? <BackgroundPanel
+                        sheet={mapVisible}
+                        duration={420}
+                        contentKey={`reassigning-${bookingLoading}`}
+                        className="py-6 max-sm:pb-0 sm:overflow-hidden justify-center items-center text-left sm:px-[9%] md:px-[5%] xl:px-[13%] flex flex-col sm:flex-row sm:justify-center lg:justify-between"
+                    >
+                        {backArrow}
+                        {!isMobile && mapVisible && (
+                            <GoogleMap center={pickupPoint} zoom={12} onMapReady={setMapApi} className={MAP_CLASSES} />
+                        )}
+                        <div className="w-full flex-1 min-h-0 flex flex-col items-center sm:contents">
+                            <div className={`relative z-10 sm:order-1 flex flex-col justify-center items-center sm:items-start w-full sm:w-auto flex-1 min-h-0 sm:flex-initial sm:h-full ${STACK}`}>
+                                <div className={`flex flex-col justify-center items-start ${PAIR} ${COL}`}>
+                                    <h2 className={`text-left w-full min-w-0 [overflow-wrap:anywhere] ${TITLE}`}>{tr("Finding a new driver")}</h2>
+                                    <p className="text-left text-base sm:text-xl leading-snug text-[var(--text-muted)]">{tr("Your ride is back in the driver search.")}</p>
+                                </div>
+                                <div className={`flex flex-col items-start gap-4 ${COL}`}>
+                                    <SearchingProgressBar startedAt={driverCancellation?.createdAt} />
+                                    {dropSummary}
+                                    <Button
+                                        onClick={() => openSupportWhatsApp("Hi, I need help while RCS finds a new driver for my ride.")}
+                                        className="my-0!"
+                                        prop={{ variant: "input", width: "100%", bg: "var(--background-muted)", border: false }}
+                                    >
+                                        <span className="flex items-center justify-center gap-2 text-base sm:text-lg">
+                                            <img src={waLogo} alt="WhatsApp" className="w-6 h-6" />{dc("Talk to Support")}</span>
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+                    </BackgroundPanel>
+                    : bookingScheduledAt != null && (["payment_pending", "confirmed", "assigned"].includes(status))
                     // contentKey: this panel drops the driver card before a driver
                     // exists, so its height changes with the status — and the sheet
                     // is sized to that height. bookingLoading is in the key for the
@@ -721,8 +939,8 @@ const TrackingPage = () => {
                             inside the column, and it now floats above the sheet */}
                         <div className={`relative z-10 sm:order-1 flex flex-col justify-end sm:justify-center items-center sm:items-start w-full sm:w-auto flex-1 min-h-0 sm:flex-initial sm:h-full ${STACK}`}>
                             <div className={`flex flex-col justify-center items-start ${PAIR} ${COL}`}>
-                                <h2 className={`text-left w-full min-w-0 [overflow-wrap:anywhere] ${TITLE}`}>{status === "payment_pending" ? "Pay advance" : status === "assigned" ? "Driver assigned" : "Not assigned yet"}</h2>
-                                <h3 className={`text-left w-full min-w-0 ${status === "confirmed" ? "text-base sm:text-xl font-normal leading-snug text-[var(--text-muted)]" : SUBTITLE}`}>{status === "payment_pending" ? "The 15% advance is part of your fare." : status === "assigned" ? "Give the driver a call to confirm" : "Assigned closer to your pickup time"}</h3>
+                                <h2 className={`text-left w-full min-w-0 [overflow-wrap:anywhere] ${TITLE}`}>{status === "payment_pending" ? dc("Pay advance") : status === "assigned" ? dc("Driver assigned") : dc("Not assigned yet")}</h2>
+                                <h3 className={`text-left w-full min-w-0 ${status === "confirmed" ? "text-base sm:text-xl font-normal leading-snug text-[var(--text-muted)]" : SUBTITLE}`}>{status === "payment_pending" ? dc("The 15% advance is part of your fare.") : status === "assigned" ? dc("Give the driver a call to confirm") : dc("Assigned closer to your pickup time")}</h3>
                             </div>
 
                             {/* The scroll region, phones only: everything below the
@@ -735,17 +953,20 @@ const TrackingPage = () => {
                                 className="w-full min-h-0 flex-1 flex flex-col items-center gap-6 overscroll-contain sm:contents"
                             >
                             <div className={`flex flex-col justify-center items-start gap-6 ${COL}`}>
-                                {status === "payment_pending" && financials && (
-                                    <div className="flex w-full flex-col gap-3">
-                                        <div className="w-full flex flex-col gap-1 text-base sm:text-lg">
-                                            <div className="flex justify-between"><span>Final fare</span><span>₹{financials.finalFare / 100}</span></div>
-                                            <div className="flex justify-between"><span>Pay now (15%)</span><span>₹{financials.advance / 100}</span></div>
-                                            <div className="flex justify-between"><span>Pay after ride</span><span>₹{financials.remaining / 100}</span></div>
-                                        </div>
-                                        <Button onClick={payScheduledAdvance} prop={{ width: "100%" }}>
-                                            {loading ? "Opening payment..." : `Pay ₹${financials.advance / 100}`}
-                                        </Button>
-                                    </div>
+                                {(status === "payment_pending" || (status === "confirmed" && paymentIsSatisfied("advance", financials))) && (
+                                    <CustomerPaymentPanel
+                                        compact
+                                        purpose="advance"
+                                        financials={financials}
+                                        phase={paymentPhase}
+                                        bookingReference={bookingReference}
+                                        bookingId={bookingId}
+                                        onPay={payScheduledAdvance}
+                                        onViewBooking={() => setDetialsVisibility(true)}
+                                    />
+                                )}
+                                {showBookingOtp && (
+                                    <OtpDisplay code={bookingCode} loading={!bookingCode} />
                                 )}
                                 {/* Driver identity and the destination/details row
                                     are one compact ride-information group. */}
@@ -782,9 +1003,7 @@ const TrackingPage = () => {
                                     prop={{ variant: "input", width: "100%", bg: "var(--background-muted)", border: false }}
                                 >
                                     <span className="flex items-center justify-center gap-2 text-base sm:text-lg">
-                                        <img src={waLogo} alt="WhatsApp" className="w-6 h-6" />
-                                        Talk to Support
-                                    </span>
+                                        <img src={waLogo} alt="WhatsApp" className="w-6 h-6" />{dc("Talk to Support")}</span>
                                 </Button>
                                 {/* Shown for the whole of `assigned` and merely
                                     disabled until the phone number lands, so the
@@ -795,9 +1014,7 @@ const TrackingPage = () => {
                                     className={`${status === 'assigned' ? "block" : "hidden"} my-0! w-full`}
                                     prop={{ variant: "", width: "100%", disabled: !driver?.phone, innerClassName: "flex gap-2 items-center justify-center text-base sm:text-lg" }}
                                 >
-                                    <Icon path={mdiPhone} size={0.8} />
-                                    Call driver
-                                </Button>
+                                    <Icon path={mdiPhone} size={0.8} />{dc("Call driver")}</Button>
                             </div>
                             </div>
                         </div>
@@ -822,7 +1039,7 @@ const TrackingPage = () => {
                                         ? <ErrorMark className="-mt-2 -mb-2" size={isMobile ? 120 : 140} />
                                         : <SuccessCheck className="-mt-2 -mb-2" size={isMobile ? 120 : 140} /> }
                                     <div className="flex w-full min-w-0 flex-col items-center gap-1 sm:items-start">
-                                        <h3 className={`w-full min-w-0 ${SUBTITLE}`}>Ride has been completed</h3>
+                                        <h3 className={`w-full min-w-0 ${SUBTITLE}`}>{tr("Ride has been completed")}</h3>
                                     </div>
                                     {tollNotice}
                                     {/* Desktop keeps the actions with the outcome
@@ -842,30 +1059,28 @@ const TrackingPage = () => {
                                             <div className="flex items-center gap-2">
                                                 {durationMin != null && (
                                                     <span className="rounded-xl bg-[var(--background-primary)] px-2.5 py-1.5 text-sm font-semibold">
-                                                        {durationMin} min
-                                                    </span>
+                                                        {durationMin}{" " + dc("min")}</span>
                                                 )}
                                                 {distanceKm != null && (
                                                     <span className="rounded-xl bg-[var(--background-primary)] px-2.5 py-1.5 text-sm font-semibold">
-                                                        {Math.round(distanceKm * 10) / 10} km
-                                                    </span>
+                                                        {Math.round(distanceKm * 10) / 10}{" " + dc("km")}</span>
                                                 )}
                                             </div>
                                         )}
 
                                         <div className="flex items-center justify-between w-full">
-                                            <h3 className={`${META} text-[var(--text-muted)]`}>Base fare</h3>
+                                            <h3 className={`${META} text-[var(--text-muted)]`}>{tr("Base fare")}</h3>
                                             <h3 className={META}>₹{baseFare}</h3>
                                         </div>
                                         {safeRoute && (
                                             <div className="flex items-center justify-between w-full">
-                                                <h3 className={`${META} text-[var(--text-muted)]`}>Safer route</h3>
+                                                <h3 className={`${META} text-[var(--text-muted)]`}>{tr("Safer route")}</h3>
                                                 <h3 className={META}>₹{SAFE_ROUTE_SURCHARGE}</h3>
                                             </div>
                                         )}
                                         <div className="w-full h-px bg-[var(--foreground)]/10 my-1" />
                                         <div className="flex items-center justify-between w-full">
-                                            <h3 className="text-xl font-semibold">Total</h3>
+                                            <h3 className="text-xl font-semibold">{tr("Total")}</h3>
                                             <h3 className="text-xl font-semibold">₹{fare}</h3>
                                         </div>
 
@@ -920,7 +1135,7 @@ const TrackingPage = () => {
                                         copied" where there is no OS share sheet.
                                         whitespace-nowrap so the wider label grows
                                         the pill instead of wrapping inside it. */}
-                                    <h4 className="text-sm whitespace-nowrap">{shareNote || "Share"}</h4>
+                                    <h4 className="text-sm whitespace-nowrap">{shareNote || dc("Share")}</h4>
                                 </div>
                             </Button>
                             {/* Bounds the column to the sheet's height on phones so
@@ -953,7 +1168,7 @@ const TrackingPage = () => {
                                     >
                                         <div className="flex gap-1.5 items-center justify-center">
                                             <Icon path={mdiShareVariant} className="text-[var(--text-muted)]" size={0.6} />
-                                            <p className="text-sm sm:text-base whitespace-nowrap">{shareNote || "Share"}</p>
+                                            <p className="text-sm sm:text-base whitespace-nowrap">{shareNote || dc("Share")}</p>
                                         </div>
                                     </Button>
                                 </div>
@@ -972,18 +1187,16 @@ const TrackingPage = () => {
                                     className="w-full min-h-0 flex-1 flex flex-col items-center overscroll-contain sm:contents"
                                 >
                                 <div className={`flex flex-col justify-center items-start gap-6 max-sm:pb-6 ${COL}`}>
-                                    {/* OTP leads once there is one: from en_route on
-                                        it is the thing the rider has to act on, and
-                                        it reads out before the plate is checked.
-                                        Before that (assigned) the driver card leads
-                                        instead.
+                                    {/* OTP leads throughout the assigned ride: it is
+                                        the thing the rider has to act on, and it
+                                        reads out before the plate is checked.
 
                                         No card around the pair — the digits carry
                                         their own boxes, one each, which is how a
                                         code meant to be read aloud a character at a
                                         time wants to be set. The label sits bare on
                                         the sheet beside them. */}
-                                    {(status === "en_route" || status === "reached") && (
+                                    {showBookingOtp && (
                                         <OtpDisplay code={bookingCode} loading={!bookingCode} />
                                     )}
 
@@ -1017,18 +1230,14 @@ const TrackingPage = () => {
                                             className="flex-1"
                                         >
                                             <span className="flex items-center justify-center gap-2 text-base sm:text-lg">
-                                                <img src={waLogo} alt="WhatsApp" className="w-6 h-6" />
-                                                Message
-                                            </span>
+                                                <img src={waLogo} alt="WhatsApp" className="w-6 h-6" />{dc("Message")}</span>
                                         </Button>
                                         <Button
                                             onClick={callDriver}
                                             className="flex-1"
                                             prop={{ variant: "", width: "100%", disabled: !driver?.phone, innerClassName: "flex gap-2 items-center justify-center text-base sm:text-lg" }}
                                         >
-                                            <Icon path={mdiPhone} size={0.8} />
-                                            Call driver
-                                        </Button>
+                                            <Icon path={mdiPhone} size={0.8} />{dc("Call driver")}</Button>
                                     </div>
                                 </div>
                                 </div>
@@ -1062,7 +1271,7 @@ const TrackingPage = () => {
                         <button
                             type="button"
                             onClick={() => setShareSheetOpen(false)}
-                            aria-label="Close share options"
+                            aria-label={dc("Close share options")}
                             className="absolute z-20 -top-12 right-4 h-9 my-1 w-9 rounded-full border border-[var(--foreground)]/30 bg-[var(--background-muted)] shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)] flex items-center justify-center cursor-pointer transition-opacity duration-300 active:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]/70 sm:hidden"
                         >
                             <Icon path={mdiClose} size={0.8} aria-hidden="true" />
@@ -1070,12 +1279,12 @@ const TrackingPage = () => {
                         <div data-sheet-scroll className="min-h-0 flex-1 flex flex-col gap-4">
                             <div className="flex items-start justify-between gap-4">
                                 <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                                    <h3 className="w-full min-w-0 [overflow-wrap:anywhere] text-xl font-medium leading-tight text-[var(--text)]">Share ride</h3>
+                                    <h3 className="w-full min-w-0 [overflow-wrap:anywhere] text-xl font-medium leading-tight text-[var(--text)]">{tr("Share ride")}</h3>
                                 </div>
                                 <button
                                     type="button"
                                     onClick={() => setShareSheetOpen(false)}
-                                    aria-label="Close share options"
+                                    aria-label={dc("Close share options")}
                                     className="hidden sm:flex shrink-0 cursor-pointer rounded-full p-1 opacity-60 transition-opacity hover:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]/70"
                                 >
                                     <Icon path={mdiClose} size={0.9} aria-hidden="true" />
@@ -1090,8 +1299,8 @@ const TrackingPage = () => {
                                 >
                                     <Icon path={mdiAccountOutline} size={1} className="shrink-0 text-[var(--text-muted)]" aria-hidden="true" />
                                     <span className="flex flex-col">
-                                        <span className="text-base sm:text-lg font-medium text-[var(--text)]">Share driver details</span>
-                                        <span className="text-sm text-[var(--text-muted)]">Name, phone number and vehicle details</span>
+                                        <span className="text-base sm:text-lg font-medium text-[var(--text)]">{tr("Share driver details")}</span>
+                                        <span className="text-sm text-[var(--text-muted)]">{tr("Name, phone number and vehicle details")}</span>
                                     </span>
                                 </button>
                                 <button
@@ -1102,8 +1311,8 @@ const TrackingPage = () => {
                                 >
                                     <Icon path={mdiMapMarkerRadius} size={1} className="shrink-0 text-[var(--text-muted)]" aria-hidden="true" />
                                     <span className="flex flex-col">
-                                        <span className="text-base sm:text-lg font-medium text-[var(--text)]">Share live location</span>
-                                        <span className="text-sm text-[var(--text-muted)]">Send a link to follow this ride</span>
+                                        <span className="text-base sm:text-lg font-medium text-[var(--text)]">{tr("Share live location")}</span>
+                                        <span className="text-sm text-[var(--text-muted)]">{tr("Send a link to follow this ride")}</span>
                                     </span>
                                 </button>
                             </div>

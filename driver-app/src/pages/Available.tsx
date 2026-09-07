@@ -1,3 +1,5 @@
+import { useLanguage as useCopyLanguage } from "../i18n";
+import { driverCopy as dc } from "../lib/copy";
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, SectionList, TextInput, View } from 'react-native';
 import { cssInterop } from 'nativewind';
@@ -24,8 +26,8 @@ const BAR_CLEARANCE = 132;
 const TITLE_TRACKING = { letterSpacing: -0.72 };
 
 const TABS: { key: MarketplaceScope; label: string }[] = [
-    { key: 'open', label: 'Open bookings' },
-    { key: 'mine', label: 'Your listings' },
+    { key: 'open', get "label"() { return dc("Open bookings"); } },
+    { key: 'mine', get "label"() { return dc("Your listings"); } },
 ];
 
 const scopeFromSearch = (search: string): MarketplaceScope =>
@@ -35,6 +37,7 @@ const pathForScope = (scope: MarketplaceScope) =>
     scope === 'mine' ? '/available?tab=mine' : '/available';
 
 const Marketplace = () => {
+    useCopyLanguage();
     const location = useLocation();
     const navigate = useNavigate();
     const onScroll = useHideAppBarOnScroll();
@@ -100,7 +103,7 @@ const Marketplace = () => {
                             autoFocus
                             value={query}
                             onChangeText={setQuery}
-                            placeholder="Pickup, drop or vehicle"
+                            placeholder={dc("Pickup, drop or vehicle")}
                             placeholderTextColor="#6B7280"
                             returnKeyType="search"
                             className={`flex-1 font-sans ${INK_TEXT}`}
@@ -108,7 +111,7 @@ const Marketplace = () => {
                         />
                         <Pressable
                             role="button"
-                            aria-label="Close search"
+                            aria-label={dc("Close search")}
                             onPress={() => { setSearching(false); setQuery(''); }}
                             hitSlop={8}
                             style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
@@ -119,12 +122,10 @@ const Marketplace = () => {
                 ) : (
                     <>
                         <View className="w-11 h-11" />
-                        <AppText className={`text-xl font-semibold ${INK_TEXT}`} style={TITLE_TRACKING}>
-                            Marketplace
-                        </AppText>
+                        <AppText className={`text-xl font-semibold ${INK_TEXT}`} style={TITLE_TRACKING}>{dc("Marketplace")}</AppText>
                         <Pressable
                             role="button"
-                            aria-label="Search marketplace bookings"
+                            aria-label={dc("Search marketplace bookings")}
                             onPress={() => setSearching(true)}
                             style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
                         >
@@ -158,12 +159,12 @@ const Marketplace = () => {
             <View className="w-full min-h-14 justify-center rounded-2xl p-3 bg-primary">
                 <View>
                     <AppText className="text-sm font-semibold text-white">
-                        {scope === 'open' ? 'Know the price before you claim' : 'Your deposit settles after the ride'}
+                        {scope === 'open' ? dc("Know the price before you claim") : dc("Your deposit settles after the ride")}
                     </AppText>
                     <AppText className="text-xs leading-4 text-[rgba(255,255,255,0.8)]">
                         {scope === 'open'
-                            ? 'The customer pays you the fare directly. Rider and poster details stay private until the marketplace deposit hold succeeds.'
-                            : 'Deposits start at ₹50 and stay below fare. You receive yours less 10% after completion; your cancellation returns the full hold.'}
+                            ? dc("The customer pays you the fare directly. Rider and poster details stay private until the marketplace deposit hold succeeds.")
+                            : dc("Deposits start at ₹50 and stay below fare. You receive yours less 10% after completion; your cancellation returns the full hold.")}
                     </AppText>
                 </View>
             </View>
@@ -192,17 +193,17 @@ const Marketplace = () => {
                     <View className="flex-1 items-center justify-center gap-1 pb-24 px-6">
                         <AppText className={`text-base font-semibold text-center ${INK_TEXT}`}>
                             {query
-                                ? 'No listings match that'
+                                ? dc("No listings match that")
                                 : scope === 'open'
-                                    ? 'No open bookings right now'
-                                    : 'You have not posted a booking'}
+                                    ? dc("No open bookings right now")
+                                    : dc("You have not posted a booking")}
                         </AppText>
                         <AppText className={`text-sm text-center ${MUTED}`}>
                             {query
-                                ? 'Try a pickup, destination, or vehicle class.'
+                                ? dc("Try a pickup, destination, or vehicle class.")
                                 : scope === 'open'
-                                    ? 'New bookings from other captains will appear here.'
-                                    : 'Post an off-app booking when another captain needs to take it.'}
+                                    ? dc("New bookings from other captains will appear here.")
+                                    : dc("Post an off-app booking when another captain needs to take it.")}
                         </AppText>
                         {scope === 'mine' && !query ? (
                             <Pressable
@@ -210,7 +211,7 @@ const Marketplace = () => {
                                 onPress={() => navigate('/available?tab=mine&post=new', { replace: true })}
                                 className="mt-4 rounded-full bg-[#121220] px-5 py-3"
                             >
-                                <AppText className="font-semibold text-white">Post a booking</AppText>
+                                <AppText className="font-semibold text-white">{dc("Post a booking")}</AppText>
                             </Pressable>
                         ) : null}
                     </View>

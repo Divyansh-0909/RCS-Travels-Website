@@ -1,3 +1,4 @@
+import { websiteCopy as dc } from "../../i18nCopy";
 import chatBg from "../../assets/chat-bg.webp"
 import waLogo from "../../assets/whatsapp-logo.webp"
 import { supportPhoneDisplay } from "../../constants/support"
@@ -31,10 +32,9 @@ const WhatsAppIllustration = () => (
 
             {/* bot reply (received — left, dark card) */}
             <div style={{ alignSelf: "flex-start", background: "#1F2C34", padding: "7px 10px", borderRadius: "10px 10px 10px 2px", maxWidth: "88%" }}>
-                <p style={{ color: "#E9EDF0", fontSize: "9.5px", fontWeight: "600", margin: "0 0 2px", fontFamily: "Poppins, sans-serif" }}>
-                    Confirmed! Raju is arriving in <strong>4 min</strong>
+                <p style={{ color: "#E9EDF0", fontSize: "9.5px", fontWeight: "600", margin: "0 0 2px", fontFamily: "Poppins, sans-serif" }}>{dc("Confirmed! Raju is arriving in") + " "}<strong>{dc("4 min")}</strong>
                 </p>
-                <p style={{ color: "#8696A0", fontSize: "8.5px", margin: 0, fontFamily: "Poppins, sans-serif" }}>Swift · UP16 XX XX XXXX · ₹900</p>
+                <p style={{ color: "#8696A0", fontSize: "8.5px", margin: 0, fontFamily: "Poppins, sans-serif" }}>{dc("Swift · UP16 XX XX XXXX · ₹900")}</p>
             </div>
         </div>
 
@@ -42,7 +42,7 @@ const WhatsAppIllustration = () => (
         <div style={{ position: "absolute", bottom: "14px", left: 0, right: 0, display: "flex", alignItems: "center", justifyContent: "center", gap: "15px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
                 <img src={waLogo} alt="WhatsApp" style={{ width: "20px", height: "20px", borderRadius: "50%" }}/>
-                <span style={{ color: "#8696A0", fontSize: "11px", fontWeight: "600", fontFamily: "Poppins, sans-serif" }}>Book via WhatsApp · {supportPhoneDisplay()}</span>
+                <span style={{ color: "#8696A0", fontSize: "11px", fontWeight: "600", fontFamily: "Poppins, sans-serif" }}>{dc("Book via WhatsApp ·") + " "}{supportPhoneDisplay()}</span>
             </div>
             {/* <div className="flex justify-center items-center" style={{ background: "white", height: "20px", borderRadius: "20px", padding: "4px 10px" }}>
                 <span style={{ color: "#243AFB", fontSize: "9.5px", fontWeight: "700", fontFamily: "Poppins, sans-serif" }}>30 sec to book</span>

@@ -2,8 +2,8 @@ import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 import { createHmac } from 'node:crypto'
 import { readFile } from 'node:fs/promises'
-import { getRazorpayConfig, safeRazorpayConfig } from '../config/razorpay.js'
-import { verifyPaymentSignature, verifyWebhookSignature } from '../services/razorpay.js'
+import { getRazorpayConfig, getRazorpayWebhookSecret, safeRazorpayConfig } from '../config/razorpay.js'
+import { createRazorpayWebhookVerifier, verifyPaymentSignature, verifyWebhookSignature } from '../services/razorpay.js'
 import { createOrderForPayment, verifyCheckoutPayment, processRazorpayWebhook, refundPayment, statusAfterGatewayPayment } from '../services/payments.js'
 
 const basePayment = (overrides = {}) => ({ id: '11111111-1111-4111-8111-111111111111', userId: 'u1', bookingId: 'b1',
@@ -24,8 +24,16 @@ const paymentDb = (initial = basePayment()) => {
 }
 
 describe('Razorpay configuration', () => {
-  test('missing credentials fail clearly', () => assert.throws(() => getRazorpayConfig({}), /RAZORPAY_KEY_ID.*RAZORPAY_KEY_SECRET.*RAZORPAY_WEBHOOK_SECRET/))
-  test('only the public key is safe for Checkout', () => assert.deepEqual(safeRazorpayConfig({ keyId: 'public', keySecret: 'secret', webhookSecret: 'hook' }), { keyId: 'public' }))
+  test('missing Checkout credentials fail clearly', () => assert.throws(() => getRazorpayConfig({}), /RAZORPAY_KEY_ID.*RAZORPAY_KEY_SECRET/))
+  test('Checkout does not require an unrelated webhook secret', () => assert.deepEqual(
+    getRazorpayConfig({ RAZORPAY_KEY_ID: 'public', RAZORPAY_KEY_SECRET: 'secret' }),
+    { keyId: 'public', keySecret: 'secret' },
+  ))
+  test('the webhook secret is required only by webhook verification', () => {
+    assert.throws(() => getRazorpayWebhookSecret({}), /RAZORPAY_WEBHOOK_SECRET/)
+    assert.equal(getRazorpayWebhookSecret({ RAZORPAY_WEBHOOK_SECRET: 'hook' }), 'hook')
+  })
+  test('only the public key is safe for Checkout', () => assert.deepEqual(safeRazorpayConfig({ keyId: 'public', keySecret: 'secret' }), { keyId: 'public' }))
 })
 
 describe('Razorpay signatures', () => {
@@ -44,9 +52,21 @@ describe('Razorpay signatures', () => {
     assert.equal(verifyWebhookSignature({ rawBody, signature, secret }), true)
     assert.equal(verifyWebhookSignature({ rawBody: Buffer.from('{}'), signature, secret }), false)
   })
+  test('webhook verification does not require Checkout API credentials', () => {
+    const rawBody = Buffer.from('{"event":"payment.captured"}')
+    const signature = createHmac('sha256', secret).update(rawBody).digest('hex')
+    const verifier = createRazorpayWebhookVerifier({ secret })
+    assert.equal(verifier.verifyWebhookSignature(rawBody, signature), true)
+  })
 })
 
 describe('server-authoritative order creation', () => {
+  test('rejects stored amounts below Razorpay minimum before calling the gateway', async () => {
+    const db = paymentDb(basePayment({ amount: 99 })); let calls = 0
+    await assert.rejects(createOrderForPayment({ paymentId: db.row.id, userId: 'u1',
+      gateway: { createOrder: async () => { calls++ } }, db }), /at least 100 subunits/)
+    assert.equal(calls, 0)
+  })
   test('uses the stored amount/currency and never a client amount', async () => {
     const db = paymentDb(); let options
     const gateway = { keyId: 'rzp_public', createOrder: async (input) => (options = input, { id: 'order_1', amount: input.amount, currency: input.currency }) }
@@ -62,6 +82,18 @@ describe('server-authoritative order creation', () => {
     await createOrderForPayment({ paymentId: db.row.id, userId: 'u1', gateway, db })
     const again = await createOrderForPayment({ paymentId: db.row.id, userId: 'u1', gateway, db })
     assert.equal(calls, 1); assert.equal(again.status, 'order_created')
+  })
+  test('maps Razorpay authentication failures to 401 without leaking details', async () => {
+    const db = paymentDb()
+    await assert.rejects(createOrderForPayment({ paymentId: db.row.id, userId: 'u1',
+      gateway: { createOrder: async () => { throw { statusCode: 401, error: { description: 'sensitive' } } } }, db }),
+    (error) => error.status === 401 && error.code === 'RAZORPAY_AUTH_FAILED' && !error.message.includes('sensitive'))
+  })
+  test('maps other Razorpay order errors to a safe 500', async () => {
+    const db = paymentDb()
+    await assert.rejects(createOrderForPayment({ paymentId: db.row.id, userId: 'u1',
+      gateway: { createOrder: async () => { throw new Error('provider detail') } }, db }),
+    (error) => error.status === 500 && error.code === 'RAZORPAY_ORDER_FAILED' && !error.message.includes('provider detail'))
   })
 })
 

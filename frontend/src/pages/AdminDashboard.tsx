@@ -1,3 +1,5 @@
+import { useTranslation as useCopyLanguage } from "react-i18next";
+import { websiteCopy as dc } from "../i18nCopy";
 import AccountLayout from "../components/ui/AccountLayout"
 import { act, lazy, Suspense, useEffect, useRef, useState } from "react"
 import Icon from '@mdi/react';
@@ -39,7 +41,7 @@ const fleetBadge = (group: DriverGroup) => {
     const tone = group === "rcs" ? "text-primary bg-primary/10" : "text-amber-700 bg-amber-500/10"
     return (
         <span className={`${tone} text-xs font-semibold px-2.5 py-1 rounded-full shrink-0`}>
-            {group === "rcs" ? "RCS fleet" : "Owner"}
+            {group === "rcs" ? dc("RCS fleet") : dc("Owner")}
         </span>
     )
 }
@@ -111,6 +113,7 @@ const userSections = ["Gender", "User phone", "Joined"]
 const genderOptions = ["Male", "Female", "Others", "Rather not say"].map(g => ({ value: g, label: g }))
 
 const AdminDashboard = () => {
+    useCopyLanguage();
     const [selected, setSelected] = useState(0)
     const [active, setActive] = useState(false)
     const [loading, setLoading] = useState(false)
@@ -293,9 +296,9 @@ const AdminDashboard = () => {
     // Clearing filters is only an escape route when some are set; searching is
     // handled by clearing the box, so that gets its own action below.
     const emptyEscape = tabFiltersActive
-        ? { label: "Clear all filters", onClick: clearFilters }
+        ? { get "label"() { return dc("Clear all filters"); }, onClick: clearFilters }
         : searchParam
-            ? { label: "Clear search", onClick: () => setSearch("") }
+            ? { get "label"() { return dc("Clear search"); }, onClick: () => setSearch("") }
             : undefined
 
     const entity = selected === 0 ? "bookings" : selected === 1 ? "drivers" : "users"
@@ -304,12 +307,12 @@ const AdminDashboard = () => {
     // to "drop a filter" it never set. Defined once — all three tabs share it.
     const emptyCopy = tabFiltersActive
         ? {
-            title: `No ${entity} match those filters`,
-            message: "Try widening the date range, or drop a filter and search again.",
+            get "title"() { return dc("No {{value0}} match those filters", {value0: (entity)}); },
+            get "message"() { return dc("Try widening the date range, or drop a filter and search again."); },
         }
         : {
-            title: `No ${entity} match your search`,
-            message: "Check the spelling, or try a phone number or ID instead.",
+            get "title"() { return dc("No {{value0}} match your search", {value0: (entity)}); },
+            get "message"() { return dc("Check the spelling, or try a phone number or ID instead."); },
         }
 
     // Debounced search: fire 400ms after typing stops; 1-char input is skipped.
@@ -351,7 +354,7 @@ const AdminDashboard = () => {
     const currentTotal = selected === 0 ? totalBookings : selected === 1 ? totalDrivers : totalUsers
     const pagination = (currentTotal ?? 0) <= limit ? null : (
         <div className="flex gap-3 sm:gap-4 items-center justify-center">
-            <button type="button" disabled={page <= 1} onClick={() => setPage(p => p - 1)} className="disabled:opacity-[0.8] disabled:cursor-not-allowed disabled:hover:bg-[var(--background)]/90 py-2 px-3 flex items-center justify-center gap-1 cursor-pointer text-[var(--text)] bg-[var(--background)]/90 hover:bg-[var(--background)] transition-color duration-300 rounded-xl"><h4>Prev</h4></button>
+            <button type="button" disabled={page <= 1} onClick={() => setPage(p => p - 1)} className="disabled:opacity-[0.8] disabled:cursor-not-allowed disabled:hover:bg-[var(--background)]/90 py-2 px-3 flex items-center justify-center gap-1 cursor-pointer text-[var(--text)] bg-[var(--background)]/90 hover:bg-[var(--background)] transition-color duration-300 rounded-xl"><h4>{dc("Prev")}</h4></button>
             <span className="text-[var(--text-foreground)] flex w-fit items-center justify-center gap-2">
                 <input
                     type="text"
@@ -362,10 +365,10 @@ const AdminDashboard = () => {
                     onBlur={commitPage}
                     className="flex text-center justify-center items-center border box-border rounded-lg h-10 w-10 p-0 m-0 bg-transparent leading-none outline-none text-sm sm:text-lg"
                 />
-                <h4>of</h4>
+                <h4>{dc("of")}</h4>
                 <h4 className="flex text-center justify-center items-center border box-border rounded-lg h-10 w-10 p-0 m-0 bg-transparent leading-none text-sm sm:text-lg">{totalPages}</h4>
             </span>
-            <button type="button" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} className="disabled:opacity-[0.8] disabled:cursor-not-allowed disabled:hover:bg-[var(--background)]/90 py-2 px-3 flex items-center justify-center gap-1 cursor-pointer text-[var(--text)] bg-[var(--background)]/90 hover:bg-[var(--background)] transition-color duration-300 rounded-xl"><h4>Next</h4></button>
+            <button type="button" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} className="disabled:opacity-[0.8] disabled:cursor-not-allowed disabled:hover:bg-[var(--background)]/90 py-2 px-3 flex items-center justify-center gap-1 cursor-pointer text-[var(--text)] bg-[var(--background)]/90 hover:bg-[var(--background)] transition-color duration-300 rounded-xl"><h4>{dc("Next")}</h4></button>
         </div>
     )
 
@@ -374,7 +377,7 @@ const AdminDashboard = () => {
             items={items}
             selected={selected}
             onSelect={(i : number) => { setSelected(i); setPage(1); setFilterSection(0); setListScrolled(false) }}
-            title="Admin Dashboard"
+            title={dc("Admin Dashboard")}
             panelOpen={expanded}
             onPanelClose={() => setExpanded(false)}
         >
@@ -382,7 +385,7 @@ const AdminDashboard = () => {
                 <Suspense
                     fallback={
                         <div className="w-full flex-1 min-h-0 flex items-center justify-center px-5 max-sm:px-0">
-                            <p className="text-sm text-gray-500">Map load ho raha hai…</p>
+                            <p className="text-sm text-gray-500">{dc("Map load ho raha hai…")}</p>
                         </div>
                     }
                 >
@@ -428,45 +431,45 @@ const AdminDashboard = () => {
                                         {sectionIndex === 1 && <Chips options={vehicleOptions} value={vehicleClass} onChange={setVehicleClass} />}
                                         {sectionIndex === 2 && (
                                             <>
-                                                <label className={filterLabel}>Start date</label>
-                                                <input type="text" value={startDate ?? ""} onChange={(e) => setStartDate(e.target.value || null)} placeholder="YYYY-MM-DD" className={filterField} />
-                                                <label className={filterLabel}>End date</label>
-                                                <input type="text" value={endDate ?? ""} onChange={(e) => setEndDate(e.target.value || null)} placeholder="YYYY-MM-DD" className={filterField} />
+                                                <label className={filterLabel}>{dc("Start date")}</label>
+                                                <input type="text" value={startDate ?? ""} onChange={(e) => setStartDate(e.target.value || null)} placeholder={dc("YYYY-MM-DD")} className={filterField} />
+                                                <label className={filterLabel}>{dc("End date")}</label>
+                                                <input type="text" value={endDate ?? ""} onChange={(e) => setEndDate(e.target.value || null)} placeholder={dc("YYYY-MM-DD")} className={filterField} />
                                             </>
                                         )}
-                                        {sectionIndex === 3 && <Chips options={[{ value: "website", label: "Website" }, { value: "whatsapp", label: "WhatsApp" }, { value: "admin", label: "Admin" }]} value={source} onChange={setSource} />}
-                                        {sectionIndex === 4 && <Chips options={[{ value: "user", label: "User" }, { value: "driver", label: "Driver" }, { value: "admin", label: "Admin" }]} value={cancelledBy} onChange={setCancelledBy} />}
+                                        {sectionIndex === 3 && <Chips options={[{ value: "website", get "label"() { return dc("Website"); } }, { value: "whatsapp", label: "WhatsApp" }, { value: "admin", get "label"() { return dc("Admin"); } }]} value={source} onChange={setSource} />}
+                                        {sectionIndex === 4 && <Chips options={[{ value: "user", get "label"() { return dc("User"); } }, { value: "driver", get "label"() { return dc("Driver"); } }, { value: "admin", get "label"() { return dc("Admin"); } }]} value={cancelledBy} onChange={setCancelledBy} />}
                                     </>
                                 ) : selected === 1 ? (
                                     <>
                                         {sectionIndex === 0 && <Chips options={vehicleOptions} value={vehicleClass} onChange={setVehicleClass} />}
-                                        {sectionIndex === 1 && <Chips options={[{ value: "pending", label: "Pending" }, { value: "approved", label: "Approved" }, { value: "rejected", label: "Rejected" }]} value={verificationStatus} onChange={setVerificationStatus} />}
+                                        {sectionIndex === 1 && <Chips options={[{ value: "pending", get "label"() { return dc("Pending"); } }, { value: "approved", get "label"() { return dc("Approved"); } }, { value: "rejected", get "label"() { return dc("Rejected"); } }]} value={verificationStatus} onChange={setVerificationStatus} />}
                                         {/* "Owner" is one row and is offered anyway:
                                             filtering to it is the quickest way to
                                             check the hold has somebody to hold for. */}
-                                        {sectionIndex === 2 && <Chips options={[{ value: "rcs", label: "RCS fleet" }, { value: "partner", label: "Partner" }, { value: "admin", label: "Owner" }]} value={group} onChange={setGroup} />}
-                                        {sectionIndex === 3 && <Chips options={[{ value: true, label: "Online" }, { value: false, label: "Offline" }]} value={isOnline} onChange={setIsOnline} />}
-                                        {sectionIndex === 4 && <input type="text" value={vehicleNumber ?? ""} onChange={(e) => setVehicleNumber(e.target.value || null)} placeholder="e.g. UP32 AB 1234" className={filterField} />}
-                                        {sectionIndex === 5 && <input type="tel" value={driverPhone ?? ""} onChange={(e) => setDriverPhone(e.target.value || null)} placeholder="XXXXX XXXXX" className={filterField} />}
+                                        {sectionIndex === 2 && <Chips options={[{ value: "rcs", get "label"() { return dc("RCS fleet"); } }, { value: "partner", get "label"() { return dc("Partner"); } }, { value: "admin", get "label"() { return dc("Owner"); } }]} value={group} onChange={setGroup} />}
+                                        {sectionIndex === 3 && <Chips options={[{ value: true, get "label"() { return dc("Online"); } }, { value: false, get "label"() { return dc("Offline"); } }]} value={isOnline} onChange={setIsOnline} />}
+                                        {sectionIndex === 4 && <input type="text" value={vehicleNumber ?? ""} onChange={(e) => setVehicleNumber(e.target.value || null)} placeholder={dc("e.g. UP32 AB 1234")} className={filterField} />}
+                                        {sectionIndex === 5 && <input type="tel" value={driverPhone ?? ""} onChange={(e) => setDriverPhone(e.target.value || null)} placeholder={dc("XXXXX XXXXX")} className={filterField} />}
                                         {sectionIndex === 6 && (
                                             <>
-                                                <label className={filterLabel}>From</label>
-                                                <input type="text" value={startDate ?? ""} onChange={(e) => setStartDate(e.target.value || null)} placeholder="YYYY-MM-DD" className={filterField} />
-                                                <label className={filterLabel}>To</label>
-                                                <input type="text" value={endDate ?? ""} onChange={(e) => setEndDate(e.target.value || null)} placeholder="YYYY-MM-DD" className={filterField} />
+                                                <label className={filterLabel}>{dc("From")}</label>
+                                                <input type="text" value={startDate ?? ""} onChange={(e) => setStartDate(e.target.value || null)} placeholder={dc("YYYY-MM-DD")} className={filterField} />
+                                                <label className={filterLabel}>{dc("To")}</label>
+                                                <input type="text" value={endDate ?? ""} onChange={(e) => setEndDate(e.target.value || null)} placeholder={dc("YYYY-MM-DD")} className={filterField} />
                                             </>
                                         )}
                                     </>
                                 ) : (
                                     <>
                                         {sectionIndex === 0 && <Chips options={genderOptions} value={gender} onChange={setGender} />}
-                                        {sectionIndex === 1 && <input type="tel" value={userPhone ?? ""} onChange={(e) => setUserPhone(e.target.value || null)} placeholder="XXXXX XXXXX" className={filterField} />}
+                                        {sectionIndex === 1 && <input type="tel" value={userPhone ?? ""} onChange={(e) => setUserPhone(e.target.value || null)} placeholder={dc("XXXXX XXXXX")} className={filterField} />}
                                         {sectionIndex === 2 && (
                                             <>
-                                                <label className={filterLabel}>From</label>
-                                                <input type="text" value={startDate ?? ""} onChange={(e) => setStartDate(e.target.value || null)} placeholder="YYYY-MM-DD" className={filterField} />
-                                                <label className={filterLabel}>To</label>
-                                                <input type="text" value={endDate ?? ""} onChange={(e) => setEndDate(e.target.value || null)} placeholder="YYYY-MM-DD" className={filterField} />
+                                                <label className={filterLabel}>{dc("From")}</label>
+                                                <input type="text" value={startDate ?? ""} onChange={(e) => setStartDate(e.target.value || null)} placeholder={dc("YYYY-MM-DD")} className={filterField} />
+                                                <label className={filterLabel}>{dc("To")}</label>
+                                                <input type="text" value={endDate ?? ""} onChange={(e) => setEndDate(e.target.value || null)} placeholder={dc("YYYY-MM-DD")} className={filterField} />
                                             </>
                                         )}
                                     </>
@@ -474,8 +477,8 @@ const AdminDashboard = () => {
                             </div>
                         </div>
                         <div className="w-full flex gap-2 px-3 pt-3 mt-3 border-t border-[var(--foreground)]/10">
-                            <div onClick={clearFilters} className="flex-1 flex justify-center items-center py-2 rounded-xl border border-[var(--foreground)]/30 text-sm cursor-pointer hover:bg-[var(--foreground)]/10 transition-colors duration-300">Clear</div>
-                            <div onClick={applyFilters} className="flex-1 flex justify-center items-center py-2 rounded-xl bg-primary text-[var(--foreground)] text-sm font-semibold cursor-pointer hover:opacity-[0.9] transition-opacity duration-300">Apply</div>
+                            <div onClick={clearFilters} className="flex-1 flex justify-center items-center py-2 rounded-xl border border-[var(--foreground)]/30 text-sm cursor-pointer hover:bg-[var(--foreground)]/10 transition-colors duration-300">{dc("Clear")}</div>
+                            <div onClick={applyFilters} className="flex-1 flex justify-center items-center py-2 rounded-xl bg-primary text-[var(--foreground)] text-sm font-semibold cursor-pointer hover:opacity-[0.9] transition-opacity duration-300">{dc("Apply")}</div>
                         </div>
                     </div>
                 </Button>
@@ -492,17 +495,17 @@ const AdminDashboard = () => {
                             id={`${selected === 0 ? "booking" : selected === 1 ? "driver" : "user"}`}
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            placeholder={selected === 0 ? "Name, phone, location, ID" : selected === 1 ? "Name, phone, vehicle no." : "Name, phone, booking code"}
+                            placeholder={selected === 0 ? dc("Name, phone, location, ID") : selected === 1 ? "Name, phone, vehicle no." : "Name, phone, booking code"}
                             className={`w-[95%] h-[5vh] text-[var(--text-foreground)]  outline-none border-none`}
                         />
                     </div>
                     <button onClick={(e) => { e.preventDefault(); setOrder(!order); }} className="py-2 px-3 flex items-center justify-center gap-1 cursor-pointer text-[var(--text)] bg-[var(--background)]/90 hover:bg-[var(--background)] transition-color duration-300 rounded-xl">
                         <Icon path={order ? mdiSortCalendarDescending : mdiSortCalendarAscending} size={1.1} />
-                        <h4>Sort</h4>
+                        <h4>{dc("Sort")}</h4>
                     </button>
                     <button onClick={(e) => { e.preventDefault(); setExpanded(!expanded); }} className="py-2 px-3 flex items-center justify-center gap-1 cursor-pointer text-[var(--text)] bg-[var(--background)]/90 hover:bg-[var(--background)] transition-color duration-300 rounded-xl">
                         <Icon path={mdiTuneVertical} size={1} className="rotate-[90deg]" />
-                        <h4>Filter</h4>
+                        <h4>{dc("Filter")}</h4>
                     </button>
                 </div>
                 {pagination && <div className="max-sm:hidden">{pagination}</div>}
@@ -511,9 +514,7 @@ const AdminDashboard = () => {
             <div
                 className={`${copied ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"} flex justify-center items-center w-[230px] fixed z-100 left-1/2 -translate-x-1/2 bottom-8 sm:bottom-10 bg-primary text-[var(--foreground)] text-sm font-semibold px-5 py-3 rounded-full shadow-[0_8px_24px_rgba(0,0,0,0.25)] flex items-center gap-2 transition-[opacity,transform] duration-300`}
             >
-                <Icon path={mdiContentCopy} size={0.7} />
-                Copied to clipboard
-            </div>
+                <Icon path={mdiContentCopy} size={0.7} />{dc("Copied to clipboard")}</div>
 
             <div onScroll={(e) => setListScrolled(e.currentTarget.scrollTop > 4)} className="w-full flex-1 min-h-0 overflow-y-auto mt-4 px-5 max-sm:px-0">
                 {/* Top fade — sticky so it hugs the scroll edge; hidden until the list is actually scrolled. */}
@@ -523,7 +524,7 @@ const AdminDashboard = () => {
                 ) : error ? (
                     <FailureState
                         tone="light"
-                        title={`Couldn't load ${entity}`}
+                        title={dc("Couldn't load {{value0}}", {value0: (entity)})}
                         detail={error}
                         onRetry={refetch}
                     />
@@ -540,8 +541,8 @@ const AdminDashboard = () => {
                         ) : (
                             <EmptyState
                                 tone="light"
-                                title="No bookings yet"
-                                message="Rides booked from the website, over WhatsApp, or by an admin all land here."
+                                title={dc("No bookings yet")}
+                                message={dc("Rides booked from the website, over WhatsApp, or by an admin all land here.")}
                             />
                         )
                     ) : (
@@ -596,11 +597,11 @@ const AdminDashboard = () => {
                                                 <div className={`${isOpen ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2"} mt-4 flex w-full cursor-default flex-col gap-4 rounded-2xl bg-white/70 p-4 transition-[opacity,transform] duration-300`}>
                                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
                                                         <div>
-                                                            <p className="text-xs uppercase tracking-wide text-gray-500 mb-0.5">Customer</p>
+                                                            <p className="text-xs uppercase tracking-wide text-gray-500 mb-0.5">{dc("Customer")}</p>
                                                             <h4 className="text-[var(--background-primary)]">{booking.user?.name ?? "—"} <span className="text-gray-500">• {displayPhone(booking.customerPhone)}</span> <CopyBtn value={displayPhone(booking.customerPhone)} onCopy={copyId} /></h4>
                                                             {booking.sharing && booking.coRiders?.length > 0 && (
                                                                 <div className="mt-1">
-                                                                    <p className="text-xs uppercase tracking-wide text-gray-500 mb-0.5">Sharing with</p>
+                                                                    <p className="text-xs uppercase tracking-wide text-gray-500 mb-0.5">{dc("Sharing with")}</p>
                                                                     {booking.coRiders.map((rider, i) => (
                                                                         <h4 key={i} className="text-[var(--background-primary)]">{rider.name ?? "—"} <span className="text-gray-500">• {displayPhone(rider.phone)}</span> <CopyBtn value={displayPhone(rider.phone)} onCopy={copyId} /></h4>
                                                                     ))}
@@ -608,10 +609,10 @@ const AdminDashboard = () => {
                                                             )}
                                                         </div>
                                                         <div>
-                                                            <p className="text-xs uppercase tracking-wide text-gray-500 mb-0.5">Driver</p>
+                                                            <p className="text-xs uppercase tracking-wide text-gray-500 mb-0.5">{dc("Driver")}</p>
                                                             {booking.driver
                                                                 ? <h4 className="text-[var(--background-primary)]">{booking.driver.name} <span className="text-gray-500">• {displayPhone(booking.driver.phone)}</span> <CopyBtn value={displayPhone(booking.driver.phone)} onCopy={copyId} /></h4>
-                                                                : <h4 className="text-gray-500">{booking.status === "cancelled" ? "—" : new Date(booking.scheduledAt ?? booking.createdAt) > new Date() ? "Yet to be assigned" : "Couldn't be assigned"}</h4>}
+                                                                : <h4 className="text-gray-500">{booking.status === "cancelled" ? "—" : new Date(booking.scheduledAt ?? booking.createdAt) > new Date() ? dc("Yet to be assigned") : dc("Couldn't be assigned")}</h4>}
                                                         </div>
                                                     </div>
 
@@ -619,7 +620,7 @@ const AdminDashboard = () => {
                                                         {/* The reference, whole. It replaces a first-eight-and-an-ellipsis
                                                             of the uuid, which was unreadable down a phone line and could
                                                             not be pasted back into this search box as shown. */}
-                                                        <p className="text-gray-500 text-sm">Ride ID: {booking.reference}</p>
+                                                        <p className="text-gray-500 text-sm">{dc("Ride ID:") + " "}{booking.reference}</p>
                                                         <CopyBtn value={booking?.reference} onCopy={copyId} />
                                                     </div>
                                                 </div>
@@ -629,8 +630,8 @@ const AdminDashboard = () => {
 
                                     {/* "hover: hover" picks the wording — no JS device sniffing */}
                                     <p className="w-full text-center text-xs text-gray-400 select-none -mt-1">
-                                        <span className="hidden [@media(hover:hover)]:inline">{isOpen ? "Click to collapse" : "Click to expand"}</span>
-                                        <span className="[@media(hover:hover)]:hidden">{isOpen ? "Tap to collapse" : "Tap to expand"}</span>
+                                        <span className="hidden [@media(hover:hover)]:inline">{isOpen ? dc("Click to collapse") : dc("Click to expand")}</span>
+                                        <span className="[@media(hover:hover)]:hidden">{isOpen ? dc("Tap to collapse") : dc("Tap to expand")}</span>
                                     </p>
                                 </div>
                             )
@@ -649,8 +650,8 @@ const AdminDashboard = () => {
                         ) : (
                             <EmptyState
                                 tone="light"
-                                title="No drivers registered yet"
-                                message="Drivers appear here once they sign up and submit their vehicle details for approval."
+                                title={dc("No drivers registered yet")}
+                                message={dc("Drivers appear here once they sign up and submit their vehicle details for approval.")}
                             />
                         )
                     ) : (
@@ -661,8 +662,8 @@ const AdminDashboard = () => {
                                     <div className="min-w-0">
                                         <div className="flex items-center gap-2">
                                             <h3 className="font-semibold text-[var(--background-primary)] truncate">{driver.name}</h3>
-                                            <span className={`w-2 h-2 rounded-full shrink-0 ${driver.isOnline ? "bg-green-500" : "bg-gray-400"}`} title={driver.isOnline ? "Online" : "Offline"}></span>
-                                            <span className="text-sm text-gray-500">{driver.isOnline ? "Online" : "Offline"}</span>
+                                            <span className={`w-2 h-2 rounded-full shrink-0 ${driver.isOnline ? "bg-green-500" : "bg-gray-400"}`} title={driver.isOnline ? dc("Online") : dc("Offline")}></span>
+                                            <span className="text-sm text-gray-500">{driver.isOnline ? dc("Online") : dc("Offline")}</span>
                                         </div>
                                         <p className="text-gray-500">{displayPhone(driver.phone)} <CopyBtn value={displayPhone(driver.phone)} onCopy={copyId} /></p>
                                     </div>
@@ -675,7 +676,7 @@ const AdminDashboard = () => {
                                             with the other would hide whichever the
                                             admin happened to need. */}
                                         {driver.suspendedAt && (
-                                            <span className="text-xs font-semibold px-2.5 py-1 rounded-full text-red-600 bg-red-500/10">Suspended</span>
+                                            <span className="text-xs font-semibold px-2.5 py-1 rounded-full text-red-600 bg-red-500/10">{dc("Suspended")}</span>
                                         )}
                                         {/* Last of the three: it is the one that
                                             does not change day to day, so it should
@@ -688,7 +689,7 @@ const AdminDashboard = () => {
                                 <div className="w-full border-t border-[var(--background-primary)]/10"></div>
 
                                 <p className="text-base text-gray-500">
-                                    {vehicleLabel(driver.vehicleClass)}  •  {driver.vehicleNumber}  •  Joined {new Date(driver.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                                    {vehicleLabel(driver.vehicleClass)}  •  {driver.vehicleNumber}{" " + dc("• Joined") + " "}{new Date(driver.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
                                 </p>
 
                                 {/* Loaded only when opened. A captain's paperwork is
@@ -701,7 +702,7 @@ const AdminDashboard = () => {
                                     aria-expanded={expandedDriver === driver.id}
                                     className="w-full text-sm text-center text-[var(--background-primary)] py-2 rounded-xl border border-[var(--background-primary)]/20 hover:bg-[var(--background-primary)]/5 focus-visible:outline-2 focus-visible:outline-offset-2 transition-colors duration-300"
                                 >
-                                    {expandedDriver === driver.id ? "Hide paperwork" : "Review paperwork"}
+                                    {expandedDriver === driver.id ? dc("Hide paperwork") : dc("Review paperwork")}
                                 </button>
 
                                 {expandedDriver === driver.id && (
@@ -739,8 +740,8 @@ const AdminDashboard = () => {
                         ) : (
                             <EmptyState
                                 tone="light"
-                                title="No users yet"
-                                message="Anyone who signs up on the website or books over WhatsApp appears here."
+                                title={dc("No users yet")}
+                                message={dc("Anyone who signs up on the website or books over WhatsApp appears here.")}
                             />
                         )
                     ) : (
@@ -750,11 +751,11 @@ const AdminDashboard = () => {
                                     <div className="min-w-0">
                                         <div className="flex items-center gap-2">
                                             <h3 className="font-semibold text-[var(--background-primary)] truncate">{user.name ?? "—"}</h3>
-                                            {user.deletedAt && <span className="text-red-600 bg-red-500/10 text-xs font-semibold px-2.5 py-1 rounded-full shrink-0">Deleted</span>}
+                                            {user.deletedAt && <span className="text-red-600 bg-red-500/10 text-xs font-semibold px-2.5 py-1 rounded-full shrink-0">{dc("Deleted")}</span>}
                                         </div>
                                         <p className="text-gray-500">{displayPhone(user.phone)} <CopyBtn value={displayPhone(user.phone)} onCopy={copyId} /></p>
                                     </div>
-                                    <span className="text-primary bg-primary/10 text-xs font-semibold px-2.5 py-1 rounded-full shrink-0">Code {user.bookingCode}</span>
+                                    <span className="text-primary bg-primary/10 text-xs font-semibold px-2.5 py-1 rounded-full shrink-0">{dc("Code") + " "}{user.bookingCode}</span>
                                 </div>
 
                                 <div className="w-full border-t border-[var(--background-primary)]/10"></div>

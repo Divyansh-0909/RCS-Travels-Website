@@ -1,3 +1,4 @@
+import { driverCopy as dc } from "../../lib/copy";
 import { Pressable, View } from 'react-native';
 import { SealCheckIcon } from 'phosphor-react-native';
 import AppText from '../AppText';
@@ -42,26 +43,22 @@ const JoinFleetCard = () => (
           break is a decision about the shape of the block, and letting it fall
           wherever the width happens to put it is not the same design at two sizes. */}
       <View>
-        <AppText className="text-xl font-semibold" style={{ ...TITLE, color: INK }}>
-          Drive under
-        </AppText>
+        <AppText className="text-xl font-semibold" style={{ ...TITLE, color: INK }}>{dc("Drive under")}</AppText>
         <AppText className="text-xl font-semibold" style={{ ...TITLE, color: INK }}>
           RCS Travels
         </AppText>
       </View>
 
-      <AppText className="text-sm" style={{ color: SUBTLE }}>
-        Fleet captains get rides first
-      </AppText>
+      <AppText className="text-sm" style={{ color: SUBTLE }}>{dc("Fleet captains get rides first")}</AppText>
 
       <Pressable
         role="button"
         onPress={() =>
-          openSupportWhatsApp("Hi, I'd like to start working under RCS Travels.")
+          openSupportWhatsApp(dc("Hi, I'd like to start working under RCS Travels."))
         }
         className="self-start mt-1 rounded-full px-5 py-2 bg-[var(--background-primary)] active:opacity-80"
       >
-        <AppText className="font-semibold text-[var(--foreground)]">Talk to the team</AppText>
+        <AppText className="font-semibold text-[var(--foreground)]">{dc("Talk to the team")}</AppText>
       </Pressable>
     </View>
 

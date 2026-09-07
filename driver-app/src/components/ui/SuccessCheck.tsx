@@ -1,3 +1,5 @@
+import { useLanguage as useCopyLanguage } from "../../i18n";
+import { driverCopy as dc } from "../../lib/copy";
 import LottieView from 'lottie-react-native';
 import { View, type StyleProp, type ViewStyle } from 'react-native';
 
@@ -20,12 +22,13 @@ const SuccessCheck = ({
     className = '',
     style,
 }: SuccessCheckProps) => {
+    useCopyLanguage();
     return (
         <View
             className={className}
             accessible
             accessibilityRole="image"
-            accessibilityLabel="Success"
+            accessibilityLabel={dc("Success")}
             style={[
                 {
                     width: size,

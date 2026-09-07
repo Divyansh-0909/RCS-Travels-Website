@@ -1,3 +1,5 @@
+import { driverCopy as dc } from "../lib/copy";
+import { driverLabel } from '../lib/localizedLabels';
 export type MarketplaceStatus = 'open' | 'claimed' | 'completed' | 'cancelled';
 
 export type MarketplaceListing = {
@@ -18,11 +20,14 @@ export type MarketplaceListing = {
 export const MARKETPLACE_POSTER_FEE_RATE = 0.10;
 export const MARKETPLACE_CANCELLATION_RATE = 0.12;
 
+export const marketplaceStatus = (status: MarketplaceStatus, locale?: string) => ({
+    label: driverLabel(locale, `marketplace.${status}`), fill: MARKETPLACE_STATUS[status].fill, ink: MARKETPLACE_STATUS[status].ink,
+});
 export const MARKETPLACE_STATUS: Record<MarketplaceStatus, { label: string; fill: string; ink: string }> = {
-    open: { label: 'Open', fill: '#243AFB', ink: 'text-white' },
-    claimed: { label: 'Claimed', fill: '#92400E', ink: 'text-white' },
-    completed: { label: 'Completed', fill: '#166534', ink: 'text-white' },
-    cancelled: { label: 'Cancelled', fill: '#4B5563', ink: 'text-white' },
+    open: { get "label"() { return dc("Open"); }, fill: '#243AFB', ink: 'text-white' },
+    claimed: { get "label"() { return dc("Claimed"); }, fill: '#92400E', ink: 'text-white' },
+    completed: { get "label"() { return dc("Completed"); }, fill: '#166534', ink: 'text-white' },
+    cancelled: { get "label"() { return dc("Cancelled"); }, fill: '#4B5563', ink: 'text-white' },
 };
 
 /**

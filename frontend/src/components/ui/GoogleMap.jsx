@@ -1,10 +1,12 @@
+import { useTranslation as useCopyLanguage } from "react-i18next";
+import { websiteCopy as dc } from "../../i18nCopy";
 import { useContext, useEffect, useRef, useState } from "react";
 import Icon from "@mdi/react";
 import { mdiAlertCircleOutline } from "@mdi/js";
-import MapSkeleton from "./MapSkeleton";
 import googleLogo from "../../assets/google-logo.webp";
 import googleAttribution from "../../assets/google-ad.webp";
 import { ThemeContext } from "../../context/ThemeContext";
+import { useWebsiteCopy } from "../../hooks/useWebsiteCopy";
 
 // Usage:
 //   <GoogleMap center={{ lat, lng }} zoom={17} onIdle={(c) => ...} className="...">
@@ -17,9 +19,10 @@ let loaderPromise = null;
 let mapDiv = null;
 let mapInstance = null;
 let activeMapAppearance = null;
-// Tiles are only "first paint" once per session — the singleton keeps them
-// afterwards, so later mounts must not flash the skeleton again.
-let tilesEverLoaded = false;
+// The singleton keeps rendered tiles while its appearance stays the same. A
+// theme change creates a new map surface, so that appearance must earn its own
+// first tile paint before the loader leaves.
+let loadedMapAppearance = null;
 
 const GOOGLE_MAP_ID = import.meta.env.VITE_GOOGLE_MAPS_MAP_ID?.trim() || undefined;
 const DARK_MAP_LAND_COLOR = "#2e2e38";
@@ -85,6 +88,8 @@ function loadMapsScript() {
 }
 
 const GoogleMap = ({ center, zoom = 16, onMapReady, onIdle, className, children }) => {
+    useCopyLanguage();
+    const tr = useWebsiteCopy();
     const hostRef = useRef(null);
     const { darkMode } = useContext(ThemeContext);
     const mapColorScheme = darkMode ? "DARK" : "LIGHT";
@@ -93,10 +98,10 @@ const GoogleMap = ({ center, zoom = 16, onMapReady, onIdle, className, children 
     const mapAppearance = `${GOOGLE_MAP_ID ?? "local"}:${mapColorScheme}`;
     // covers the map with a shimmer until Google reports the first tiles
     // painted — otherwise tiles pop in over white
-    const [ready, setReady] = useState(tilesEverLoaded);
+    const [ready, setReady] = useState(loadedMapAppearance === mapAppearance);
     // Kept for the 200ms fade only, then unmounted so an invisible skeleton
     // does not keep animating behind an interactive map for the rest of a trip.
-    const [showSkeleton, setShowSkeleton] = useState(!tilesEverLoaded);
+    const [showSkeleton, setShowSkeleton] = useState(loadedMapAppearance !== mapAppearance);
     // Maps JS never loaded (blocked, offline, bad key). The container used to be
     // left as a bare grey rectangle, which reads as a broken page rather than a
     // missing map.
@@ -110,6 +115,9 @@ const GoogleMap = ({ center, zoom = 16, onMapReady, onIdle, className, children 
         let cancelled = false;
         let idleListener = null;
         let tilesListener = null;
+
+        setLoadFailed(false);
+        setReady(loadedMapAppearance === mapAppearance);
 
         (async () => {
             try {
@@ -171,9 +179,9 @@ const GoogleMap = ({ center, zoom = 16, onMapReady, onIdle, className, children 
             idleListener = mapInstance.addListener("idle", () => {
                 onIdleRef.current?.(mapInstance.getCenter().toJSON());
             });
-            if (tilesEverLoaded) setReady(true);
+            if (loadedMapAppearance === mapAppearance) setReady(true);
             else tilesListener = mapInstance.addListener("tilesloaded", () => {
-                tilesEverLoaded = true;
+                loadedMapAppearance = mapAppearance;
                 setReady(true);
             });
             onMapReady?.(mapInstance);
@@ -187,15 +195,17 @@ const GoogleMap = ({ center, zoom = 16, onMapReady, onIdle, className, children 
         };
     }, [darkMode]);
 
+    const appearanceReady = loadFailed || (ready && loadedMapAppearance === mapAppearance);
+
     useEffect(() => {
-        if (!ready) {
+        if (!appearanceReady) {
             setShowSkeleton(true);
             return;
         }
 
         const timer = setTimeout(() => setShowSkeleton(false), 220);
         return () => clearTimeout(timer);
-    }, [ready]);
+    }, [appearanceReady]);
 
     // re-center when the caller's target moves (e.g. locate-me)
     useEffect(() => {
@@ -221,7 +231,7 @@ const GoogleMap = ({ center, zoom = 16, onMapReady, onIdle, className, children 
                 script never loads): branding over a shimmer or over the
                 "Map unavailable" card would be crediting a map that isn't
                 there. */}
-            {ready && !loadFailed && (
+            {appearanceReady && !loadFailed && (
                 <>
                     <img
                         src={googleLogo}
@@ -230,23 +240,24 @@ const GoogleMap = ({ center, zoom = 16, onMapReady, onIdle, className, children 
                     />
                     <img
                         src={googleAttribution}
-                        alt="Map data ©2026"
+                        alt={dc("Map data ©2026")}
                         className="absolute top-0 right-0 z-10 sm:hidden w-[150px] h-auto pointer-events-none"
                     />
                 </>
             )}
             {/* above children too: a pin floating on a shimmer reads as broken */}
-            {showSkeleton && (
+            {(showSkeleton || !appearanceReady) && (
                 <div
-                    className={`absolute inset-0 z-20 pointer-events-none transition-opacity duration-200 motion-reduce:transition-none ${ready ? "opacity-0" : "opacity-100"}`}
-                    style={{ background: mapBackgroundColor }}
+                    className={`map-loading-sheen absolute inset-0 z-20 pointer-events-none transition-opacity duration-200 motion-reduce:transition-none ${appearanceReady ? "opacity-0" : "opacity-100"}`}
+                    style={{
+                        backgroundColor: mapBackgroundColor,
+                        "--map-sheen-opacity": darkMode ? 0.15 : 0.7,
+                    }}
                     role="status"
                     aria-live="polite"
-                    aria-label={ready ? undefined : "Loading map"}
-                    aria-hidden={ready}
-                >
-                    <MapSkeleton />
-                </div>
+                    aria-label={appearanceReady ? undefined : tr("Loading map")}
+                    aria-hidden={appearanceReady}
+                />
             )}
             {/* Names the gap rather than filling it. pointer-events-none on
                 purpose: on phones this sits behind the booking sheets, and the
@@ -256,12 +267,12 @@ const GoogleMap = ({ center, zoom = 16, onMapReady, onIdle, className, children 
             {loadFailed && (
                 <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-1.5 px-6 text-center pointer-events-none" style={{ background: mapBackgroundColor }}>
                     <Icon path={mdiAlertCircleOutline} size={1} className="text-[var(--text-muted)]/70" />
-                    <h4 className="text-sm sm:text-base font-medium text-[var(--text)]/80">Map unavailable</h4>
+                    <h4 className="text-sm sm:text-base font-medium text-[var(--text)]/80">{tr("Map unavailable")}</h4>
                     {/* No "below": this panel sits beside the content on
                         desktop and behind the sheet on phones, so the copy
                         can't name a direction. */}
                     <p className="text-xs sm:text-sm leading-snug text-[var(--text-muted)] max-w-[28ch]">
-                        Your ride is unaffected. Your driver and route details are live.
+                        {tr("Your ride is unaffected. Your driver and route details are live.")}
                     </p>
                 </div>
             )}

@@ -188,6 +188,7 @@ export function resolveSnap(y, velocity, stops) {
  * @param {boolean} options.enabled          Off on desktop — the hook then does nothing at all.
  * @param {boolean} options.open             False plays the sheet back off-screen.
  * @param {typeof SNAP_NAMES[number]} options.initialSnap
+ * @param {boolean} [options.fillAvailable] Use all available height instead of fitting short content.
  * @param {number} [options.bottomInset] Px of pinned chrome below the sheet (an action bar).
  * @param {unknown} [options.contentKey] Changes when the panel swaps its content, so a sheet
  *                                       sized to that content can be re-measured. Not a render
@@ -199,7 +200,7 @@ export function resolveSnap(y, velocity, stops) {
  *                                         actually closes the sheet — this only reports it.
  * @param {(snap: typeof SNAP_NAMES[number]) => void} [options.onSnapChange] Fired on settle, not per frame.
  */
-export function useBottomSheet({ enabled, open = true, initialSnap = INITIAL_SHEET_SNAP, bottomInset = 0, contentKey, dismissible = false, onDismiss, onSnapChange }) {
+export function useBottomSheet({ enabled, open = true, initialSnap = INITIAL_SHEET_SNAP, fillAvailable = false, bottomInset = 0, contentKey, dismissible = false, onDismiss, onSnapChange }) {
     const sheetRef = useRef(null);
     const grabberRef = useRef(null);
 
@@ -284,9 +285,13 @@ export function useBottomSheet({ enabled, open = true, initialSnap = INITIAL_SHE
     const measure = useCallback(() => {
         const vh = window.innerHeight;
         const inset = bottomInsetRef.current;
-        geometryRef.current = { vh, bottomInset: inset, ...sheetStops(vh, inset, measureContent(), dismissible) };
+        geometryRef.current = {
+            vh,
+            bottomInset: inset,
+            ...sheetStops(vh, inset, fillAvailable ? 0 : measureContent(), dismissible),
+        };
         return geometryRef.current;
-    }, [measureContent, dismissible]);
+    }, [measureContent, dismissible, fillAvailable]);
 
     const paint = useCallback((y) => {
         // Expanded rests at 0 and nothing sits above it, so a negative value can

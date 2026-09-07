@@ -1,5 +1,6 @@
 import { useViewNavigate } from "../hooks/useViewNavigate"
 import Button from "../components/ui/Button"
+import { useWebsiteCopy } from "../hooks/useWebsiteCopy"
 
 /* Rendered by the catch-all route. Vercel rewrites every path to index.html, so
    without this a mistyped or stale URL would fall through to the router's
@@ -8,16 +9,17 @@ import Button from "../components/ui/Button"
    The metadata comes from defaultMeta, which PageMeta applies to any path with
    no entry of its own. */
 const NotFound = () => {
+    const tr = useWebsiteCopy()
     const navigate = useViewNavigate()
 
     return (
         <div className="bg-gradient min-h-[100dvh] flex flex-col items-center justify-center gap-3 px-6 text-center">
-            <h1>This page doesn't exist</h1>
+            <h1>{tr("This page doesn't exist")}</h1>
             <p className="max-w-md">
-                The link may be old, or the address slightly off. Everything still works from the home page.
+                {tr("The link may be old, or the address slightly off. Everything still works from the home page.")}
             </p>
             <Button prop={{}} className="mt-4" onClick={() => navigate("/")}>
-                Back to home
+                {tr("Back to home")}
             </Button>
         </div>
     )

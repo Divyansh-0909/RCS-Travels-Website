@@ -1,3 +1,5 @@
+import { useLanguage as useCopyLanguage } from "../i18n";
+import { driverCopy as dc } from "../lib/copy";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
@@ -80,6 +82,7 @@ const CarPanel = ({
   onToggle: () => void;
   children: ReactNode;
 }) => {
+    useCopyLanguage();
   // Held rather than read from Pressable's style callback: the header carries a
   // className, and NativeWind drops a style-as-a-function on anything that does.
   // Same reason Button and Input hold theirs.
@@ -114,7 +117,7 @@ const CarPanel = ({
       <Pressable
         role="button"
         aria-expanded={open}
-        aria-label={`${vehicleClassLabel(vehicle.class)} ${vehicle.number} documents`}
+        aria-label={dc("{{value0}} {{value1}} documents", {value0: (vehicleClassLabel(vehicle.class)), value1: (vehicle.number)})}
         onPress={onToggle}
         onPressIn={() => setPressed(true)}
         onPressOut={() => setPressed(false)}
@@ -132,9 +135,9 @@ const CarPanel = ({
                 did not need to say which car it was about; with one per car, the
                 captain's first question at every row is which of them he is
                 answering for. */}
-            {vehicle.isActive ? 'Driving now · ' : ''}
+            {vehicle.isActive ? dc("Driving now ·") : ''}
             {missingCount > 0
-              ? `${missingCount} still to upload`
+              ? dc("{{value0}} still to upload", {value0: (missingCount)})
               : verificationLabel(vehicle.verificationStatus)}
           </AppText>
         </View>
@@ -162,6 +165,7 @@ const CarPanel = ({
 };
 
 const Documents = () => {
+    useCopyLanguage();
   const api = useApi();
   const navigate = useNavigate();
   // Which car the caller pointed at. It no longer decides which checklist is on
@@ -351,7 +355,7 @@ const Documents = () => {
 
       if (!outcome.ok) {
         const failure = outcome.results.find((r) => !r.ok && r.error);
-        Alert.alert('Upload failed', failure?.error ?? outcome.error ?? 'Please try again.');
+        Alert.alert(dc("Upload failed"), failure?.error ?? outcome.error ?? dc("Please try again."));
       }
 
       await refresh();
@@ -399,7 +403,7 @@ const Documents = () => {
 
   if (loading) {
     return (
-      <AccountDetailScreen title="Documents">
+      <AccountDetailScreen title={dc("Documents")}>
         <DetailSectionsSkeleton cards={4} />
       </AccountDetailScreen>
     );
@@ -482,9 +486,7 @@ const Documents = () => {
     >
       <View className="flex-row items-center gap-2 px-4 pt-4" style={{ paddingBottom: HEADING_GAP }}>
         <BackButton onPress={() => navigate(-1)} icon="caret" className="-ml-3 -mr-3" />
-        <AppText className={`text-xl font-semibold ${INK}`} style={TITLE_TRACKING}>
-          Documents
-        </AppText>
+        <AppText className={`text-xl font-semibold ${INK}`} style={TITLE_TRACKING}>{dc("Documents")}</AppText>
       </View>
 
       {error ? (
@@ -500,13 +502,10 @@ const Documents = () => {
       <View className="mx-4 rounded-2xl p-4" style={{ backgroundColor: CARD }}>
         <AppText className={`font-semibold ${INK}`}>
           {totalMissing === 0
-            ? 'All required documents are on file'
-            : `${totalMissing} still to upload`}
+            ? dc("All required documents are on file")
+            : dc("{{value0}} still to upload", {value0: (totalMissing)})}
         </AppText>
-        <AppText className={`text-sm mt-1 ${MUTED}`}>
-          Every document is checked automatically, then reviewed by the RCS team.
-          Both have to pass before you can go online.
-        </AppText>
+        <AppText className={`text-sm mt-1 ${MUTED}`}>{dc("Every document is checked automatically, then reviewed by the RCS team. Both have to pass before you can go online.")}</AppText>
       </View>
 
       {/* Personal documents carry no car. Passing null rather than the active
@@ -514,7 +513,7 @@ const Documents = () => {
           resolveUploadVehicle: a batch of his licence and his photograph involves
           no car and must not name one. */}
       <View className="mx-4 mt-2">
-        <AppText className={`text-sm font-semibold ${INK}`}>Your documents</AppText>
+        <AppText className={`text-sm font-semibold ${INK}`}>{dc("Your documents")}</AppText>
       </View>
       <View className="mx-4">
         {personalTypes.map((info, i) => renderRow(info, i, personalTypes, base ?? undefined, null))}
@@ -526,7 +525,7 @@ const Documents = () => {
               owes as a driver, this names what a car owes — and each panel below
               names which car. */}
           <View className="mx-4 mt-2">
-            <AppText className={`text-sm font-semibold ${INK}`}>Car documents</AppText>
+            <AppText className={`text-sm font-semibold ${INK}`}>{dc("Car documents")}</AppText>
           </View>
 
           {/* One panel per car, all shut but the one the caller named. The toggle
@@ -566,18 +565,15 @@ const Documents = () => {
         // dead checklist would be the alternative — eleven rows, nine of which
         // fail on tap with a message about a car he has never been asked for.
         <View className="mx-4 mt-2 rounded-2xl p-4" style={{ backgroundColor: CARD }}>
-          <AppText className={`font-semibold ${INK}`}>Add your car first</AppText>
-          <AppText className={`text-sm mt-1 ${MUTED}`}>
-            The RC, insurance and permits belong to a specific car, so we need to know
-            which one before you can upload them.
-          </AppText>
+          <AppText className={`font-semibold ${INK}`}>{dc("Add your car first")}</AppText>
+          <AppText className={`text-sm mt-1 ${MUTED}`}>{dc("The RC, insurance and permits belong to a specific car, so we need to know which one before you can upload them.")}</AppText>
           <Pressable
             role="button"
             onPress={() => navigate('/account/vehicles')}
             hitSlop={8}
             style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1, marginTop: 12 })}
           >
-            <AppText className={`font-semibold ${INK}`}>Add a car →</AppText>
+            <AppText className={`font-semibold ${INK}`}>{dc("Add a car →")}</AppText>
           </Pressable>
         </View>
       )}

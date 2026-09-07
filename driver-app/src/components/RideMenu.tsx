@@ -1,3 +1,5 @@
+import { useLanguage as useCopyLanguage } from "../i18n";
+import { driverCopy as dc } from "../lib/copy";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { BackHandler, Dimensions, Pressable, View } from 'react-native';
 import { cssInterop } from 'nativewind';
@@ -34,6 +36,7 @@ type RideMenuValue = { open: boolean; setOpen: (open: boolean) => void };
 const RideMenuContext = createContext<RideMenuValue | null>(null);
 
 export const RideMenuProvider = ({ children }: { children: ReactNode }) => {
+    useCopyLanguage();
     const [open, setOpen] = useState(false);
     const value = useMemo(() => ({ open, setOpen }), [open]);
     return <RideMenuContext.Provider value={value}>{children}</RideMenuContext.Provider>;
@@ -52,12 +55,13 @@ const useRideMenu = () => {
  * be positioned against a strip 92% wide and 40 tall.
  */
 export const RideMenuButton = () => {
+    useCopyLanguage();
     const { setOpen } = useRideMenu();
 
     return (
         <Pressable
             role="button"
-            aria-label="Menu"
+            aria-label={dc("Menu")}
             onPress={() => setOpen(true)}
             hitSlop={10}
             style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
@@ -71,6 +75,7 @@ export const RideMenuButton = () => {
 };
 
 export const RideMenuDrawer = () => {
+    useCopyLanguage();
     const { open, setOpen } = useRideMenu();
     const { profile } = useDriver();
     const navigate = useNavigate();
@@ -105,7 +110,7 @@ export const RideMenuDrawer = () => {
             <Animated.View entering={FadeIn.duration(160)} style={{ position: 'absolute', inset: 0 }}>
                 <Pressable
                     onPress={close}
-                    accessibilityLabel="Close menu"
+                    accessibilityLabel={dc("Close menu")}
                     style={{ flex: 1, backgroundColor: 'rgba(11,11,20,0.5)' }}
                 />
             </Animated.View>
@@ -133,7 +138,7 @@ export const RideMenuDrawer = () => {
                     </AppText>
                     <Pressable
                         role="button"
-                        aria-label="Close menu"
+                        aria-label={dc("Close menu")}
                         onPress={close}
                         hitSlop={10}
                         style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}

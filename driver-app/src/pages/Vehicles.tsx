@@ -1,3 +1,5 @@
+import { useLanguage as useCopyLanguage } from "../i18n";
+import { driverCopy as dc } from "../lib/copy";
 import { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
@@ -72,6 +74,7 @@ const toneFor = (status: Vehicle['verificationStatus']) =>
       : MUTED;
 
 const Vehicles = () => {
+    useCopyLanguage();
   const api = useApi();
   const navigate = useNavigate();
   const { height: windowHeight } = useWindowDimensions();
@@ -155,7 +158,7 @@ const Vehicles = () => {
     // them to be read. Echoing its sentence is better than composing a vaguer
     // one here from a status code.
     if (result.error) {
-      Alert.alert('Cannot switch cars', result.error);
+      Alert.alert(dc("Cannot switch cars"), result.error);
       return;
     }
 
@@ -167,8 +170,8 @@ const Vehicles = () => {
     // loses an afternoon.
     if (result.verificationStatus !== 'approved') {
       Alert.alert(
-        `Now driving ${vehicle.number}`,
-        "This car's documents aren't approved yet, so you can't go online in it. Switch back any time.",
+        dc("Now driving {{value0}}", {value0: (vehicle.number)}),
+        dc("This car's documents aren't approved yet, so you can't go online in it. Switch back any time."),
       );
     }
   }, [api, busy, load]);
@@ -176,11 +179,11 @@ const Vehicles = () => {
   const remove = useCallback(async (vehicle: Vehicle) => {
     const confirmed = await new Promise<boolean>((resolve) => {
       Alert.alert(
-        `Remove ${vehicle.number}?`,
-        'Its documents are removed with it. You can add the car again later, but you would have to upload them all again.',
+        dc("Remove {{value0}}?", {value0: (vehicle.number)}),
+        dc("Its documents are removed with it. You can add the car again later, but you would have to upload them all again."),
         [
-          { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
-          { text: 'Remove', style: 'destructive', onPress: () => resolve(true) },
+          { get "text"() { return dc("Cancel"); }, style: 'cancel', onPress: () => resolve(false) },
+          { get "text"() { return dc("Remove"); }, style: 'destructive', onPress: () => resolve(true) },
         ],
       );
     });
@@ -191,18 +194,18 @@ const Vehicles = () => {
     setBusy(false);
 
     if (result.error) {
-      Alert.alert('Cannot remove this car', result.error);
+      Alert.alert(dc("Cannot remove this car"), result.error);
       return;
     }
     await load();
   }, [api, load]);
 
   const submitNew = useCallback(async () => {
-    if (!vehicleClass) { setFormError('Pick the kind of car'); return; }
-    if (vehicleNumber.trim().length < 4) { setFormError('Enter the number on the plate'); return; }
+    if (!vehicleClass) { setFormError(dc("Pick the kind of car")); return; }
+    if (vehicleNumber.trim().length < 4) { setFormError(dc("Enter the number on the plate")); return; }
     // Required, like the plate. A rider meeting this car at a gate is looking for
     // "the white Innova Crysta" — the class alone does not pick it out of a queue.
-    if (vehicleModel.trim().length < 2) { setFormError("Enter the car's model"); return; }
+    if (vehicleModel.trim().length < 2) { setFormError(dc("Enter the car's model")); return; }
 
     setBusy(true);
     const result = await api.addVehicle({
@@ -231,7 +234,7 @@ const Vehicles = () => {
 
   if (loading) {
     return (
-      <AccountDetailScreen title="Your cars">
+      <AccountDetailScreen title={dc("Your cars")}>
         <DetailSectionsSkeleton cards={3} />
       </AccountDetailScreen>
     );
@@ -250,9 +253,7 @@ const Vehicles = () => {
       >
       <View className="flex-row items-center gap-2 px-4 pt-4" style={{ paddingBottom: HEADING_GAP }}>
         <BackButton onPress={() => navigate(-1)} icon="caret" className="-ml-3 -mr-3" />
-        <AppText className={`text-xl font-semibold ${INK}`} style={TITLE_TRACKING}>
-          Your cars
-        </AppText>
+        <AppText className={`text-xl font-semibold ${INK}`} style={TITLE_TRACKING}>{dc("Your cars")}</AppText>
       </View>
 
       {error ? (
@@ -290,7 +291,7 @@ const Vehicles = () => {
                 </AppText>
                 <AppText numberOfLines={1} className={`text-sm ${MUTED}`}>
                   {vehicleClassLabel(vehicle.class)}
-                  {vehicle.model ? ` · ${vehicle.model}` : ''}
+                  {vehicle.model ? dc("· {{value0}}", {value0: (vehicle.model)}) : ''}
                 </AppText>
               </View>
             </View>
@@ -298,16 +299,14 @@ const Vehicles = () => {
             <View className="flex-row items-center justify-between gap-2 mt-3">
               <AppText className={`flex-1 text-sm ${toneFor(vehicle.verificationStatus)}`}>
                 {verificationLabel(vehicle.verificationStatus)}
-                {vehicle.missing?.length ? ` · ${vehicle.missing.length} to upload` : ''}
+                {vehicle.missing?.length ? dc("· {{value0}} to upload", {value0: (vehicle.missing.length)}) : ''}
               </AppText>
               {vehicle.isActive ? (
                 <View
                   className="shrink-0 rounded-lg px-2.5 py-1"
                   style={{ backgroundColor: PRIMARY }}
                 >
-                  <AppText className="text-xs font-semibold uppercase tracking-wide text-white">
-                    Driving now
-                  </AppText>
+                  <AppText className="text-xs font-semibold uppercase tracking-wide text-white">{dc("Driving now")}</AppText>
                 </View>
               ) : null}
             </View>
@@ -325,7 +324,7 @@ const Vehicles = () => {
                   opacity: pressed ? 0.7 : 1,
                 })}
               >
-                <AppText className="text-sm font-semibold text-white">Documents</AppText>
+                <AppText className="text-sm font-semibold text-white">{dc("Documents")}</AppText>
               </Pressable>
 
               {!vehicle.isActive ? (
@@ -342,7 +341,7 @@ const Vehicles = () => {
                     opacity: pressed || busy ? 0.6 : 1,
                   })}
                 >
-                  <AppText className="text-sm font-semibold text-white">Drive this one</AppText>
+                  <AppText className="text-sm font-semibold text-white">{dc("Drive this one")}</AppText>
                 </Pressable>
               ) : null}
 
@@ -353,7 +352,7 @@ const Vehicles = () => {
               {!vehicle.isActive ? (
                 <Pressable
                   role="button"
-                  aria-label={`Remove ${vehicle.number}`}
+                  aria-label={dc("Remove {{value0}}", {value0: (vehicle.number)})}
                   disabled={busy}
                   onPress={() => remove(vehicle)}
                   hitSlop={8}
@@ -382,7 +381,7 @@ const Vehicles = () => {
         >
           <PlusIcon size={18} weight="bold" color={ICON_INK} />
         </View>
-        <AppText className={`font-semibold ${INK}`}>Add another car</AppText>
+        <AppText className={`font-semibold ${INK}`}>{dc("Add another car")}</AppText>
       </Pressable>
       </ScrollView>
 
@@ -405,15 +404,13 @@ const Vehicles = () => {
           >
             <View className="flex-row items-start gap-3 pb-4">
               <View className="flex-1 gap-1">
-                <AppText className={`text-lg font-semibold ${INK}`}>Add a car</AppText>
-                <AppText className={`text-sm ${MUTED}`}>
-                  Choose the type, then enter the number plate and model.
-                </AppText>
+                <AppText className={`text-lg font-semibold ${INK}`}>{dc("Add a car")}</AppText>
+                <AppText className={`text-sm ${MUTED}`}>{dc("Choose the type, then enter the number plate and model.")}</AppText>
               </View>
 
               <Pressable
                 role="button"
-                aria-label="Close"
+                aria-label={dc("Close")}
                 disabled={busy}
                 hitSlop={10}
                 onPress={closeAddSheet}
@@ -437,7 +434,7 @@ const Vehicles = () => {
               contentContainerStyle={{ gap: 12, paddingBottom: 32 }}
             >
               <View className="gap-2">
-                <AppText className={`text-sm font-semibold ${INK}`}>Car type</AppText>
+                <AppText className={`text-sm font-semibold ${INK}`}>{dc("Car type")}</AppText>
                 <View className="flex-row flex-wrap gap-2">
                   {CLASSES.map((option) => {
                     const selected = vehicleClass === option;
@@ -464,12 +461,12 @@ const Vehicles = () => {
               </View>
 
               <View className="gap-1">
-                <AppText className={`text-sm font-semibold ${INK}`}>Number plate</AppText>
+                <AppText className={`text-sm font-semibold ${INK}`}>{dc("Number plate")}</AppText>
                 <Input
                   prop={{
                     variant: 'light',
                     type: 'text',
-                    placeholder: 'Number plate',
+                    get "placeholder"() { return dc("Number plate"); },
                     value: vehicleNumber,
                     onChangeFn: (value: string) => {
                       setVehicleNumber(value.toUpperCase());
@@ -480,12 +477,12 @@ const Vehicles = () => {
               </View>
 
               <View className="gap-1">
-                <AppText className={`text-sm font-semibold ${INK}`}>Model</AppText>
+                <AppText className={`text-sm font-semibold ${INK}`}>{dc("Model")}</AppText>
                 <Input
                   prop={{
                     variant: 'light',
                     type: 'text',
-                    placeholder: 'Model',
+                    get "placeholder"() { return dc("Model"); },
                     value: vehicleModel,
                     onChangeFn: (value: string) => {
                       setVehicleModel(value);
@@ -503,7 +500,7 @@ const Vehicles = () => {
                 ) : null}
 
                 <Button prop={{ disabled: busy }} onPress={submitNew}>
-                  {busy ? 'Adding...' : 'Add car'}
+                  {busy ? dc("Adding...") : dc("Add car")}
                 </Button>
               </View>
             </ScrollView>

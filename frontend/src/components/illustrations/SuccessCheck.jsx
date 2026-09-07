@@ -1,3 +1,5 @@
+import { useTranslation as useCopyLanguage } from "react-i18next";
+import { websiteCopy as dc } from "../../i18nCopy";
 /* SuccessCheck — animated success checkmark (Lottie).
    Replaces the static tick.webp confirmation icon. */
 
@@ -15,12 +17,13 @@ const SuccessCheck = ({
     className = "",
     style,
 }) => {
+    useCopyLanguage();
     return (
         <div
             className={className}
             style={{ width: size, height: size, ...style }}
             role="img"
-            aria-label="Success"
+            aria-label={dc("Success")}
         >
             <DotLottieReact
                 data={SUCCESS_DATA}

@@ -1,3 +1,5 @@
+import { useTranslation as useCopyLanguage } from "react-i18next";
+import { websiteCopy as dc } from "../../i18nCopy";
 /* CrossOutline — self-contained animated cross/error mark.
    Draws the two cross strokes. No external deps / network. */
 
@@ -16,6 +18,7 @@ const CrossOutline = ({
     className = "",
     style,
 }) => {
+    useCopyLanguage();
     const iterations = loop ? "infinite" : 1;
     const wait = `${delay}ms`;
     const waitSecond = `${delay + 200}ms`;
@@ -25,34 +28,9 @@ const CrossOutline = ({
             className={className}
             style={{ display: "inline-flex", lineHeight: 0, ...style }}
             role="img"
-            aria-label="Error"
+            aria-label={dc("Error")}
         >
-            <style>{`
-                @keyframes cro-line { to { stroke-dashoffset: 0; } }
-                @keyframes cro-pop {
-                    0%   { transform: scale(0.9); }
-                    60%  { transform: scale(1.04); }
-                    100% { transform: scale(1); }
-                }
-                .cro-line-1 {
-                    stroke-dasharray: ${LINE_LENGTH};
-                    stroke-dashoffset: ${LINE_LENGTH};
-                    animation: cro-line 0.25s cubic-bezier(0.65, 0, 0.35, 1) ${wait} forwards ${iterations};
-                }
-                .cro-line-2 {
-                    stroke-dasharray: ${LINE_LENGTH};
-                    stroke-dashoffset: ${LINE_LENGTH};
-                    animation: cro-line 0.25s cubic-bezier(0.65, 0, 0.35, 1) ${waitSecond} forwards ${iterations};
-                }
-                .cro-svg {
-                    transform-origin: center;
-                    animation: cro-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) ${wait} both ${iterations};
-                }
-                @media (prefers-reduced-motion: reduce) {
-                    .cro-line-1, .cro-line-2 { animation: none; stroke-dashoffset: 0; }
-                    .cro-svg { animation: none; }
-                }
-            `}</style>
+            <style>{`@keyframes cro-line { to { stroke-dashoffset: 0; } } @keyframes cro-pop { 0% { transform: scale(0.9); } 60% { transform: scale(1.04); } 100% { transform: scale(1); } } .cro-line-1 { stroke-dasharray: ${LINE_LENGTH}; stroke-dashoffset: ${LINE_LENGTH}; animation: cro-line 0.25s cubic-bezier(0.65, 0, 0.35, 1) ${wait} forwards ${iterations}; } .cro-line-2 { stroke-dasharray: ${LINE_LENGTH}; stroke-dashoffset: ${LINE_LENGTH}; animation: cro-line 0.25s cubic-bezier(0.65, 0, 0.35, 1) ${waitSecond} forwards ${iterations}; } .cro-svg { transform-origin: center; animation: cro-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) ${wait} both ${iterations}; } @media (prefers-reduced-motion: reduce) { .cro-line-1, .cro-line-2 { animation: none; stroke-dashoffset: 0; } .cro-svg { animation: none; } }`}</style>
 
             <svg
                 className="cro-svg"

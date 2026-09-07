@@ -1,0 +1,8 @@
+{
+  "language": { "select": "Apni language chunein", "english": "English", "hinglish": "Hinglish", "hindi": "Hindi", "default": "Default" },
+  "languageSelector": { "canRead": "CanRead this? Tap here", "yePadh": "Ye padh sakte hain? Yahan dabayein", "yeHindi": "Yeh padh sakte hain? Yahan dabayein" },
+  "actions": { "continue": "Aage badhein", "back": "Peechhe", "cancel": "Radd karein", "save": "Save karein", "retry": "Dobara koshish karein", "close": "Band karein", "greeting": "Namaste, {{name}}" },
+  "status": { "loading": "Load ho raha hai…", "error": "Kuch galat ho gaya", "offline": "Aap offline hain" },
+  "validation": { "required": "Yeh field zaroori hai", "invalidPhone": "Sahi mobile number daalein" },
+  "accessibility": { "back": "Peechhe jaayein", "close": "Band karein" }
+}

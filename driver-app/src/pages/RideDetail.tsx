@@ -1,3 +1,5 @@
+import { useLanguage as useCopyLanguage } from "../i18n";
+import { driverCopy as dc } from "../lib/copy";
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Linking, Pressable, ScrollView, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
@@ -9,6 +11,7 @@ import AppText from '../components/AppText';
 import {
     ActionButton,
     CONTENT,
+    CustomerPaymentPanel,
     DetailPageHeader,
     DetailStatusBanner,
     FactPill,
@@ -34,6 +37,7 @@ import {
     formatDuration,
     initials,
     isFinished,
+    customerPaymentNotice,
     rideDuration,
     rupees,
     vehicleLabel,
@@ -60,13 +64,6 @@ const FARE_LINE = `text-sm font-semibold ${CONTENT}`;
 type ApiError = { error: string; status: number; code?: string };
 type GetRideResponse = UpcomingBooking | ApiError;
 
-const PaymentBanner = ({ state }: { state: UpcomingBooking['paymentState'] }) => (
-    <DetailStatusBanner
-        label={paymentWords(state)}
-        tone={state === 'due' ? 'danger' : state === 'paid' ? 'success' : 'neutral'}
-    />
-);
-
 // gap-4 is the card's own rhythm: the top card stacks whole blocks — a heading, a
 // route, a rider — and they need the air to stay separate. The summary card stacks
 // rows of one table, which do not, so it passes its own.
@@ -91,6 +88,7 @@ const Label = ({ children }: { children: React.ReactNode }) => (
 );
 
 const RideDetail = () => {
+    useCopyLanguage();
     const { id } = useParams();
     const navigate = useNavigate();
     const api = useApi();
@@ -117,7 +115,7 @@ const RideDetail = () => {
             if ('error' in data) setError(data.error);
             else setBooking(data);
         } catch (e: unknown) {
-            setError(e instanceof Error ? e.message : 'Something went wrong');
+            setError(e instanceof Error ? e.message : dc("Something went wrong"));
         } finally {
             setLoading(false);
         }
@@ -135,7 +133,7 @@ const RideDetail = () => {
         setTimeout(() => setCopied(false), 2000);
     };
 
-    const header = <DetailPageHeader title="Ride details" onBack={() => navigate(-1)} />;
+    const header = <DetailPageHeader title={dc("Ride details")} onBack={() => navigate(-1)} />;
 
     if (loading || !booking) {
         return (
@@ -149,7 +147,7 @@ const RideDetail = () => {
                         <>
                             <AppText className="text-sm text-center text-red-600">{error}</AppText>
                             <Pressable role="button" onPress={load} hitSlop={8}>
-                                <AppText className="text-sm font-semibold text-primary">Try again</AppText>
+                                <AppText className="text-sm font-semibold text-primary">{dc("Try again")}</AppText>
                             </Pressable>
                         </>
                     </View>
@@ -162,9 +160,15 @@ const RideDetail = () => {
 
     const { lines, total, totalLabel } = fareBreakdown(booking);
     const { minutes, estimated } = rideDuration(booking);
-    const rider = booking.user?.name ?? 'Rider';
+    const rider = booking.user?.name ?? dc("Rider");
     const when = booking.completedAt ?? booking.scheduledAt;
     const canCancel = booking.status === 'assigned' || booking.status === 'en_route';
+    const payment = customerPaymentNotice(booking);
+    const onlineCollection = booking.collectionMode === 'online' || booking.scheduledAt != null;
+    const paymentStillNeedsAttention = payment.tone === 'warning' || payment.tone === 'danger' || payment.tone === 'primary';
+    const shouldShowRider = !isFinished(booking)
+        || paymentStillNeedsAttention
+        || (!onlineCollection && booking.paymentState !== 'paid' && booking.paymentState !== 'retained');
 
     const cancelRide = async () => {
         if (cancelling) return;
@@ -179,7 +183,7 @@ const RideDetail = () => {
             await refreshDriver();
             navigate(-1);
         } catch (e: unknown) {
-            setError(e instanceof Error ? e.message : 'Could not cancel this ride');
+            setError(e instanceof Error ? e.message : dc("Could not cancel this ride"));
         } finally {
             setCancelling(false);
         }
@@ -209,7 +213,7 @@ const RideDetail = () => {
 
                     Red is spent here and nowhere else on the screen, which is what lets
                     it mean "still owed" rather than just "look here". */}
-                <Card banner={isFinished(booking) ? <PaymentBanner state={booking.paymentState} /> : null}>
+                <Card banner={isFinished(booking) && !onlineCollection ? <DetailStatusBanner label={paymentWords(booking.paymentState)} tone={booking.paymentState === 'due' ? 'danger' : booking.paymentState === 'paid' || booking.paymentState === 'retained' ? 'success' : 'neutral'} /> : null}>
                     <View className="gap-1">
                         {/* The title has the row to itself now that the payment words
                             head the card. It keeps numberOfLines: "Premium SUV Ride" is
@@ -220,10 +224,9 @@ const RideDetail = () => {
                             className={`text-2xl font-semibold ${INK_TEXT}`}
                             style={{ letterSpacing: -0.5 }}
                         >
-                            {vehicleLabel(booking.vehicleClass)} Ride
-                        </AppText>
+                            {vehicleLabel(booking.vehicleClass)}{" " + dc("Ride")}</AppText>
                         <AppText className={`text-sm ${MUTED}`}>
-                            {when ? formatDateTime(when) : 'Immediate pickup'}
+                            {when ? formatDateTime(when) : dc("Immediate pickup")}
                         </AppText>
                         {/* No "(est.)" beside it. The fare was quoted when the ride was
                             booked and is the figure the rider is held to — calling it an
@@ -238,7 +241,7 @@ const RideDetail = () => {
                     <View className="h-px w-full" style={{ backgroundColor: HAIRLINE }} />
 
                     <View className="gap-1">
-                        <Label>Ride ID</Label>
+                        <Label>{dc("Ride ID")}</Label>
                         <View className="flex-row items-center gap-2">
                             {/* No flex-1: the reference sizes to its own ten characters,
                                 so the button that copies it sits against its end rather
@@ -250,7 +253,7 @@ const RideDetail = () => {
                             </AppText>
                             <Pressable
                                 role="button"
-                                aria-label="Copy ride ID"
+                                aria-label={dc("Copy ride ID")}
                                 onPress={copyId}
                                 hitSlop={10}
                                 className="flex-row items-center gap-1"
@@ -258,7 +261,7 @@ const RideDetail = () => {
                                 {copied ? (
                                     <>
                                         <Check size={14} weight="bold" className="text-[#166534]" />
-                                        <AppText className="text-xs font-semibold text-[#166534]">Copied</AppText>
+                                        <AppText className="text-xs font-semibold text-[#166534]">{dc("Copied")}</AppText>
                                     </>
                                 ) : (
                                     <Copy size={15} weight="regular" className={MUTED} />
@@ -280,7 +283,7 @@ const RideDetail = () => {
                     {booking.status !== 'cancelled' && (
                         <View className="flex-row items-center gap-2 pl-6">
                             <FactPill>
-                                {minutes == null ? '—' : `${estimated ? '~' : ''}${formatDuration(minutes)}`}
+                                {minutes == null ? '—' : dc("{{value0}}{{value1}}", {value0: (estimated ? '~' : ''), value1: (formatDuration(minutes))})}
                             </FactPill>
                             <FactPill>{formatDistance(booking.distanceKm)}</FactPill>
                         </View>
@@ -295,7 +298,7 @@ const RideDetail = () => {
 
                         Paid only, not "nothing owed": a no-charge ride can still be one
                         the captain is on his way to drive. */}
-                    {booking.paymentState !== 'paid' && (
+                    {shouldShowRider && (
                         <View
                             className="w-full flex-row items-center gap-3 rounded-2xl p-3"
                             style={{ backgroundColor: INK }}
@@ -312,14 +315,18 @@ const RideDetail = () => {
                                 <AppText numberOfLines={1} className="text-base font-semibold text-white">
                                     {rider}
                                 </AppText>
-                                <AppText className="text-xs text-[rgba(255,255,255,0.7)]">Rider</AppText>
+                                <AppText className="text-xs text-[rgba(255,255,255,0.7)]">{dc("Rider")}</AppText>
                             </View>
                         </View>
                     )}
+
+                    {(isFinished(booking) || onlineCollection) ? (
+                        <CustomerPaymentPanel {...payment} />
+                    ) : null}
                 </Card>
 
                 <View className="gap-2">
-                    <View className="px-1"><Label>Ride summary</Label></View>
+                    <View className="px-1"><Label>{dc("Ride summary")}</Label></View>
                     <Card gap="gap-3">
                         {/* The rows are one table and take a tighter gap than the card's,
                             grouped so the number is theirs and not every child's: at the
@@ -359,7 +366,7 @@ const RideDetail = () => {
                 <View className="w-full flex-row gap-2">
                     {canCancel ? (
                         <ActionButton
-                            label={cancelling ? 'Cancelling\u2026' : 'Cancel ride'}
+                            label={cancelling ? dc("Cancelling…") : dc("Cancel ride")}
                             leading={null}
                             tone="danger"
                             disabled={cancelling}
@@ -368,7 +375,7 @@ const RideDetail = () => {
                         />
                     ) : fareUnpaid(booking) ? (
                         <ActionButton
-                            label="Call rider"
+                            label={dc("Call rider")}
                             leading={<PhoneMark />}
                             solid
                             size="large"
@@ -376,7 +383,7 @@ const RideDetail = () => {
                         />
                     ) : null}
                     <ActionButton
-                        label="Contact support"
+                        label={dc("Contact support")}
                         leading={<WhatsappMark />}
                         size="large"
                         onPress={() => openSupportWhatsApp(`Hi, I need help with ride ${booking.reference}.`)}

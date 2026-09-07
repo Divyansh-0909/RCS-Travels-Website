@@ -1,0 +1,8 @@
+{
+  "language": { "select": "अपनी भाषा चुनें", "english": "अंग्रेज़ी", "hinglish": "हिंग्लिश", "hindi": "हिंदी", "default": "डिफ़ॉल्ट" },
+  "languageSelector": { "canRead": "यह पढ़ सकते हैं? यहाँ दबाएँ", "yePadh": "यह पढ़ सकते हैं? यहाँ दबाएँ", "yeHindi": "यह पढ़ सकते हैं? यहाँ दबाएँ" },
+  "actions": { "continue": "जारी रखें", "back": "वापस", "cancel": "रद्द करें", "save": "सहेजें", "retry": "फिर कोशिश करें", "close": "बंद करें", "greeting": "नमस्ते, {{name}}" },
+  "status": { "loading": "लोड हो रहा है…", "error": "कुछ गलत हो गया", "offline": "आप ऑफ़लाइन हैं" },
+  "validation": { "required": "यह फ़ील्ड ज़रूरी है", "invalidPhone": "मान्य मोबाइल नंबर दर्ज करें" },
+  "accessibility": { "back": "वापस जाएँ", "close": "बंद करें" }
+}

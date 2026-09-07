@@ -148,6 +148,26 @@ It exits non-zero if any boot-critical secret is missing — `DATABASE_URL`,
 `CLERK_SECRET_KEY`, `FARE_QUOTE_SECRET` —
 so a missing one is caught here rather than as a Cloud Run crash loop.
 
+### Razorpay activation
+
+Keep Test Mode credentials in the gitignored local `.env` only. Before enabling
+real customer payments:
+
+1. Generate Live Mode `RAZORPAY_KEY_ID` and `RAZORPAY_KEY_SECRET` in the
+   Razorpay Dashboard.
+2. Create a separate webhook secret and configure the Dashboard webhook as
+   `https://api.rcstravels.co.in/api/payments/razorpay/webhook` for
+   `payment.authorized`, `payment.captured`, `payment.failed`,
+   `refund.processed`, and `refund.failed`.
+3. Enable automatic capture. The application fulfils a payment only after its
+   gateway status is `captured`; an `authorized` payment remains pending until
+   the capture webhook arrives.
+4. Put all three production values in `.env.production`, run
+   `scripts/push-secrets.ps1`, and include the three Secret Manager bindings in
+   the deploy command below.
+
+Never deploy the Test Mode key pair to the production service.
+
 **`DATABASE_URL` must be the Supabase session pooler URI.** Direct connections
 are IPv6-only on new projects and Cloud Run's egress will not reach them.
 `DIRECT_URL` is deliberately **not** pushed: it is read only by `prisma migrate`
@@ -201,7 +221,7 @@ gcloud run deploy $SERVICE `
   --set-env-vars "CORS_ORIGINS=https://rcstravels.vercel.app" `
   --set-env-vars "APP_ORIGIN=https://rcstravels.vercel.app" `
   --set-env-vars "GCS_BUCKET=rcs-travels-driver-documents" `
-  --set-secrets "DATABASE_URL=DATABASE_URL:latest,CLERK_SECRET_KEY=CLERK_SECRET_KEY:latest,CLERK_PUBLISHABLE_KEY=CLERK_PUBLISHABLE_KEY:latest,FARE_QUOTE_SECRET=FARE_QUOTE_SECRET:latest,GOOGLE_MAPS_API_KEY=GOOGLE_MAPS_API_KEY:latest,FIREBASE_SERVICE_ACCOUNT_BASE64=FIREBASE_SERVICE_ACCOUNT_BASE64:latest,WHATSAPP_ACCESS_TOKEN=WHATSAPP_ACCESS_TOKEN:latest,WHATSAPP_PHONE_NUMBER_ID=WHATSAPP_PHONE_NUMBER_ID:latest,WHATSAPP_VERIFY_TOKEN=WHATSAPP_VERIFY_TOKEN:latest,WHATSAPP_APP_SECRET=WHATSAPP_APP_SECRET:latest,ADMIN_PHONE=ADMIN_PHONE:latest"
+  --set-secrets "DATABASE_URL=DATABASE_URL:latest,CLERK_SECRET_KEY=CLERK_SECRET_KEY:latest,CLERK_PUBLISHABLE_KEY=CLERK_PUBLISHABLE_KEY:latest,FARE_QUOTE_SECRET=FARE_QUOTE_SECRET:latest,GOOGLE_MAPS_API_KEY=GOOGLE_MAPS_API_KEY:latest,RAZORPAY_KEY_ID=RAZORPAY_KEY_ID:latest,RAZORPAY_KEY_SECRET=RAZORPAY_KEY_SECRET:latest,RAZORPAY_WEBHOOK_SECRET=RAZORPAY_WEBHOOK_SECRET:latest,FIREBASE_SERVICE_ACCOUNT_BASE64=FIREBASE_SERVICE_ACCOUNT_BASE64:latest,WHATSAPP_ACCESS_TOKEN=WHATSAPP_ACCESS_TOKEN:latest,WHATSAPP_PHONE_NUMBER_ID=WHATSAPP_PHONE_NUMBER_ID:latest,WHATSAPP_VERIFY_TOKEN=WHATSAPP_VERIFY_TOKEN:latest,WHATSAPP_APP_SECRET=WHATSAPP_APP_SECRET:latest,ADMIN_PHONE=ADMIN_PHONE:latest"
 ```
 
 Why these numbers:

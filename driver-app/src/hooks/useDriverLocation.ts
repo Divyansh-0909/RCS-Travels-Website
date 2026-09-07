@@ -1,3 +1,4 @@
+import { driverCopy as dc } from "../lib/copy";
 import { useEffect, useRef, useState } from 'react';
 import { AppState, Linking } from 'react-native';
 import * as Location from 'expo-location';
@@ -95,8 +96,8 @@ const IMMEDIATE_FIX_TIMEOUT_MS = 12_000;
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const FOREGROUND_SERVICE = {
-  notificationTitle: 'Online with RCS Captains',
-  notificationBody: 'Sharing your location so nearby rides reach you.',
+  get "notificationTitle"() { return dc("Online with RCS Captains"); },
+  get "notificationBody"() { return dc("Sharing your location so nearby rides reach you."); },
   notificationColor: '#243AFB',
   // FALSE, so swiping the app away does not quietly take him off the map. He is
   // still online — the server still thinks so, and riders are still being
@@ -132,11 +133,11 @@ export async function ensureLocationPermission(): Promise<LocationPermission> {
     const canRequest = foreground.canAskAgain;
     const accepted = await showPermissionPrompt({
       kind: 'location',
-      title: canRequest ? 'Share your location' : 'Turn on location access',
+      title: canRequest ? dc("Share your location") : dc("Turn on location access"),
       message: canRequest
-        ? 'RCS Captains uses your location to find nearby rides and guide customers to your live position.'
-        : 'Location access is off. Turn it on in app settings before going online.',
-      actionLabel: canRequest ? 'Continue' : 'Open app settings',
+        ? dc("RCS Captains uses your location to find nearby rides and guide customers to your live position.")
+        : dc("Location access is off. Turn it on in app settings before going online."),
+      actionLabel: canRequest ? dc("Continue") : dc("Open app settings"),
     });
 
     if (!accepted) return 'deniedForeground';
@@ -156,11 +157,11 @@ export async function ensureLocationPermission(): Promise<LocationPermission> {
     const canRequest = background.canAskAgain;
     const accepted = await showPermissionPrompt({
       kind: 'background-location',
-      title: canRequest ? 'Keep rides reaching you' : 'Allow location all the time',
+      title: canRequest ? dc("Keep rides reaching you") : dc("Allow location all the time"),
       message: canRequest
-        ? 'Choose “Allow all the time” so dispatch can find you while you drive with the app in the background.'
-        : 'Open app settings and set Location to “Allow all the time” before going online.',
-      actionLabel: canRequest ? 'Continue' : 'Open app settings',
+        ? dc("Choose “Allow all the time” so dispatch can find you while you drive with the app in the background.")
+        : dc("Open app settings and set Location to “Allow all the time” before going online."),
+      actionLabel: canRequest ? dc("Continue") : dc("Open app settings"),
     });
 
     if (!accepted) return 'deniedBackground';

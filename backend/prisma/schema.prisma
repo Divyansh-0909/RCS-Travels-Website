@@ -100,8 +100,8 @@ enum ScanStatus {
 
 enum WalletEntryType {
   // Taken when a driver accepts and is shown the rider's details; returned by
-  // `deposit_refund` on completion. PERCENTAGE IS STILL RAJU'S TO SET, and so is
-  // whether it applies below the ₹800 commission floor — see ROADMAP block 10.
+  // `deposit_refund` on completion. It is 15% of the authoritative scheduled
+  // fare and does not apply to Ride Now — see ROADMAP block 10.
   deposit_hold
   deposit_refund
   // The ₹100 the platform owes the driver for a coupon the rider spent.

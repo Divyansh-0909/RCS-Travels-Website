@@ -5,6 +5,11 @@ export const DRIVER_CANCELLATION_SUSPEND_THRESHOLD = 5
 export const cancellationWindowStart = (now = new Date()) =>
   new Date(now.getTime() - DRIVER_CANCELLATION_WINDOW_DAYS * 24 * 60 * 60 * 1000)
 
+// Re-dispatch is a new assignment attempt on the same booking. Its timeout must
+// start when the captain returned the ride, not when the customer first booked.
+export const assignmentWindowStartedAt = (bookingCreatedAt, latestCancellation) =>
+  latestCancellation?.createdAt ?? bookingCreatedAt
+
 export async function applyDriverCancellationConsequences(tx, driverId, { bookingId, fromStatus, now = new Date() }) {
   await tx.driverCancellation.create({ data: { driverId, bookingId, fromStatus, createdAt: now } })
   const cancellations = await tx.driverCancellation.count({

@@ -1,4 +1,5 @@
 import { useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import Icon from '@mdi/react';
 import { mdiKeyboardBackspace } from '@mdi/js';
 import { useViewNavigate } from "../hooks/useViewNavigate";
@@ -32,11 +33,15 @@ const Text = ({ children }) => {
 };
 
 const LegalPage = () => {
+    const { t } = useTranslation("legal");
     const navigate = useViewNavigate();
     const { pathname } = useLocation();
 
     const path = legalDocs[pathname] ? pathname : legalPaths[0];
-    const doc = legalDocs[path];
+    const sourceDoc = legalDocs[path];
+    const localized = t(`documents.${path.slice(1)}`, { returnObjects: true });
+    const doc = localized?.sections ? localized : sourceDoc;
+    const tabLabel = (p) => t(`documents.${p.slice(1)}.tab`, { defaultValue: legalDocs[p].tab });
 
     return (
         <div className="min-h-[100dvh] bg-[var(--foreground)] text-[var(--text-foreground)] px-5 sm:px-10 pb-20">
@@ -47,12 +52,12 @@ const LegalPage = () => {
                 <h3 onClick={() => navigate('/')} className="sm:block hidden cursor-pointer text-[var(--background-primary)] text-2xl pl-1 opacity-[0.85] transition-opacity duration-300 hover:opacity-[1]"><span className="font-semibold">RCS</span> travels</h3>
                 <Icon onClick={() => navigate('/')} className="sm:hidden block cursor-pointer text-[var(--background-primary)] opacity-[0.85] transition-opacity duration-300 hover:opacity-[1]" path={mdiKeyboardBackspace} size={1.2} />
                 <span className="text-[var(--background-primary)]/25 text-xl font-light select-none">/</span>
-                <h3 className="text-[var(--background-primary)]/60 text-xl">Legal</h3>
+                <h3 className="text-[var(--background-primary)]/60 text-xl">{t('ui.legal')}</h3>
             </div>
 
             {/* Mobile: the four documents as a scrollable rail. Nothing truncates
                 and nothing needs a menu. */}
-            <nav aria-label="Legal documents" className="sm:hidden -mx-5 px-5 overflow-x-auto">
+            <nav aria-label={t('ui.documents')} className="sm:hidden -mx-5 px-5 overflow-x-auto">
                 <ul className="flex gap-2 w-max pb-1">
                     {legalPaths.map((p) => (
                         <li key={p}>
@@ -64,7 +69,7 @@ const LegalPage = () => {
                                     ? "bg-[var(--background-primary)] text-[var(--text)]"
                                     : "bg-[var(--background-primary)]/5 text-[var(--text-foreground)]"}`}
                             >
-                                {legalDocs[p].tab}
+                                {tabLabel(p)}
                             </button>
                         </li>
                     ))}
@@ -74,7 +79,7 @@ const LegalPage = () => {
             <div className="flex gap-6 lg:gap-10 pt-6 sm:pt-4">
 
                 {/* Desktop: a rail that stays put while a long document scrolls past it. */}
-                <nav aria-label="Legal documents" className="hidden sm:block w-[30%] lg:w-[22%] shrink-0">
+                <nav aria-label={t('ui.documents')} className="hidden sm:block w-[30%] lg:w-[22%] shrink-0">
                     <ul className="sticky top-6 flex flex-col gap-1">
                         {legalPaths.map((p) => (
                             <li key={p}>
@@ -86,7 +91,7 @@ const LegalPage = () => {
                                         ? "bg-[var(--background-primary)] text-[var(--text)]"
                                         : "text-[var(--text-foreground)] hover:bg-[var(--background-primary)]/5"}`}
                                 >
-                                    {legalDocs[p].tab}
+                                    {tabLabel(p)}
                                 </button>
                             </li>
                         ))}
@@ -99,10 +104,8 @@ const LegalPage = () => {
 
                     {DRAFT && (
                         <p className="mb-8 rounded-2xl border border-[var(--color-negative)]/25 bg-[var(--color-negative)]/5 px-5 py-4 text-sm text-[var(--color-negative)] leading-relaxed">
-                            <span className="font-semibold">Draft: not yet reviewed by a lawyer.</span>{" "}
-                            Nothing on this page is in force. Every highlighted note below is a decision
-                            still to be made. Set <span className="font-mono">DRAFT = false</span> in
-                            constants/legal.js once it's signed off.
+                            <span className="font-semibold">{t('ui.draft')}</span>{" "}
+                            {t('ui.draftDetail')}
                         </p>
                     )}
 
@@ -110,13 +113,13 @@ const LegalPage = () => {
                         <h2 className="text-3xl sm:text-4xl font-semibold tracking-[-0.02em] text-[var(--text-foreground)]">{doc.title}</h2>
                         <p className="pt-3 text-base sm:text-lg text-[var(--background-primary)]/60 leading-[1.7]">{doc.standfirst}</p>
                         <p className="pt-5 text-sm text-[var(--background-primary)]/45">
-                            Last updated <Text>{LEGAL_UPDATED}</Text>
+                            {t('ui.lastUpdated')}{" "}<Text>{LEGAL_UPDATED}</Text>
                         </p>
                     </header>
 
                     <div className="flex flex-col gap-10">
-                        {doc.sections.map((section) => (
-                            <section key={section.heading} id={sectionId(section.heading)} className="scroll-mt-6">
+                        {doc.sections.map((section, index) => (
+                            <section key={index} id={sectionId(sourceDoc.sections[index].heading)} className="scroll-mt-6">
                                 <h4 className="text-lg sm:text-xl font-medium text-[var(--text-foreground)] pb-3">{section.heading}</h4>
 
                                 {section.body?.map((para, i) => (
@@ -148,15 +151,15 @@ const LegalPage = () => {
                     {/* Every legal document has to end somewhere a person can be
                         reached, so all four end in the same place. */}
                     <footer className="mt-12 pt-8 border-t border-[var(--background-primary)]/10">
-                        <h4 className="text-lg font-medium text-[var(--text-foreground)] pb-2">Reaching a person</h4>
+                        <h4 className="text-lg font-medium text-[var(--text-foreground)] pb-2">{t('ui.reachingPerson')}</h4>
                         <p className="text-base text-[var(--background-primary)]/70 leading-[1.75] pb-4">
-                            Anything on this page, or anything that's gone wrong with a ride: we'd rather you asked.
+                            {t('ui.contactPrompt')}
                         </p>
                         <div className="flex flex-wrap gap-2">
                             {[
-                                ["Call us", supportPhoneDisplay(), callSupport],
-                                ["WhatsApp us", supportPhoneDisplay(), () => openSupportWhatsApp()],
-                                ["Email us", supportEmail(), emailSupport],
+                                [t('ui.callUs'), supportPhoneDisplay(), callSupport],
+                                [t('ui.whatsappUs'), supportPhoneDisplay(), () => openSupportWhatsApp()],
+                                [t('ui.emailUs'), supportEmail(), emailSupport],
                             ].map(([label, value, onClick]) => (
                                 <button
                                     key={label}

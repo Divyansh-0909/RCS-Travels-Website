@@ -1,4 +1,6 @@
-import { Pressable, View } from 'react-native';
+import { useLanguage as useCopyLanguage } from "../../i18n";
+import { driverCopy as dc } from "../../lib/copy";
+import { View } from 'react-native';
 import { cssInterop } from 'nativewind';
 import { WalletIcon } from 'phosphor-react-native';
 import AppText from '../AppText';
@@ -18,7 +20,6 @@ const OWED = 'text-[#FBBF24]';
 
 type Props = {
   balance: number;
-  onPressTransactions?: () => void;
 };
 
 /**
@@ -33,14 +34,15 @@ type Props = {
  * it. Here it is the consequence or the way through to the ledger; on the month tile
  * it is the ride count. Keep them the same height or the row looks broken.
  */
-const WalletCard = ({ balance, onPressTransactions }: Props) => {
+const WalletCard = ({ balance }: Props) => {
+    useCopyLanguage();
   const owing = balance < 0;
 
   return (
     <View className={`${TILE} bg-[var(--background-primary)]`}>
       <View className="flex-row items-center gap-1.5">
         <Wallet size={13} weight="fill" className={LABEL} />
-        <AppText className={`${TILE_LABEL} ${LABEL}`}>Wallet</AppText>
+        <AppText className={`${TILE_LABEL} ${LABEL}`}>{dc("Wallet")}</AppText>
       </View>
 
       <AppText
@@ -51,29 +53,14 @@ const WalletCard = ({ balance, onPressTransactions }: Props) => {
         {rupees(balance)}
       </AppText>
 
-      {/* Owing outranks the link. A captain who cannot go online needs to be told
-          that before he is offered a statement explaining why. */}
+      {/* Holds and releases are not exposed by the captain API yet, so this remains
+          a factual balance label rather than a dead route to a nonexistent ledger. */}
       {owing ? (
-        <AppText numberOfLines={2} className={`text-xs ${OWED}`}>
-          Clear it to go online
-        </AppText>
+        <AppText numberOfLines={2} className={`text-xs ${OWED}`}>{dc("Negative balance blocks going online")}</AppText>
       ) : (
-        // A Pressable only where there is somewhere to go. The words are the same
-        // either way so the tile does not change height when the ledger screen
-        // lands — but until it does, this line is a label rather than a button, and
-        // tapping it correctly does nothing.
-        //
-        // NOTE: those words currently promise more than the app can do. Wiring this
-        // up is one prop from Account — pass onPressTransactions — and until that
-        // exists the copy is ahead of the build.
-        <Pressable
-          role="button"
-          onPress={onPressTransactions}
-          disabled={!onPressTransactions}
-          style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
-        >
-          <AppText className="text-xs font-semibold text-white">Tap to view usage</AppText>
-        </Pressable>
+        <AppText numberOfLines={2} className="text-xs text-[rgba(255,255,255,0.7)]">
+          {dc("Available wallet balance")}
+        </AppText>
       )}
     </View>
   );

@@ -1,0 +1,81 @@
+.border-glow {
+  --border-glow-edge: 0;
+  --border-glow-angle: 45deg;
+  --border-glow-edge-sensitivity: 30;
+  --border-glow-radius: 28px;
+  --border-glow-padding: 24px;
+  --border-glow-intensity: 1;
+  --border-glow-cone-spread: 25;
+  --border-glow-color: var(--border-glow-color-light, var(--background));
+
+  position: relative;
+  display: grid;
+  min-width: 0;
+  border-radius: var(--border-glow-radius);
+  isolation: isolate;
+}
+
+.dark .border-glow {
+  --border-glow-color: var(--border-glow-color-dark, var(--foreground));
+}
+
+.border-glow__inner {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  border-radius: inherit;
+}
+
+.border-glow__light {
+  position: absolute;
+  z-index: 0;
+  inset: calc(var(--border-glow-padding) * -1);
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 180ms ease-out;
+  -webkit-mask-image: conic-gradient(
+    from var(--border-glow-angle) at center,
+    #000 calc(var(--border-glow-cone-spread) * 1%),
+    transparent calc((var(--border-glow-cone-spread) + 15) * 1%),
+    transparent calc((100 - var(--border-glow-cone-spread) - 15) * 1%),
+    #000 calc((100 - var(--border-glow-cone-spread)) * 1%)
+  );
+  mask-image: conic-gradient(
+    from var(--border-glow-angle) at center,
+    #000 calc(var(--border-glow-cone-spread) * 1%),
+    transparent calc((var(--border-glow-cone-spread) + 15) * 1%),
+    transparent calc((100 - var(--border-glow-cone-spread) - 15) * 1%),
+    #000 calc((100 - var(--border-glow-cone-spread)) * 1%)
+  );
+}
+
+.border-glow__light::before {
+  content: "";
+  position: absolute;
+  inset: var(--border-glow-padding);
+  border-radius: inherit;
+  opacity: clamp(0, var(--border-glow-intensity), 1);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--border-glow-color) 76%, transparent),
+    0 0 5px color-mix(in srgb, var(--border-glow-color) 48%, transparent),
+    0 0 14px color-mix(in srgb, var(--border-glow-color) 30%, transparent),
+    0 0 26px color-mix(in srgb, var(--border-glow-color) 16%, transparent);
+}
+
+.border-glow--sweeping > .border-glow__light {
+  opacity: clamp(
+    0,
+    calc(
+      (var(--border-glow-edge) - var(--border-glow-edge-sensitivity)) /
+      (100 - var(--border-glow-edge-sensitivity))
+    ),
+    1
+  );
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .border-glow__light {
+    transition: none;
+  }
+}

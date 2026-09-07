@@ -1,9 +1,12 @@
+import { useTranslation as useCopyLanguage } from "react-i18next";
+import { websiteCopy as dc } from "../../i18nCopy";
 import { useState, useEffect } from "react"
 import mapLight from "../../assets/map.webp"
 import mapDark from "../../assets/map-dark.webp"
 
 /* Illustration 2 — Safe, verified rides */
 const SafetyIllustration = () => {
+    useCopyLanguage();
     const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'))
 
     useEffect(() => {
@@ -52,32 +55,26 @@ const SafetyIllustration = () => {
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "9px" }}>
                         <div style={{ width: "36px", height: "36px", borderRadius: "50%", background: "rgba(255,255,255,0.2)", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                            <span style={{ color: "white", fontSize: "11px", fontWeight: "700" }}>RK</span>
+                            <span style={{ color: "white", fontSize: "11px", fontWeight: "700" }}>{dc("RK")}</span>
                         </div>
                         <div>
                             <div style={{ display: "flex", alignItems: "center", gap: "5px", marginBottom: "4px" }}>
-                                <span style={{ color: "white", fontSize: "12.5px", fontWeight: "700" }}>Raju</span>
+                                <span style={{ color: "white", fontSize: "12.5px", fontWeight: "700" }}>{dc("Raju")}</span>
                                 <span style={{ color: "#fbbf24", fontSize: "11px" }}>★</span>
                                 <span style={{ color: "rgba(255,255,255,0.75)", fontSize: "10.5px", fontWeight: "600" }}>4.8</span>
                             </div>
                             <p style={{ color: "rgba(255,255,255,0.65)", fontSize: "9.5px", margin: "0 0 2px", display: "flex", alignItems: "center", gap: "5px" }}>
-                                <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: "rgba(255,255,255,0.5)", display: "inline-block", flexShrink: 0 }}/> University Parking
-                            </p>
+                                <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: "rgba(255,255,255,0.5)", display: "inline-block", flexShrink: 0 }}/>{" " + dc("University Parking")}</p>
                             <p style={{ color: "rgba(255,255,255,0.65)", fontSize: "9.5px", margin: 0, display: "flex", alignItems: "center", gap: "5px" }}>
-                                <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: "white", display: "inline-block", flexShrink: 0 }}/> Delhi
-                            </p>
+                                <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: "white", display: "inline-block", flexShrink: 0 }}/>{" " + dc("Delhi")}</p>
                         </div>
                     </div>
                     <p style={{ color: "white", fontSize: "22px", fontWeight: "800", margin: 0 }}>₹900</p>
                 </div>
 
                 <div style={{ marginTop: "8px", display: "flex", gap: "6px" }}>
-                    <span style={{ background: "rgba(255,255,255,0.18)", color: "white", fontSize: "9px", fontWeight: "600", padding: "3px 9px", borderRadius: "20px" }}>
-                        🛡️ Background verified
-                    </span>
-                    <span style={{ background: "rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.85)", fontSize: "9px", fontWeight: "600", padding: "3px 9px", borderRadius: "20px" }}>
-                        GPS tracked
-                    </span>
+                    <span style={{ background: "rgba(255,255,255,0.18)", color: "white", fontSize: "9px", fontWeight: "600", padding: "3px 9px", borderRadius: "20px" }}>{dc("🛡️ Background verified")}</span>
+                    <span style={{ background: "rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.85)", fontSize: "9px", fontWeight: "600", padding: "3px 9px", borderRadius: "20px" }}>{dc("GPS tracked")}</span>
                 </div>
             </div>
         </div>

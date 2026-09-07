@@ -1,3 +1,4 @@
+import { driverCopy as dc } from "../lib/copy";
 import type { DriverGroup, VerificationStatus } from '../types/enums';
 
 // The captain's words for the columns on his own driver row. Same job
@@ -12,12 +13,12 @@ import type { DriverGroup, VerificationStatus } from '../types/enums';
 // rather than a tier. Never print the raw key: "partner" alone reads as a status the
 // captain has been demoted to.
 const GROUP_LABELS: Record<DriverGroup, string> = {
-  admin: 'Owner',
-  rcs: 'RCS fleet',
-  partner: 'Partner captain',
+  get "admin"() { return dc("Owner"); },
+  get "rcs"() { return dc("RCS fleet"); },
+  get "partner"() { return dc("Partner captain"); },
 };
 
-export const groupLabel = (group: DriverGroup) => GROUP_LABELS[group] ?? 'Partner captain';
+export const groupLabel = (group: DriverGroup) => GROUP_LABELS[group] ?? dc("Partner captain");
 
 // Only a partner has anywhere to go: `rcs` is already there and `admin` owns the
 // place. This is the whole condition behind the join card, kept here so the page
@@ -39,12 +40,12 @@ export const isFleet = (group: DriverGroup) => group === 'rcs' || group === 'adm
 // screen is the only place that holds his own status.
 const VERIFICATION_LABELS: Record<VerificationStatus, string> = {
   approved: 'Verified',
-  pending: 'In review',
-  rejected: 'Not approved',
+  get "pending"() { return dc("In review"); },
+  get "rejected"() { return dc("Not approved"); },
 };
 
 export const verificationLabel = (status: VerificationStatus) =>
-  VERIFICATION_LABELS[status] ?? 'In review';
+  VERIFICATION_LABELS[status] ?? dc("In review");
 
 // The captain's own number, grouped the way support's is on the website:
 // "+91 98765 43210". The prefix is added here and only here, and it is safe to add

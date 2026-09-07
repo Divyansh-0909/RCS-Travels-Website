@@ -1,6 +1,16 @@
 import { Navigate, Outlet, useLocation } from 'react-router-native';
 import { useDriver } from '../hooks/useDriver';
-import { HomeGateSkeleton } from './ui/LoadingSkeletons';
+import {
+  HomeGateSkeleton,
+  MarketplaceDetailPageSkeleton,
+  MarketplacePageSkeleton,
+} from './ui/LoadingSkeletons';
+
+const loadingScreenFor = (pathname: string) => {
+  if (/^\/available\/[^/]+$/.test(pathname)) return <MarketplaceDetailPageSkeleton />;
+  if (pathname === '/available') return <MarketplacePageSkeleton />;
+  return <HomeGateSkeleton />;
+};
 
 // The gate.
 //
@@ -30,7 +40,7 @@ const VerifiedRoute = () => {
   // incomplete information would bounce an approved captain to the checklist for
   // half a second every time he opened the app.
   if (loading) {
-    return <HomeGateSkeleton />;
+    return loadingScreenFor(location.pathname);
   }
 
   // Signed in with Clerk but no driver row — he verified his phone and closed

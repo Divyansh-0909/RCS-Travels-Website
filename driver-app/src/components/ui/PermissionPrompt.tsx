@@ -1,3 +1,5 @@
+import { useLanguage as useCopyLanguage } from "../../i18n";
+import { driverCopy as dc } from "../../lib/copy";
 import {
   createContext,
   useCallback,
@@ -85,6 +87,7 @@ const PermissionSheet = ({
   prompt: QueuedPrompt | null;
   onAnswer: (accepted: boolean) => void;
 }) => {
+    useCopyLanguage();
   const [closePressed, setClosePressed] = useState(false);
   const [actionPressed, setActionPressed] = useState(false);
   const [cancelPressed, setCancelPressed] = useState(false);
@@ -131,7 +134,7 @@ const PermissionSheet = ({
 
             <Pressable
               role="button"
-              aria-label="Close"
+              aria-label={dc("Close")}
               hitSlop={10}
               onPress={() => onAnswer(false)}
               onPressIn={() => setClosePressed(true)}
@@ -171,7 +174,7 @@ const PermissionSheet = ({
               style={{ backgroundColor: WELL, opacity: cancelPressed ? 0.65 : 1 }}
             >
               <AppText className="text-base font-semibold text-[var(--background-primary)]">
-                {prompt?.cancelLabel ?? 'Not now'}
+                {prompt?.cancelLabel ?? dc("Not now")}
               </AppText>
             </Pressable>
           </View>
@@ -182,6 +185,7 @@ const PermissionSheet = ({
 };
 
 export const PermissionPromptProvider = ({ children }: { children: ReactNode }) => {
+    useCopyLanguage();
   const [active, setActive] = useState<QueuedPrompt | null>(null);
   const activeRef = useRef<QueuedPrompt | null>(null);
   const queue = useRef<QueuedPrompt[]>([]);

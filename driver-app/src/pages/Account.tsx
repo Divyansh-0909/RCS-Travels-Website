@@ -1,3 +1,5 @@
+import { useLanguage as useCopyLanguage } from "../i18n";
+import { driverCopy as dc } from "../lib/copy";
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, Image, Pressable, Share, View } from 'react-native';
 import Animated from 'react-native-reanimated';
@@ -101,8 +103,8 @@ const AVATAR = 76;
 // icon cannot carry — "In review" and "Not approved" are sentences, and a mark that
 // tried to say either would be a mark the captain has to be taught.
 const CHIPS: Record<'pending' | 'rejected', { text: string; fill: string }> = {
-  pending: { text: 'text-[#92400E]', fill: 'rgba(146,64,14,0.12)' },
-  rejected: { text: 'text-[#B91C1C]', fill: 'rgba(185,28,28,0.12)' },
+  pending: { get "text"() { return "text-[#92400E]"; }, fill: 'rgba(146,64,14,0.12)' },
+  rejected: { get "text"() { return "text-[#B91C1C]"; }, fill: 'rgba(185,28,28,0.12)' },
 };
 
 const Chip = ({ label, text, fill }: { label: string; text: string; fill: string }) => (
@@ -114,6 +116,7 @@ const Chip = ({ label, text, fill }: { label: string; text: string; fill: string
 );
 
 const Account = () => {
+    useCopyLanguage();
   const api = useApi();
   const navigate = useNavigate();
   const onScroll = useHideAppBarOnScroll();
@@ -148,7 +151,7 @@ const Account = () => {
       else setProfile(data as DriverProfile);
     } catch (e: unknown) {
       if (requestId !== latestRequest.current) return;
-      setError(e instanceof Error ? e.message : 'Something went wrong');
+      setError(e instanceof Error ? e.message : dc("Something went wrong"));
     } finally {
       if (requestId === latestRequest.current) setLoading(false);
     }
@@ -181,7 +184,7 @@ const Account = () => {
       // redirect — send them back to onboarding here.
       navigate('/', { replace: true });
     } catch (e: unknown) {
-      setSignOutError(e instanceof Error ? e.message : 'Something went wrong');
+      setSignOutError(e instanceof Error ? e.message : dc("Something went wrong"));
       setBusy(false);
     }
   }
@@ -201,9 +204,7 @@ const Account = () => {
           the thing the two screens share — reproducing it with a margin would put the
           two headers back out of step the first time either one changed. */}
       <View className="w-full h-11 items-center justify-center">
-        <AppText className={`text-xl font-semibold text-center ${INK}`} style={TITLE_TRACKING}>
-          Account
-        </AppText>
+        <AppText className={`text-xl font-semibold text-center ${INK}`} style={TITLE_TRACKING}>{dc("Account")}</AppText>
       </View>
 
       {error && (
@@ -214,7 +215,7 @@ const Account = () => {
             onPress={refresh}
             style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
           >
-            <AppText className="text-sm font-semibold text-primary">Try again</AppText>
+            <AppText className="text-sm font-semibold text-primary">{dc("Try again")}</AppText>
           </Pressable>
         </View>
       )}
@@ -322,7 +323,7 @@ const Account = () => {
                     color={isFleet(profile.group) ? BADGE_GOLD : BADGE_BLUE}
                   />
                   <AppText className={`text-base font-semibold ${INK}`}>
-                    {isFleet(profile.group) ? groupLabel(profile.group) : 'Verified'}
+                    {isFleet(profile.group) ? groupLabel(profile.group) : dc("Verified")}
                   </AppText>
                 </View>
               ) : (
@@ -382,7 +383,7 @@ const Account = () => {
                 windscreen. */}
             <Pressable
               role="button"
-              aria-label={`Your cars, ${profile.vehicleNumber}`}
+              aria-label={dc("Your cars, {{value0}}", {value0: (profile.vehicleNumber)})}
               onPress={() => navigate('/account/vehicles')}
               style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
             >
@@ -395,12 +396,10 @@ const Account = () => {
                     that needed separating. */}
                 <Car size={26} weight="fill" className={INK} />
                 <View className="flex-1">
-                  <AppText numberOfLines={1} className={`font-semibold ${INK}`}>
-                    Your cars
-                  </AppText>
+                  <AppText numberOfLines={1} className={`font-semibold ${INK}`}>{dc("Your cars")}</AppText>
                   <AppText numberOfLines={1} className={`text-xs ${MUTED}`}>
                     {profile.vehicleCount > 1
-                      ? `${profile.vehicleNumber} · ${profile.vehicleCount} cars`
+                      ? dc("{{value0}} · {{value1}} cars", {value0: (profile.vehicleNumber), value1: (profile.vehicleCount)})
                       : profile.vehicleNumber}
                   </AppText>
                 </View>
@@ -443,18 +442,18 @@ const Account = () => {
                 block of information competing with the three that matter. */}
             <View className="w-full" style={{ paddingHorizontal: ROW_INSET }}>
               <AccountRow
-                label="Linked UPI account"
+                label={dc("Linked UPI account")}
                 Icon={BankIcon}
-                value="Not linked"
+                value={dc("Not linked")}
                 onPress={() => navigate('/account/payout')}
               />
               <AccountRow
-                label="Documents"
+                label={dc("Documents")}
                 Icon={FileTextIcon}
                 value={
                   profile.expiringDocuments > 0
-                    ? `${profile.expiringDocuments} expiring`
-                    : 'All current'
+                    ? dc("{{value0}} expiring", { value0: profile.expiringDocuments })
+                    : dc("All current")
                 }
                 warn={profile.expiringDocuments > 0}
                 onPress={() => navigate('/account/documents')}
@@ -463,9 +462,9 @@ const Account = () => {
                   his name — and a row repeating the same number two inches below it
                   invited the captain to check whether the two agreed. What is left
                   here is what this row can actually open: what riders wrote. */}
-              <AccountRow label="Feedback" Icon={StarIcon} onPress={() => navigate('/account/feedback')} />
+              <AccountRow label={dc("Feedback")} Icon={StarIcon} onPress={() => navigate('/account/feedback')} />
               {/* Language lives under Settings, so it is not also a sibling of it. */}
-              <AccountRow label="Settings" Icon={GearIcon} onPress={() => navigate('/account/settings')} />
+              <AccountRow label={dc("Settings")} Icon={GearIcon} onPress={() => navigate('/account/settings')} />
               {/* His name, his number, his papers — and the way out of the platform
                   altogether. Kept well clear of Log out at the foot of the page:
                   logging out is a thing he does every week, and closing an account is
@@ -474,7 +473,7 @@ const Account = () => {
               {/* UserIcon, the same glyph the AppBar's Account tab carries. The row
                   and the tab lead to the same subject, so a captain who tapped one
                   should recognise the other. */}
-              <AccountRow label="Manage account" Icon={UserIcon} onPress={() => navigate('/account/manage')} />
+              <AccountRow label={dc("Manage account")} Icon={UserIcon} onPress={() => navigate('/account/manage')} />
 
               {/* One continuous menu. Carets distinguish the in-app Help and Legal
                   pages from the system share sheet above them. */}
@@ -487,23 +486,23 @@ const Account = () => {
               {/* Referral is the one system action in this run, so it alone drops
                   the caret. Help now opens its own contact-method page. */}
               <AccountRow
-                label="Refer a captain"
+                label={dc("Refer a captain")}
                 Icon={UsersThreeIcon}
                 caret={false}
                 onPress={() =>
                   Share.share({
-                    message: `Drive with RCS Travels. I'm a captain here — call ${supportPhoneDisplay()} to get started.`,
+                    get "message"() { return dc("Drive with RCS Travels. I'm a captain here — call {{value0}} to get started.", {value0: (supportPhoneDisplay())}); },
                   })
                 }
               />
               <AccountRow
-                label="Help"
+                label={dc("Help")}
                 Icon={QuestionIcon}
                 onPress={() => navigate('/account/help')}
               />
               {/* Terms, privacy and grievance information. The collection is an
                   in-app page; each document then announces that it opens the website. */}
-              <AccountRow label="Legal" Icon={InfoIcon} onPress={() => navigate('/account/legal')} last />
+              <AccountRow label={dc("Legal")} Icon={InfoIcon} onPress={() => navigate('/account/legal')} last />
             </View>
 
             {/* The error slot and the button are ONE scroller child, not two. As
@@ -537,14 +536,13 @@ const Account = () => {
                 >
                   <SignOut size={18} weight="bold" className="text-[#B91C1C]" />
                   <AppText className="font-semibold" style={{ color: ERROR_TEXT }}>
-                    {busy ? 'Logging out…' : 'Log out'}
+                    {busy ? dc("Logging out…") : dc("Log out")}
                   </AppText>
                 </View>
               </Pressable>
             </View>
 
-            <AppText className={`text-xs text-center ${MUTED}`}>
-              RCS Captains v{version}
+            <AppText className={`text-xs text-center ${MUTED}`}>{dc("RCS Captains v")}{version}
             </AppText>
           </>
         )}

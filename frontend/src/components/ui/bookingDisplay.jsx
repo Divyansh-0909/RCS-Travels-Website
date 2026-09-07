@@ -1,3 +1,4 @@
+import { websiteCopy as dc } from "../../i18nCopy";
 import Icon from "@mdi/react";
 import { mdiContentCopy } from "@mdi/js";
 import { labelOf } from "../../constants/vehicles";
@@ -34,7 +35,7 @@ export const formatDateTime = (d) =>
 // Hover-copy icon with the app's "copy" tooltip, used on ride IDs and phone numbers.
 export const CopyBtn = ({ value, onCopy }) => (
     <span className="group relative inline-flex items-center align-middle">
-        <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 rounded-md bg-primary text-[var(--foreground)] text-xs font-semibold whitespace-nowrap opacity-0 translate-y-1 transition-[opacity,transform] duration-200 group-hover:opacity-100 group-hover:translate-y-0">copy</span>
+        <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 rounded-md bg-primary text-[var(--foreground)] text-xs font-semibold whitespace-nowrap opacity-0 translate-y-1 transition-[opacity,transform] duration-200 group-hover:opacity-100 group-hover:translate-y-0">{dc("copy")}</span>
         <Icon onClick={() => onCopy(value)} className="cursor-pointer mb-0.5 text-gray-500 transition-color duration-300 hover:text-[var(--text-foreground)]" path={mdiContentCopy} size={0.6} />
     </span>
 );

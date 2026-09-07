@@ -84,7 +84,7 @@ const Button = ({ prop, className, children, onClick, containerRef, style }) => 
         onClick={onClick}
         disabled={isDisabled}
         className={` ${prop.innerClassName}
-          flex items-center py-2 w-[97%] h-[80%] ${isDisabled ? "cursor-not-allowed" : "cursor-pointer"}
+          flex min-h-10 items-center whitespace-normal break-words py-2.5 w-[97%] ${isDisabled ? "cursor-not-allowed" : "cursor-pointer"}
           ${prop.innerClassName ? "" : (isDropdown ? "justify-start" : "justify-center")}
           rounded-[inherit] outline-none
           focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]/70

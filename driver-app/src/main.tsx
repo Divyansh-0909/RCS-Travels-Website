@@ -40,6 +40,7 @@ import OnBoarding from './pages/OnBoarding';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import { fontAssets } from './theme/fonts';
+import { LanguageProvider, useLanguage } from './i18n';
 
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY;
 
@@ -49,8 +50,9 @@ if (!publishableKey) {
 
 const AppRoutes = () => {
     const { isLoaded, isSignedIn } = useAuth();
+    const { ready } = useLanguage();
 
-    if (!isLoaded) {
+    if (!isLoaded || !ready) {
         return null;
     }
 
@@ -141,6 +143,7 @@ const Main = () => {
         // Below the font gate above, though, so the error screen has the faces it sets
         // type in — a fallback rendering in the system font would be the second thing
         // visibly wrong on a screen already reporting the first.
+        <LanguageProvider>
         <ErrorBoundary>
             <ClerkProvider
                 publishableKey={publishableKey}
@@ -150,6 +153,7 @@ const Main = () => {
                 <AppRoutes />
             </ClerkProvider>
         </ErrorBoundary>
+        </LanguageProvider>
     )
 }
 

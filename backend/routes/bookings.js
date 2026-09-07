@@ -19,6 +19,7 @@ import { freshLocationWithinPickup } from '../services/rideGeofence.js'
 import { createBookingFromQuote, BookingCreationError } from '../services/bookingCreation.js'
 import { nearbyDriverAvailability, nearbyDriverEta } from '../services/nearbyDrivers.js'
 import { driverLocationVisibleToRider } from '../services/riderDriverLocation.js'
+import { assignmentWindowStartedAt } from '../services/driverCancellations.js'
 
 const bookingsRouter = Router()
 
@@ -311,18 +312,34 @@ bookingsRouter.get('/:id/status', protect, async (req, res) => {
 
   const booking = await prisma.booking.findUnique({
     where: { id: req.params.id },
-    include: { driver: { include: { location: true } }, payments: { select: { id: true, purpose: true, status: true, amount: true } } },
+    include: {
+      driver: { include: { location: true } },
+      payments: { select: { id: true, purpose: true, status: true, amount: true } },
+      // A captain cancellation does not cancel the booking: it puts the same
+      // ride back into dispatch. Return the latest audit row separately so the
+      // rider can be told what happened while `status` remains pending/confirmed.
+      driverCancellations: {
+        orderBy: { createdAt: 'desc' },
+        take: 1,
+        select: { id: true, createdAt: true },
+      },
+    },
   })
 
   if (!booking) return res.status(404).json({ error: 'Booking not found' })
   if (booking.userId !== user.id) return res.status(403).json({ error: 'Forbidden' })
 
+  const driverCancellation = booking.driverCancellations[0] ?? null
+
   // Crash guard: startAssignment normally writes the terminal status itself,
   // but a restart mid-search would leave the row pending forever and the client
-  // polling it forever. Expiring lazily here needs no scheduler — the only
-  // thing waiting on the answer is the poll that just arrived.
+  // polling it forever. A captain hand-back begins a new search, so its audit
+  // stamp — not the original booking creation — starts that new five-minute
+  // window. Expiring lazily here needs no scheduler: the only thing waiting on
+  // the answer is the poll that just arrived.
   let status = booking.status
-  if (status === 'pending' && Date.now() - booking.createdAt.getTime() > ASSIGNMENT_DEADLINE_MS) {
+  const assignmentStartedAt = assignmentWindowStartedAt(booking.createdAt, driverCancellation)
+  if (status === 'pending' && Date.now() - assignmentStartedAt.getTime() > ASSIGNMENT_DEADLINE_MS) {
     if (await markNoDriver(booking.id)) status = 'no_driver'
   }
 
@@ -336,7 +353,7 @@ bookingsRouter.get('/:id/status', protect, async (req, res) => {
     payments: booking.payments,
   } : null
 
-  if (!booking.driverId) return res.json({ bookingId: booking.id, reference: booking.reference, bookingCode: user.bookingCode, status, scheduledAt: booking.scheduledAt, cancellationCharge, financials: paymentSummary, driver: null })
+  if (!booking.driverId) return res.json({ bookingId: booking.id, reference: booking.reference, bookingCode: user.bookingCode, status, scheduledAt: booking.scheduledAt, cancellationCharge, financials: paymentSummary, driverCancellation, driver: null })
 
   const location = driverLocationVisibleToRider({ status, scheduledAt: booking.scheduledAt })
     ? booking.driver.location
@@ -372,6 +389,7 @@ bookingsRouter.get('/:id/status', protect, async (req, res) => {
     scheduledAt: booking.scheduledAt,
     cancellationCharge,
     financials: paymentSummary,
+    driverCancellation,
     navigationEtaMinutes,
     navigationPolyline,
     fare: booking.fare,

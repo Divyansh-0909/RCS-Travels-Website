@@ -1,5 +1,6 @@
 import { fetch } from 'expo/fetch';
 import { File } from 'expo-file-system';
+import { driverCopy as dc } from './copy';
 
 import { getDocumentUploadUrls, confirmDocuments } from '../api/api';
 import { documentLabelOf, type DriverDocumentType } from '../constants/documents';
@@ -141,7 +142,7 @@ export async function uploadDriverDocuments(
         onProgress(document.type, 'failed');
         return {
           type: document.type,
-          error: `The server had nowhere to put your ${documentLabelOf(document.type)}.`,
+          error: dc("The server had nowhere to put your {{value0}}.", { value0: documentLabelOf(document.type) }),
         };
       }
 
@@ -173,7 +174,7 @@ export async function uploadDriverDocuments(
           onProgress(document.type, 'failed');
           return {
             type: document.type,
-            error: `Could not upload your ${documentLabelOf(document.type)}. Please try again.`,
+            error: dc("Could not upload your {{value0}}. Please try again.", { value0: documentLabelOf(document.type) }),
           };
         }
 
@@ -183,7 +184,7 @@ export async function uploadDriverDocuments(
         onProgress(document.type, 'failed');
         return {
           type: document.type,
-          error: `Could not upload your ${documentLabelOf(document.type)}. Check your connection.`,
+            error: dc("Could not upload your {{value0}}. Check your connection.", { value0: documentLabelOf(document.type) }),
         };
       }
     }),

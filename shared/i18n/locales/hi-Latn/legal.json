@@ -1,0 +1,498 @@
+{
+  "ui": {
+    "legal": "Kanooni jaankari",
+    "documents": "Kanooni documents",
+    "draft": "Draft: abhi lawyer ne review nahi kiya hai.",
+    "notInForce": "Is page ki koi baat abhi lagu nahi hai.",
+    "lastUpdated": "Aakhri update",
+    "reachingPerson": "Kisi person se baat karein",
+    "contactPrompt": "Is page par koi sawaal ho ya ride mein kuch galat hua ho, toh humse poochhein.",
+    "callUs": "Humein call karein",
+    "whatsappUs": "WhatsApp karein",
+    "emailUs": "Email karein",
+    "draftDetail": "Is page ki koi baat abhi laagu nahi hai. Neeche har highlighted note ek pending faisla hai. Review poora hone par constants/legal.js mein DRAFT = false karein."
+  },
+  "documents": {
+    "terms": {
+      "tab": "Shartein",
+      "title": "Service ki shartein",
+      "standfirst": "Hamare saath ride book karte waqt aap kin baaton se sehmat hote hain, aasan shabdon mein.",
+      "sections": [
+        {
+          "heading": "Hum kaun hain",
+          "body": [
+            "RCS Travels ek cab service hai jise [TO CONFIRM: registered business name] chalata hai. Yeh [TO CONFIRM: sole proprietorship / partnership / private limited company] hai aur iska registered address [TO CONFIRM: full registered address with PIN code] hai. In sharton mein “hum” aur “RCS Travels” ka matlab yeh business hai, aur “aap” ka matlab ride book karne ya lene wala vyakti hai.",
+            "Hum aapke aur independent driver-partners ke beech rides arrange karte hain, jo apni gaadi ke maalik hain aur use khud chalate hain. Hum transport operator nahi hain: hum drivers verify karte hain, fare tay karte hain aur har completed ride par commission lete hain. Aapko driver le jaata hai, hum nahi. [TO CONFIRM: this framing decides where liability sits and must be confirmed with the lawyer before publishing. If the business owns the vehicles or employs the drivers, this clause and \"Our responsibility, and its limits\" below both have to be rewritten.]",
+            "Is website ya WhatsApp par ride book karke aap in sharton se sehmat hote hain. Agar sehmat nahi hain, toh service use na karein."
+          ]
+        },
+        {
+          "heading": "Kaun book kar sakta hai",
+          "body": [
+            "Account rakhne ke liye aapki umar kam se kam 18 saal honi chahiye. Chhoti umar ke log travel kar sakte hain, lekin booking ek adult ko karni hogi aur saath travel bhi karna hoga."
+          ],
+          "list": [
+            "Apna chalu phone number use karein. Ride ke din driver isi par call karega.",
+            "Ek phone number par ek account.",
+            "Sirf apne liye ya aise vyakti ke liye book karein jise pata ho ki aap uski taraf se booking kar rahe hain."
+          ]
+        },
+        {
+          "heading": "Aapka account",
+          "body": [
+            "Aap phone number aur hamare bheje one-time code se login karte hain. Password yaad rakhne ki zaroorat nahi. Iska matlab yeh bhi hai ki aapka phone rakhne wala aapke account tak pahunch sakta hai, isliye phone aur codes sirf apne paas rakhein.",
+            "Signup par aapko chaar ankon ka booking code bhi milta hai. Yeh wahi rehta hai aur humein aur driver ko aapki bookings pehchanne mein madad karta hai. Ise kisi aise vyakti ko na dein jise aap apni booking nahi saunpenge.",
+            "Aapki di hui har jaankari sahi honi chahiye. Galat details, aisi rides book karna jo li hi nahi jaati, ya driver-partner se badtameezi karne wale account ko hum suspend ya band kar sakte hain."
+          ]
+        },
+        {
+          "heading": "Ride book karna",
+          "body": [
+            "Aap pickup se 30 minute se lekar 7 din pehle tak book kar sakte hain. Paas driver ho toh turant ride bhi book kar sakte hain."
+          ],
+          "list": [
+            "Hamari confirmation tak booking ek request hai. Confirmation us waqt aur route par driver milne par nirbhar hai.",
+            "Ek waqt mein ek hi active ride ho sakti hai. Agli booking se pehle maujooda ride poori ya cancel karein.",
+            "Pickup se lagbhag ek ghanta pehle tracking page par driver ka naam, phone aur gaadi number dikhta hai.",
+            "4-seater ya 6-seater chunein, akele travel karein ya apne route ke co-riders ke saath fare baantein. Shehar se bahar ke liye outstation trip chunein.",
+            "Pickup time hamara aap tak pahunchne ka target hai, vaada nahi. Traffic, mausam aur sadak ki haalat baaki waqt tay karte hain."
+          ]
+        },
+        {
+          "heading": "Kiraya",
+          "body": [
+            "Confirm karne se pehle poora fare dikhta hai aur aap wahi dete hain. Hum meter ke bajaye destination aur gaadi ke hisaab se price tay karte hain, isliye demand badhne par fare nahi badhta aur surge nahi hai.",
+            "Kuch cheezein fare mein judti hain. Confirm karne se pehle fare screen par har charge dikhega:"
+          ],
+          "list": [
+            "Safer route chunne par: fixed ₹150.",
+            "Route ke tolls, state permits aur parking.",
+            "Samaan ke liye zaroori ho toh roof carrier.",
+            "Round trip ka fare do alag bookings ke bajaye ek booking ke roop mein tay hota hai."
+          ],
+          "after": [
+            "Booking ke baad fare tabhi badal sakta hai jab ride badle: alag drop, extra stop ya free waiting time se zyada intezaar. [TO CONFIRM: the free waiting time in minutes, and the per-minute or per-hour charge after it. The app does not calculate this today, so whatever you decide has to be told to drivers as well as written here.]",
+            "Driver tracking page ke fare se zyada maange toh extra na dein. Humein call karein."
+          ]
+        },
+        {
+          "heading": "Payment karna",
+          "body": [
+            "Trip ke end mein driver ko seedha cash ya UPI se pay karte hain. Pehle koi charge nahi liya jaata, hum card details kabhi nahi maangte aur koi payment information store nahi karte.",
+            "Amount booking ke waqt dikhaya fare aur upar ke section ke mutabik ride mein jude charges ke barabar hota hai. Receipt chahiye toh driver se maangein ya Manage Account se ride history download karein."
+          ]
+        },
+        {
+          "heading": "Shared rides",
+          "body": [
+            "Shared ride mein aap usi taraf jaane wale co-riders ke saath travel karte hain aur har vyakti solo fare se kam deta hai. Badle mein trip lambi hoti hai: pickup route ke hisaab se hota hai aur aapka pickup pehle hona zaroori nahi.",
+            "Apni booking ke alawa co-riders aapke aur hamare liye anjaan hain. “Sabse kaisa bartaav chahiye” ki har baat unpar bhi utni hi laagu hai. Aisa na ho toh humein batayein, hum action lenge."
+          ]
+        },
+        {
+          "heading": "Safer route",
+          "body": [
+            "Kuch routes par fixed ₹150 dekar shortest raaste ki jagah lamba, roshni wala highway chun sakte hain. Yeh isliye hai kyunki university ka sabse tez raasta aise hisson se jaata hai jinhe raat mein akele jaane wale riders taalna chahte hain.",
+            "Yeh route ki pasand hai, security service nahi. Ise chunne par driver highway lega; iska matlab sadak par safety ki guarantee nahi. Ise aisi guarantee na samjhein. Safety mein emergency contact jodein aur kuch galat lage toh turant humein ya 112 par call karein."
+          ]
+        },
+        {
+          "heading": "Cancel karna",
+          "body": [
+            "Driver pickup se 500 metre se zyada door ho toh cancellation free hai. Driver ki current location 500 metre ke andar aane par scheduled ride cancel karne se diya gaya 15% advance rakh liya jaata hai. Driver cancel kare ya is area mein aaye hi nahi toh aapko kuch nahi dena hota. Poora rule Refund aur Cancellation page par hai."
+          ]
+        },
+        {
+          "heading": "Sabse kaisa bartaav chahiye",
+          "body": [
+            "Ride kisi ka workplace aur kisi doosre ka safar hai. Dono ek jaisi izzat ke haqdaar hain."
+          ],
+          "list": [
+            "Seatbelt lagayein. Bachchon ke saath aaye adults se unhein theek se sambhalne ko kahein.",
+            "Gaadi mein smoking, alcohol aur drugs nahi.",
+            "Samaan mein koi illegal, khatarnaak ya zinda cheez nahi.",
+            "Driver ko traffic rule todne ya seats se zyada log bithane ko na kahein.",
+            "Driver ko dhamkane, pareshan karne ya gaali dene par ride aur account band ho jaate hain."
+          ],
+          "after": [
+            "Ride ke dauran gaadi damage ya bahut gandi ho toh safai ya repair ka kharcha aapse maanga jaayega. [TO CONFIRM: a flat cleaning charge, or \"at actuals against a receipt\"? Pick one; an unspecified charge is unenforceable and invites arguments at the roadside.]"
+          ]
+        },
+        {
+          "heading": "Hamare driver-partners",
+          "body": [
+            "Pehli ride se pehle har driver-partner apna driving licence aur Aadhaar deta hai, aur hum dono check karte hain. Documents dekhe bina hum driver ko service mein nahi lagate.",
+            "Woh independent contractors hain jo apne hours chunte aur apni gaadi chalate hain. Platform par kise aane dete hain aur kuch galat ho toh action lene ki zimmedari hamari hai; hum unke employer nahi hain."
+          ]
+        },
+        {
+          "heading": "Jo hum ya aap control nahi karte",
+          "body": [
+            "Traffic, mausam, road closures, gaadi kharab hona, protests, strikes, network outages aur sarkari action rides ko affect karte hain. Yeh na hamare control mein hain, na aapke. Inse ride late ya band ho toh hum rebook karne mein madad karenge aur jo ride aapne li hi nahi uska charge nahi lenge."
+          ]
+        },
+        {
+          "heading": "Hamari zimmedari aur uski seema",
+          "body": [
+            "Service imaandari se chalana hamari zimmedari hai: bataya hua fare lena, driver-partners verify karna aur kuch galat ho toh aapko jawab dena.",
+            "Jahan kanoon hamari liability seemit karne deta hai, ek ride ki liability us ride ke fare tak hai. Late ya cancelled ride se flight, exam, interview ya connection chhootne jaise indirect losses ke liye hum zimmedar nahi hain. Yahan kuch bhi aisi liability seemit nahi karta jo kanoon ke tahat seemit nahi ho sakti, jaise negligence se death ya personal injury, ya Consumer Protection Act, 2019 ke tahat aapke adhikaar. [TO CONFIRM: this is the clause most worth the lawyer's time. A cab service carrying students to and from trains and flights will be tested on exactly this, and a cap the court won't enforce is worse than no cap.]"
+          ]
+        },
+        {
+          "heading": "Chhoota hua samaan",
+          "body": [
+            "Pata chalte hi ride ki date aur time ke saath humein batayein. Hum driver se contact karke samaan lautane ki koshish karenge. Milne ka vaada nahi kar sakte aur gaadi mein chhodi cheezon ke liye zimmedar nahi hain."
+          ]
+        },
+        {
+          "heading": "Account band karna",
+          "body": [
+            "Active ride ke dauran chhodkar aap kabhi bhi Manage Account se account delete kar sakte hain. Pehle ride poori ya cancel karein. Delete karne se kya mitta hai aur humein kya rakhna padta hai, yeh Privacy Policy mein hai.",
+            "In sharton mein diye kaaranon se hum account suspend ya band kar sakte hain. Jahan mumkin ho, hum wajah batayenge."
+          ]
+        },
+        {
+          "heading": "In sharton mein badlav",
+          "body": [
+            "Service badalne par hum shartein update karenge. Upar ki date current version dikhati hai. Koi bada badlav laagu hone se pehle app mein batayenge. Badlav ke baad book ki gayi ride par us din laagu version chalega."
+          ]
+        },
+        {
+          "heading": "Kaunsa kanoon laagu hai",
+          "body": [
+            "Yeh shartein Bharat ke kanoon ke tahat hain aur inse nikle vivaadon par [TO CONFIRM: courts of <city>, usually where the business is registered] ka exclusive jurisdiction hai.",
+            "Usse pehle Grievance Redressal page use karein. Lagbhag saari problems wahin sulajh jaati hain."
+          ]
+        }
+      ]
+    },
+    "refunds": {
+      "tab": "Refund",
+      "title": "Refund aur cancellation",
+      "standfirst": "Ride cancel karne, galat charge aur paise wapas milne ke baare mein jaanein.",
+      "sections": [
+        {
+          "heading": "Pehle jaanein: Ride Now prepaid nahi hai",
+          "body": [
+            "Ride Now ka payment trip ke end mein cash ya UPI se hota hai. Scheduled ride mein 15% advance liya jaata hai, jo neeche ke distance rule ke mutabik wapas hota hai ya rakh liya jaata hai."
+          ]
+        },
+        {
+          "heading": "Driver paas aane se pehle cancel karna",
+          "body": [
+            "Driver assign na hua ho ya assigned driver ki current location pickup se 500 metre se zyada door ho toh cancellation free hai. Scheduled ride ka diya advance refund hota hai."
+          ]
+        },
+        {
+          "heading": "Driver paas ho toh cancel karna",
+          "body": [
+            "Driver ki current location pickup ke 500 metre ke andar aane par scheduled ride cancel karne se diya hua 15% advance rakh liya jaata hai. Aap tak pahunchne mein lage fuel aur time ke liye yeh driver ko milta hai."
+          ]
+        },
+        {
+          "heading": "Driver cancel kare ya na aaye",
+          "body": [
+            "Aapko kuch nahi dena hota aur hum doosri ride dhoondhenge. Humein batayein, hum turant madad karenge taaki aapko dobara book na karna pade."
+          ]
+        },
+        {
+          "heading": "Driver na mil paaye",
+          "body": [
+            "Kabhi search ke baad bhi driver nahi milta, khaaskar der raat ya door ke area mein. Booking mein yeh dikhega, koi charge nahi lagega aur aap doosre waqt ke liye phir book kar sakte hain."
+          ]
+        },
+        {
+          "heading": "Galat fare liya jaaye",
+          "body": [
+            "Tracking page par dikhaya fare hi aapka fare hai. Driver ne zyada liya ho ya aisi ride ke liye pay kiya jo hui hi nahi, toh date aur time ke saath batayein. Hum apne booking record se check karenge.",
+            "Zyada payment hone par fark ki rakam UPI se us number par lautate hain jisse aapne book kiya tha. [TO CONFIRM: the timeline you're willing to commit to; 7 working days is the usual promise. Say a number; \"as soon as possible\" is what people complain about.]"
+          ]
+        },
+        {
+          "heading": "Aap na aayein toh",
+          "body": [
+            "Driver pickup ke 500 metre ke andar aane ke baad cancel karne par scheduled ride ka diya 15% advance rakh liya jaata hai. Timed no-show ka alag action abhi nahi hai, isliye aap jawab na dein toh driver ko support se contact karna hoga."
+          ]
+        },
+        {
+          "heading": "Cancel kaise karein",
+          "body": [
+            "Ride ke tracking page se cancel karein ya humein call karein, hum kar denge. Sirf driver ko batana kaafi nahi. Hamare system mein cancel hone tak booking khuli rehti hai."
+          ]
+        }
+      ]
+    },
+    "grievance": {
+      "tab": "Shikayat",
+      "title": "Shikayat ka samadhaan",
+      "standfirst": "Problem par kisse contact karein, kitna waqt lagega aur hal na mile toh aage kahan jaayein.",
+      "sections": [
+        {
+          "heading": "Pehle support se baat karein",
+          "body": [
+            "Galat fare, driver ka na aana ya gaadi mein samaan chhootne jaisi zyadaatar problems call ya message se usi din sulajh jaati hain. Pehle yeh karein. Yeh page tab ke liye hai jab wahan hal na mile ya ghatna itni gambhir ho ki record mein rakhna zaroori ho."
+          ]
+        },
+        {
+          "heading": "Ride mein kuch hua ho toh intezaar na karein",
+          "body": [
+            "Safety ka maamla ho toh pehle 112 par aur turant baad humein call karein. Shikayat ki process aur timeline hoti hai, lekin chal rahi ghatna ke liye intezaar nahi hota."
+          ]
+        },
+        {
+          "heading": "Hamare Grievance Officer",
+          "body": [
+            "Information Technology (Intermediary Guidelines and Digital Media Ethics Code) Rules, 2021 ke tahat hum shikayaton ke liye jawabdeh vyakti appoint karte hain. Unki details:"
+          ],
+          "list": [
+            "Naam: [TO CONFIRM: Grievance Officer's full name]",
+            "Pad: [TO CONFIRM: designation, e.g. Proprietor]",
+            "Email: [TO CONFIRM: grievance email; a domain address reads better than gmail]",
+            "Phone: [TO CONFIRM: grievance phone number and the hours it is answered]",
+            "Pata: [TO CONFIRM: full registered address with PIN code]"
+          ],
+          "after": [
+            "Aapke personal data ki shikayatein bhi yahi officer sambhalte hain."
+          ]
+        },
+        {
+          "heading": "Hum kya aur kab tak karte hain",
+          "list": [
+            "Shikayat milne ke 48 ghante ke andar uski receipt confirm karte hain.",
+            "30 din ke andar hal karte hain, aur mumkin ho toh pehle.",
+            "Jis number ya email se aapne shikayat ki, usi par nateeja aur kiya gaya action batate hain."
+          ]
+        },
+        {
+          "heading": "Humein kya bhejein",
+          "body": [
+            "Inmein se jitni jaankari denge, process utni jaldi hogi:"
+          ],
+          "list": [
+            "Aapke account ka registered phone number,",
+            "Ride ki date, time aur destination,",
+            "Driver ka naam ya gaadi number, agar aapke paas ho,",
+            "Kya hua aur aap humse kya karwana chahte hain."
+          ]
+        },
+        {
+          "heading": "Hal na mila ho toh",
+          "body": [
+            "Aapko sirf hum tak rukne ki zaroorat nahi. Hamare jawab se khush na hon ya 30 din tak jawab na aaye toh aage contact kar sakte hain:"
+          ],
+          "list": [
+            "National Consumer Helpline 1915 ya consumerhelpline.gov.in,",
+            "Apne district ka consumer commission,",
+            "Personal data ki shikayat ke liye Data Protection Board of India,",
+            "[TO CONFIRM: the state transport authority to name here, if the business holds an aggregator licence under the Motor Vehicles Aggregator Guidelines. If it does, that licence also requires a 24×7 control-room number, which belongs on this page.]"
+          ]
+        }
+      ]
+    },
+    "privacy": {
+      "tab": "Privacy",
+      "title": "Privacy policy",
+      "standfirst": "Hum aapki kya jaankari rakhte hain, kaun dekhta hai, kab tak rakhte hain aur use kaise hatwayein.",
+      "sections": [
+        {
+          "heading": "Parichay",
+          "body": [
+            "Yeh Privacy Policy batati hai ki service use karne par hum aapki jaankari kaise collect, use aur disclose karte hain. Yeh aapke privacy rights aur kanoon ki suraksha bhi batati hai.",
+            "Hum service dene aur behtar banane ke liye Personal Data use karte hain. Jaankari is policy ke mutabik collect, use aur disclose hoti hai. Jahan applicable law maangta hai, hum aisa sirf valid legal basis par karte hain, jismein aapki consent bhi shaamil hai jahan zaroori ho. Yeh policy TermsFeed Privacy Policy Generator (https://www.termsfeed.com/privacy-policy-generator/) ki madad se bani hai."
+          ]
+        },
+        {
+          "heading": "Matlab aur paribhashayein",
+          "body": [
+            "Original English text mein capital letter se shuru hone wale shabdon ka matlab neeche diya hai. Singular ya plural hone par bhi matlab ek hai.",
+            "Is Privacy Policy ke liye:"
+          ],
+          "list": [
+            "Account woh unique account hai jo service ya uske hisson tak pahunchne ke liye aapke liye banaya gaya hai.",
+            "Affiliate woh entity hai jo kisi party ko control karti ho, uske control mein ho ya common control mein ho. Control ka matlab directors ya doosri managing authority chunne ke voting rights wale 50% ya zyada shares, equity interest ya doosri securities ki ownership hai.",
+            "Company (is policy mein “Company”, “hum” ya “hamara”) ka matlab R C S Travels, Ramgopal Enclave Colony, G T Road, Dadri, Gautam Buddh Nagar, Uttar Pradesh 203207 hai.",
+            "Cookies website ki rakhi chhoti files hain jo computer, mobile ya doosre device par hoti hain. Inke kai uses mein us website ki browsing history ki details rakhna bhi hai.",
+            "Country/State ka matlab: Uttar Pradesh, India.",
+            "Device koi bhi upkaran hai jisse service access ho, jaise computer, mobile phone ya digital tablet.",
+            "Personal Data (ya Personal Information) kisi pehchaane gaye ya pehchaane ja sakne wale vyakti ki jaankari hai. Jab tak kanoon alag shabd na use kare, hum dono ka ek hi matlab lete hain.",
+            "Service ka matlab Website hai.",
+            "Service Provider koi vyakti ya legal entity hai jo Company ki taraf se data process kare. Ismein service aasaan banane, Company ki taraf se service dene, related kaam karne ya service use ka analysis karne ke liye rakhi third-party companies aur log shaamil hain.",
+            "Usage Data apne aap collect hota hai, service use hone se ya uske infrastructure se, jaise page visit ka duration.",
+            "User koi bhi vyakti hai jo service access ya use kare.",
+            "Website ka matlab RCS Travels hai, jo https://www.rcstravels.co.in/ par hai.",
+            "You ka matlab service access ya use karne wala vyakti, ya woh company ya doosri legal entity hai jiski taraf se woh vyakti use kar raha hai, jaisa laagu ho."
+          ]
+        },
+        {
+          "heading": "Personal Data ki jaankari",
+          "body": [
+            "Service use karte waqt hum pehchaan ya contact ke liye kuch personally identifiable information maang sakte hain. Ismein neeche di jaankari shaamil ho sakti hai, lekin yeh in tak seemit nahi:"
+          ],
+          "list": [
+            "Pehla naam aur surname",
+            "Phone number",
+            "Pata, State, Province, ZIP/Postal code, City"
+          ]
+        },
+        {
+          "heading": "Usage Data ki jaankari",
+          "body": [
+            "Service use karte waqt Usage Data apne aap collect hota hai.",
+            "Ismein device ka Internet Protocol address (jaise IP address), browser type aur version, dekhe gaye service pages, visit ki date aur time, pages par bitaya waqt, unique device identifiers aur doosra diagnostic data ho sakta hai.",
+            "Mobile se service access karne par kuch jaankari automatic collect ho sakti hai, jaise mobile type, unique ID, IP address, mobile operating system, mobile Internet browser type, unique identifiers aur diagnostic data. Yeh list seemit nahi hai.",
+            "Service visit karte waqt ya mobile se access karte waqt browser jo jaankari bhejta hai, hum woh bhi collect kar sakte hain."
+          ]
+        },
+        {
+          "heading": "Tracking technology aur cookies",
+          "body": [
+            "Hum service activity track karne aur kuch jaankari rakhne ke liye Cookies aur milti-julti tracking technologies use karte hain. Beacons, tags aur scripts se jaankari collect aur track hoti hai aur service improve aur analyse hoti hai. Inmein yeh ho sakta hai:"
+          ],
+          "list": [
+            "Cookies ya Browser Cookies: device par rakhi chhoti file. Browser ko sabhi Cookies reject karne ya Cookie aane par batane ko keh sakte hain. Lekin Cookies accept na karne par service ke kuch hisse use nahi ho sakte.",
+            "Web Beacons: service ke kuch sections aur emails mein chhoti electronic files ho sakti hain, jinhe clear gifs, pixel tags ya single-pixel gifs bhi kehte hain. Inse Company page dekhne ya email kholne wale users gin sakti hai aur website statistics, jaise section ki popularity aur system/server integrity, check kar sakti hai."
+          ],
+          "after": [
+            "Cookies Persistent ya Session ho sakti hain. Offline hone par Persistent Cookies computer ya mobile par rehti hain; browser band karte hi Session Cookies delete hoti hain.",
+            "Jahan kanoon zaroori kehta hai, non-essential cookies, jaise analytics, advertising aur remarketing, sirf consent se use hoti hain. Cookie preferences tool (agar available ho) ya browser/device settings se consent kabhi bhi badal ya wapas le sakte hain. Isse pehle consent ke basis par hue processing ki legality nahi badalti.",
+            "Hum neeche ke maqsadon ke liye Session aur Persistent dono Cookies use karte hain:",
+            "Necessary/Essential Cookies (Session, hamare dwara managed): website services aur kuch features dene ke liye zaroori hain. Users authenticate karne aur accounts ke fraudulent use ko rokne mein madad karti hain. Inke bina maangi gayi services nahi di ja sakti; hum inhein sirf woh services dene ke liye use karte hain.",
+            "Cookies Policy/Notice Acceptance Cookies (Persistent, hamare dwara managed): pehchaanti hain ki user ne website par cookies ka use accept kiya ya nahi.",
+            "Functionality Cookies (Persistent, hamare dwara managed): website ki choices, jaise login details ya language, yaad rakhti hain. Isse personal experience milta hai aur har visit par preferences dobara nahi bharni padti.",
+            "Hamari cookies aur aapki choices ki aur jaankari ke liye Privacy Policy ka Cookies section dekhein."
+          ]
+        },
+        {
+          "heading": "Personal Data ka istemaal",
+          "body": [
+            "Company Personal Data in maqsadon se use kar sakti hai:"
+          ],
+          "list": [
+            "Service dene aur maintain karne ke liye, jismein service usage monitor karna shaamil hai.",
+            "Account manage karna: service user ke roop mein registration sambhalna. Diya gaya data registered users ke liye available alag features ki access de sakta hai.",
+            "Contract poora karna: kharide products, items ya services ke purchase contract, ya service ke zariye hamare saath kisi doosre contract ka development, compliance aur execution.",
+            "Contact karna: email, phone, SMS ya milte-julte electronic tareeqe, jaise app push notifications. Ismein features, products ya contracted services ke updates aur information, aur unhein laagu karne ke liye zaroori ya reasonable security updates shaamil hain.",
+            "News, special offers aur aisi doosri goods, services aur events ki information dena jo aapki kharidi ya poochhi cheezon jaisi hon. Marketing sirf applicable law ki permission par hoti hai. Jahan pehle consent chahiye, jaise EEA aur UK ke laws, sirf consent se bhejenge; warna opt-out tak bhej sakte hain. Marketing email ke unsubscribe link ya humse contact karke kabhi bhi opt out ya consent withdraw kar sakte hain.",
+            "Requests manage karna: aapki bheji requests dekhna aur sambhalna.",
+            "Business transfers: merger, divestiture, restructuring, reorganisation, dissolution ya kuch/saari assets ki sale ya transfer evaluate ya conduct karna. Yeh going concern ya bankruptcy, liquidation jaisi process mein ho sakta hai, jahan users ka data transferred assets ka hissa ho.",
+            "Doosre maqsad: data analysis, usage trends, promotional campaigns ki effectiveness, aur service, products, services, marketing aur aapke experience ko evaluate aur improve karna."
+          ]
+        },
+        {
+          "heading": "Personal Data share karna",
+          "body": [
+            "Hum in situations mein Personal Data share kar sakte hain:"
+          ],
+          "list": [
+            "Service Providers ke saath: service use monitor aur analyse karne aur aapse contact karne ke liye.",
+            "Business transfers ke liye: merger, Company assets ki sale, financing ya doosri company ko kuch/poora business acquisition ke sambandh mein ya uski negotiations ke dauran.",
+            "Affiliates ke saath: unse is policy ka paalan karwayenge. Ismein parent company, subsidiaries, joint venture partners aur hamare ya common control ki companies hain.",
+            "Business partners ke saath: kuch products, services ya promotions dene ke liye. Partners apni privacy policies ke mutabik information apne maqsadon se bhi use kar sakte hain.",
+            "Doosre users ke saath: agar service mein public areas hon, toh wahan Personal Data share karne ya users se interaction ki information sab dekh sakte hain aur service ke bahar publicly distribute ho sakti hai.",
+            "Aapki consent se: kisi doosre maqsad ke liye aapki consent lekar data disclose kar sakte hain."
+          ]
+        },
+        {
+          "heading": "Personal Data kab tak rakhte hain",
+          "body": [
+            "Company data sirf is policy ke maqsadon ke liye zaroori waqt tak rakhegi. Legal obligations, jaise applicable law ke liye data rakhna, disputes resolve karna aur legal agreements/policies enforce karne ke liye jitna zaroori ho utna retain aur use karenge.",
+            "Mumkin ho toh chhoti retention periods rakhte hain ya data delete, aggregate ya anonymise karke pehchaan kam karte hain. Alag na bataya ho toh neeche ke periods maximum (“up to”) hain; maqsad poora ho toh pehle bhi delete ya anonymise kar sakte hain. Processing ke maqsad aur legal obligations ke hisaab se har category ki period alag hai:"
+          ],
+          "list": [
+            "Account Information—User Accounts: account relationship tak aur closure ke baad issues ya disputes sambhalne ke liye zyada se zyada 24 months.",
+            "Usage Data—Website analytics (cookies, IP addresses, device identifiers): collection se zyada se zyada 24 months, taaki privacy principles ka dhyaan rakhte hue trends analyse hon.",
+            "Usage Data—Server logs (IP addresses, access times): security monitoring aur troubleshooting ke liye zyada se zyada 24 months."
+          ],
+          "after": [
+            "Usage Data upar ki periods ke mutabik rehta hai. Zyada waqt sirf security, fraud prevention ya legal compliance ke liye zaroori hone par reh sakta hai.",
+            "Data upar se zyada waqt rakhne ki wajah ho sakti hai: legal obligation, jaise tax authorities ke financial records; legal claims establish, exercise ya defend karna; aapki explicit request; ya technical limits, jaise routine deletion ke liye scheduled backups mein data.",
+            "Data kab tak rakhenge, yeh jaanne ke liye contact kar sakte hain.",
+            "Retention khatam hone par data securely delete ya anonymise karte hain. Deletion: systems se data hata diya jaata hai aur active processing band hoti hai. Backup retention: bachi copies encrypted backups mein hamare schedule ke hisaab se limited waqt reh sakti hain; sirf security, disaster recovery ya legal compliance ke liye zaroori ho toh restore hoti hain. Anonymisation: kuch data anonymous statistics ban jaata hai jise aapse nahi joda ja sakta; research aur analytics ke liye ise indefinitely rakh sakte hain."
+          ]
+        },
+        {
+          "heading": "Personal Data transfer karna",
+          "body": [
+            "Personal Data samet aapki information Company offices aur processing karne wali parties ke locations par process hoti hai. Isliye data state, province, country ya doosre jurisdiction ke bahar computers par transfer aur maintain ho sakta hai, jahan data protection laws alag hon.",
+            "Jahan applicable law maange, international transfers ke liye suitable safeguards aur relevant supplementary measures ensure karenge. Company data ko secure aur is policy ke mutabik rakhne ke sab reasonable necessary steps legi. Data aur personal information ki security samet adequate controls ke bina kisi organisation ya country ko transfer nahi hoga."
+          ]
+        },
+        {
+          "heading": "Personal Data delete karna",
+          "body": [
+            "Aapko hamare collect kiye apne Personal Data ko delete karne ya usmein hamari madad maangne ka haq hai.",
+            "Service ke andar aapki kuch information delete karne ka option ho sakta hai.",
+            "Account ho toh login karke personal information manage karne wali settings se kabhi bhi update, amend ya delete kar sakte hain. Diye data ko access, correct ya delete karwane ke liye humse contact bhi kar sakte hain.",
+            "Lekin legal obligation ya lawful basis ho toh kuch information rakhni pad sakti hai."
+          ]
+        },
+        {
+          "heading": "Personal Data disclose karna",
+          "body": [
+            "Business Transactions: merger, acquisition ya asset sale mein data transfer ho sakta hai. Data transfer aur alag Privacy Policy ke tahat aane se pehle notice denge.",
+            "Law Enforcement: kuch situations mein kanoon ki maang ya public authorities, jaise court ya government agency, ki valid request par data disclose kar sakte hain.",
+            "Doosri legal requirements: good-faith mein zaroori maanne par Company data disclose kar sakti hai:"
+          ],
+          "list": [
+            "Legal obligation poori karne ke liye",
+            "Company ke rights ya property ki raksha ke liye",
+            "Service se judi possible wrongdoing rokne ya investigate karne ke liye",
+            "Users ya public ki personal safety bachane ke liye",
+            "Legal liability se bachav ke liye"
+          ]
+        },
+        {
+          "heading": "Personal Data ki security",
+          "body": [
+            "Data security hamare liye zaroori hai, lekin Internet transmission ya electronic storage ka koi tareeqa 100% secure nahi. Hum commercially reasonable protection use karne ki koshish karte hain, lekin absolute security ki guarantee nahi de sakte."
+          ]
+        },
+        {
+          "heading": "Hamare Service Providers",
+          "body": [
+            "Hamare Service Providers ko Personal Data ki access ho sakti hai. Yeh third-party vendors apni Privacy Policies ke mutabik service par aapki activity ki information collect, store, use, process aur transfer karte hain.",
+            "Service maintain aur improve karne ke liye third-party providers use kar sakte hain."
+          ],
+          "list": [
+            "Google Places: Google ki service jo HTTP requests se places ki information deti hai. Security ke liye aapse aur device se information collect kar sakti hai. Data Google ki Privacy Policy ke mutabik rakha jaata hai: https://www.google.com/intl/en/policies/privacy/",
+            "Clerk: unki Privacy Policy https://clerk.com/legal/privacy par dekh sakte hain.",
+            "WhatsApp Business Platform: unki Privacy Policy https://www.whatsapp.com/legal/business-app-privacy-policy par dekh sakte hain."
+          ]
+        },
+        {
+          "heading": "Bachchon aur minors ki privacy",
+          "body": [
+            "Service 16 saal se kam logon ke liye nahi hai aur hum jaanboojhkar unki Personal Information collect nahi karte.",
+            "Aap parent ya guardian hain aur lagta hai bachche ne information di hai toh contact karein. 16 saal se kam ki information collect hone ka pata chale toh reasonably jaldi servers se hatane ke steps lenge.",
+            "Kuch countries aur states apni information processing ki consent ke liye zyada age tay karti hain. Jahan hum consent par rely karte hain aur user par laagu law mein age 16 se zyada hai, information collect aur use karne se pehle parent ya guardian ki consent maang sakte hain."
+          ]
+        },
+        {
+          "heading": "Doosri websites ke links",
+          "body": [
+            "Service mein aisi sites ke links ho sakte hain jinhein hum nahi chalate. Third-party link par click karke aap unki site par jaayenge. Har visited site ki Privacy Policy padhne ki hamari zor daar salah hai.",
+            "Third-party sites ya services ke content, privacy policies aur practices par hamara control nahi aur hum unki zimmedari nahi lete."
+          ]
+        },
+        {
+          "heading": "Privacy Policy mein badlav",
+          "body": [
+            "Hum policy waqt-waqt par update kar sakte hain. Nayi policy is page par post karke changes batayenge.",
+            "Badlav effective hone se pehle email aur/ya service par prominent notice se batayenge aur upar Last updated date badlenge.",
+            "Changes ke liye policy waqt-waqt par padhein. Badlav is page par post hone par effective hote hain."
+          ]
+        },
+        {
+          "heading": "Humse sampark karein",
+          "body": [
+            "Privacy Policy ke sawalon ke liye contact karein:"
+          ],
+          "list": [
+            "Email par: rcstravels.business@gmail.com",
+            "Phone par: 8586088085"
+          ]
+        }
+      ]
+    }
+  }
+}

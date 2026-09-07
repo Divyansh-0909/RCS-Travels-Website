@@ -1,3 +1,5 @@
+import { useTranslation as useCopyLanguage } from "react-i18next";
+import { websiteCopy as dc } from "../i18nCopy";
 import { useState, useEffect, useRef } from "react"
 import { useLocation } from "react-router-dom";
 import Icon from '@mdi/react';
@@ -20,6 +22,7 @@ import { VEHICLE_CLASS_NAMES } from "../constants/vehicles";
 import { angledVehicleImageOf } from "../constants/vehicleImages";
 import Chips, { filterLabel, filterField } from "../components/ui/Chips";
 import { COMPLAINT_OPTIONS } from "../constants/complaints";
+import { useWebsiteCopy } from "../hooks/useWebsiteCopy";
 
 const genderOptions = ["Male", "Female", "Others", "Rather not say"]
 
@@ -39,6 +42,8 @@ const fieldDescriptions = {
 }
 
 const ManageAccount = () => {
+    useCopyLanguage();
+    const tr = useWebsiteCopy()
     const username = useData(state => state.username)
     const setUsername = useData(state => state.setUsername)
     const phone = useData(state => state.phone)
@@ -146,7 +151,7 @@ const ManageAccount = () => {
         } catch {
             if (!mountedRef.current) return
             notifyRefreshFailed(
-                "Couldn't refresh your profile. Showing your last saved details.",
+                dc("Couldn't refresh your profile. Showing your last saved details."),
                 () => hydrateProfile({ isRetry: true }),
             )
         }
@@ -169,9 +174,9 @@ const ManageAccount = () => {
     // Clearing filters is no help when the only thing narrowing the list is the
     // search box, so the escape route matches whichever is actually set.
     const rideEmptyEscape = (rideStatus || rideVehicleClass || rideStartDate || rideEndDate)
-        ? { label: "Clear filters", onClick: clearRideFilters }
+        ? { get "label"() { return dc("Clear filters"); }, onClick: clearRideFilters }
         : rideSearchParam
-            ? { label: "Clear search", onClick: () => setRideSearch("") }
+            ? { get "label"() { return dc("Clear search"); }, onClick: () => setRideSearch("") }
             : undefined
 
     async function searchRides(e, overrides = {}) {
@@ -402,7 +407,7 @@ const ManageAccount = () => {
             else if (field === "DOB") setDOB(fieldValue)
             setExpanded(null)
         } catch {
-            setError("Something went wrong. Please try again.")
+            setError(dc("Something went wrong. Please try again."))
         } finally {
             setLoading(false)
         }
@@ -428,7 +433,7 @@ const ManageAccount = () => {
             URL.revokeObjectURL(url)
         } catch (e) {
             console.error(e)
-            setDownloadError("Couldn't download your data. Please try again.")
+            setDownloadError(dc("Couldn't download your data. Please try again."))
         } finally {
             setDownloading(false)
         }
@@ -450,7 +455,7 @@ const ManageAccount = () => {
         }
         catch (e) {
             console.error(e)
-            setError("Something went wrong. Please try again.")
+            setError(dc("Something went wrong. Please try again."))
         }
         finally {
             setLoading(false)
@@ -461,7 +466,7 @@ const ManageAccount = () => {
     // Hidden entirely while everything fits on one page.
     const ridePagination = (rideTotal ?? 0) <= rideLimit ? null : (
         <div className="flex gap-3 sm:gap-4 items-center justify-center">
-            <button type="button" disabled={ridePage <= 1} onClick={() => setRidePage(p => p - 1)} className="disabled:opacity-[0.8] disabled:cursor-not-allowed disabled:hover:bg-[var(--background)]/90 py-2 px-3 flex items-center justify-center gap-1 cursor-pointer text-[var(--text)] bg-[var(--background)]/90 hover:bg-[var(--background)] transition-color duration-300 rounded-xl"><h4>Prev</h4></button>
+            <button type="button" disabled={ridePage <= 1} onClick={() => setRidePage(p => p - 1)} className="disabled:opacity-[0.8] disabled:cursor-not-allowed disabled:hover:bg-[var(--background)]/90 py-2 px-3 flex items-center justify-center gap-1 cursor-pointer text-[var(--text)] bg-[var(--background)]/90 hover:bg-[var(--background)] transition-color duration-300 rounded-xl"><h4>{tr("Prev")}</h4></button>
             <span className="text-[var(--text-foreground)] flex w-fit items-center justify-center gap-2">
                 <input
                     type="text"
@@ -472,19 +477,19 @@ const ManageAccount = () => {
                     onBlur={commitRidePage}
                     className="flex text-center justify-center items-center border box-border rounded-lg h-10 w-10 p-0 m-0 bg-transparent leading-none outline-none text-sm sm:text-lg"
                 />
-                <h4>of</h4>
+                <h4>{tr("of")}</h4>
                 <h4 className="flex text-center justify-center items-center border box-border rounded-lg h-10 w-10 p-0 m-0 bg-transparent leading-none text-sm sm:text-lg">{totalRidePages}</h4>
             </span>
-            <button type="button" disabled={ridePage >= totalRidePages} onClick={() => setRidePage(p => p + 1)} className="disabled:opacity-[0.8] disabled:cursor-not-allowed disabled:hover:bg-[var(--background)]/90 py-2 px-3 flex items-center justify-center gap-1 cursor-pointer text-[var(--text)] bg-[var(--background)]/90 hover:bg-[var(--background)] transition-color duration-300 rounded-xl"><h4>Next</h4></button>
+            <button type="button" disabled={ridePage >= totalRidePages} onClick={() => setRidePage(p => p + 1)} className="disabled:opacity-[0.8] disabled:cursor-not-allowed disabled:hover:bg-[var(--background)]/90 py-2 px-3 flex items-center justify-center gap-1 cursor-pointer text-[var(--text)] bg-[var(--background)]/90 hover:bg-[var(--background)] transition-color duration-300 rounded-xl"><h4>{tr("Next")}</h4></button>
         </div>
     )
 
     return (
         <AccountLayout
-            items={items}
+            items={items.map(tr)}
             selected={selected}
             onSelect={(i) => { setSelected(i); setRideScrolled(false) }}
-            title="Manage Account"
+            title={tr("Manage Account")}
             startOnContent={items.includes(requestedTab)}
             panelOpen={!!expanded || rideFilterExpand}
             onPanelClose={() => { setExpanded(null); setRideFilterExpand(false) }}
@@ -503,14 +508,14 @@ const ManageAccount = () => {
                                 <p className="mt-1 text-sm text-[var(--foreground-muted)]/70">{panel[3]}</p>
                             </div>
                             : <div className="flex flex-col gap-3 w-full justify-center px-3 pt-3 items-center text-center">
-                                <h2 className="text-2xl">{panel === "deactivate" ? "Before you deactivate" : panel === "drivers" ? "What your driver sees" : `${field}`}</h2>
-                                <p className="-mt-2 mb-5 text-sm text-[var(--foreground-muted)]/70">{panel === "deactivate" ? "This can't be undone." : panel === "drivers" ? "The details shared with a driver when they accept your ride." : `${fieldDescriptions[field]}`}</p>
+                                <h2 className="text-2xl">{panel === "deactivate" ? dc("Before you deactivate") : panel === "drivers" ? dc("What your driver sees") : dc(field)}</h2>
+                                <p className="-mt-2 mb-5 text-sm text-[var(--foreground-muted)]/70">{panel === "deactivate" ? dc("This can't be undone.") : panel === "drivers" ? dc("The details shared with a driver when they accept your ride.") : dc(fieldDescriptions[field])}</p>
 
                                 {/* PLACEHOLDER — reconcile with the real driver route once it exists (see ROADMAP IMP) */}
                                 {panel === "drivers" && (
                                     <div className="w-full flex flex-col gap-4 mb-1 text-left">
                                         <div className="flex flex-col gap-2">
-                                            <p className="text-xs uppercase tracking-wide text-[var(--foreground-muted)]/50">Shared with your driver</p>
+                                            <p className="text-xs uppercase tracking-wide text-[var(--foreground-muted)]/50">{tr("Shared with your driver")}</p>
                                             <ul className="flex flex-col gap-2 text-sm text-[var(--text)]">
                                                 {["Your phone number", "Your pickup & drop location"].map(t => (
                                                     <li key={t} className="flex items-center gap-2"><Icon path={mdiCheck} size={0.7} /> {t}</li>
@@ -518,7 +523,7 @@ const ManageAccount = () => {
                                             </ul>
                                         </div>
                                         <div className="flex flex-col gap-2">
-                                            <p className="text-xs uppercase tracking-wide text-[var(--foreground-muted)]/50">Never shared</p>
+                                            <p className="text-xs uppercase tracking-wide text-[var(--foreground-muted)]/50">{tr("Never shared")}</p>
                                             <ul className="flex flex-col gap-2 text-sm text-[var(--foreground-muted)]/70">
                                                 {["Your name", "Gender", "Date of birth", "Emergency contact"].map(t => (
                                                     <li key={t} className="flex items-center gap-2"><Icon path={mdiClose} size={0.7} /> {t}</li>
@@ -530,16 +535,16 @@ const ManageAccount = () => {
                                 {panel === "deactivate" && (
                                     <div className="w-full flex flex-col gap-4 mb-1">
                                         <ul className="list-disc pl-5 flex flex-col gap-2 text-left text-sm text-[var(--foreground-muted)]/70 marker:text-[var(--foreground-muted)]/40">
-                                            <li>Your personal details are erased: name, gender, DOB, emergency contact, and saved places.</li>
-                                            <li>Your past rides are kept anonymously for our records.</li>
-                                            <li>You're signed out on all your devices.</li>
-                                            <li>You can sign up again with this number, but your history won't return.</li>
+                                            <li>{tr("Your personal details are erased: name, gender, DOB, emergency contact, and saved places.")}</li>
+                                            <li>{tr("Your past rides are kept anonymously for our records.")}</li>
+                                            <li>{tr("You're signed out on all your devices.")}</li>
+                                            <li>{tr("You can sign up again with this number, but your history won't return.")}</li>
                                         </ul>
                                         <input
                                             type="text"
                                             value={confirmText}
                                             onChange={(e) => setConfirmText(e.target.value)}
-                                            placeholder={`Type "Deactivate"`}
+                                            placeholder={dc("Type \"Deactivate\"", {})}
                                             className="w-full rounded-xl py-2 px-3 text-base text-center text-[var(--text)] bg-transparent outline-none placeholder:text-[var(--foreground-muted)]/50 border border-[var(--foreground)]/30"
                                         />
                                     </div>
@@ -547,7 +552,7 @@ const ManageAccount = () => {
 
                                 {/* Gender — dropdown selector */}
                                 <div onClick={() => setDropdownExpand(!dropdownExpand)} className={`${field === "Gender" ? "block" : "hidden"} relative w-full flex items-center rounded-xl py-2 justify-between px-3 border border-[var(--foreground)]/30`}>
-                                    <h4 className={`${genderSelected === "Not Selected" && "text-[var(--foreground-muted)]/50"} text-lg`}>{genderSelected}</h4>
+                                    <h4 className={`${genderSelected === "Not Selected" && "text-[var(--foreground-muted)]/50"} text-lg`}>{dc(genderSelected)}</h4>
                                     <Icon path={mdiChevronDown} style={{
                                         transform: dropdownExpand
                                             ? "rotate(180deg)"
@@ -566,7 +571,7 @@ const ManageAccount = () => {
                                             <div className="flex flex-col items-start">
                                                 {genderOptions.map((option) => (
                                                     <div
-                                                        key={option}
+                                                        key={dc(option)}
                                                         onClick={(e) => {
                                                             e.stopPropagation();
                                                             setGenderSelected(option);
@@ -588,19 +593,19 @@ const ManageAccount = () => {
                                         inputMode="numeric"
                                         value={fieldValue}
                                         onChange={field === "DOB" ? handleDobChange : handleContactChange}
-                                        placeholder={field === "DOB" ? "DD/MM/YYYY" : "XXXXX XXXXX"}
+                                        placeholder={field === "DOB" ? dc("DD/MM/YYYY") : dc("XXXXX XXXXX")}
                                         className={`w-full rounded-xl py-2 px-3 text-lg text-center text-[var(--text)] bg-transparent outline-none placeholder:text-[var(--foreground-muted)]/50 border ${(field === "DOB" && fieldValue && !dobValid) || (field === "Emergency Contact" && fieldValue && fieldValue.length !== 10) ? "border-[rgba(239,68,68,0.5)]" : "border-[var(--foreground)]/30"}`}
                                     />
                                 )}
 
                                 {/* DOB format error */}
                                 {field === "DOB" && fieldValue && !dobValid && (
-                                    <p className="-mt-1 text-sm text-[rgba(239,68,68,0.9)]">Enter a valid date as DD/MM/YYYY</p>
+                                    <p className="-mt-1 text-sm text-[rgba(239,68,68,0.9)]">{tr("Enter a valid date as DD/MM/YYYY")}</p>
                                 )}
 
                                 {/* Emergency contact format error */}
                                 {field === "Emergency Contact" && fieldValue && fieldValue.length !== 10 && (
-                                    <p className="-mt-1 text-sm text-[rgba(239,68,68,0.9)]">Enter a 10-digit phone number</p>
+                                    <p className="-mt-1 text-sm text-[rgba(239,68,68,0.9)]">{tr("Enter a 10-digit phone number")}</p>
                                 )}
 
                                 {/* Save error from the backend */}
@@ -615,7 +620,7 @@ const ManageAccount = () => {
                                         disabled: updateDisabled || loading,
                                     }}
                                 >
-                                    {loading ? "Saving…" : "Update"}
+                                    {loading ? dc("Saving…") : dc("Update")}
                                 </Button>
                                 <Button className={`${panel === 'deactivate' ? "block" : "hidden"}`} onClick={handleDeactivate}
                                     prop={{
@@ -624,7 +629,7 @@ const ManageAccount = () => {
                                         disabled: !deactivateReady || loading,
                                     }}
                                 >
-                                    {loading ? "Deactivating…" : "Deactivate"}
+                                    {loading ? dc("Deactivating…") : dc("Deactivate")}
                                 </Button>
                             </div>}
                     </Button>
@@ -633,9 +638,7 @@ const ManageAccount = () => {
             <div
                 className={`${copied ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"} flex justify-center items-center w-[230px] fixed z-100 left-1/2 -translate-x-1/2 bottom-8 sm:bottom-10 bg-primary text-[var(--foreground)] text-sm font-semibold px-5 py-3 rounded-full shadow-[0_8px_24px_rgba(0,0,0,0.25)] gap-2 transition-[opacity,transform] duration-300`}
             >
-                <Icon path={mdiContentCopy} size={0.7} />
-                Copied to clipboard
-            </div>
+                <Icon path={mdiContentCopy} size={0.7} />{dc("Copied to clipboard")}</div>
             {items[selected] === RIDE_TAB
                 ? <>
                     {/* Sectioned filter panel — same shell as the admin dashboard's; Apply refetches page 1 */}
@@ -675,17 +678,17 @@ const ManageAccount = () => {
                                         {rideFilterSection === 1 && <Chips options={vehicleOptions} value={rideVehicleClass} onChange={setRideVehicleClass} />}
                                         {rideFilterSection === 2 && (
                                             <>
-                                                <label className={filterLabel}>Start date</label>
-                                                <input type="text" value={rideStartDate ?? ""} onChange={(e) => setRideStartDate(e.target.value || null)} placeholder="YYYY-MM-DD" className={filterField} />
-                                                <label className={filterLabel}>End date</label>
-                                                <input type="text" value={rideEndDate ?? ""} onChange={(e) => setRideEndDate(e.target.value || null)} placeholder="YYYY-MM-DD" className={filterField} />
+                                                <label className={filterLabel}>{tr("Start date")}</label>
+                                                <input type="text" value={rideStartDate ?? ""} onChange={(e) => setRideStartDate(e.target.value || null)} placeholder={dc("YYYY-MM-DD")} className={filterField} />
+                                                <label className={filterLabel}>{tr("End date")}</label>
+                                                <input type="text" value={rideEndDate ?? ""} onChange={(e) => setRideEndDate(e.target.value || null)} placeholder={dc("YYYY-MM-DD")} className={filterField} />
                                             </>
                                         )}
                                     </div>
                                 </div>
                                 <div className="w-full flex gap-2 px-3 pt-3 mt-3 border-t border-[var(--foreground)]/10">
-                                    <div onClick={clearRideFilters} className="flex-1 flex justify-center items-center py-2 rounded-xl border border-[var(--foreground)]/30 text-sm cursor-pointer hover:bg-[var(--foreground)]/10 transition-colors duration-300">Clear</div>
-                                    <div onClick={applyRideFilters} className="flex-1 flex justify-center items-center py-2 rounded-xl bg-primary text-[var(--foreground)] text-sm font-semibold cursor-pointer hover:opacity-[0.9] transition-opacity duration-300">Apply</div>
+                                    <div onClick={clearRideFilters} className="flex-1 flex justify-center items-center py-2 rounded-xl border border-[var(--foreground)]/30 text-sm cursor-pointer hover:bg-[var(--foreground)]/10 transition-colors duration-300">{tr("Clear")}</div>
+                                    <div onClick={applyRideFilters} className="flex-1 flex justify-center items-center py-2 rounded-xl bg-primary text-[var(--foreground)] text-sm font-semibold cursor-pointer hover:opacity-[0.9] transition-opacity duration-300">{tr("Apply")}</div>
                                 </div>
                             </div>
                         </Button>
@@ -703,17 +706,17 @@ const ManageAccount = () => {
                                 id="ride-search"
                                 value={rideSearch}
                                 onChange={(e) => setRideSearch(e.target.value)}
-                                placeholder="Location, driver, ID"
+                                placeholder={dc("Location, driver, ID")}
                                 className={`w-[95%] h-[5vh] text-[var(--text-foreground)]  outline-none border-none`}
                             />
                         </div>
                         <button type="button" onClick={() => setRideOrder(!rideOrder)} className="py-2 px-3 flex items-center justify-center gap-1 cursor-pointer text-[var(--text)] bg-[var(--background)]/90 hover:bg-[var(--background)] transition-color duration-300 rounded-xl">
                             <Icon path={rideOrder ? mdiSortCalendarDescending : mdiSortCalendarAscending} size={1.1} />
-                            <h4>Sort</h4>
+                            <h4>{tr("Sort")}</h4>
                         </button>
                         <button type="button" onClick={() => setRideFilterExpand(!rideFilterExpand)} className="py-2 px-3 flex items-center justify-center gap-1 cursor-pointer text-[var(--text)] bg-[var(--background)]/90 hover:bg-[var(--background)] transition-color duration-300 rounded-xl">
                             <Icon path={mdiTuneVertical} size={1} className="rotate-[90deg]" />
-                            <h4>Filter</h4>
+                            <h4>{tr("Filter")}</h4>
                         </button>
                         </div>
                         {ridePagination && <div className="max-sm:hidden">{ridePagination}</div>}
@@ -725,7 +728,7 @@ const ManageAccount = () => {
                         ?
                         <FailureState
                             tone="light"
-                            title="Couldn't load your rides"
+                            title={tr("Couldn't load your rides")}
                             detail={rideError}
                             onRetry={() => searchRides()}
                         />
@@ -738,8 +741,8 @@ const ManageAccount = () => {
                             <EmptyState
                                 tone="light"
                                 glyph="search"
-                                title="No rides match your search"
-                                message="Try a wider date range, or clear what's set to see every ride."
+                                title={tr("No rides match your search")}
+                                message={tr("Try a wider date range, or clear what's set to see every ride.")}
                                 secondaryAction={rideEmptyEscape}
                             />
                             :
@@ -748,9 +751,9 @@ const ManageAccount = () => {
                             // had caused. The action carries this screen instead.
                             <EmptyState
                                 tone="light"
-                                title="No rides yet"
-                                message="Your trips show up here once you book one, with the driver's details and what you paid."
-                                action={{ label: "Book a ride", onClick: () => navigate('/') }}
+                                title={tr("No rides yet")}
+                                message={tr("Your trips show up here once you book one, with the driver's details and what you paid.")}
+                                action={{ label: tr("Book a ride"), onClick: () => navigate('/') }}
                             />)
                         :
                         orderedBookings.map((booking) => {
@@ -766,7 +769,7 @@ const ManageAccount = () => {
                                             <img
                                                 src={angledVehicleImageOf(booking.vehicleClass)}
                                                 className={`hidden h-28 w-44 -ml-4 shrink-0 object-contain sm:block ${booking.status === "cancelled" ? "grayscale" : ""}`}
-                                                alt={`${vehicleLabel(booking.vehicleClass)} vehicle`}
+                                                alt={dc("{{value0}} vehicle", {value0: (vehicleLabel(booking.vehicleClass))})}
                                             />
                                             <div className="flex flex-col gap-3 min-w-0">
                                                 <div className="flex items-center gap-3">
@@ -798,7 +801,7 @@ const ManageAccount = () => {
                                     <div className="flex flex-col w-full">
                                         <div className="flex justify-between items-center w-full gap-4">
                                             <p className="text-base text-gray-500">
-                                                {formatDateTime(booking.scheduledAt ?? booking.createdAt)}  •  {vehicleLabel(booking.vehicleClass)}{booking.sharing ? " • Sharing" : ""}
+                                                {formatDateTime(booking.scheduledAt ?? booking.createdAt)}  •  {vehicleLabel(booking.vehicleClass)}{booking.sharing ? dc("• Sharing") : ""}
                                             </p>
                                             <div onClick={() => setExpandedRide(isOpen ? null : booking.id)} className="cursor-pointer text-[var(--foreground-muted)] bg-[var(--background-primary)]/80 transition-color duration-300 hover:bg-[var(--background-primary)] p-1 rounded-full shrink-0">
                                                 <Icon path={mdiChevronDown} size={1} className={`transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`} />
@@ -811,17 +814,16 @@ const ManageAccount = () => {
                                                 <div className={`${isOpen ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2"} mt-4 flex w-full flex-col gap-4 rounded-2xl bg-white/70 p-4 transition-[opacity,transform] duration-300`}>
                                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
                                                     <div>
-                                                        <p className="text-xs uppercase tracking-wide text-gray-500 mb-0.5">Driver</p>
+                                                        <p className="text-xs uppercase tracking-wide text-gray-500 mb-0.5">{tr("Driver")}</p>
                                                         {booking.driver
                                                             ? <h4 className="text-[var(--background-primary)]">{booking.driver.name} <span className="text-gray-500">• {displayPhone(booking.driver.phone)}</span> <CopyBtn value={displayPhone(booking.driver.phone)} onCopy={copyRideId} /></h4>
                                                             : <h4 className="text-gray-500">{booking.status === "cancelled" ? "—" : upcoming ? "Yet to be assigned" : "Couldn't be assigned"}</h4>}
                                                     </div>
                                                     <div>
-                                                        <p className="text-xs uppercase tracking-wide text-gray-500 mb-0.5">Trip</p>
+                                                        <p className="text-xs uppercase tracking-wide text-gray-500 mb-0.5">{tr("Trip")}</p>
                                                         <h4 className="text-[var(--background-primary)]">
-                                                            {booking.distanceKm ?? "—"} KM
-                                                            {booking.status === "completed" && booking.completedAt && booking.confirmedAt
-                                                                ? ` • ${Math.floor((Date.parse(booking.completedAt) - Date.parse(booking.confirmedAt)) / 60000)} min`
+                                                            {booking.distanceKm ?? "—"}{" " + dc("KM")}{booking.status === "completed" && booking.completedAt && booking.confirmedAt
+                                                                ? dc("• {{value0}} min", {value0: (Math.floor((Date.parse(booking.completedAt) - Date.parse(booking.confirmedAt)) / 60000))})
                                                                 : ""}
                                                         </h4>
                                                     </div>
@@ -837,12 +839,12 @@ const ManageAccount = () => {
                                                         more fact about the ride, not an alert. */}
                                                     {booking.sharing && booking.soloFare != null && (
                                                         <div>
-                                                            <p className="text-xs uppercase tracking-wide text-gray-500 mb-0.5">Sharing</p>
+                                                            <p className="text-xs uppercase tracking-wide text-gray-500 mb-0.5">{tr("Sharing")}</p>
                                                             {booking.shareGroupId
-                                                                ? <h4 className="text-[var(--background-primary)]">Saved ₹{Math.round(booking.soloFare - booking.fare)} <span className="text-gray-500">• someone shared this ride</span></h4>
+                                                                ? <h4 className="text-[var(--background-primary)]">{dc("Saved ₹")}{Math.round(booking.soloFare - booking.fare)} <span className="text-gray-500">{dc("• someone shared this ride")}</span></h4>
                                                                 : booking.status === "completed"
-                                                                    ? <h4 className="text-[var(--background-primary)]">Solo fare <span className="text-gray-500">• no one shared this ride</span></h4>
-                                                                    : <h4 className="text-gray-500">₹{booking.fare} if someone shares · ₹{booking.soloFare} if not</h4>}
+                                                                    ? <h4 className="text-[var(--background-primary)]">{dc("Solo fare") + " "}<span className="text-gray-500">{dc("• no one shared this ride")}</span></h4>
+                                                                    : <h4 className="text-gray-500">₹{booking.fare}{" " + dc("if someone shares · ₹")}{booking.soloFare}{" " + dc("if not")}</h4>}
                                                         </div>
                                                     )}
                                                 </div>
@@ -851,7 +853,7 @@ const ManageAccount = () => {
                                                     {/* The reference, whole — this is the value support asks for,
                                                         and a truncated uuid could not be read back over a phone
                                                         or pasted into the search box above. */}
-                                                    <p className="text-gray-500 text-sm">Ride ID: {booking.reference}</p>
+                                                    <p className="text-gray-500 text-sm">{dc("Ride ID:") + " "}{booking.reference}</p>
                                                     <CopyBtn value={booking?.reference} onCopy={copyRideId} />
                                                 </div>
 
@@ -860,9 +862,9 @@ const ManageAccount = () => {
                                                         <Button onClick={() => handleCancel(booking)} prop={{ variant: "negative", width: "200px" }}>
                                                             {cancelConfirmation?.id === booking.id
                                                                 ? cancelConfirmation.charge > 0
-                                                                    ? `Yes, cancel and pay ₹${cancelConfirmation.charge}`
-                                                                    : "Yes, cancel this ride"
-                                                                : "Cancel ride"}
+                                                                    ? dc("Yes, cancel and pay ₹{{amount}}", { amount: cancelConfirmation.charge })
+                                                                    : dc("Yes, cancel this ride")
+                                                                : dc("Cancel ride")}
                                                         </Button>}
                                                     {["completed", "cancelled"].includes(booking.status) && booking.driver && (
                                                         <button
@@ -870,15 +872,15 @@ const ManageAccount = () => {
                                                             onClick={() => complaintRide === booking.id ? setComplaintRide(null) : openComplaint(booking)}
                                                             className="rounded-full border border-[var(--background-primary)]/25 px-4 py-2 text-sm font-semibold text-[var(--background-primary)] hover:bg-[var(--background-primary)]/5 transition-colors"
                                                         >
-                                                            {booking.complaint ? "Update complaint" : "Report driver"}
+                                                            {booking.complaint ? dc("Update complaint") : dc("Report driver")}
                                                         </button>
                                                     )}
-                                                    <p>Need help? <u className="text-[var(--background-primary)] cursor-pointer transition-color duration-300 hover:text-[var(--background-primary)]/80">Talk to us</u></p>
+                                                    <p>{dc("Need help?") + " "}<u className="text-[var(--background-primary)] cursor-pointer transition-color duration-300 hover:text-[var(--background-primary)]/80">{dc("Talk to us")}</u></p>
                                                 </div>
                                                 {complaintRide === booking.id && (
                                                     <div className="rounded-2xl border border-[var(--background-primary)]/10 bg-[var(--foreground)]/60 p-4">
-                                                        <h4 className="font-semibold text-[var(--background-primary)]">What happened?</h4>
-                                                        <p className="mt-0.5 text-sm text-gray-500">Choose every option that applies. No written feedback is needed.</p>
+                                                        <h4 className="font-semibold text-[var(--background-primary)]">{dc("What happened?")}</h4>
+                                                        <p className="mt-0.5 text-sm text-gray-500">{dc("Choose every option that applies. No written feedback is needed.")}</p>
                                                         <div className="mt-3 flex flex-wrap gap-2">
                                                             {COMPLAINT_OPTIONS.map((option) => {
                                                                 const selected = complaintReasons.includes(option.value)
@@ -903,11 +905,9 @@ const ManageAccount = () => {
                                                                 onClick={() => saveComplaint(booking.id)}
                                                                 className="rounded-full bg-primary px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition-opacity duration-300 hover:opacity-[0.9] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-40"
                                                             >
-                                                                {complaintBusy ? "Saving…" : "Submit complaint"}
+                                                                {complaintBusy ? dc("Saving…") : dc("Submit complaint")}
                                                             </button>
-                                                            <button type="button" onClick={() => setComplaintRide(null)} className="rounded-full px-4 py-2 text-sm font-semibold text-[var(--background-primary)]/60 transition-colors duration-300 hover:bg-[var(--background-primary)]/5 hover:text-[var(--background-primary)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
-                                                                Cancel
-                                                            </button>
+                                                            <button type="button" onClick={() => setComplaintRide(null)} className="rounded-full px-4 py-2 text-sm font-semibold text-[var(--background-primary)]/60 transition-colors duration-300 hover:bg-[var(--background-primary)]/5 hover:text-[var(--background-primary)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">{dc("Cancel")}</button>
                                                         </div>
                                                     </div>
                                                 )}
@@ -927,21 +927,21 @@ const ManageAccount = () => {
                     ? AccountInfo_items.map((item, i) => (
                         <SettingRow key={i} tone="bg-pastel-primary" trailing={<CircleIconButton icon={mdiPlus} onClick={() => setExpanded(item)} />}>
                             <p className="flex items-center justify-start gap-1 text-base text-[var(--background-primary)]/50">{item[0]} <Icon className={`${lockedFields.includes(item[0]) ? "block" : "hidden"} -mt-0.5 opacity-[0.9]`} path={mdiLock} size={0.6} /> </p>
-                            <h4 className="text-lg font-medium">{item[1] ? `${item[1]}` : "Not added yet"}</h4>
+                            <h4 className="text-lg font-medium">{item[1] ? dc("{{value0}}", {value0: (item[1])}) : dc("Not added yet")}</h4>
                         </SettingRow>
                     ))
                     : <>
                         <SettingRow tone="bg-pastel-sand" trailing={<CircleIconButton icon={mdiPlus} onClick={() => setExpanded('drivers')} />}>
-                            <h4 className="text-lg font-medium">What drivers see</h4>
-                            <p className="flex items-center justify-start gap-1 text-base text-[var(--background-primary)]/50">The details a driver can see about you.</p>
+                            <h4 className="text-lg font-medium">{tr("What drivers see")}</h4>
+                            <p className="flex items-center justify-start gap-1 text-base text-[var(--background-primary)]/50">{tr("The details a driver can see about you.")}</p>
                         </SettingRow>
                         <SettingRow tone="bg-pastel-sand" trailing={<CircleIconButton icon={mdiTrayArrowDown} size={0.85} disabled={downloading} onClick={handleDownload} />}>
-                            <h4 className="text-lg font-medium">Download my data</h4>
-                            <p className={`flex items-center justify-start gap-1 text-base ${downloadError ? "text-[rgba(239,68,68,0.9)]" : "text-[var(--background-primary)]/50"}`}>{downloadError || (downloading ? "Preparing your download…" : "Get a copy of your profile and ride history.")}</p>
+                            <h4 className="text-lg font-medium">{tr("Download my data")}</h4>
+                            <p className={`flex items-center justify-start gap-1 text-base ${downloadError ? "text-[rgba(239,68,68,0.9)]" : "text-[var(--background-primary)]/50"}`}>{downloadError || (downloading ? dc("Preparing your download…") : dc("Get a copy of your profile and ride history."))}</p>
                         </SettingRow>
                         <SettingRow tone="bg-pastel-sand" trailing={<CircleIconButton icon={mdiPlus} onClick={() => setExpanded('deactivate')} />}>
-                            <h4 className="text-lg font-medium">Deactivate your account</h4>
-                            <p className="flex items-center justify-start gap-1 text-base text-[var(--background-primary)]/50">Find out how to deactivate your account</p>
+                            <h4 className="text-lg font-medium">{tr("Deactivate your account")}</h4>
+                            <p className="flex items-center justify-start gap-1 text-base text-[var(--background-primary)]/50">{tr("Find out how to deactivate your account")}</p>
                         </SettingRow>
                     </>
                 }

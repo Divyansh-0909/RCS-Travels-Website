@@ -1,3 +1,4 @@
+import { driverCopy as dc } from "../../lib/copy";
 import { View } from 'react-native';
 import { cssInterop } from 'nativewind';
 import { CoinsIcon } from 'phosphor-react-native';
@@ -44,7 +45,7 @@ const MonthEarningsCard = ({ summary }: Props) => (
         just repeat the next line. */}
     <View className="flex-row items-center gap-1.5">
       <Earned size={14} weight="fill" className={MUTED} />
-      <AppText className={`${TILE_LABEL} ${MUTED}`}>This month</AppText>
+      <AppText className={`${TILE_LABEL} ${MUTED}`}>{dc("This month")}</AppText>
     </View>
 
     <AppText numberOfLines={1} className="text-2xl font-semibold text-white" style={FIGURE}>
@@ -60,7 +61,7 @@ const MonthEarningsCard = ({ summary }: Props) => (
         read on each tile, so they carry the same weight of voice; the labels above
         them are the quiet ones. */}
     <AppText className="text-xs font-semibold text-white">
-      {summary.rides === 1 ? '1 ride' : `${summary.rides} rides`}
+      {summary.rides === 1 ? dc("1 ride") : dc("{{value0}} rides", {value0: (summary.rides)})}
     </AppText>
   </View>
 );

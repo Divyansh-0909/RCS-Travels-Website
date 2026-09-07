@@ -1,0 +1,45 @@
+name: Code Atlas
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: code-atlas-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  atlas:
+    name: Generate and validate atlas
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tools/code-atlas
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: tools/code-atlas/package-lock.json
+
+      - name: Install atlas dependencies
+        run: npm ci
+
+      - name: Test, generate, and build atlas
+        run: npm run ci
+
+      - name: Upload single-file atlas
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-atlas-${{ github.sha }}
+          path: tools/code-atlas/dist/index.html
+          if-no-files-found: error
+          retention-days: 14

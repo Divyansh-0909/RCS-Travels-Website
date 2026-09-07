@@ -1,3 +1,5 @@
+import { useLanguage as useCopyLanguage } from "../i18n";
+import { driverCopy as dc } from "../lib/copy";
 import { Pressable, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import AppText from './AppText';
@@ -16,6 +18,7 @@ export const RideCompleted = ({
     ride: UpcomingBooking;
     onDone: () => void;
 }) => {
+    useCopyLanguage();
     const { hidden: appBarHidden } = useAppBarVisibility();
     const setHidden = useData((state) => state.setHidden);
 
@@ -40,16 +43,13 @@ export const RideCompleted = ({
                         width={120}
                         height={120}
                         accessibilityRole="image"
-                        accessibilityLabel="Success"
+                        accessibilityLabel={dc("Success")}
                         style={{ marginTop: -8 }}
                     />
                 </View>
                 <View className='flex justify-center items-center gap-1'>
-                    <AppText className={`text-2xl font-semibold ${INK_TEXT}`} style={{ letterSpacing: -0.6 }}>
-                        Ride completed
-                    </AppText>
-                    <AppText numberOfLines={1} className={`text-sm ${MUTED}`}>
-                        Dropped at {drop.main}
+                    <AppText className={`text-2xl font-semibold ${INK_TEXT}`} style={{ letterSpacing: -0.6 }}>{dc("Ride completed")}</AppText>
+                    <AppText numberOfLines={1} className={`text-sm ${MUTED}`}>{dc("Dropped at") + " "}{drop.main}
                     </AppText>
                 </View>
             </Animated.View>
@@ -104,9 +104,7 @@ export const RideCompleted = ({
                     style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
                 >
                     <View className="w-full rounded-2xl py-4 items-center bg-[var(--background-primary)]">
-                        <AppText className="text-base font-semibold text-[var(--foreground)]">
-                            Done
-                        </AppText>
+                        <AppText className="text-base font-semibold text-[var(--foreground)]">{dc("Done")}</AppText>
                     </View>
                 </Pressable>
                 <AppText className={`text-xs text-center mt-3 ${MUTED}`}>

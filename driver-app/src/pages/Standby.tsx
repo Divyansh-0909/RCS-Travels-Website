@@ -1,3 +1,5 @@
+import { useLanguage as useCopyLanguage } from "../i18n";
+import { driverCopy as dc } from "../lib/copy";
 import { useEffect, useState } from 'react';
 import { AppState, Pressable, View } from 'react-native';
 import * as Location from 'expo-location';
@@ -49,6 +51,7 @@ const whenLabel = (scheduledAt: string | null) => {
 };
 
 const Standby = ({ next, onChanged }: { next: UpcomingBooking | null; onChanged: () => void }) => {
+    useCopyLanguage();
     const api = useApi();
     const { refresh: refreshDriver } = useDriver();
     const [busy, setBusy] = useState(false);
@@ -162,9 +165,7 @@ const Standby = ({ next, onChanged }: { next: UpcomingBooking | null; onChanged:
                     {next && place ? (
                         <>
                             <View className="flex-row items-center justify-between gap-3">
-                                <AppText className={`text-base font-semibold uppercase tracking-wide ${MUTED}`}>
-                                    Next pickup
-                                </AppText>
+                                <AppText className={`text-base font-semibold uppercase tracking-wide ${MUTED}`}>{dc("Next pickup")}</AppText>
                                 <AppText className={`text-base font-semibold uppercase tracking-wide ${next.scheduledAt ? MUTED : 'text-primary'}`}>
                                     {whenLabel(next.scheduledAt)}
                                 </AppText>
@@ -184,9 +185,7 @@ const Standby = ({ next, onChanged }: { next: UpcomingBooking | null; onChanged:
                                     style={({ pressed }) => ({ opacity: pressed || busy ? 0.85 : 1 })}
                                 >
                                     <View className="w-25 flex-row items-center mt-2 justify-center gap-2 rounded-xl p-2 bg-[var(--background-primary)]">
-                                        <AppText className="text-sm w-fit font-semibold text-[var(--text)]">
-                                            Ride details
-                                        </AppText>
+                                        <AppText className="text-sm w-fit font-semibold text-[var(--text)]">{dc("Ride details")}</AppText>
                                     </View>
                                 </Pressable>
                             </View>
@@ -203,20 +202,14 @@ const Standby = ({ next, onChanged }: { next: UpcomingBooking | null; onChanged:
                             >
                                 <View className="w-full flex-row items-center justify-center gap-2 rounded-2xl py-3.5 bg-primary">
                                     <NavArrow size={18} weight="fill" className="text-[var(--foreground)]" />
-                                    <AppText className="text-base font-semibold text-[var(--foreground)]">
-                                        Go to pickup point
-                                    </AppText>
+                                    <AppText className="text-base font-semibold text-[var(--foreground)]">{dc("Go to pickup point")}</AppText>
                                 </View>
                             </Pressable>
                         </>
                     ) : (
                         <View className="gap-0.5 py-2 flex flex-col justify-center items-center text-center">
-                            <AppText className={`text-2xl font-semibold ${INK_TEXT}`}>
-                                No ride scheduled
-                            </AppText>
-                            <AppText className={`text-sm text-center ${MUTED}`}>
-                                Your next assigned ride shows up here.
-                            </AppText>
+                            <AppText className={`text-2xl font-semibold ${INK_TEXT}`}>{dc("No ride scheduled")}</AppText>
+                            <AppText className={`text-sm text-center ${MUTED}`}>{dc("Your next assigned ride shows up here.")}</AppText>
                         </View>
                     )}
                 </View>

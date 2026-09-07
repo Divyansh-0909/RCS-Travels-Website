@@ -1,3 +1,4 @@
+import { websiteCopy as dc } from "../../i18nCopy";
 import { haversineKm } from "../../lib/trip";
 import { headingBetween, pointAlongPreparedPath, preparePathMotion, remainingRoadPath, roadPathBetween } from "../../lib/routeMotion";
 import { labelOf } from "../../constants/vehicles";
@@ -107,7 +108,7 @@ const endpointIcon = (g, svg) => ({
 export const CenterPin = ({ target }) => (
     <div className="pointer-events-none absolute left-1/2 top-1/2 z-10 h-0 w-0 drop-shadow-[0_2px_5px_rgba(0,0,0,0.65)]">
         <div className={`absolute bottom-5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold leading-none ${target === "pickup" ? "bg-[var(--foreground)] text-[var(--text-foreground)]" : "bg-primary text-[var(--foreground)]"}`}>
-            {target === "pickup" ? "Pickup location" : "Drop location"}
+            {target === "pickup" ? dc("Pickup location") : dc("Drop location")}
         </div>
         <div className={`absolute bottom-0 left-1/2 h-5 w-0.5 -translate-x-1/2 ${target === "pickup" ? "bg-[var(--foreground)]" : "bg-primary"}`} />
         {target === "pickup"
@@ -189,7 +190,7 @@ export function setNearbyVehiclePositions(map, positions, vehicleClass) {
         map,
         position,
         zIndex: 8,
-        title: `Nearby ${labelOf(nextClass)}`,
+        get "title"() { return dc("Nearby {{value0}}", {value0: (labelOf(nextClass))}); },
         // Use the same top-view, class-aware artwork as the assigned-driver
         // marker. These anonymous preview points do not expose a bearing, so
         // they retain the source image's stable default orientation.
@@ -345,7 +346,7 @@ export function setDriverPosition(map, coords, { navigationPolyline = null, vehi
         driverMarker = new g.Marker({
             map, position: coords, zIndex: 10,
             icon: imageIcon(g, initialImage.src, initialImage.width, initialImage.height),
-            title: `Driver location · ${labelOf(initialClass)}`,
+            get "title"() { return dc("Driver location · {{value0}}", {value0: (labelOf(initialClass))}); },
         });
         lastDriverVehicleClass = null;
         lastDriverHeading = null;

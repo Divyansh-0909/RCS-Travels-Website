@@ -1,3 +1,5 @@
+import { useLanguage as useCopyLanguage } from "../i18n";
+import { driverCopy as dc } from "../lib/copy";
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Pressable, View } from 'react-native';
 import { Navigate } from 'react-router-native';
@@ -51,6 +53,7 @@ export const homeScreenFor = (profile: GatedDriverProfile | null | undefined): H
 };
 
 const HomeGate = () => {
+    useCopyLanguage();
   const { profile, loading, notRegistered } = useDriver();
   const api = useApi();
   // One fetch for whichever screen is chosen. The ride screens need the booking
@@ -166,9 +169,7 @@ const HomeGate = () => {
           </>
         ) : (
           <>
-            <AppText className="text-base font-semibold text-[var(--background-primary)]">
-              Active ride could not be loaded
-            </AppText>
+            <AppText className="text-base font-semibold text-[var(--background-primary)]">{dc("Active ride could not be loaded")}</AppText>
             <AppText className="text-sm text-center text-red-600">{ridesError}</AppText>
             <Pressable
               role="button"
@@ -176,7 +177,7 @@ const HomeGate = () => {
               style={({ pressed }) => ({ opacity: pressed ? 0.65 : 1 })}
             >
               <View className="rounded-xl bg-primary px-5 py-3">
-                <AppText className="text-sm font-semibold text-[var(--foreground)]">Try again</AppText>
+                <AppText className="text-sm font-semibold text-[var(--foreground)]">{dc("Try again")}</AppText>
               </View>
             </Pressable>
           </>

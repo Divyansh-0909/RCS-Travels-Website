@@ -1,3 +1,5 @@
+import { useTranslation as useCopyLanguage } from "react-i18next";
+import { websiteCopy as dc } from "../../i18nCopy";
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import Icon from '@mdi/react';
@@ -14,6 +16,7 @@ import { useExitAnim } from "../../hooks/useExitAnim";
 // or re-anchored by whatever the page wraps its content in. z-150 sits under the
 // panels themselves (z-200) and over the page's own fixed chrome.
 const PanelBackdrop = ({ open, onClose }) => {
+    useCopyLanguage();
     // 300ms = the length of animate-datetime-out, the exit every panel over
     // these pages uses. The fade itself is shorter and holds at 0 for the rest,
     // so the dim is gone before the panel it sits behind has finished leaving.
@@ -38,6 +41,7 @@ const PanelBackdrop = ({ open, onClose }) => {
 };
 
 const AccountLayout = ({ items, selected, onSelect, title, children, startOnContent = false, panelOpen = false, onPanelClose }) => {
+    useCopyLanguage();
     const navigate = useViewNavigate();
     // On phones the section list and the content take turns on the full screen;
     // on sm+ both columns are always visible and this state is inert. Pages that
@@ -63,7 +67,7 @@ const AccountLayout = ({ items, selected, onSelect, title, children, startOnCont
                     <ul className="flex w-full flex-col items-start gap-2">
                         {items.map((item, i) => (
                             <li key={i} onClick={() => { onSelect(i); setMenuOpen(false); }} className={`flex w-fit max-w-full cursor-pointer select-none items-center justify-start rounded-full px-4 py-2 transition-opacity duration-200 hover:opacity-80 focus-within:opacity-80 ${selected === i ? "bg-[var(--background)] text-[var(--text)]" : "bg-[var(--foreground-muted)] text-[var(--text-foreground)]"}`}>
-                                <h4 className="truncate text-2xl font-semibold sm:text-lg">{item}</h4>
+                                <h4 className="break-words text-2xl font-semibold leading-snug sm:text-lg">{item}</h4>
                             </li>
                         ))}
                     </ul>
@@ -71,7 +75,7 @@ const AccountLayout = ({ items, selected, onSelect, title, children, startOnCont
                 </div>
                 <div className={`${menuOpen ? "hidden" : "flex animate-account-content"} w-full sm:flex sm:w-[84%] flex-col justify-start items-start h-full min-h-0 overflow-hidden bg-[var(--foreground)] pb-5 [&>ul]:px-4 sm:[&>ul]:px-5`}>
                     <div className="flex items-center gap-3 pb-6 px-5 max-sm:px-4 max-sm:w-full max-sm:pt-3">
-                        <button type="button" aria-label="Show sections" onClick={() => setMenuOpen(true)} className="sm:hidden shrink-0 cursor-pointer rounded-lg text-[var(--text-foreground)] opacity-[0.85] transition-opacity duration-300 hover:opacity-[1] active:opacity-[0.7] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--background-primary)]">
+                        <button type="button" aria-label={dc("Show sections")} onClick={() => setMenuOpen(true)} className="sm:hidden shrink-0 cursor-pointer rounded-lg text-[var(--text-foreground)] opacity-[0.85] transition-opacity duration-300 hover:opacity-[1] active:opacity-[0.7] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--background-primary)]">
                             <Icon path={mdiMenu} size={1.2} />
                         </button>
                         <h3 className="min-w-0 flex-1 break-words text-4xl sm:text-5xl text-[var(--text-foreground)] font-semibold leading-tight tracking-[-0.04em]">{items[selected]}</h3>

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { scheduledPaymentAmounts, applyCapturedPaymentEffect, applyRefundedPaymentEffect } from '../services/scheduledPayments.js'
 import { walletEvent } from '../services/walletKeys.js'
 
-describe('scheduled customer advance arithmetic uses integer paise', () => {
+describe('scheduled customer advance arithmetic uses whole-rupee instalments', () => {
   test('₹1,000 fare produces ₹150 advance', () => {
     assert.deepEqual(scheduledPaymentAmounts({ fare: 1000 }), {
       originalFare: 100000, coupon: 0, finalFare: 100000, advancePercentage: 15, advance: 15000, remaining: 85000,
@@ -17,10 +17,16 @@ describe('scheduled customer advance arithmetic uses integer paise', () => {
     const amounts = scheduledPaymentAmounts({ fare: 1200, couponAmount: 500 })
     assert.equal(amounts.finalFare, 70000); assert.equal(amounts.advance, 10500); assert.equal(amounts.remaining, 59500)
   })
+  test('a 190 rupee fare rounds the 28.50 advance to 29 and leaves 161', () => {
+    const amounts = scheduledPaymentAmounts({ fare: 190 })
+    assert.equal(amounts.advance, 2900); assert.equal(amounts.remaining, 16100)
+  })
   test('advance plus final payment always equals post-coupon fare', () => {
-    for (const input of [{ fare: 1000 }, { fare: 1000, couponAmount: 100 }, { fare: 1200, couponAmount: 500 }]) {
+    for (const input of [{ fare: 190 }, { fare: 1000 }, { fare: 1000, couponAmount: 100 }, { fare: 1200, couponAmount: 500 }]) {
       const a = scheduledPaymentAmounts(input)
       assert.equal(a.advance + a.remaining, a.finalFare)
+      assert.equal(a.advance % 100, 0)
+      assert.equal(a.remaining % 100, 0)
     }
   })
 })

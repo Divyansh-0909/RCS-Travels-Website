@@ -6,7 +6,11 @@ export function scheduledPaymentAmounts({ fare, couponAmount = 0 }) {
   const originalFare = toSubunits(fare)
   const coupon = Math.min(originalFare, Math.max(0, Math.round(couponAmount * 100)))
   const finalFare = originalFare - coupon
-  const advance = Math.round((finalFare * SCHEDULED_CUSTOMER_ADVANCE_PCT) / 100)
+  // Both scheduled instalments must be payable as whole rupees. Round the 15%
+  // advance once, at the source of truth, then derive the balance so the two
+  // orders still add up to the exact post-coupon fare.
+  const advance = Math.min(finalFare,
+    Math.max(0, Math.round((finalFare * SCHEDULED_CUSTOMER_ADVANCE_PCT) / 10_000) * 100))
   return { originalFare, coupon, finalFare, advancePercentage: SCHEDULED_CUSTOMER_ADVANCE_PCT,
     advance, remaining: finalFare - advance }
 }

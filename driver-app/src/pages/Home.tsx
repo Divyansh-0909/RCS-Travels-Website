@@ -1,3 +1,5 @@
+import { useLanguage as useCopyLanguage } from "../i18n";
+import { driverCopy as dc } from "../lib/copy";
 import { Pressable, View } from "react-native";
 import { cssInterop } from "nativewind";
 import { CaretRightIcon } from "phosphor-react-native";
@@ -27,6 +29,7 @@ type Props = {
 };
 
 const Home = ({ scheduled, loading, error, onRefresh }: Props) => {
+    useCopyLanguage();
     const navigate = useNavigate()
     const { profile } = useDriver()
     const online = profile?.isOnline ?? false
@@ -43,11 +46,10 @@ const Home = ({ scheduled, loading, error, onRefresh }: Props) => {
             }}
         >
             <View className="flex-1 items-center justify-center w-full rounded-2xl px-4 gap-0.5">
-                <AppText className="text-2xl font-semibold text-[var(--background-primary)]">
-                    You&apos;re {online ? 'online' : 'offline'}
+                <AppText className="text-2xl font-semibold text-[var(--background-primary)]">{dc("You're") + " "}{online ? dc("online") : dc("offline")}
                 </AppText>
                 <AppText className="text-base text-gray-600">
-                    {online ? 'Waiting for a new ride.' : 'Go online to start getting rides.'}
+                    {online ? dc("Waiting for a new ride.") : dc("Go online to start getting rides.")}
                 </AppText>
             </View>
 
@@ -60,22 +62,20 @@ const Home = ({ scheduled, loading, error, onRefresh }: Props) => {
                             onPress={onRefresh}
                             style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
                         >
-                            <AppText className="text-sm font-semibold text-primary">Try again</AppText>
+                            <AppText className="text-sm font-semibold text-primary">{dc("Try again")}</AppText>
                         </Pressable>
                     </View>
                 )}
                 <View className="w-full gap-2">
                     <View className="flex-row items-center justify-between gap-3 px-1">
-                        <AppText className="text-xs font-semibold uppercase tracking-wide text-gray-600">
-                            Next rides
-                        </AppText>
+                        <AppText className="text-xs font-semibold uppercase tracking-wide text-gray-600">{dc("Next rides")}</AppText>
                         <Pressable
                             role="link"
                             onPress={() => navigate("/rides")}
                             style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
                         >
                             <View className="flex-row items-center gap-1">
-                                <AppText className="text-sm font-semibold text-primary">Schedule</AppText>
+                                <AppText className="text-sm font-semibold text-primary">{dc("Schedule")}</AppText>
                                 <Caret size={14} weight="bold" className="text-primary" />
                             </View>
                         </Pressable>
@@ -85,8 +85,8 @@ const Home = ({ scheduled, loading, error, onRefresh }: Props) => {
                         <HomeRideListSkeleton />
                     ) : scheduled.length === 0 ? (
                         <View className="w-full rounded-2xl p-4 gap-0.5" style={{ backgroundColor: '#f3f3f3' }}>
-                            <AppText className="font-semibold text-[var(--background-primary)]">No ride scheduled</AppText>
-                            <AppText className="text-xs text-gray-600">Your next assigned ride shows up here.</AppText>
+                            <AppText className="font-semibold text-[var(--background-primary)]">{dc("No ride scheduled")}</AppText>
+                            <AppText className="text-xs text-gray-600">{dc("Your next assigned ride shows up here.")}</AppText>
                         </View>
                     ) : (
                         scheduled.slice(0, MAX_ROWS).map((ride) => (

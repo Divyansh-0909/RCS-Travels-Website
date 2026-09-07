@@ -1,3 +1,5 @@
+import { useTranslation as useCopyLanguage } from "react-i18next";
+import { websiteCopy as dc } from "../../i18nCopy";
 import { useEffect, useState } from "react";
 import SuccessCheck from "../illustrations/SuccessCheck";
 import { useIsMobile } from "../../hooks/useIsMobile";
@@ -27,6 +29,7 @@ const STORED_OUTCOME = readOutcome();
 const DISMISS_MS = 8000;
 
 const RideCancelledToast = ({ outcome: outcomeOverride, dismissAfterMs = DISMISS_MS }) => {
+    useCopyLanguage();
     const outcome = outcomeOverride ?? STORED_OUTCOME;
     const [show, setShow] = useState(false);
     const isMobile = useIsMobile();
@@ -56,7 +59,7 @@ const RideCancelledToast = ({ outcome: outcomeOverride, dismissAfterMs = DISMISS
         <div className={`fixed inset-0 z-[120] ${show ? "pointer-events-auto" : "pointer-events-none"}`}>
             <button
                 type="button"
-                aria-label="Dismiss cancellation summary"
+                aria-label={dc("Dismiss cancellation summary")}
                 onClick={dismiss}
                 className={`${show ? "opacity-100" : "opacity-0"} absolute inset-0 h-full w-full cursor-default bg-black/40 transition-opacity duration-300 motion-reduce:transition-none`}
             />
@@ -78,33 +81,31 @@ const RideCancelledToast = ({ outcome: outcomeOverride, dismissAfterMs = DISMISS
                 >
                     <SuccessCheck className="-mt-2" size={isMobile ? 120 : 140} />
                     <div className="flex w-[min(86vw,100%)] min-w-0 flex-col items-center sm:w-[377px]">
-                        <h2 className="w-full min-w-0 [overflow-wrap:anywhere] font-bold text-3xl sm:text-5xl leading-tight">Ride cancelled</h2>
+                        <h2 className="w-full min-w-0 [overflow-wrap:anywhere] font-bold text-3xl sm:text-5xl leading-tight">{dc("Ride cancelled")}</h2>
                         <p className="mt-1 w-full min-w-0 text-base sm:text-lg leading-snug text-[var(--text-muted)]">
                             {charge > 0
-                                ? "Your scheduled advance has been settled."
+                                ? dc("Your scheduled advance has been settled.")
                                 : refundPending
-                                    ? "Your advance refund has been started."
+                                    ? dc("Your advance refund has been started.")
                                     : refunded
-                                        ? "Your advance has been refunded."
-                                        : "No cancellation fee was deducted."}
+                                        ? dc("Your advance has been refunded.")
+                                        : dc("No cancellation fee was deducted.")}
                         </p>
                     </div>
 
                     <div className="mt-4 w-[min(86vw,100%)] sm:w-[377px] rounded-2xl bg-[var(--background-muted)] px-4 py-3 text-left">
                         <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-                            {charge > 0 ? "Amount deducted" : "Cancellation charge"}
+                            {charge > 0 ? dc("Amount deducted") : dc("Cancellation charge")}
                         </p>
                         <p className="mt-0.5 text-2xl font-bold">₹{charge}</p>
                         {charge > 0 && (
-                            <p className="mt-1 text-xs text-[var(--text-muted)]">
-                                Retained from your paid advance as driver compensation—not charged again.
-                            </p>
+                            <p className="mt-1 text-xs text-[var(--text-muted)]">{dc("Retained from your paid advance as driver compensation—not charged again.")}</p>
                         )}
                     </div>
 
                     <div className="mt-3 w-[min(86vw,100%)] sm:w-[377px]">
                         <Button onClick={dismiss} prop={{ width: "100%" }}>
-                            <span className="text-base sm:text-lg">Okay</span>
+                            <span className="text-base sm:text-lg">{dc("Okay")}</span>
                         </Button>
                     </div>
                 </div>

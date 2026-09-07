@@ -1,3 +1,4 @@
+import { websiteCopy as dc } from "../../i18nCopy";
 /* Illustration 1 — Lowest campus prices */
 const PriceIllustration = () => (
     <div style={{
@@ -11,7 +12,7 @@ const PriceIllustration = () => (
         <div className="flex justify-center items-center" style={{ position: "absolute", top: "14px", left: "14px", background: "white", borderRadius: "20px", padding: "2px 8px", display: "flex", alignItems: "center", gap: "4px" }}>
             <span style={{ color: "#fbbf24", fontSize: "15px" }}>★</span>
             <span style={{ color: "#111", fontSize: "9.5px",}}>4.9</span>
-            <span style={{ color: "#888", fontSize: "8px", }}>Avg rating</span>
+            <span style={{ color: "#888", fontSize: "8px", }}>{dc("Avg rating")}</span>
         </div>
 
         {/* overlapping rider avatars */}
@@ -35,19 +36,17 @@ const PriceIllustration = () => (
 
         {/* "40% Cheaper" chip — right aligned */}
         <div className="flex justify-center items-center" style={{ position: "absolute", top: "49px", right: "14px", background: "rgba(255,255,255,0.18)", borderRadius: "20px", padding: "2px 8px", border: "1px solid rgba(255,255,255,0.22)" }}>
-            <span style={{ color: "white", fontSize: "10px", fontWeight: "700"}}>20% Cheaper</span>
+            <span style={{ color: "white", fontSize: "10px", fontWeight: "700"}}>{dc("20% Cheaper")}</span>
         </div>
 
         {/* big savings figure */}
         <div style={{ position: "absolute", top: "86px", left: "14px" }}>
             <p style={{ color: "white", fontSize: "42px", fontWeight: "800", margin: 0, lineHeight: 1, letterSpacing: "-0.03em" }}>₹400+</p>
-            <p style={{ color: "rgba(255,255,255,0.6)", fontSize: "9.5px", margin: "5px 0 0", }}>avg savings per month</p>
+            <p style={{ color: "rgba(255,255,255,0.6)", fontSize: "9.5px", margin: "5px 0 0", }}>{dc("avg savings per month")}</p>
         </div>
 
         {/* bottom headline */}
-        <p style={{ position: "absolute", bottom: "14px", left: "14px", right: "14px", color: "white", fontSize: "13.5px", margin: 0, lineHeight: 1.3 }}>
-            Campus rides, campus prices.
-        </p>
+        <p style={{ position: "absolute", bottom: "14px", left: "14px", right: "14px", color: "white", fontSize: "13.5px", margin: 0, lineHeight: 1.3 }}>{dc("Campus rides, campus prices.")}</p>
     </div>
 )
 

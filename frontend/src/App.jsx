@@ -61,12 +61,12 @@ function App() {
               light band does. Declared here rather than inside each page
               because it is a property of this arrangement: the same components
               appear on other routes against other backgrounds. */}
-          <div id="smooth-content">
+          <div id="smooth-content" className="flex flex-col gap-18 bg-[var(--foreground)]">
             {/* The fixed destination bar owns the top of the initial viewport.
                 Keep the first section below it so its headline is never hidden
                 under the two-row expanded state. */}
-            <div id="how-it-works" data-bar-tone="light" className="pt-[136px] sm:pt-[88px]"><HowItWorks/></div>
-            <div id="services" data-bar-tone="light"><Services/></div>
+            <div id="services" data-bar-tone="light" className="pt-[150px] sm:pt-[180px]"><Services/></div>
+            <div id="how-it-works" data-bar-tone="light"><HowItWorks/></div>
             <div id="about" data-bar-tone="primary"><AboutUs/></div>
             <div id="why-us" data-bar-tone="light"><WhyUs/></div>
             <div data-bar-tone="light"><FinalCTA/></div>

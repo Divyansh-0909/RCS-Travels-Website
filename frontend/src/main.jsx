@@ -27,6 +27,7 @@ import OpenDriverApp from './pages/OpenDriverApp';
 import LegalPage from './pages/LegalPage';
 import { legalPaths } from './constants/legal';
 import LoadingScreen from './components/LoadingScreen';
+import './i18n';
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
 

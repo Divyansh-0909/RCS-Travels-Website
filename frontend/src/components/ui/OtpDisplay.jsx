@@ -1,3 +1,5 @@
+import { useTranslation as useCopyLanguage } from "react-i18next";
+import { websiteCopy as dc } from "../../i18nCopy";
 import Skeleton from "./Skeleton";
 
 const OTP_LENGTH = 4;
@@ -5,6 +7,7 @@ const OTP_LENGTH = 4;
 // Read-only customer OTP. Tracking and the onboarding trip summary share this
 // component so the same code cannot drift back into two visual languages.
 const OtpDisplay = ({ code, tone = "sheet", loading = false, className = "" }) => {
+    useCopyLanguage();
     const digits = code
         ? String(code).slice(0, OTP_LENGTH).split("")
         : Array(OTP_LENGTH).fill(null);
@@ -18,7 +21,7 @@ const OtpDisplay = ({ code, tone = "sheet", loading = false, className = "" }) =
             <div
                 className="flex gap-2"
                 role="group"
-                aria-label={code ? `OTP ${String(code).split("").join(" ")}` : "OTP loading"}
+                aria-label={code ? dc("OTP {{value0}}", {value0: (String(code).split("").join(" "))}) : dc("OTP loading")}
             >
                 {digits.map((digit, index) => (
                     <div

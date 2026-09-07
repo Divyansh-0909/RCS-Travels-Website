@@ -1,4 +1,6 @@
-import { Text, type TextProps } from 'react-native';
+import { Text, type TextProps, type TextStyle } from 'react-native';
+import { useLanguage } from '../i18n';
+import { devanagariFonts } from '../theme/fonts';
 
 const suppliesFont = (className: string) => /(^|\s)font-/.test(className);
 // A var() is not the only way to set a colour: the brand utilities from tokens.cjs
@@ -10,13 +12,24 @@ const suppliesColor = (className: string) =>
 const suppliesTracking = (className: string) => /(^|\s)tracking-/.test(className);
 
 const AppText = ({ className = '', ...rest }: TextProps) => {
+    const { language } = useLanguage();
     const base = [
         suppliesFont(className) ? '' : 'font-sans',
         suppliesColor(className) ? '' : 'text-[var(--text)]',
         suppliesTracking(className) ? '' : 'tracking-slight',
     ];
 
-    return <Text className={[...base, className].filter(Boolean).join(' ')} {...rest} />;
+    // PP Mori has no Devanagari glyphs. Applying the Noto family explicitly is
+    // reliable across Android and iOS, including selector Hindi before a locale
+    // has been chosen. Roman Hinglish deliberately retains the product family.
+    const devanagari = language === 'hi' || /[\u0900-\u097F]/.test(String(rest.children ?? ''));
+    const strong = /(^|\s)font-(semibold|bold)/.test(className);
+    const fontFamily = devanagari ? (strong ? devanagariFonts.semibold : devanagariFonts.normal) : undefined;
+    const style = fontFamily
+        ? [rest.style as TextStyle, { fontFamily, letterSpacing: 0 }]
+        : rest.style;
+
+    return <Text className={[...base, className].filter(Boolean).join(' ')} {...rest} style={style} />;
 };
 
 export default AppText;

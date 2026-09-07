@@ -11,7 +11,7 @@ import { INITIAL_SHEET_SNAP, useBottomSheet } from "../../hooks/useBottomSheet"
 // Without it nothing about the panel changes; with it, nothing changes from sm
 // up either — the hook is inert unless useIsMobile() is true, so the desktop
 // side panel keeps its layout, animation and scrolling exactly as before.
-const BackgroundPanel = ({ show = true, duration = 250, className, children, sheet = false, bottomInset = 0, contentKey, dismissible = false, onDismiss, onSnapChange }) => {
+const BackgroundPanel = ({ show = true, duration = 250, className, children, sheet = false, fillAvailable = false, bottomInset = 0, contentKey, dismissible = false, onDismiss, onSnapChange }) => {
     const [mounted, setMounted] = useState(show)
     const [closing, setClosing] = useState(false)
     const isMobile = useIsMobile()
@@ -24,6 +24,10 @@ const BackgroundPanel = ({ show = true, duration = 250, className, children, she
         // full decision area. Half/collapsed remain available after a drag, but
         // callers cannot accidentally hide content on entry.
         initialSnap: INITIAL_SHEET_SNAP,
+        // Route entry deliberately opens as a full decision surface even when
+        // its fields are shorter than the viewport. Fare/vehicle and tracking
+        // keep their existing content-fit sizing.
+        fillAvailable,
         // Px of pinned chrome below the sheet — the vehicle screen's Book bar.
         bottomInset,
         // Re-measure trigger for sheets whose height follows their content — the

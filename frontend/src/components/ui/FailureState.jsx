@@ -1,6 +1,7 @@
 import ErrorMark from "../illustrations/ErrorMark";
 import Button from "./Button";
 import { toneOf, alignOf, SecondaryButton } from "./stateChrome";
+import { useWebsiteCopy } from "../../hooks/useWebsiteCopy";
 
 // Something broke and the content could not be shown. Distinct from EmptyState
 // (nothing to show, nothing wrong) and from RefreshNotice (stale content IS on
@@ -39,6 +40,7 @@ const FailureState = ({
     size = 108,
     className = "",
 }) => {
+    const tr = useWebsiteCopy();
     const t = toneOf(tone);
     const a = alignOf(align);
 
@@ -66,7 +68,7 @@ const FailureState = ({
                             className="my-0!"
                             prop={{ variant: "", width: "240px", disabled: retrying }}
                         >
-                            <span className="text-base">{retrying ? "Retrying…" : retryLabel}</span>
+                            <span className="text-base">{retrying ? tr("Retrying…") : tr(retryLabel)}</span>
                         </Button>
                     )}
                     {secondaryAction && (

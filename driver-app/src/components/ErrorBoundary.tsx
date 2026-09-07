@@ -1,3 +1,4 @@
+import { driverCopy as dc } from "../lib/copy";
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
@@ -52,16 +53,16 @@ class ErrorBoundary extends Component<Props, State> {
             <View className="flex-1 w-full items-center justify-center bg-[var(--foreground)]">
                 <StatusBar style="dark" animated />
                 <ErrorState
-                    title="This screen stopped working"
+                    title={dc("This screen stopped working")}
                     // The raw message only in development. On a captain's phone it is a
                     // minified variable name, which tells him nothing and reads as the
                     // app talking to somebody else.
                     message={
                         __DEV__
                             ? error.message
-                            : 'The app hit an error it could not recover from. Your rides are safe on the server — try again to carry on.'
+                            : dc("The app hit an error it could not recover from. Your rides are safe on the server — try again to carry on.")
                     }
-                    actionLabel="Try again"
+                    actionLabel={dc("Try again")}
                     onAction={this.reset}
                 />
             </View>

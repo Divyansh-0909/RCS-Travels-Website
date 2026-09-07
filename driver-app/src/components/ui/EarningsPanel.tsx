@@ -1,3 +1,4 @@
+import { driverCopy as dc } from "../../lib/copy";
 import { View } from 'react-native';
 import AppText from '../AppText';
 import { RidesSummary } from '../../types/enums';
@@ -21,9 +22,7 @@ const EarningsPanel = ({ summary }: Props) => (
     <View className="w-full rounded-3xl bg-primary p-5">
         <View className="flex-row items-end justify-between gap-4">
             <View className="flex-1 gap-1">
-                <AppText className={`text-xs font-semibold uppercase tracking-wide ${MUTED}`}>
-                    This week
-                </AppText>
+                <AppText className={`text-xs font-semibold uppercase tracking-wide ${MUTED}`}>{dc("This week")}</AppText>
                 {/* tracking is points here, not em — see tailwind.config.js. -1px is
                     the display-type equivalent of the -0.02em the token carries. */}
                 <AppText
@@ -42,7 +41,7 @@ const EarningsPanel = ({ summary }: Props) => (
                 {/* Singular when it is one. A captain who has done exactly one ride
                     this week should not be told he has done "1 rides done". */}
                 <AppText className={`text-xs ${MUTED}`}>
-                    {summary.rides === 1 ? 'ride done' : 'rides done'}
+                    {summary.rides === 1 ? dc("ride done") : dc("rides done")}
                 </AppText>
             </View>
         </View>

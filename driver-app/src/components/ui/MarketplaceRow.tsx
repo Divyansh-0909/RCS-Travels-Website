@@ -1,3 +1,5 @@
+import { useLanguage as useCopyLanguage } from "../../i18n";
+import { driverCopy as dc } from "../../lib/copy";
 import { Pressable, View } from 'react-native';
 import { cssInterop } from 'nativewind';
 import { CaretRightIcon } from 'phosphor-react-native';
@@ -31,6 +33,7 @@ const MarketplaceRow = ({
     listing: MarketplaceListing;
     onPress: () => void;
 }) => {
+    useCopyLanguage();
     const when = clockParts(listing.scheduledAt);
     const pickup = splitAddress(listing.pickupAddress).main;
     const drop = splitAddress(listing.dropAddress).main;
@@ -39,14 +42,14 @@ const MarketplaceRow = ({
     return (
         <Pressable
             role="button"
-            aria-label={`${drop} from ${pickup}. Fare ${money(listing.fare)}. ${listing.mine ? status.label : `Deposit to claim ${money(listing.deposit)}`}.`}
+            aria-label={dc("{{value0}} from {{value1}}. Fare {{value2}}. {{value3}}.", {value0: (drop), value1: (pickup), value2: (money(listing.fare)), value3: (listing.mine ? status.label : `Deposit to claim ${money(listing.deposit)}`)})}
             onPress={onPress}
             className="w-full rounded-2xl px-4 py-3 gap-3 bg-[var(--foreground-muted)]"
             style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}
         >
             <View className="w-full flex-row items-center gap-3">
                 <View>
-                    <AppText className={`font-semibold ${INK}`}>{`${when.clock} ${when.meridiem}`}</AppText>
+                    <AppText className={`font-semibold ${INK}`}>{dc("{{value0}} {{value1}}", {value0: (when.clock), value1: (when.meridiem)})}</AppText>
                     <AppText className={`text-xs font-semibold uppercase tracking-wide text-center ${MUTED}`}>
                         {when.day}
                     </AppText>
@@ -56,7 +59,7 @@ const MarketplaceRow = ({
 
                 <View className="flex-1">
                     <AppText numberOfLines={1} className={`font-semibold ${INK}`}>{drop}</AppText>
-                    <AppText numberOfLines={1} className={`text-sm ${MUTED}`}>from {pickup}</AppText>
+                    <AppText numberOfLines={1} className={`text-sm ${MUTED}`}>{dc("from") + " "}{pickup}</AppText>
                 </View>
 
                 <View className="items-end">
@@ -77,7 +80,7 @@ const MarketplaceRow = ({
                         </View>
                     ) : null}
                     <AppText className={`text-sm ${MUTED}`}>
-                        {listing.mine ? 'Deposit you set' : 'Deposit to claim'}
+                        {listing.mine ? dc("Deposit you set") : dc("Deposit to claim")}
                     </AppText>
                     <AppText className={`text-sm font-semibold ${INK}`}>{money(listing.deposit)}</AppText>
                 </View>

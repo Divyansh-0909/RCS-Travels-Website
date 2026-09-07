@@ -1,3 +1,5 @@
+import { useLanguage as useCopyLanguage } from "../i18n";
+import { driverCopy as dc } from "../lib/copy";
 import { useEffect, useRef, useState } from 'react';
 import {
     Pressable,
@@ -23,9 +25,9 @@ export const OtpEntry = ({
     error,
     onSubmit,
     onClose,
-    title = 'Enter OTP',
+    title = dc("Enter OTP"),
     description,
-    submitLabel = 'Start ride',
+    submitLabel = dc("Start ride"),
 }: {
     riderName: string | null;
     error: string | null;
@@ -35,6 +37,7 @@ export const OtpEntry = ({
     description?: string;
     submitLabel?: string;
 }) => {
+    useCopyLanguage();
     const [otp, setOtp] = useState('');
     const [focusedBox, setFocusedBox] = useState(-1);
 
@@ -165,7 +168,7 @@ export const OtpEntry = ({
                 <AppText
                     className={`text-base text-center mt-1 ${MUTED}`}
                 >
-                    {description ?? `Ask the rider for the ${OTP_LENGTH}-digit code on their screen.`}
+                    {description ?? dc("Ask the rider for the {{value0}}-digit code on their screen.", {value0: (OTP_LENGTH)})}
                 </AppText>
 
                 {/*
@@ -263,7 +266,7 @@ export const OtpEntry = ({
                     <Pressable
                         className='w-full flex items-center justify-center'
                         role="button"
-                        accessibilityLabel="Close"
+                        accessibilityLabel={dc("Close")}
                         onPress={onClose}
                         hitSlop={12}
                         style={({ pressed }) => ({
@@ -274,9 +277,7 @@ export const OtpEntry = ({
                         <View
                             className="w-[92%] flex-row items-center justify-center gap-2 rounded-full bg-[var(--foreground-muted)] py-3.5"
                         >
-                            <AppText className="text-base font-semibold text-[var(--background-primary)]">
-                                Back
-                            </AppText>
+                            <AppText className="text-base font-semibold text-[var(--background-primary)]">{dc("Back")}</AppText>
                         </View>
                     </Pressable>
                 </View>
