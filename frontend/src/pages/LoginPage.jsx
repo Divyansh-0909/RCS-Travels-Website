@@ -336,7 +336,7 @@ const LoginPage = () => {
             <p className="text-base sm:text-lg text-[var(--text-muted)]">
               {isPhone
                 ? tr("We'll send a OTP to this number.")
-                : <>{tr("Enter the 6-digit code we sent to")} <span className="font-semibold text-[var(--text)]">{phoneDisplay}</span></>}
+                : <>{tr("Enter the 6-digit code we sent to")} <br/> <span className="font-semibold text-[var(--text)]">{phoneDisplay}</span></>}
             </p>
           </div>
           <div className="flex flex-col justify-center items-center">

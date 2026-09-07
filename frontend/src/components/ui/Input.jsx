@@ -21,7 +21,7 @@ const Input = ({ prop, className, leading, trailing }) => {
         style={{ "--input-bg": prop.bg }}
         className={`
           font-medium text-default text-[var(--text)]
-          px-4 py-2 w-[290px] max-sm:w-full rounded-xl
+          px-4 py-3 w-[290px] max-sm:w-full rounded-xl
           ${leading ? "pl-9" : ""}
           ${trailing ? "pr-10" : ""}
           border outline-none

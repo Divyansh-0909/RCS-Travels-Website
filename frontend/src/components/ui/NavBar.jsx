@@ -203,12 +203,12 @@ const NavBar = ({ invert = false, hideExpanded = false, hideDestinationInput = f
         ? "hover:bg-[var(--foreground)]/8 active:bg-[var(--foreground)]/12"
         : "hover:bg-[var(--foreground-muted)] active:bg-[var(--foreground-muted)]"
 
-    const desktopSecondaryButton = `cursor-pointer rounded-full px-3 py-2 text-base font-medium outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${invert
+    const desktopSecondaryButton = `cursor-pointer rounded-xl px-3 py-2 text-base font-medium outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${invert
         ? "bg-[var(--foreground)]/10 text-[var(--text)] hover:bg-[var(--foreground)]/15 active:bg-[var(--foreground)]/20"
         : "bg-[var(--background)]/10 text-[var(--text-foreground)] hover:bg-[var(--background)]/20 active:bg-[var(--background)]/15"
         }`
 
-    const desktopPrimaryButton = "cursor-pointer rounded-full bg-primary px-3 py-2 text-base font-medium text-white outline-none transition-opacity duration-200 hover:opacity-90 active:opacity-80 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+    const desktopPrimaryButton = "cursor-pointer rounded-xl bg-primary px-3 py-2 text-base font-medium text-white outline-none transition-opacity duration-200 hover:opacity-90 active:opacity-80 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
 
     const drawer = (
         <>

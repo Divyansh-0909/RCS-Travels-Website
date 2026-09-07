@@ -930,7 +930,7 @@ const OnBoarding = ({ bookingStage = false, timingStep = false, highlightRideNow
         contentKey={`${showsRouteForm}-${timingStep}-${timing}-${activeSuggestion ?? "none"}-${mapPickerTarget ?? "form"}`}
         fillAvailable={!mapPickerTarget}
         onSnapChange={setSheetSnap}
-        className={`z-10 flex h-[inherit] w-full max-w-[500px] flex-col items-center py-8 sm:h-fit sm:justify-center lg:items-start ${bookingStage ? mapPickerTarget ? "max-sm:h-auto max-sm:items-start max-sm:justify-start max-sm:px-[7vw] max-sm:py-6" : "max-sm:items-start max-sm:justify-start max-sm:px-[5vw] max-[359px]:px-2! max-sm:py-6 max-sm:pb-0" : "justify-end"}`}
+        className={`z-10 flex h-[inherit] w-full max-w-[500px] flex-col items-center py-8 sm:h-fit sm:justify-center lg:items-start ${bookingStage ? mapPickerTarget ? "max-sm:h-auto max-sm:items-start max-sm:justify-start max-sm:px-[7vw] max-sm:py-6" : "max-sm:items-start max-sm:justify-start max-sm:px-[7vw] max-[359px]:px-2! max-sm:py-6 max-sm:pb-0" : "justify-end"}`}
       >
         {bookingStage && !mapPickerTarget && (
           <button
@@ -1046,7 +1046,7 @@ const OnBoarding = ({ bookingStage = false, timingStep = false, highlightRideNow
                   </p>
                 )}
                 <div className={`mb-2 flex items-center justify-start gap-1 px-1 max-[335px]:flex-wrap max-[335px]:gap-y-2 ${formWidth} sm:mb-0 sm:w-[377px] sm:gap-2 sm:px-0`}>
-                  <div className="flex shrink-0 gap-1 rounded-full bg-[var(--background-muted)] p-1.5 outline outline-[var(--foreground)]/40 sm:gap-2 sm:p-2 [&>*]:cursor-pointer [&>*]:rounded-full [&>*]:px-3 [&>*]:py-1 [&>*]:text-base [&>*]:sm:px-3 [&>*]:sm:py-2 [&>*]:sm:text-xl">
+                  <div className="flex shrink-0 gap-1 rounded-full scale-[0.9] bg-[var(--background-muted)] p-1.5 outline outline-[var(--foreground)]/40 sm:gap-2 sm:p-2 [&>*]:cursor-pointer [&>*]:rounded-full [&>*]:px-3 [&>*]:py-1 [&>*]:text-base [&>*]:sm:px-3 [&>*]:sm:py-2 [&>*]:sm:text-xl">
                     <button type="button" aria-pressed={!isRoundTrip} onClick={() => setIsRoundTrip(false)} className={`transition-colors duration-300 text-[var(--text)] ${isRoundTrip ? "" : "bg-primary"}`}>
                       {tr("One way")}
                     </button>
@@ -1068,7 +1068,7 @@ const OnBoarding = ({ bookingStage = false, timingStep = false, highlightRideNow
                           ? "var(--foreground)"
                           : expand ? "var(--background-primary)" : "var(--background-muted)",
                       }}
-                      className={`relative my-0! px-2 sm:origin-left sm:scale-[1.2] ${highlightRideNow && timing === "Now"
+                      className={`relative my-0! px-2 sm:origin-left scale-[0.9] rounded-full ${highlightRideNow && timing === "Now"
                         ? "text-[var(--text-foreground)]! hover:bg-[var(--foreground)]! active:bg-[var(--foreground)]/90!"
                         : ""
                       }`}

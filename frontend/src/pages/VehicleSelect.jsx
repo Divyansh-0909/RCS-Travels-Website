@@ -26,7 +26,7 @@ import { CARRIER_CHARGE, CANCELLATION_CHARGE_PCT, SAFE_ROUTE_SURCHARGE, isDistan
 import Skeleton from "../components/ui/Skeleton";
 import EmptyState from "../components/ui/EmptyState";
 import FailureState from "../components/ui/FailureState";
-import { VEHICLE_CATEGORIES, VEHICLE_CLASS_NAMES, labelOf, seatsOf } from "../constants/vehicles";
+import { VEHICLE_CATEGORIES, VEHICLE_CLASS_NAMES, labelOf, seatsOf, imageOf } from "../constants/vehicles";
 import { openRazorpayCheckout } from "../services/razorpayCheckout";
 import { useWebsiteCopy } from "../hooks/useWebsiteCopy";
 import CustomerPaymentPanel from "../components/CustomerPaymentPanel";
@@ -36,6 +36,7 @@ import {
     paymentIsSatisfied,
     paymentPhaseForError,
 } from "../lib/paymentUi";
+
 
 // Every price on this screen comes from /api/fare/estimate, which resolves each
 // seat type through zones -> the fixed fare table -> the per-km formula. There is
@@ -1198,7 +1199,7 @@ const VehicleSelect = () => {
 
     // One card per vehicle — same block for every class, so the type scale and
     // internal spacing can't drift between them.
-    const vehicleCard = (cls, name, seats, priceSolo, priceSharing) => (
+    const vehicleCard = (cls, name, seats, priceSolo, priceSharing,image) => (
         <Button
             key={cls}
             onClick={() => setVehicleClass(cls)}
@@ -1212,28 +1213,31 @@ const VehicleSelect = () => {
             {/* tighter inset at 290px so the longest name ("Premium SUV") keeps
                 its name and price on one line each, like every other card */}
             <div className="flex justify-between items-center w-full gap-2 sm:gap-3">
-                <div className="text-left flex flex-col justify-center items-start gap-1.5">
-                    {/* Name alone on the first line; seats and ETA share the
-                        muted second line. The seat count is a person glyph and a
-                        number rather than the word "Seater" — it reads at a
-                        glance and costs less width than the label it replaces. */}
-                    <h4 className="text-lg sm:text-xl font-medium text-[var(--text)] leading-tight">{name}</h4>
-                    <p className="flex items-center gap-1 text-sm sm:text-base text-[var(--text-muted)] leading-tight">
-                        {seats && (
-                            <span className="flex items-center gap-0.5">
-                                {/* sized in CSS, not the size prop, so the glyph
-                                    tracks the two type steps of this line */}
-                                <Icon path={mdiAccount} className="w-[16px] h-[16px] sm:w-[18px] sm:h-[18px]" />
-                                {seats}
-                            </span>
-                        )}
-                        {!scheduledTime && nearbyEta?.vehicleClass === cls && (
-                            <>
-                                {seats && <span aria-hidden="true">·</span>}
-                                <span>{nearbyEta.minutes}{" " + dc("min away")}</span>
-                            </>
-                        )}
-                    </p>
+                <div className="flex justify-start items-center w-full gap-2 sm:gap-3">
+                    <img src={image} alt="car-icon" className="w-20" />
+                    <div className="text-left flex flex-col justify-center items-start gap-1.5">
+                        {/* Name alone on the first line; seats and ETA share the
+                            muted second line. The seat count is a person glyph and a
+                            number rather than the word "Seater" — it reads at a
+                            glance and costs less width than the label it replaces. */}
+                        <h4 className="text-lg sm:text-xl font-medium text-[var(--text)] leading-tight">{name}</h4>
+                        <p className="flex items-center gap-1 text-sm sm:text-base text-[var(--text-muted)] leading-tight">
+                            {seats && (
+                                <span className="flex items-center gap-0.5">
+                                    {/* sized in CSS, not the size prop, so the glyph
+                                        tracks the two type steps of this line */}
+                                    <Icon path={mdiAccount} className="w-[16px] h-[16px] sm:w-[18px] sm:h-[18px]" />
+                                    {seats}
+                                </span>
+                            )}
+                            {!scheduledTime && nearbyEta?.vehicleClass === cls && (
+                                <>
+                                    {seats && <span aria-hidden="true">·</span>}
+                                    <span>{nearbyEta.minutes}{" " + dc("min away")}</span>
+                                </>
+                            )}
+                        </p>
+                    </div>
                 </div>
                 {/* Only the price is skeletoned here. Driver availability has
                     its own quiet loading state: the ETA is simply absent until
@@ -1579,7 +1583,7 @@ const VehicleSelect = () => {
                                     contents — an empty flex box here would still
                                     be paid for by the parent's gap. */}
                                 {(pricing || distanceKm != null || (!isMobile && showsBookForm && fareNotices.length > 0)) && (
-                                    <div className="w-full flex flex-wrap justify-center sm:justify-start items-center gap-2">
+                                    <div className="w-full flex flex-wrap justify-start items-center gap-2">
                                         {(pricing && distanceKm == null) ? (
                                             /* sized to the real chip (py-1 + hairline
                                                + line box) so nothing shifts when the
@@ -1682,7 +1686,7 @@ const VehicleSelect = () => {
                                             // are one block describing the trip, and a
                                             // left-aligned pill under a centred chip reads as
                                             // a stray heading for the list below it.
-                                            <div className="w-full mb-3 flex flex-col items-center gap-1.5">
+                                            <div className="w-full mb-3 flex flex-col items-start gap-1.5">
                                                 {fareNotices.map(text => <NoticePill key={text}>{text}</NoticePill>)}
                                             </div>
                                         )}
@@ -1717,7 +1721,7 @@ const VehicleSelect = () => {
                                                     )}
                                                     {group.classes.map(cls => vehicleCard(
                                                         cls, labelOf(cls), seatsOf(cls),
-                                                        label(cls, "solo"), label(cls, "sharing"),
+                                                        label(cls, "solo"), label(cls, "sharing"), imageOf(cls),
                                                     ))}
                                                 </div>
                                             ))}
