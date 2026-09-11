@@ -1,4 +1,5 @@
 import { prisma } from '../db/prisma.js'
+import { clerkClient } from '@clerk/express'
 import { seatsOf } from '../constants/vehicles.js'
 import { normalizePhone } from '../lib/phone.js'
 import { ensurePrimaryVehicle } from '../services/driverVehicles.js'
@@ -45,9 +46,38 @@ const fareData = [
 // 20km assignment bounding box.
 const PICKUP = { lat: 28.6315, lng: 77.2167 }
 
-// MUST equal your real Clerk user id or POST /bookings returns 401.
-// Set it before seeding:  SEED_CLERK_ID=user_xxx npm run db:seed
-const SEED_CLERK_ID = process.env.SEED_CLERK_ID || 'user_3FdlhBI7SlbMclO523ek4cXH1pl'
+const TEST_RIDER_PHONE = '9876543210'
+const TEST_RIDER_EMAIL = `91${TEST_RIDER_PHONE}@rcs-travels.com`
+
+// A database fixture and its Clerk identity have to agree on clerkId. A hard-coded
+// id only agrees with the one Clerk instance it came from, which made a fresh dev
+// environment accept the OTP and then answer 404 from /api/users/me. Resolve the
+// identity in the configured Clerk DEVELOPMENT instance instead. An explicit id
+// remains available for offline/manual seeding, but automatic identity creation is
+// deliberately refused for live keys so this script cannot populate production
+// Clerk by accident.
+async function seedClerkId() {
+  if (process.env.SEED_CLERK_ID) return process.env.SEED_CLERK_ID
+
+  if (!process.env.CLERK_SECRET_KEY?.startsWith('sk_test_')) {
+    throw new Error(
+      'db:seed requires a Clerk test key, or an explicit SEED_CLERK_ID. ' +
+      'Never run the development seed against a live Clerk instance.',
+    )
+  }
+
+  const existing = await clerkClient.users.getUserList({ emailAddress: [TEST_RIDER_EMAIL] })
+  const user = existing.data[0] ?? await clerkClient.users.createUser({
+    emailAddress: [TEST_RIDER_EMAIL],
+    skipPasswordChecks: true,
+    publicMetadata: { role: 'admin' },
+  })
+
+  // The dev rider doubles as the admin UI fixture. This is backend-managed public
+  // metadata (not user-editable unsafe metadata), and can only run with sk_test_.
+  await clerkClient.users.updateUserMetadata(user.id, { publicMetadata: { role: 'admin' } })
+  return user.id
+}
 
 // One driver per class — assignment matches the class EXACTLY, so a fleet
 // missing a class means every booking of it goes unassigned. vehicleCapacity is
@@ -77,21 +107,15 @@ async function seedFares() {
 }
 
 async function seedTestData() {
-  if (SEED_CLERK_ID.startsWith('user_REPLACE')) {
-    console.warn(
-      '\n  ⚠  SEED_CLERK_ID is not set — using a placeholder clerkId.\n' +
-      '     Booking will 401 until you reseed with your real Clerk id:\n' +
-      '     SEED_CLERK_ID=user_xxxxx npm run db:seed\n'
-    )
-  }
+  const clerkId = await seedClerkId()
 
   console.log('Seeding test user...')
   const user = await prisma.user.upsert({
-    where:  { clerkId: SEED_CLERK_ID },
-    update: { phone: '9876543210', name: 'Test Rider', bookingCode: '4242' },
+    where:  { phone: TEST_RIDER_PHONE },
+    update: { clerkId, name: 'Test Rider', bookingCode: '4242' },
     create: {
-      clerkId:     SEED_CLERK_ID,
-      phone:       '9876543210',
+      clerkId,
+      phone:       TEST_RIDER_PHONE,
       name:        'Test Rider',
       bookingCode: '4242',
     },

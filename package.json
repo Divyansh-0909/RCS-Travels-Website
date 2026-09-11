@@ -1,0 +1,14 @@
+{
+  "name": "rcs-travels-workspace",
+  "private": true,
+  "scripts": {
+    "dev": "node tools/dev/run.mjs start",
+    "dev:check": "node tools/dev/run.mjs check",
+    "dev:driver": "node tools/dev/run.mjs driver",
+    "dev:driver:web": "node tools/dev/run.mjs driver:web",
+    "dev:all": "node tools/dev/run.mjs all",
+    "dev:db:deploy": "node tools/dev/run.mjs db:deploy",
+    "dev:db:seed": "node tools/dev/run.mjs db:seed",
+    "dev:db:seed:captain": "node tools/dev/run.mjs db:seed:captain"
+  }
+}

@@ -5,9 +5,10 @@ import { cssInterop } from 'nativewind';
 import { CaretRightIcon } from 'phosphor-react-native';
 import AppText from '../AppText';
 import RideRowHead from './RideRowHead';
-import { MUTED, PAGE, statusFill } from './rideUi';
+import { MUTED, statusFill } from './rideUi';
 import { UpcomingBooking } from '../../types/enums';
 import { isFinished, paymentChip, rideStatusLabel } from '../../constants/booking';
+import { useTheme } from '../../theme/ThemeContext';
 
 const asThemed = { className: { target: false, nativeStyleToProp: { color: true } } } as const;
 const Caret = cssInterop(CaretRightIcon, asThemed);
@@ -38,6 +39,7 @@ type Props = {
  */
 const RideRow = ({ booking, onPress, historic }: Props) => {
     useCopyLanguage();
+    const { colors } = useTheme();
     const chip = paymentChip(booking);
 
     return (
@@ -46,7 +48,7 @@ const RideRow = ({ booking, onPress, historic }: Props) => {
             aria-label={dc("{{value0}}, {{value1}}. {{value2}}. {{value3}}.", {value0: (booking.user?.name ?? 'Rider'), value1: (booking.dropAddress), value2: (rideStatusLabel(booking.status)), value3: (chip.label)})}
             onPress={onPress}
             className="w-full rounded-2xl px-4 py-3 gap-3"
-            style={{ backgroundColor: PAGE }}
+            style={{ backgroundColor: colors.surfaceMuted }}
         >
             <RideRowHead booking={booking} at={historic ? booking.completedAt : null} />
 

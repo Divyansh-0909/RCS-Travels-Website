@@ -10,7 +10,7 @@ const Line = ({ h, bar, w }) => (
 
 // One placeholder card — clones a collapsed booking card's structure exactly.
 const CardSkeleton = () => (
-    <div className="my-2 flex flex-col justify-center items-start gap-3 rounded-3xl bg-pastel-primary px-5 py-5 sm:px-6">
+    <div className="my-2 flex flex-col justify-center items-start gap-3 rounded-3xl bg-tone-primary px-5 py-5 sm:px-6">
         <div className="flex justify-between items-start gap-4 w-full">
             {/* route: pickup → drop, with the car thumbnail on its left on sm+ */}
             <div className="flex items-center gap-4">
@@ -39,7 +39,7 @@ const CardSkeleton = () => (
             </div>
         </div>
 
-        <div className="w-full border-t border-[var(--background-primary)]/10"></div>
+        <div className="w-full border-t border-border/50"></div>
 
         {/* meta line (text-base) + expand toggle */}
         <div className="flex justify-between items-center w-full gap-4">

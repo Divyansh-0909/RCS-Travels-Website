@@ -12,22 +12,23 @@ import RideRow from '../components/ui/RideRow';
 import RidesSkeleton from '../components/ui/RidesSkeleton';
 import ErrorState from '../components/ui/ErrorState';
 import { useApi } from '../hooks/useApi';
-import EarningsPanel from '../components/ui/EarningsPanel';
+import EarningsPanel, { type EarningsPeriodKey, type EarningsPeriodOption } from '../components/ui/EarningsPanel';
 import { RidesScope, RidesSummary, UpcomingBooking } from '../types/enums';
-import { groupByDay, matchesQuery, type RideSection } from '../constants/booking';
+import { groupByDay, matchesQuery, rideMoment, type RideSection } from '../constants/booking';
+import { useTheme } from '../theme/ThemeContext';
 
 const asThemed = { className: { target: false, nativeStyleToProp: { color: true } } } as const;
 const Search = cssInterop(MagnifyingGlassIcon, asThemed);
 const Clear = cssInterop(XIcon, asThemed);
 
-const CARD = '#f3f3f3';                          // --foreground-muted
-const INK = '#121220';                           // --background-primary
-const MUTED = 'text-gray-600';
-const INK_TEXT = 'text-[var(--background-primary)]';
+const MUTED = 'text-ink-muted';
+const INK_TEXT = 'text-ink';
 
 // The floating AppBar sits at bottom-8 and runs ~64px tall. The list scrolls under
 // it by design, so the last row needs its own clearance or it can never be read.
 const BAR_CLEARANCE = 132;
+const HISTORY_PAGE_SIZE = 100;
+const IST_OFFSET_MS = 330 * 60 * 1000;
 
 // The screen title carries the wordmark's treatment: same cut, same text-xl, same
 // tracking, so "Rides" and "RCS Travels" read as one voice rather than two headings
@@ -62,14 +63,62 @@ const TABS: { key: RidesScope; label: string }[] = [
     { key: 'history', get "label"() { return dc("History"); } },
 ];
 
+const HISTORY_PERIODS: EarningsPeriodOption[] = [
+    { key: 'today', get "label"() { return dc("Today"); } },
+    { key: 'week', get "label"() { return dc("This week"); } },
+    { key: 'month', get "label"() { return dc("This month"); } },
+    { key: 'threeMonths', get "label"() { return dc("Last 3 months"); } },
+];
+
+const HISTORY_PERIOD_KEYS = new Set<EarningsPeriodKey>(HISTORY_PERIODS.map((period) => period.key));
+
 const scopeFromSearch = (search: string): RidesScope =>
     new URLSearchParams(search).get('tab') === 'history' ? 'history' : 'upcoming';
 
-const pathForScope = (scope: RidesScope) =>
-    scope === 'history' ? '/rides?tab=history' : '/rides';
+const historyPeriodFromSearch = (search: string): EarningsPeriodKey => {
+    const value = new URLSearchParams(search).get('period') as EarningsPeriodKey | null;
+    return value && HISTORY_PERIOD_KEYS.has(value) ? value : 'week';
+};
+
+const pathForScope = (scope: RidesScope, period: EarningsPeriodKey = 'week') => {
+    if (scope !== 'history') return '/rides';
+    return period === 'week' ? '/rides?tab=history' : `/rides?tab=history&period=${period}`;
+};
+
+// Every date boundary is calculated on India's calendar rather than the device's
+// current timezone. Captains cross state lines; the meaning of "Today" should not
+// shift because a handset is temporarily reporting another zone.
+const historyPeriodStart = (period: EarningsPeriodKey, now = new Date()) => {
+    const ist = new Date(now.getTime() + IST_OFFSET_MS);
+    const year = ist.getUTCFullYear();
+    const month = ist.getUTCMonth();
+    const day = ist.getUTCDate();
+
+    if (period === 'today') {
+        return new Date(Date.UTC(year, month, day) - IST_OFFSET_MS);
+    }
+
+    if (period === 'week') {
+        const weekday = (ist.getUTCDay() + 6) % 7;
+        return new Date(Date.UTC(year, month, day - weekday) - IST_OFFSET_MS);
+    }
+
+    if (period === 'month') {
+        return new Date(Date.UTC(year, month, 1) - IST_OFFSET_MS);
+    }
+
+    const shifted = new Date(ist);
+    shifted.setUTCDate(1);
+    shifted.setUTCMonth(shifted.getUTCMonth() - 3);
+    const lastDay = new Date(Date.UTC(shifted.getUTCFullYear(), shifted.getUTCMonth() + 1, 0)).getUTCDate();
+    shifted.setUTCDate(Math.min(day, lastDay));
+    shifted.setUTCHours(0, 0, 0, 0);
+    return new Date(shifted.getTime() - IST_OFFSET_MS);
+};
 
 const Rides = () => {
     useCopyLanguage();
+    const { colors } = useTheme();
     const api = useApi();
     const location = useLocation();
     const navigate = useNavigate();
@@ -80,6 +129,7 @@ const Rides = () => {
     // back as Upcoming. Keeping History in the entry URL lets every kind of Back
     // (header, Android and edge swipe) restore the board that opened the ride.
     const [scope, setScope] = useState<RidesScope>(() => scopeFromSearch(location.search));
+    const [historyPeriod, setHistoryPeriod] = useState<EarningsPeriodKey>(() => historyPeriodFromSearch(location.search));
     // Kept per tab, not per screen. Both boards are one request each and neither
     // changes while the captain is looking at the other, so re-fetching on every
     // switch bought nothing and cost a round trip to ap-south-1 — with an empty list
@@ -90,9 +140,6 @@ const Rides = () => {
         upcoming: null,
         history: null,
     });
-    // Not kept per scope like the rows are: only history has one, and it is refreshed
-    // by the same request that fills the board it heads.
-    const [summary, setSummary] = useState<RidesSummary | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -121,7 +168,11 @@ const Rides = () => {
         setLoading(true);
         setError(null);
         try {
-            const data = await apiRef.current.getRides({ scope: next }) as GetRidesResponse;
+            const data = await apiRef.current.getRides(
+                next === 'history'
+                    ? { scope: next, page: 1, limit: HISTORY_PAGE_SIZE }
+                    : { scope: next },
+            ) as GetRidesResponse;
             if (requestId !== latestRequest.current) return;
 
             // A failed refresh leaves the rows already on screen alone. Blanking a
@@ -130,10 +181,37 @@ const Rides = () => {
             if ('error' in data) {
                 setError(data.error);
             } else {
-                setRidesByScope((current) => ({ ...current, [next]: data.bookings }));
-                // Left standing when the upcoming board answers with null, so switching
-                // tabs and back does not blank a total that is still true.
-                if (data.summary) setSummary(data.summary);
+                let bookings = data.bookings;
+
+                // History is deliberately limited by the backend to the recent
+                // three-month window, but the endpoint is paged within that window.
+                // Pull every page here so narrowing that set to Today/Week/Month never
+                // silently means "among the first 30 rides".
+                if (next === 'history') {
+                    let page = 1;
+                    let hasMore = data.hasMore;
+
+                    while (hasMore) {
+                        page += 1;
+                        const pageData = await apiRef.current.getRides({
+                            scope: next,
+                            page,
+                            limit: HISTORY_PAGE_SIZE,
+                        }) as GetRidesResponse;
+                        if (requestId !== latestRequest.current) return;
+                        if ('error' in pageData) throw new Error(pageData.error);
+
+                        bookings = [...bookings, ...pageData.bookings];
+                        hasMore = pageData.hasMore;
+                    }
+
+                    // A new completion landing between page requests can shift the
+                    // boundary by one row. Keep one copy of each ride; the next poll
+                    // will naturally reconcile the ordering.
+                    bookings = [...new Map(bookings.map((booking) => [booking.id, booking])).values()];
+                }
+
+                setRidesByScope((current) => ({ ...current, [next]: bookings }));
             }
         } catch (e: unknown) {
             if (requestId !== latestRequest.current) return;
@@ -163,9 +241,34 @@ const Rides = () => {
     // navigation to the same path, where pathname alone would not change.
     useEffect(() => {
         setScope(scopeFromSearch(location.search));
+        setHistoryPeriod(historyPeriodFromSearch(location.search));
         setSearching(false);
         setQuery('');
     }, [location.key, location.search]);
+
+    // Recompute the boundary on every render, then memoise downstream work by its
+    // timestamp. Today/week/month therefore stay stable during ordinary renders but
+    // naturally roll over after a refresh or foreground transition crosses a boundary.
+    const historySince = historyPeriodStart(historyPeriod);
+    const historySinceMs = historySince.getTime();
+
+    const periodRides = useMemo(() => {
+        const all = cached ?? [];
+        if (scope !== 'history') return all;
+
+        return all.filter((ride) => rideMoment(ride).getTime() >= historySinceMs);
+    }, [cached, historySinceMs, scope]);
+
+    const historySummary = useMemo<RidesSummary | null>(() => {
+        if (scope !== 'history' || cached === null) return null;
+
+        const completed = periodRides.filter((ride) => ride.status === 'completed');
+        return {
+            earned: completed.reduce((total, ride) => total + ride.fare - ride.commissionAmt, 0),
+            rides: completed.length,
+            since: new Date(historySinceMs).toISOString(),
+        };
+    }, [cached, historySinceMs, periodRides, scope]);
 
     // History runs backwards from now, upcoming forwards. Both read as "nearest to
     // today first", which is the same instinct pointed in two directions.
@@ -173,10 +276,9 @@ const Rides = () => {
     // a fresh array on every render that has no cache, which changes the dependency
     // every time and re-groups the whole list for nothing.
     const sections = useMemo(() => {
-        const all = cached ?? [];
-        const matched = isSearchIdle ? [] : query ? all.filter((ride) => matchesQuery(ride, query)) : all;
+        const matched = isSearchIdle ? [] : query ? periodRides.filter((ride) => matchesQuery(ride, query)) : periodRides;
         return groupByDay(matched, new Date(), scope === 'history' ? 'desc' : 'asc');
-    }, [cached, isSearchIdle, query, scope]);
+    }, [isSearchIdle, periodRides, query, scope]);
 
     // This board has never come back. Not "is empty" — `[]` is empty; null is unknown.
     // Everything below keys off that distinction, because the two states share no copy:
@@ -204,9 +306,15 @@ const Rides = () => {
         // Replace rather than push: switching a tab should not require another Back
         // press later. The replaced entry is nevertheless what a ride detail returns
         // to, complete with the selected tab.
-        navigate(pathForScope(next), { replace: true });
+        navigate(pathForScope(next, historyPeriod), { replace: true });
         // The banner belongs to the board that failed, not to the screen.
         setError(null);
+    };
+
+    const changeHistoryPeriod = (next: EarningsPeriodKey) => {
+        if (next === historyPeriod) return;
+        setHistoryPeriod(next);
+        navigate(pathForScope('history', next), { replace: true });
     };
 
     return (
@@ -215,7 +323,7 @@ const Rides = () => {
                 {searching ? (
                     <View
                         className="flex-1 flex-row items-center gap-2 rounded-full px-4 h-11"
-                        style={{ backgroundColor: CARD }}
+                        style={{ backgroundColor: colors.surfaceMuted }}
                     >
                         <Search size={18} weight="bold" className={MUTED} />
                         <TextInput
@@ -223,7 +331,7 @@ const Rides = () => {
                             value={query}
                             onChangeText={setQuery}
                             placeholder={dc("Place, rider or ride number")}
-                            placeholderTextColor="#6B7280"
+                            placeholderTextColor={colors.inkMuted}
                             returnKeyType="search"
                             className={`flex-1 font-sans ${INK_TEXT}`}
                             style={{ paddingVertical: 0 }}
@@ -252,7 +360,7 @@ const Rides = () => {
                         >
                             <View
                                 className="w-11 h-11 rounded-full items-center justify-center"
-                                style={{ backgroundColor: CARD }}
+                                style={{ backgroundColor: colors.surfaceMuted }}
                             >
                                 <Search size={20} weight="bold" className={INK_TEXT} />
                             </View>
@@ -261,7 +369,7 @@ const Rides = () => {
                 )}
             </View>
 
-            <View className="flex-row rounded-full p-1" style={{ backgroundColor: CARD }}>
+            <View className="flex-row rounded-full p-1" style={{ backgroundColor: colors.surfaceMuted }}>
                 {TABS.map((tab) => {
                     const active = tab.key === scope;
                     return (
@@ -278,7 +386,7 @@ const Rides = () => {
                             role="tab"
                             aria-selected={active}
                             onPress={() => switchTo(tab.key)}
-                            className={`flex-1 items-center justify-center rounded-full py-2.5 px-3 ${active ? 'bg-[#121220]' : 'bg-transparent'}`}
+                            className={`flex-1 items-center justify-center rounded-full py-2.5 px-3 ${active ? 'bg-strong' : 'bg-transparent'}`}
                         >
                             <AppText
                                 className={`text-base font-semibold ${active ? 'text-white' : MUTED}`}
@@ -322,7 +430,14 @@ const Rides = () => {
                 different question — the total then heads a filtered list it does not
                 describe, on the one board where the results need every row of height
                 they can get. It comes back when the field closes; nothing is recomputed. */}
-            {scope === 'history' && summary && !searching && <EarningsPanel summary={summary} />}
+            {scope === 'history' && historySummary && !searching && (
+                <EarningsPanel
+                    summary={historySummary}
+                    period={historyPeriod}
+                    periodOptions={HISTORY_PERIODS}
+                    onPeriodChange={changeHistoryPeriod}
+                />
+            )}
 
             {isSearchIdle ? (
                 <View className="flex-1" />
@@ -334,7 +449,7 @@ const Rides = () => {
                 // No `loading` in this condition — see the note on failedFirstLoad. An
                 // unknown board draws the skeleton from the frame the tab is tapped,
                 // which is a frame before the request it is waiting on even exists.
-                <RidesSkeleton withPanel={scope === 'history' && !summary && !searching} />
+                <RidesSkeleton withPanel={scope === 'history' && !searching} />
             ) : failedFirstLoad ? (
                 <ErrorState
                     title={dc("Can't load your rides")}
@@ -375,6 +490,8 @@ const Rides = () => {
                             <AppText className={`text-base font-semibold text-center ${INK_TEXT}`}>
                                 {query
                                     ? dc("No rides match that")
+                                    : scope === 'history' && (cached?.length ?? 0) > 0
+                                        ? dc("No rides in this period")
                                     : scope === 'upcoming'
                                         ? dc("No rides booked yet")
                                         : dc("No finished rides yet")}
@@ -382,6 +499,8 @@ const Rides = () => {
                             <AppText className={`text-sm text-center ${MUTED}`}>
                                 {query
                                     ? dc("Try a place, a rider name, or a ride ID.")
+                                    : scope === 'history' && (cached?.length ?? 0) > 0
+                                        ? dc("Try a wider date range.")
                                     : scope === 'upcoming'
                                         ? dc("Go online and rides you accept will queue up here.")
                                         : dc("Rides you complete or cancel are kept here.")}
@@ -402,7 +521,7 @@ const Rides = () => {
                 one the guard was written for. */}
             {loading && !firstLoad && !isSearchIdle && (
                 <View className="absolute right-1 top-1">
-                    <ActivityIndicator size="small" color={INK} />
+                    <ActivityIndicator size="small" color={colors.ink} />
                 </View>
             )}
         </View>

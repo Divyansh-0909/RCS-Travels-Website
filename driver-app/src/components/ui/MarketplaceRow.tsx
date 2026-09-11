@@ -15,8 +15,8 @@ export type { MarketplaceListing } from '../../constants/marketplace';
 const asThemed = { className: { target: false, nativeStyleToProp: { color: true } } } as const;
 const Caret = cssInterop(CaretRightIcon, asThemed);
 
-const INK = 'text-[var(--background-primary)]';
-const MUTED = 'text-gray-600';
+const INK = 'text-ink';
+const MUTED = 'text-ink-muted';
 const HAIRLINE = 'rgba(18,18,32,0.1)';
 
 const money = (value: number) => rupees(Math.round(value));

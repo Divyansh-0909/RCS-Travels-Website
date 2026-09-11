@@ -13,7 +13,10 @@ import {
   mdiClose,
   mdiKeyboardBackspace,
   mdiMapMarkerOutline,
+  mdiMapMarkerOffOutline,
+  mdiCrosshairs,
   mdiBookmarkOutline,
+  mdiCarClock,
 } from "@mdi/js";
 import Input from "../components/ui/Input";
 import { useApi } from "../hooks/useApi";
@@ -38,7 +41,6 @@ import { useTranslation } from "react-i18next";
 // real width so the trip screens carry no transform and their type is honest.
 const COL = "w-[min(86vw,100%)] sm:w-[377px]";
 const TITLE = "font-bold text-3xl sm:text-5xl leading-tight";
-const SUBTITLE = "text-lg sm:text-2xl font-normal leading-snug text-[var(--text-muted)]";
 const STACK = "gap-6 sm:gap-8";
 // Current Trip sets its own step between its heading, status and CTA.
 const TRIP_STEP = "gap-4 sm:gap-5";
@@ -67,6 +69,7 @@ export function useAddressSuggestions(value, setValue, setCoords, api, exclusive
   // same: the suggestions simply disappeared as you typed.
   const [lookupError, setLookupError] = useState(null);
   const [expanded, setExpanded] = useState(false);
+  const [locatingCurrentLocation, setLocatingCurrentLocation] = useState(false);
   const justSelectedRef = useRef(false);
   // input -> fetched suggestions; repeat queries skip the API and the debounce
   const cacheRef = useRef(new Map());
@@ -101,6 +104,7 @@ export function useAddressSuggestions(value, setValue, setCoords, api, exclusive
     get "label"() { return dc("Current location"); },
     name: "Current location",
     isCurrentLocation: true,
+    isLocatingCurrentLocation: locatingCurrentLocation,
   };
 
   // Keep the empty field useful rather than turning it into history: after the
@@ -190,12 +194,15 @@ export function useAddressSuggestions(value, setValue, setCoords, api, exclusive
 
   async function select(item) {
     if (item.isCurrentLocation) {
+      if (locatingCurrentLocation) return;
+
       if (!navigator.geolocation) {
         setLookupError(dc("Location isn't available on this device."));
         return;
       }
 
       setLookupError(null);
+      setLocatingCurrentLocation(true);
       navigator.geolocation.getCurrentPosition(
         async (position) => {
           const { latitude, longitude } = position.coords;
@@ -210,6 +217,7 @@ export function useAddressSuggestions(value, setValue, setCoords, api, exclusive
           const address = data?.formattedAddress;
           if (data?.error || !address) {
             setLookupError(dc("Couldn't determine your current address."));
+            setLocatingCurrentLocation(false);
             return;
           }
 
@@ -226,9 +234,11 @@ export function useAddressSuggestions(value, setValue, setCoords, api, exclusive
             lat: latitude,
             lng: longitude,
           });
+          setLocatingCurrentLocation(false);
         },
         () => {
           setLookupError(dc("Couldn't access your current location."));
+          setLocatingCurrentLocation(false);
         },
         {
           enableHighAccuracy: true,
@@ -284,6 +294,7 @@ export function useAddressSuggestions(value, setValue, setCoords, api, exclusive
     onBlur,
     lookupError,
     typed,
+    locatingCurrentLocation,
   };
 }
 
@@ -320,18 +331,23 @@ export const SuggestionDropdown = ({ anim, items, onSelect, actions = [], above 
       className={`${className} ${panelClass} ${inline ? "" : "max-h-[200px] overflow-y-auto scrollbar-inset"}`}
     >
       {showEmptyState && (
-        <div className="px-4 py-3 text-left">
-          <h4 className="text-sm text-[var(--text)]">
-            {emptyTitle || (error ? dc("Suggestions unavailable") : dc("No matching places"))}
-          </h4>
-          <p className="mt-0.5 text-xs leading-snug text-[var(--text-muted)]">
-            {emptyMessage || error || dc("Check the spelling, or type the address in full and we'll find it.")}
-          </p>
+        <div className="flex items-start gap-3 px-3 py-3 text-left">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[var(--background-muted)] text-[var(--text)]">
+            <Icon path={mdiMapMarkerOffOutline} size={0.9} aria-hidden="true" />
+          </span>
+          <div className="min-w-0 pt-0.5">
+            <h4 className="text-sm text-[var(--text)]">
+              {emptyTitle || (error ? dc("Suggestions unavailable") : dc("No matching places"))}
+            </h4>
+            <p className="mt-0.5 text-xs leading-snug text-[var(--text-muted)]">
+              {emptyMessage || error || dc("Check the spelling, or type the address in full and we'll find it.")}
+            </p>
+          </div>
         </div>
       )}
 
-      {rows.length > 0 && <ul className={`flex w-full flex-col items-center justify-center ${inline ? "py-1" : "py-2"}`}>
-        {rows.map((item, index) => {
+      {rows.length > 0 && <ul className={`flex w-full flex-col items-center justify-center ${actions.length > 0 ? (inline ? "pt-1" : "pt-2") : (inline ? "py-1" : "py-2")}`}>
+        {rows.map((item) => {
           const commaIndex = item.label.indexOf(",");
 
           // Saved places show their name (Home, Work) as the heading and the
@@ -345,38 +361,69 @@ export const SuggestionDropdown = ({ anim, items, onSelect, actions = [], above 
 
           return (
             <li
-              className={`${inline ? "w-full px-4" : "w-[97%] px-3 rounded-xl"} cursor-pointer transition-colors duration-250 hover:bg-[var(--background-primary)] active:bg-[var(--background-primary)]`}
-              onClick={() => onSelect(item)}
+              className="w-full"
               key={item.id}>
-              <div
-                className={`py-3 ${index !== rows.length - 1
-                  ? "border-b border-[var(--foreground)]/20"
-                  : ""
-                  }`}
+              <button
+                type="button"
+                onClick={() => onSelect(item)}
+                disabled={item.isCurrentLocation && item.isLocatingCurrentLocation}
+                aria-busy={item.isCurrentLocation && item.isLocatingCurrentLocation ? "true" : undefined}
+                className={`flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]/70 ${item.isCurrentLocation
+                  ? "bg-[var(--foreground)] text-[var(--text-foreground)] hover:bg-[var(--foreground)] active:bg-[var(--foreground)]/90"
+                  : "hover:bg-[var(--background-primary)] active:bg-[var(--background-primary)]"
+                } ${item.isCurrentLocation && item.isLocatingCurrentLocation ? "cursor-wait" : ""}`}
               >
-                <h4 className={`text-left text-base ${inline ? "font-medium" : ""}`}>{mainLocation}</h4>
-                <p className={`text-left text-[var(--text-muted)] ${inline ? "text-sm" : "text-xs"}`}>
-                  {item.isCurrentLocation
-                    ? dc("Use your current location")
-                    : remainingLocation}
-                </p>
-              </div>
+                <span className={`flex size-9 shrink-0 items-center justify-center rounded-full ${item.isCurrentLocation
+                  ? "bg-[var(--background)]/10 text-[var(--text-foreground)]"
+                  : "bg-[var(--background-muted)] text-[var(--text)]"
+                }`}>
+                  {item.isCurrentLocation && item.isLocatingCurrentLocation ? (
+                    <span
+                      className="size-4 animate-spin rounded-full border-2 border-current border-r-transparent motion-reduce:animate-none"
+                      aria-hidden="true"
+                    />
+                  ) : (
+                    <Icon
+                      path={item.isCurrentLocation ? mdiCrosshairs : mdiMapMarkerOutline}
+                      size={item.isCurrentLocation ? 1 : 0.9}
+                      aria-hidden="true"
+                    />
+                  )}
+                </span>
+                <div className="min-w-0">
+                  <h4 className={`truncate text-left text-base ${inline ? "font-medium" : ""}`}>{mainLocation}</h4>
+                  <p className={`truncate text-left ${item.isCurrentLocation ? "text-[var(--text-foreground)]/70" : "text-[var(--text-muted)]"} ${inline ? "text-sm" : "text-xs"}`}>
+                    {item.isCurrentLocation
+                      ? item.isLocatingCurrentLocation
+                        ? dc("Getting your location...")
+                        : dc("Use your current location")
+                      : remainingLocation}
+                  </p>
+                </div>
+              </button>
             </li>
           );
         })}
       </ul>}
 
       {actions.length > 0 && (
-        <ul className={`flex w-full flex-col ${rows.length > 0 || showEmptyState ? "border-t border-[var(--foreground)]/15" : ""} ${inline ? "px-4 py-2" : "px-3 py-2"}`}>
+        <ul className="flex w-full flex-col items-center justify-center pb-2 pt-0">
           {actions.map((action) => (
-            <li key={action.id}>
+            <li className="w-full" key={action.id}>
               <button
                 type="button"
                 onClick={action.onClick}
-                className="flex min-h-12 w-full cursor-pointer items-center gap-3 rounded-xl px-1 py-2 text-left transition-colors duration-200 hover:bg-[var(--background-primary)] active:bg-[var(--background-primary)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]/70"
+                className="flex min-h-12 w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2 text-left transition-colors duration-200 hover:bg-[var(--background-primary)] active:bg-[var(--background-primary)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]/70"
               >
                 <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[var(--background-muted)] text-[var(--text)]">
-                  <Icon path={action.icon} size={0.9} aria-hidden="true" />
+                  {action.pinTarget ? (
+                    <span className="relative size-5" aria-hidden="true">
+                      <span className={`absolute bottom-0 left-1/2 h-3.5 w-0.5 -translate-x-1/2 rounded-full ${action.pinTarget === "pickup" ? "bg-[var(--foreground)]" : "bg-primary"}`} />
+                      <span className={`absolute left-1/2 top-0 flex size-3.5 -translate-x-1/2 items-center justify-center rounded-full ${action.pinTarget === "pickup" ? "bg-[var(--foreground)]" : "bg-primary"}`}>
+                        <span className="size-1.5 rounded-full bg-[var(--background-primary)]" />
+                      </span>
+                    </span>
+                  ) : <Icon path={action.icon} size={0.9} aria-hidden="true" />}
                 </span>
                 <span className="min-w-0">
                   <span className="block text-base font-medium text-[var(--text)]">{action.label}</span>
@@ -391,10 +438,131 @@ export const SuggestionDropdown = ({ anim, items, onSelect, actions = [], above 
   );
 };
 
+const TimingChoiceSheet = ({ anim, timing, onSelect, onClose, isMobile }) => {
+  const sheetRef = useRef(null);
+  const overlayRef = useRef(null);
+
+  useEffect(() => {
+    if (!anim.mounted || anim.closing) return undefined;
+    const frame = window.requestAnimationFrame(() => {
+      sheetRef.current?.querySelector('[aria-pressed="true"]')?.focus();
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [anim.mounted, anim.closing]);
+
+  if (!anim.mounted) return null;
+
+  const options = [
+    { value: "Now", label: dc("Ride now"), description: dc("Request a ride immediately"), icon: mdiClockTimeFourOutline },
+    { value: "Schedule", label: dc("Later"), description: dc("Schedule a ride for later"), icon: mdiCarClock },
+  ];
+
+  const handleDialogKeyDown = (event) => {
+    if (event.key !== "Tab") return;
+    const controls = [...overlayRef.current.querySelectorAll("[data-timing-dialog-control]:not(:disabled)")];
+    if (!controls.length) return;
+    const first = controls[0];
+    const last = controls[controls.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  };
+
+  const dialogContent = (
+    <section
+      ref={sheetRef}
+      data-sheet-scroll
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="timing-sheet-title"
+      className={`relative flex w-full flex-col ${isMobile ? "text-[var(--text)]" : "text-on-strong legacy:text-[var(--text)]"}`}
+    >
+      {!isMobile && (
+        <button
+          type="button"
+          data-timing-dialog-control
+          onClick={onClose}
+          aria-label={dc("Close timing options")}
+          className="absolute right-0 top-0 z-20 flex size-9 items-center justify-center rounded-full transition-opacity duration-300 hover:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/70"
+        >
+          <Icon path={mdiClose} size={0.8} aria-hidden="true" />
+        </button>
+      )}
+      <h2 id="timing-sheet-title" className="mb-4 pr-12 text-xl font-semibold tracking-[-0.02em]">{dc("Choose timing")}</h2>
+      <div className="flex flex-col gap-2">
+        {options.map((option) => {
+          const selected = timing === option.value;
+          return (
+            <button
+              key={option.value}
+              type="button"
+              data-timing-dialog-control
+              aria-pressed={selected}
+              onClick={() => onSelect(option.value)}
+              className={`flex min-h-16 w-full items-center gap-3 rounded-2xl bg-[var(--background-muted)] px-3 py-3 text-left text-[var(--text)] outline-primary transition-colors hover:bg-[var(--foreground)]/10 focus-visible:outline-2 focus-visible:outline-offset-2 ${selected ? "outline-2" : "outline-0"}`}
+            >
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[var(--background-primary)] text-[var(--text)]">
+                <Icon path={option.icon} size={0.95} aria-hidden="true" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-base font-semibold">{option.label}</span>
+                <span className="block text-sm leading-snug text-[var(--text-muted)]">{option.description}</span>
+              </span>
+              <span className={`size-4 shrink-0 rounded-full border-2 border-[var(--foreground)]/30 ${selected ? "shadow-[inset_0_0_0_3px_var(--background-muted)] bg-primary" : ""}`} aria-hidden="true" />
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
+
+  return createPortal(
+    <div ref={overlayRef} onKeyDown={handleDialogKeyDown} className="fixed inset-0 z-[120]" role="presentation">
+      <button
+        type="button"
+        aria-label={dc("Close timing options")}
+        onClick={onClose}
+        className={`absolute inset-0 h-full w-full cursor-default bg-black/55 ${anim.closing ? "animate-panel-fade-out" : "animate-backdrop"} motion-reduce:animate-none`}
+      />
+      {isMobile ? (
+        <BackgroundPanel
+          sheet
+          dismissible
+          onDismiss={onClose}
+          show={!anim.closing}
+          duration={420}
+          contentKey={timing}
+          className="z-50 flex flex-col px-5 pb-[calc(1.5rem+env(safe-area-inset-bottom))] pt-6 text-left"
+        >
+          <button
+            type="button"
+            data-timing-dialog-control
+            onClick={onClose}
+            aria-label={dc("Close timing options")}
+            className="absolute z-20 -top-12 right-4 flex size-9 items-center justify-center rounded-full border border-[var(--foreground)]/30 bg-[var(--background-muted)] text-[var(--text)] shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)] transition-opacity duration-300 active:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]/70"
+          >
+            <Icon path={mdiClose} size={0.8} aria-hidden="true" />
+          </button>
+          {dialogContent}
+        </BackgroundPanel>
+      ) : (
+        <div className={`absolute left-1/2 top-1/2 z-50 w-[360px] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-border bg-strong px-5 py-6 text-on-strong shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)] legacy:border-[var(--foreground)]/15 legacy:bg-[var(--background-primary)] legacy:text-[var(--text)] ${anim.closing ? "animate-datetime-out pointer-events-none" : "animate-datetime"} motion-reduce:animate-none`}>
+          {dialogContent}
+        </div>
+      )}
+    </div>,
+    document.body,
+  );
+};
+
 // The route form uses the same draggable booking sheet as the later vehicle
 // stage on phones. From sm upward it stays a regular content column so the
 // established form-and-map split is unchanged.
-const RoutePanel = ({ sheet, isMobile, className, children, bottomInset = 0, contentKey, fillAvailable = true, onSnapChange }) => {
+const RoutePanel = ({ sheet, isMobile, className, children, bottomInset = 0, contentKey, fillAvailable = true, expandedTopGap, lockExpanded = false, onSnapChange }) => {
     useCopyLanguage();
   if (sheet && isMobile) {
     return (
@@ -404,6 +572,8 @@ const RoutePanel = ({ sheet, isMobile, className, children, bottomInset = 0, con
         duration={420}
         bottomInset={bottomInset}
         contentKey={contentKey}
+        expandedTopGap={expandedTopGap}
+        lockExpanded={lockExpanded}
         onSnapChange={onSnapChange}
         className={className}
       >
@@ -442,6 +612,7 @@ const OnBoarding = ({ bookingStage = false, timingStep = false, highlightRideNow
   const [error, setError] = useState(null);
   const scheduledTime = useData(state => state.scheduledTime);
   const setScheduledTime = useData(state => state.setScheduledTime);
+  const timingButtonRef = useRef(null);
   const setBookingId = useData(state => state.setBookingId);
   const setFare = useData(state => state.setFare);
   const setVehicleClass = useData(state => state.setVehicleClass);
@@ -490,7 +661,7 @@ const OnBoarding = ({ bookingStage = false, timingStep = false, highlightRideNow
     navigate(`/booking/${activeBooking.id}`, { state: { freshStatus: true } });
   }
 
-  const timingDropdown = useExitAnim(expand, 220);
+  const timingDropdown = useExitAnim(expand, 420);
   const calendarDropdown = useExitAnim(expandCalendar, 300);
 
   // Hydrate activeBooking so the trip cards survive reloads. Deliberately
@@ -570,6 +741,30 @@ const OnBoarding = ({ bookingStage = false, timingStep = false, highlightRideNow
   const suggestionCloserRef = useRef(null);
   const closeSuggestions = () => { suggestionCloserRef.current?.(); };
   const closeTimingPanels = () => { setExpand(false); setExpandCalendar(false); };
+
+  const closeTimingSheet = () => {
+    setExpand(false);
+    window.setTimeout(() => timingButtonRef.current?.querySelector("button")?.focus(), 430);
+  };
+
+  const selectTiming = (value) => {
+    setTiming(value);
+    closeTimingSheet();
+    setExpandCalendar(false);
+    if (value === "Now") {
+      setError(null);
+      setScheduledTime(null);
+    }
+  };
+
+  useEffect(() => {
+    if (!expand) return undefined;
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") closeTimingSheet();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [expand]);
   const pickupAutocomplete = useAddressSuggestions(pickupLocation, setPickup, setPickupCoords, api, suggestionCloserRef, closeTimingPanels,true)
   const dropAutocomplete = useAddressSuggestions(dropLocation, setDrop, setDropCoords, api, suggestionCloserRef, closeTimingPanels,false)
   const isMobile = useIsMobile();
@@ -654,7 +849,7 @@ const OnBoarding = ({ bookingStage = false, timingStep = false, highlightRideNow
       id: `${target}-map`,
       get "label"() { return dc("Set location on map"); },
       get "description"() { return dc("Choose a precise point"); },
-      icon: mdiMapMarkerOutline,
+      pinTarget: target,
       onClick: () => startMapPicker(target),
     },
     {
@@ -791,6 +986,13 @@ const OnBoarding = ({ bookingStage = false, timingStep = false, highlightRideNow
       setError("Scheduled Time Too Soon");
       return;
     }
+    const latestBookable = new Date();
+    latestBookable.setDate(latestBookable.getDate() + 7);
+    latestBookable.setHours(23, 59, 59, 999);
+    if (scheduledTime.getTime() > latestBookable.getTime()) {
+      setError("No Scheduled Time");
+      return;
+    }
     continueToPrices();
   }
 
@@ -888,7 +1090,13 @@ const OnBoarding = ({ bookingStage = false, timingStep = false, highlightRideNow
   // `form` attribute lets the pinned mobile button submit the form inside the
   // sheet, exactly like the vehicle step's Book button.
   const scheduledTimeIsBookable = scheduledTime instanceof Date
-    && scheduledTime.getTime() >= Date.now() + 30 * 60 * 1000;
+    && scheduledTime.getTime() >= Date.now() + 30 * 60 * 1000
+    && scheduledTime.getTime() <= (() => {
+      const latest = new Date();
+      latest.setDate(latest.getDate() + 7);
+      latest.setHours(23, 59, 59, 999);
+      return latest.getTime();
+    })();
 
   const priceAction = (
     <div className={`flex w-full shrink-0 flex-col gap-2 sm:items-start sm:gap-5 ${bookingStage ? "items-start" : "items-center"}`}>
@@ -909,7 +1117,7 @@ const OnBoarding = ({ bookingStage = false, timingStep = false, highlightRideNow
       </Button>
 
       {!priceBarCollapsed && (
-        <p className={`relative text-[var(--text-muted)] sm:order-first sm:text-left sm:text-lg ${bookingStage ? "w-full text-center sm:w-auto" : "order-first text-center"}`}>
+        <p className={`relative text-[var(--text-muted)] sm:order-first sm:text-left sm:text-lg ${bookingStage ? "order-first w-full text-left sm:w-auto" : "order-first text-center"}`}>
           {timingStep && error === "Scheduled Time Too Soon"
             ? tr("* Choose a time at least 30 minutes from now")
             : timing === "Now"
@@ -928,11 +1136,13 @@ const OnBoarding = ({ bookingStage = false, timingStep = false, highlightRideNow
         isMobile={isMobile}
         bottomInset={pinPriceBar ? priceBarHeight : 0}
         contentKey={`${showsRouteForm}-${timingStep}-${timing}-${activeSuggestion ?? "none"}-${mapPickerTarget ?? "form"}`}
-        fillAvailable={!mapPickerTarget}
+        fillAvailable={!mapPickerTarget && !timingStep}
+        expandedTopGap={0}
+        lockExpanded={timingStep}
         onSnapChange={setSheetSnap}
         className={`z-10 flex h-[inherit] w-full max-w-[500px] flex-col items-center py-8 sm:h-fit sm:justify-center lg:items-start ${bookingStage ? mapPickerTarget ? "max-sm:h-auto max-sm:items-start max-sm:justify-start max-sm:px-[7vw] max-sm:py-6" : "max-sm:items-start max-sm:justify-start max-sm:px-[7vw] max-[359px]:px-2! max-sm:py-6 max-sm:pb-0" : "justify-end"}`}
       >
-        {bookingStage && !mapPickerTarget && (
+        {bookingStage && !mapPickerTarget && (!isMobile || timingStep || sheetSnap !== "expanded") && (
           <button
             type="button"
             onClick={() => timingStep
@@ -1010,8 +1220,7 @@ const OnBoarding = ({ bookingStage = false, timingStep = false, highlightRideNow
             {(!(activeBooking && authed && activeBooking.scheduledAt) || showForm) && (timingStep ? (
               <section className={`flex w-full min-h-0 flex-1 flex-col items-center gap-4 sm:w-[377px] sm:flex-none sm:items-start sm:gap-5`}>
                 <div className="w-full shrink-0">
-                  <h1 className={`text-left ${TITLE}`}>{tr("Choose date & time")}</h1>
-                  <p className={`mt-1 text-left ${SUBTITLE}`}>{tr("When should your driver arrive?")}</p>
+                  <h1 className="text-left text-3xl font-bold leading-tight sm:text-4xl">{tr("Set date and time")}</h1>
                 </div>
 
                 <div data-sheet-scroll className="min-h-0 w-full flex-1 overflow-y-auto overscroll-contain px-1 pb-2 scrollbar-inset sm:flex-none sm:overflow-visible sm:px-0 sm:pb-0">
@@ -1045,8 +1254,8 @@ const OnBoarding = ({ bookingStage = false, timingStep = false, highlightRideNow
                     {dc(error)}
                   </p>
                 )}
-                <div className={`mb-2 flex items-center justify-start gap-1 px-1 max-[335px]:flex-wrap max-[335px]:gap-y-2 ${formWidth} sm:mb-0 sm:w-[377px] sm:gap-2 sm:px-0`}>
-                  <div className="flex shrink-0 gap-1 rounded-full scale-[0.9] bg-[var(--background-muted)] p-1.5 outline outline-[var(--foreground)]/40 sm:gap-2 sm:p-2 [&>*]:cursor-pointer [&>*]:rounded-full [&>*]:px-3 [&>*]:py-1 [&>*]:text-base [&>*]:sm:px-3 [&>*]:sm:py-2 [&>*]:sm:text-xl">
+                <div className={`flex items-center justify-start gap-1 max-[335px]:flex-wrap max-[335px]:gap-y-2 ${formWidth} sm:w-[377px]`}>
+                  <div className="-mr-5 flex shrink-0 origin-left scale-[0.9] gap-1 rounded-full bg-[var(--background-muted)] p-1.5 sm:gap-2 sm:p-2 [&>*]:cursor-pointer [&>*]:rounded-full [&>*]:px-3 [&>*]:py-1 [&>*]:text-base [&>*]:sm:px-3 [&>*]:sm:py-2 [&>*]:sm:text-xl">
                     <button type="button" aria-pressed={!isRoundTrip} onClick={() => setIsRoundTrip(false)} className={`transition-colors duration-300 text-[var(--text)] ${isRoundTrip ? "" : "bg-primary"}`}>
                       {tr("One way")}
                     </button>
@@ -1057,18 +1266,24 @@ const OnBoarding = ({ bookingStage = false, timingStep = false, highlightRideNow
 
                   <div className="relative shrink-0">
                     <Button
+                      containerRef={timingButtonRef}
                       onClick={() => {
                         closeSuggestions();
                         setExpandCalendar(false);
                         setExpand(!expand);
                       }}
                       prop={{
+                        type: "button",
+                        "aria-haspopup": "dialog",
+                        "aria-expanded": expand,
                         variant: "input",
+                        border: false,
+                        rounded: "999px",
                         bg: highlightRideNow && timing === "Now"
                           ? "var(--foreground)"
                           : expand ? "var(--background-primary)" : "var(--background-muted)",
                       }}
-                      className={`relative my-0! px-2 sm:origin-left scale-[0.9] rounded-full ${highlightRideNow && timing === "Now"
+                      className={`relative my-0! origin-left scale-[0.9] rounded-full px-2 ${highlightRideNow && timing === "Now"
                         ? "text-[var(--text-foreground)]! hover:bg-[var(--foreground)]! active:bg-[var(--foreground)]/90!"
                         : ""
                       }`}
@@ -1085,37 +1300,6 @@ const OnBoarding = ({ bookingStage = false, timingStep = false, highlightRideNow
                       </div>
                     </Button>
 
-                    {timingDropdown.mounted && (
-                      <Button
-                        prop={{ variant: "dropdown", width: "155px" }}
-                        className={`absolute right-0 top-12 z-10 block origin-top-right scale-[1] active:opacity-[1] hover:opacity-[1] sm:left-0 sm:right-auto sm:top-14 sm:origin-top-left sm:scale-[1.2] ${timingDropdown.closing ? "animate-dropdown-out" : "animate-dropdown"}`}
-                      >
-                        <div className="flex flex-col items-start">
-                          <div
-                            onClick={() => {
-                              setTiming("Schedule");
-                              setExpandCalendar(false);
-                              setExpand(false);
-                            }}
-                            className={`flex w-full items-center gap-2 border-b border-[var(--foreground)]/40 py-1 pb-2 ${timing === "Schedule" ? "text-white-muted" : "text-white"}`}
-                          >
-                            {tr("Schedule a ride")}
-                          </div>
-                          <div
-                            onClick={() => {
-                              setTiming("Now");
-                              setExpand(false);
-                              setError(null);
-                              setExpandCalendar(false);
-                              setScheduledTime(null);
-                            }}
-                            className={`flex w-full items-center gap-2 py-1 pt-2 ${timing === "Now" ? "text-white-muted" : "text-white"}`}
-                          >
-                            {tr("Ride now")}
-                          </div>
-                        </div>
-                      </Button>
-                    )}
                   </div>
                 </div>
                 <div className={`relative ${bookingStage ? "max-sm:w-full" : ""}`}>
@@ -1125,10 +1309,13 @@ const OnBoarding = ({ bookingStage = false, timingStep = false, highlightRideNow
                       id: "pickup-location",
                       name: "pickup-location",
                       placeholder: tr("Pickup Location"),
-                      value: editingLocation === "pickup"
-                        ? pickupLocation
-                        : firstAddressSegment(pickupLocation),
+                      value: pickupAutocomplete.locatingCurrentLocation
+                        ? dc("Getting your current location...")
+                        : editingLocation === "pickup"
+                          ? pickupLocation
+                          : firstAddressSegment(pickupLocation),
                       onChangeFn: (value) => {
+                        if (pickupAutocomplete.locatingCurrentLocation) return;
                         setSavedSuggestionTarget(null);
                         setPickup(value);
                         if (error === "No Pickup Location") {
@@ -1137,6 +1324,9 @@ const OnBoarding = ({ bookingStage = false, timingStep = false, highlightRideNow
                       },
                       error: error === "No Pickup Location",
                       bg: "var(--background-muted)",
+                      foreground: pickupAutocomplete.locatingCurrentLocation,
+                      readOnly: pickupAutocomplete.locatingCurrentLocation,
+                      ariaBusy: pickupAutocomplete.locatingCurrentLocation,
                       autoComplete: "off",
                       onFocusFn: () => {
                         setEditingLocation("pickup");
@@ -1150,10 +1340,17 @@ const OnBoarding = ({ bookingStage = false, timingStep = false, highlightRideNow
                     }}
                     className={`scale-[1] sm:scale-[1.3] sm:origin-left ${formWidth}`}
                     leading={
-                      <div className="w-3 h-3 rounded-full bg-[var(--foreground)]" />
+                      pickupAutocomplete.locatingCurrentLocation ? (
+                        <span
+                          className="size-3.5 animate-spin rounded-full border-2 border-[var(--text-foreground)] border-r-transparent motion-reduce:animate-none"
+                          aria-hidden="true"
+                        />
+                      ) : (
+                        <div className="w-3 h-3 rounded-full bg-[var(--foreground)]" />
+                      )
                     }
                     trailing={
-                      pickupLocation?.trim() ? (
+                      !pickupAutocomplete.locatingCurrentLocation && pickupLocation?.trim() ? (
                         <button
                           type="button"
                           aria-label={tr("Clear pickup location")}
@@ -1240,7 +1437,7 @@ const OnBoarding = ({ bookingStage = false, timingStep = false, highlightRideNow
                     items={suggestionItemsFor("drop", dropAutocomplete)}
                     onSelect={selectDropSuggestion}
                     actions={suggestionActions("drop")}
-                    above
+                    above={isMobile}
                     error={savedSuggestionTarget === "drop" ? null : dropAutocomplete.lookupError}
                     typed={savedSuggestionTarget === "drop" ? false : dropAutocomplete.typed}
                     emptyTitle={savedSuggestionTarget === "drop" ? dc("No saved places yet") : undefined}
@@ -1299,7 +1496,7 @@ const OnBoarding = ({ bookingStage = false, timingStep = false, highlightRideNow
                     <Button
                       prop={{
                         variant: "dropdown",
-                        width: "250px",
+                        width: "330px",
                       }}
                       className={`block ${calendarDropdown.closing ? "animate-datetime-out" : "animate-datetime"
                         } fixed scale-[1] sm:scale-[1.2] z-[105] top-1/2 -translate-y-1/2 ${calendarAnchor
@@ -1368,6 +1565,14 @@ const OnBoarding = ({ bookingStage = false, timingStep = false, highlightRideNow
         }
       </RoutePanel>
 
+      <TimingChoiceSheet
+        anim={timingDropdown}
+        timing={timing}
+        onSelect={selectTiming}
+        onClose={closeTimingSheet}
+        isMobile={isMobile}
+      />
+
       {pinPriceBar && (
         <div
           ref={priceBarRef}
@@ -1379,6 +1584,7 @@ const OnBoarding = ({ bookingStage = false, timingStep = false, highlightRideNow
 
       {bookingStage ? <>
         <GoogleMap
+          appearance="dark"
           center={mapPickerTarget ? mapPickerCoords : pickupCoords ?? { lat: 28.6315, lng: 77.2167 }}
           zoom={mapPickerTarget ? 17 : 12}
           onIdle={mapPickerTarget ? setMapPickerCoords : undefined}
@@ -1387,6 +1593,7 @@ const OnBoarding = ({ bookingStage = false, timingStep = false, highlightRideNow
           {mapPickerTarget && <CenterPin target={mapPickerTarget} />}
         </GoogleMap>
         <GoogleMap
+          appearance="dark"
           center={mapPickerTarget ? mapPickerCoords : pickupCoords ?? { lat: 28.6315, lng: 77.2167 }}
           zoom={mapPickerTarget ? 17 : 12}
           onIdle={mapPickerTarget ? setMapPickerCoords : undefined}

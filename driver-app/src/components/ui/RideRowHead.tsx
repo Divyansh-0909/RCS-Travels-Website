@@ -16,8 +16,8 @@ const HAIRLINE = 'rgba(18,18,32,0.1)';
 
 // text-gray-600 rather than the lighter step the mock uses: 500 lands at 4.4:1 on
 // #f3f3f3, under AA, and these are 12px labels read in a car in daylight.
-export const MUTED = 'text-gray-600';
-export const INK = 'text-[var(--background-primary)]';
+export const MUTED = 'text-ink-muted';
+export const INK = 'text-ink';
 
 type Props = {
     booking: UpcomingBooking;

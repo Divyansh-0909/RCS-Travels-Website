@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Modal, Pressable, View } from 'react-native';
 import { CameraIcon, FilePdfIcon, ImageIcon, XIcon } from 'phosphor-react-native';
 import AppText from '../AppText';
+import { useTheme } from '../../theme/ThemeContext';
 
 // Where the file is coming from: the camera, the gallery, or the files app.
 //
@@ -20,9 +21,8 @@ import AppText from '../AppText';
 const SCRIM = 'rgba(18,18,32,0.45)';
 const WELL = 'rgba(18,18,32,0.03)';
 
-const INK = 'text-[var(--background-primary)]';
-const MUTED = 'text-gray-600';
-const ICON = '#121220';
+const INK = 'text-ink';
+const MUTED = 'text-ink-muted';
 
 export type DocumentSource = 'camera' | 'library' | 'pdf';
 
@@ -34,6 +34,7 @@ type OptionProps = {
 
 const Option = ({ Icon, label, onPress }: OptionProps) => {
     useCopyLanguage();
+  const { colors } = useTheme();
   // Held rather than read from Pressable's style callback. This row carries a
   // className, and NativeWind merges an inline style into its own computation and
   // understands objects and arrays only — a function is collected, applied, and
@@ -53,7 +54,7 @@ const Option = ({ Icon, label, onPress }: OptionProps) => {
         opacity: pressed ? 0.7 : 1,
       }}
     >
-      <Icon size={22} weight="regular" color={ICON} />
+          <Icon size={22} weight="regular" color={colors.ink} />
       <AppText className={`font-semibold ${INK}`}>{label}</AppText>
     </Pressable>
   );
@@ -70,6 +71,7 @@ type Props = {
 
 const DocumentSourceSheet = ({ visible, label, allowPdf, onCancel, onPick }: Props) => {
     useCopyLanguage();
+  const { colors } = useTheme();
   const [closePressed, setClosePressed] = useState(false);
 
   return (
@@ -79,7 +81,7 @@ const DocumentSourceSheet = ({ visible, label, allowPdf, onCancel, onPick }: Pro
           is how most people will actually leave it. */}
       <Pressable className="flex-1 justify-end" style={{ backgroundColor: SCRIM }} onPress={onCancel}>
         {/* Swallows the tap, so pressing the sheet itself does not close it. */}
-        <Pressable className="bg-white rounded-t-3xl px-5 pt-5 pb-8 gap-4" onPress={() => {}}>
+        <Pressable className="bg-surface rounded-t-3xl px-5 pt-5 pb-8 gap-4" onPress={() => {}}>
           {/* The way out, level with the title rather than under the options.
               A full-width Cancel at the foot is a fourth thing the eye has to rule
               out before it can choose one of the three above it; up here it is
@@ -113,7 +115,7 @@ const DocumentSourceSheet = ({ visible, label, allowPdf, onCancel, onPick }: Pro
                 opacity: closePressed ? 0.6 : 1,
               }}
             >
-              <XIcon size={16} weight="bold" color={ICON} />
+              <XIcon size={16} weight="bold" color={colors.ink} />
             </Pressable>
           </View>
 

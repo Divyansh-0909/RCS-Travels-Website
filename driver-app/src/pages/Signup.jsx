@@ -77,6 +77,8 @@ const Signup = () => {
     const phone = useData(state => state.phone);
     const setPhone = useData(state => state.setPhone);
     const [otp, setOtp] = useState("");
+    const activeInputRef = useRef(null);
+    const vehicleNumberInputRef = useRef(null);
     const otpRefs = useRef([]);
     const OTP_LENGTH = 6;
     const OTP_TTL = 300; // seconds until the OTP expires — matches the backend's 5-minute window
@@ -99,6 +101,7 @@ const Signup = () => {
     const api = useApi();
     const { profile, notRegistered, loading: driverLoading, refresh } = useDriver();
     const { language, setLanguage, t } = useLanguage();
+    const [pendingLanguage, setPendingLanguage] = useState(language);
 
     useEffect(() => {
         if (resendIn <= 0) return;
@@ -345,6 +348,16 @@ const Signup = () => {
 
     const busy = loading || redirecting;
 
+    useEffect(() => {
+        if (isLanguage) return;
+        const activeInput = isOtp
+            ? otpRefs.current[0]
+            : isVehicle
+                ? vehicleNumberInputRef.current
+                : activeInputRef.current;
+        activeInput?.focus();
+    }, [step, isLanguage, isOtp, isVehicle]);
+
     // The collapse reports an answer, so it waits for one. busy alone starts on the
     // press, which would have the boxes merging over a request that might still
     // come back rejected. Both halves are needed: verdict outlives the request it
@@ -421,7 +434,7 @@ const Signup = () => {
     // The OTP comes over WhatsApp, whose "Copy code" button is the only way it
     // reaches the app — SMS autofill can't see it. Only while the boxes are
     // empty: a code already typed or already filled is not one to overwrite.
-    const { canPaste, paste: pasteOtp } = useOtpClipboard({
+    useOtpClipboard({
         enabled: isOtp && !busy && otp.length === 0,
         length: OTP_LENGTH,
         onCode: (code) => {
@@ -473,7 +486,7 @@ const Signup = () => {
             )}
 
             <ScrollView
-                contentContainerClassName="flex-grow justify-center items-center px-6"
+                contentContainerClassName="flex-grow justify-start items-start px-6 pt-4"
                 keyboardShouldPersistTaps="handled"
             >
                 {/* Only for somebody who is signed in AND already has a driver
@@ -482,19 +495,23 @@ const Signup = () => {
                     back rather than flashing "already logged in" at him for the
                     length of one request. */}
                 {isLanguage
-                    ? <View className="w-full max-w-[440px] justify-center items-center">
-                        <View className="w-full items-center gap-3 mb-7">
-                            <AppText className="text-2xl font-semibold text-center">{t('driver.language.title')}</AppText>
-                            <AppText className="text-base text-center text-[var(--text-muted)]">{t('driver.language.body')}</AppText>
+                    ? <View className="w-full max-w-[440px] justify-start items-start">
+                        <View className="w-full items-start gap-1 mb-7">
+                            <AppText className="text-2xl font-semibold text-left">{t('driver.language.title')}</AppText>
+                            <AppText className="text-base text-left text-[var(--text-muted)]">{t('driver.language.body')}</AppText>
                         </View>
                         <LanguageSelector
-                            value={language}
-                            onSelect={async (next) => {
-                                try { await setLanguage(next); } catch { /* use this session's selected language */ }
+                            value={pendingLanguage}
+                            onSelect={setPendingLanguage}
+                        />
+                        <Button
+                            onPress={async () => {
+                                try { await setLanguage(pendingLanguage); } catch { /* use this session's selected language */ }
                                 if (location.state?.entry === 'login') navigate('/login', { replace: true });
                                 else setStep('username');
                             }}
-                        />
+                            className="mt-5"
+                        >{t('driver.auth.confirm')}</Button>
                     </View>
                     : isSignedIn && !redirecting && !isVehicle && !driverLoading && profile
                     ? <View className="justify-center items-center">
@@ -508,9 +525,9 @@ const Signup = () => {
                         >{dc("Back")}</Button>
                     </View>
 
-                    : <View className="w-full justify-center items-center">
-                        <View className="justify-center items-center gap-3">
-                            <AppText className="text-2xl font-semibold text-center">
+                    : <View className="w-full justify-start items-start gap-5">
+                        <View className="w-full justify-center items-start gap-1">
+                            <AppText className="text-2xl font-semibold text-left">
                                 {isUsername
                                     ? t('driver.signup.nameTitle')
                                     : isPhone
@@ -519,7 +536,7 @@ const Signup = () => {
                                             ? t('driver.signup.otpTitle')
                                             : t('driver.signup.vehicleTitle')}
                             </AppText>
-                            <AppText className="text-base text-center text-[var(--text-muted)]">
+                            <AppText className="text-base text-left text-[var(--text-muted)]">
                                 {isUsername
                                     ? t('driver.signup.nameBody')
                                     : isPhone
@@ -530,16 +547,15 @@ const Signup = () => {
                             </AppText>
                         </View>
 
-                        <View className="w-full justify-center items-center">
+                        <View className="w-full justify-center items-start">
 
-                            {/* Fixed-height slot so an error appearing doesn't shift the form */}
-                            <View className="mt-4 mb-2 min-h-5 items-center justify-center">
-                                {error && (
-                                    <AppText className="text-sm text-center" style={{ color: ERROR_TEXT }}>
+                            {error && (
+                                <View className="mt-2 mb-1 items-start justify-center">
+                                    <AppText className="text-sm text-left" style={{ color: ERROR_TEXT }}>
                                         {error}
                                     </AppText>
-                                )}
-                            </View>
+                                </View>
+                            )}
 
                             {/* Explicitly `isOtp`, not `!isPhone`. The old
                                 condition also caught the USERNAME step — isPhone
@@ -548,13 +564,14 @@ const Signup = () => {
                                 and its Input branch below was unreachable. A
                                 fourth step made that impossible to leave alone. */}
                             {isOtp
-                                ? <View className="justify-center items-center">
+                                ? <View className="justify-center items-start">
                                     <View className="relative flex-row justify-center items-center gap-2">
                                         {Array.from({ length: OTP_LENGTH }).map((_, i) => (
                                             <OtpBox key={i} index={i} count={OTP_LENGTH} collapsed={settled}>
                                                 <TextInput
                                                     ref={(el) => { otpRefs.current[i] = el; }}
                                                     keyboardType="number-pad"
+                                                    autoFocus={i === 0}
                                                     textContentType={i === 0 ? "oneTimeCode" : "none"}
                                                     autoComplete={i === 0 ? "sms-otp" : "off"}
                                                     // Emptied rather than hidden. The website turns the digit
@@ -608,23 +625,10 @@ const Signup = () => {
                                         )}
                                     </View>
 
-                                    <AppText className={`text-sm text-[var(--text-muted)] mt-2 mb-5 ${busy ? "opacity-0" : ""}`}>
+                                    <AppText className={`text-sm text-left text-[var(--text-muted)] mt-2 mb-3 ${busy ? "opacity-0" : ""}`}>
                                         {expiresIn > 0
                       ? t('driver.auth.expires', { time: formatMMSS(expiresIn) })
                       : t('driver.auth.expired')}
-                                        {/* iOS only — Android fills the boxes on its own. Not
-                                            offered on an expired code, which pastes to nothing. */}
-                                        {canPaste && expiresIn > 0 && (
-                                            <>
-                                                {" · "}
-                                                <AppText
-                                                    onPress={pasteOtp}
-                                                    className="font-semibold text-[var(--text)] underline"
-                                                >
-                          {t('driver.auth.paste')}
-                                                </AppText>
-                                            </>
-                                        )}
                                     </AppText>
                                 </View>
                                 : isVehicle
@@ -634,7 +638,7 @@ const Signup = () => {
                                             earns its extra tap, and which one he
                                             is decides which rides he is offered
                                             — worth seeing all four at once. */}
-                                        <View className="flex-row flex-wrap justify-center gap-2">
+                                        <View className="flex-row flex-wrap justify-start gap-2">
                                             {VEHICLE_CLASSES.map((option) => {
                                                 const selected = vehicleClass === option;
                                                 return (
@@ -658,9 +662,11 @@ const Signup = () => {
                                         </View>
 
                                         <Input
-                                            prop={{
-                                                type: "text",
-                                                get "placeholder"() { return dc("Registration number"); },
+                                                prop={{
+                                                    type: "text",
+                                                    inputRef: vehicleNumberInputRef,
+                                                    autoFocus: true,
+                                                    get "placeholder"() { return dc("Registration number"); },
                                                 value: vehicleNumber,
                                                 onChangeFn: (value) => { setVehicleNumber(value); if (error) setError(null); },
                                                 maxLength: 20,
@@ -684,7 +690,9 @@ const Signup = () => {
                                 : <Input
                                     prop={{
                                         type: isUsername ? "text" : "tel",
-                                        placeholder: isUsername ? dc("Full Name") : dc("Phone Number"),
+                                        inputRef: activeInputRef,
+                                        autoFocus: true,
+                                        placeholder: isUsername ? dc("Full Name") : dc("Mobile number"),
                                         value: isUsername ? username : phone,
                                         onChangeFn: isUsername ? handleUsernameChange : handlePhoneChange,
                                         maxLength: isUsername ? null : 10,
@@ -723,7 +731,7 @@ const Signup = () => {
                                                 ? loading
                                                 : (isPhone ? phone.length !== 10 : otp.length !== OTP_LENGTH),
                                 }}
-                                className="mt-5"
+                                className="mt-3"
                             >
                                 {isPhone
                                     ? (showLoginUp ? dc("Login Up") : (loading ? dc("Sending OTP...") : t('common.actions.continue')))
@@ -735,7 +743,7 @@ const Signup = () => {
                             </Button>
 
                             {isPhone && !showLoginUp && (
-                                <AppText className="mt-6 text-sm text-center text-[var(--text-muted)]">
+                                <AppText className="mt-3 text-sm text-left text-[var(--text-muted)]">
                                     <AppText className="text-[var(--text)]">{t('driver.signup.haveAccount')}</AppText>{" "}
                                     <AppText
                                         onPress={() => navigate("/login")}
@@ -747,12 +755,12 @@ const Signup = () => {
                             )}
 
                             {isOtp && (
-                                <AppText className={`mt-6 text-sm text-center text-[var(--text-muted)] ${busy ? "opacity-0" : ""}`}>
-                                    <AppText className="text-[var(--text)]">{t('driver.auth.didntGet')}</AppText>{" "}
+                                <AppText className={`mt-3 text-sm text-left text-[var(--text-muted)] ${busy ? "opacity-0" : ""}`}>
+                                    <AppText className="text-[var(--text-muted)]">{t('driver.auth.didntGet')}</AppText>{" "}
                                     {resending
                                         ? t('driver.auth.sending')
                                         : resendIn > 0
-                                            ? <AppText style={{ fontVariant: ["tabular-nums"] }}>{t('driver.auth.resendIn', { seconds: resendIn })}</AppText>
+                                            ? <AppText className="underline" style={{ fontVariant: ["tabular-nums"] }}>{t('driver.auth.resendIn', { seconds: resendIn })}</AppText>
                                             : <AppText
                                                 onPress={handleResend}
                                                 className="font-semibold text-[var(--text)] underline"
@@ -762,19 +770,19 @@ const Signup = () => {
                                 </AppText>
                             )}
 
-                            {isUsername && (<AppText className="text-sm text-center text-[var(--text-muted)] mt-5">
+                            {isUsername && (<AppText className="text-sm text-left text-[var(--text-muted)] mt-5">
                                 {t('driver.auth.usernameHint')}
                             </AppText>)}
 
-                            {isPhone && (<AppText className="text-sm text-center text-[var(--text-muted)] mt-5">
+                            {isPhone && (<AppText className="text-sm text-left text-[var(--text-muted)] mt-5">
                                 {t('driver.auth.phoneHint')}
                             </AppText>)}
 
-                            {isOtp && (<AppText className="text-sm text-center text-[var(--text-muted)] mt-5">
+                            {isOtp && (<AppText className="text-sm text-left text-[var(--text-muted)] mt-5">
                                 {t('driver.auth.consent')}
                             </AppText>)}
 
-                            {isVehicle && (<AppText className="text-sm text-center text-[var(--text-muted)] mt-5">
+                            {isVehicle && (<AppText className="text-sm text-left text-[var(--text-muted)] mt-5">
                                 {t('driver.auth.vehicleHint')}
                             </AppText>)}
                         </View>

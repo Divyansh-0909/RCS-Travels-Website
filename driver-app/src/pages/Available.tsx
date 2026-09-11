@@ -11,6 +11,7 @@ import MarketplaceRow, { type MarketplaceListing } from '../components/ui/Market
 import MarketplacePostSheet from '../components/ui/MarketplacePostSheet';
 import { dayBucket } from '../constants/booking';
 import { marketplaceListings } from '../constants/marketplace';
+import { useTheme } from '../theme/ThemeContext';
 
 const asThemed = { className: { target: false, nativeStyleToProp: { color: true } } } as const;
 const Search = cssInterop(MagnifyingGlassIcon, asThemed);
@@ -19,9 +20,8 @@ const Clear = cssInterop(XIcon, asThemed);
 type MarketplaceScope = 'open' | 'mine';
 type MarketplaceSection = { title: string; data: MarketplaceListing[] };
 
-const CARD = '#f3f3f3';
-const INK_TEXT = 'text-[var(--background-primary)]';
-const MUTED = 'text-gray-600';
+const INK_TEXT = 'text-ink';
+const MUTED = 'text-ink-muted';
 const BAR_CLEARANCE = 132;
 const TITLE_TRACKING = { letterSpacing: -0.72 };
 
@@ -38,6 +38,7 @@ const pathForScope = (scope: MarketplaceScope) =>
 
 const Marketplace = () => {
     useCopyLanguage();
+    const { colors } = useTheme();
     const location = useLocation();
     const navigate = useNavigate();
     const onScroll = useHideAppBarOnScroll();
@@ -97,14 +98,14 @@ const Marketplace = () => {
         <View className="flex-1 w-[92%] gap-3">
             <View className="flex-row items-center justify-between gap-3">
                 {searching ? (
-                    <View className="flex-1 flex-row items-center gap-2 rounded-full px-4 h-11" style={{ backgroundColor: CARD }}>
+                    <View className="flex-1 flex-row items-center gap-2 rounded-full px-4 h-11" style={{ backgroundColor: colors.surfaceMuted }}>
                         <Search size={18} weight="bold" className={MUTED} />
                         <TextInput
                             autoFocus
                             value={query}
                             onChangeText={setQuery}
                             placeholder={dc("Pickup, drop or vehicle")}
-                            placeholderTextColor="#6B7280"
+                            placeholderTextColor={colors.inkMuted}
                             returnKeyType="search"
                             className={`flex-1 font-sans ${INK_TEXT}`}
                             style={{ paddingVertical: 0 }}
@@ -129,7 +130,7 @@ const Marketplace = () => {
                             onPress={() => setSearching(true)}
                             style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
                         >
-                            <View className="w-11 h-11 rounded-full items-center justify-center" style={{ backgroundColor: CARD }}>
+                            <View className="w-11 h-11 rounded-full items-center justify-center" style={{ backgroundColor: colors.surfaceMuted }}>
                                 <Search size={20} weight="bold" className={INK_TEXT} />
                             </View>
                         </Pressable>
@@ -137,7 +138,7 @@ const Marketplace = () => {
                 )}
             </View>
 
-            <View className="flex-row rounded-full p-1" style={{ backgroundColor: CARD }}>
+            <View className="flex-row rounded-full p-1" style={{ backgroundColor: colors.surfaceMuted }}>
                 {TABS.map((tab) => {
                     const active = tab.key === scope;
                     return (
@@ -146,7 +147,7 @@ const Marketplace = () => {
                             role="tab"
                             aria-selected={active}
                             onPress={() => switchTo(tab.key)}
-                            className={`flex-1 items-center justify-center rounded-full py-2.5 px-2 ${active ? 'bg-[#121220]' : 'bg-transparent'}`}
+                            className={`flex-1 items-center justify-center rounded-full py-2.5 px-2 ${active ? 'bg-strong' : 'bg-transparent'}`}
                         >
                             <AppText className={`text-sm font-semibold ${active ? 'text-white' : MUTED}`}>
                                 {tab.label}
@@ -209,7 +210,7 @@ const Marketplace = () => {
                             <Pressable
                                 role="button"
                                 onPress={() => navigate('/available?tab=mine&post=new', { replace: true })}
-                                className="mt-4 rounded-full bg-[#121220] px-5 py-3"
+                                className="mt-4 rounded-full bg-strong px-5 py-3"
                             >
                                 <AppText className="font-semibold text-white">{dc("Post a booking")}</AppText>
                             </Pressable>

@@ -3,7 +3,6 @@ import { driverCopy as dc } from "../../lib/copy";
 import { useEffect, useState, type ReactNode } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
-  useColorScheme,
   View,
   type DimensionValue,
   type StyleProp,
@@ -21,6 +20,7 @@ import Animated, {
   withSequence,
   withTiming,
 } from 'react-native-reanimated';
+import { useTheme } from '../../theme/ThemeContext';
 
 const BLOCK = 'rgba(18,18,32,0.08)';
 const STILL_OPACITY = 0.72;
@@ -31,6 +31,7 @@ export const LIGHT_MAP_LAND_COLOR = '#b9b9bf';
 type SectionProps = {
   children: ReactNode;
   className?: string;
+  surface?: 'primary' | 'surface' | 'surfaceMuted';
   style?: StyleProp<ViewStyle>;
 };
 
@@ -39,8 +40,9 @@ type SectionProps = {
  * section rather than on every placeholder avoids starting dozens of native
  * animations while the JS thread is already processing a response.
  */
-export const SkeletonSection = ({ children, className, style }: SectionProps) => {
+export const SkeletonSection = ({ children, className, surface, style }: SectionProps) => {
     useCopyLanguage();
+  const { colors } = useTheme();
   const reducedMotion = useReducedMotion();
   const opacity = useSharedValue(STILL_OPACITY);
 
@@ -71,7 +73,11 @@ export const SkeletonSection = ({ children, className, style }: SectionProps) =>
     <Animated.View
       aria-hidden
       className={className}
-      style={[style, breathe]}
+      style={[
+        surface ? { backgroundColor: colors[surface] } : undefined,
+        style,
+        breathe,
+      ]}
     >
       {children}
     </Animated.View>
@@ -105,11 +111,11 @@ export const SkeletonBlock = ({
 /** A plain map-coloured field with one soft highlight sweeping across it. */
 export const MapLoadingSkeleton = ({ dark }: { dark?: boolean }) => {
     useCopyLanguage();
-  const systemScheme = useColorScheme();
+  const { colors, scheme } = useTheme();
   const reducedMotion = useReducedMotion();
   const [width, setWidth] = useState(0);
   const translateX = useSharedValue(0);
-  const isDark = dark ?? systemScheme === 'dark';
+  const isDark = dark ?? scheme === 'dark';
 
   useEffect(() => {
     if (reducedMotion || width <= 0) {
@@ -158,7 +164,7 @@ export const MapLoadingSkeleton = ({ dark }: { dark?: boolean }) => {
         inset: 0,
         zIndex: 20,
         overflow: 'hidden',
-        backgroundColor: isDark ? DARK_MAP_LAND_COLOR : LIGHT_MAP_LAND_COLOR,
+        backgroundColor: colors.mapLand,
       }}
     >
       {!reducedMotion && width > 0 ? (

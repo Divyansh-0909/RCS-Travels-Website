@@ -1,12 +1,13 @@
 import { useLanguage as useCopyLanguage } from "../../i18n";
 import { driverCopy as dc } from "../../lib/copy";
-import { Linking, Pressable, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { cssInterop } from 'nativewind';
 import { PhoneIcon } from 'phosphor-react-native';
 import AppText from '../AppText';
 import { UpcomingBooking } from '../../types/enums';
 import { activeLeg, initials, splitAddress } from '../../constants/booking';
 import { openDriverNavigation } from '../../lib/navigation';
+import { callPhoneNumber } from '../../lib/externalLinks';
 
 const Phone = cssInterop(PhoneIcon, {
     className: { target: false, nativeStyleToProp: { color: true } },
@@ -58,7 +59,7 @@ const RideCard = ({ booking, onPress }: Props) => {
                             ₹{booking.fare}
                         </AppText>
                     </View>
-                    <AppText numberOfLines={1} className="text-3xl font-semibold tracking-[-0.6px] text-white">
+                    <AppText numberOfLines={1} className="text-3xl font-semibold tracking-[-0.6px] text-on-strong">
                         {main}
                     </AppText>
                     {rest ? (
@@ -70,24 +71,24 @@ const RideCard = ({ booking, onPress }: Props) => {
                         className="w-12 h-12 rounded-full items-center justify-center"
                         style={{ backgroundColor: ON_PRIMARY }}
                     >
-                        <AppText className="text-xl font-semibold text-white">
+                        <AppText className="text-xl font-semibold text-on-strong">
                             {initials(booking.user?.name ?? null)}
                         </AppText>
                     </View>
-                    <AppText numberOfLines={1} className="flex-1 text-xl font-semibold text-white">
+                    <AppText numberOfLines={1} className="flex-1 text-xl font-semibold text-on-strong">
                         {booking.user?.name ?? dc("Rider")}
                     </AppText>
                     <Pressable
                         role="button"
                         aria-label={dc("Call {{value0}}", {value0: (booking.user?.name ?? 'the rider')})}
-                        onPress={() => Linking.openURL(`tel:${booking.customerPhone}`)}
+                        onPress={() => callPhoneNumber(booking.customerPhone)}
                         style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
                     >
                         <View
                             className="w-12 h-12 rounded-xl items-center justify-center"
                             style={{ backgroundColor: ON_PRIMARY }}
                         >
-                            <Phone size={22} weight="fill" className="text-[var(--foreground)]" />
+                            <Phone size={22} weight="fill" className="text-on-strong" />
                         </View>
                     </Pressable>
                 </View>
@@ -97,8 +98,8 @@ const RideCard = ({ booking, onPress }: Props) => {
                     onPress={navigate}
                     style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
                 >
-                    <View className="w-full rounded-2xl bg-[var(--background-primary)] py-3.5 items-center">
-                        <AppText className="text-base font-semibold text-[var(--foreground)]">{dc("Navigate")}</AppText>
+                    <View className="w-full rounded-2xl bg-strong py-3.5 items-center">
+                        <AppText className="text-base font-semibold text-on-strong">{dc("Navigate")}</AppText>
                     </View>
                 </Pressable>
             </View>

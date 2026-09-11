@@ -8,14 +8,14 @@ const suppliesFont = (className: string) => /(^|\s)font-/.test(className);
 // beside one of them leaves two colour utilities on the element with nothing but
 // stylesheet order to decide the winner.
 const suppliesColor = (className: string) =>
-    /(^|\s)text-(\[|primary|negative|white|black|gray-|green-|red-|amber-)/.test(className);
+    /(^|\s)text-(\[|primary|negative|white|black|gray-|green-|red-|amber-|ink|on-strong)/.test(className);
 const suppliesTracking = (className: string) => /(^|\s)tracking-/.test(className);
 
 const AppText = ({ className = '', ...rest }: TextProps) => {
     const { language } = useLanguage();
     const base = [
         suppliesFont(className) ? '' : 'font-sans',
-        suppliesColor(className) ? '' : 'text-[var(--text)]',
+        suppliesColor(className) ? '' : 'text-ink',
         suppliesTracking(className) ? '' : 'tracking-slight',
     ];
 

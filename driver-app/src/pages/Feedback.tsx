@@ -13,6 +13,7 @@ import AccountDetailScreen, {
 } from '../components/ui/AccountDetailScreen';
 import { useApi } from '../hooks/useApi';
 import { DetailSectionsSkeleton } from '../components/ui/LoadingSkeletons';
+import { useTheme } from '../theme/ThemeContext';
 
 type Review = {
   id: string;
@@ -33,18 +34,19 @@ const dateLabel = (value: string) => new Intl.DateTimeFormat('en-IN', {
   year: 'numeric',
 }).format(new Date(value));
 
-const Stars = ({ value, size = 17 }: { value: number; size?: number }) => (
-  <View className="flex-row gap-0.5" accessibilityLabel={dc("{{value0}} out of 5 stars", {value0: (value)})}>
+const Stars = ({ value, size = 17 }: { value: number; size?: number }) => {
+  const { colors } = useTheme();
+  return <View className="flex-row gap-0.5" accessibilityLabel={dc("{{value0}} out of 5 stars", {value0: (value)})}>
     {[1, 2, 3, 4, 5].map((star) => (
       <StarIcon
         key={star}
         size={size}
         weight={star <= value ? 'fill' : 'regular'}
-        color={star <= value ? '#92400E' : 'rgba(18,18,32,0.25)'}
+        color={star <= value ? colors.warning : colors.borderUi}
       />
     ))}
-  </View>
-);
+  </View>;
+};
 
 type FeedbackViewProps = {
   data: FeedbackResponse | null;
@@ -53,7 +55,9 @@ type FeedbackViewProps = {
   onRetry: () => void;
 };
 
-export const FeedbackView = ({ data, loading, error, onRetry }: FeedbackViewProps) => (
+export const FeedbackView = ({ data, loading, error, onRetry }: FeedbackViewProps) => {
+  const { colors } = useTheme();
+  return (
   <AccountDetailScreen title={dc("Feedback")}>
     {loading ? (
       <DetailSectionsSkeleton cards={3} />
@@ -72,10 +76,10 @@ export const FeedbackView = ({ data, loading, error, onRetry }: FeedbackViewProp
     ) : !data?.summary ? (
       <AccountSection>
         <View className="items-center py-6">
-          <View className="w-12 h-12 rounded-full items-center justify-center bg-white">
-            <StarIcon size={24} weight="regular" color="#121220" />
+          <View className="w-12 h-12 rounded-full items-center justify-center bg-surface">
+            <StarIcon size={24} weight="regular" color={colors.ink} />
           </View>
-          <AppText className="font-semibold mt-3 text-[var(--background-primary)]">{dc("No feedback yet")}</AppText>
+          <AppText className="font-semibold mt-3 text-ink">{dc("No feedback yet")}</AppText>
           <AppText className={`text-sm text-center mt-1 ${ACCOUNT_MUTED}`}>{dc("Ratings and comments from completed rides will appear here.")}</AppText>
         </View>
       </AccountSection>
@@ -83,7 +87,7 @@ export const FeedbackView = ({ data, loading, error, onRetry }: FeedbackViewProp
       <>
         <AccountSection>
           <View className="flex-row items-center gap-4">
-            <AppText className="text-4xl font-semibold text-[var(--background-primary)]">
+            <AppText className="text-4xl font-semibold text-ink">
               {data.summary.average.toFixed(1)}
             </AppText>
             <View className="flex-1 gap-1">
@@ -110,7 +114,8 @@ export const FeedbackView = ({ data, loading, error, onRetry }: FeedbackViewProp
       </>
     )}
   </AccountDetailScreen>
-);
+  );
+};
 
 const Feedback = () => {
     useCopyLanguage();

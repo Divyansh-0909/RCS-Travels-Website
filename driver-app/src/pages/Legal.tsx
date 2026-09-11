@@ -1,11 +1,11 @@
 import { driverCopy as dc } from "../lib/copy";
-import { Linking } from 'react-native';
 import { FileTextIcon, ShieldCheckIcon } from 'phosphor-react-native';
 import AccountRow from '../components/ui/AccountRow';
 import AccountDetailScreen, {
   AccountList,
   AccountSectionLabel,
 } from '../components/ui/AccountDetailScreen';
+import { openExternalUrl } from '../lib/externalLinks';
 
 const BASE = 'https://www.rcstravels.co.in';
 
@@ -27,7 +27,7 @@ const Legal = () => (
           detail={detail}
           Icon={Icon}
           external
-          onPress={() => Linking.openURL(`${BASE}${path}`)}
+          onPress={() => openExternalUrl(`${BASE}${path}`)}
           last={index === documents.length - 1}
         />
       ))}

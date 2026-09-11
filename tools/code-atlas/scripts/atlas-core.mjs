@@ -86,3 +86,89 @@ export function stableUnique(items, key = item => item.id) {
   for (const item of items) if (!byKey.has(key(item))) byKey.set(key(item), item)
   return [...byKey.values()].sort((a, b) => key(a).localeCompare(key(b)))
 }
+
+/**
+ * Normalize copy for display/search without retaining an entire source line.
+ * Source text nodes only ever contain a literal's own value, never surrounding
+ * code, comments, or interpolation expressions.
+ */
+export function normalizeSourceText(input) {
+  return String(input ?? '').replace(/\s+/g, ' ').trim()
+}
+
+function shannonEntropy(value) {
+  const counts = new Map()
+  for (const character of value) counts.set(character, (counts.get(character) || 0) + 1)
+  let entropy = 0
+  for (const count of counts.values()) {
+    const probability = count / value.length
+    entropy -= probability * Math.log2(probability)
+  }
+  return entropy
+}
+
+/**
+ * Keep the text index useful without turning it into a source/secret dump.
+ * This intentionally rejects opaque values and code-ish identifiers even when
+ * callers have already identified a string literal.
+ */
+export function isSafeSourceText(input, { allowSimpleLabel = false } = {}) {
+  const value = normalizeSourceText(input)
+  if (value.length < 3 || value.length > 240) return false
+  if (!/[A-Za-z]/.test(value)) return false
+  if (/^(?:https?:)?\/\//i.test(value) || /\b(?:https?:\/\/|www\.)/i.test(value)) return false
+  if (/^\/?(?:api|internal)\//i.test(value) || /(?:^|\s)[~.]?\.?[\\/][\w.-]+(?:[\\/][\w.-]+)+/.test(value) || /^[\w.-]+(?:[\\/][\w.-]+)+\.[A-Za-z]{1,8}$/.test(value)) return false
+  if (!allowSimpleLabel && /^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*$/.test(value)) return false
+  if (/^(?:[A-Fa-f0-9]{8}-){3,}[A-Fa-f0-9]{8,}$/.test(value)) return false
+  const compact = value.replace(/[\s_-]/g, '')
+  if (compact.length >= 24 && /^[A-Za-z0-9+/=]+$/.test(compact) && shannonEntropy(compact) >= 3.5) return false
+  return true
+}
+
+export function isLikelyVisibleSourceText(input) {
+  const value = normalizeSourceText(input)
+  // JSX/translation callers are allowed to show compact labels such as "Log in";
+  // ordinary literals need prose-like spacing to avoid indexing implementation
+  // constants and identifiers.
+  return isSafeSourceText(value) && /\s/.test(value) && /[A-Za-z]{2}/.test(value)
+}
+
+/**
+ * Return each distinct directed cycle in the confirmed file-import graph.
+ *
+ * A cycle is returned with its first node repeated at the end. Starting each
+ * depth-first search at the lexically smallest node in a candidate cycle
+ * prevents reporting its rotations as separate diagnostics. This deliberately
+ * does not consider test, call, or inferred edges: those do not prove a module
+ * loader cycle.
+ */
+export function findCircularImportCycles(edges) {
+  const adjacency = new Map()
+  for (const edge of edges) {
+    if (edge.type !== 'imports' || edge.confidence !== 'confirmed' || !edge.source || !edge.target) continue
+    if (!adjacency.has(edge.source)) adjacency.set(edge.source, new Set())
+    adjacency.get(edge.source).add(edge.target)
+    if (!adjacency.has(edge.target)) adjacency.set(edge.target, new Set())
+  }
+
+  const cycles = []
+  const starts = [...adjacency.keys()].sort((a, b) => a.localeCompare(b))
+  for (const start of starts) {
+    const visit = (current, trail, visiting) => {
+      for (const target of [...(adjacency.get(current) || [])].sort((a, b) => a.localeCompare(b))) {
+        if (target === start && trail.length > 1) {
+          cycles.push([...trail, start])
+          continue
+        }
+        // Only the smallest ID in a cycle may start its traversal, which
+        // eliminates rotation duplicates while retaining distinct cycles.
+        if (target.localeCompare(start) < 0 || visiting.has(target)) continue
+        visiting.add(target)
+        visit(target, [...trail, target], visiting)
+        visiting.delete(target)
+      }
+    }
+    visit(start, [start], new Set([start]))
+  }
+  return cycles.sort((left, right) => left.join('\u0000').localeCompare(right.join('\u0000')))
+}

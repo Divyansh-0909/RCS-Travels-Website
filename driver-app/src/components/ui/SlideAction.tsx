@@ -10,6 +10,7 @@ import Animated, {
     withTiming,
 } from 'react-native-reanimated';
 import AppText from '../AppText';
+import { useTheme } from '../../theme/ThemeContext';
 
 const Arrow = cssInterop(ArrowRightIcon, {
     className: { target: false, nativeStyleToProp: { color: true } },
@@ -40,8 +41,6 @@ const PAD = 6;
 // The active knob stays lighter than the track so it remains findable while it
 // moves. Once disabled, the knob is no longer an affordance, so it blends into
 // the track instead of leaving a mismatched patch of lighter padding.
-const TRACK_FILL = '#243AFB';
-const KNOB_FILL = '#7A94FF';
 /** How far across counts as meaning it. Below this it springs back. */
 const CONFIRM_AT = 0.72;
 
@@ -57,6 +56,7 @@ export const SlideAction = ({
     /** Shown in place of the label while disabled — say why, never just grey out. */
     disabledHint?: string;
 }) => {
+    const { colors } = useTheme();
     const [width, setWidth] = useState(0);
     const x = useSharedValue(0);
     const confirming = useRef(false);
@@ -122,7 +122,7 @@ export const SlideAction = ({
         <View
             onLayout={(e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width)}
             className={`w-full rounded-full overflow-hidden ${disabled ? 'opacity-50' : ''}`}
-            style={{ height: KNOB + PAD * 2, backgroundColor: TRACK_FILL, justifyContent: 'center' }}
+            style={{ height: KNOB + PAD * 2, backgroundColor: colors.primary, justifyContent: 'center' }}
         >
             <Animated.View
                 pointerEvents="none"
@@ -131,7 +131,7 @@ export const SlideAction = ({
             />
 
             <Animated.View pointerEvents="none" style={labelStyle} className="absolute w-full items-center">
-                <AppText className="text-base font-semibold text-[var(--foreground)]">
+                <AppText className="text-base font-semibold text-on-strong">
                     {disabled && disabledHint ? disabledHint : label}
                 </AppText>
             </Animated.View>
@@ -144,14 +144,14 @@ export const SlideAction = ({
                         height: KNOB,
                         marginLeft: PAD,
                         borderRadius: 999,
-                        backgroundColor: disabled ? TRACK_FILL : KNOB_FILL,
+                        backgroundColor: disabled ? colors.primary : colors.primaryLight,
                         alignItems: 'center',
                         justifyContent: 'center',
                     },
                     knobStyle,
                 ]}
             >
-                <Arrow size={24} weight="bold" className="text-[var(--foreground)]" />
+                <Arrow size={24} weight="bold" className="text-on-strong" />
             </Animated.View>
         </View>
     );

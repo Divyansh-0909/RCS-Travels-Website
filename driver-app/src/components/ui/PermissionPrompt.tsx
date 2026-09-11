@@ -22,6 +22,7 @@ import {
   type IconProps,
 } from 'phosphor-react-native';
 import AppText from '../AppText';
+import { useTheme } from '../../theme/ThemeContext';
 
 /**
  * The app-owned half of a permission request.
@@ -36,8 +37,6 @@ import AppText from '../AppText';
 
 const SCRIM = 'rgba(18,18,32,0.45)';
 const WELL = 'rgba(18,18,32,0.04)';
-const INK = '#121220';
-const PRIMARY = '#243AFB';
 
 export type PermissionPromptKind =
   | 'camera'
@@ -88,6 +87,7 @@ const PermissionSheet = ({
   onAnswer: (accepted: boolean) => void;
 }) => {
     useCopyLanguage();
+  const { colors } = useTheme();
   const [closePressed, setClosePressed] = useState(false);
   const [actionPressed, setActionPressed] = useState(false);
   const [cancelPressed, setCancelPressed] = useState(false);
@@ -112,7 +112,7 @@ const PermissionSheet = ({
         onPress={() => onAnswer(false)}
       >
         <Pressable
-          className="rounded-t-3xl bg-white px-5 pt-5 pb-8 gap-5"
+          className="rounded-t-3xl bg-surface px-5 pt-5 pb-8 gap-5"
           onPress={() => {}}
         >
           <View className="flex-row items-start gap-3">
@@ -120,14 +120,14 @@ const PermissionSheet = ({
               className="shrink-0 items-center justify-center rounded-xl"
               style={{ width: 44, height: 44, backgroundColor: WELL }}
             >
-              <Icon size={23} weight="regular" color={INK} />
+              <Icon size={23} weight="regular" color={colors.ink} />
             </View>
 
             <View className="flex-1 gap-1 pt-0.5">
-              <AppText className="text-lg font-semibold text-[var(--background-primary)]">
+              <AppText className="text-lg font-semibold text-ink">
                 {prompt?.title ?? ''}
               </AppText>
-              <AppText className="text-sm text-gray-600">
+              <AppText className="text-sm text-ink-muted">
                 {prompt?.message ?? ''}
               </AppText>
             </View>
@@ -147,7 +147,7 @@ const PermissionSheet = ({
                 opacity: closePressed ? 0.6 : 1,
               }}
             >
-              <XIcon size={16} weight="bold" color={INK} />
+              <XIcon size={16} weight="bold" color={colors.ink} />
             </Pressable>
           </View>
 
@@ -158,7 +158,7 @@ const PermissionSheet = ({
               onPressIn={() => setActionPressed(true)}
               onPressOut={() => setActionPressed(false)}
               className="w-full items-center justify-center rounded-xl px-4 py-3.5"
-              style={{ backgroundColor: PRIMARY, opacity: actionPressed ? 0.8 : 1 }}
+              style={{ backgroundColor: colors.primary, opacity: actionPressed ? 0.8 : 1 }}
             >
               <AppText className="text-base font-semibold text-white">
                 {prompt?.actionLabel ?? ''}
@@ -173,7 +173,7 @@ const PermissionSheet = ({
               className="w-full items-center justify-center rounded-xl px-4 py-3"
               style={{ backgroundColor: WELL, opacity: cancelPressed ? 0.65 : 1 }}
             >
-              <AppText className="text-base font-semibold text-[var(--background-primary)]">
+              <AppText className="text-base font-semibold text-ink">
                 {prompt?.cancelLabel ?? dc("Not now")}
               </AppText>
             </Pressable>

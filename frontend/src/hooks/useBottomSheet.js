@@ -18,10 +18,10 @@ export const SHEET_SNAPS = { collapsed: 0.28, half: 0.6 };
 // preserve on each side of `half` before falling back to evenly spaced stops.
 const MIN_SNAP_GAP_PX = 48;
 
-// Expanded is deliberately NOT a fraction. The panel floats its back button
-// above its own top edge — `-top-12` (-48px) plus the pill's `my-1` (4px) puts
-// its topmost pixel 44px above the sheet — and that button is the only way off
-// the screen, so it has to survive full expansion with a little air above it.
+// Expanded is deliberately NOT a fraction. Most sheets float navigation chrome
+// above their own top edge, so the default keeps enough room for that control.
+// Booking sheets can opt into a zero gap when their expanded state hides the
+// floating control and should reach the viewport edge.
 //
 // That requirement is a fixed number of pixels on every device. The old 6%
 // drifted from 38px on a small phone to 56px on a large one: too tight to fit
@@ -76,13 +76,13 @@ const prefersReducedMotion = () =>
  * content is the exception: its stops are pulled inside the sheet so expanded,
  * half and collapsed remain distinct without making the sheet itself taller.
  */
-export function sheetStops(viewportHeight, bottomInset = 0, naturalHeight = 0, dismissible = false) {
+export function sheetStops(viewportHeight, bottomInset = 0, naturalHeight = 0, dismissible = false, expandedTopGap = EXPANDED_TOP_GAP_PX) {
     // A panel can pin an action bar below the sheet (the vehicle screen keeps its
     // Book button on screen at every stop). The sheet then owns everything above
     // that bar, and the fractions are of THAT space — measured against the full
     // viewport instead, a tall bar would quietly eat most of the collapsed sheet.
     const available = viewportHeight - bottomInset;
-    const maxHeight = available - EXPANDED_TOP_GAP_PX;
+    const maxHeight = available - expandedTopGap;
     // A sheet is never taller than what it holds. The vehicle screen's fare list
     // always overruns the cap, so this is inert there — but the tracking panels
     // hold a fixed handful of rows, and at the full height `expanded` opened onto
@@ -196,11 +196,13 @@ export function resolveSnap(y, velocity, stops) {
  * @param {boolean} [options.dismissible] Drops the intermediate stops and lets a downward throw
  *                                        take the sheet off-screen. For sheets that are open or
  *                                        gone rather than resizable.
+ * @param {number} [options.expandedTopGap] Px reserved above the sheet at full expansion.
+ * @param {boolean} [options.lockExpanded] Keep the sheet at the expanded stop and disable drag snapping.
  * @param {() => void} [options.onDismiss] Fired when such a throw lands. The owner is what
  *                                         actually closes the sheet — this only reports it.
  * @param {(snap: typeof SNAP_NAMES[number]) => void} [options.onSnapChange] Fired on settle, not per frame.
  */
-export function useBottomSheet({ enabled, open = true, initialSnap = INITIAL_SHEET_SNAP, fillAvailable = false, bottomInset = 0, contentKey, dismissible = false, onDismiss, onSnapChange }) {
+export function useBottomSheet({ enabled, open = true, initialSnap = INITIAL_SHEET_SNAP, fillAvailable = false, bottomInset = 0, contentKey, dismissible = false, expandedTopGap = EXPANDED_TOP_GAP_PX, lockExpanded = false, onDismiss, onSnapChange }) {
     const sheetRef = useRef(null);
     const grabberRef = useRef(null);
 
@@ -288,10 +290,10 @@ export function useBottomSheet({ enabled, open = true, initialSnap = INITIAL_SHE
         geometryRef.current = {
             vh,
             bottomInset: inset,
-            ...sheetStops(vh, inset, fillAvailable ? 0 : measureContent(), dismissible),
+            ...sheetStops(vh, inset, fillAvailable ? 0 : measureContent(), dismissible, expandedTopGap),
         };
         return geometryRef.current;
-    }, [measureContent, dismissible, fillAvailable]);
+    }, [measureContent, dismissible, expandedTopGap, fillAvailable]);
 
     const paint = useCallback((y) => {
         // Expanded rests at 0 and nothing sits above it, so a negative value can
@@ -374,19 +376,20 @@ export function useBottomSheet({ enabled, open = true, initialSnap = INITIAL_SHE
 
     /** Animate to a named stop. Safe to call from anywhere, including mid-drag. */
     const snapTo = useCallback((snap, velocity = 0) => {
+        const nextSnap = lockExpanded ? "expanded" : snap;
         const { stops } = geometryRef.current.vh ? geometryRef.current : measure();
-        const y = stops[snap];
+        const y = stops[nextSnap];
         if (y == null) return;
-        const changed = snapRef.current !== snap;
-        snapRef.current = snap;
-        syncScrollability(snap);
+        const changed = snapRef.current !== nextSnap;
+        snapRef.current = nextSnap;
+        syncScrollability(nextSnap);
         springTo(y, velocity);
-        if (changed) onSnapChangeRef.current?.(snap);
-    }, [measure, springTo, syncScrollability]);
+        if (changed) onSnapChangeRef.current?.(nextSnap);
+    }, [lockExpanded, measure, springTo, syncScrollability]);
 
     // ---- Gesture ----------------------------------------------------------
     useEffect(() => {
-        if (!enabled) return;
+        if (!enabled || lockExpanded) return;
         const el = sheetRef.current;
         if (!el) return;
 
@@ -512,7 +515,19 @@ export function useBottomSheet({ enabled, open = true, initialSnap = INITIAL_SHE
             el.removeEventListener("touchmove", onTouchMove);
             dragRef.current = null;
         };
-    }, [enabled, paint, scrollerOf, springTo, stopSpring, syncScrollability]);
+    }, [enabled, lockExpanded, paint, scrollerOf, springTo, stopSpring, syncScrollability]);
+
+    useEffect(() => {
+        if (!enabled || !lockExpanded) return;
+        const { stops } = geometryRef.current.vh ? geometryRef.current : measure();
+        if (stops.expanded == null) return;
+        dragRef.current = null;
+        const changed = snapRef.current !== "expanded";
+        snapRef.current = "expanded";
+        syncScrollability("expanded");
+        springTo(stops.expanded);
+        if (changed) onSnapChangeRef.current?.("expanded");
+    }, [enabled, lockExpanded, measure, springTo, syncScrollability]);
 
     // ---- Geometry + entrance ----------------------------------------------
     useLayoutEffect(() => {

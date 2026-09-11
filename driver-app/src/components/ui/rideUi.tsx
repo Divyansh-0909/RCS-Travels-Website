@@ -8,6 +8,7 @@ import { PhoneIcon } from 'phosphor-react-native';
 import AppText from '../AppText';
 import BackButton from './BackButton';
 import { splitAddress } from '../../constants/booking';
+import { useTheme } from '../../theme/ThemeContext';
 
 const asThemed = { className: { target: false, nativeStyleToProp: { color: true } } } as const;
 export const Phone = cssInterop(PhoneIcon, asThemed);
@@ -17,13 +18,10 @@ export const Phone = cssInterop(PhoneIcon, asThemed);
 // require() into frontend/src would resolve at type-check time and fail at bundle time.
 export const WhatsappLogo = require('../../../assets/whatsapp-logo.webp');
 
-export const PAGE = '#f3f3f3';                   // --foreground-muted
-export const SURFACE = '#ffffff';                // --foreground
-export const INK = '#121220';                    // --background-primary
 export const HAIRLINE = 'rgba(18,18,32,0.1)';
 
-export const INK_TEXT = 'text-[var(--background-primary)]';
-export const MUTED = 'text-gray-600';
+export const INK_TEXT = 'text-ink';
+export const MUTED = 'text-ink-muted';
 export const CONTENT = 'text-black';
 
 // The primary line of a section: the thing a captain actually reads, as opposed to the
@@ -36,21 +34,24 @@ export const PRIMARY_LINE = `text-base font-semibold ${CONTENT}`;
  * lives outside their ScrollViews so the captain never loses the page title or the
  * way back while reading a long fare breakdown.
  */
-export const DetailPageHeader = ({ title, onBack }: { title: string; onBack: () => void }) => (
-    <View className="w-full flex-row items-center gap-2 px-4" style={{ backgroundColor: PAGE }}>
-        <BackButton onPress={onBack} iconClassName={INK_TEXT} />
-        <AppText className={`text-xl font-semibold ${INK_TEXT}`} style={{ letterSpacing: -0.72 }}>
-            {title}
-        </AppText>
-    </View>
-);
+export const DetailPageHeader = ({ title, onBack }: { title: string; onBack: () => void }) => {
+    const { colors } = useTheme();
+    return (
+        <View className="w-full flex-row items-center gap-2 px-4" style={{ backgroundColor: colors.surfaceMuted }}>
+            <BackButton onPress={onBack} iconClassName={INK_TEXT} />
+            <AppText className={`text-xl font-semibold ${INK_TEXT}`} style={{ letterSpacing: -0.72 }}>
+                {title}
+            </AppText>
+        </View>
+    );
+};
 
 // The status pill's fill says which KIND of state the ride is in rather than which
 // state exactly — the three working statuses share a colour because the word on the
 // pill already separates them, and six fills would make a list into a colour chart.
 // White clears 6.4:1 on the tightest of these, so every pill is AA at 12px.
 const STATUS_FILLS: Record<string, string> = {
-    assigned: INK,
+    assigned: '#121220',
     en_route: '#243AFB',
     reached: '#243AFB',
     started: '#243AFB',
@@ -60,7 +61,7 @@ const STATUS_FILLS: Record<string, string> = {
 
 // Ink for anything unrecognised: a status the app has not been taught still has to
 // draw, and the neutral is the one fill that claims nothing about it.
-export const statusFill = (status: string) => STATUS_FILLS[status] ?? INK;
+export const statusFill = (status: string) => STATUS_FILLS[status] ?? '#121220';
 
 // Payment as a sentence rather than a chip. The colours that used to sit beside this
 // have gone with the words they dressed: the detail screen banners this across the head
@@ -133,16 +134,18 @@ export const CustomerPaymentPanel = ({
 
 // Pickup is a solid dark dot, drop is a primary ring — two shapes rather than two
 // colours, so the pair still says which end is which to anyone who cannot separate them.
-const RouteDot = ({ drop }: { drop?: boolean }) =>
-    drop ? (
+const RouteDot = ({ drop }: { drop?: boolean }) => {
+    const { colors } = useTheme();
+    return drop ? (
         <View className="w-3 h-3 rounded-full bg-primary items-center justify-center">
             {/* Centred by flex rather than absolute + translate: RN has no percentage
                 transforms, and a hole punched in a ring only has to be in the middle. */}
-            <View className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: SURFACE }} />
+            <View className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: colors.surface }} />
         </View>
     ) : (
-        <View className="w-3 h-3 rounded-full" style={{ backgroundColor: INK }} />
+        <View className="w-3 h-3 rounded-full" style={{ backgroundColor: colors.ink }} />
     );
+};
 
 /**
  * One end of the trip, split at the first comma. The first field is the only part read
@@ -178,14 +181,17 @@ export const RouteLeg = ({ address, drop }: { address: string; drop?: boolean })
  * labelling what the label already said. Horizontal padding is a touch wider than the
  * vertical to make up for the mark that used to hold that edge.
  */
-export const FactPill = ({ children }: { children: ReactNode }) => (
-    <View
-        className="rounded-xl"
-        style={{ backgroundColor: PAGE, paddingVertical: 6, paddingHorizontal: 10 }}
-    >
-        <AppText className={`text-sm font-semibold ${INK_TEXT}`}>{children}</AppText>
-    </View>
-);
+export const FactPill = ({ children }: { children: ReactNode }) => {
+    const { colors } = useTheme();
+    return (
+        <View
+            className="rounded-xl"
+            style={{ backgroundColor: colors.surfaceMuted, paddingVertical: 6, paddingHorizontal: 10 }}
+        >
+            <AppText className={`text-sm font-semibold ${INK_TEXT}`}>{children}</AppText>
+        </View>
+    );
+};
 
 /**
  * `leading` is a node, not an icon component: one of these buttons is fronted by a
@@ -243,8 +249,8 @@ export const ActionButton = ({
                         : danger
                             ? 'bg-negative'
                         : solid
-                            ? 'bg-[var(--background-primary)]'
-                            : 'bg-[var(--foreground)]'
+                            ? 'bg-strong'
+                            : 'bg-surface'
                 }`}
                 style={{
                     borderRadius: large ? 16 : 12,
@@ -275,7 +281,7 @@ export const ActionButton = ({
 
 /** The two marks the action buttons are fronted by, so both call sites agree on size. */
 export const PhoneMark = () => (
-    <Phone size={18} weight="fill" className="text-[var(--foreground)]" />
+    <Phone size={18} weight="fill" className="text-on-strong" />
 );
 
 export const WhatsappMark = () => (

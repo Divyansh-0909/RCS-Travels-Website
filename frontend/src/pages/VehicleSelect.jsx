@@ -1190,7 +1190,7 @@ const VehicleSelect = () => {
             {!barCollapsed && (
                 <p className="text-xs sm:text-sm leading-snug text-center sm:text-left text-[var(--text-muted)]">
                     {scheduledTime
-                        ? tr("Cancel free while your driver is more than 500 m from pickup. Within 500 m, the paid 15% advance is retained.")
+                        ? tr("Cancel free while your driver is far from pickup. If near, the paid 15% advance is deducted.")
                         : tr("Ride Now cancellation is free before the trip starts.")}
                 </p>
             )}
@@ -1214,7 +1214,7 @@ const VehicleSelect = () => {
                 its name and price on one line each, like every other card */}
             <div className="flex justify-between items-center w-full gap-2 sm:gap-3">
                 <div className="flex justify-start items-center w-full gap-2 sm:gap-3">
-                    <img src={image} alt="car-icon" className="w-20" />
+                    <img src={image} alt="car-icon" className="w-18 -scale-x-100" />
                     <div className="text-left flex flex-col justify-center items-start gap-1.5">
                         {/* Name alone on the first line; seats and ETA share the
                             muted second line. The seat count is a person glyph and a
@@ -1252,7 +1252,7 @@ const VehicleSelect = () => {
                     </div>
                 ) : (
                     <div key={sharing ? "share" : "solo"} className="animate-fade-swap text-right flex flex-col justify-center items-end gap-1.5">
-                        <span className={`flex gap-1 leading-tight ${solo}`}> <span className={`${soloVisiblity}`}>{tr("Not shared:")} </span>{priceSolo}</span>
+                        <span className={`flex gap-1 leading-tight ${solo}`}> <span className={`${soloVisiblity}`}>{tr("Solo:")} </span>{priceSolo}</span>
                         <span className={`flex gap-1 leading-tight ${share}`}> <span className={`${shareVisiblity}`}>{tr("Sharing:")} </span>{priceSharing}</span>
                     </div>
                 )}
@@ -1279,6 +1279,7 @@ const VehicleSelect = () => {
                         bottom-sheet panels sit over it (OnBoarding layering) */}
                 {isMobile && (
                     <GoogleMap
+                        appearance="dark"
                         center={pickupPoint}
                         zoom={12}
                         onMapReady={setMapApi}
@@ -1337,7 +1338,7 @@ const VehicleSelect = () => {
                 <BackgroundPanel show={searchingVisible && detialsVisibility === false} className={`z-3 sm:z-2 sm:overflow-hidden py-6 text-left sm:px-[9%] md:px-[5%] xl:px-[13%] flex flex-col sm:flex-row sm:justify-center lg:justify-between items-center`}>
                     {/* Back to the zoomed-out full-route view while searching */}
                     {!isMobile && searchingVisible && detialsVisibility === false && (
-                        <GoogleMap center={pickupPoint} zoom={12} onMapReady={setMapApi} className={MAP_CLASSES} />
+                        <GoogleMap appearance="dark" center={pickupPoint} zoom={12} onMapReady={setMapApi} className={MAP_CLASSES} />
                     )}
 
                     <div className={`relative z-10 sm:order-1 flex flex-col justify-end sm:justify-center items-center sm:items-start ${STACK} w-full sm:w-auto h-full sm:h-auto`}>
@@ -1399,7 +1400,7 @@ const VehicleSelect = () => {
                     {/* same split as every other desktop panel: content
                             left, the booked route on the right */}
                     {!isMobile && detialsVisibility && (
-                        <GoogleMap center={pickupPoint} zoom={12} onMapReady={setMapApi} className={`${MAP_CLASSES} max-lg:hidden`} />
+                        <GoogleMap appearance="dark" center={pickupPoint} zoom={12} onMapReady={setMapApi} className={`${MAP_CLASSES} max-lg:hidden`} />
                     )}
                     <RideDetails prop={{ bookingId, setLoading, setError, setDetialsVisibility }} />
                 </BackgroundPanel>
@@ -1412,6 +1413,7 @@ const VehicleSelect = () => {
                 <BackgroundPanel show={step === "confirmLocation"} className={`z-1 sm:z-0 sm:overflow-hidden py-6 text-left flex flex-col sm:flex-row sm:px-[9%] md:px-[5%] xl:px-[13%] sm:justify-center lg:justify-between items-center`}>
                     {!isMobile && step === "confirmLocation" && (
                         <GoogleMap
+                            appearance="dark"
                             center={confirmTarget === "pickup" ? pickupPoint : dropPoint}
                             zoom={19}
                             onMapReady={setMapApi}
@@ -1478,7 +1480,7 @@ const VehicleSelect = () => {
                                     must not state softer terms than the one before. */}
                             <p className="text-xs sm:text-sm leading-snug text-[var(--text-muted)]">
                                 {scheduledTime
-                                    ? tr("Cancel free while your driver is more than 500 m from pickup. Within 500 m, the paid 15% advance is retained.")
+                                    ? tr("Cancel free while your driver is far from pickup. If near, the paid 15% advance is deducted.")
                                     : tr("Ride Now cancellation is free before the trip starts.")}
                             </p>
                         </div>
@@ -1511,6 +1513,7 @@ const VehicleSelect = () => {
                     sheet
                     duration={420}
                     bottomInset={pinBookBar ? bookBarHeight : 0}
+                    expandedTopGap={0}
                     // The sheet is sized to its content, and this screen's
                     // content arrives late: the estimate decides whether there
                     // are notice pills above the list at all, and whether the
@@ -1525,18 +1528,20 @@ const VehicleSelect = () => {
                     // down into the space the bar just gave up.
                     onSnapChange={setSheetSnap}
                     show={step === "vehicleType"}
-                    className={`z-1 sm:z-0 sm:overflow-hidden py-6 max-sm:pb-0 text-left sm:px-[9%] md:px-[5%] xl:px-[13%] flex flex-col sm:flex-row sm:justify-center lg:justify-between items-center`}
+                    className="z-1 sm:z-0 sm:overflow-hidden py-6 max-sm:pb-0 text-left sm:px-[9%] md:px-[5%] xl:px-[13%] flex flex-col sm:flex-row sm:justify-center lg:justify-between items-center"
                 >
                     {/* Zoomed-out full-route view; markers are clickable to
                             adjust either endpoint. Guarded on `step` so the
                             singleton map moves out promptly on step change. */}
                     {!isMobile && step === "vehicleType" && (
-                        <GoogleMap center={pickupPoint} zoom={12} onMapReady={setMapApi} className={MAP_CLASSES} />
+                        <GoogleMap appearance="dark" center={pickupPoint} zoom={12} onMapReady={setMapApi} className={MAP_CLASSES} />
                     )}
 
-                    <div onClick={() => navigate('/')} className="max-sm:-top-12 max-sm:left-4 max-sm:h-9 max-sm:my-1 max-sm:px-3 max-sm:rounded-full max-sm:border max-sm:border-[var(--foreground)]/30 max-sm:bg-[var(--background-muted)] max-sm:shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)] flex items-center justify-center cursor-pointer sm:opacity-[0.8] transition-opacity duration-300 hover:opacity-[1] absolute z-20 sm:left-5 sm:top-6 text-[var(--text)]">
-                        <Icon path={mdiKeyboardBackspace} size={1.2} />
-                    </div>
+                    {(!isMobile || sheetSnap !== "expanded") && (
+                        <div onClick={() => navigate('/')} className="max-sm:-top-12 max-sm:left-4 max-sm:h-9 max-sm:my-1 max-sm:px-3 max-sm:rounded-full max-sm:border max-sm:border-[var(--foreground)]/30 max-sm:bg-[var(--background-muted)] max-sm:shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)] flex items-center justify-center cursor-pointer sm:opacity-[0.8] transition-opacity duration-300 hover:opacity-[1] absolute z-20 sm:left-5 sm:top-6 text-[var(--text)]">
+                            <Icon path={mdiKeyboardBackspace} size={1.2} />
+                        </div>
+                    )}
                     {/* Bounds the column to the sheet's height on phones, so the
                             scroll area inside it has something to be `flex-1` of.
                             sm:contents removes it from layout entirely from the sm
@@ -1590,8 +1595,8 @@ const VehicleSelect = () => {
                                                metrics land */
                                             <Skeleton rounded="rounded-full" className="h-[30px] sm:h-[34px] w-[130px] sm:w-[145px]" />
                                         ) : distanceKm != null && (
-                                            <div className="rounded-xl bg-[var(--background-muted)] px-3 py-1.5 text-sm sm:text-base whitespace-nowrap text-[var(--text-muted)]">
-                                                {Math.round(distanceKm * 10) / 10}{" " + dc("km")}{durationMin != null ? dc("· {{value0}} min", {value0: (durationMin)}) : ""}
+                                            <div className="rounded-full bg-[var(--background-muted)] px-3 py-1.5 text-xs whitespace-nowrap text-[var(--text-muted)]">
+                                                Drop by 12:46PM
                                             </div>
                                         )}
                                         {/* Only alongside a form: on the unpriced and

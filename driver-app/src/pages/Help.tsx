@@ -1,5 +1,4 @@
 import { driverCopy as dc } from "../lib/copy";
-import { Linking } from 'react-native';
 import { ChatCircleIcon, EnvelopeIcon, PhoneIcon, WarningCircleIcon } from 'phosphor-react-native';
 import AccountRow from '../components/ui/AccountRow';
 import AccountDetailScreen, {
@@ -12,6 +11,7 @@ import {
   supportEmail,
   supportPhoneDisplay,
 } from '../constants/support';
+import { callPhoneNumber, openExternalUrl } from '../lib/externalLinks';
 
 const Help = () => (
   <AccountDetailScreen title={dc("Help")}>
@@ -36,7 +36,10 @@ const Help = () => (
         detail={supportEmail()}
         Icon={EnvelopeIcon}
         caret={false}
-        onPress={() => Linking.openURL(`mailto:${supportEmail()}?subject=Captain%20support`)}
+        onPress={() => openExternalUrl(
+          `mailto:${supportEmail()}?subject=Captain%20support`,
+          dc("Could not open the email app. Please try again."),
+        )}
         last
       />
     </AccountList>
@@ -49,7 +52,7 @@ const Help = () => (
         Icon={WarningCircleIcon}
         tone="danger"
         caret={false}
-        onPress={() => Linking.openURL('tel:112')}
+        onPress={() => callPhoneNumber('112')}
         last
       />
     </AccountList>

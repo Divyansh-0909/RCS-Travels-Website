@@ -3,6 +3,7 @@ import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import ErrorState from './ui/ErrorState';
+import { useTheme } from '../theme/ThemeContext';
 
 /**
  * The app's last line. Anything that throws while RENDERING below this point lands
@@ -21,6 +22,25 @@ import ErrorState from './ui/ErrorState';
 
 type Props = { children: ReactNode };
 type State = { error: Error | null };
+
+const ThemedFallback = ({ error, onReset }: { error: Error; onReset: () => void }) => {
+    const { scheme } = useTheme();
+    return (
+        <View className="flex-1 w-full items-center justify-center bg-canvas">
+            <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} animated />
+            <ErrorState
+                title={dc("This screen stopped working")}
+                message={
+                    __DEV__
+                        ? error.message
+                        : dc("The app hit an error it could not recover from. Your rides are safe on the server — try again to carry on.")
+                }
+                actionLabel={dc("Try again")}
+                onAction={onReset}
+            />
+        </View>
+    );
+};
 
 class ErrorBoundary extends Component<Props, State> {
     state: State = { error: null };
@@ -46,27 +66,7 @@ class ErrorBoundary extends Component<Props, State> {
         const { error } = this.state;
         if (!error) return this.props.children;
 
-        return (
-            // Its own opaque page. This replaces whatever was on screen, and half of the
-            // app's screens are the dark auth shell — without a background of its own
-            // the error would be drawn over a login form it has already broken.
-            <View className="flex-1 w-full items-center justify-center bg-[var(--foreground)]">
-                <StatusBar style="dark" animated />
-                <ErrorState
-                    title={dc("This screen stopped working")}
-                    // The raw message only in development. On a captain's phone it is a
-                    // minified variable name, which tells him nothing and reads as the
-                    // app talking to somebody else.
-                    message={
-                        __DEV__
-                            ? error.message
-                            : dc("The app hit an error it could not recover from. Your rides are safe on the server — try again to carry on.")
-                    }
-                    actionLabel={dc("Try again")}
-                    onAction={this.reset}
-                />
-            </View>
-        );
+        return <ThemedFallback error={error} onReset={this.reset} />;
     }
 }
 

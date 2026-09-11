@@ -4,7 +4,7 @@ import cors from 'cors'
 import { prisma } from './db/prisma.js'
 import { clerkAuth } from './middleware/auth.js'
 import { errorHandler } from './middleware/errorHandler.js'
-import { googleApiLimiter, fareLimiter, authLimiter, shareLimiter } from './middleware/rateLimit.js'
+import { googleApiLimiter, fareLimiter, authLimiter, shareLimiter, apiLimiters, paymentWriteLimiter } from './middleware/rateLimit.js'
 import fareRouter from './routes/fare.js'
 import bookingsRouter from './routes/bookings.js'
 import driverRouter from './routes/driver.js'
@@ -34,8 +34,17 @@ app.set('trust proxy', 1)
 
 // Comma-separated allowlist, e.g. "https://rcstravels.vercel.app". Defaults to
 // the local Vite ports so dev needs no configuration.
-const ALLOWED_ORIGINS = (process.env.CORS_ORIGINS ?? 'http://localhost:1574,http://localhost:5173')
+const LOCAL_ORIGINS = [
+  'http://localhost:1574', 'http://127.0.0.1:1574',
+  'http://localhost:5173', 'http://127.0.0.1:5173',
+]
+const configuredOrigins = (process.env.CORS_ORIGINS ?? LOCAL_ORIGINS.join(','))
   .split(',').map(s => s.trim()).filter(Boolean)
+// Vite may be opened through either loopback spelling. Keep both usable in
+// development even when a long-running dev runner supplied an older allowlist.
+const ALLOWED_ORIGINS = process.env.NODE_ENV === 'development'
+  ? [...new Set([...configuredOrigins, ...LOCAL_ORIGINS])]
+  : configuredOrigins
 
 app.use(cors({
   origin(origin, callback) {
@@ -67,6 +76,11 @@ app.use('/internal', internalRouter)
 
 app.use(clerkAuth)
 
+// These protected routers share one identity-aware budget. Public API surfaces
+// keep their deliberately sized, IP-based policies below instead.
+const protectedApiPrefixes = ['/api/bookings', '/api/driver', '/api/users', '/api/admin', '/api/payments']
+app.use(protectedApiPrefixes, apiLimiters.read, apiLimiters.write, apiLimiters.location)
+
 // Both of these proxy billed Google APIs and cannot require auth — a rider sees
 // fares and types addresses before logging in.
 // Public by design and by necessity: the person following a shared ride has no
@@ -82,7 +96,7 @@ app.use('/api/driver', driverRouter)
 app.use('/api/users', usersRouter)
 app.use('/api/auth', authLimiter, hybridAuthRouter)
 app.use('/api/admin', adminRouter)
-app.use('/api/payments', paymentsRouter)
+app.use('/api/payments', paymentWriteLimiter, paymentsRouter)
 app.use('/api/googleAPI', googleApiLimiter, googleRouter)
 
 // The database round trip is load-bearing, not decorative. Supabase's free tier

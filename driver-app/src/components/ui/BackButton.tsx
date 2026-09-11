@@ -25,7 +25,7 @@ const BackButton = ({
   onPress,
   label = 'Back',
   icon = 'arrow',
-  iconClassName = 'text-[var(--background-primary)]',
+  iconClassName = 'text-ink',
   iconSize = 22,
   weight = 'bold',
   className = '',

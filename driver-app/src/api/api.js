@@ -42,7 +42,24 @@ async function request(path, { method = "GET", body, getToken } = {}) {
     const headers = { "Content-Type": "application/json" };
 
     if (getToken) {
-        const token = await getToken();
+        let token;
+        try {
+            token = await getToken();
+        } catch {
+            return {
+                error: 'Could not verify your session. Please try again.',
+                status: 0,
+                code: 'AUTH_TOKEN_ERROR',
+            };
+        }
+
+        if (!token) {
+            return {
+                error: 'Your session has expired. Please sign in again.',
+                status: 401,
+                code: 'AUTH_TOKEN_UNAVAILABLE',
+            };
+        }
         headers["Authorization"] = `Bearer ${token}`;
     }
 
@@ -77,12 +94,24 @@ async function request(path, { method = "GET", body, getToken } = {}) {
         clearTimeout(timer);
     }
 
-    if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        return { error: data.error || `Server error (${res.status})`, status: res.status, code: data.code, details: data.details };
+    if (res.status === 204) return {};
+
+    let data;
+    try {
+        data = await res.json();
+    } catch {
+        return {
+            error: `Server returned an invalid response (${res.status})`,
+            status: res.status,
+            code: 'INVALID_RESPONSE',
+        };
     }
 
-    return res.json();
+    if (!res.ok) {
+        return { error: data?.error || `Server error (${res.status})`, status: res.status, code: data?.code, details: data?.details };
+    }
+
+    return data;
 }
 
 export const sendOtp           = (phone, intent)         => request("/api/auth/send-otp", { method: "POST", body: { phone, intent, audience: "driver" } });

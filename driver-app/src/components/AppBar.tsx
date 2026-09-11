@@ -82,7 +82,7 @@ import { driverCopy as dc } from "../lib/copy";
                 ]}
             >
                 <View
-                    className="flex w-full py-1 justify-center items-center h-fit rounded-full bg-[var(--background-primary)]"
+                    className="flex w-full py-1 justify-center items-center h-fit rounded-full bg-strong"
                     style={{ minHeight: BAR_HEIGHT }}
                 >
                     <FlatList
@@ -103,19 +103,19 @@ import { driverCopy as dc } from "../lib/copy";
                                     role="button"
                                     aria-label={isPost ? dc("Post a marketplace booking") : item.name}
                                     onPress={() => navigate(isPost ? postPath : item.path, { replace: true })}
-                                    className={`flex gap-1 items-center justify-center ${isPost ? "bg-[var(--foreground)] w-12 h-12 my-1.5 rounded-full mx-1" : "w-[14vw]"}`}>
+                                    className={`flex gap-1 items-center justify-center ${isPost ? "bg-surface w-12 h-12 my-1.5 rounded-full mx-1" : "w-[14vw]"}`}>
                                     {isPost ? (
-                                        <item.Icon size={24} weight="bold" className="text-[var(--background-primary)]" />
+                                        <item.Icon size={24} weight="bold" className="text-ink" />
                                     ) : (
                                         <View className="w-[22px] h-[22px] items-center justify-center">
-                                            <item.Icon size={20} weight="regular" className="text-[var(--text-muted)]" />
+                                            <item.Icon size={20} weight="regular" className="text-ink-muted" />
                                             <View className={`absolute transition-opacity duration-200 ${isSelected ? "opacity-100" : "opacity-0"}`}>
-                                                <item.Icon size={20} weight="fill" className="text-[var(--foreground)]" />
+                                                <item.Icon size={20} weight="fill" className="text-on-strong" />
                                             </View>
                                         </View>
                                     )}
                                     {!isPost && (
-                                        <AppText className={`${isSelected ? "text-[var(--foreground)]" : "text-[var(--text-muted)]" } transition-colors duration-200 text-xs font-semibold`}>
+                                        <AppText className={`${isSelected ? "text-on-strong" : "text-ink-muted" } transition-colors duration-200 text-xs font-semibold`}>
                                             {item.name}
                                         </AppText>
                                     )}

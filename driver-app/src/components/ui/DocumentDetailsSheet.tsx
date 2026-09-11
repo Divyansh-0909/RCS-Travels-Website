@@ -5,6 +5,7 @@ import { Keyboard, Modal, Platform, Pressable, TextInput, View } from 'react-nat
 import { XIcon } from 'phosphor-react-native';
 import AppText from '../AppText';
 import { numberFieldFor, type DriverDocumentType } from '../../constants/documents';
+import { useTheme } from '../../theme/ThemeContext';
 
 // What has to be typed in before a document can be registered: the number
 // printed on it, and the date it runs out.
@@ -23,10 +24,8 @@ const ERROR_BORDER = 'rgba(185,28,28,0.55)';
 const WELL = 'rgba(18,18,32,0.03)';
 const SCRIM = 'rgba(18,18,32,0.45)';
 
-const INK = 'text-[var(--background-primary)]';
-const MUTED = 'text-gray-600';
-const PRIMARY = '#243AFB';
-const ERROR = '#B91C1C';
+const INK = 'text-ink';
+const MUTED = 'text-ink-muted';
 
 type Props = {
   visible: boolean;
@@ -73,6 +72,7 @@ const toIso = (masked: string): string | null => {
 
 const DocumentDetailsSheet = ({ visible, type, label, needsNumber, needsExpiry, onCancel, onSubmit }: Props) => {
     useCopyLanguage();
+  const { colors } = useTheme();
   const numberField = numberFieldFor(type);
 
   const [number, setNumber] = useState('');
@@ -142,7 +142,7 @@ const DocumentDetailsSheet = ({ visible, type, label, needsNumber, needsExpiry, 
         className="flex-1 justify-end"
         style={{ backgroundColor: SCRIM, paddingBottom: keyboardHeight }}
       >
-        <View className="bg-white rounded-t-3xl px-5 pt-5 pb-8 gap-4">
+        <View className="bg-surface rounded-t-3xl px-5 pt-5 pb-8 gap-4">
           {/* The way out, level with the title — same as the source sheet, which is
               the step immediately before this one. A full-width Cancel beside
               Upload gave equal weight to finishing and abandoning, on a sheet the
@@ -182,7 +182,7 @@ const DocumentDetailsSheet = ({ visible, type, label, needsNumber, needsExpiry, 
                 opacity: closePressed ? 0.6 : 1,
               }}
             >
-              <XIcon size={16} weight="bold" color="#121220" />
+              <XIcon size={16} weight="bold" color={colors.ink} />
             </Pressable>
           </View>
 
@@ -193,7 +193,7 @@ const DocumentDetailsSheet = ({ visible, type, label, needsNumber, needsExpiry, 
                 value={number}
                 onChangeText={setNumber}
                 placeholder={numberField.placeholder}
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={colors.inkMuted}
                 autoCapitalize="characters"
                 autoCorrect={false}
                 maxLength={60}
@@ -202,7 +202,7 @@ const DocumentDetailsSheet = ({ visible, type, label, needsNumber, needsExpiry, 
                   backgroundColor: WELL,
                   borderWidth: 1,
                   borderColor: touched && numberBad ? ERROR_BORDER : HAIRLINE,
-                  color: '#121220',
+                  color: colors.ink,
                 }}
               />
               {/* Names the field it sits under, for the same reason the heading
@@ -210,7 +210,7 @@ const DocumentDetailsSheet = ({ visible, type, label, needsNumber, needsExpiry, 
                   headed "Policy number" is the app forgetting what it just asked
                   for. */}
               {touched && numberBad ? (
-                <AppText className="text-sm" style={{ color: ERROR }}>{dc("Enter the") + " "}{numberField.label.toLowerCase()}{" " + dc("printed on it.")}</AppText>
+                <AppText className="text-sm" style={{ color: colors.negative }}>{dc("Enter the") + " "}{numberField.label.toLowerCase()}{" " + dc("printed on it.")}</AppText>
               ) : null}
             </View>
           ) : null}
@@ -222,7 +222,7 @@ const DocumentDetailsSheet = ({ visible, type, label, needsNumber, needsExpiry, 
                 value={expiry}
                 onChangeText={(raw) => setExpiry(maskDate(raw))}
                 placeholder={dc("DD/MM/YYYY")}
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={colors.inkMuted}
                 keyboardType="number-pad"
                 maxLength={10}
                 className="w-full rounded-xl px-3.5 py-3 text-base"
@@ -230,11 +230,11 @@ const DocumentDetailsSheet = ({ visible, type, label, needsNumber, needsExpiry, 
                   backgroundColor: WELL,
                   borderWidth: 1,
                   borderColor: touched && expiryBad ? ERROR_BORDER : HAIRLINE,
-                  color: '#121220',
+                  color: colors.ink,
                 }}
               />
               {touched && expiryBad ? (
-                <AppText className="text-sm" style={{ color: ERROR }}>
+                <AppText className="text-sm" style={{ color: colors.negative }}>
                   {iso ? dc("That date has already passed — check the year.") : dc("Enter the date as DD/MM/YYYY.")}
                 </AppText>
               ) : null}
@@ -265,7 +265,7 @@ const DocumentDetailsSheet = ({ visible, type, label, needsNumber, needsExpiry, 
               }}
               className="w-full rounded-xl py-3.5 items-center"
               style={{
-                backgroundColor: PRIMARY,
+                backgroundColor: colors.primary,
                 opacity: submitPressed ? 0.85 : 1,
               }}
             >

@@ -1,7 +1,7 @@
 
 import { driverCopy as dc } from "../lib/copy";
 import { useEffect, useState } from 'react';
-import { AppState, Linking, Pressable, View } from 'react-native';
+import { AppState, Pressable, View } from 'react-native';
 import { cssInterop } from 'nativewind';
 import { NavigationArrowIcon, PhoneIcon } from 'phosphor-react-native';
 import * as Location from 'expo-location';
@@ -13,13 +13,15 @@ import { OtpEntry } from '../components/OtpEntry';
 import { BottomSheet } from '../components/ui/BottomSheet';
 import MapSlot from '../components/ui/MapSlot';
 import { SlideAction } from '../components/ui/SlideAction';
-import { CustomerPaymentPanel, INK_TEXT, MUTED, SURFACE } from '../components/ui/rideUi';
+import { CustomerPaymentPanel, INK_TEXT, MUTED } from '../components/ui/rideUi';
 
 import { useApi } from '../hooks/useApi';
 import { useDriver } from '../hooks/useDriver';
 import type { UpcomingBooking } from '../types/enums';
 import { getRememberedDriverLocation, rememberDriverLocation } from '../lib/driverLocationCache';
 import { useLanguage } from '../i18n';
+import { useTheme } from '../theme/ThemeContext';
+import { callPhoneNumber } from '../lib/externalLinks';
 
 const asThemed = { className: { target: false, nativeStyleToProp: { color: true } } } as const;
 const Phone = cssInterop(PhoneIcon, asThemed);
@@ -77,6 +79,7 @@ const ActiveRide = ({ ride, onChanged }: { ride: UpcomingBooking; onChanged: () 
     const api = useApi();
     const { refresh: refreshDriver } = useDriver();
     const { t } = useLanguage();
+    const { colors } = useTheme();
     const [error, setError] = useState<string | null>(null);
 
     // The code screen opens ITSELF the moment he marks himself arrived, because
@@ -257,61 +260,65 @@ const ActiveRide = ({ ride, onChanged }: { ride: UpcomingBooking; onChanged: () 
         if (!step) return;
         setError(null);
 
-        // Sent when the transition requires it. The server measures it against the
-        // pickup or the drop and stores the distance — the record of whether he
-        // was actually there when he said so. The server requires this evidence
-        // for arrival, start and completion and rejects missing or mocked fixes.
-        //
-        // The enabled slider already proves the watcher has a recent, accurate
-        // fix. Reuse it instead of blocking on another high-accuracy lookup,
-        // which can take several seconds on Android. Fall back to a new lookup
-        // only if the watched fix is too close to expiring.
-        const needsLocation = ['reached', 'started', 'completed'].includes(step.to);
-        const watchedFixIsReady = liveFix
-            && (liveFix.coords.accuracy ?? Infinity) <= MAX_FIX_ACCURACY_M
-            && Date.now() - liveFix.timestamp <= MAX_FIX_AGE_MS - FIX_SUBMIT_BUFFER_MS;
-        const fix = !needsLocation
-            ? null
-            : watchedFixIsReady
-                ? liveFix
-                : await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High }).catch(() => null);
-        const where = fix
-            ? {
-                lat: fix.coords.latitude,
-                lng: fix.coords.longitude,
-                accuracy: fix.coords.accuracy ?? 10_000,
-                capturedAt: Math.round(fix.timestamp),
-                mocked: Boolean((fix as Location.LocationObject & { mocked?: boolean }).mocked),
+        try {
+            // Sent when the transition requires it. The server measures it against the
+            // pickup or the drop and stores the distance — the record of whether he
+            // was actually there when he said so. The server requires this evidence
+            // for arrival, start and completion and rejects missing or mocked fixes.
+            //
+            // The enabled slider already proves the watcher has a recent, accurate
+            // fix. Reuse it instead of blocking on another high-accuracy lookup,
+            // which can take several seconds on Android. Fall back to a new lookup
+            // only if the watched fix is too close to expiring.
+            const needsLocation = ['reached', 'started', 'completed'].includes(step.to);
+            const watchedFixIsReady = liveFix
+                && (liveFix.coords.accuracy ?? Infinity) <= MAX_FIX_ACCURACY_M
+                && Date.now() - liveFix.timestamp <= MAX_FIX_AGE_MS - FIX_SUBMIT_BUFFER_MS;
+            const fix = !needsLocation
+                ? null
+                : watchedFixIsReady
+                    ? liveFix
+                    : await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High }).catch(() => null);
+            const where = fix
+                ? {
+                    lat: fix.coords.latitude,
+                    lng: fix.coords.longitude,
+                    accuracy: fix.coords.accuracy ?? 10_000,
+                    capturedAt: Math.round(fix.timestamp),
+                    mocked: Boolean((fix as Location.LocationObject & { mocked?: boolean }).mocked),
+                }
+                : {};
+
+            const result = await api.setRideStatus(ride.id, step.to, {
+                ...where,
+                ...(otp ? { otp } : {}),
+                ...(overrideReason ? { completionOverrideReason: overrideReason } : {}),
+            });
+
+            if (result?.error) {
+                setError(result.error);
+                if (result.code === 'DROP_CONFIRMATION_REQUIRED') setDropOverrideOpen(true);
+                return;
             }
-            : {};
 
-        const result = await api.setRideStatus(ride.id, step.to, {
-            ...where,
-            ...(otp ? { otp } : {}),
-            ...(overrideReason ? { completionOverrideReason: overrideReason } : {}),
-        });
+            // The server has accepted this transition. Show it immediately; the
+            // list/profile requests below reconcile shared state in the background.
+            setConfirmedStatus(result.status ?? step.to);
 
-        if (result?.error) {
-            setError(result.error);
-            if (result.code === 'DROP_CONFIRMATION_REQUIRED') setDropOverrideOpen(true);
-            return;
+            // Only once the server has taken it. A wrong code comes back 403 and the
+            // screen has to stay up with the message on it, not close as though it
+            // had worked.
+            setOtpOpen(step.to === 'reached');
+            setDropOtpOpen(false);
+            setDropOverrideOpen(false);
+            setDropOverrideReason(null);
+            // The ride list drives this screen; the profile drives whether the shell
+            // is hidden and how often the GPS reports. Finishing a ride has to move
+            // both, or he is left on a stripped-down screen with no ride on it.
+            await Promise.all([onChanged(), refreshDriver()]);
+        } catch (cause: unknown) {
+            setError(cause instanceof Error ? cause.message : dc("Could not update the ride. Please try again."));
         }
-
-        // The server has accepted this transition. Show it immediately; the
-        // list/profile requests below reconcile shared state in the background.
-        setConfirmedStatus(result.status ?? step.to);
-
-        // Only once the server has taken it. A wrong code comes back 403 and the
-        // screen has to stay up with the message on it, not close as though it
-        // had worked.
-        setOtpOpen(step.to === 'reached');
-        setDropOtpOpen(false);
-        setDropOverrideOpen(false);
-        setDropOverrideReason(null);
-        // The ride list drives this screen; the profile drives whether the shell
-        // is hidden and how often the GPS reports. Finishing a ride has to move
-        // both, or he is left on a stripped-down screen with no ride on it.
-        await Promise.all([onChanged(), refreshDriver()]);
     };
 
     const above = (
@@ -331,9 +338,9 @@ const ActiveRide = ({ ride, onChanged }: { ride: UpcomingBooking; onChanged: () 
                 <NavArrow
                     size={18}
                     weight="fill"
-                    className="text-[var(--foreground)]"
+                    className="text-on-strong"
                 />
-                <AppText className="text-base font-semibold text-[var(--foreground)]">
+                <AppText className="text-base font-semibold text-on-strong">
                     {leg.endpoint === 'drop' ? t('driver.active.goDrop') : t('driver.active.goPickup')}
                 </AppText>
             </View>
@@ -400,7 +407,7 @@ const ActiveRide = ({ ride, onChanged }: { ride: UpcomingBooking; onChanged: () 
                                 style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
                             >
                                 <View className="flex-row items-center justify-center gap-2 rounded-xl p-3 bg-[var(--foreground-muted)]">
-                                    <AppText className="text-base font-semibold text-[var(--background-primary)]">
+                                    <AppText className="text-base font-semibold text-ink">
                                         {t('driver.active.details')}
                                     </AppText>
                                 </View>
@@ -410,12 +417,12 @@ const ActiveRide = ({ ride, onChanged }: { ride: UpcomingBooking; onChanged: () 
                                 className='w-[49%]'
                                 role="button"
                                 aria-label={`${t('driver.active.call')} ${ride.user?.name ?? ''}`.trim()}
-                                onPress={() => Linking.openURL(`tel:${ride.customerPhone}`)}
+                                onPress={() => callPhoneNumber(ride.customerPhone)}
                                 style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
                             >
                                 <View className="rounded-xl w-full flex flex-row gap-2 p-3 items-center justify-center bg-[var(--foreground-muted)]">
-                                    <Phone size={20} weight="fill" className="text-[var(--background-primary)]" />
-                                    <AppText className='text-base font-semibold text-[var(--background-primary)]'>{t('driver.active.call')}</AppText>
+                                    <Phone size={20} weight="fill" className="text-ink" />
+                                    <AppText className='text-base font-semibold text-ink'>{t('driver.active.call')}</AppText>
                                 </View>
                             </Pressable>
                         </View>
@@ -458,7 +465,7 @@ const ActiveRide = ({ ride, onChanged }: { ride: UpcomingBooking; onChanged: () 
                     style={{ position: 'absolute', inset: 0, zIndex: 94, backgroundColor: 'rgba(0,0,0,0.45)' }}
                     className="justify-end"
                 >
-                    <View className="rounded-t-3xl px-5 pt-5 pb-8 gap-3" style={{ backgroundColor: SURFACE }}>
+                    <View className="rounded-t-3xl px-5 pt-5 pb-8 gap-3" style={{ backgroundColor: colors.surface }}>
                         <AppText className={`text-xl font-bold ${INK_TEXT}`}>{t('driver.active.differentDrop')}</AppText>
                         <AppText className={`text-sm ${MUTED}`}>
                             {t('driver.active.outsideDrop')}

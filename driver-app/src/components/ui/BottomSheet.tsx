@@ -2,7 +2,7 @@ import { useRef, useState, type ReactNode } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
 import { PanResponder, View, type LayoutChangeEvent } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
-import { PAGE, SURFACE } from './rideUi';
+import { useTheme } from '../../theme/ThemeContext';
 
 /**
  * The panel on the map screens, as something he can push out of the way.
@@ -54,6 +54,7 @@ export const BottomSheet = ({
     onHeightChange?: (height: number) => void;
 
 }) => {
+    const { colors } = useTheme();
     const [height, setHeight] = useState(0);
     const y = useSharedValue(0);
 
@@ -129,13 +130,13 @@ export const BottomSheet = ({
                     borderTopLeftRadius: 24,
                     borderTopRightRadius: 24,
                     borderWidth: 1,
-                    borderColor: PAGE,
-                    backgroundColor: SURFACE,
+                    borderColor: colors.surfaceMuted,
+                    backgroundColor: colors.surface,
                     boxShadow: SHEET_DROP_SHADOW,
                 }}
             >
                 <LinearGradient
-                    colors={[SURFACE, SURFACE, PAGE]}
+                    colors={[colors.surface, colors.surface, colors.surfaceMuted]}
                     locations={[0, 0.4, 1]}
                     start={{ x: 0.5, y: 0 }}
                     end={{ x: 0.5, y: 1 }}

@@ -18,11 +18,11 @@ export default function OpenDriverApp() {
   }, [appUrl])
 
   return (
-    <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)] grid place-items-center px-6">
-      <section className="w-full max-w-md rounded-3xl border border-black/10 bg-[var(--background-muted)] p-8 text-center shadow-xl">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--foreground-muted)]">RCS Travels</p>
+    <main className="min-h-screen bg-canvas text-ink grid place-items-center px-6">
+      <section className="w-full max-w-md rounded-3xl border border-border bg-surface p-8 text-center shadow-xl">
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-ink-muted">RCS Travels</p>
         <h1 className="mt-3 text-3xl font-semibold">{tr("Open RCS Captains")}</h1>
-        <p className="mt-3 text-sm leading-6 text-[var(--foreground-muted)]">
+        <p className="mt-3 text-sm leading-6 text-ink-muted">
           {valid
             ? tr('Open the assigned ride securely in the Captains app.')
             : tr('This ride link is invalid. Open the Captains app to view your assigned rides.')}
@@ -31,7 +31,7 @@ export default function OpenDriverApp() {
         {appUrl && (
           <a
             href={appUrl}
-            className="mt-7 block rounded-full bg-[var(--primary)] px-5 py-3 font-semibold text-white"
+            className="mt-7 block rounded-full bg-primary px-5 py-3 font-semibold text-on-primary"
           >
             {tr("Open driver app")}
           </a>

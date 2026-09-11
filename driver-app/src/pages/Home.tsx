@@ -11,6 +11,7 @@ import { HomeRideListSkeleton } from "../components/ui/LoadingSkeletons";
 import { useNavigate } from "react-router-native";
 import { useDriver } from "../hooks/useDriver";
 import type { UpcomingBooking } from "../types/enums";
+import { useTheme } from '../theme/ThemeContext';
 
 const Caret = cssInterop(CaretRightIcon, {
     className: { target: false, nativeStyleToProp: { color: true } },
@@ -32,6 +33,7 @@ const Home = ({ scheduled, loading, error, onRefresh }: Props) => {
     useCopyLanguage();
     const navigate = useNavigate()
     const { profile } = useDriver()
+    const { colors } = useTheme()
     const online = profile?.isOnline ?? false
 
     return (
@@ -46,9 +48,9 @@ const Home = ({ scheduled, loading, error, onRefresh }: Props) => {
             }}
         >
             <View className="flex-1 items-center justify-center w-full rounded-2xl px-4 gap-0.5">
-                <AppText className="text-2xl font-semibold text-[var(--background-primary)]">{dc("You're") + " "}{online ? dc("online") : dc("offline")}
+                <AppText className="text-2xl font-semibold text-ink">{dc("You're") + " "}{online ? dc("online") : dc("offline")}
                 </AppText>
-                <AppText className="text-base text-gray-600">
+                <AppText className="text-base text-ink-muted">
                     {online ? dc("Waiting for a new ride.") : dc("Go online to start getting rides.")}
                 </AppText>
             </View>
@@ -68,7 +70,7 @@ const Home = ({ scheduled, loading, error, onRefresh }: Props) => {
                 )}
                 <View className="w-full gap-2">
                     <View className="flex-row items-center justify-between gap-3 px-1">
-                        <AppText className="text-xs font-semibold uppercase tracking-wide text-gray-600">{dc("Next rides")}</AppText>
+                        <AppText className="text-xs font-semibold uppercase tracking-wide text-ink-muted">{dc("Next rides")}</AppText>
                         <Pressable
                             role="link"
                             onPress={() => navigate("/rides")}
@@ -84,9 +86,9 @@ const Home = ({ scheduled, loading, error, onRefresh }: Props) => {
                     {loading && scheduled.length === 0 ? (
                         <HomeRideListSkeleton />
                     ) : scheduled.length === 0 ? (
-                        <View className="w-full rounded-2xl p-4 gap-0.5" style={{ backgroundColor: '#f3f3f3' }}>
-                            <AppText className="font-semibold text-[var(--background-primary)]">{dc("No ride scheduled")}</AppText>
-                            <AppText className="text-xs text-gray-600">{dc("Your next assigned ride shows up here.")}</AppText>
+                        <View className="w-full rounded-2xl px-4 py-5 gap-0.5" style={{ backgroundColor: colors.surfaceMuted }}>
+                            <AppText className="text-lg font-semibold text-ink">{dc("No ride scheduled")}</AppText>
+                            <AppText className="text-sm text-ink-muted">{dc("Your next assigned ride shows up here.")}</AppText>
                         </View>
                     ) : (
                         scheduled.slice(0, MAX_ROWS).map((ride) => (

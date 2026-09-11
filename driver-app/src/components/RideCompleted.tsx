@@ -4,12 +4,13 @@ import { Pressable, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import AppText from './AppText';
 import SuccessMark from '../../assets/Success.svg';
-import { INK_TEXT, MUTED, SURFACE } from './ui/rideUi';
+import { INK_TEXT, MUTED } from './ui/rideUi';
 import { fareBreakdown, rupees, splitAddress } from '../constants/booking';
 import type { UpcomingBooking } from '../types/enums';
 import { useEffect } from 'react';
 import { useAppBarVisibility } from './AppBarVisibility';
 import { useData } from '../hooks/useData';
+import { useTheme } from '../theme/ThemeContext';
 
 export const RideCompleted = ({
     ride,
@@ -19,6 +20,7 @@ export const RideCompleted = ({
     onDone: () => void;
 }) => {
     useCopyLanguage();
+    const { colors } = useTheme();
     const { hidden: appBarHidden } = useAppBarVisibility();
     const setHidden = useData((state) => state.setHidden);
 
@@ -57,7 +59,7 @@ export const RideCompleted = ({
             <Animated.View
                 entering={FadeInDown.duration(280).delay(160)}
                 className="w-full rounded-3xl p-5 mt-8 gap-3"
-                style={{ backgroundColor: SURFACE }}
+                style={{ backgroundColor: colors.surface }}
             >
                 {fare.lines.map((line) => (
                     <View key={line.label} className="flex-row items-start justify-between gap-3">
@@ -103,8 +105,8 @@ export const RideCompleted = ({
                     onPress={onDone}
                     style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
                 >
-                    <View className="w-full rounded-2xl py-4 items-center bg-[var(--background-primary)]">
-                        <AppText className="text-base font-semibold text-[var(--foreground)]">{dc("Done")}</AppText>
+                    <View className="w-full rounded-2xl py-4 items-center bg-strong">
+                        <AppText className="text-base font-semibold text-on-strong">{dc("Done")}</AppText>
                     </View>
                 </Pressable>
                 <AppText className={`text-xs text-center mt-3 ${MUTED}`}>

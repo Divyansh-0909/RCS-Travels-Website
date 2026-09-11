@@ -354,8 +354,8 @@ const AdminDashboard = () => {
     const currentTotal = selected === 0 ? totalBookings : selected === 1 ? totalDrivers : totalUsers
     const pagination = (currentTotal ?? 0) <= limit ? null : (
         <div className="flex gap-3 sm:gap-4 items-center justify-center">
-            <button type="button" disabled={page <= 1} onClick={() => setPage(p => p - 1)} className="disabled:opacity-[0.8] disabled:cursor-not-allowed disabled:hover:bg-[var(--background)]/90 py-2 px-3 flex items-center justify-center gap-1 cursor-pointer text-[var(--text)] bg-[var(--background)]/90 hover:bg-[var(--background)] transition-color duration-300 rounded-xl"><h4>{dc("Prev")}</h4></button>
-            <span className="text-[var(--text-foreground)] flex w-fit items-center justify-center gap-2">
+            <button type="button" disabled={page <= 1} onClick={() => setPage(p => p - 1)} className="disabled:opacity-[0.8] disabled:cursor-not-allowed disabled:hover:bg-strong/90 py-2 px-3 flex items-center justify-center gap-1 cursor-pointer text-on-strong bg-strong/90 hover:bg-strong transition-colors duration-300 rounded-xl"><h4>{dc("Prev")}</h4></button>
+            <span className="text-ink flex w-fit items-center justify-center gap-2">
                 <input
                     type="text"
                     inputMode="numeric"
@@ -368,7 +368,7 @@ const AdminDashboard = () => {
                 <h4>{dc("of")}</h4>
                 <h4 className="flex text-center justify-center items-center border box-border rounded-lg h-10 w-10 p-0 m-0 bg-transparent leading-none text-sm sm:text-lg">{totalPages}</h4>
             </span>
-            <button type="button" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} className="disabled:opacity-[0.8] disabled:cursor-not-allowed disabled:hover:bg-[var(--background)]/90 py-2 px-3 flex items-center justify-center gap-1 cursor-pointer text-[var(--text)] bg-[var(--background)]/90 hover:bg-[var(--background)] transition-color duration-300 rounded-xl"><h4>{dc("Next")}</h4></button>
+            <button type="button" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} className="disabled:opacity-[0.8] disabled:cursor-not-allowed disabled:hover:bg-strong/90 py-2 px-3 flex items-center justify-center gap-1 cursor-pointer text-on-strong bg-strong/90 hover:bg-strong transition-colors duration-300 rounded-xl"><h4>{dc("Next")}</h4></button>
         </div>
     )
 
@@ -385,7 +385,7 @@ const AdminDashboard = () => {
                 <Suspense
                     fallback={
                         <div className="w-full flex-1 min-h-0 flex items-center justify-center px-5 max-sm:px-0">
-                            <p className="text-sm text-gray-500">{dc("Map load ho raha hai…")}</p>
+                            <p className="text-sm text-ink-muted">{dc("Map load ho raha hai…")}</p>
                         </div>
                     }
                 >
@@ -409,14 +409,14 @@ const AdminDashboard = () => {
                     >
                         <div className="flex w-full items-stretch h-[360px] max-h-[70vh] max-sm:h-auto max-sm:max-h-none max-sm:flex-1 max-sm:min-h-0">
                             {/* Section list */}
-                            <div className="w-[38%] shrink-0 flex flex-col border-r border-[var(--foreground)]/15 overflow-y-auto">
+                            <div className="w-[38%] shrink-0 flex flex-col border-r border-border/50 overflow-y-auto">
                                 {sections.map((s, i) => (
                                     <div
                                         key={s}
                                         onClick={() => setFilterSection(i)}
-                                        className={`py-3 pl-5 pr-3 text-sm cursor-pointer select-none border-b border-[var(--foreground)]/10 border-l-[3px] transition-colors duration-300 ${i === sectionIndex
-                                            ? "text-[var(--text)] font-semibold bg-[var(--foreground)]/15 border-l-primary"
-                                            : "text-[var(--text-muted)] border-l-transparent hover:bg-[var(--foreground)]/5"}`}
+                                        className={`py-3 pl-5 pr-3 text-sm cursor-pointer select-none border-b border-border/50 border-l-[3px] transition-colors duration-300 ${i === sectionIndex
+                                            ? "text-ink font-semibold bg-surface-muted border-l-primary"
+                                            : "text-ink-muted border-l-transparent hover:bg-surface-muted"}`}
                                     >
                                         {s}
                                     </div>
@@ -476,17 +476,17 @@ const AdminDashboard = () => {
                                 )}
                             </div>
                         </div>
-                        <div className="w-full flex gap-2 px-3 pt-3 mt-3 border-t border-[var(--foreground)]/10">
-                            <div onClick={clearFilters} className="flex-1 flex justify-center items-center py-2 rounded-xl border border-[var(--foreground)]/30 text-sm cursor-pointer hover:bg-[var(--foreground)]/10 transition-colors duration-300">{dc("Clear")}</div>
-                            <div onClick={applyFilters} className="flex-1 flex justify-center items-center py-2 rounded-xl bg-primary text-[var(--foreground)] text-sm font-semibold cursor-pointer hover:opacity-[0.9] transition-opacity duration-300">{dc("Apply")}</div>
+                        <div className="w-full flex gap-2 px-3 pt-3 mt-3 border-t border-border/50">
+                            <div onClick={clearFilters} className="flex-1 flex justify-center items-center py-2 rounded-xl border border-border text-sm cursor-pointer hover:bg-surface-muted transition-colors duration-300">{dc("Clear")}</div>
+                            <div onClick={applyFilters} className="flex-1 flex justify-center items-center py-2 rounded-xl bg-primary text-on-strong text-sm font-semibold cursor-pointer hover:opacity-[0.9] transition-opacity duration-300">{dc("Apply")}</div>
                         </div>
                     </div>
                 </Button>
             )}
             <form onSubmit={(e) => { e.preventDefault(); clearTimeout(debounceRef.current); runSearch() }} className="flex w-full flex-wrap justify-between px-5 max-sm:px-0 gap-2 gap-y-3 items-center">
                 <div className="flex w-fit max-sm:w-full max-sm:flex-wrap justify-start gap-2 items-center">
-                    <div className={`flex justify-start gap-1 items-center rounded-xl py-5 px-3 w-[20vw] max-sm:w-full ${active ? "border-[var(--background-muted)]" : "border-[var(--background-muted)]/40"} h-[5vh] text-[var(--text-foreground)] transition-all duration-300 border-2`}>
-                        <Icon path={mdiMagnify} size={0.9} className="cursor-pointer text-sm sm:text-lg hover:text-[var(--text-foreground)] transition-color duration-300 text-[var(--text-foreground)]/40" />
+                    <div className={`flex justify-start gap-1 items-center rounded-xl py-5 px-3 w-[20vw] max-sm:w-full ${active ? "border-border" : "border-border/40"} h-[5vh] text-ink transition-all duration-300 border-2`}>
+                        <Icon path={mdiMagnify} size={0.9} className="cursor-pointer text-sm sm:text-lg hover:text-ink transition-colors duration-300 text-ink/40" />
                         <input
                             onFocus={() => setActive(true)}
                             onBlur={() => setActive(false)}
@@ -496,14 +496,14 @@ const AdminDashboard = () => {
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                             placeholder={selected === 0 ? dc("Name, phone, location, ID") : selected === 1 ? "Name, phone, vehicle no." : "Name, phone, booking code"}
-                            className={`w-[95%] h-[5vh] text-[var(--text-foreground)]  outline-none border-none`}
+                            className={`w-[95%] h-[5vh] text-ink outline-none border-none`}
                         />
                     </div>
-                    <button onClick={(e) => { e.preventDefault(); setOrder(!order); }} className="py-2 px-3 flex items-center justify-center gap-1 cursor-pointer text-[var(--text)] bg-[var(--background)]/90 hover:bg-[var(--background)] transition-color duration-300 rounded-xl">
+                    <button onClick={(e) => { e.preventDefault(); setOrder(!order); }} className="py-2 px-3 flex items-center justify-center gap-1 cursor-pointer text-on-strong bg-strong/90 hover:bg-strong transition-colors duration-300 rounded-xl">
                         <Icon path={order ? mdiSortCalendarDescending : mdiSortCalendarAscending} size={1.1} />
                         <h4>{dc("Sort")}</h4>
                     </button>
-                    <button onClick={(e) => { e.preventDefault(); setExpanded(!expanded); }} className="py-2 px-3 flex items-center justify-center gap-1 cursor-pointer text-[var(--text)] bg-[var(--background)]/90 hover:bg-[var(--background)] transition-color duration-300 rounded-xl">
+                    <button onClick={(e) => { e.preventDefault(); setExpanded(!expanded); }} className="py-2 px-3 flex items-center justify-center gap-1 cursor-pointer text-on-strong bg-strong/90 hover:bg-strong transition-colors duration-300 rounded-xl">
                         <Icon path={mdiTuneVertical} size={1} className="rotate-[90deg]" />
                         <h4>{dc("Filter")}</h4>
                     </button>
@@ -512,7 +512,7 @@ const AdminDashboard = () => {
             </form>
 
             <div
-                className={`${copied ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"} flex justify-center items-center w-[230px] fixed z-100 left-1/2 -translate-x-1/2 bottom-8 sm:bottom-10 bg-primary text-[var(--foreground)] text-sm font-semibold px-5 py-3 rounded-full shadow-[0_8px_24px_rgba(0,0,0,0.25)] flex items-center gap-2 transition-[opacity,transform] duration-300`}
+                className={`${copied ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"} flex justify-center items-center w-[230px] fixed z-100 left-1/2 -translate-x-1/2 bottom-8 sm:bottom-10 bg-primary text-on-strong text-sm font-semibold px-5 py-3 rounded-full shadow-lg flex items-center gap-2 transition-[opacity,transform] duration-300`}
             >
                 <Icon path={mdiContentCopy} size={0.7} />{dc("Copied to clipboard")}</div>
 
@@ -551,37 +551,37 @@ const AdminDashboard = () => {
                             const [dropMain, dropRest] = splitAddress(booking.dropAddress)
                             const isOpen = expandedBooking === booking.id
                             return (
-                                <div key={booking.id} onClick={() => setExpandedBooking(isOpen ? null : booking.id)} className={`${booking.status === "cancelled" ? "opacity-60" : ""} my-2 flex cursor-pointer flex-col items-start justify-center gap-3 rounded-3xl bg-pastel-primary px-5 py-5 sm:px-6`}>
+                                <div key={booking.id} onClick={() => setExpandedBooking(isOpen ? null : booking.id)} className={`${booking.status === "cancelled" ? "opacity-60" : ""} my-2 flex cursor-pointer flex-col items-start justify-center gap-3 rounded-3xl bg-tone-primary px-5 py-5 sm:px-6`}>
                                     <div className="flex justify-between items-start gap-4 w-full">
                                         {/* Route: pickup → drop */}
                                         <div className="flex flex-col gap-3 min-w-0">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-3 h-3 rounded-full bg-[var(--background-primary)] shrink-0"></div>
+                                                <div className="w-3 h-3 rounded-full bg-strong shrink-0"></div>
                                                 <div className="min-w-0">
-                                                    <h4 className="font-semibold text-[var(--background-primary)] truncate">{pickupMain}</h4>
-                                                    {pickupRest && <p className="text-sm text-gray-500 truncate">{pickupRest}</p>}
+                                                    <h4 className="font-semibold text-ink truncate">{pickupMain}</h4>
+                                                    {pickupRest && <p className="text-sm text-ink-muted truncate">{pickupRest}</p>}
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-3">
-                                                <div className="w-3 h-3 rounded-full bg-primary relative shrink-0"><div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-[var(--foreground)]" /></div>
+                                                <div className="w-3 h-3 rounded-full bg-primary relative shrink-0"><div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-on-strong" /></div>
                                                 <div className="min-w-0">
-                                                    <h4 className="font-semibold text-[var(--background-primary)] truncate">{dropMain}</h4>
-                                                    {dropRest && <p className="text-sm text-gray-500 truncate">{dropRest}</p>}
+                                                    <h4 className="font-semibold text-ink truncate">{dropMain}</h4>
+                                                    {dropRest && <p className="text-sm text-ink-muted truncate">{dropRest}</p>}
                                                 </div>
                                             </div>
                                         </div>
                                         {/* Fare + status */}
                                         <div className="flex flex-col items-end gap-1.5 shrink-0">
-                                            <h3 className="font-semibold text-[var(--background-primary)]">₹{booking.fare}</h3>
+                                        <h3 className="font-semibold text-ink">₹{booking.fare}</h3>
                                             <span className={`${statusChip(booking.status)} text-xs font-semibold px-2.5 py-1 rounded-full capitalize`}>{booking.status.replace("_", " ")}</span>
                                         </div>
                                     </div>
 
-                                    <div className="w-full border-t border-[var(--background-primary)]/10"></div>
+                                    <div className="w-full border-t border-border/50"></div>
 
                                     {/* Trip meta; details attached so the collapsed grid adds no flex-gap */}
                                     <div className="flex flex-col w-full">
-                                        <p className="text-base text-gray-500">
+                                        <p className="text-base text-ink-muted">
                                             {[
                                                 formatDateTime(booking.scheduledAt ?? booking.createdAt),
                                                 `${vehicleLabel(booking.vehicleClass)}${booking.sharing ? " • Sharing" : ""}`,
@@ -594,25 +594,25 @@ const AdminDashboard = () => {
                                             inside don't bubble, so copying a number can't collapse the card. */}
                                         <div className={`grid w-full transition-[grid-template-rows] duration-300 ${isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
                                             <div className="overflow-hidden min-h-0 w-full" onClick={(e) => e.stopPropagation()}>
-                                                <div className={`${isOpen ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2"} mt-4 flex w-full cursor-default flex-col gap-4 rounded-2xl bg-white/70 p-4 transition-[opacity,transform] duration-300`}>
+                                                <div className={`${isOpen ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2"} mt-4 flex w-full cursor-default flex-col gap-4 rounded-2xl bg-surface p-4 transition-[opacity,transform] duration-300`}>
                                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
                                                         <div>
-                                                            <p className="text-xs uppercase tracking-wide text-gray-500 mb-0.5">{dc("Customer")}</p>
-                                                            <h4 className="text-[var(--background-primary)]">{booking.user?.name ?? "—"} <span className="text-gray-500">• {displayPhone(booking.customerPhone)}</span> <CopyBtn value={displayPhone(booking.customerPhone)} onCopy={copyId} /></h4>
+                                                            <p className="text-xs uppercase tracking-wide text-ink-muted mb-0.5">{dc("Customer")}</p>
+                                                            <h4 className="text-ink">{booking.user?.name ?? "—"} <span className="text-ink-muted">• {displayPhone(booking.customerPhone)}</span> <CopyBtn value={displayPhone(booking.customerPhone)} onCopy={copyId} /></h4>
                                                             {booking.sharing && booking.coRiders?.length > 0 && (
                                                                 <div className="mt-1">
-                                                                    <p className="text-xs uppercase tracking-wide text-gray-500 mb-0.5">{dc("Sharing with")}</p>
+                                                                    <p className="text-xs uppercase tracking-wide text-ink-muted mb-0.5">{dc("Sharing with")}</p>
                                                                     {booking.coRiders.map((rider, i) => (
-                                                                        <h4 key={i} className="text-[var(--background-primary)]">{rider.name ?? "—"} <span className="text-gray-500">• {displayPhone(rider.phone)}</span> <CopyBtn value={displayPhone(rider.phone)} onCopy={copyId} /></h4>
+                                                                        <h4 key={i} className="text-ink">{rider.name ?? "—"} <span className="text-ink-muted">• {displayPhone(rider.phone)}</span> <CopyBtn value={displayPhone(rider.phone)} onCopy={copyId} /></h4>
                                                                     ))}
                                                                 </div>
                                                             )}
                                                         </div>
                                                         <div>
-                                                            <p className="text-xs uppercase tracking-wide text-gray-500 mb-0.5">{dc("Driver")}</p>
+                                                            <p className="text-xs uppercase tracking-wide text-ink-muted mb-0.5">{dc("Driver")}</p>
                                                             {booking.driver
-                                                                ? <h4 className="text-[var(--background-primary)]">{booking.driver.name} <span className="text-gray-500">• {displayPhone(booking.driver.phone)}</span> <CopyBtn value={displayPhone(booking.driver.phone)} onCopy={copyId} /></h4>
-                                                                : <h4 className="text-gray-500">{booking.status === "cancelled" ? "—" : new Date(booking.scheduledAt ?? booking.createdAt) > new Date() ? dc("Yet to be assigned") : dc("Couldn't be assigned")}</h4>}
+                                                                ? <h4 className="text-ink">{booking.driver.name} <span className="text-ink-muted">• {displayPhone(booking.driver.phone)}</span> <CopyBtn value={displayPhone(booking.driver.phone)} onCopy={copyId} /></h4>
+                                                                : <h4 className="text-ink-muted">{booking.status === "cancelled" ? "—" : new Date(booking.scheduledAt ?? booking.createdAt) > new Date() ? dc("Yet to be assigned") : dc("Couldn't be assigned")}</h4>}
                                                         </div>
                                                     </div>
 
@@ -620,7 +620,7 @@ const AdminDashboard = () => {
                                                         {/* The reference, whole. It replaces a first-eight-and-an-ellipsis
                                                             of the uuid, which was unreadable down a phone line and could
                                                             not be pasted back into this search box as shown. */}
-                                                        <p className="text-gray-500 text-sm">{dc("Ride ID:") + " "}{booking.reference}</p>
+                                                        <p className="text-ink-muted text-sm">{dc("Ride ID:") + " "}{booking.reference}</p>
                                                         <CopyBtn value={booking?.reference} onCopy={copyId} />
                                                     </div>
                                                 </div>
@@ -629,7 +629,7 @@ const AdminDashboard = () => {
                                     </div>
 
                                     {/* "hover: hover" picks the wording — no JS device sniffing */}
-                                    <p className="w-full text-center text-xs text-gray-400 select-none -mt-1">
+                                    <p className="w-full text-center text-xs text-ink-muted/70 select-none -mt-1">
                                         <span className="hidden [@media(hover:hover)]:inline">{isOpen ? dc("Click to collapse") : dc("Click to expand")}</span>
                                         <span className="[@media(hover:hover)]:hidden">{isOpen ? dc("Tap to collapse") : dc("Tap to expand")}</span>
                                     </p>
@@ -656,16 +656,16 @@ const AdminDashboard = () => {
                         )
                     ) : (
                         drivers.map((driver) => (
-                            <div key={driver.id} className="my-2 flex cursor-default flex-col items-start justify-center gap-3 rounded-3xl bg-pastel-teal px-5 py-5 sm:px-6"
+                            <div key={driver.id} className="my-2 flex cursor-default flex-col items-start justify-center gap-3 rounded-3xl bg-tone-teal px-5 py-5 sm:px-6"
                                 data-suspended={Boolean(driver.suspendedAt)}>
                                 <div className="flex justify-between items-start gap-4 w-full">
                                     <div className="min-w-0">
                                         <div className="flex items-center gap-2">
-                                            <h3 className="font-semibold text-[var(--background-primary)] truncate">{driver.name}</h3>
-                                            <span className={`w-2 h-2 rounded-full shrink-0 ${driver.isOnline ? "bg-green-500" : "bg-gray-400"}`} title={driver.isOnline ? dc("Online") : dc("Offline")}></span>
-                                            <span className="text-sm text-gray-500">{driver.isOnline ? dc("Online") : dc("Offline")}</span>
+                                            <h3 className="font-semibold text-ink truncate">{driver.name}</h3>
+                                            <span className={`w-2 h-2 rounded-full shrink-0 ${driver.isOnline ? "bg-green-500" : "bg-border"}`} title={driver.isOnline ? dc("Online") : dc("Offline")}></span>
+                                            <span className="text-sm text-ink-muted">{driver.isOnline ? dc("Online") : dc("Offline")}</span>
                                         </div>
-                                        <p className="text-gray-500">{displayPhone(driver.phone)} <CopyBtn value={displayPhone(driver.phone)} onCopy={copyId} /></p>
+                                        <p className="text-ink-muted">{displayPhone(driver.phone)} <CopyBtn value={displayPhone(driver.phone)} onCopy={copyId} /></p>
                                     </div>
                                     <div className="flex flex-col items-end gap-1 shrink-0">
                                         <span className={`${verificationChip(driver.verificationStatus)} text-xs font-semibold px-2.5 py-1 rounded-full capitalize`}>{driver.verificationStatus}</span>
@@ -686,9 +686,9 @@ const AdminDashboard = () => {
                                     </div>
                                 </div>
 
-                                <div className="w-full border-t border-[var(--background-primary)]/10"></div>
+                                <div className="w-full border-t border-border/50"></div>
 
-                                <p className="text-base text-gray-500">
+                                <p className="text-base text-ink-muted">
                                     {vehicleLabel(driver.vehicleClass)}  •  {driver.vehicleNumber}{" " + dc("• Joined") + " "}{new Date(driver.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
                                 </p>
 
@@ -700,7 +700,7 @@ const AdminDashboard = () => {
                                 <button
                                     onClick={() => setExpandedDriver(expandedDriver === driver.id ? null : driver.id)}
                                     aria-expanded={expandedDriver === driver.id}
-                                    className="w-full text-sm text-center text-[var(--background-primary)] py-2 rounded-xl border border-[var(--background-primary)]/20 hover:bg-[var(--background-primary)]/5 focus-visible:outline-2 focus-visible:outline-offset-2 transition-colors duration-300"
+                                    className="w-full text-sm text-center text-ink py-2 rounded-xl border border-border hover:bg-surface-muted focus-visible:outline-2 focus-visible:outline-offset-2 transition-colors duration-300"
                                 >
                                     {expandedDriver === driver.id ? dc("Hide paperwork") : dc("Review paperwork")}
                                 </button>
@@ -746,21 +746,21 @@ const AdminDashboard = () => {
                         )
                     ) : (
                         users.map((user) => (
-                            <div key={user.id} className={`${user.deletedAt ? "opacity-60" : ""} my-2 flex cursor-default flex-col items-start justify-center gap-3 rounded-3xl bg-pastel-violet px-5 py-5 sm:px-6`}>
+                            <div key={user.id} className={`${user.deletedAt ? "opacity-60" : ""} my-2 flex cursor-default flex-col items-start justify-center gap-3 rounded-3xl bg-tone-violet px-5 py-5 sm:px-6`}>
                                 <div className="flex justify-between items-start gap-4 w-full">
                                     <div className="min-w-0">
                                         <div className="flex items-center gap-2">
-                                            <h3 className="font-semibold text-[var(--background-primary)] truncate">{user.name ?? "—"}</h3>
+                                            <h3 className="font-semibold text-ink truncate">{user.name ?? "—"}</h3>
                                             {user.deletedAt && <span className="text-red-600 bg-red-500/10 text-xs font-semibold px-2.5 py-1 rounded-full shrink-0">{dc("Deleted")}</span>}
                                         </div>
-                                        <p className="text-gray-500">{displayPhone(user.phone)} <CopyBtn value={displayPhone(user.phone)} onCopy={copyId} /></p>
+                                        <p className="text-ink-muted">{displayPhone(user.phone)} <CopyBtn value={displayPhone(user.phone)} onCopy={copyId} /></p>
                                     </div>
                                     <span className="text-primary bg-primary/10 text-xs font-semibold px-2.5 py-1 rounded-full shrink-0">{dc("Code") + " "}{user.bookingCode}</span>
                                 </div>
 
-                                <div className="w-full border-t border-[var(--background-primary)]/10"></div>
+                                <div className="w-full border-t border-border/50"></div>
 
-                                <p className="text-base text-gray-500">
+                                <p className="text-base text-ink-muted">
                                     {[
                                         user.gender,
                                         `${user._count.bookings} ${user._count.bookings === 1 ? "ride" : "rides"}`,

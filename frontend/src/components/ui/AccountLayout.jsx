@@ -49,15 +49,15 @@ const AccountLayout = ({ items, selected, onSelect, title, children, startOnCont
     const [menuOpen, setMenuOpen] = useState(!startOnContent);
 
     return (
-        <div className="w-[100vw] h-[100dvh] flex flex-col justify-center items-center px-5 sm:px-10 bg-[var(--foreground)] text-[var(--text-foreground)]">
+        <div className="w-[100vw] h-[100dvh] flex flex-col justify-center items-center px-5 sm:px-10 bg-surface text-ink">
             <PanelBackdrop open={panelOpen} onClose={onPanelClose} />
             <div className="flex w-full justify-start items-center gap-3 py-6">
-                <h3 onClick={() => navigate('/')} className="sm:block hidden cursor-pointer text-[var(--background-primary)] text-2xl pl-1 opacity-[0.85] transition-opacity duration-300 hover:opacity-[1]"><span className="font-semibold">RCS</span> travels</h3>
-                <Icon onClick={() => navigate('/')} className="sm:hidden block cursor-pointer text-[var(--background-primary)] opacity-[0.85] transition-opacity duration-300 hover:opacity-[1]" path={mdiHome} size={1.2} />
+                <h3 onClick={() => navigate('/')} className="sm:block hidden cursor-pointer text-ink text-2xl pl-1 opacity-[0.85] transition-opacity duration-300 hover:opacity-[1]"><span className="font-semibold">RCS</span> travels</h3>
+                <Icon onClick={() => navigate('/')} className="sm:hidden block cursor-pointer text-ink opacity-[0.85] transition-opacity duration-300 hover:opacity-[1]" path={mdiHome} size={1.2} />
                 {title && (
                     <>
-                        <span className="text-[var(--background-primary)]/25 text-xl font-light select-none">/</span>
-                        <h3 className="text-[var(--background-primary)]/60 text-xl">{title}</h3>
+                        <span className="text-ink-muted/50 text-xl font-light select-none">/</span>
+                        <h3 className="text-ink-muted text-xl">{title}</h3>
                     </>
                 )}
             </div>
@@ -66,19 +66,19 @@ const AccountLayout = ({ items, selected, onSelect, title, children, startOnCont
                     <div className="flex w-full flex-col items-start gap-4">
                     <ul className="flex w-full flex-col items-start gap-2">
                         {items.map((item, i) => (
-                            <li key={i} onClick={() => { onSelect(i); setMenuOpen(false); }} className={`flex w-fit max-w-full cursor-pointer select-none items-center justify-start rounded-full px-4 py-2 transition-opacity duration-200 hover:opacity-80 focus-within:opacity-80 ${selected === i ? "bg-[var(--background)] text-[var(--text)]" : "bg-[var(--foreground-muted)] text-[var(--text-foreground)]"}`}>
+                            <li key={i} onClick={() => { onSelect(i); setMenuOpen(false); }} className={`flex w-fit max-w-full cursor-pointer select-none items-center justify-start rounded-full px-4 py-2 transition-opacity duration-200 hover:opacity-80 focus-within:opacity-80 ${selected === i ? "bg-strong text-on-strong" : "bg-surface-muted text-ink"}`}>
                                 <h4 className="break-words text-2xl font-semibold leading-snug sm:text-lg">{item}</h4>
                             </li>
                         ))}
                     </ul>
                     </div>
                 </div>
-                <div className={`${menuOpen ? "hidden" : "flex animate-account-content"} w-full sm:flex sm:w-[84%] flex-col justify-start items-start h-full min-h-0 overflow-hidden bg-[var(--foreground)] pb-5 [&>ul]:px-4 sm:[&>ul]:px-5`}>
+                <div className={`${menuOpen ? "hidden" : "flex animate-account-content"} w-full sm:flex sm:w-[84%] flex-col justify-start items-start h-full min-h-0 overflow-hidden bg-surface pb-5 [&>ul]:px-4 sm:[&>ul]:px-5`}>
                     <div className="flex items-center gap-3 pb-6 px-5 max-sm:px-4 max-sm:w-full max-sm:pt-3">
-                        <button type="button" aria-label={dc("Show sections")} onClick={() => setMenuOpen(true)} className="sm:hidden shrink-0 cursor-pointer rounded-lg text-[var(--text-foreground)] opacity-[0.85] transition-opacity duration-300 hover:opacity-[1] active:opacity-[0.7] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--background-primary)]">
+                        <button type="button" aria-label={dc("Show sections")} onClick={() => setMenuOpen(true)} className="sm:hidden shrink-0 cursor-pointer rounded-lg text-ink opacity-[0.85] transition-opacity duration-300 hover:opacity-[1] active:opacity-[0.7] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
                             <Icon path={mdiMenu} size={1.2} />
                         </button>
-                        <h3 className="min-w-0 flex-1 break-words text-4xl sm:text-5xl text-[var(--text-foreground)] font-semibold leading-tight tracking-[-0.04em]">{items[selected]}</h3>
+                        <h3 className="min-w-0 flex-1 break-words text-4xl sm:text-5xl text-ink font-semibold leading-tight tracking-[-0.04em]">{items[selected]}</h3>
                     </div>
                     {children}
                 </div>

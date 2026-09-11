@@ -153,33 +153,39 @@ export const OfferProvider = ({ children }: { children: ReactNode }) => {
             return;
         }
 
-        const result = await api.getOffers();
+        try {
+            const result = await api.getOffers();
 
-        if (!result?.error) {
-            const list: Offer[] = result.offers ?? [];
-            setOffers(list);
-            setCanAccept(Boolean(result.canAccept));
+            if (!result?.error) {
+                const list: Offer[] = result.offers ?? [];
+                setOffers(list);
+                setCanAccept(Boolean(result.canAccept));
 
-            // Forget dismissals for rides no longer on the board — answered,
-            // withdrawn, or given to somebody else. Done here, against a real
-            // response, rather than in an effect on `offers`: an effect would
-            // also fire on the empty list this holds before the first fetch and
-            // would clear the very ids that were just read from storage.
-            const live = new Set(list.map((o) => o.offerId));
-            setDismissed((prev) => {
-                if (prev.size === 0) return prev;
-                const next = new Set([...prev].filter((id) => live.has(id)));
-                return next.size === prev.size ? prev : next;
-            });
+                // Forget dismissals for rides no longer on the board — answered,
+                // withdrawn, or given to somebody else. Done here, against a real
+                // response, rather than in an effect on `offers`: an effect would
+                // also fire on the empty list this holds before the first fetch and
+                // would clear the very ids that were just read from storage.
+                const live = new Set(list.map((o) => o.offerId));
+                setDismissed((prev) => {
+                    if (prev.size === 0) return prev;
+                    const next = new Set([...prev].filter((id) => live.has(id)));
+                    return next.size === prev.size ? prev : next;
+                });
+            }
+
+            // Cheap and cached by the OS — this is the fix the location service
+            // already collected, not a new GPS read, so it costs no battery and can
+            // ride along with every poll.
+            const last = await Location.getLastKnownPositionAsync().catch(() => null);
+            if (last) setHere({ lat: last.coords.latitude, lng: last.coords.longitude });
+        } catch {
+            // refresh() is called from effects, push handlers, AppState, and the
+            // poll loop. Keep those background entry points from producing an
+            // unhandled rejection if a dependency unexpectedly throws.
+        } finally {
+            setLoading(false);
         }
-
-        // Cheap and cached by the OS — this is the fix the location service
-        // already collected, not a new GPS read, so it costs no battery and can
-        // ride along with every poll.
-        const last = await Location.getLastKnownPositionAsync().catch(() => null);
-        if (last) setHere({ lat: last.coords.latitude, lng: last.coords.longitude });
-
-        setLoading(false);
     }, [api, canDrive]);
 
     useEffect(() => { refresh(); }, [refresh]);
@@ -250,7 +256,7 @@ export const OfferProvider = ({ children }: { children: ReactNode }) => {
             // decide between the 20-second idle rate and the 4-second ride rate,
             // and it only re-reads when the profile does. Without this the whole
             // drive to pickup reports at idle rate while a rider watches the map.
-            await refreshDriver();
+            await refreshDriver().catch(() => {});
 
             setAccepted({
                 bookingId: result.bookingId,

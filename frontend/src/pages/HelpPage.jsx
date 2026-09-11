@@ -68,39 +68,39 @@ const HelpPage = () => {
                     <li
                         key={q}
                         onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                        className="font-normal w-full select-none cursor-pointer py-5 px-6 rounded-3xl flex flex-col bg-pastel-primary text-[var(--text-foreground)] transition-opacity duration-200 hover:opacity-80"
+                        className="font-normal w-full select-none cursor-pointer py-5 px-6 rounded-3xl flex flex-col bg-tone-primary text-ink transition-opacity duration-200 hover:opacity-80"
                     >
                         <div className="w-full flex justify-between items-center gap-3">
                             <h4 className="break-words text-lg font-medium">{tr(q)}</h4>
-                            <Icon path={mdiChevronDown} size={1} className={`shrink-0 text-[var(--background-primary)]/60 transition-transform duration-300 ${openFaq === i ? "rotate-180" : ""}`} />
+                            <Icon path={mdiChevronDown} size={1} className={`shrink-0 text-ink-muted transition-transform duration-300 ${openFaq === i ? "rotate-180" : ""}`} />
                         </div>
                         <div className={`grid transition-[grid-template-rows] duration-300 ${openFaq === i ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
                             <div className="overflow-hidden">
-                                <p className={`break-words text-base text-[var(--background-primary)]/60 pt-2 pr-8 transition-opacity duration-300 ${openFaq === i ? "opacity-100" : "opacity-0"}`}>{tr(a)}</p>
+                                <p className={`break-words text-base text-ink-muted pt-2 pr-8 transition-opacity duration-300 ${openFaq === i ? "opacity-100" : "opacity-0"}`}>{tr(a)}</p>
                             </div>
                         </div>
                     </li>
                 ))}
                 {selected === 0 && (
-                    <p className="text-sm text-[var(--background-primary)]/50 px-2">{tr("Didn't find your answer?")} <span onClick={() => setSelected(1)} className="cursor-pointer underline underline-offset-2 hover:text-[var(--background-primary)] transition-color duration-300">{tr("Contact us")}</span>, {tr("we're happy to help.")}</p>
+                    <p className="text-sm text-ink-muted px-2">{tr("Didn't find your answer?")} <span onClick={() => setSelected(1)} className="cursor-pointer underline underline-offset-2 hover:text-ink transition-colors duration-300">{tr("Contact us")}</span>, {tr("we're happy to help.")}</p>
                 )}
 
                 {selected === 1 && contacts.map(([title, desc, value, icon, onClick]) => (
-                    <SettingRow key={title} tone="bg-pastel-teal" trailing={<CircleIconButton icon={icon} size={0.85} onClick={onClick} />}>
+                    <SettingRow key={title} tone="bg-tone-teal" trailing={<CircleIconButton icon={icon} size={0.85} onClick={onClick} />}>
                         <h4 className="break-words text-lg font-medium">{tr(title)}</h4>
-                        <p className="break-words text-base text-[var(--background-primary)]/50">{tr(desc)}</p>
-                        <p className="text-sm text-[var(--background-primary)]/70 pt-1">{value}</p>
+                        <p className="break-words text-base text-ink-muted">{tr(desc)}</p>
+                        <p className="text-sm text-ink-muted pt-1">{value}</p>
                     </SettingRow>
                 ))}
 
                 {selected === 2 && cancellationPolicy.map(([title, desc]) => (
-                    <SettingRow key={title} tone="bg-pastel-sand">
+                    <SettingRow key={title} tone="bg-tone-sand">
                         <h4 className="break-words text-lg font-medium">{tr(title)}</h4>
-                        <p className="break-words text-base text-[var(--background-primary)]/50">{tr(desc)}</p>
+                        <p className="break-words text-base text-ink-muted">{tr(desc)}</p>
                     </SettingRow>
                 ))}
                 {selected === 2 && (
-                    <p className="text-sm text-[var(--background-primary)]/50 px-2">{tr("If your driver cancels or doesn't show up, you're never charged, and we'll help you rebook right away.")}</p>
+                    <p className="text-sm text-ink-muted px-2">{tr("If your driver cancels or doesn't show up, you're never charged, and we'll help you rebook right away.")}</p>
                 )}
             </ul>
         </AccountLayout>

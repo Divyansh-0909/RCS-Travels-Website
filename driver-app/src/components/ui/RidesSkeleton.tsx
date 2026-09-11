@@ -10,7 +10,8 @@ import Animated, {
     withRepeat,
     withTiming,
 } from 'react-native-reanimated';
-import { HAIRLINE, PAGE } from './rideUi';
+import { HAIRLINE } from './rideUi';
+import { useTheme } from '../../theme/ThemeContext';
 
 // The Rides board while its first page is in flight.
 //
@@ -63,27 +64,28 @@ const Bar = ({ width, height, style, breathe }: BarProps) => (
     />
 );
 
-const CardSkeleton = ({ breathe }: { breathe: Breathe }) => (
-    <View className="w-full rounded-2xl px-4 py-3 gap-3" style={{ backgroundColor: PAGE }}>
+const CardSkeleton = ({ breathe }: { breathe: Breathe }) => {
+    const { colors } = useTheme();
+    return <View className="w-full rounded-2xl px-4 py-3 gap-3" style={{ backgroundColor: colors.surfaceMuted }}>
         {/* RideRowHead: when | rule | where to | what it pays */}
-        <View className="w-full flex-row items-center gap-3">
-            <View className="gap-1 items-center">
-                <Bar width={62} height={15} breathe={breathe} />
-                <Bar width={40} height={11} breathe={breathe} />
+        <View className="h-11 w-full flex-row items-center gap-3">
+            <View className="gap-1 items-center justify-center">
+                <Bar width={62} height={16} breathe={breathe} />
+                <Bar width={40} height={12} breathe={breathe} />
             </View>
 
             {/* The real rule, not a bar. It is chrome rather than content, so it is
                 already at its final value and has nothing to wait for. */}
             <View className="w-px h-9" style={{ backgroundColor: HAIRLINE }} />
 
-            <View className="flex-1 gap-1.5">
-                <Bar width="72%" height={15} breathe={breathe} />
-                <Bar width="48%" height={12} breathe={breathe} />
+            <View className="flex-1 gap-1 justify-center">
+                <Bar width="72%" height={16} breathe={breathe} />
+                <Bar width="48%" height={14} breathe={breathe} />
             </View>
 
-            <View className="items-end gap-1.5">
-                <Bar width={54} height={15} breathe={breathe} />
-                <Bar width={38} height={11} breathe={breathe} />
+            <View className="items-end gap-1 justify-center">
+                <Bar width={54} height={16} breathe={breathe} />
+                <Bar width={38} height={12} breathe={breathe} />
             </View>
         </View>
 
@@ -91,11 +93,11 @@ const CardSkeleton = ({ breathe }: { breathe: Breathe }) => (
 
         {/* The status pill, and the caret that never changes size. */}
         <View className="flex-row items-center justify-between gap-3">
-            <Bar width={86} height={22} style={{ borderRadius: 8 }} breathe={breathe} />
-            <Bar width={8} height={13} breathe={breathe} />
+            <Bar width={86} height={24} style={{ borderRadius: 8 }} breathe={breathe} />
+            <Bar width={8} height={14} breathe={breathe} />
         </View>
-    </View>
-);
+    </View>;
+};
 
 /**
  * @param withPanel History reserves the EarningsPanel's height while the total is still
@@ -103,6 +105,7 @@ const CardSkeleton = ({ breathe }: { breathe: Breathe }) => (
  */
 const RidesSkeleton = ({ withPanel = false }: { withPanel?: boolean }) => {
     useCopyLanguage();
+    const { colors } = useTheme();
     // Honoured rather than assumed: a pulsing screen is exactly the kind of ambient
     // motion this setting exists to turn off, and the skeleton still does its whole job
     // held at a fixed value.
@@ -143,15 +146,16 @@ const RidesSkeleton = ({ withPanel = false }: { withPanel?: boolean }) => {
                 // The panel's own box — rounded-3xl, p-5 — drawn in the neutral rather
                 // than in primary. A solid blue slab that sits there for a second and
                 // then fills with a number reads as the number having been zero.
-                <View className="w-full rounded-3xl p-5" style={{ backgroundColor: PAGE }}>
+                <View className="w-full rounded-3xl p-5" style={{ backgroundColor: colors.surfaceMuted }}>
                     <View className="flex-row items-end justify-between gap-4">
                         <View className="flex-1 gap-2">
-                            <Bar width={78} height={11} breathe={breathe} />
-                            <Bar width={148} height={32} breathe={breathe} />
+                            {/* Matches the 32px period pill (text-sm/20 + py-1.5). */}
+                            <Bar width={108} height={32} style={{ borderRadius: 16 }} breathe={breathe} />
+                            <Bar width={148} height={40} breathe={breathe} />
                         </View>
-                        <View className="items-end gap-2">
-                            <Bar width={34} height={26} breathe={breathe} />
-                            <Bar width={58} height={11} breathe={breathe} />
+                        <View className="items-end">
+                            <Bar width={34} height={36} breathe={breathe} />
+                            <Bar width={58} height={16} breathe={breathe} />
                         </View>
                     </View>
                 </View>
@@ -159,8 +163,10 @@ const RidesSkeleton = ({ withPanel = false }: { withPanel?: boolean }) => {
 
             {GROUPS.map((count, group) => (
                 <View key={group} className="w-full gap-2">
-                    {/* The day header, at the size and inset renderSectionHeader uses. */}
-                    <Bar width={66} height={11} style={{ marginLeft: 4, marginTop: 8 }} breathe={breathe} />
+                    {/* The day header reserves its real 16px line + 8px top padding. */}
+                    <View className="h-6 justify-end px-1">
+                        <Bar width={66} height={12} breathe={breathe} />
+                    </View>
                     {Array.from({ length: count }, (_, row) => (
                         <CardSkeleton key={row} breathe={breathe} />
                     ))}

@@ -34,7 +34,7 @@ const MarketPromo = () => {
                     onPress={() => navigate('/available')}
                     className="self-start mt-1 rounded-full px-5 py-2 bg-[var(--background-primary)] active:opacity-80"
                 >
-                    <AppText className="font-semibold text-[var(--foreground)]">{dc("Open Market")}</AppText>
+                    <AppText className="font-semibold text-on-strong">{dc("Open Market")}</AppText>
                 </Pressable>
             </View>
 

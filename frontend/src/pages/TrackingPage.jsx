@@ -870,7 +870,7 @@ const TrackingPage = () => {
             {isMobile && mapVisible && (
                 <>
                     <div className="absolute inset-0 z-0" style={{ background: MAP_LAND_COLOR }} />
-                    <GoogleMap center={pickupPoint} zoom={12} onMapReady={setMapApi} className="absolute inset-0 z-0" />
+                    <GoogleMap appearance="dark" center={pickupPoint} zoom={12} onMapReady={setMapApi} className="absolute inset-0 z-0" />
                 </>
             )}
 
@@ -888,7 +888,7 @@ const TrackingPage = () => {
                     >
                         {backArrow}
                         {!isMobile && mapVisible && (
-                            <GoogleMap center={pickupPoint} zoom={12} onMapReady={setMapApi} className={MAP_CLASSES} />
+                            <GoogleMap appearance="dark" center={pickupPoint} zoom={12} onMapReady={setMapApi} className={MAP_CLASSES} />
                         )}
                         <div className="w-full flex-1 min-h-0 flex flex-col items-center sm:contents">
                             <div className={`relative z-10 sm:order-1 flex flex-col justify-center items-center sm:items-start w-full sm:w-auto flex-1 min-h-0 sm:flex-initial sm:h-full ${STACK}`}>
@@ -928,7 +928,7 @@ const TrackingPage = () => {
                         {backArrow}
                         {/* Scheduled ride: zoomed-out full route, no driver yet */}
                         {!isMobile && mapVisible && (
-                            <GoogleMap center={pickupPoint} zoom={12} onMapReady={setMapApi} className={MAP_CLASSES} />
+                            <GoogleMap appearance="dark" center={pickupPoint} zoom={12} onMapReady={setMapApi} className={MAP_CLASSES} />
                         )}
                         {/* Bounds the column to the sheet's height on phones so the
                             scroll region inside it has something to be flex-1 of;
@@ -1117,7 +1117,7 @@ const TrackingPage = () => {
                         >
                             {/* Live ride: route + the driver's current position */}
                             {!isMobile && mapVisible && (
-                                <GoogleMap center={pickupPoint} zoom={12} onMapReady={setMapApi} className={MAP_CLASSES} />
+                                <GoogleMap appearance="dark" center={pickupPoint} zoom={12} onMapReady={setMapApi} className={MAP_CLASSES} />
                             )}
                             {/* Floats over the map, a fixed gap above the sheet's
                                 top edge. Anchored to the panel, not the content
@@ -1249,7 +1249,7 @@ const TrackingPage = () => {
             {/* ride details */}
             <BackgroundPanel show={detialsVisibility === true} className={`z-3 sm:z-2 py-6 sm:overflow-hidden text-left flex flex-col sm:flex-row justify-center items-center sm:justify-center lg:justify-between sm:px-[9%] md:px-[5%] xl:px-[13%]`}>
                 {!isMobile && detialsVisibility && pickupPoint && dropPoint && (
-                    <GoogleMap center={pickupPoint} zoom={12} onMapReady={setMapApi} className={`${MAP_CLASSES} max-lg:hidden`} />
+                    <GoogleMap appearance="dark" center={pickupPoint} zoom={12} onMapReady={setMapApi} className={`${MAP_CLASSES} max-lg:hidden`} />
                 )}
                 <RideDetails prop={{bookingId, setLoading, setError, setDetialsVisibility }} />
             </BackgroundPanel>

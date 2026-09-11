@@ -69,6 +69,7 @@ const Login = () => {
   const phone = useData(state => state.phone);
   const setPhone = useData(state => state.setPhone);
   const [otp, setOtp] = useState("");
+  const phoneInputRef = useRef(null);
   const otpRefs = useRef([]);
   const OTP_LENGTH = 6;
   const OTP_TTL = 300; // seconds until the OTP expires — matches the backend's 5-minute window
@@ -252,6 +253,11 @@ const Login = () => {
 
   const busy = loading || redirecting;
 
+  useEffect(() => {
+    const activeInput = isPhone ? phoneInputRef.current : otpRefs.current[0];
+    activeInput?.focus();
+  }, [isPhone]);
+
   // The collapse reports an answer, so it waits for one. busy alone starts on the
   // press, which would have the boxes merging over a request that might still
   // come back rejected. Both halves are needed: verdict outlives the request it
@@ -323,7 +329,7 @@ const Login = () => {
   // The OTP comes over WhatsApp, whose "Copy code" button is the only way it
   // reaches the app — SMS autofill can't see it. Only while the boxes are empty:
   // a code already typed or already filled is not one to overwrite.
-  const { canPaste, paste: pasteOtp } = useOtpClipboard({
+  useOtpClipboard({
     enabled: !isPhone && !busy && otp.length === 0,
     length: OTP_LENGTH,
     onCode: (code) => {
@@ -369,7 +375,7 @@ const Login = () => {
       />
 
       <ScrollView
-        contentContainerClassName="flex-grow justify-center items-center px-6"
+        contentContainerClassName="flex-grow justify-start items-start px-6 pt-4"
         keyboardShouldPersistTaps="handled"
       >
         {isSignedIn && !redirecting
@@ -386,37 +392,37 @@ const Login = () => {
             </Button>
           </View>
 
-          : <View className="w-full justify-center items-center">
-            <View className="justify-center items-center gap-3">
-              <AppText className="text-2xl font-semibold text-center">
+          : <View className="w-full justify-start items-start gap-5">
+            <View className="w-full justify-center items-start gap-1">
+              <AppText className="text-2xl font-semibold text-left">
                 {isPhone ? t('driver.auth.loginTitle') : t('driver.auth.confirmTitle')}
               </AppText>
-              <AppText className="text-base text-center text-[var(--text-muted)]">
+              <AppText className="text-base text-left text-[var(--text-muted)]">
                 {isPhone
                   ? t('driver.auth.phoneBody')
                   : t('driver.auth.otpBody', { phone: phoneDisplay })}
               </AppText>
             </View>
 
-            <View className="w-full justify-center items-center">
+            <View className="w-full justify-center items-start">
 
-              {/* Fixed-height slot so an error appearing doesn't shift the form */}
-              <View className="mt-4 mb-2 min-h-5 items-center justify-center">
-                {error && (
-                  <AppText className="text-sm text-center" style={{ color: ERROR_TEXT }}>
+              {error && (
+                <View className="mt-2 mb-1 items-start justify-center">
+                  <AppText className="text-sm text-left" style={{ color: ERROR_TEXT }}>
                     {error}
                   </AppText>
-                )}
-              </View>
+                </View>
+              )}
 
               {!isPhone
-                ? <View className="justify-center items-center">
+                ? <View className="justify-center items-start">
                   <View className="relative flex-row justify-center items-center gap-2">
                     {Array.from({ length: OTP_LENGTH }).map((_, i) => (
                       <OtpBox key={i} index={i} count={OTP_LENGTH} collapsed={settled}>
                         <TextInput
                           ref={(el) => { otpRefs.current[i] = el; }}
                           keyboardType="number-pad"
+                          autoFocus={i === 0}
                           textContentType={i === 0 ? "oneTimeCode" : "none"}
                           autoComplete={i === 0 ? "sms-otp" : "off"}
                           // Emptied rather than hidden. The website turns the digit
@@ -470,30 +476,19 @@ const Login = () => {
                     )}
                   </View>
 
-                  <AppText className={`text-sm text-[var(--text-muted)] mt-2 mb-5 ${busy ? "opacity-0" : ""}`}>
+                  <AppText className={`text-sm text-left text-[var(--text-muted)] mt-2 mb-3 ${busy ? "opacity-0" : ""}`}>
                     {expiresIn > 0
                       ? t('driver.auth.expires', { time: formatMMSS(expiresIn) })
                       : t('driver.auth.expired')}
-                    {/* iOS only — Android fills the boxes on its own. Not
-                        offered on an expired code, which pastes to nothing. */}
-                    {canPaste && expiresIn > 0 && (
-                      <>
-                        {" · "}
-                        <AppText
-                          onPress={pasteOtp}
-                          className="font-semibold text-[var(--text)] underline"
-                        >
-                          {t('driver.auth.paste')}
-                        </AppText>
-                      </>
-                    )}
                   </AppText>
                 </View>
                 :
                 <Input
                   prop={{
                     type: "tel",
-                    get "placeholder"() { return dc("XXXXX XXXXX"); },
+                    inputRef: phoneInputRef,
+                    autoFocus: true,
+                    get "placeholder"() { return dc("Mobile number"); },
                     value: phone,
                     onChangeFn: handlePhoneChange,
                     maxLength: 10,
@@ -512,32 +507,20 @@ const Login = () => {
                     ? false
                     : (isPhone ? phone.length !== 10 : otp.length !== OTP_LENGTH),
                 }}
-                className="mt-5"
+                className="mt-3"
               >
                 {isPhone
                   ? (showSignUp ? t('driver.auth.signUp') : (loading ? t('driver.auth.sendingOtp') : t('common.actions.continue')))
                   : (loading ? t('driver.auth.redirecting') : t('driver.auth.confirm'))}
               </Button>
 
-              {isPhone && !showSignUp && (
-                <AppText className="mt-6 text-sm text-center text-[var(--text-muted)]">
-                  <AppText className="text-[var(--text)]">{t('driver.auth.noAccount')}</AppText>{" "}
-                  <AppText
-                    onPress={() => navigate("/signup")}
-                    className="font-semibold text-[var(--text)] underline"
-                  >
-                    {t('driver.auth.signUp')}
-                  </AppText>
-                </AppText>
-              )}
-
               {!isPhone && (
-                <AppText className={`mt-6 text-sm text-center text-[var(--text-muted)] ${busy ? "opacity-0" : ""}`}>
-                  <AppText className="text-[var(--text)]">{t('driver.auth.didntGet')}</AppText>{" "}
+                <AppText className={`mt-3 text-sm text-left text-[var(--text-muted)] ${busy ? "opacity-0" : ""}`}>
+                  <AppText className="text-[var(--text-muted)]">{t('driver.auth.didntGet')}</AppText>{" "}
                   {resending
                     ? t('driver.auth.sending')
                     : resendIn > 0
-                      ? <AppText style={{ fontVariant: ["tabular-nums"] }}>{t('driver.auth.resendIn', { seconds: resendIn })}</AppText>
+                      ? <AppText className="underline" style={{ fontVariant: ["tabular-nums"] }}>{t('driver.auth.resendIn', { seconds: resendIn })}</AppText>
                       : <AppText
                         onPress={handleResend}
                         className="font-semibold text-[var(--text)] underline"
@@ -547,9 +530,11 @@ const Login = () => {
                 </AppText>
               )}
 
-              <AppText className="text-sm text-center text-[var(--text-muted)] mt-5">
-                {t('driver.auth.consent')}
-              </AppText>
+              {isPhone && (
+                <AppText className="text-sm text-left text-[var(--text-muted)] mt-5">
+                  {t('driver.auth.consent')}
+                </AppText>
+              )}
             </View>
           </View>}
       </ScrollView>

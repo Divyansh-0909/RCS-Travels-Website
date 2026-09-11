@@ -1,16 +1,13 @@
-import type { ReactNode } from 'react';
+import type { ReactNode, Ref } from 'react';
 import { useState } from 'react';
 import { TextInput, View, type KeyboardTypeOptions, type TextInputProps } from 'react-native';
 import { useLanguage } from '../../i18n';
 import { devanagariFonts } from '../../theme/fonts';
+import { useTheme } from '../../theme/ThemeContext';
 
-const BORDER = 'rgba(255,255,255,0.3)';
-const BORDER_FOCUS = 'rgba(255,255,255,0.6)';
-const BG_FOCUS = 'rgba(255,255,255,0.05)';
 const BORDER_ERROR = 'rgba(185,28,28,0.5)';
 const BORDER_ERROR_FOCUS = 'rgba(185,28,28,0.8)';
 const BG_ERROR = 'rgba(185,28,28,0.1)';
-const PLACEHOLDER = 'rgba(243,243,243,0.5)';
 
 // The light-surface set. Everything above is tuned for the dark auth shell — white
 // borders, a translucent white fill and #ffffff text — so a field dropped onto a
@@ -18,10 +15,6 @@ const PLACEHOLDER = 'rgba(243,243,243,0.5)';
 // and, worst of the three, invisible typing: the captain filled it in correctly and
 // watched nothing appear. These are --background-primary and the hairline the
 // account screens rule with.
-const INK_LIGHT = 'rgba(18,18,32,0.12)';
-const INK_LIGHT_FOCUS = 'rgba(18,18,32,0.45)';
-const BG_LIGHT = '#ffffff';
-const PLACEHOLDER_LIGHT = 'rgba(18,18,32,0.4)';
 
 type InputType = 'text' | 'email' | 'tel' | 'number' | 'password';
 
@@ -45,6 +38,8 @@ interface InputProp {
     onFocusFn?: () => void;
     onBlurFn?: () => void;
     autoComplete?: TextInputProps['autoComplete'];
+    inputRef?: Ref<TextInput>;
+    autoFocus?: boolean;
     type?: InputType;
     placeholder?: string;
     bg?: string;
@@ -60,43 +55,42 @@ interface Props {
 }
 
 const Input = ({ prop, className = '', leading, trailing }: Props) => {
-    const { language } = useLanguage();
+  const { language } = useLanguage();
+    const { colors } = useTheme();
     const [focused, setFocused] = useState(false);
     const hasError = prop.error === true;
     const light = prop.variant === 'light';
     const type = prop.type ?? 'text';
     const plain = type !== 'email' && type !== 'password';
 
-    // The error pair is shared. Both are rgba ink-red, which reads on either shell —
-    // only the resting and focused states had to be resolved twice.
+    // The error pair is shared. Neutral field states always come from the active
+    // palette; `light` only asks for a filled field on an already-light card.
     const borderColor = hasError
         ? focused ? BORDER_ERROR_FOCUS : BORDER_ERROR
-        : light
-            ? focused ? INK_LIGHT_FOCUS : INK_LIGHT
-            : focused ? BORDER_FOCUS : BORDER;
+        : focused ? colors.ink : colors.borderUi;
 
     const backgroundColor = hasError
         ? BG_ERROR
-        : light
-            ? prop.bg ?? BG_LIGHT
-            : focused ? BG_FOCUS : prop.bg ?? 'transparent';
+        : prop.bg ?? (light ? colors.surface : focused ? colors.surfaceRaised : 'transparent');
 
     return (
         <View className={`${className} relative w-full my-1`}>
             <TextInput
+                ref={prop.inputRef}
                 value={prop.value != null ? `${prop.value}` : ''}
                 onChangeText={prop.onChangeFn}
                 onFocus={() => { setFocused(true); prop.onFocusFn?.(); }}
                 onBlur={() => { setFocused(false); prop.onBlurFn?.(); }}
                 placeholder={prop.placeholder}
-                placeholderTextColor={light ? PLACEHOLDER_LIGHT : PLACEHOLDER}
+                placeholderTextColor={colors.inkMuted}
                 autoComplete={prop.autoComplete}
+                autoFocus={prop.autoFocus}
                 autoCapitalize={plain ? 'sentences' : 'none'}
                 autoCorrect={plain}
                 secureTextEntry={type === 'password'}
                 keyboardType={KEYBOARD[type]}
                 maxLength={prop.maxLength}
-                className={`font-sans text-base ${light ? 'text-[var(--background-primary)]' : 'text-[var(--text)]'} w-full px-4 py-3 rounded-xl border ${leading ? 'pl-9' : ''} ${trailing ? 'pr-10' : ''}`}
+                className={`font-sans text-base text-ink w-full px-4 py-3 rounded-xl border ${leading ? 'pl-9' : ''} ${trailing ? 'pr-10' : ''}`}
                 style={{ borderColor, backgroundColor, ...(language === 'hi' ? { fontFamily: devanagariFonts.normal } : {}) }}
             />
 

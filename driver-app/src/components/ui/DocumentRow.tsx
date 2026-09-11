@@ -12,6 +12,8 @@ import {
   XCircleIcon,
 } from 'phosphor-react-native';
 import AppText from '../AppText';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
 
 const asThemed = { className: { target: false, nativeStyleToProp: { color: true } } } as const;
 const Retry = cssInterop(ArrowClockwiseIcon, asThemed);
@@ -20,16 +22,9 @@ const HAIRLINE = 'rgba(18,18,32,0.1)';
 const WELL = 'rgba(18,18,32,0.04)';
 const TRACK = 'rgba(18,18,32,0.08)';
 
-const INK = 'text-[var(--background-primary)]';
-const MUTED = 'text-gray-600';
+const INK = 'text-ink';
+const MUTED = 'text-ink-muted';
 
-const ICON_INK = '#121220';
-// Amber 800 rather than 700, for the reason AccountRow gives: 700 lands at 4.2:1
-// on this page and these are 12-14px lines a captain is meant to act on.
-const AMBER = '#92400E';
-const GREEN = '#15803D';
-const RED = '#B91C1C';
-const BLUE = '#243AFB';
 
 /**
  * The state of one document, as the captain reads it. Not the same vocabulary as
@@ -64,21 +59,21 @@ type Props = {
   last?: boolean;
 };
 
-const PRESENTATION: Record<DocumentRowState, { Icon: typeof ClockIcon; color: string; word: string }> = {
-  missing: { Icon: PlusCircleIcon, color: ICON_INK, get "word"() { return dc("Not uploaded"); } },
-  uploading: { Icon: ClockIcon, color: BLUE, word: 'Uploading' },
+const presentationFor = (colors: ThemeColors): Record<DocumentRowState, { Icon: typeof ClockIcon; color: string; word: string }> => ({
+  missing: { Icon: PlusCircleIcon, color: colors.ink, get "word"() { return dc("Not uploaded"); } },
+  uploading: { Icon: ClockIcon, color: colors.primary, word: 'Uploading' },
   // The file check, in the captain's words. He is not told it is a security scan
   // — that invites him to wonder what was suspected of his licence — only that it
   // is being checked, which is true and is all he can act on.
-  scanning: { Icon: ShieldCheckIcon, color: BLUE, word: 'Checking' },
-  pending: { Icon: ClockIcon, color: AMBER, get "word"() { return dc("Waiting for review"); } },
-  approved: { Icon: CheckCircleIcon, color: GREEN, get "word"() { return dc("Approved"); } },
-  rejected: { Icon: XCircleIcon, color: RED, get "word"() { return dc("Rejected"); } },
+  scanning: { Icon: ShieldCheckIcon, color: colors.primary, word: 'Checking' },
+  pending: { Icon: ClockIcon, color: colors.warning, get "word"() { return dc("Waiting for review"); } },
+  approved: { Icon: CheckCircleIcon, color: colors.positive, get "word"() { return dc("Approved"); } },
+  rejected: { Icon: XCircleIcon, color: colors.negative, get "word"() { return dc("Rejected"); } },
   // A scan that could not be completed. Deliberately worded as a problem with
   // the file rather than a verdict on the driver — most of these are a truncated
   // upload over bad signal, not anybody trying anything.
-  unverified: { Icon: WarningCircleIcon, color: RED, get "word"() { return dc("Couldn't be checked"); } },
-};
+  unverified: { Icon: WarningCircleIcon, color: colors.negative, get "word"() { return dc("Couldn't be checked"); } },
+});
 
 const DocumentRow = ({
   label,
@@ -94,7 +89,8 @@ const DocumentRow = ({
   last,
 }: Props) => {
     useCopyLanguage();
-  const { Icon, color, word } = PRESENTATION[state];
+  const { colors } = useTheme();
+  const { Icon, color, word } = presentationFor(colors)[state];
   const showProgress = state === 'uploading' && typeof progress === 'number';
   const showRetry = (state === 'rejected' || state === 'unverified') && onRetry != null;
 
@@ -133,7 +129,7 @@ const DocumentRow = ({
         ) : null}
 
         {expiry ? (
-          <AppText className="text-sm" style={{ color: expiryWarn ? AMBER : '#4B5563' }}>
+          <AppText className="text-sm" style={{ color: expiryWarn ? colors.warning : colors.inkMuted }}>
             {expiry}
           </AppText>
         ) : null}
@@ -142,7 +138,7 @@ const DocumentRow = ({
             already sent looks exactly like an approved row with nothing done —
             and the captain uploads his insurance a second time. */}
         {renewing ? (
-          <AppText className="text-sm" style={{ color: BLUE }}>{dc("Renewal sent — being checked")}</AppText>
+          <AppText className="text-sm" style={{ color: colors.primary }}>{dc("Renewal sent — being checked")}</AppText>
         ) : null}
 
         {showProgress ? (
@@ -152,7 +148,7 @@ const DocumentRow = ({
           >
             <View
               className="h-full rounded-full"
-              style={{ backgroundColor: BLUE, width: `${Math.round((progress ?? 0) * 100)}%` }}
+              style={{ backgroundColor: colors.primary, width: `${Math.round((progress ?? 0) * 100)}%` }}
             />
           </View>
         ) : null}
@@ -166,7 +162,7 @@ const DocumentRow = ({
           hitSlop={8}
           style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
         >
-          <Retry size={18} weight="bold" color={ICON_INK} />
+          <Retry size={18} weight="bold" color={colors.ink} />
         </Pressable>
       ) : null}
     </View>

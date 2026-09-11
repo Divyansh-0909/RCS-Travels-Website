@@ -1,16 +1,18 @@
 import { useLanguage as useCopyLanguage } from "../i18n";
 import { driverCopy as dc } from "../lib/copy";
 import { useEffect, useState } from 'react';
-import { Linking, Pressable, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { cssInterop } from 'nativewind';
 import { PhoneIcon, XIcon } from 'phosphor-react-native';
 import Animated, { FadeIn, SlideInUp } from 'react-native-reanimated';
 import AppText from './AppText';
 import { useNoticeTop } from './AppBarVisibility';
-import { INK_TEXT, MUTED, SURFACE } from './ui/rideUi';
+import { INK_TEXT, MUTED } from './ui/rideUi';
 import { ACTIVE_RIDE_STATUSES } from '../constants/booking';
 import { useApi } from '../hooks/useApi';
 import { useOffers } from '../hooks/useOffers';
+import { useTheme } from '../theme/ThemeContext';
+import { callPhoneNumber } from '../lib/externalLinks';
 import type { UpcomingBooking } from '../types/enums';
 
 const asThemed = { className: { target: false, nativeStyleToProp: { color: true } } } as const;
@@ -47,6 +49,7 @@ const RideAcceptedSheet = () => {
     const { accepted, clearAccepted } = useOffers();
     const api = useApi();
     const top = useNoticeTop();
+    const { colors } = useTheme();
     const [show, setShow] = useState(false);
 
     useEffect(() => {
@@ -96,7 +99,7 @@ const RideAcceptedSheet = () => {
             <Animated.View
                 entering={SlideInUp.duration(280)}
                 className="absolute left-3 right-3 rounded-3xl px-6 pt-5 pb-6 gap-1"
-                style={{ top, backgroundColor: SURFACE }}
+                style={{ top, backgroundColor: colors.surface }}
             >
                 <View className="flex-row items-center justify-between">
                     <AppText
@@ -122,7 +125,7 @@ const RideAcceptedSheet = () => {
                         role="button"
                         accessibilityLabel={dc("Call {{value0}}", {value0: (accepted.customerPhone)})}
                         onPress={() => {
-                            Linking.openURL(`tel:${accepted.customerPhone}`);
+                            callPhoneNumber(accepted.customerPhone);
                             // Closed on the way out. He is leaving for the dialler,
                             // and coming back to the sheet that sent him there would
                             // read as the call not having happened.
@@ -131,7 +134,7 @@ const RideAcceptedSheet = () => {
                         style={({ pressed }) => ({ opacity: pressed ? 0.75 : 1 })}
                         className="w-full h-12 rounded-xl flex flex-row gap-2 items-center justify-center bg-primary"
                     >
-                        <Phone size={22} weight="fill" className="text-[var(--foreground)]" />
+                        <Phone size={22} weight="fill" className="text-on-strong" />
                         <AppText className='font-semibold text-lg'>{dc("Call Rider")}</AppText>
                     </Pressable>
                 </View>

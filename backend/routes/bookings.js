@@ -20,6 +20,8 @@ import { createBookingFromQuote, BookingCreationError } from '../services/bookin
 import { nearbyDriverAvailability, nearbyDriverEta } from '../services/nearbyDrivers.js'
 import { driverLocationVisibleToRider } from '../services/riderDriverLocation.js'
 import { assignmentWindowStartedAt } from '../services/driverCancellations.js'
+import { paymentWriteLimiter } from '../middleware/rateLimit.js'
+import { recentBookingHistoryWhere } from '../lib/bookingHistory.js'
 
 const bookingsRouter = Router()
 
@@ -223,7 +225,7 @@ async function ownedBooking(req, res) {
   return { user, booking }
 }
 
-bookingsRouter.post('/:id/scheduled-advance/order', protect, async (req, res) => {
+bookingsRouter.post('/:id/scheduled-advance/order', protect, paymentWriteLimiter, async (req, res) => {
   const owned = await ownedBooking(req, res)
   if (!owned) return
   if (!owned.booking.scheduledAt) return res.status(409).json({ error: 'Ride Now has no scheduled advance' })
@@ -235,7 +237,7 @@ bookingsRouter.post('/:id/scheduled-advance/order', protect, async (req, res) =>
   catch (err) { if (err instanceof PaymentError) return res.status(err.status).json({ error: err.message, code: err.code }); throw err }
 })
 
-bookingsRouter.post('/:id/scheduled-final/order', protect, async (req, res) => {
+bookingsRouter.post('/:id/scheduled-final/order', protect, paymentWriteLimiter, async (req, res) => {
   const owned = await ownedBooking(req, res)
   if (!owned) return
   if (!owned.booking.scheduledAt || owned.booking.status !== 'completed')
@@ -607,7 +609,11 @@ bookingsRouter.get('/my-bookings', protect, async (req, res) => {
     const user = await prisma.user.findUnique({ where: { clerkId: req.auth.userId } })
     if (!user) return res.status(401).json({ error: 'User not found' })
 
-    const where = { userId: user.id }
+    // Ride History is intentionally bounded to the last three calendar months.
+    // Keep this server-side so pagination, search and direct API use all obey the
+    // same retention window. The helper follows the same effective ride moment as
+    // the captain history UI: completedAt -> scheduledAt -> createdAt.
+    const where = { userId: user.id, AND: [recentBookingHistoryWhere()] }
     if (search) {
         const compact = search.replace(/[\s+\-()]/g, '')
         const reference = normalizeReference(search)

@@ -4,6 +4,7 @@ import { clerkClient } from '@clerk/express'
 import crypto from 'crypto'
 // Unused while the send below is commented out — kept so putting it back is one edit.
 import { sendOtpWhatsApp } from '../services/notification.js'
+import { normalizedPhone, otpLimiters } from '../middleware/rateLimit.js'
 
 // Phone-OTP login without Clerk's hosted UI and without passwords. We own the OTP
 // (stored hashed, 5-minute expiry) and Clerk owns the session; the two are bridged
@@ -57,10 +58,11 @@ async function intentMismatch(phone, intent, audience) {
   return account ? null : { status: 404, error: `No ${noun} found with this number` }
 }
 
-hybridAuthRouter.post('/send-otp', async (req, res) => {
-  const { phone, intent, audience } = req.body
+hybridAuthRouter.post('/send-otp', otpLimiters.send, async (req, res) => {
+  const { intent, audience } = req.body
+  const phone = normalizedPhone(req.body.phone)
 
-  if (!phone || phone.length !== 10) {
+  if (!phone) {
     return res.status(400).json({ error: 'Invalid phone number' })
   }
 
@@ -120,8 +122,9 @@ hybridAuthRouter.post('/send-otp', async (req, res) => {
   return res.json({ ok: true })
 })
 
-hybridAuthRouter.post('/verify-otp', async (req, res) => {
-  const { phone, otp, intent, audience } = req.body
+hybridAuthRouter.post('/verify-otp', otpLimiters.verify, async (req, res) => {
+  const { otp, intent, audience } = req.body
+  const phone = normalizedPhone(req.body.phone)
 
   if (!phone || !otp) {
     return res.status(400).json({ error: 'Phone and OTP are required' })

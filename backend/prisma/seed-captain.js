@@ -53,8 +53,8 @@ async function main() {
   if (!isVehicleClass(VEHICLE_CLASS)) {
     throw new Error(`CAPTAIN_CLASS "${VEHICLE_CLASS}" is not a vehicle class`)
   }
-  if (!process.env.CLERK_SECRET_KEY) {
-    throw new Error('CLERK_SECRET_KEY is not set — this script has to create the Clerk user')
+  if (!process.env.CLERK_SECRET_KEY?.startsWith('sk_test_')) {
+    throw new Error('CLERK_SECRET_KEY must be a Clerk test-mode key — refusing to seed a live Clerk instance')
   }
 
   // The exact derivation hybridAuth.js uses. It has to match, or verify-otp
@@ -66,7 +66,7 @@ async function main() {
     ? found.data[0]
     : await clerkClient.users.createUser({ emailAddress: [email], skipPasswordChecks: true })
 
-  console.log(`Clerk user ${clerkUser.id} (${email})`)
+  console.log('Development Clerk captain identity is ready')
 
   const driver = await prisma.driver.upsert({
     where: { phone: PHONE },
@@ -110,10 +110,9 @@ async function main() {
     create: { driverId: driver.id, latitude: PICKUP.lat, longitude: PICKUP.lng },
   })
 
-  console.log(`Driver ${driver.name} (${driver.vehicleClass}) @ ${driver.id}`)
+  console.log(`Driver ${driver.name} (${driver.vehicleClass}) is ready`)
   console.log(`\n  Log in with: ${PHONE}`)
-  console.log('  The OTP prints to the backend console — WhatsApp delivery is')
-  console.log('  commented out in routes/hybridAuth.js.\n')
+  console.log('  The six-digit OTP prints to the backend console in development.\n')
 }
 
 main()

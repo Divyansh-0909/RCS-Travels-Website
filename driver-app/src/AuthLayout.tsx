@@ -8,6 +8,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Outlet, useLocation } from 'react-router-native';
 import SwipeBack from './components/SwipeBack';
+import { useTheme } from './theme/ThemeContext';
 
 const PAGE_ENTER = FadeInDown
     .duration(180)
@@ -21,10 +22,11 @@ const PAGE_EXIT = FadeOut
 
 const AuthLayout = () => {
     const { pathname } = useLocation();
+    const { scheme } = useTheme();
 
     return (
-        <View className='relative w-full h-full bg-[var(--background-primary)] flex flex-col justify-center items-center'>
-            <StatusBar style="light" animated />
+        <View className='relative w-full h-full bg-immersive flex flex-col justify-center items-center'>
+            <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} animated />
             <Animated.View
                 key={pathname}
                 entering={PAGE_ENTER}

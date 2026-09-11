@@ -55,7 +55,7 @@ const Notifications = () => {
                     ) : null}
                 </View>
                 <BackButton
-                    className="absolute -top-2 left-0 rounded-full bg-[#f3f3f3]"
+                    className="absolute -top-2 left-0 rounded-full bg-surface-muted"
                     // Notifications can be opened from any signed-in screen. Follow
                     // the same router entry as Android and swipe-back instead of
                     // hard-coding Home and discarding the captain's context.
@@ -74,7 +74,7 @@ const Notifications = () => {
             ) : null}
 
             {error ? (
-                <View className="rounded-2xl px-4 py-3 mb-3 bg-[var(--background-primary)]">
+                <View className="rounded-2xl px-4 py-3 mb-3 bg-surface">
                     <AppText className="text-sm font-medium text-red-400">{error}</AppText>
                 </View>
             ) : null}

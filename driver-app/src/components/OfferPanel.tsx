@@ -146,10 +146,14 @@ const OfferPanel = () => {
     if (!panelOffer || remainingMs <= 0) return null;
 
     const answer = async (action: (id: string) => Promise<{ error?: string } | null>) => {
-        const failure = await action(panelOffer.offerId);
-        // Left on screen when it fails, and only then: the message is about THIS
-        // card, and hiding it would take the explanation with it.
-        setError(failure?.error ?? null);
+        try {
+            const failure = await action(panelOffer.offerId);
+            // Left on screen when it fails, and only then: the message is about THIS
+            // card, and hiding it would take the explanation with it.
+            setError(failure?.error ?? null);
+        } catch (cause: unknown) {
+            setError(cause instanceof Error ? cause.message : dc("Could not update this offer. Please try again."));
+        }
     };
 
     
@@ -174,7 +178,7 @@ const OfferPanel = () => {
                         <AppText className="text-sm font-medium text-red-400">{error}</AppText>
                     </View>
                 ) : (
-                    <AppText className="text-xs text-center mt-2 text-[var(--background-primary)] opacity-60">{dc("Swipe away to hide, it stays in Notifications")}</AppText>
+                    <AppText className="text-xs text-center mt-2 text-ink opacity-60">{dc("Swipe away to hide, it stays in Notifications")}</AppText>
                 )}
             </Animated.View>
         </View>

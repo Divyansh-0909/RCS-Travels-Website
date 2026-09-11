@@ -234,7 +234,7 @@ const SharedTrip = () => {
             {isMobile && mapVisible && (
                 <>
                     <div className="absolute inset-0 z-0" style={{ background: MAP_LAND_COLOR }} />
-                    <GoogleMap center={pickupPoint} zoom={12} onMapReady={setMapApi} className="absolute inset-0 z-0" />
+                    <GoogleMap appearance="dark" center={pickupPoint} zoom={12} onMapReady={setMapApi} className="absolute inset-0 z-0" />
                 </>
             )}
 
@@ -245,7 +245,7 @@ const SharedTrip = () => {
                 className={"py-6 max-sm:pb-0 sm:overflow-hidden justify-center items-center flex flex-col sm:flex-row sm:justify-center lg:justify-between text-left sm:px-[9%] md:px-[5%] xl:px-[13%]"}
             >
                 {!isMobile && mapVisible && (
-                    <GoogleMap center={pickupPoint} zoom={12} onMapReady={setMapApi} className={MAP_CLASSES} />
+                    <GoogleMap appearance="dark" center={pickupPoint} zoom={12} onMapReady={setMapApi} className={MAP_CLASSES} />
                 )}
 
                 <div className="w-full flex-1 min-h-0 flex flex-col items-center sm:contents">

@@ -22,10 +22,9 @@ import {
 } from '../../constants/marketplace';
 import Button from './Button';
 import Input from './Input';
+import { useTheme } from '../../theme/ThemeContext';
 
-const CARD = '#f3f3f3';
 const HAIRLINE = 'rgba(18,18,32,0.12)';
-const INK_COLOR = '#121220';
 const SCRIM = 'rgba(18,18,32,0.52)';
 const WELL = 'rgba(18,18,32,0.04)';
 const ERROR = '#B91C1C';
@@ -37,8 +36,8 @@ const FLING_VELOCITY = 0.45;
 const SNAP_DRAG_THRESHOLD = 56;
 const SNAP_ANIMATION = { damping: 24, stiffness: 240, mass: 0.9 } as const;
 
-const INK = 'text-[var(--background-primary)]';
-const MUTED = 'text-gray-600';
+const INK = 'text-ink';
+const MUTED = 'text-ink-muted';
 
 const VEHICLE_CLASSES = ['hatchback', 'sedan', 'suv', 'suv_premium'] as const;
 
@@ -133,6 +132,7 @@ const FieldError = ({ children }: { children?: string }) => children ? (
 
 const MarketplacePostSheet = ({ visible, onClose, onSubmit }: Props) => {
     useCopyLanguage();
+  const { colors } = useTheme();
   const { height: windowHeight } = useWindowDimensions();
   const [form, setForm] = useState<Form>(EMPTY_FORM);
   const [submitted, setSubmitted] = useState(false);
@@ -266,7 +266,7 @@ const MarketplacePostSheet = ({ visible, onClose, onSubmit }: Props) => {
           accessibilityViewIsModal
           style={{
             height: sheetHeight,
-            backgroundColor: '#ffffff',
+            backgroundColor: colors.surface,
             borderTopLeftRadius: 24,
             borderTopRightRadius: 24,
             overflow: 'hidden',
@@ -306,7 +306,7 @@ const MarketplacePostSheet = ({ visible, onClose, onSubmit }: Props) => {
                 opacity: pressed ? 0.6 : 1,
               })}
             >
-              <XIcon size={17} weight="bold" color={INK_COLOR} />
+              <XIcon size={17} weight="bold" color={colors.ink} />
             </Pressable>
           </View>
 
@@ -377,9 +377,9 @@ const MarketplacePostSheet = ({ visible, onClose, onSubmit }: Props) => {
                         borderRadius: 12,
                         paddingHorizontal: 12,
                         paddingVertical: 10,
-                        backgroundColor: selected ? INK_COLOR : '#fff',
+                        backgroundColor: selected ? colors.strong : colors.surface,
                         borderWidth: 1,
-                        borderColor: selected ? INK_COLOR : HAIRLINE,
+                        borderColor: selected ? colors.strong : colors.borderUi,
                         opacity: pressed ? 0.7 : 1,
                       })}
                     >
@@ -410,7 +410,7 @@ const MarketplacePostSheet = ({ visible, onClose, onSubmit }: Props) => {
               </View>
             </View>
 
-            <View className="rounded-2xl p-4 gap-2" style={{ backgroundColor: CARD }}>
+            <View className="rounded-2xl p-4 gap-2" style={{ backgroundColor: colors.surfaceMuted }}>
               <View className="flex-row justify-between gap-3">
                 <AppText className={`text-sm ${MUTED}`}>{dc("Deposit")}</AppText>
                 <AppText className={`text-sm font-semibold ${INK}`}>{rupees(deposit)}</AppText>
@@ -430,7 +430,7 @@ const MarketplacePostSheet = ({ visible, onClose, onSubmit }: Props) => {
             </View>
           </ScrollView>
 
-          <View className="w-full gap-1 px-5 pt-3 pb-6 bg-white">
+          <View className="w-full gap-1 px-5 pt-3 pb-6 bg-surface">
             <Button onPress={submit}>{dc("Post booking")}</Button>
             <AppText className={`text-xs text-center ${MUTED}`}>{dc("The rider pays the claiming captain") + " "}{rupees(fare)}{" " + dc("directly.")}</AppText>
           </View>

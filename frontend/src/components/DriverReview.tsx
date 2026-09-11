@@ -99,7 +99,7 @@ const GROUP_LABELS: Record<DriverGroup, string> = {
 const groupChipFor = (group: DriverGroup) =>
     group === "rcs" ? "text-primary bg-primary/10"
         : group === "admin" ? "text-amber-700 bg-amber-500/10"
-            : "text-gray-600 bg-gray-500/10"
+            : "text-ink-muted bg-surface-muted"
 
 const plainChip = "text-xs font-semibold px-2.5 py-1 rounded-full shrink-0"
 // Every other chip on this screen prints an enum key straight from the wire, so
@@ -204,12 +204,12 @@ const DriverReview = ({ driverId, onVerificationChange, onGroupChange }: {
         onGroupChange?.(result.group)
     }
 
-    if (loading) return <p className="text-sm text-gray-500 py-4">{dc("Loading paperwork…")}</p>
+    if (loading) return <p className="text-sm text-ink-muted py-4">{dc("Loading paperwork…")}</p>
 
     if (error && !data) return (
         <div className="w-full py-4">
             <p className="text-sm text-red-600">{error}</p>
-            <button onClick={load} className="mt-2 text-sm underline text-[var(--background-primary)]">{dc("Try again")}</button>
+            <button onClick={load} className="mt-2 text-sm underline text-ink">{dc("Try again")}</button>
         </div>
     )
 
@@ -223,9 +223,9 @@ const DriverReview = ({ driverId, onVerificationChange, onGroupChange }: {
         const isBusy = busyId === document.id
 
         return (
-            <div key={document.id} className="w-full py-3 border-b border-[var(--background-primary)]/10 last:border-b-0">
+            <div key={document.id} className="w-full py-3 border-b border-border/50 last:border-b-0">
                 <div className="flex flex-wrap items-center gap-2">
-                    <h4 className="font-medium text-[var(--background-primary)]">{document.label}</h4>
+                    <h4 className="font-medium text-ink">{document.label}</h4>
                     {document.isReplacement && (
                         <span className={`${chip} text-blue-600 bg-blue-500/10`}>{dc("Renewal")}</span>
                     )}
@@ -236,7 +236,7 @@ const DriverReview = ({ driverId, onVerificationChange, onGroupChange }: {
                     {lapsed && <span className={`${chip} text-red-600 bg-red-500/10`}>{dc("Expired")}</span>}
                 </div>
 
-                <p className="text-sm text-gray-500 mt-1">
+                <p className="text-sm text-ink-muted mt-1">
                     {document.number ? dc("{{value0}} •", {value0: (document.number)}) : ""}
                     {document.expiresAt ? dc("Expires {{value0}} •", {value0: (shortDate(document.expiresAt))}) : ""}{dc("Uploaded") + " "}{shortDate(document.uploadedAt)}
                 </p>
@@ -266,7 +266,7 @@ const DriverReview = ({ driverId, onVerificationChange, onGroupChange }: {
                             href={document.url ?? undefined}
                             target="_blank"
                             rel="noreferrer"
-                            className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-xl border border-[var(--background-primary)]/30 text-[var(--background-primary)] hover:bg-[var(--background-primary)]/5 focus-visible:outline-2 focus-visible:outline-offset-2 transition-colors duration-300"
+                            className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-xl border border-border text-ink hover:bg-surface-muted focus-visible:outline-2 focus-visible:outline-offset-2 transition-colors duration-300"
                         >
                             <Icon path={mdiOpenInNew} size={0.7} />{dc("Open document")}</a>
 
@@ -274,7 +274,7 @@ const DriverReview = ({ driverId, onVerificationChange, onGroupChange }: {
                             <button
                                 disabled={isBusy}
                                 onClick={() => review(document, "approved")}
-                                className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-xl bg-primary text-[var(--foreground)] font-semibold hover:opacity-90 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 transition-opacity duration-300"
+                                className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-xl bg-primary text-on-strong font-semibold hover:opacity-90 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 transition-opacity duration-300"
                             >
                                 <Icon path={mdiCheck} size={0.7} />
                                 {isBusy ? dc("Saving…") : dc("Approve")}
@@ -298,7 +298,7 @@ const DriverReview = ({ driverId, onVerificationChange, onGroupChange }: {
                     reason gets the same file uploaded again. */}
                 {rejecting === document.id && (
                     <div className="mt-3 w-full">
-                        <label htmlFor={`reason-${document.id}`} className="text-sm text-gray-500">{dc("Why are you rejecting this? The captain sees this message.")}</label>
+                        <label htmlFor={`reason-${document.id}`} className="text-sm text-ink-muted">{dc("Why are you rejecting this? The captain sees this message.")}</label>
                         <textarea
                             id={`reason-${document.id}`}
                             value={reason}
@@ -306,19 +306,19 @@ const DriverReview = ({ driverId, onVerificationChange, onGroupChange }: {
                             rows={2}
                             maxLength={500}
                             placeholder={dc("e.g. The photo is too blurry to read the licence number")}
-                            className="w-full mt-1 p-2 text-sm rounded-xl border-2 border-[var(--background-muted)]/40 focus:border-[var(--background-muted)] outline-none text-[var(--background-primary)] transition-colors duration-300"
+                            className="w-full mt-1 p-2 text-sm rounded-xl border-2 border-border/40 focus:border-border outline-none text-ink transition-colors duration-300"
                         />
                         <div className="flex gap-2 mt-2">
                             <button
                                 disabled={reason.trim().length < 3 || isBusy}
                                 onClick={() => review(document, "rejected")}
-                                className="text-sm px-3 py-1.5 rounded-xl bg-red-600 text-white font-semibold hover:opacity-90 disabled:opacity-40 transition-opacity duration-300"
+                                className="text-sm px-3 py-1.5 rounded-xl bg-red-600 text-on-strong font-semibold hover:opacity-90 disabled:opacity-40 transition-opacity duration-300"
                             >
                                 {isBusy ? dc("Saving…") : dc("Send rejection")}
                             </button>
                             <button
                                 onClick={() => { setRejecting(null); setReason("") }}
-                                className="text-sm px-3 py-1.5 rounded-xl border border-[var(--background-primary)]/30 text-[var(--background-primary)] hover:bg-[var(--background-primary)]/5 transition-colors duration-300"
+                                className="text-sm px-3 py-1.5 rounded-xl border border-border text-ink hover:bg-surface-muted transition-colors duration-300"
                             >{dc("Cancel")}</button>
                         </div>
                     </div>
@@ -338,9 +338,9 @@ const DriverReview = ({ driverId, onVerificationChange, onGroupChange }: {
             {error && <p className="text-sm text-red-600 mb-3">{error}</p>}
 
             <section className="w-full">
-                <h4 className="text-xs uppercase tracking-wide text-gray-500 mb-1">{dc("The captain")}</h4>
+                <h4 className="text-xs uppercase tracking-wide text-ink-muted mb-1">{dc("The captain")}</h4>
                 {driverOwned.length === 0
-                    ? <p className="text-sm text-gray-500 py-2">{dc("Nothing uploaded yet.")}</p>
+                    ? <p className="text-sm text-ink-muted py-2">{dc("Nothing uploaded yet.")}</p>
                     : driverOwned.map(row)}
                 {missingNote(data.missing)}
             </section>
@@ -351,7 +351,7 @@ const DriverReview = ({ driverId, onVerificationChange, onGroupChange }: {
                 nothing about whether he can work today. */}
             {data.vehicles.map((vehicle) => (
                 <section key={vehicle.id} className="w-full mt-5">
-                    <h4 className="text-xs uppercase tracking-wide text-gray-500 mb-1">
+                    <h4 className="text-xs uppercase tracking-wide text-ink-muted mb-1">
                         {/* labelOf, not the raw class. Cars added before the model
                             was required have none, and the fallback was printing
                             the wire value — "suv_premium" — into a heading. */}
@@ -359,16 +359,16 @@ const DriverReview = ({ driverId, onVerificationChange, onGroupChange }: {
                         {vehicle.isActive && <span className="ml-2 normal-case text-green-700">{dc("driving this one")}</span>}
                     </h4>
                     {forVehicle(vehicle.id).length === 0
-                        ? <p className="text-sm text-gray-500 py-2">{dc("Nothing uploaded for this car yet.")}</p>
+                        ? <p className="text-sm text-ink-muted py-2">{dc("Nothing uploaded for this car yet.")}</p>
                         : forVehicle(vehicle.id).map(row)}
                     {missingNote(vehicle.missing)}
                 </section>
             ))}
 
-            <section className="w-full mt-6 pt-4 border-t border-[var(--background-primary)]/10">
-                <h4 className="font-medium text-[var(--background-primary)]">{dc("Conduct")}</h4>
+            <section className="w-full mt-6 pt-4 border-t border-border/50">
+                <h4 className="font-medium text-ink">{dc("Conduct")}</h4>
                 <div className="mt-2 flex flex-wrap gap-2">
-                    <span className={`${plainChip} ${data.conduct.cancellationCount30Days >= 5 ? "bg-red-500/10 text-red-700" : data.conduct.cancellationCount30Days >= 3 ? "bg-amber-500/10 text-amber-700" : "bg-gray-500/10 text-gray-600"}`}>
+                    <span className={`${plainChip} ${data.conduct.cancellationCount30Days >= 5 ? "bg-red-500/10 text-red-700" : data.conduct.cancellationCount30Days >= 3 ? "bg-amber-500/10 text-amber-700" : "bg-surface-muted text-ink-muted"}`}>
                         {data.conduct.cancellationCount30Days}{" " + dc("cancellations · 30 days")}</span>
                     {data.conduct.benefitRestrictedUntil && new Date(data.conduct.benefitRestrictedUntil) > new Date() && (
                         <span className={`${plainChip} bg-amber-500/10 text-amber-700`}>{dc("Benefits restricted until") + " "}{shortDate(data.conduct.benefitRestrictedUntil)}
@@ -376,14 +376,14 @@ const DriverReview = ({ driverId, onVerificationChange, onGroupChange }: {
                     )}
                 </div>
 
-                <h5 className="mt-4 text-xs uppercase tracking-wide text-gray-500">{dc("Customer complaints")}</h5>
+                <h5 className="mt-4 text-xs uppercase tracking-wide text-ink-muted">{dc("Customer complaints")}</h5>
                 {data.conduct.complaints.length === 0 ? (
-                    <p className="mt-1 text-sm text-gray-500">{dc("No complaints recorded.")}</p>
+                    <p className="mt-1 text-sm text-ink-muted">{dc("No complaints recorded.")}</p>
                 ) : (
                     <div className="mt-2 flex flex-col gap-3">
                         {data.conduct.complaints.map((complaint) => (
-                            <div key={complaint.id} className="rounded-xl bg-[var(--background-primary)]/5 p-3">
-                                <p className="text-xs text-gray-500">{complaint.booking.reference} · {shortDate(complaint.createdAt)}</p>
+                            <div key={complaint.id} className="rounded-xl bg-surface-muted p-3">
+                                <p className="text-xs text-ink-muted">{complaint.booking.reference} · {shortDate(complaint.createdAt)}</p>
                                 <div className="mt-2 flex flex-wrap gap-1.5">
                                     {complaint.labels.map((label) => (
                                         <span key={label} className={`${plainChip} bg-red-500/10 text-red-700`}>{label}</span>
@@ -399,9 +399,9 @@ const DriverReview = ({ driverId, onVerificationChange, onGroupChange }: {
                 destructive action stays last on the screen, and separated from the
                 paperwork because it is not a fact about his papers: a partner
                 captain is not a captain with something missing. */}
-            <section className="w-full mt-6 pt-4 border-t border-[var(--background-primary)]/10">
+            <section className="w-full mt-6 pt-4 border-t border-border/50">
                 <div className="flex flex-wrap items-center gap-2">
-                    <h4 className="font-medium text-[var(--background-primary)]">{dc("Fleet")}</h4>
+                    <h4 className="font-medium text-ink">{dc("Fleet")}</h4>
                     <span className={`${plainChip} ${groupChipFor(data.driver.group)}`}>
                         {GROUP_LABELS[data.driver.group]}
                     </span>
@@ -410,10 +410,10 @@ const DriverReview = ({ driverId, onVerificationChange, onGroupChange }: {
                 {/* The owner's own row. The server refuses to move it, so the button
                     is not offered — an admin should not find that out from a 409. */}
                 {data.driver.group === "admin" ? (
-                    <p className="text-sm text-gray-500 mt-1">{dc("Every scheduled ride is held for him before it reaches the fleet, so this row can't be moved from here.")}</p>
+                    <p className="text-sm text-ink-muted mt-1">{dc("Every scheduled ride is held for him before it reaches the fleet, so this row can't be moved from here.")}</p>
                 ) : (
                     <>
-                        <p className="text-sm text-gray-500 mt-1">
+                        <p className="text-sm text-ink-muted mt-1">
                             {data.driver.group === "rcs"
                                 ? dc("Offered scheduled rides before partner captains, and ranked ahead of them on ride-now.")
                                 : dc("Offered scheduled rides only once the RCS fleet has passed on them.")}
@@ -424,7 +424,7 @@ const DriverReview = ({ driverId, onVerificationChange, onGroupChange }: {
                         <button
                             disabled={groupBusy}
                             onClick={() => moveGroup(data.driver.group === "rcs" ? "partner" : "rcs")}
-                            className="mt-3 text-sm px-3 py-1.5 rounded-xl border border-[var(--background-primary)]/30 text-[var(--background-primary)] hover:bg-[var(--background-primary)]/5 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 transition-colors duration-300"
+                            className="mt-3 text-sm px-3 py-1.5 rounded-xl border border-border text-ink hover:bg-surface-muted disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 transition-colors duration-300"
                         >
                             {groupBusy
                                 ? dc("Saving…")
@@ -439,24 +439,24 @@ const DriverReview = ({ driverId, onVerificationChange, onGroupChange }: {
             {/* Suspension sits apart from the documents on purpose. It is a
                 judgement about conduct, not about paperwork, and a captain can be
                 fully approved and suspended at the same time. */}
-            <section className="w-full mt-6 pt-4 border-t border-[var(--background-primary)]/10">
+            <section className="w-full mt-6 pt-4 border-t border-border/50">
                 {data.driver.suspendedAt ? (
                     <>
                         <h4 className="font-medium text-red-600">{dc("Suspended") + " "}{shortDate(data.driver.suspendedAt)}</h4>
                         {data.driver.suspensionReason && (
-                            <p className="text-sm text-gray-500 mt-0.5">{data.driver.suspensionReason}</p>
+                            <p className="text-sm text-ink-muted mt-0.5">{data.driver.suspensionReason}</p>
                         )}
                         <button
                             disabled={suspendBusy}
                             onClick={() => toggleSuspension(false)}
-                            className="mt-3 text-sm px-3 py-1.5 rounded-xl bg-primary text-[var(--foreground)] font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity duration-300"
+                            className="mt-3 text-sm px-3 py-1.5 rounded-xl bg-primary text-on-strong font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity duration-300"
                         >
                             {suspendBusy ? dc("Saving…") : dc("Lift suspension")}
                         </button>
                     </>
                 ) : suspendOpen ? (
                     <>
-                        <label htmlFor={`suspend-${driverId}`} className="text-sm text-gray-500">{dc("Why is") + " "}{data.driver.name}{" " + dc("being suspended? He is shown this, and it is the only record of why.")}</label>
+                        <label htmlFor={`suspend-${driverId}`} className="text-sm text-ink-muted">{dc("Why is") + " "}{data.driver.name}{" " + dc("being suspended? He is shown this, and it is the only record of why.")}</label>
                         <textarea
                             id={`suspend-${driverId}`}
                             value={suspendReason}
@@ -464,19 +464,19 @@ const DriverReview = ({ driverId, onVerificationChange, onGroupChange }: {
                             rows={2}
                             maxLength={500}
                             placeholder={dc("e.g. Asked a rider for cash on top of the fare, 12 Aug")}
-                            className="w-full mt-1 p-2 text-sm rounded-xl border-2 border-[var(--background-muted)]/40 focus:border-[var(--background-muted)] outline-none text-[var(--background-primary)] transition-colors duration-300"
+                            className="w-full mt-1 p-2 text-sm rounded-xl border-2 border-border/40 focus:border-border outline-none text-ink transition-colors duration-300"
                         />
                         <div className="flex gap-2 mt-2">
                             <button
                                 disabled={suspendReason.trim().length < 3 || suspendBusy}
                                 onClick={() => toggleSuspension(true)}
-                                className="text-sm px-3 py-1.5 rounded-xl bg-red-600 text-white font-semibold hover:opacity-90 disabled:opacity-40 transition-opacity duration-300"
+                                className="text-sm px-3 py-1.5 rounded-xl bg-red-600 text-on-strong font-semibold hover:opacity-90 disabled:opacity-40 transition-opacity duration-300"
                             >
                                 {suspendBusy ? dc("Saving…") : dc("Suspend captain")}
                             </button>
                             <button
                                 onClick={() => { setSuspendOpen(false); setSuspendReason("") }}
-                                className="text-sm px-3 py-1.5 rounded-xl border border-[var(--background-primary)]/30 text-[var(--background-primary)] hover:bg-[var(--background-primary)]/5 transition-colors duration-300"
+                                className="text-sm px-3 py-1.5 rounded-xl border border-border text-ink hover:bg-surface-muted transition-colors duration-300"
                             >{dc("Cancel")}</button>
                         </div>
                     </>

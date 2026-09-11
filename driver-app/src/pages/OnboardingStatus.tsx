@@ -15,6 +15,7 @@ import AppText from '../components/AppText';
 import Button from '../components/ui/Button';
 import { useDriver } from '../hooks/useDriver';
 import { openSupportWhatsApp } from '../constants/support';
+import { useTheme } from '../theme/ThemeContext';
 
 // Home, for a captain who cannot drive yet.
 //
@@ -33,9 +34,8 @@ import { openSupportWhatsApp } from '../constants/support';
 // is happening, who it is waiting on, and what he can do — even when the honest
 // answer to the last one is "nothing, we'll message you".
 
-const CARD = '#f3f3f3';
-const INK = 'text-[var(--background-primary)]';
-const MUTED = 'text-gray-600';
+const INK = 'text-ink';
+const MUTED = 'text-ink-muted';
 const TITLE_TRACKING = { letterSpacing: -0.72 };
 
 // Same clearance every other board inside the shell reserves. This screen centres
@@ -130,6 +130,7 @@ const FACES: Record<string, Face> = {
 
 const OnboardingStatus = () => {
     useCopyLanguage();
+    const { colors } = useTheme();
   const { profile, loading, refresh } = useDriver();
   const navigate = useNavigate();
 
@@ -165,7 +166,7 @@ const OnboardingStatus = () => {
       // against nothing and comes out zero wide. The text blocks below size from
       // their own content and survive it; the button is w-full, and without this it
       // renders at zero width, which is to say invisibly.
-      className="flex-1 w-full bg-white"
+      className="flex-1 w-full bg-canvas"
       contentContainerStyle={{
         padding: 20,
         paddingBottom: BAR_CLEARANCE,
@@ -184,7 +185,7 @@ const OnboardingStatus = () => {
       <View className="items-center gap-4">
         <View
           className="w-16 h-16 rounded-2xl items-center justify-center"
-          style={{ backgroundColor: CARD }}
+          style={{ backgroundColor: colors.surfaceMuted }}
         >
           <Icon size={30} weight="regular" color={face.tone} />
         </View>
@@ -200,7 +201,7 @@ const OnboardingStatus = () => {
         {/* The office's own words, when there are any. A suspension with no
             stated reason is the thing a captain cannot argue with or act on. */}
         {blockedBy === 'suspended' && profile?.onboarding?.suspensionReason ? (
-          <View className="w-full rounded-2xl p-4" style={{ backgroundColor: CARD }}>
+          <View className="w-full rounded-2xl p-4" style={{ backgroundColor: colors.surfaceMuted }}>
             <AppText className={`text-sm ${MUTED}`}>
               {profile.onboarding.suspensionReason}
             </AppText>
@@ -214,7 +215,7 @@ const OnboardingStatus = () => {
             this is what tells him they are still his, on the screen that just
             told him he is blocked. */}
         {owedRides > 0 ? (
-          <View className="w-full rounded-2xl p-4 gap-3" style={{ backgroundColor: CARD }}>
+          <View className="w-full rounded-2xl p-4 gap-3" style={{ backgroundColor: colors.surfaceMuted }}>
             <AppText className={`text-sm ${MUTED}`}>
               {owedRides === 1
                 ? dc("You still have one ride to finish. Please complete it as normal — someone is waiting for it.")

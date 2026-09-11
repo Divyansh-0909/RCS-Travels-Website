@@ -1,6 +1,9 @@
 import { useTranslation } from "react-i18next";
+import Icon from "@mdi/react";
+import { mdiCheck } from "@mdi/js";
 import { useData } from "../hooks/useData";
 import { normalizeLanguage } from "../i18n";
+import SettingRow from "./ui/SettingRow";
 
 const choices = [
   { code: "en", native: "English", prompt: "Can read this? Tap here" },
@@ -8,7 +11,7 @@ const choices = [
   { code: "hi", native: "हिन्दी", prompt: "यह पढ़ सकते हैं? यहाँ दबाएँ" },
 ];
 
-export default function LanguageSelector({ className = "" }) {
+export default function LanguageSelector({ className = "", tone = "bg-tone-primary" }) {
   const { i18n, t } = useTranslation("common");
   const language = normalizeLanguage(useData((state) => state.language));
   const setLanguage = useData((state) => state.setLanguage);
@@ -18,21 +21,37 @@ export default function LanguageSelector({ className = "" }) {
     i18n.changeLanguage(code);
   };
 
+  const chooseWithKeyboard = (event, code) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    choose(code);
+  };
+
   return (
-    <div className={`grid w-full grid-cols-1 gap-3 md:grid-cols-3 ${className}`} role="radiogroup" aria-label={t("language.select")}>
+    <ul className={`flex w-full flex-col items-start justify-center gap-4 ${className}`} role="radiogroup" aria-label={t("language.select")}>
       {choices.map(({ code, native, prompt }) => (
-        <button
+        <SettingRow
           key={code}
-          type="button"
           role="radio"
           aria-checked={language === code}
+          tabIndex={0}
           onClick={() => choose(code)}
-          className={`min-h-24 min-w-0 rounded-2xl border p-4 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-primary ${language === code ? "border-primary bg-primary text-white" : "border-[var(--background-primary)]/20 bg-[var(--foreground-muted)] text-[var(--text-foreground)]"}`}
+          onKeyDown={(event) => chooseWithKeyboard(event, code)}
+          tone={tone}
+          className="outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          trailing={(
+            <span
+              aria-hidden="true"
+              className={`flex h-8 w-8 items-center justify-center rounded-full border transition-colors ${language === code ? "border-strong bg-strong text-on-strong" : "border-border bg-surface text-transparent"}`}
+            >
+              <Icon path={mdiCheck} size={0.8} />
+            </span>
+          )}
         >
-          <span lang={code} className="block break-words text-lg font-semibold leading-snug">{native}</span>
-          <span lang={code} className="mt-1 block break-words text-sm leading-relaxed opacity-75">{prompt}</span>
-        </button>
+          <h4 lang={code} className="break-words text-lg font-medium">{native}</h4>
+          <p lang={code} className="break-words text-base text-ink-muted">{prompt}</p>
+        </SettingRow>
       ))}
-    </div>
+    </ul>
   );
 }

@@ -1,15 +1,13 @@
 import { useLanguage as useCopyLanguage } from "../../i18n";
 import { driverCopy as dc } from "../../lib/copy";
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AppState, Pressable, useColorScheme, View } from 'react-native';
-import MapView, { Marker, Polyline, PROVIDER_GOOGLE, type MapStyleElement } from 'react-native-maps';
+import { AppState, Pressable, View } from 'react-native';
+import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import { CrosshairSimpleIcon } from 'phosphor-react-native';
 import { decodeGooglePolyline, remainingRoutePoints } from '../../lib/polyline';
-import {
-    DARK_MAP_LAND_COLOR,
-    LIGHT_MAP_LAND_COLOR,
-    MapLoadingSkeleton,
-} from './Skeleton';
+import { MapLoadingSkeleton } from './Skeleton';
+import { useTheme } from '../../theme/ThemeContext';
+import { mapStyleFor } from '../../theme/mapStyles';
 
 type Point = { latitude: number; longitude: number };
 type Props = {
@@ -60,49 +58,11 @@ const validPoint = (latitude: unknown, longitude: unknown): Point | null => {
     return { latitude: lat, longitude: lng };
 };
 
-// Dark mirrors the passenger website. Light stays in the same blue-grey family,
-// with lifted shades instead of switching to an unrelated stock Google theme.
-export const DARK_MAP_STYLE: MapStyleElement[] = [
-    { elementType: 'geometry', stylers: [{ color: DARK_MAP_LAND_COLOR }] },
-    { elementType: 'labels.text.fill', stylers: [{ color: '#d6d6db' }] },
-    { elementType: 'labels.text.stroke', stylers: [{ color: DARK_MAP_LAND_COLOR }] },
-    { featureType: 'landscape.man_made', elementType: 'geometry', stylers: [{ color: '#41414d' }] },
-    { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#1d1d27' }] },
-    { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#16161f' }] },
-    { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ visibility: 'off' }] },
-    { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#9a9ab2' }] },
-    { featureType: 'road.local', elementType: 'geometry', stylers: [{ color: '#1d1d26' }] },
-    { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#101018' }] },
-    { featureType: 'poi', stylers: [{ visibility: 'off' }] },
-    { featureType: 'poi.park', stylers: [{ visibility: 'on' }] },
-    { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#1b1b26' }] },
-    { featureType: 'transit', stylers: [{ visibility: 'off' }] },
-];
-
-const LIGHT_MAP_STYLE: MapStyleElement[] = [
-    { elementType: 'geometry', stylers: [{ color: LIGHT_MAP_LAND_COLOR }] },
-    { elementType: 'labels.text.fill', stylers: [{ color: '#565660' }] },
-    { elementType: 'labels.text.stroke', stylers: [{ color: '#f4f4f6' }, { weight: 2 }] },
-    { featureType: 'landscape.man_made', elementType: 'geometry.fill', stylers: [{ color: '#e1e1e5' }] },
-    { featureType: 'landscape.man_made', elementType: 'geometry.stroke', stylers: [{ color: '#c9c9d0' }, { weight: 1 }] },
-    { featureType: 'poi', elementType: 'geometry.fill', stylers: [{ visibility: 'on' }, { color: '#e1e1e5' }] },
-    { featureType: 'poi', elementType: 'geometry.stroke', stylers: [{ visibility: 'on' }, { color: '#c9c9d0' }, { weight: 1 }] },
-    { featureType: 'poi', elementType: 'labels', stylers: [{ visibility: 'off' }] },
-    { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#dbe4ed' }] },
-    { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#ffffff' }] },
-    { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#eeeef2' }] },
-    { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#55555f' }] },
-    { featureType: 'road.local', elementType: 'geometry', stylers: [{ color: '#f8f8fa' }] },
-    { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#ffffff' }] },
-    { featureType: 'poi.park', stylers: [{ visibility: 'on' }] },
-    { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#e4efdf' }] },
-    { featureType: 'transit', stylers: [{ visibility: 'off' }] },
-];
-
 const EndpointPin = ({ kind }: { kind: 'pickup' | 'drop' }) => {
     useCopyLanguage();
+    const { colors } = useTheme();
     const pickup = kind === 'pickup';
-    const color = pickup ? '#ffffff' : '#243AFB';
+    const color = pickup ? colors.onStrong : colors.primary;
     return (
         <View
             collapsable={false}
@@ -134,7 +94,7 @@ const EndpointPin = ({ kind }: { kind: 'pickup' | 'drop' }) => {
                     elevation: 5,
                 }}
             >
-                {!pickup ? <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#0B0B14' }} /> : null}
+                {!pickup ? <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: colors.immersive }} /> : null}
             </View>
         </View>
     );
@@ -154,8 +114,8 @@ const MapSlot = ({
     bottomSheetHeight = 0,
 }: Props) => {
     useCopyLanguage();
-    const deviceColorScheme = useColorScheme();
-    const mapInterfaceStyle = deviceColorScheme === 'dark' ? 'dark' : 'light';
+    const { colors, scheme } = useTheme();
+    const mapInterfaceStyle = scheme;
     const mapAppearance = `${GOOGLE_MAP_ID ?? 'local'}:${mapInterfaceStyle}`;
     const mapRef = useRef<MapView>(null);
     const mapReadyRef = useRef(false);
@@ -369,7 +329,7 @@ const MapSlot = ({
             style={{ position: 'absolute', inset: 0 }}
             googleMapId={GOOGLE_MAP_ID}
             googleRenderer="LATEST"
-            customMapStyle={GOOGLE_MAP_ID ? undefined : (mapInterfaceStyle === 'dark' ? DARK_MAP_STYLE : LIGHT_MAP_STYLE)}
+            customMapStyle={GOOGLE_MAP_ID ? undefined : mapStyleFor(mapInterfaceStyle)}
             userInterfaceStyle={mapInterfaceStyle}
             mapType="standard"
             showsBuildings={true}
@@ -417,7 +377,7 @@ const MapSlot = ({
             // then so slow tiles never expose an empty map surface.
             onMapLoaded={() => setLoadedMapAppearance(mapAppearance)}
         >
-            {routePoints.length >= 2 ? <Polyline coordinates={routePoints} strokeColor="#7A94FF" strokeWidth={4} /> : null}
+            {routePoints.length >= 2 ? <Polyline coordinates={routePoints} strokeColor={colors.mapRoute} strokeWidth={4} /> : null}
             {pickupPoint ? (
                 <Marker coordinate={pickupPoint} anchor={{ x: 0.5, y: ENDPOINT_TIP_Y / ENDPOINT_MARKER_HEIGHT }} tracksViewChanges={false}>
                     <EndpointPin kind="pickup" />
@@ -462,12 +422,12 @@ const MapSlot = ({
                     borderRadius: MAP_CONTROL_SIZE / 2,
                     alignItems: 'center',
                     justifyContent: 'center',
-                    backgroundColor: '#ffffff',
+                    backgroundColor: colors.surface,
                     opacity: recenterPressed ? 0.75 : 1,
                     elevation: 6,
                 }}
             >
-                <CrosshairSimpleIcon size={24} weight="bold" color="#121220" />
+                <CrosshairSimpleIcon size={24} weight="bold" color={colors.ink} />
             </Pressable>
         ) : null}
         </View>

@@ -17,7 +17,7 @@ const OtpDisplay = ({ code, tone = "sheet", loading = false, className = "" }) =
 
     return (
         <div className={`flex w-full items-center justify-between gap-2.5 text-left sm:gap-3 ${className}`}>
-            <span className="text-base text-[var(--text-muted)] sm:text-xl">OTP</span>
+            <span className="text-lg text-[var(--text-muted)] sm:text-2xl">OTP</span>
             <div
                 className="flex gap-2"
                 role="group"

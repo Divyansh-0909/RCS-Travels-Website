@@ -33,7 +33,7 @@ const OnBoarding = () => {
 
             <View className="w-full max-w-[500px] h-full py-12 justify-between items-center gap-1">
                 <View className="w-full items-center gap-3 mb-4">
-                    <AppText className="text-xl bg-[var(--foreground)] my-3 py-2 px-3 rounded-full text-[var(--text-foreground)] flex flex-row justify-center items-center font-semibold text-center" style={TITLE_TRACKING}>
+                    <AppText className="text-xl bg-surface my-3 py-2 px-3 rounded-full text-ink flex flex-row justify-center items-center font-semibold text-center" style={TITLE_TRACKING}>
                         RCS{" "}
                         <AppText className="text-[var(--text-foreground)]">
                             Travels

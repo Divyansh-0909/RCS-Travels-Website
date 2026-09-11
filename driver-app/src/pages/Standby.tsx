@@ -137,6 +137,8 @@ const Standby = ({ next, onChanged }: { next: UpcomingBooking | null; onChanged:
             }
 
             await Promise.all([onChanged(), refreshDriver()]);
+        } catch (cause: unknown) {
+            setError(cause instanceof Error ? cause.message : dc("Could not start this ride. Please try again."));
         } finally {
             setBusy(false);
         }
@@ -185,7 +187,7 @@ const Standby = ({ next, onChanged }: { next: UpcomingBooking | null; onChanged:
                                     style={({ pressed }) => ({ opacity: pressed || busy ? 0.85 : 1 })}
                                 >
                                     <View className="w-25 flex-row items-center mt-2 justify-center gap-2 rounded-xl p-2 bg-[var(--background-primary)]">
-                                        <AppText className="text-sm w-fit font-semibold text-[var(--text)]">{dc("Ride details")}</AppText>
+                                        <AppText className="text-sm w-fit font-semibold text-on-strong">{dc("Ride details")}</AppText>
                                     </View>
                                 </Pressable>
                             </View>
@@ -201,8 +203,8 @@ const Standby = ({ next, onChanged }: { next: UpcomingBooking | null; onChanged:
                                 style={({ pressed }) => ({ opacity: pressed || busy ? 0.85 : 1 })}
                             >
                                 <View className="w-full flex-row items-center justify-center gap-2 rounded-2xl py-3.5 bg-primary">
-                                    <NavArrow size={18} weight="fill" className="text-[var(--foreground)]" />
-                                    <AppText className="text-base font-semibold text-[var(--foreground)]">{dc("Go to pickup point")}</AppText>
+                                    <NavArrow size={18} weight="fill" className="text-on-strong" />
+                                    <AppText className="text-base font-semibold text-on-strong">{dc("Go to pickup point")}</AppText>
                                 </View>
                             </Pressable>
                         </>

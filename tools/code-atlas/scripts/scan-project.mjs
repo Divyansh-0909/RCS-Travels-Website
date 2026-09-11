@@ -3,8 +3,8 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { Project, Node, SyntaxKind } from 'ts-morph'
 import {
-  apiMatchKey, expressionPath, joinApiPaths, methodFromOptions, normalizeApiPath,
-  shouldScan, slug, stableUnique, surfaceFor, toPosix,
+  apiMatchKey, expressionPath, findCircularImportCycles, joinApiPaths, methodFromOptions, normalizeApiPath,
+  isLikelyVisibleSourceText, isSafeSourceText, normalizeSourceText, shouldScan, slug, stableUnique, surfaceFor, toPosix,
 } from './atlas-core.mjs'
 
 const SCAN_ROOTS = ['frontend/src', 'backend', 'driver-app/src', 'shared']
@@ -113,12 +113,122 @@ function findElementName(node) {
   return text.match(/<\s*([A-Z][\w.]*)/)?.[1]?.split('.').at(-1) || null
 }
 
+async function walkLocaleJson(root, current = root) {
+  const output = []
+  let entries = []
+  try { entries = await fs.readdir(current, { withFileTypes: true }) } catch { return output }
+  for (const entry of entries) {
+    const absolute = path.join(current, entry.name)
+    if (entry.isDirectory()) output.push(...await walkLocaleJson(root, absolute))
+    else if (entry.isFile() && path.extname(entry.name).toLowerCase() === '.json') output.push(absolute)
+  }
+  return output
+}
+
+function sourceTextId(relativePath, line, text) { return slug('source-text', relativePath, line, text) }
+
+function isSensitiveStringContext(node) {
+  for (let current = node; current; current = current.getParent()) {
+    if (Node.isPropertyAssignment(current) || Node.isVariableDeclaration(current)) {
+      const name = current.getName?.() || ''
+      if (/(?:secret|token|password|credential|api[_-]?key|private[_-]?key|authorization)/i.test(name)) return true
+    }
+    // Environment configuration is not product copy even when its literal is
+    // harmless, and it is safer to omit the entire configuration context.
+    if (Node.isPropertyAccessExpression(current) && /^process\.env(?:\.|\[)/.test(current.getText())) return true
+  }
+  return false
+}
+
+function translationCallFor(node) {
+  const call = node.getFirstAncestorByKind(SyntaxKind.CallExpression)
+  if (!call || !call.getArguments().includes(node)) return false
+  const name = call.getExpression().getText()
+  return /(?:^|\.)(?:tr|t|translate|i18n\.t)$/.test(name)
+}
+
+function isJsxContext(node) {
+  // Attribute literals are overwhelmingly styling, test hooks, URLs, and DOM
+  // configuration rather than copy shown to a person. Translation calls in an
+  // attribute remain eligible through their separate translation classification.
+  if (node.getFirstAncestorByKind(SyntaxKind.JsxAttribute)) return false
+  return Boolean(node.getFirstAncestorByKind(SyntaxKind.JsxElement) || node.getFirstAncestorByKind(SyntaxKind.JsxSelfClosingElement))
+}
+
+function indexSourceText(source, relativePath, surface, indexedDeclarations, repoRoot, nodes, edges) {
+  const nodeById = new Map(nodes.map(node => [node.id, node]))
+  const candidates = []
+  for (const jsxText of source.getDescendantsOfKind(SyntaxKind.JsxText)) {
+    candidates.push({ node: jsxText, text: jsxText.getText(), kind: 'jsxText', visible: true })
+  }
+  for (const literal of source.getDescendants().filter(node => Node.isStringLiteral(node) || Node.isNoSubstitutionTemplateLiteral(node))) {
+    const text = literal.getLiteralText()
+    const translation = translationCallFor(literal)
+    const jsx = isJsxContext(literal)
+    if (!translation && !jsx && !isLikelyVisibleSourceText(text)) continue
+    candidates.push({ node: literal, text, kind: translation ? 'translation' : Node.isNoSubstitutionTemplateLiteral(literal) ? 'template' : 'string', visible: translation || jsx })
+  }
+  for (const candidate of candidates) {
+    const text = normalizeSourceText(candidate.text)
+    if (!isSafeSourceText(text, { allowSimpleLabel: candidate.visible }) || isSensitiveStringContext(candidate.node)) continue
+    // A raw JSX fragment can contain formatting whitespace. Other strings must
+    // be visibly rendered or prose-like before entering the graph.
+    if (!candidate.visible && !isLikelyVisibleSourceText(text)) continue
+    const line = candidate.node.getStartLineNumber()
+    const id = sourceTextId(relativePath, line, text)
+    const owner = nearestOwner(candidate.node, indexedDeclarations, repoRoot) || fileId(relativePath)
+    const containing = nodeById.get(owner)
+    nodes.push({
+      id, type: 'sourceText', label: text, path: relativePath, line, surface, group: fileId(relativePath),
+      details: {
+        kind: candidate.kind,
+        ...(containing?.type !== 'file' ? { containingSymbolId: owner, containingSymbolLabel: containing.label } : {}),
+      },
+    })
+    addEdge(edges, owner, id, 'contains_text', 'confirmed')
+  }
+}
+
+function jsonTokenLocations(raw) {
+  const tokens = []
+  const expression = /"(?:\\.|[^"\\])*"/g
+  for (const match of raw.matchAll(expression)) {
+    let text
+    try { text = JSON.parse(match[0]) } catch { continue }
+    const after = raw.slice((match.index || 0) + match[0].length)
+    const key = /^\s*:/.test(after)
+    const before = raw.slice(0, match.index || 0)
+    tokens.push({ text, key, index: match.index || 0, line: before.split('\n').length, column: (match.index || 0) - before.lastIndexOf('\n') })
+  }
+  return tokens
+}
+
+function indexLocaleJson(relativePath, raw, nodes, edges) {
+  const locale = path.basename(path.dirname(relativePath))
+  const file = fileId(relativePath)
+  nodes.push({ id: file, type: 'file', label: path.basename(relativePath), path: relativePath, surface: 'shared', group: relativePath.split('/').slice(0, -1).join('/') })
+  for (const token of jsonTokenLocations(raw)) {
+    const text = normalizeSourceText(token.text)
+    // Translation keys are catalog navigation metadata. Translation values are
+    // individually filtered so malformed/config-like locale files cannot leak
+    // URLs, paths, opaque tokens, or overlong content into the atlas.
+    const preceding = raw.slice(Math.max(0, token.index - 180), token.index)
+    const sensitiveValue = !token.key && /"[^"\\]*(?:secret|token|password|credential|api[_-]?key|private[_-]?key|authorization)[^"\\]*"\s*:\s*$/i.test(preceding)
+    if (!text || text.length > 240 || sensitiveValue || (!token.key && !isSafeSourceText(text, { allowSimpleLabel: true }))) continue
+    const kind = token.key ? 'translationKey' : 'translationValue'
+    const id = slug('source-text', relativePath, token.line, token.column, text)
+    nodes.push({ id, type: 'sourceText', label: text, path: relativePath, line: token.line, column: token.column, surface: 'shared', group: file, details: { kind, locale } })
+    addEdge(edges, file, id, 'contains_text', 'confirmed')
+  }
+}
+
 export async function scanProject(repoRoot) {
   const started = Date.now()
   const nodes = []
   const edges = []
   const diagnostics = []
   const absoluteFiles = (await Promise.all(SCAN_ROOTS.map(scanRoot => walk(path.join(repoRoot, scanRoot))))).flat().sort()
+  const localeFiles = await walkLocaleJson(path.join(repoRoot, 'shared/i18n/locales'))
   const project = new Project({
     skipAddingFilesFromTsConfig: true,
     compilerOptions: { allowJs: true, checkJs: false, jsx: 1, moduleResolution: 2, target: 99, skipLibCheck: true },
@@ -326,6 +436,14 @@ export async function scanProject(repoRoot) {
       const component = elementName && nameToIds.get(elementName)?.[0]
       if (component) addEdge(edges, id, component, 'renders')
     }
+
+    indexSourceText(source, relativePath, surface, indexedDeclarations, repoRoot, nodes, edges)
+  }
+
+  for (const absolutePath of localeFiles.sort()) {
+    const relativePath = toPosix(path.relative(repoRoot, absolutePath))
+    try { indexLocaleJson(relativePath, await fs.readFile(absolutePath, 'utf8'), nodes, edges) }
+    catch (error) { diagnostics.push({ level: 'warning', code: 'LOCALE_READ', message: `Could not read locale: ${error.message}`, path: relativePath }) }
   }
 
   const schemaPath = path.join(repoRoot, 'backend/prisma/schema.prisma')
@@ -344,6 +462,16 @@ export async function scanProject(repoRoot) {
 
   const finalNodes = stableUnique(nodes)
   const finalEdges = stableUnique(filteredEdges)
+  const pathsById = new Map(finalNodes.filter(node => node.type === 'file').map(node => [node.id, node.path]))
+  for (const cycle of findCircularImportCycles(finalEdges)) {
+    const cyclePaths = cycle.map(id => pathsById.get(id) || id)
+    diagnostics.push({
+      level: 'warning',
+      code: 'CIRCULAR_IMPORT',
+      message: `Circular import: ${cyclePaths.join(' -> ')}`,
+      path: cyclePaths[0],
+    })
+  }
   const totals = finalNodes.reduce((result, node) => { result[node.type] = (result[node.type] || 0) + 1; return result }, { nodes: finalNodes.length, edges: finalEdges.length })
   return {
     meta: { generatedAt: new Date().toISOString(), projectName: 'RCS Travels', totals, scanDurationMs: Date.now() - started, surfaces: [...new Set(finalNodes.map(node => node.surface))].sort() },

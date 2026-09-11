@@ -1,19 +1,25 @@
 import { useLanguage as useCopyLanguage } from "../i18n";
 import { driverCopy as dc } from "../lib/copy";
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { AppState, Image, Pressable, Share, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
+import { AppState, Image, Linking, Modal, Platform, Pressable, Share, StyleSheet, View, useWindowDimensions } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { cssInterop } from 'nativewind';
+import * as Notifications from 'expo-notifications';
 import {
   BankIcon,
+  BellIcon,
   CarIcon,
   CaretRightIcon,
+  CheckIcon,
   FileTextIcon,
-  GearIcon,
+  DeviceMobileIcon,
+  GlobeIcon,
   InfoIcon,
+  MoonIcon,
   QuestionIcon,
   SignOutIcon,
   StarIcon,
+  SunIcon,
   UserIcon,
   UsersThreeIcon,
 } from 'phosphor-react-native';
@@ -33,6 +39,8 @@ import { initials } from '../constants/booking';
 import { canJoinFleet, formatPhone, formatRating, groupLabel, isFleet, verificationLabel } from '../constants/driver';
 import { supportPhoneDisplay } from '../constants/support';
 import type { DriverProfile } from '../types/enums';
+import type { DriverLanguage } from '../types/language';
+import { type ThemePreference, useTheme } from '../theme/ThemeContext';
 
 const asThemed = { className: { target: false, nativeStyleToProp: { color: true } } } as const;
 const Star = cssInterop(StarIcon, asThemed);
@@ -40,9 +48,8 @@ const Car = cssInterop(CarIcon, asThemed);
 const Caret = cssInterop(CaretRightIcon, asThemed);
 const SignOut = cssInterop(SignOutIcon, asThemed);
 
-const CARD = '#f3f3f3';                          // --foreground-muted
-const INK = 'text-[var(--background-primary)]';
-const MUTED = 'text-gray-600';
+const INK = 'text-ink';
+const MUTED = 'text-ink-muted';
 
 // Login's error red is tuned for the dark auth shell; on this light page it drops
 // under AA, so the solid negative from Button is reused instead.
@@ -66,18 +73,11 @@ const TITLE_TRACKING = { letterSpacing: -0.72 };
 // different rhythm on each reads as one of them being slightly off without ever
 // saying which. If that list's gap changes, change this with it.
 const PANEL_GAP = 8;
+const SETTINGS_MENU_WIDTH = 184;
+const SETTINGS_MENU_GUTTER = 16;
 
-// How far the menu rows pull in from the panels above them, per side.
-//
-// In points, not a px-* class, for the reason AVATAR below spells out: the spacing
-// scale is rem and NativeWind's inlineRem is 14, so px-3 is 10.5pt rather than the 12
-// it reads as. A number that has to line up with PANEL_GAP cannot be written in a
-// unit that quietly shrinks.
-//
-// The inset IS the hierarchy now that these rows have no card under them. Everything
-// wider than this is a surface carrying a fact; the menu is a list of ways out of the
-// page, and pulling it in is what says so without giving it a fourth background.
-const ROW_INSET = 12;
+type SettingsMenuAnchor = { x: number; y: number; width: number; height: number };
+type OpenSetting = 'language' | 'appearance';
 
 // One number for both avatar branches, in POINTS rather than a w-*/h-* class.
 //
@@ -107,6 +107,8 @@ const CHIPS: Record<'pending' | 'rejected', { text: string; fill: string }> = {
   rejected: { get "text"() { return "text-[#B91C1C]"; }, fill: 'rgba(185,28,28,0.12)' },
 };
 
+type Permission = 'checking' | 'granted' | 'denied' | 'undetermined' | 'unavailable';
+
 const Chip = ({ label, text, fill }: { label: string; text: string; fill: string }) => (
   <View className="rounded-full px-2.5 py-1" style={{ backgroundColor: fill }}>
     <AppText className={`text-xs font-semibold uppercase tracking-wide ${text}`}>
@@ -116,7 +118,9 @@ const Chip = ({ label, text, fill }: { label: string; text: string; fill: string
 );
 
 const Account = () => {
-    useCopyLanguage();
+  const { language, setLanguage, t } = useCopyLanguage();
+  const { colors, preference, setPreference } = useTheme();
+  const { width: screenWidth } = useWindowDimensions();
   const api = useApi();
   const navigate = useNavigate();
   const onScroll = useHideAppBarOnScroll();
@@ -127,6 +131,11 @@ const Account = () => {
 
   const [busy, setBusy] = useState(false);
   const [signOutError, setSignOutError] = useState<string | null>(null);
+  const [permission, setPermission] = useState<Permission>('checking');
+  const [openSetting, setOpenSetting] = useState<OpenSetting | null>(null);
+  const [settingsMenuAnchor, setSettingsMenuAnchor] = useState<SettingsMenuAnchor | null>(null);
+  const languageTriggerRef = useRef<View>(null);
+  const appearanceTriggerRef = useRef<View>(null);
 
   // The api object is read through a ref rather than closed over, for the reason the
   // Rides board spells out: useApi memoises on Clerk's getToken, whose identity is not
@@ -159,6 +168,15 @@ const Account = () => {
 
   useEffect(() => { refresh(); }, [refresh]);
 
+  const refreshPermission = useCallback(async () => {
+    if (Platform.OS === 'web') {
+      setPermission('unavailable');
+      return;
+    }
+    const result = await Notifications.getPermissionsAsync();
+    setPermission(result.status as Permission);
+  }, []);
+
   // Unmount only. An empty dep array, so nothing but leaving the screen can abandon a
   // request mid-flight.
   useEffect(() => () => { latestRequest.current++; }, []);
@@ -166,12 +184,25 @@ const Account = () => {
   // The wallet moves while he is driving, not while he is looking at this page, so
   // coming back to the app is the moment worth re-reading it.
   useEffect(() => {
+    refreshPermission();
     const subscription = AppState.addEventListener('change', (state) => {
-      if (state === 'active') refresh();
+      if (state === 'active') {
+        refresh();
+        refreshPermission();
+      }
     });
 
     return () => subscription.remove();
-  }, [refresh]);
+  }, [refresh, refreshPermission]);
+
+  const manageNotifications = useCallback(async () => {
+    if (permission === 'undetermined') {
+      const result = await Notifications.requestPermissionsAsync();
+      setPermission(result.status as Permission);
+      return;
+    }
+    if (Platform.OS !== 'web') await Linking.openSettings();
+  }, [permission]);
 
   async function handleSignOut() {
     if (busy) return;
@@ -190,6 +221,49 @@ const Account = () => {
   }
 
   const version = Constants.expoConfig?.version ?? '1.0.0';
+  const notificationDetail = permission === 'granted' ? t('driver.settings.allowed')
+    : permission === 'denied' ? t('driver.settings.blocked')
+      : permission === 'undetermined' ? t('driver.settings.allow')
+        : permission === 'unavailable' ? t('driver.settings.browser')
+          : t('driver.settings.checking');
+  const languageName = language === 'hi' ? t('common.language.hindi')
+    : language === 'hi-Latn' ? t('common.language.hinglish') : t('common.language.english');
+  const appearanceName = preference === 'light' ? t('driver.settings.light')
+    : preference === 'dark' ? t('driver.settings.dark') : t('driver.settings.system');
+  const AppearanceIcon = preference === 'light'
+    ? SunIcon
+    : preference === 'dark'
+      ? MoonIcon
+      : DeviceMobileIcon;
+  const appearanceOptions: ThemePreference[] = ['system', 'light', 'dark'];
+  const languageOptions: { key: DriverLanguage; label: string }[] = [
+    { key: 'en', label: t('common.language.english') },
+    { key: 'hi-Latn', label: t('common.language.hinglish') },
+    { key: 'hi', label: t('common.language.hindi') },
+  ];
+  const settingsMenuOptions = openSetting === 'language'
+    ? languageOptions
+    : appearanceOptions.map((key) => ({ key, label: t(`driver.settings.${key}`) }));
+  const selectedSetting = openSetting === 'language' ? language : preference;
+  const settingsMenuWidth = Math.min(SETTINGS_MENU_WIDTH, screenWidth - SETTINGS_MENU_GUTTER * 2);
+  const settingsMenuLeft = settingsMenuAnchor
+    ? Math.min(
+      Math.max(SETTINGS_MENU_GUTTER, settingsMenuAnchor.x + settingsMenuAnchor.width - settingsMenuWidth),
+      Math.max(SETTINGS_MENU_GUTTER, screenWidth - settingsMenuWidth - SETTINGS_MENU_GUTTER),
+    )
+    : SETTINGS_MENU_GUTTER;
+
+  const toggleSettingMenu = (setting: OpenSetting, triggerRef: RefObject<View | null>) => {
+    if (openSetting === setting) {
+      setOpenSetting(null);
+      return;
+    }
+
+    triggerRef.current?.measureInWindow((x, y, width, height) => {
+      setSettingsMenuAnchor({ x, y, width, height });
+      setOpenSetting(setting);
+    });
+  };
 
   return (
     <View className="flex-1 w-[92%] gap-3">
@@ -283,7 +357,7 @@ const Account = () => {
                 // phone and reads as the class having done nothing at all.
                 <View
                   className="flex-row items-center gap-1 rounded-xl"
-                  style={{ backgroundColor: CARD, padding: 6 }}
+                  style={{ backgroundColor: colors.surfaceMuted, padding: 6 }}
                 >
                   <Star size={14} weight="fill" className={INK} />
                   <AppText className={`text-sm font-semibold ${INK}`}>
@@ -389,14 +463,14 @@ const Account = () => {
             >
               <View
                 className="w-full flex-row items-center gap-3 rounded-2xl px-4 py-3.5"
-                style={{ backgroundColor: CARD }}
+                style={{ backgroundColor: colors.surfaceMuted }}
               >
                 {/* No well behind it. The card is already a surface, and a second one
                     under a single glyph gave the row a box inside a box for no fact
                     that needed separating. */}
                 <Car size={26} weight="fill" className={INK} />
                 <View className="flex-1">
-                  <AppText numberOfLines={1} className={`font-semibold ${INK}`}>{dc("Your cars")}</AppText>
+                  <AppText numberOfLines={1} className={`text-base font-semibold ${INK}`}>{dc("Your cars")}</AppText>
                   <AppText numberOfLines={1} className={`text-xs ${MUTED}`}>
                     {profile.vehicleCount > 1
                       ? dc("{{value0}} · {{value1}} cars", {value0: (profile.vehicleNumber), value1: (profile.vehicleCount)})
@@ -419,7 +493,7 @@ const Account = () => {
                 The month here, the week on the Rides board: History answers "how did
                 this week go" beside a list of recent rides, and this answers "how am
                 I doing" against costs a captain pays monthly. */}
-            <View className="w-full flex-row" style={{ gap: TILE_GAP }}>
+            <View className="w-full flex-row" style={{ gap: TILE_GAP, marginBottom: 18 }}>
               <WalletCard balance={profile.walletBalance} />
               <MonthEarningsCard summary={profile.month} />
             </View>
@@ -431,21 +505,19 @@ const Account = () => {
                 Partners only — see canJoinFleet. */}
             {canJoinFleet(profile.group) && <JoinFleetCard />}
 
-            {/* One list, hairline-separated, in the order a captain needs them: the
-                money first, then the paperwork that can stop him earning it, then
-                the settings he touches twice a year.
-
-                No card under it, unlike the panels above. Everything above this point
-                is a thing to read — a balance, a total, a car — and a surface is what
-                separates one from the next. These are a menu, and a menu on its own
-                ground reads as a list of ways out of the page rather than as a fourth
-                block of information competing with the three that matter. */}
-            <View className="w-full" style={{ paddingHorizontal: ROW_INSET }}>
+            {/* The reference reads as one stack of panels: a very narrow page-colour
+                gap separates rows, while only the outside of the whole stack is
+                rounded. The parent clips those outer corners; each row stays square. */}
+            <View
+              className="w-full rounded-2xl overflow-hidden"
+              style={{ backgroundColor: colors.canvas, gap: 3 }}
+            >
               <AccountRow
                 label={dc("Linked UPI account")}
                 Icon={BankIcon}
                 value={dc("Not linked")}
                 onPress={() => navigate('/account/payout')}
+                grouped
               />
               <AccountRow
                 label={dc("Documents")}
@@ -457,14 +529,100 @@ const Account = () => {
                 }
                 warn={profile.expiringDocuments > 0}
                 onPress={() => navigate('/account/documents')}
+                grouped
               />
               {/* Feedback only. The rating already has a home — the star pill beside
                   his name — and a row repeating the same number two inches below it
                   invited the captain to check whether the two agreed. What is left
                   here is what this row can actually open: what riders wrote. */}
-              <AccountRow label={dc("Feedback")} Icon={StarIcon} onPress={() => navigate('/account/feedback')} />
-              {/* Language lives under Settings, so it is not also a sibling of it. */}
-              <AccountRow label={dc("Settings")} Icon={GearIcon} onPress={() => navigate('/account/settings')} />
+              <AccountRow label={dc("Feedback")} Icon={StarIcon} onPress={() => navigate('/account/feedback')} grouped />
+              <AccountRow
+                label={t('driver.settings.notifications')}
+                detail={notificationDetail}
+                Icon={BellIcon}
+                onPress={permission === 'checking' || permission === 'unavailable' ? undefined : manageNotifications}
+                grouped
+              />
+              <View ref={languageTriggerRef} collapsable={false}>
+                <AccountRow
+                  label={t('driver.settings.language')}
+                  value={languageName}
+                  Icon={GlobeIcon}
+                  onPress={() => toggleSettingMenu('language', languageTriggerRef)}
+                  expanded={openSetting === 'language'}
+                  grouped
+                />
+              </View>
+              <View ref={appearanceTriggerRef} collapsable={false}>
+                <AccountRow
+                  label={t('driver.settings.appearance')}
+                  value={appearanceName}
+                  Icon={AppearanceIcon}
+                  onPress={() => toggleSettingMenu('appearance', appearanceTriggerRef)}
+                  expanded={openSetting === 'appearance'}
+                  grouped
+                />
+              </View>
+              <Modal
+                visible={openSetting !== null && settingsMenuAnchor !== null}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setOpenSetting(null)}
+              >
+                <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
+                  <Pressable
+                    style={StyleSheet.absoluteFill}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('common.accessibility.close')}
+                    onPress={() => setOpenSetting(null)}
+                  />
+
+                  {settingsMenuAnchor && openSetting ? (
+                    <View
+                      accessibilityViewIsModal
+                      className="absolute rounded-2xl p-1"
+                      style={{
+                        left: settingsMenuLeft,
+                        top: settingsMenuAnchor.y + settingsMenuAnchor.height + 8,
+                        width: settingsMenuWidth,
+                        backgroundColor: colors.surfaceRaised,
+                        borderWidth: 1,
+                        borderColor: colors.borderUi,
+                        boxShadow: '0px 10px 30px rgba(0,0,0,0.22)',
+                        elevation: 10,
+                      }}
+                    >
+                      {settingsMenuOptions.map((option) => {
+                        const active = option.key === selectedSetting;
+                        return (
+                          <Pressable
+                            key={option.key}
+                            role="menuitem"
+                            aria-selected={active}
+                            onPress={async () => {
+                              setOpenSetting(null);
+                              if (openSetting === 'language') {
+                                await setLanguage(option.key as DriverLanguage);
+                              } else {
+                                await setPreference(option.key as ThemePreference);
+                              }
+                            }}
+                            className="min-h-11 flex-row items-center justify-between rounded-xl px-3 py-2.5"
+                            style={({ pressed }) => ({
+                              backgroundColor: active || pressed ? colors.surfaceMuted : 'transparent',
+                            })}
+                          >
+                            <AppText className={`text-sm ${active ? 'font-semibold text-ink' : 'font-medium text-ink'}`}>
+                              {option.label}
+                            </AppText>
+                            {active ? <CheckIcon size={16} weight="bold" color={colors.primary} /> : null}
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  ) : null}
+                </View>
+              </Modal>
               {/* His name, his number, his papers — and the way out of the platform
                   altogether. Kept well clear of Log out at the foot of the page:
                   logging out is a thing he does every week, and closing an account is
@@ -473,7 +631,7 @@ const Account = () => {
               {/* UserIcon, the same glyph the AppBar's Account tab carries. The row
                   and the tab lead to the same subject, so a captain who tapped one
                   should recognise the other. */}
-              <AccountRow label={dc("Manage account")} Icon={UserIcon} onPress={() => navigate('/account/manage')} />
+              <AccountRow label={dc("Manage account")} Icon={UserIcon} onPress={() => navigate('/account/manage')} grouped />
 
               {/* One continuous menu. Carets distinguish the in-app Help and Legal
                   pages from the system share sheet above them. */}
@@ -489,6 +647,7 @@ const Account = () => {
                 label={dc("Refer a captain")}
                 Icon={UsersThreeIcon}
                 caret={false}
+                grouped
                 onPress={() =>
                   Share.share({
                     get "message"() { return dc("Drive with RCS Travels. I'm a captain here — call {{value0}} to get started.", {value0: (supportPhoneDisplay())}); },
@@ -499,10 +658,11 @@ const Account = () => {
                 label={dc("Help")}
                 Icon={QuestionIcon}
                 onPress={() => navigate('/account/help')}
+                grouped
               />
               {/* Terms, privacy and grievance information. The collection is an
                   in-app page; each document then announces that it opens the website. */}
-              <AccountRow label={dc("Legal")} Icon={InfoIcon} onPress={() => navigate('/account/legal')} last />
+              <AccountRow label={dc("Legal")} Icon={InfoIcon} onPress={() => navigate('/account/legal')} grouped />
             </View>
 
             {/* The error slot and the button are ONE scroller child, not two. As
@@ -532,7 +692,7 @@ const Account = () => {
               >
                 <View
                   className="w-full flex-row items-center justify-center gap-2 rounded-2xl py-3.5"
-                  style={{ backgroundColor: CARD }}
+                  style={{ backgroundColor: colors.surfaceMuted }}
                 >
                   <SignOut size={18} weight="bold" className="text-[#B91C1C]" />
                   <AppText className="font-semibold" style={{ color: ERROR_TEXT }}>

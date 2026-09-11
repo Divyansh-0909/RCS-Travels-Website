@@ -11,8 +11,6 @@ import Icon from '@mdi/react';
 import { mdiKeyboardBackspace } from '@mdi/js';
 import { useData } from "../hooks/useData";
 import { useOtpClipboard } from "../hooks/useOtpClipboard";
-import CheckMarkOutline from "../components/illustrations/CheckMarkOutline";
-import CrossOutline from "../components/illustrations/CrossOutline";
 import { useWebsiteCopy } from "../hooks/useWebsiteCopy";
 
 // Signing up never touches Clerk's signUp — the account already exists by the time
@@ -28,6 +26,7 @@ const SignUpPage = () => {
   const phone = useData(state=>state.phone);
   const setPhone = useData(state => state.setPhone);
   const [otp, setOtp] = useState("");
+  const activeInputRef = useRef(null);
   const otpRefs = useRef([]);
   const OTP_LENGTH = 6;
   const OTP_TTL = 300; // seconds until the OTP expires — matches the backend's 5-minute window
@@ -42,6 +41,7 @@ const SignUpPage = () => {
   const [resending, setResending] = useState(false);
   const [resendIn, setResendIn] = useState(0);
   const [showLogin, setShowLogin] = useState(false);
+  const [continueTo, setContinueTo] = useState(null);
   const pickupLocation = useData(state => state.pickupLocation);
 
   const api = useApi();
@@ -121,6 +121,11 @@ const SignUpPage = () => {
   async function handleOTPSubmit(e) {
       e.preventDefault();
 
+      if (verdict === "pass" && continueTo) {
+        navigate(continueTo);
+        return;
+      }
+
       if (!otp) {
         setError(dc("Enter OTP"));
         return;
@@ -134,13 +139,12 @@ const SignUpPage = () => {
       try {
         setError(null);
         setVerdict(null);
+        setContinueTo(null);
         setLoading(true);
         await verifyOtp()
       } catch (err) {
         console.error(err);
         setError(tr("Something went wrong"));
-        // A throw after the code was accepted leaves the verdict on "pass", which
-        // would sit a tick above the error message.
         setVerdict("fail");
       } finally {
         setLoading(false);
@@ -153,6 +157,8 @@ const SignUpPage = () => {
     // rejects before generating a new one) — e.g. after a page refresh. Advance to
     // the OTP step so that code can be used, instead of stranding the user here.
     if (data.status === 429) {
+      setVerdict(null);
+      setContinueTo(null);
       setStep("otp");
       setResendIn(RESEND_COOLDOWN);
       setExpiresIn(OTP_TTL - RESEND_COOLDOWN); // true remaining TTL is unknown; assume the worst
@@ -167,6 +173,8 @@ const SignUpPage = () => {
       return;
     }
     if (data.error) { setError(data.error); return; }
+    setVerdict(null);
+    setContinueTo(null);
     setStep("otp");
     setResendIn(RESEND_COOLDOWN);
     setExpiresIn(OTP_TTL);
@@ -177,6 +185,8 @@ const SignUpPage = () => {
 
     try {
       setError(null);
+      setVerdict(null);
+      setContinueTo(null);
       setResending(true);
       const data = await api.sendOtp(phone, "signup");
       if (data.error) {
@@ -203,16 +213,9 @@ const SignUpPage = () => {
     if (data.error) {
       setError(data.error);
       setVerdict("fail");
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      setOtp("");
       return;
     }
 
-    setVerdict("pass");
-
-    // Everything past this point runs behind a tick, because the code itself was
-    // right — but a failure here still has to correct that, or an error message
-    // ends up sitting under a success mark.
     const result = await signIn.create({ strategy: "ticket", ticket: data.ticket });
     if (result.status !== "complete") {
       setError(dc("Verification failed. Please try again."));
@@ -234,19 +237,24 @@ const SignUpPage = () => {
       return;
     }
 
-    navigate(pickupLocation ? "/book" : "/");
+    setContinueTo(pickupLocation ? "/book" : "/");
+    setVerdict("pass");
   };
 
   const isUsername = step === "username";
   const isPhone = step === "phone";
   const isOtp = step === "otp";
   const busy = loading;
+  const otpReadyToContinue = verdict === "pass" && Boolean(continueTo);
 
-  // The collapse reports an answer, so it waits for one. busy alone starts on the
-  // press, which would have the boxes merging over a request that might still
-  // come back rejected. Both halves are needed: verdict outlives the request it
-  // came from, and without busy the mark would stay up after the row reopens.
-  const settled = busy && Boolean(verdict);
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      const activeInput = isOtp ? otpRefs.current[0] : activeInputRef.current;
+      activeInput?.focus({ preventScroll: true });
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [step, isOtp]);
 
   const formatMMSS = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 
@@ -273,6 +281,8 @@ const SignUpPage = () => {
 
   const clearOtpError = () => {
     if (error) setError(null);
+    if (verdict) setVerdict(null);
+    if (continueTo) setContinueTo(null);
   };
 
   const focusBox = (i) => {
@@ -329,7 +339,7 @@ const SignUpPage = () => {
   // The OTP comes over WhatsApp, whose "Copy code" button is the only way it
   // reaches the browser — SMS autofill can't see it. Only while the boxes are
   // empty: a code already typed or already filled is not one to overwrite.
-  const { supported: canPasteOtp, paste: pasteOtp } = useOtpClipboard({
+  useOtpClipboard({
     enabled: isOtp && !busy && otp.length === 0,
     length: OTP_LENGTH,
     onCode: (code) => {
@@ -346,7 +356,7 @@ const SignUpPage = () => {
         </div>
         {/* The session may be active while finalizing — keep the form so the
             "already logged in" screen doesn't flash mid-signup. */}
-        { isSignedIn && !loading
+        { isSignedIn && !loading && !(isOtp && verdict === "pass")
         ?
         <div className="flex flex-col justify-center items-center">
           <h2 className="font-bold text-[var(--text)]">{dc("You are already") + " "}<br />{" " + dc("logged in.")}</h2>
@@ -360,11 +370,11 @@ const SignUpPage = () => {
         </div>
         :
           <form
-            className="flex flex-col justify-center items-center"
+            className="flex flex-col justify-start sm:justify-center h-full py-15 items-start gap-5 sm:gap-7 max-sm:w-[86vw]"
             noValidate
             onSubmit={isUsername ? handleUsernameSubmit : isPhone ? handleSubmit : handleOTPSubmit}
           >
-            <div className="flex flex-col justify-center items-center gap-2 sm:gap-3">
+            <div className="w-full flex flex-col justify-center items-start sm:items-center sm:text-center text-left gap-2 sm:gap-3">
               <h2 className="font-bold text-[var(--text)]">
                 {isUsername
                   ? <>{tr("Make it yours.")}</>
@@ -380,16 +390,15 @@ const SignUpPage = () => {
                   : <>{tr("Enter the 6-digit code we sent to")} <span className="font-semibold text-[var(--text)]">{phoneDisplay}</span></>}
               </p>
             </div>
-            <div className="flex flex-col justify-center items-center">
+            <div className="flex flex-col justify-center items-start sm:items-center">
 
-              {/* Fixed-height slot so an error appearing doesn't shift the form */}
-              <div className="mt-2 sm:mt-4 mb-1 sm:mb-2 min-h-5 flex items-center justify-center">
-                {error && (
-                  <p className="text-red-400 text-sm">
+              {error && !isOtp && (
+                <div className="mt-2 sm:mt-4 mb-1 sm:mb-2 flex items-center justify-start sm:justify-center">
+                  <p className="text-status-danger text-sm">
                     {error}
                   </p>
-                )}
-              </div>
+                </div>
+              )}
 
               {isOtp
                 ? <div className="flex flex-col justify-center items-center">
@@ -402,6 +411,7 @@ const SignUpPage = () => {
                         ref={(el) => (otpRefs.current[i] = el)}
                         type="tel"
                         inputMode="numeric"
+                        autoFocus={i === 0}
                         autoComplete={i === 0 ? "one-time-code" : "off"}
                         name={`otp-number-${i + 1}`}
                         id={`otp-number-${i + 1}`}
@@ -409,15 +419,14 @@ const SignUpPage = () => {
                         onChange={(e) => handleOtpDigit(i, e.target.value)}
                         onKeyDown={(e) => handleOtpKeyDown(i, e)}
                         onPaste={handleOtpPaste}
-                        style={{ "--i": i }}
+                        readOnly={loading || verdict === "pass"}
                         className={`
                         relative flex justify-center text-center items-center font-medium text-2xl sm:text-3xl my-1
-                        ${settled ? "text-transparent placeholder-transparent" : "text-white"}
-                        py-2 w-[42px] h-[42px] sm:w-[55px] sm:h-[55px] rounded-xl transition-all duration-600 ease-in-out
-                        ${settled && `animate-otp-box-in ${i === 0 && `${verdict === "fail" ? "bg-red-600!" : "bg-green-600!"}`}`}
+                        text-ink
+                        py-2 w-[46px] h-[46px] sm:w-[55px] sm:h-[55px] rounded-xl transition-all duration-300 ease-in-out
                         ${otpError
                             ? "border border-negative/50 bg-negative/10 focus:border-negative/80"
-                            : "border border-[var(--foreground)]/30 bg-[var(--background-muted)] hover:border-[var(--foreground)]/50 focus:border-[var(--foreground)]/60 focus:bg-[var(--foreground)]/5"
+                            : "border border-[var(--foreground)]/30 bg-[var(--background-muted)] focus:border-primary"
                           }
                         focus:outline-none
                         transition-all duration-200
@@ -425,37 +434,26 @@ const SignUpPage = () => {
                       />
                     );
                   })}
-                    {/* Held until the boxes have finished converging, so the mark
-                        lands on the stack rather than over six moving boxes — the
-                        delay matches .animate-otp-badge's. Keyed off the verdict,
-                        never off error: error is null for the whole round trip,
-                        which is not the same thing as the code being right. */}
-                    {settled && (
-                      <span className="animate-otp-badge absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
-                        {verdict === "fail"
-                          ? <CrossOutline size={38} delay={450} />
-                          : <CheckMarkOutline size={38} delay={450} />}
-                      </span>
-                    )}
                   </div>
-                  <p className={`text-[var(--text-muted)] text-sm mt-1 sm:mt-2 mb-3 sm:mb-5 ${busy ? "invisible" : ""}`}>
-                    {expiresIn > 0
-                      ? <>{tr("Code expires in")} <span className="tabular-nums text-[var(--text)]">{formatMMSS(expiresIn)}</span></>
-                      : tr("Your code has expired.")}
-                    {/* Chrome fills the boxes on its own once the clipboard
-                        permission is granted; this is where that gets granted,
-                        and it stays for the browsers that never grant it. Not
-                        offered on an expired code, which pastes to nothing. */}
-                    {canPasteOtp && expiresIn > 0 && (
-                      <>
-                        {" · "}
-                        <button
-                          type="button"
-                          onClick={pasteOtp}
-                          className="cursor-pointer text-[var(--text)] underline underline-offset-4 decoration-[var(--foreground)]/40 hover:decoration-[var(--foreground)] transition-colors duration-300 rounded-sm outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]/70"
-                        >{tr("Paste code")}</button>
-                      </>
-                    )}
+                  <p
+                    aria-live="polite"
+                    className={`text-sm mt-1 sm:mt-2 mb-3 sm:mb-3 ${
+                      verdict === "pass"
+                        ? "text-status-success"
+                        : verdict === "fail"
+                          ? "text-status-danger"
+                          : "text-[var(--text-muted)]"
+                    }`}
+                  >
+                    {loading
+                      ? tr("Verifying...")
+                      : verdict === "pass"
+                        ? tr("Success!")
+                        : verdict === "fail"
+                          ? tr("Wrong OTP")
+                          : expiresIn > 0
+                            ? <>{tr("OTP expires in")} <span className="tabular-nums text-[var(--text)]">{formatMMSS(expiresIn)}</span></>
+                            : tr("OTP has expired.")}
                   </p>
                 </div>
                 : <Input
@@ -463,7 +461,9 @@ const SignUpPage = () => {
                     type: isUsername ? "text" : "tel",
                     name: isUsername ? "username" : "phone-number",
                     id: isUsername ? "username" : "phone-number",
-                    placeholder: isUsername ? tr("Full Name") : tr("Phone Number"),
+                    inputRef: activeInputRef,
+                    autoFocus: true,
+                    placeholder: isUsername ? tr("Full Name") : tr("Mobile number"),
                     value: isUsername ? username : phone,
                     onChangeFn: isUsername ? handleUsernameChange : handlePhoneChange,
                     error: isUsername
@@ -471,7 +471,7 @@ const SignUpPage = () => {
                       : error === tr("Enter a Phone Number") || error === tr("Number should be exactly 10 digits"),
                     bg: "var(--background-muted)",
                   }}
-                  className="scale-[1] sm:scale-[1.3]"
+                  className="scale-[1] sm:scale-[1.3] mb-2"
                 />}
 
               <Button
@@ -484,7 +484,7 @@ const SignUpPage = () => {
                     ? username.trim().length < 2
                     : isPhone
                     ? phone.length !== 10
-                    : otp.length !== OTP_LENGTH,
+                    : loading || verdict === "fail" || (!otpReadyToContinue && otp.length !== OTP_LENGTH),
                 }}
                 className="scale-[1] sm:scale-[1.3] mt-1 sm:mt-5"
               >
@@ -492,7 +492,7 @@ const SignUpPage = () => {
                   ? tr("Continue")
                   : isPhone
                   ? (showLogin ? tr("Login") : (loading ? tr("Sending OTP...") : tr("Continue")))
-                  : (loading ? tr("Verifying...") : tr("Verify"))}
+                  : (loading || verdict ? tr("Continue") : tr("Submit"))}
               </Button>
 
               {/* Mirror of login's "No account?" link, on both pre-OTP steps
@@ -500,7 +500,7 @@ const SignUpPage = () => {
                   flips the main button into "Login" — two login actions on
                   one screen would compete. */}
               {!isOtp && !showLogin && (
-                <p className="mt-3 sm:mt-6 text-sm text-[var(--text-muted)]">
+                <p className="mt-3 sm:mt-6 text-sm text-[var(--text-muted)] text-left sm:text-center">
                   <span className="text-[var(--text)]">{tr("Have an account?")}</span>{" "}
                   <button
                     type="button"
@@ -510,30 +510,30 @@ const SignUpPage = () => {
                 </p>
               )}
               {isOtp && (
-                <p className={`mt-3 sm:mt-6 text-sm text-[var(--text-muted)] ${busy ? "invisible" : ""}`}>
-                  <span className="text-[var(--text)]">{tr("Didn't get it?")}</span>{" "}
+                <p className={`mt-3 sm:mt-6 text-sm text-[var(--text-muted)] text-left sm:text-center ${busy ? "invisible" : ""}`}>
+                  <span className="text-[var(--text-muted)]">{tr("Didn't get it or expired?")}</span>{" "}
                   {resending
                     ? tr("Sending...")
                     : resendIn > 0
-                      ? <span className="tabular-nums">{tr("Resend in")} {resendIn}s</span>
+                      ? <span className="tabular-nums underline underline-offset-4">{tr("Resend in")} {resendIn}s</span>
                       : <button
                         type="button"
                         onClick={handleResend}
-                        className="cursor-pointer text-[var(--text)] underline underline-offset-4 decoration-[var(--foreground)]/40 hover:decoration-[var(--foreground)] transition-colors duration-300 rounded-sm outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]/70"
+                        className="cursor-pointer text-[var(--text)] underline underline-offset-2 rounded-sm outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]/70"
                       >{tr("Resend")}</button>}
                 </p>
               )}
 
               {isUsername && (
-                <p className="text-[var(--text-muted)] text-sm mt-3 sm:mt-5">{tr("Your name can't be changed later, so we suggest using your full name.")}</p>
+                <p className="text-[var(--text-muted)] text-sm mt-3 sm:mt-5 text-left sm:text-center">{tr("Your name can't be changed later, so we suggest using your full name.")}</p>
               )}
 
               {isPhone && (
-                <p className="text-[var(--text-muted)] text-sm mt-3 sm:mt-5 max-sm:max-w-[min(86vw,100%)] sm:max-w-[340px]">{tr("Your number can't be changed later. By continuing, you consent to receive an OTP by text or WhatsApp.")}</p>
+                <p className="text-[var(--text-muted)] text-sm mt-3 sm:mt-5 max-sm:max-w-[min(86vw,100%)] sm:max-w-[340px] text-left sm:text-center">{tr("Your number can't be changed later. By continuing, you consent to receive an OTP by text or WhatsApp.")}</p>
               )}
 
               {isOtp && (
-                <p className="text-[var(--text-muted)] text-sm mt-3 sm:mt-5">{tr("You consent to receive a OTP by text or WhatsApp.")}</p>
+                <p className="text-[var(--text-muted)] text-sm mt-3 sm:mt-5 text-left sm:text-center">{tr("You consent to receive a OTP by text or WhatsApp.")}</p>
               )}
             </div>
           </form>

@@ -58,7 +58,7 @@ const JoinFleetCard = () => (
         }
         className="self-start mt-1 rounded-full px-5 py-2 bg-[var(--background-primary)] active:opacity-80"
       >
-        <AppText className="font-semibold text-[var(--foreground)]">{dc("Talk to the team")}</AppText>
+        <AppText className="font-semibold text-on-strong">{dc("Talk to the team")}</AppText>
       </Pressable>
     </View>
 

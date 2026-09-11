@@ -6,6 +6,7 @@ import LoginPage from './pages/LoginPage'
 import './index.css'
 import App from './App'
 import {ThemeProvider} from './context/ThemeContext';
+import ThemeRouteSync from './components/ThemeRouteSync';
 import ErrorBoundary, { RouteErrorBoundary } from './components/ErrorBoundary';
 import BookingFlow from './pages/BookingFlow';
 import SignUpPage from './pages/SignUpPage';
@@ -51,7 +52,7 @@ function AuthLoadingGate({ children }) {
 // Pathless layout route: PageMeta renders every page through an <Outlet/> and
 // sets that route's title/description from constants/pageMeta.js.
 const router = createBrowserRouter([{
-  element: <PageMeta />,
+  element: <><ThemeRouteSync /><PageMeta /></>,
   // A data router swallows throws from its own routes and renders React
   // Router's built-in "Unexpected Application Error!" page, which never reaches
   // the <ErrorBoundary> below. Since every page is inside the router, this is

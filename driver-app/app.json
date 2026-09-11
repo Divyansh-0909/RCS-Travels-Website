@@ -7,6 +7,7 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
+    "backgroundColor": "#0B0B14",
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -77,6 +78,7 @@
         }
       ],
       "./plugins/with-return-overlay-logo",
+      "expo-system-ui",
       "expo-font",
       "expo-secure-store"
     ],

@@ -15,9 +15,7 @@ import {
     HAIRLINE,
     INK_TEXT,
     MUTED,
-    PAGE,
     RouteLeg,
-    SURFACE,
     WhatsappMark,
 } from '../components/ui/rideUi';
 import { formatDateTime, rupees, vehicleLabel } from '../constants/booking';
@@ -30,6 +28,7 @@ import {
     type MarketplaceStatus,
 } from '../constants/marketplace';
 import { openSupportWhatsApp } from '../constants/support';
+import { useTheme } from '../theme/ThemeContext';
 
 const SHELL_TOP_PAD = 40;
 const MONEY_LINE = 'text-sm font-semibold text-black';
@@ -45,12 +44,13 @@ const Card = ({ children, gap = 'gap-4', banner }: {
     children: React.ReactNode;
     gap?: string;
     banner?: React.ReactNode;
-}) => (
-    <View className="w-full rounded-2xl" style={{ backgroundColor: SURFACE }}>
+}) => {
+    const { colors } = useTheme();
+    return <View className="w-full rounded-2xl" style={{ backgroundColor: colors.surface }}>
         {banner}
         <View className={`p-5 ${gap}`}>{children}</View>
-    </View>
-);
+    </View>;
+};
 
 const Label = ({ children }: { children: React.ReactNode }) => (
     <AppText className={`text-xs font-semibold uppercase tracking-wide ${MUTED}`}>
@@ -77,6 +77,7 @@ const MarketplaceDetail = () => {
     const { id } = useParams();
     const location = useLocation();
     const navigate = useNavigate();
+    const { colors } = useTheme();
 
     const stateListing = (location.state as { listing?: MarketplaceListing } | null)?.listing;
     const listing = stateListing?.id === id
@@ -89,7 +90,7 @@ const MarketplaceDetail = () => {
         return (
             <View
                 className="flex-1 w-full gap-4"
-                style={{ backgroundColor: PAGE, marginTop: -SHELL_TOP_PAD, paddingTop: SHELL_TOP_PAD }}
+                style={{ backgroundColor: colors.surfaceMuted, marginTop: -SHELL_TOP_PAD, paddingTop: SHELL_TOP_PAD }}
             >
                 {header}
                 <View className="flex-1 items-center justify-center mx-5 pb-24 gap-1 px-6">
@@ -119,7 +120,7 @@ const MarketplaceDetail = () => {
     return (
         <View
             className="flex-1 w-full"
-            style={{ backgroundColor: PAGE, marginTop: -SHELL_TOP_PAD, paddingTop: SHELL_TOP_PAD }}
+            style={{ backgroundColor: colors.surfaceMuted, marginTop: -SHELL_TOP_PAD, paddingTop: SHELL_TOP_PAD }}
         >
             {header}
             <ScrollView
@@ -255,7 +256,7 @@ const MarketplaceDetail = () => {
 
             <View
                 className="w-full flex-row px-5 pt-3 pb-6"
-                style={{ backgroundColor: PAGE }}
+                style={{ backgroundColor: colors.surfaceMuted }}
             >
                 <ActionButton
                     label={

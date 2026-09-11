@@ -6,9 +6,10 @@ import { cssInterop } from 'nativewind';
 import type { SharedValue } from 'react-native-reanimated';
 import { CheckIcon, XIcon } from 'phosphor-react-native';
 import AppText from '../AppText';
-import { ActionButton, FactPill, INK_TEXT, MUTED, RouteLeg, SURFACE } from './rideUi';
+import { ActionButton, FactPill, INK_TEXT, MUTED, RouteLeg } from './rideUi';
 import { clockParts, dayBucket, formatDistance, rupees, vehicleLabel } from '../../constants/booking';
 import type { Offer } from '../../hooks/useOffers';
+import { useTheme } from '../../theme/ThemeContext';
 
 const asThemed = { className: { target: false, nativeStyleToProp: { color: true } } } as const;
 const Check = cssInterop(CheckIcon, asThemed);
@@ -53,16 +54,17 @@ const whenLabel = (scheduledAt: string | null) => {
  * fare: a shared cabin, a roof carrier he may not own, a day out of the city, a
  * longer road. Rendered only when true — a row of "no" chips is noise.
  */
-const Chip = ({ label, strong }: { label: string; strong?: boolean }) => (
-    <View
+const Chip = ({ label, strong }: { label: string; strong?: boolean }) => {
+    const { colors } = useTheme();
+    return <View
         className="rounded-xl px-2.5 py-1"
-        style={{ backgroundColor: strong ? '#121220' : '#f3f3f3' }}
+        style={{ backgroundColor: strong ? colors.strong : colors.surfaceMuted }}
     >
         <AppText className={`text-sm font-semibold ${strong ? 'text-white' : INK_TEXT}`}>
             {label}
         </AppText>
-    </View>
-);
+    </View>;
+};
 
 export const OfferCard = ({
     offer,
@@ -80,6 +82,7 @@ export const OfferCard = ({
     timerProgress?: SharedValue<number>;
 }) => {
     useCopyLanguage();
+    const { colors } = useTheme();
     // Guards a double-tap into two requests, and dims the pair while one is in
     // flight. Accept and Reject share it: answering an offer twice, either way,
     // is the same mistake.
@@ -88,7 +91,15 @@ export const OfferCard = ({
     const run = async (action: () => void | Promise<void>) => {
         if (busy) return;
         setBusy(true);
-        try { await action(); } finally { setBusy(false); }
+        try {
+            await action();
+        } catch {
+            // The panel owns the visible error for today's actions. Keep this
+            // boundary defensive so a future callback cannot escape a press as
+            // an unhandled rejected promise.
+        } finally {
+            setBusy(false);
+        }
     };
 
     // Two different measurements. The trip length is the server's, priced at
@@ -97,7 +108,7 @@ export const OfferCard = ({
     const toPickup = here ? kmBetween(here, offer.pickup) : null;
 
     return (
-        <View className="w-full rounded-2xl p-4" style={{ backgroundColor: SURFACE }}>
+        <View className="w-full rounded-2xl p-4" style={{ backgroundColor: colors.surface }}>
             <View className="flex-row items-end justify-between mb-3">
                 <AppText className={`text-3xl font-bold ${INK_TEXT}`} style={{ letterSpacing: -0.8 }}>
                     {rupees(offer.fare)}
@@ -148,7 +159,7 @@ export const OfferCard = ({
                         <Check
                             size={18}
                             weight="bold"
-                            className="text-[var(--foreground)]"
+                            className="text-on-strong"
                         />
                     }
                     onPress={() => run(onAccept)}

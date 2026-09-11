@@ -6,8 +6,9 @@ import { XIcon } from 'phosphor-react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import AppText from './AppText';
 import { useNoticeTop } from './AppBarVisibility';
-import { INK_TEXT, MUTED, PAGE, SURFACE } from './ui/rideUi';
+import { INK_TEXT, MUTED } from './ui/rideUi';
 import { rupees, splitAddress } from '../constants/booking';
+import { useTheme } from '../theme/ThemeContext';
 import type { UpcomingBooking } from '../types/enums';
 
 const Cross = cssInterop(XIcon, {
@@ -34,6 +35,7 @@ export const RideCancelled = ({
     onDismiss: () => void;
 }) => {
     useCopyLanguage();
+    const { colors } = useTheme();
     const charge = ride.cancellationCharge ?? 0;
     const pickup = splitAddress(ride.pickupAddress);
     const top = useNoticeTop();
@@ -46,7 +48,7 @@ export const RideCancelled = ({
             <Animated.View
                 entering={FadeInDown.duration(220)}
                 className="w-[92%] rounded-2xl p-4 gap-3"
-                style={{ backgroundColor: SURFACE }}
+                style={{ backgroundColor: colors.surface }}
             >
                 <View className="flex-row items-start justify-between gap-3">
                     <View className="flex-1 gap-0.5">
@@ -64,7 +66,7 @@ export const RideCancelled = ({
                         hitSlop={12}
                         style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}
                     >
-                        <View className="w-9 h-9 items-center justify-center rounded-full" style={{ backgroundColor: PAGE }}>
+                        <View className="w-9 h-9 items-center justify-center rounded-full" style={{ backgroundColor: colors.surfaceMuted }}>
                             <Cross size={20} weight="bold" className={INK_TEXT} />
                         </View>
                     </Pressable>
@@ -74,7 +76,7 @@ export const RideCancelled = ({
                     no charge at all, and printing "₹0" invites him to wonder what
                     he did wrong. */}
                 {charge > 0 ? (
-                    <View className="rounded-2xl px-4 py-3 gap-0.5" style={{ backgroundColor: PAGE }}>
+                    <View className="rounded-2xl px-4 py-3 gap-0.5" style={{ backgroundColor: colors.surfaceMuted }}>
                         <AppText className={`text-xs font-semibold uppercase tracking-wide ${MUTED}`}>{dc("Your compensation")}</AppText>
                         <AppText className={`text-2xl font-bold ${INK_TEXT}`} style={{ letterSpacing: -0.5 }}>
                             {rupees(charge)}

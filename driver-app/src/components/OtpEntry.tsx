@@ -12,7 +12,8 @@ import { cssInterop } from 'nativewind';
 import { XIcon } from 'phosphor-react-native';
 import Animated, { FadeIn, SlideInDown } from 'react-native-reanimated';
 import AppText from './AppText';
-import { INK_TEXT, MUTED, SURFACE } from './ui/rideUi';
+import { INK_TEXT, MUTED } from './ui/rideUi';
+import { useTheme } from '../theme/ThemeContext';
 
 const Cross = cssInterop(XIcon, {
     className: { target: false, nativeStyleToProp: { color: true } },
@@ -38,6 +39,7 @@ export const OtpEntry = ({
     submitLabel?: string;
 }) => {
     useCopyLanguage();
+    const { colors } = useTheme();
     const [otp, setOtp] = useState('');
     const [focusedBox, setFocusedBox] = useState(-1);
 
@@ -151,7 +153,7 @@ export const OtpEntry = ({
                 position: 'absolute',
                 inset: 0,
                 zIndex: 95,
-                backgroundColor: SURFACE,
+                backgroundColor: colors.surface,
             }}
         >
             <Animated.View
@@ -258,7 +260,7 @@ export const OtpEntry = ({
                                     : 'bg-primary-light'
                                 }`}
                         >
-                            <AppText className="text-base font-semibold text-[var(--foreground)]">
+                            <AppText className="text-base font-semibold text-on-strong">
                                 {submitLabel}
                             </AppText>
                         </View>
@@ -277,7 +279,7 @@ export const OtpEntry = ({
                         <View
                             className="w-[92%] flex-row items-center justify-center gap-2 rounded-full bg-[var(--foreground-muted)] py-3.5"
                         >
-                            <AppText className="text-base font-semibold text-[var(--background-primary)]">{dc("Back")}</AppText>
+                            <AppText className="text-base font-semibold text-ink">{dc("Back")}</AppText>
                         </View>
                     </Pressable>
                 </View>

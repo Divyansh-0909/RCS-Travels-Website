@@ -10,10 +10,18 @@ import SettingRow from "../components/ui/SettingRow";
 import CircleIconButton from "../components/ui/CircleIconButton";
 import Toggle from "../components/ui/Toggle";
 import LanguageSelector from "../components/LanguageSelector";
+import ThemeToggle from "../components/ThemeToggle";
 import { useTranslation } from "react-i18next";
 import { useWebsiteCopy } from "../hooks/useWebsiteCopy";
 
-const panelTones = ["bg-pastel-primary", "bg-pastel-teal", "bg-pastel-violet"]
+const panelTones = {
+    theme: "bg-tone-primary",
+    language: "bg-tone-primary",
+    notifications: "bg-tone-teal",
+    savedPlaces: "bg-tone-violet",
+}
+
+const settingsListClass = "flex flex-col items-start gap-4 justify-center w-full"
 
 const notifRows = [
     ["Ride updates", "Booking confirmations and ride status on WhatsApp.", "whatsapp"],
@@ -119,37 +127,42 @@ const SettingsPage = () => {
 
     return (
         <AccountLayout
-            items={[t("settings.language"), t("settings.notifications"), t("settings.savedPlaces")]}
+            items={[t("settings.theme"), t("settings.language"), t("settings.notifications"), t("settings.savedPlaces")]}
             selected={selected}
             onSelect={setSelected}
             title={t("settings.title")}
         >
-            <ul className="flex flex-col items-start gap-4 justify-center w-full">
-                {selected === 0 && <li className="w-full"><LanguageSelector /></li>}
+            {selected === 0 && <ThemeToggle tone={panelTones.theme} />}
 
-                {selected === 1 && notifRows.map(([title, desc, key]) => (
-                    <SettingRow key={key} tone={panelTones[selected]} trailing={<Toggle on={notifs[key]} onClick={() => toggleNotif(key)} />}>
+            {selected === 1 && <LanguageSelector tone={panelTones.language} />}
+
+            {selected === 2 && (
+                <ul className={settingsListClass}>
+                {notifRows.map(([title, desc, key]) => (
+                    <SettingRow key={key} tone={panelTones.notifications} trailing={<Toggle on={notifs[key]} onClick={() => toggleNotif(key)} />}>
                         <h4 className="break-words text-lg font-medium">{tr(title)}</h4>
-                        <p className="break-words text-base text-[var(--background-primary)]/50">{tr(desc)}</p>
+                        <p className="break-words text-base text-ink-muted">{tr(desc)}</p>
                     </SettingRow>
                 ))}
+                </ul>
+            )}
 
-                {selected === 2 && (
-                    <>
+            {selected === 3 && (
+                <ul className={settingsListClass}>
                         {places.map((p, i) => (
                             editingPlace === i ? (
-                                <li key={i} className="w-full select-none py-5 px-6 rounded-3xl flex items-center justify-between gap-3 bg-pastel-violet">
+                                <li key={i} className="w-full select-none py-5 px-6 rounded-3xl flex items-center justify-between gap-3 bg-tone-violet">
                                     <input
                                         autoFocus
                                         value={placeInput}
                                         onChange={(e) => setPlaceInput(e.target.value)}
                                         onKeyDown={(e) => { if (e.key === "Enter") savePlace(); if (e.key === "Escape") cancelEdit() }}
                                         placeholder={t("settings.addressPlaceholder", { place: p.label })}
-                                        className="flex-1 min-w-0 rounded-xl py-2 px-3 text-base text-[var(--text-foreground)] bg-transparent outline-none placeholder:text-[var(--background-primary)]/40 border border-[var(--background-primary)]/30"
+                                        className="flex-1 min-w-0 rounded-xl py-2 px-3 text-base text-ink bg-transparent outline-none placeholder:text-ink-muted/60 border border-border"
                                     />
                                     <div className="flex items-center gap-2 shrink-0">
                                         <CircleIconButton icon={mdiCheck} size={0.9} disabled={savingPlace} onClick={savePlace} />
-                                        <div onClick={cancelEdit} className="cursor-pointer p-1 rounded-full text-[var(--background-primary)]/60 transition-color duration-300 hover:text-[var(--background-primary)]">
+                                        <div onClick={cancelEdit} className="cursor-pointer p-1 rounded-full text-ink-muted transition-colors duration-300 hover:text-ink">
                                             <Icon path={mdiClose} size={0.9} />
                                         </div>
                                     </div>
@@ -157,7 +170,7 @@ const SettingsPage = () => {
                             ) : (
                                 <SettingRow
                                     key={i}
-                                    tone={panelTones[selected]}
+                                    tone={panelTones.savedPlaces}
                                     trailing={
                                         <div className="flex items-center gap-2 shrink-0">
                                             {/* Home and Work are fixed slots — only extra places can be removed. */}
@@ -170,18 +183,17 @@ const SettingsPage = () => {
                                         </div>
                                     }
                                 >
-                                    <p className="text-base text-[var(--background-primary)]/50">{tr(p.label)}</p>
+                                    <p className="text-base text-ink-muted">{tr(p.label)}</p>
                                     <h4 className="break-words text-lg font-medium">{p.address || t("settings.notAdded")}</h4>
                                 </SettingRow>
                             )
                         ))}
-                        {placeError && <p className="text-sm text-[rgba(239,68,68,0.9)] px-2">{placeError}</p>}
-                        <li onClick={addPlace} className="font-medium text-lg w-full cursor-pointer select-none py-5 px-6 rounded-3xl flex justify-center items-center gap-2 bg-pastel-violet text-[var(--background-primary)] transition-opacity duration-200 hover:opacity-80">
+                        {placeError && <li className="text-sm text-negative px-2">{placeError}</li>}
+                        <li onClick={addPlace} className="font-medium text-lg w-full cursor-pointer select-none py-5 px-6 rounded-3xl flex justify-center items-center gap-2 bg-tone-violet text-ink transition-opacity duration-200 hover:opacity-80">
                             <Icon path={mdiPlus} size={0.9} /> {t("settings.addPlace")}
                         </li>
-                    </>
-                )}
-            </ul>
+                </ul>
+            )}
         </AccountLayout>
     )
 }

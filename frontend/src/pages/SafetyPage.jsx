@@ -14,7 +14,7 @@ import { useRefreshNotice } from "../hooks/useRefreshNotice";
 import { useWebsiteCopy } from "../hooks/useWebsiteCopy";
 
 const items = ["Emergency contact", "Live location", "Helpline"]
-const panelTones = ["bg-pastel-primary", "bg-pastel-teal", "bg-pastel-violet"]
+const panelTones = ["bg-tone-primary", "bg-tone-teal", "bg-tone-violet"]
 
 // tel: numbers reachable from the Helpline section.
 const helplines = [
@@ -92,7 +92,7 @@ const SafetyPage = () => {
             <ul className="flex flex-col items-start gap-4 justify-center w-full">
                 {selected === 0 && (
                     editingContact ? (
-                        <li className="w-full flex flex-col gap-2 select-none py-5 px-6 rounded-3xl bg-pastel-primary">
+                        <li className="w-full flex flex-col gap-2 select-none py-5 px-6 rounded-3xl bg-tone-primary">
                             <div className="w-full flex items-center gap-2">
                                 <input
                                     autoFocus
@@ -102,30 +102,30 @@ const SafetyPage = () => {
                                     onChange={(e) => setContactInput(e.target.value.replace(/\D/g, "").slice(0, 10))}
                                     onKeyDown={(e) => { if (e.key === "Enter") saveContact(); if (e.key === "Escape") cancelEdit() }}
                                     placeholder={dc("XXXXX XXXXX")}
-                                    className={`w-full rounded-xl py-2 px-3 text-base text-[var(--text-foreground)] bg-transparent outline-none placeholder:text-[var(--background-primary)]/40 border ${contactError ? "border-[rgba(239,68,68,0.5)]" : "border-[var(--background-primary)]/30"}`}
+                                    className={`w-full rounded-xl py-2 px-3 text-base text-ink bg-transparent outline-none placeholder:text-ink-muted/60 border ${contactError ? "border-negative/50" : "border-border"}`}
                                 />
                                 <CircleIconButton icon={mdiCheck} size={0.9} disabled={savingContact} onClick={saveContact} />
-                                <div onClick={cancelEdit} className="cursor-pointer p-1 rounded-full text-[var(--background-primary)]/60 transition-color duration-300 hover:text-[var(--background-primary)]">
+                                <div onClick={cancelEdit} className="cursor-pointer p-1 rounded-full text-ink-muted transition-colors duration-300 hover:text-ink">
                                     <Icon path={mdiClose} size={0.9} />
                                 </div>
                             </div>
-                            {contactError && <p className="text-sm text-[rgba(239,68,68,0.9)] px-2">{contactError}</p>}
+                            {contactError && <p className="text-sm text-negative px-2">{contactError}</p>}
                         </li>
                     ) : (
                         <SettingRow tone={panelTones[selected]} trailing={<CircleIconButton icon={emergencyContact ? mdiPencil : mdiPlus} size={emergencyContact ? 0.8 : 1} onClick={startEdit} />}>
-                            <p className="text-base text-[var(--background-primary)]/50">{tr("Emergency contact")}</p>
+                            <p className="text-base text-ink-muted">{tr("Emergency contact")}</p>
                             <h4 className="text-lg font-medium">{emergencyContact || tr("Not added yet")}</h4>
                         </SettingRow>
                     )
                 )}
                 {selected === 0 && (
-                    <p className="text-sm text-[var(--background-primary)]/50 px-2">{tr("We'll reach this person if something goes wrong during a ride.")}</p>
+                    <p className="text-sm text-ink-muted px-2">{tr("We'll reach this person if something goes wrong during a ride.")}</p>
                 )}
 
                 {selected === 1 && (
                     <SettingRow tone={panelTones[selected]} trailing={<Toggle on={autoShare} onClick={() => setAutoShare(v => !v)} />}>
                         <h4 className="text-lg font-medium">{tr("Share my live location")}</h4>
-                        <p className="text-base text-[var(--background-primary)]/50">{tr("Let your emergency contact follow your ride in real time when a trip starts.")}</p>
+                        <p className="text-base text-ink-muted">{tr("Let your emergency contact follow your ride in real time when a trip starts.")}</p>
                     </SettingRow>
                 )}
 
@@ -136,7 +136,7 @@ const SafetyPage = () => {
                         trailing={<CircleIconButton icon={mdiPhone} size={0.85} onClick={() => { window.location.href = `tel:${number}` }} />}
                     >
                         <h4 className="break-words text-lg font-medium">{tr(title)}</h4>
-                        <p className="break-words text-base text-[var(--background-primary)]/50">{tr(desc)}</p>
+                        <p className="break-words text-base text-ink-muted">{tr(desc)}</p>
                     </SettingRow>
                 ))}
             </ul>

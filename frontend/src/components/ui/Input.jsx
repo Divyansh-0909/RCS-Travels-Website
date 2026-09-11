@@ -3,6 +3,7 @@
 // input and adornments scale together.
 const Input = ({ prop, className, leading, trailing }) => {
   const hasError = prop.error === true;
+  const useForeground = prop.foreground === true;
 
   return (
     <div className={`${className} relative w-fit max-sm:w-[86vw] max-sm:max-w-full my-1 sm:scale-y-[1.3]`}>
@@ -15,22 +16,26 @@ const Input = ({ prop, className, leading, trailing }) => {
         onFocus={prop.onFocusFn}
         onBlur={prop.onBlurFn}
         autoComplete={prop.autoComplete}
+        autoFocus={prop.autoFocus}
         type={prop.type}
         placeholder={prop.placeholder}
+        readOnly={prop.readOnly}
+        aria-busy={prop.ariaBusy ? "true" : undefined}
         required
         style={{ "--input-bg": prop.bg }}
         className={`
-          font-medium text-default text-[var(--text)]
-          px-4 py-3 w-[290px] max-sm:w-full rounded-xl
+          font-medium text-default
+          px-4 py-2 w-[290px] max-sm:w-full rounded-xl
           ${leading ? "pl-9" : ""}
           ${trailing ? "pr-10" : ""}
           border outline-none
-          placeholder:text-[var(--foreground-muted)]/50
           transition-colors duration-300
           ${
-            hasError
-              ? "border-negative/50 bg-negative/10 focus:border-negative/80"
-              : "border-[var(--foreground)]/30 bg-[var(--input-bg,transparent)] hover:border-[var(--foreground)]/50 focus:border-[var(--foreground)]/60 focus:bg-[var(--foreground)]/5"
+            useForeground
+              ? "cursor-wait border-[var(--foreground)] bg-[var(--foreground)] text-[var(--text-foreground)] placeholder:text-[var(--text-foreground)]/70 hover:border-[var(--foreground)] focus:border-[var(--foreground)]"
+              : hasError
+                ? "border-negative/50 bg-negative/10 text-[var(--text)] placeholder:text-[var(--foreground-muted)]/50 focus:border-negative/80"
+                : "border-[var(--foreground)]/30 bg-[var(--input-bg,transparent)] text-[var(--text)] placeholder:text-[var(--foreground-muted)]/50 hover:border-[var(--foreground)]/50 focus:border-primary"
           }
         `}
       />

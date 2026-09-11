@@ -51,6 +51,7 @@ import { isDriverDispatchReady, restoreIdleDriverCapacity } from '../services/dr
 import { notifyWhatsAppDriverCancelled, notifyWhatsAppRideStatus } from '../services/notification.js'
 import { getNavigationRoute } from '../services/rideEstimate.js'
 import { locationSchema, UploadUrlRequest, ConfirmDocumentsRequest, rideParamsSchema, driverOnlineSchema, driverAccountInformationSchema, addVehicleSchema, activeVehicleSchema, fcmTokenSchema, rideStatusSchema, driverRidesQuerySchema } from '../types.ts'
+import { recentBookingHistoryWhere } from '../lib/bookingHistory.js'
 
 // The driver-facing API. Nothing calls it yet — the driver app is Phase 5, and until
 // it exists the assignment loop takes a driver's answer from sendFCM's return value
@@ -1546,6 +1547,7 @@ driverRouter.get('/rides', protect, async (req, res) => {
         where: {
             driverId: driver.id,
             status: { in: isHistory ? [...HISTORY_STATUSES] : ACTIVE_STATUSES },
+            ...(isHistory ? recentBookingHistoryWhere() : {}),
         },
         select: {
             id: true,

@@ -284,7 +284,7 @@ export function useDriverLocation(enabled: boolean, onRide: boolean) {
           void reportFix(
             { lat: loc.coords.latitude, lng: loc.coords.longitude },
             postFix,
-          );
+          ).catch(() => {});
         },
         () => {},
       );

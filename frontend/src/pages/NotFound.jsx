@@ -13,7 +13,7 @@ const NotFound = () => {
     const navigate = useViewNavigate()
 
     return (
-        <div className="bg-gradient min-h-[100dvh] flex flex-col items-center justify-center gap-3 px-6 text-center">
+        <div className="bg-canvas text-ink min-h-[100dvh] flex flex-col items-center justify-center gap-3 px-6 text-center">
             <h1>{tr("This page doesn't exist")}</h1>
             <p className="max-w-md">
                 {tr("The link may be old, or the address slightly off. Everything still works from the home page.")}

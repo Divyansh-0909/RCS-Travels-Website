@@ -7,6 +7,7 @@
  */
 import path from 'node:path';
 import { spawn } from 'node:child_process';
+import { readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import chokidar from 'chokidar';
 
@@ -16,30 +17,27 @@ const repositoryDirectory = path.resolve(atlasDirectory, '..', '..');
 const generatedFile = path.join(atlasDirectory, 'src', 'generated-atlas.js');
 const debounceMilliseconds = 350;
 
-const sourceGlobs = [
-  path.join(repositoryDirectory, 'backend', '**', '*.{js,jsx,mjs,cjs,ts,tsx,prisma,json}'),
-  path.join(repositoryDirectory, 'frontend', '**', '*.{js,jsx,mjs,cjs,ts,tsx,prisma,json}'),
-  path.join(repositoryDirectory, 'driver-app', '**', '*.{js,jsx,mjs,cjs,ts,tsx,prisma,json}'),
-  path.join(repositoryDirectory, 'shared', '**', '*.{js,jsx,mjs,cjs,ts,tsx,prisma,json}'),
-  path.join(repositoryDirectory, 'tools', '**', '*.{js,jsx,mjs,cjs,ts,tsx,prisma,json}'),
-  path.join(repositoryDirectory, '*.{js,jsx,mjs,cjs,ts,tsx,prisma,json,yml,yaml}'),
+// Chokidar v4 no longer expands glob watch paths. Watch concrete locations and
+// filter events below so additions, changes, and removals all work reliably.
+const sourceDirectories = new Set(['backend', 'frontend', 'driver-app', 'shared', 'tools']);
+const sourceExtensions = new Set(['.js', '.jsx', '.mjs', '.cjs', '.ts', '.tsx', '.prisma', '.json']);
+const ignoredDirectoryNames = new Set(['node_modules', 'build', 'dist', '.git', 'migrations', 'assets']);
+const watchedPaths = [
+  ...sourceDirectories.values().map((directory) => path.join(repositoryDirectory, directory)),
+  ...readdirSync(repositoryDirectory, { withFileTypes: true })
+    .filter((entry) => entry.isFile() && isWatchedSourceFile(path.join(repositoryDirectory, entry.name)))
+    .map((entry) => path.join(repositoryDirectory, entry.name)),
 ];
 
-const ignored = [
-  '**/node_modules/**',
-  '**/build/**',
-  '**/dist/**',
-  '**/.git/**',
-  '**/generated-atlas.js',
-  '**/migrations/**',
-  '**/assets/**',
-];
-
-const viteCommand = path.join(
+// Starting the JavaScript entry point with the current Node runtime avoids
+// spawning vite.cmd with shell disabled on Windows (which throws EINVAL),
+// while retaining direct process execution on every platform.
+const viteEntryPoint = path.join(
   atlasDirectory,
   'node_modules',
-  '.bin',
-  process.platform === 'win32' ? 'vite.cmd' : 'vite',
+  'vite',
+  'bin',
+  'vite.js',
 );
 
 let generatorProcess;
@@ -51,6 +49,27 @@ let shuttingDown = false;
 
 function timestamp() {
   return new Date().toLocaleTimeString();
+}
+
+function relativePathParts(filePath) {
+  return path.relative(repositoryDirectory, path.resolve(filePath)).split(path.sep);
+}
+
+function isIgnoredPath(filePath) {
+  const resolvedPath = path.resolve(filePath);
+  return resolvedPath === generatedFile || relativePathParts(resolvedPath)
+    .some((part) => ignoredDirectoryNames.has(part));
+}
+
+function isWatchedSourceFile(filePath) {
+  if (isIgnoredPath(filePath)) return false;
+
+  const parts = relativePathParts(filePath);
+  const extension = path.extname(filePath).toLowerCase();
+  if (sourceExtensions.has(extension)) return sourceDirectories.has(parts[0]) || parts.length === 1;
+
+  // YAML configuration belongs at the repository root only.
+  return parts.length === 1 && (extension === '.yml' || extension === '.yaml');
 }
 
 async function generate(reason) {
@@ -91,7 +110,7 @@ async function generate(reason) {
 }
 
 function scheduleGeneration(filePath, eventName) {
-  if (shuttingDown || path.resolve(filePath) === generatedFile) return;
+  if (shuttingDown || !isWatchedSourceFile(filePath)) return;
 
   clearTimeout(debounceTimer);
   debounceTimer = setTimeout(() => {
@@ -119,15 +138,15 @@ async function shutdown(exitCode = 0) {
 async function main() {
   await generate('initial scan');
 
-  watcher = chokidar.watch(sourceGlobs, {
-    ignored,
+  watcher = chokidar.watch(watchedPaths, {
+    ignored: isIgnoredPath,
     ignoreInitial: true,
     awaitWriteFinish: { stabilityThreshold: 120, pollInterval: 25 },
   });
   watcher.on('all', (eventName, filePath) => scheduleGeneration(filePath, eventName));
   watcher.on('error', (error) => console.error(`[atlas ${timestamp()}] Watcher error: ${error.message}`));
 
-  viteProcess = spawn(viteCommand, ['--host', '127.0.0.1'], {
+  viteProcess = spawn(process.execPath, [viteEntryPoint, '--host', '127.0.0.1'], {
     cwd: atlasDirectory,
     stdio: 'inherit',
     shell: false,

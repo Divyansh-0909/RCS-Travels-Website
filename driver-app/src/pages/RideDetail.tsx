@@ -1,7 +1,7 @@
 import { useLanguage as useCopyLanguage } from "../i18n";
 import { driverCopy as dc } from "../lib/copy";
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Linking, Pressable, ScrollView, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { cssInterop } from 'nativewind';
 import { CheckIcon, CopyIcon } from 'phosphor-react-native';
@@ -16,13 +16,10 @@ import {
     DetailStatusBanner,
     FactPill,
     HAIRLINE,
-    INK,
     INK_TEXT,
     MUTED,
-    PAGE,
     PhoneMark,
     RouteLeg,
-    SURFACE,
     WhatsappMark,
     paymentWords,
 } from '../components/ui/rideUi';
@@ -43,6 +40,8 @@ import {
     vehicleLabel,
 } from '../constants/booking';
 import { openSupportWhatsApp } from '../constants/support';
+import { useTheme } from '../theme/ThemeContext';
+import { callPhoneNumber } from '../lib/externalLinks';
 
 const asThemed = { className: { target: false, nativeStyleToProp: { color: true } } } as const;
 const Copy = cssInterop(CopyIcon, asThemed);
@@ -74,12 +73,13 @@ const Card = ({ children, gap = 'gap-4', banner }: {
     children: React.ReactNode;
     gap?: string;
     banner?: React.ReactNode;
-}) => (
-    <View className="w-full rounded-2xl" style={{ backgroundColor: SURFACE }}>
+}) => {
+    const { colors } = useTheme();
+    return <View className="w-full rounded-2xl" style={{ backgroundColor: colors.surface }}>
         {banner}
         <View className={`p-5 ${gap}`}>{children}</View>
-    </View>
-);
+    </View>;
+};
 
 const Label = ({ children }: { children: React.ReactNode }) => (
     <AppText className={`text-xs font-semibold uppercase tracking-wide ${MUTED}`}>
@@ -93,6 +93,7 @@ const RideDetail = () => {
     const navigate = useNavigate();
     const api = useApi();
     const { refresh: refreshDriver } = useDriver();
+    const { colors } = useTheme();
 
     const [booking, setBooking] = useState<UpcomingBooking | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -139,7 +140,7 @@ const RideDetail = () => {
         return (
             <View
                 className="flex-1 w-full gap-4"
-                style={{ backgroundColor: PAGE, marginTop: -SHELL_TOP_PAD, paddingTop: SHELL_TOP_PAD }}
+                style={{ backgroundColor: colors.surfaceMuted, marginTop: -SHELL_TOP_PAD, paddingTop: SHELL_TOP_PAD }}
             >
                 {header}
                 {error ? (
@@ -192,7 +193,7 @@ const RideDetail = () => {
     return (
         <View
             className="flex-1 w-full"
-            style={{ backgroundColor: PAGE, marginTop: -SHELL_TOP_PAD, paddingTop: SHELL_TOP_PAD }}
+            style={{ backgroundColor: colors.surfaceMuted, marginTop: -SHELL_TOP_PAD, paddingTop: SHELL_TOP_PAD }}
         >
             {header}
             <ScrollView
@@ -301,7 +302,7 @@ const RideDetail = () => {
                     {shouldShowRider && (
                         <View
                             className="w-full flex-row items-center gap-3 rounded-2xl p-3"
-                            style={{ backgroundColor: INK }}
+                            style={{ backgroundColor: colors.strong }}
                         >
                             <View
                                 className="w-11 h-11 rounded-full items-center justify-center"
@@ -359,7 +360,7 @@ const RideDetail = () => {
 
             {/* This footer owns real layout space and an opaque surface. The details
                 viewport therefore ends above it instead of scrolling behind the actions. */}
-            <View className="w-full gap-2 px-5 pt-3 pb-6" style={{ backgroundColor: PAGE }}>
+            <View className="w-full gap-2 px-5 pt-3 pb-6" style={{ backgroundColor: colors.surfaceMuted }}>
                 {error ? (
                     <AppText className="text-sm font-medium text-red-600">{error}</AppText>
                 ) : null}
@@ -379,7 +380,7 @@ const RideDetail = () => {
                             leading={<PhoneMark />}
                             solid
                             size="large"
-                            onPress={() => Linking.openURL(`tel:${booking.customerPhone}`)}
+                            onPress={() => callPhoneNumber(booking.customerPhone)}
                         />
                     ) : null}
                     <ActionButton

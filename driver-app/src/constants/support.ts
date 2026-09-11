@@ -1,4 +1,4 @@
-import { Linking } from 'react-native';
+import { callPhoneNumber, openExternalUrl } from '../lib/externalLinks';
 
 // The captain-side twin of frontend/src/constants/support.js — same number, same
 // split-parts trick so the raw string never sits in the bundle whole, and the links
@@ -24,12 +24,13 @@ export const supportPhoneDisplay = () => {
     return `+${p.slice(0, 2)} ${p.slice(2, 7)} ${p.slice(7)}`;
 };
 
-export const callSupport = () => Linking.openURL(`tel:${supportTel()}`);
+export const callSupport = () => callPhoneNumber(supportTel());
 
 // WhatsApp rather than a call, and pre-filled with the ride reference: a captain
 // asking about a ride is asking about a specific one, and the first thing support
 // would have to ask for is the number he is already looking at.
 export const openSupportWhatsApp = (message?: string) =>
-    Linking.openURL(
+    openExternalUrl(
         `https://wa.me/${supportPhone()}${message ? `?text=${encodeURIComponent(message)}` : ''}`,
+        'Could not open WhatsApp. Please try again.',
     );

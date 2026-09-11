@@ -1,8 +1,16 @@
 diff --git a/node_modules/expo-dev-launcher/android/src/debug/java/expo/modules/devlauncher/DevLauncherController.kt b/node_modules/expo-dev-launcher/android/src/debug/java/expo/modules/devlauncher/DevLauncherController.kt
-index a6b8358..d35e3f3 100644
+index a6b8358..a1e22a8 100644
 --- a/node_modules/expo-dev-launcher/android/src/debug/java/expo/modules/devlauncher/DevLauncherController.kt
 +++ b/node_modules/expo-dev-launcher/android/src/debug/java/expo/modules/devlauncher/DevLauncherController.kt
-@@ -47,6 +47,10 @@ import expo.modules.updatesinterface.UpdatesDevLauncherInterface
+@@ -35,6 +35,7 @@ import expo.modules.devlauncher.launcher.DevLauncherRecentlyOpenedAppsRegistry
+ import expo.modules.devlauncher.launcher.errors.DevLauncherAppError
+ import expo.modules.devlauncher.launcher.errors.DevLauncherErrorActivity
+ import expo.modules.devlauncher.launcher.errors.DevLauncherUncaughtExceptionHandler
++import expo.modules.devlauncher.launcher.loaders.DevLauncherAppLoader
+ import expo.modules.devlauncher.launcher.loaders.DevLauncherAppLoaderFactory
+ import expo.modules.devlauncher.launcher.manifest.DevLauncherManifestParser
+ import expo.modules.devlauncher.react.activitydelegates.DevLauncherReactActivityNOPDelegate
+@@ -47,6 +48,10 @@ import expo.modules.updatesinterface.UpdatesDevLauncherInterface
  import kotlinx.coroutines.CoroutineScope
  import kotlinx.coroutines.Dispatchers
  import kotlinx.coroutines.launch
@@ -13,16 +21,33 @@ index a6b8358..d35e3f3 100644
  
  private const val NEW_ACTIVITY_FLAGS = Intent.FLAG_ACTIVITY_NEW_TASK or
    Intent.FLAG_ACTIVITY_CLEAR_TASK or
-@@ -131,7 +135,7 @@ class DevLauncherController private constructor(
+@@ -131,7 +136,6 @@ class DevLauncherController private constructor(
      }
  
      try {
 -      ensureHostWasCleared(appHost, activityToBeInvalidated = mainActivity)
-+      ensureHostWasClearedBeforeLaunch(appHost, activityToBeInvalidated = mainActivity)
        val devLauncherUrl = DevLauncherUrl(url)
        val parsedUrl = devLauncherUrl.url
        var parsedProjectUrl = projectUrl ?: url
-@@ -308,6 +312,38 @@ class DevLauncherController private constructor(
+@@ -165,6 +169,17 @@ class DevLauncherController private constructor(
+         DependencyInjection.devMenuPreferences?.isOnboardingFinished = true
+       }
+ 
++      if (!prepareAppHostForLaunch(appHost, appLoader, activityToBeInvalidated = mainActivity)) {
++        mode = Mode.LAUNCHER
++        manifest = null
++        manifestURL = null
++        synchronized(this) {
++          appIsLoading = false
++          _isLoadingToBundler.value = false
++        }
++        return
++      }
++
+       val appLoaderListener = appLoader.createOnDelegateWillBeCreatedListener()
+       lifecycle.addListener(appLoaderListener)
+       mode = Mode.APP
+@@ -308,6 +323,46 @@ class DevLauncherController private constructor(
      }
    }
  
@@ -31,12 +56,15 @@ index a6b8358..d35e3f3 100644
 +   * ReactHost.destroy() is asynchronous, so starting that Activity immediately races the old
 +   * context and makes DevLauncherAppLoader reject it. Wait for teardown before relaunching.
 +   */
-+  private suspend fun ensureHostWasClearedBeforeLaunch(
++  private suspend fun prepareAppHostForLaunch(
 +    host: ReactHost,
++    appLoader: DevLauncherAppLoader,
 +    activityToBeInvalidated: ReactActivity? = null
 +  ) = withContext(Dispatchers.Main) {
-+    if (host.currentReactContext == null) {
-+      return@withContext
++    // Configure the requested bundle before teardown so any concurrent headless initialization
++    // uses the right source, then configure it again because destroy() stops the custom inspector.
++    if (!appLoader.injectBundleLoader()) {
++      return@withContext false
 +    }
 +
 +    networkInterceptor?.close()
@@ -56,8 +84,82 @@ index a6b8358..d35e3f3 100644
 +        invalidateActivity(it)
 +      }
 +    }
++
++    if (!appLoader.injectBundleLoader()) {
++      throw IllegalStateException("DevLauncher could not restore the requested bundle after teardown")
++    }
++    true
 +  }
 +
    @UiThread
    private fun clearHost(host: ReactHost, activityToBeInvalidated: ReactActivity?) {
      host.destroy("DevLauncher reloading app", null)
+diff --git a/node_modules/expo-dev-launcher/android/src/debug/java/expo/modules/devlauncher/launcher/loaders/DevLauncherAppLoader.kt b/node_modules/expo-dev-launcher/android/src/debug/java/expo/modules/devlauncher/launcher/loaders/DevLauncherAppLoader.kt
+index 6a73a34..08bc434 100644
+--- a/node_modules/expo-dev-launcher/android/src/debug/java/expo/modules/devlauncher/launcher/loaders/DevLauncherAppLoader.kt
++++ b/node_modules/expo-dev-launcher/android/src/debug/java/expo/modules/devlauncher/launcher/loaders/DevLauncherAppLoader.kt
+@@ -9,6 +9,7 @@ import com.facebook.react.ReactHost
+ import com.facebook.react.ReactInstanceEventListener
+ import com.facebook.react.bridge.ReactContext
+ import expo.modules.devlauncher.launcher.DevLauncherControllerInterface
++import java.util.concurrent.atomic.AtomicBoolean
+ import kotlinx.coroutines.Dispatchers
+ import kotlinx.coroutines.withContext
+ import kotlin.coroutines.Continuation
+@@ -40,30 +41,35 @@ abstract class DevLauncherAppLoader(
+   private val controller: DevLauncherControllerInterface
+ ) {
+   private var continuation: Continuation<Boolean>? = null
+-  private var reactContextWasInitialized = false
++  private val reactContextWasInitialized = AtomicBoolean(false)
+ 
+   fun createOnDelegateWillBeCreatedListener(): (ReactActivity) -> Unit {
+     return { activity ->
+       onDelegateWillBeCreated(activity)
+ 
+-      require(appHost.currentReactContext == null) { "App react context shouldn't be created before." }
+-      appHost.addReactInstanceEventListener(object : ReactInstanceEventListener {
++      val reactInstanceEventListener = object : ReactInstanceEventListener {
+         override fun onReactContextInitialized(context: ReactContext) {
+-          if (reactContextWasInitialized) {
++          if (!reactContextWasInitialized.compareAndSet(false, true)) {
+             return
+           }
+ 
+           controller.onAppLoaded(context)
+           onReactContext(context)
+           appHost.removeReactInstanceEventListener(this)
+-          reactContextWasInitialized = true
+           continuation!!.resume(true)
+         }
+-      })
++      }
++      appHost.addReactInstanceEventListener(reactInstanceEventListener)
+ 
+       activity.lifecycle.addObserver(object : DefaultLifecycleObserver {
+         override fun onCreate(owner: LifecycleOwner) {
+           super.onCreate(owner)
++          // A headless task can win the race and create React between host teardown and Activity
++          // creation. Once the Activity is attached, reuse that context instead of crashing. The
++          // atomic guard prevents the listener and this fallback from completing the launch twice.
++          appHost.currentReactContext?.takeIf { it.hasActiveReactInstance() }?.let {
++            reactInstanceEventListener.onReactContextInitialized(it)
++          }
+           activity.lifecycle.removeObserver(this)
+         }
+       })
+@@ -72,12 +78,8 @@ abstract class DevLauncherAppLoader(
+ 
+   open suspend fun launch(intent: Intent): Boolean = withContext(Dispatchers.Main) {
+     suspendCoroutine { callback ->
+-      if (injectBundleLoader()) {
+-        continuation = callback
+-        launchIntent(intent)
+-        return@suspendCoroutine
+-      }
+-      callback.resume(false)
++      continuation = callback
++      launchIntent(intent)
+     }
+   }
+ 

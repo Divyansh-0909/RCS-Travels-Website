@@ -160,7 +160,8 @@ const HomeGate = () => {
           <>
             <MapLoadingSkeleton />
             <SkeletonSection
-              className="absolute inset-x-5 bottom-6 rounded-3xl bg-white p-5 gap-3"
+              className="absolute inset-x-5 bottom-6 rounded-3xl p-5 gap-3"
+              surface="surface"
             >
               <SkeletonBlock width={112} height={12} />
               <SkeletonBlock width="66%" height={24} />
@@ -169,7 +170,7 @@ const HomeGate = () => {
           </>
         ) : (
           <>
-            <AppText className="text-base font-semibold text-[var(--background-primary)]">{dc("Active ride could not be loaded")}</AppText>
+            <AppText className="text-base font-semibold text-ink">{dc("Active ride could not be loaded")}</AppText>
             <AppText className="text-sm text-center text-red-600">{ridesError}</AppText>
             <Pressable
               role="button"
@@ -177,7 +178,7 @@ const HomeGate = () => {
               style={({ pressed }) => ({ opacity: pressed ? 0.65 : 1 })}
             >
               <View className="rounded-xl bg-primary px-5 py-3">
-                <AppText className="text-sm font-semibold text-[var(--foreground)]">{dc("Try again")}</AppText>
+                <AppText className="text-sm font-semibold text-on-strong">{dc("Try again")}</AppText>
               </View>
             </Pressable>
           </>

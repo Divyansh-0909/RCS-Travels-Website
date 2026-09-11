@@ -1,6 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { HIDE, useAppBarVisibility, useShellHidden } from './AppBarVisibility';
+import { useTheme } from '../theme/ThemeContext';
 
 /**
  * The white fade every page's content runs out through at the bottom edge.
@@ -17,14 +18,12 @@ import { HIDE, useAppBarVisibility, useShellHidden } from './AppBarVisibility';
 // Page white. --foreground, from tokens.cjs. Read as a literal rather than a var()
 // because this is a colour PROP on a native gradient, not a style — expo-linear-
 // gradient parses the strings itself and knows nothing about CSS variables.
-const WHITE = '#ffffff';
 
 // NOT 'transparent', and not rgba(0,0,0,0). The keyword resolves to transparent
 // BLACK, and a gradient interpolates all four channels — so the top half of the fade
 // comes out a grey haze over the content instead of clear. Transparent white is the
 // same colour as the bottom stop with the alpha taken off it, which is what makes the
 // ramp invisible at the top.
-const CLEAR_WHITE = 'rgba(255,255,255,0)';
 
 // The bar sits at bottom-6 (24) and runs ~68 tall, so its top edge is 92 up. This used
 // to be 96, level with that edge, so the ramp began exactly where the bar began.
@@ -63,6 +62,7 @@ const SOLID_AT = 0.7;
 const AppBarScrim = () => {
   const { hidden } = useAppBarVisibility();
   const { hidden: shellHidden } = useShellHidden();
+  const { colors } = useTheme();
 
   // Leaves with the bar, on the bar's own curve. Once the bar has gone the scrim is
   // veiling content for nothing — the whole point of the bar sliding off is to hand
@@ -94,7 +94,7 @@ const AppBarScrim = () => {
       ]}
     >
       <LinearGradient
-        colors={[CLEAR_WHITE, WHITE]}
+        colors={[`${colors.surface}00`, colors.surface]}
         locations={[0, SOLID_AT]}
         style={{ flex: 1 }}
       />

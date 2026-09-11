@@ -36,7 +36,23 @@ module.exports = {
         },
 
         extend: {
-            colors: tokens.colors,
+            // The same semantic class names are used in both modes. ThemeProvider
+            // changes their variable values at runtime instead of asking screens
+            // to branch on an appearance flag.
+            colors: {
+                ...tokens.colors,
+                canvas: 'var(--canvas)',
+                immersive: 'var(--immersive)',
+                surface: 'var(--surface)',
+                'surface-muted': 'var(--surface-muted)',
+                'surface-raised': 'var(--surface-raised)',
+                ink: 'var(--ink)',
+                'ink-muted': 'var(--ink-muted)',
+                'border-ui': 'var(--border-ui)',
+                strong: 'var(--strong)',
+                'on-strong': 'var(--on-strong)',
+                gray: { 600: 'var(--ink-muted)' },
+            },
 
             // v3 ships 35 spacing steps and thins out fast above 12 — 14, 16, then
             // fours to 64. An off-scale class is not a smaller value, it is no

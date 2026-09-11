@@ -7,7 +7,7 @@ import commonHinglish from '../../shared/i18n/locales/hi-Latn/common.json';
 import driverEn from '../../shared/i18n/locales/en/driver.json';
 import driverHi from '../../shared/i18n/locales/hi/driver.json';
 import driverHinglish from '../../shared/i18n/locales/hi-Latn/driver.json';
-import type { DriverLanguage } from './components/LanguageSelector';
+import type { DriverLanguage } from './types/language';
 import { setDriverLabelLocale } from './lib/localizedLabels';
 
 const LANGUAGE_KEY = 'rcs.driver.language';

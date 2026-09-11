@@ -3,7 +3,7 @@ import { websiteCopy as dc } from "../../i18nCopy";
 import Icon from '@mdi/react';
 import { mdiMenu, mdiClose, mdiAccountCircle, mdiChevronDown, mdiCog, mdiInformation, mdiShieldCheck, mdiMapMarkerOutline, mdiClockTimeFourOutline } from '@mdi/js';
 import { useViewNavigate } from "../../hooks/useViewNavigate";
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useApi } from '../../hooks/useApi';
 import { useSignIn, useAuth, useUser } from "@clerk/clerk-react";
@@ -23,9 +23,9 @@ import { useTranslation } from 'react-i18next';
 
 
 // The initial-in-a-circle, at whatever size the surface needs.
-const Avatar = ({ invert, initial, box, text }) => (
-    <div className={`${invert ? "bg-[var(--foreground)]" : "bg-[var(--background-primary)]"} flex items-center justify-center rounded-full transition-colors duration-300 motion-reduce:transition-none ${box}`}>
-        <h3 className={`font-semibold ${text} transition-colors duration-300 motion-reduce:transition-none ${invert ? "text-[var(--text-foreground)]" : "text-[var(--text)]"}`}>
+const Avatar = ({ invert, themed = false, initial, box, text }) => (
+    <div className={`${themed ? "bg-strong" : invert ? "bg-[var(--foreground)]" : "bg-[var(--background-primary)]"} flex items-center justify-center rounded-full transition-colors duration-300 motion-reduce:transition-none ${box}`}>
+        <h3 className={`font-semibold ${text} transition-colors duration-300 motion-reduce:transition-none ${themed ? "text-on-strong" : invert ? "text-[var(--text-foreground)]" : "text-[var(--text)]"}`}>
             {initial}
         </h3>
     </div>
@@ -60,6 +60,8 @@ const NavBar = ({ invert = false, hideExpanded = false, hideDestinationInput = f
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState(null)
     const drawerRef = useRef(null)
+    const profileTriggerRef = useRef(null)
+    const [desktopMenuPosition, setDesktopMenuPosition] = useState(null)
     const [collapsed, setCollapsed] = useState(false)
     const destinationOnly = collapsed && !hideDestinationInput
 
@@ -122,6 +124,33 @@ const NavBar = ({ invert = false, hideExpanded = false, hideDestinationInput = f
     useEffect(() => {
         if (menuMounted && isMobile) drawerRef.current?.focus()
     }, [menuMounted, isMobile])
+
+    // The desktop menu is portalled to the body so later navbar siblings (most
+    // visibly the destination/Now rail) and transformed page content can never
+    // paint over it. Keep its viewport position anchored to the profile chip.
+    useLayoutEffect(() => {
+        if (!(menuMounted && !isMobile)) {
+            setDesktopMenuPosition(null)
+            return
+        }
+
+        const positionMenu = () => {
+            const rect = profileTriggerRef.current?.getBoundingClientRect()
+            if (!rect) return
+            setDesktopMenuPosition({
+                top: rect.bottom + 8,
+                right: Math.max(16, window.innerWidth - rect.right),
+            })
+        }
+
+        positionMenu()
+        window.addEventListener("resize", positionMenu)
+        window.addEventListener("scroll", positionMenu, true)
+        return () => {
+            window.removeEventListener("resize", positionMenu)
+            window.removeEventListener("scroll", positionMenu, true)
+        }
+    }, [menuMounted, isMobile, collapsed])
 
     const dropdownTone = invert ? "dark" : "light"
 
@@ -199,9 +228,7 @@ const NavBar = ({ invert = false, hideExpanded = false, hideDestinationInput = f
 
     const displayName = user?.name?.length > 15 ? `${user.name.slice(0, 15)}...` : user?.name
 
-    const rowHover = invert
-        ? "hover:bg-[var(--foreground)]/8 active:bg-[var(--foreground)]/12"
-        : "hover:bg-[var(--foreground-muted)] active:bg-[var(--foreground-muted)]"
+    const rowHover = "hover:bg-surface-muted active:bg-surface-raised"
 
     const desktopSecondaryButton = `cursor-pointer rounded-xl px-3 py-2 text-base font-medium outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${invert
         ? "bg-[var(--foreground)]/10 text-[var(--text)] hover:bg-[var(--foreground)]/15 active:bg-[var(--foreground)]/20"
@@ -214,7 +241,7 @@ const NavBar = ({ invert = false, hideExpanded = false, hideDestinationInput = f
         <>
             <div
                 onClick={() => setExpand(false)}
-                className={`fixed inset-0 z-90 bg-black/40 backdrop-blur-[2px] ${menuClosing ? "animate-panel-fade-out" : "animate-backdrop"} motion-reduce:animate-none`}
+                className={`fixed inset-0 z-[1000] bg-black/40 backdrop-blur-[2px] ${menuClosing ? "animate-panel-fade-out" : "animate-backdrop"} motion-reduce:animate-none`}
             />
             <div
                 ref={drawerRef}
@@ -222,7 +249,7 @@ const NavBar = ({ invert = false, hideExpanded = false, hideDestinationInput = f
                 role="dialog"
                 aria-modal="true"
                 aria-label={t("nav.menu")}
-                className={`fixed right-0 top-0 z-100 h-dvh w-[82%] max-w-[320px] flex flex-col overflow-y-auto overscroll-contain outline-none border-l shadow-[-8px_0_24px_rgba(0,0,0,0.35)] ${menuClosing ? "animate-sheet-out" : "animate-sheet"} motion-reduce:animate-none ${invert ? "bg-[var(--background-primary)] text-[var(--text)] border-[var(--foreground)]/15" : "bg-[var(--foreground)] text-[var(--text-foreground)] border-black/10"}`}
+                className={`fixed right-0 top-0 z-[1010] h-dvh w-[82%] max-w-[320px] flex flex-col overflow-y-auto overscroll-contain border-l border-border bg-surface-raised text-ink outline-none shadow-[-8px_0_24px_rgba(0,0,0,0.35)] ${menuClosing ? "animate-sheet-out" : "animate-sheet"} motion-reduce:animate-none`}
             >
                 <div className='flex items-center justify-between gap-2 px-5 pt-6 pb-5'>
                     {isSignedIn
@@ -232,7 +259,7 @@ const NavBar = ({ invert = false, hideExpanded = false, hideDestinationInput = f
                                 <Skeleton tone={dropdownTone} className='h-8 w-32' />
                             </div>
                             : <div className='flex min-w-0 items-center gap-3'>
-                                <Avatar invert={invert} initial={user?.name?.charAt(0)} box='w-12 h-12 shrink-0' text={"text-2xl"} />
+                                <Avatar themed initial={user?.name?.charAt(0)} box='w-12 h-12 shrink-0' text={"text-2xl"} />
                                 <h3 className='truncate text-xl font-semibold'>{displayName}</h3>
                             </div>
                         : <h3
@@ -264,7 +291,7 @@ const NavBar = ({ invert = false, hideExpanded = false, hideDestinationInput = f
 
                 {isSignedIn &&
                     <>
-                        <div className={`mx-5 my-3 h-px ${invert ? "bg-[var(--foreground)]/10" : "bg-black/10"}`} />
+                        <div className='mx-5 my-3 h-px bg-border' />
                         <ul className='flex flex-col gap-0.5 px-2'>
                             {loading
                                 ? userDropDownList.map((_, i) => (
@@ -294,13 +321,13 @@ const NavBar = ({ invert = false, hideExpanded = false, hideDestinationInput = f
                         : <div className='flex flex-col gap-2'>
                             <h4
                                 onClick={() => go(() => navigate('/login'))}
-                                className={`cursor-pointer rounded-xl border py-3 text-center text-base font-medium transition-colors duration-300 ${invert ? "border-[var(--foreground)]/25 hover:bg-[var(--foreground)]/10 active:bg-[var(--foreground)]/15" : "border-black/15 hover:bg-[var(--foreground-muted)] active:bg-[var(--foreground-muted)]"}`}
+                                className='cursor-pointer rounded-xl border border-border py-3 text-center text-base font-medium transition-colors duration-300 hover:bg-surface-muted active:bg-surface-raised'
                             >
                                 {t("nav.login")}
                             </h4>
                             <h4
                                 onClick={() => go(() => navigate('/signup'))}
-                                className='cursor-pointer rounded-xl bg-[var(--background-primary)] py-3 text-center text-base font-semibold text-[var(--text)] transition-opacity duration-300 hover:opacity-90 active:opacity-80'
+                                className='cursor-pointer rounded-xl bg-strong py-3 text-center text-base font-semibold text-on-strong transition-opacity duration-300 hover:opacity-90 active:opacity-80'
                             >
                                 {t("nav.signup")}
                             </h4>
@@ -336,14 +363,22 @@ const NavBar = ({ invert = false, hideExpanded = false, hideDestinationInput = f
                                     </li>
                                 ))}
                             </ul>
-                            <div onClick={() => setExpand(!expand)} className={`flex ${invert ? "text-[var(--text)] bg-[var(--background-primary)] hover:bg-[var(--foreground)]/10" : "text-[var(--text-foreground)] bg-[var(--foreground)] hover:bg-[var(--background-primary)]/10"} jusityf-center items-center px-1 py-1 rounded-3xl justify-center items-center gap-1 cursor-pointer transition-colors duration-300 motion-reduce:transition-none`}>
+                            <button
+                                ref={profileTriggerRef}
+                                type="button"
+                                aria-haspopup="menu"
+                                aria-expanded={expand}
+                                aria-label={t("nav.menu")}
+                                onClick={() => setExpand(!expand)}
+                                className={`flex ${invert ? "text-[var(--text)] bg-[var(--background-primary)] hover:bg-[var(--foreground)]/10" : "text-[var(--text-foreground)] bg-[var(--foreground)] hover:bg-[var(--background-primary)]/10"} items-center rounded-3xl px-1 py-1 justify-center gap-1 cursor-pointer outline-none transition-colors duration-300 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 motion-reduce:transition-none`}
+                            >
                                 <Avatar invert={invert} initial={user?.name?.charAt(0)} box='w-8 h-8' text='' />
                                 <Icon path={mdiChevronDown} style={{
                                     transform: expand
                                         ? "rotate(180deg)"
                                         : "rotate(0deg)",
                                 }} size={0.8} />
-                            </div>
+                            </button>
                         </>
                         :
                         <div className='flex items-center justify-center gap-2'>
@@ -351,8 +386,13 @@ const NavBar = ({ invert = false, hideExpanded = false, hideDestinationInput = f
                             <button type="button" onClick={() => navigate('/signup')} className={desktopPrimaryButton}>{t("nav.signup")}</button>
                         </div>
                     }
-                    {menuMounted && !isMobile &&
-                        <Button prop={{ variant: "dropdown", width: "390px", innerClassName: "flex flex-col gap-3 sm:gap-4 items-start justify-center" }} className={`flex flex-col p-2 absolute right-0 top-[130%] ${menuClosing ? "animate-dropdown-out" : "animate-dropdown"} hover:opacity-[1] ${invert ? "" : "bg-[var(--foreground)]"}`}>
+                    {menuMounted && !isMobile && desktopMenuPosition && createPortal(
+                        <div
+                            role="menu"
+                            aria-label={t("nav.menu")}
+                            className={`fixed z-[1010] flex w-[390px] max-w-[calc(100vw-2rem)] flex-col gap-3 rounded-2xl border border-border bg-surface-raised p-4 text-ink shadow-[0_12px_36px_rgba(0,0,0,0.32)] sm:gap-4 ${menuClosing ? "animate-dropdown-out" : "animate-dropdown"} motion-reduce:animate-none`}
+                            style={desktopMenuPosition}
+                        >
                             {loading
                                 ? <>
                                     <div className='flex items-center w-full justify-between'>
@@ -371,17 +411,24 @@ const NavBar = ({ invert = false, hideExpanded = false, hideDestinationInput = f
                                     </div>
                                 </>
                                 : <>
-                                    <div className={`${invert ? "text-[var(--text)]" : "text-[var(--text-foreground)]"} flex items-center w-full justify-between`}>
+                                    <div className='flex w-full items-center justify-between text-ink'>
                                         <h3 className='text-3xl font-semibold'>{displayName}</h3>
-                                        <Avatar invert={invert} initial={user?.name?.charAt(0)} box='w-14 h-14' text={"text-3xl"} />
+                                        <Avatar themed initial={user?.name?.charAt(0)} box='w-14 h-14' text={"text-3xl"} />
                                     </div>
                                     <div className='w-full'>
                                         <ul className='flex flex-col items-start justify-center gap-1 w-full'>
                                             {userDropDownList.map((item, i) => {
                                                 return (
-                                                    <li key={i} onClick={() => navigate(`${item[2]}`)} className={`font-normal text-3xl w-full rounded-2xl py-3 px-3 flex justify-start gap-2 transition-color duration-300 items-center ${!invert ? " text-[var(--text-foreground)] hover:bg-[var(--foreground-muted)]" : "text-[var(--text)] hover:bg-[var(--foreground)]/8"}`}>
-                                                        {item[0]}
-                                                        <h4 >{item[1]}</h4>
+                                                    <li key={i} className='w-full'>
+                                                        <button
+                                                            type="button"
+                                                            role="menuitem"
+                                                            onClick={() => go(() => navigate(`${item[2]}`))}
+                                                            className={`flex w-full cursor-pointer items-center justify-start gap-2 rounded-2xl px-3 py-3 text-left text-3xl font-normal text-ink outline-none transition-colors duration-300 focus-visible:ring-2 focus-visible:ring-primary ${rowHover}`}
+                                                        >
+                                                            {item[0]}
+                                                            <span>{item[1]}</span>
+                                                        </button>
                                                     </li>
                                                 )
                                             })}
@@ -390,8 +437,9 @@ const NavBar = ({ invert = false, hideExpanded = false, hideDestinationInput = f
                                     </div>
                                 </>
                             }
-                        </Button>
-                    }
+                        </div>,
+                        document.body
+                    )}
                 </div>
 
                 <Icon
@@ -412,7 +460,7 @@ const NavBar = ({ invert = false, hideExpanded = false, hideDestinationInput = f
                     glowRadius={24}
                     glowIntensity={0.72}
                     coneSpread={15}
-                    className="w-full"
+                    className="w-full transition-transform duration-[160ms] ease-out motion-reduce:transition-none sm:hover:-translate-x-0.5 sm:hover:translate-y-1"
                 >
                     <div
                         className={`flex w-full shadow-[-3.5px_7px_0_rgba(0,0,0,0.3)] sm:shadow-[-4.5px_8px_0_rgba(0,0,0,0.3)] hover:sm:shadow-[0_0_0_rgba(0,0,0,0)] transition-all duration-300 items-stretch rounded-full border-2 p-1.5 pl-3 ${invert ? "border-[var(--foreground)]/40 bg-[var(--background-muted)] text-[var(--foreground)]" : "border-[var(--background)]/40 bg-[var(--foreground)] text-[var(--background)]"}`}

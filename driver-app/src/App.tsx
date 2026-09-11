@@ -18,6 +18,7 @@ import { RideMenuDrawer, RideMenuProvider } from './components/RideMenu';
 import { homeScreenFor } from './components/HomeGate';
 import { useDriver } from './hooks/useDriver';
 import { useDriverLocation } from './hooks/useDriverLocation';
+import { useTheme } from './theme/ThemeContext';
 
 // A route change should register immediately without making a frequently used
 // tab feel theatrical. The eight-point lift supplies continuity while the short
@@ -35,6 +36,7 @@ const PAGE_EXIT = FadeOut
 const App = () => {
     const { pathname } = useLocation();
     const { profile } = useDriver();
+    const { scheme } = useTheme();
 
     // Mounted on the shell rather than on Home, because reporting his position
     // is not something the captain is doing on a screen — it has to survive him
@@ -65,15 +67,12 @@ const App = () => {
 
     return (
         <AppBarVisibilityProvider>
-            {/* The signed-in shell is always light, including its map style. `auto`
-                follows the phone theme instead of the pixels under the bar, leaving
-                white icons on these surfaces when the device is in dark mode. */}
-            <StatusBar style="dark" animated />
+            <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} animated />
             {/* Wraps the shell because its two halves sit at opposite ends of it:
                 the button is inside the header, the drawer has to cover the whole
                 screen and so cannot be the header's child. */}
             <RideMenuProvider>
-            <View className={`relative w-full h-full bg-[var(--foreground)] ${fullBleed ? 'pt-0' : showsHomeHeader ? 'pt-24' : 'pt-10'} flex flex-col justify-center items-center`}>
+            <View className={`relative w-full h-full bg-canvas ${fullBleed ? 'pt-0' : showsHomeHeader ? 'pt-24' : 'pt-10'} flex flex-col justify-center items-center`}>
                 <OnlineToggle />
                 <Animated.View
                     key={pathname}

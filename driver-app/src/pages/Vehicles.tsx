@@ -22,6 +22,7 @@ import { DetailSectionsSkeleton } from '../components/ui/LoadingSkeletons';
 import { useApi } from '../hooks/useApi';
 import { verificationLabel, type Vehicle, type VehiclesResponse } from '../lib/documentState';
 import { vehicleClassLabel } from '../constants/documents';
+import { useTheme } from '../theme/ThemeContext';
 
 // The captain's cars.
 //
@@ -35,15 +36,11 @@ import { vehicleClassLabel } from '../constants/documents';
 // deliberate action on a screen he had to navigate to, with the selected car
 // kept unmistakable in the list.
 
-const CARD = '#f3f3f3';
-const HAIRLINE = 'rgba(18,18,32,0.1)';
-const PRIMARY = '#243AFB';
 const SCRIM = 'rgba(18,18,32,0.45)';
 const WELL = 'rgba(18,18,32,0.04)';
-const INK = 'text-[var(--background-primary)]';
-const MUTED = 'text-gray-600';
+const INK = 'text-ink';
+const MUTED = 'text-ink-muted';
 const TITLE_TRACKING = { letterSpacing: -0.72 };
-const ICON_INK = '#121220';
 
 // Solid negative, the same one Account's Log out uses. The auth shell's error red is
 // tuned for a dark page and drops under AA here.
@@ -75,6 +72,7 @@ const toneFor = (status: Vehicle['verificationStatus']) =>
 
 const Vehicles = () => {
     useCopyLanguage();
+    const { colors } = useTheme();
   const api = useApi();
   const navigate = useNavigate();
   const { height: windowHeight } = useWindowDimensions();
@@ -234,7 +232,7 @@ const Vehicles = () => {
 
   if (loading) {
     return (
-      <AccountDetailScreen title={dc("Your cars")}>
+      <AccountDetailScreen title={dc("Your Cars")} centeredHeader>
         <DetailSectionsSkeleton cards={3} />
       </AccountDetailScreen>
     );
@@ -248,16 +246,21 @@ const Vehicles = () => {
         // Same reason as Documents: the shell centres its Outlet, so without an
         // explicit width this scroller sizes to its content and takes every card
         // below in with it.
-        className="flex-1 w-full bg-white"
-        contentContainerStyle={{ paddingBottom: TAIL_PADDING, gap: 8 }}
+        className="flex-1 w-full bg-canvas"
+        contentContainerStyle={{ paddingBottom: TAIL_PADDING, paddingTop: 8, gap: 8 }}
       >
-      <View className="flex-row items-center gap-2 px-4 pt-4" style={{ paddingBottom: HEADING_GAP }}>
-        <BackButton onPress={() => navigate(-1)} icon="caret" className="-ml-3 -mr-3" />
-        <AppText className={`text-xl font-semibold ${INK}`} style={TITLE_TRACKING}>{dc("Your cars")}</AppText>
+      <View className="relative mx-4" style={{ paddingBottom: HEADING_GAP }}>
+        <View className="flex-row h-full items-baseline justify-center pt-1 mb-1">
+          <AppText className={`text-xl font-semibold text-center ${INK}`} style={TITLE_TRACKING}>{dc("Your Cars")}</AppText>
+        </View>
+        <BackButton
+          onPress={() => navigate(-1)}
+          className="absolute -top-2 left-0 rounded-full bg-surface-muted"
+        />
       </View>
 
       {error ? (
-        <View className="mx-4 rounded-2xl p-4" style={{ backgroundColor: CARD }}>
+        <View className="mx-4 rounded-2xl p-4" style={{ backgroundColor: colors.surfaceMuted }}>
           <AppText className={`text-sm ${MUTED}`}>{error}</AppText>
         </View>
       ) : null}
@@ -273,9 +276,9 @@ const Vehicles = () => {
             // that marks the one he is driving had to fight a hairline around every
             // other card to say so.
             style={{
-              backgroundColor: CARD,
+              backgroundColor: colors.surfaceMuted,
               borderWidth: vehicle.isActive ? 2 : 1,
-              borderColor: vehicle.isActive ? PRIMARY : HAIRLINE,
+              borderColor: vehicle.isActive ? colors.primary : colors.borderUi,
             }}
           >
             <View className="flex-row items-center gap-3">
@@ -283,7 +286,7 @@ const Vehicles = () => {
                 className="w-9 h-9 rounded-xl items-center justify-center"
                 style={{ backgroundColor: 'rgba(18,18,32,0.04)' }}
               >
-                <CarIcon size={18} weight="regular" color={ICON_INK} />
+                <CarIcon size={18} weight="regular" color={colors.ink} />
               </View>
               <View className="flex-1">
                 <AppText numberOfLines={1} className={`font-semibold ${INK}`}>
@@ -304,7 +307,7 @@ const Vehicles = () => {
               {vehicle.isActive ? (
                 <View
                   className="shrink-0 rounded-lg px-2.5 py-1"
-                  style={{ backgroundColor: PRIMARY }}
+                  style={{ backgroundColor: colors.primary }}
                 >
                   <AppText className="text-xs font-semibold uppercase tracking-wide text-white">{dc("Driving now")}</AppText>
                 </View>
@@ -317,7 +320,7 @@ const Vehicles = () => {
                 onPress={() => navigate(`/account/documents?vehicleId=${vehicle.id}`)}
                 hitSlop={8}
                 style={({ pressed }) => ({
-                  backgroundColor: ICON_INK,
+                  backgroundColor: colors.strong,
                   borderRadius: 999,
                   paddingHorizontal: 12,
                   paddingVertical: 8,
@@ -334,7 +337,7 @@ const Vehicles = () => {
                   onPress={() => switchTo(vehicle)}
                   hitSlop={8}
                   style={({ pressed }) => ({
-                    backgroundColor: ICON_INK,
+                    backgroundColor: colors.strong,
                     borderRadius: 999,
                     paddingHorizontal: 12,
                     paddingVertical: 8,
@@ -371,7 +374,7 @@ const Vehicles = () => {
         onPress={openAddSheet}
         className="mx-4 rounded-2xl p-4 flex-row items-center gap-3"
         style={({ pressed }) => ({
-          backgroundColor: CARD,
+          backgroundColor: colors.surfaceMuted,
           opacity: pressed ? 0.6 : 1,
         })}
       >
@@ -379,7 +382,7 @@ const Vehicles = () => {
           className="w-9 h-9 rounded-xl items-center justify-center"
           style={{ backgroundColor: WELL }}
         >
-          <PlusIcon size={18} weight="bold" color={ICON_INK} />
+          <PlusIcon size={18} weight="bold" color={colors.ink} />
         </View>
         <AppText className={`font-semibold ${INK}`}>{dc("Add another car")}</AppText>
       </Pressable>
@@ -398,7 +401,7 @@ const Vehicles = () => {
         >
           <Pressable
             accessibilityViewIsModal
-            className="bg-white rounded-t-3xl px-5 pt-5"
+            className="bg-surface rounded-t-3xl px-5 pt-5"
             style={{ maxHeight: Math.max(windowHeight - keyboardHeight - 16, 240) }}
             onPress={() => {}}
           >
@@ -424,7 +427,7 @@ const Vehicles = () => {
                   opacity: busy ? 0.4 : closePressed ? 0.6 : 1,
                 }}
               >
-                <XIcon size={16} weight="bold" color={ICON_INK} />
+                <XIcon size={16} weight="bold" color={colors.ink} />
               </Pressable>
             </View>
 
@@ -446,9 +449,9 @@ const Vehicles = () => {
                         onPress={() => { setVehicleClass(option); setFormError(null); }}
                         className="rounded-xl px-3 py-2"
                         style={{
-                          backgroundColor: selected ? ICON_INK : '#fff',
+                          backgroundColor: selected ? colors.strong : colors.surface,
                           borderWidth: 1,
-                          borderColor: selected ? ICON_INK : HAIRLINE,
+                          borderColor: selected ? colors.strong : colors.borderUi,
                         }}
                       >
                         <AppText className={`text-sm font-semibold ${selected ? 'text-white' : INK}`}>

@@ -33,11 +33,11 @@ import {
 } from '../lib/documentState';
 import { uploadDriverDocuments, type PendingUpload } from '../lib/uploadDocuments';
 import { isImageOnly, vehicleClassLabel, type DriverDocumentType } from '../constants/documents';
+import { useTheme } from '../theme/ThemeContext';
 
-const CARD = '#f3f3f3';
 const HAIRLINE = 'rgba(18,18,32,0.1)';
-const INK = 'text-[var(--background-primary)]';
-const MUTED = 'text-gray-600';
+const INK = 'text-ink';
+const MUTED = 'text-ink-muted';
 const TITLE_TRACKING = { letterSpacing: -0.72 };
 
 // Not the 132 the boards reserve. This screen is a drill-down now (see
@@ -82,6 +82,7 @@ const CarPanel = ({
   onToggle: () => void;
   children: ReactNode;
 }) => {
+  const { colors } = useTheme();
     useCopyLanguage();
   // Held rather than read from Pressable's style callback: the header carries a
   // className, and NativeWind drops a style-as-a-function on anything that does.
@@ -122,9 +123,9 @@ const CarPanel = ({
         onPressIn={() => setPressed(true)}
         onPressOut={() => setPressed(false)}
         className="flex-row items-center gap-3 px-4 py-3.5"
-        style={{ backgroundColor: CARD, opacity: pressed ? 0.7 : 1 }}
+        style={{ backgroundColor: colors.surfaceMuted, opacity: pressed ? 0.7 : 1 }}
       >
-        <CarIcon size={24} weight="fill" color="#121220" />
+        <CarIcon size={24} weight="fill" color={colors.ink} />
 
         <View className="flex-1">
           <AppText numberOfLines={1} className={`font-semibold ${INK}`}>
@@ -145,7 +146,7 @@ const CarPanel = ({
         {/* Rotated, not swapped for an up-caret. The turn is what says the panel
             moved; two different glyphs would only say it changed. */}
         <Animated.View style={caretStyle}>
-          <CaretDownIcon size={18} weight="bold" color="#121220" />
+          <CaretDownIcon size={18} weight="bold" color={colors.ink} />
         </Animated.View>
       </Pressable>
 
@@ -155,7 +156,7 @@ const CarPanel = ({
       {open ? (
         <View
           className="px-4"
-          style={{ backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: HAIRLINE }}
+          style={{ backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: HAIRLINE }}
         >
           {children}
         </View>
@@ -166,6 +167,7 @@ const CarPanel = ({
 
 const Documents = () => {
     useCopyLanguage();
+  const { colors } = useTheme();
   const api = useApi();
   const navigate = useNavigate();
   // Which car the caller pointed at. It no longer decides which checklist is on
@@ -481,7 +483,7 @@ const Documents = () => {
       // Explicit, because the shell centres its Outlet with alignItems: 'center'
       // and leaves this auto-width otherwise — which shrink-wraps every mx-4 card
       // below to the width of its own longest line.
-      className="flex-1 w-full bg-white"
+      className="flex-1 w-full bg-canvas"
       contentContainerStyle={{ paddingBottom: TAIL_PADDING, gap: 8 }}
     >
       <View className="flex-row items-center gap-2 px-4 pt-4" style={{ paddingBottom: HEADING_GAP }}>
@@ -490,7 +492,7 @@ const Documents = () => {
       </View>
 
       {error ? (
-        <View className="mx-4 rounded-2xl p-4" style={{ backgroundColor: CARD }}>
+        <View className="mx-4 rounded-2xl p-4" style={{ backgroundColor: colors.surfaceMuted }}>
           <AppText className={`text-sm ${MUTED}`}>{error}</AppText>
         </View>
       ) : null}
@@ -499,7 +501,7 @@ const Documents = () => {
           captain opens this screen to find out whether he is done — and with more
           than one car, "done" means every car, so this counts across all of them
           rather than only the one whose panel happens to be open. */}
-      <View className="mx-4 rounded-2xl p-4" style={{ backgroundColor: CARD }}>
+      <View className="mx-4 rounded-2xl p-4" style={{ backgroundColor: colors.surfaceMuted }}>
         <AppText className={`font-semibold ${INK}`}>
           {totalMissing === 0
             ? dc("All required documents are on file")
@@ -564,7 +566,7 @@ const Documents = () => {
         // No car on the account, so the nine below have nothing to attach to. A
         // dead checklist would be the alternative — eleven rows, nine of which
         // fail on tap with a message about a car he has never been asked for.
-        <View className="mx-4 mt-2 rounded-2xl p-4" style={{ backgroundColor: CARD }}>
+        <View className="mx-4 mt-2 rounded-2xl p-4" style={{ backgroundColor: colors.surfaceMuted }}>
           <AppText className={`font-semibold ${INK}`}>{dc("Add your car first")}</AppText>
           <AppText className={`text-sm mt-1 ${MUTED}`}>{dc("The RC, insurance and permits belong to a specific car, so we need to know which one before you can upload them.")}</AppText>
           <Pressable

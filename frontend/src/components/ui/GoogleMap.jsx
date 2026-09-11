@@ -87,14 +87,15 @@ function loadMapsScript() {
     return loaderPromise;
 }
 
-const GoogleMap = ({ center, zoom = 16, onMapReady, onIdle, className, children }) => {
+const GoogleMap = ({ center, zoom = 16, onMapReady, onIdle, className, children, appearance }) => {
     useCopyLanguage();
     const tr = useWebsiteCopy();
     const hostRef = useRef(null);
     const { darkMode } = useContext(ThemeContext);
-    const mapColorScheme = darkMode ? "DARK" : "LIGHT";
-    const mapBackgroundColor = darkMode ? DARK_MAP_LAND_COLOR : LIGHT_MAP_LAND_COLOR;
-    const fallbackStyles = darkMode ? DARK_MAP_STYLES : LIGHT_MAP_STYLES;
+    const isDark = appearance ? appearance === "dark" : darkMode;
+    const mapColorScheme = isDark ? "DARK" : "LIGHT";
+    const mapBackgroundColor = isDark ? DARK_MAP_LAND_COLOR : LIGHT_MAP_LAND_COLOR;
+    const fallbackStyles = isDark ? DARK_MAP_STYLES : LIGHT_MAP_STYLES;
     const mapAppearance = `${GOOGLE_MAP_ID ?? "local"}:${mapColorScheme}`;
     // covers the map with a shimmer until Google reports the first tiles
     // painted — otherwise tiles pop in over white
@@ -193,7 +194,7 @@ const GoogleMap = ({ center, zoom = 16, onMapReady, onIdle, className, children 
             tilesListener?.remove();
             if (mapDiv?.parentNode === hostRef.current) hostRef.current.removeChild(mapDiv);
         };
-    }, [darkMode]);
+    }, [mapAppearance]);
 
     const appearanceReady = loadFailed || (ready && loadedMapAppearance === mapAppearance);
 
@@ -251,7 +252,7 @@ const GoogleMap = ({ center, zoom = 16, onMapReady, onIdle, className, children 
                     className={`map-loading-sheen absolute inset-0 z-20 pointer-events-none transition-opacity duration-200 motion-reduce:transition-none ${appearanceReady ? "opacity-0" : "opacity-100"}`}
                     style={{
                         backgroundColor: mapBackgroundColor,
-                        "--map-sheen-opacity": darkMode ? 0.15 : 0.7,
+                        "--map-sheen-opacity": isDark ? 0.15 : 0.7,
                     }}
                     role="status"
                     aria-live="polite"

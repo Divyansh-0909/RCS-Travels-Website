@@ -10,7 +10,7 @@ const Line = ({ h, bar, w }) => (
 
 // One placeholder booking card — clones the admin booking card's structure.
 const BookingCardSkeleton = () => (
-    <div className="my-2 flex flex-col justify-center items-start gap-3 rounded-3xl bg-pastel-primary px-5 py-5 sm:px-6">
+    <div className="my-2 flex flex-col justify-center items-start gap-3 rounded-3xl bg-tone-primary px-5 py-5 sm:px-6">
         <div className="flex justify-between items-start gap-4 w-full">
             {/* route: pickup → drop */}
             <div className="flex flex-col gap-3">
@@ -36,7 +36,7 @@ const BookingCardSkeleton = () => (
             </div>
         </div>
 
-        <div className="w-full border-t border-[var(--background-primary)]/10"></div>
+        <div className="w-full border-t border-border/50"></div>
 
         {/* meta line (text-base) */}
         <Line h="h-6" bar="h-4" w="w-64 sm:w-80" />
@@ -59,7 +59,7 @@ const BookingCardSkeleton = () => (
 );
 
 // One placeholder driver card — name + online dot, phone, divider, meta line, chip.
-const DriverCardSkeleton = ({ tone = "bg-pastel-teal" }) => (
+const DriverCardSkeleton = ({ tone = "bg-tone-teal" }) => (
     <div className={`my-2 flex flex-col justify-center items-start gap-3 rounded-3xl ${tone} px-5 py-5 sm:px-6`}>
         <div className="flex justify-between items-start gap-4 w-full">
             <div>
@@ -75,7 +75,7 @@ const DriverCardSkeleton = ({ tone = "bg-pastel-teal" }) => (
             <Skeleton tone="light" rounded="rounded-full" className="h-6 w-20 shrink-0" />
         </div>
 
-        <div className="w-full border-t border-[var(--background-primary)]/10"></div>
+        <div className="w-full border-t border-border/50"></div>
 
         {/* meta line (text-base) */}
         <Line h="h-6" bar="h-4" w="w-72 sm:w-96" />
@@ -88,7 +88,7 @@ const AdminDashboardSkeleton = ({ variant = "bookings" }) => (
         {[0, 1, 2].map((i) =>
             variant === "bookings"
                 ? <BookingCardSkeleton key={i} />
-                : <DriverCardSkeleton key={i} tone={variant === "users" ? "bg-pastel-violet" : "bg-pastel-teal"} />
+                : <DriverCardSkeleton key={i} tone={variant === "users" ? "bg-tone-violet" : "bg-tone-teal"} />
         )}
     </div>
 );

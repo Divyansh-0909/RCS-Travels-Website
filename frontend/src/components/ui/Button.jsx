@@ -53,16 +53,16 @@ const Button = ({ prop, className, children, onClick, containerRef, style }) => 
         ${mobileWidth}
         ${width && !isDropdown ? "sm:w-[var(--btn-w)]" : ""}
         flex items-center justify-center
-        ${isSolid ? "font-semibold" : "font-medium"} text-default text-[var(--text)] my-1
+        ${isSolid ? "font-semibold" : "font-medium"} text-default ${isSolid ? "text-on-primary" : isDropdown ? "text-on-strong" : "text-ink"} legacy:text-[var(--text)] my-1
         ${isDisabled ? "opacity-40 cursor-not-allowed" : isDropdown ? "" : "cursor-pointer"}
         ${
           isSolid
             ? `${isNegative ? "bg-negative" : "bg-primary"} transition-opacity duration-300 ${isDisabled ? "" : "hover:opacity-[0.9] active:opacity-[0.8]"}`
             : isDropdown
-            ? "border border-[var(--foreground)]/15 bg-[var(--background-primary)] shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)] px-4"
+            ? "border border-border bg-strong shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)] px-4 legacy:border-[var(--foreground)]/15 legacy:bg-[var(--background-primary)]"
             : hasError
             ? "border border-negative/50 bg-negative/10 transition-colors duration-300"
-            : `border ${prop.border === false ? "border-transparent" : "border-[var(--foreground)]/30"} bg-[var(--btn-bg,transparent)] transition-colors duration-300 ${isDisabled ? "" : "hover:bg-[var(--foreground)]/10 active:bg-[var(--foreground)]/15"}`
+            : `border ${prop.border === false ? "border-transparent" : "border-border legacy:border-[var(--foreground)]/30"} bg-[var(--btn-bg,transparent)] transition-colors duration-300 ${isDisabled ? "" : "hover:bg-surface-muted active:bg-surface-raised legacy:hover:bg-[var(--foreground)]/10 legacy:active:bg-[var(--foreground)]/15"}`
         }
       `}
       style={{
@@ -81,13 +81,15 @@ const Button = ({ prop, className, children, onClick, containerRef, style }) => 
         // pins its CTA to the viewport on mobile, where nesting it in the form
         // inside the sheet is exactly what it can't do.
         form={prop.form}
+        aria-haspopup={prop["aria-haspopup"]}
+        aria-expanded={prop["aria-expanded"]}
         onClick={onClick}
         disabled={isDisabled}
         className={` ${prop.innerClassName}
           flex min-h-10 items-center whitespace-normal break-words py-2.5 w-[97%] ${isDisabled ? "cursor-not-allowed" : "cursor-pointer"}
           ${prop.innerClassName ? "" : (isDropdown ? "justify-start" : "justify-center")}
           rounded-[inherit] outline-none
-          focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]/70
+          focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary legacy:focus-visible:outline-[var(--foreground)]/70
         `}
       >
         {children}

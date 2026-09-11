@@ -29,7 +29,6 @@ import Help from './pages/Help';
 import Legal from './pages/Legal';
 import ManageAccount from './pages/ManageAccount';
 import PayoutAccount from './pages/PayoutAccount';
-import Settings from './pages/Settings';
 import Available from './pages/Available';
 import MarketplaceDetail from './pages/MarketplaceDetail';
 import Notifications from './pages/Notifications';
@@ -40,6 +39,7 @@ import OnBoarding from './pages/OnBoarding';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import { fontAssets } from './theme/fonts';
+import { ThemeProvider, useTheme } from './theme/ThemeContext';
 import { LanguageProvider, useLanguage } from './i18n';
 
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY;
@@ -51,8 +51,9 @@ if (!publishableKey) {
 const AppRoutes = () => {
     const { isLoaded, isSignedIn } = useAuth();
     const { ready } = useLanguage();
+    const { ready: themeReady } = useTheme();
 
-    if (!isLoaded || !ready) {
+    if (!isLoaded || !ready || !themeReady) {
         return null;
     }
 
@@ -105,7 +106,7 @@ const AppRoutes = () => {
                         <Route path="account/vehicles" element={<Vehicles />} />
                         <Route path="account/payout" element={<PayoutAccount />} />
                         <Route path="account/feedback" element={<Feedback />} />
-                        <Route path="account/settings" element={<Settings />} />
+                        <Route path="account/settings" element={<Navigate to="/account" replace />} />
                         <Route path="account/manage" element={<ManageAccount />} />
                         <Route path="account/help" element={<Help />} />
                         <Route path="account/legal" element={<Legal />} />
@@ -143,17 +144,19 @@ const Main = () => {
         // Below the font gate above, though, so the error screen has the faces it sets
         // type in — a fallback rendering in the system font would be the second thing
         // visibly wrong on a screen already reporting the first.
-        <LanguageProvider>
-        <ErrorBoundary>
-            <ClerkProvider
-                publishableKey={publishableKey}
-                tokenCache={tokenCache}
-                __experimental_resourceCache={resourceCache}
-            >
-                <AppRoutes />
-            </ClerkProvider>
-        </ErrorBoundary>
-        </LanguageProvider>
+        <ThemeProvider>
+            <LanguageProvider>
+            <ErrorBoundary>
+                <ClerkProvider
+                    publishableKey={publishableKey}
+                    tokenCache={tokenCache}
+                    __experimental_resourceCache={resourceCache}
+                >
+                    <AppRoutes />
+                </ClerkProvider>
+            </ErrorBoundary>
+            </LanguageProvider>
+        </ThemeProvider>
     )
 }
 

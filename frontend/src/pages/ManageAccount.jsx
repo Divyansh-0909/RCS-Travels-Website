@@ -577,7 +577,7 @@ const ManageAccount = () => {
                                                             setGenderSelected(option);
                                                             setDropdownExpand(false);
                                                         }}
-                                                        className="w-full flex items-center gap-2 py-3 text-white"
+                                                        className="w-full flex items-center gap-2 py-3 text-on-strong"
                                                     >
                                                         {option}
                                                     </div>
@@ -594,23 +594,23 @@ const ManageAccount = () => {
                                         value={fieldValue}
                                         onChange={field === "DOB" ? handleDobChange : handleContactChange}
                                         placeholder={field === "DOB" ? dc("DD/MM/YYYY") : dc("XXXXX XXXXX")}
-                                        className={`w-full rounded-xl py-2 px-3 text-lg text-center text-[var(--text)] bg-transparent outline-none placeholder:text-[var(--foreground-muted)]/50 border ${(field === "DOB" && fieldValue && !dobValid) || (field === "Emergency Contact" && fieldValue && fieldValue.length !== 10) ? "border-[rgba(239,68,68,0.5)]" : "border-[var(--foreground)]/30"}`}
+                                        className={`w-full rounded-xl py-2 px-3 text-lg text-center text-ink bg-transparent outline-none placeholder:text-ink-muted/60 border ${(field === "DOB" && fieldValue && !dobValid) || (field === "Emergency Contact" && fieldValue && fieldValue.length !== 10) ? "border-negative/50" : "border-border"}`}
                                     />
                                 )}
 
                                 {/* DOB format error */}
                                 {field === "DOB" && fieldValue && !dobValid && (
-                                    <p className="-mt-1 text-sm text-[rgba(239,68,68,0.9)]">{tr("Enter a valid date as DD/MM/YYYY")}</p>
+                                    <p className="-mt-1 text-sm text-negative">{tr("Enter a valid date as DD/MM/YYYY")}</p>
                                 )}
 
                                 {/* Emergency contact format error */}
                                 {field === "Emergency Contact" && fieldValue && fieldValue.length !== 10 && (
-                                    <p className="-mt-1 text-sm text-[rgba(239,68,68,0.9)]">{tr("Enter a 10-digit phone number")}</p>
+                                    <p className="-mt-1 text-sm text-negative">{tr("Enter a 10-digit phone number")}</p>
                                 )}
 
                                 {/* Save error from the backend */}
                                 {error && (
-                                    <p className="-mt-1 text-sm text-[rgba(239,68,68,0.9)]">{error}</p>
+                                    <p className="-mt-1 text-sm text-negative">{error}</p>
                                 )}
 
                                 <Button className={`${panel === 'deactivate' || panel === 'drivers' ? "hidden" : "block"}`} onClick={handleUpdate}
@@ -636,7 +636,7 @@ const ManageAccount = () => {
                     )}
             {/* "Copied to clipboard" pill for the ride history tab */}
             <div
-                className={`${copied ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"} flex justify-center items-center w-[230px] fixed z-100 left-1/2 -translate-x-1/2 bottom-8 sm:bottom-10 bg-primary text-[var(--foreground)] text-sm font-semibold px-5 py-3 rounded-full shadow-[0_8px_24px_rgba(0,0,0,0.25)] gap-2 transition-[opacity,transform] duration-300`}
+                className={`${copied ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"} flex justify-center items-center w-[230px] fixed z-100 left-1/2 -translate-x-1/2 bottom-8 sm:bottom-10 bg-primary text-on-strong text-sm font-semibold px-5 py-3 rounded-full shadow-lg gap-2 transition-[opacity,transform] duration-300`}
             >
                 <Icon path={mdiContentCopy} size={0.7} />{dc("Copied to clipboard")}</div>
             {items[selected] === RIDE_TAB
@@ -762,7 +762,7 @@ const ManageAccount = () => {
                             const isOpen = expandedRide === booking.id
                             const upcoming = new Date(booking.scheduledAt) > new Date()
                             return (
-                                <div key={booking.id} className={`${booking.status === "cancelled" ? "opacity-60" : ""} my-2 flex cursor-default flex-col items-start justify-center gap-3 rounded-3xl bg-pastel-primary px-5 py-5 sm:px-6`}>
+                                <div key={booking.id} className={`${booking.status === "cancelled" ? "opacity-60" : ""} my-2 flex cursor-default flex-col items-start justify-center gap-3 rounded-3xl bg-tone-primary px-5 py-5 sm:px-6`}>
                                     <div className="flex justify-between items-start gap-4 w-full">
                                         {/* Route: pickup → drop, with the car on its left on sm+ */}
                                         <div className="flex items-center gap-4 min-w-0">
@@ -773,37 +773,37 @@ const ManageAccount = () => {
                                             />
                                             <div className="flex flex-col gap-3 min-w-0">
                                                 <div className="flex items-center gap-3">
-                                                    <div className="w-3 h-3 rounded-full bg-[var(--background-primary)] shrink-0"></div>
+                                                    <div className="w-3 h-3 rounded-full bg-strong shrink-0"></div>
                                                     <div className="min-w-0">
-                                                        <h4 className="font-semibold text-[var(--background-primary)] truncate">{pickupMain}</h4>
-                                                        {pickupRest && <p className="text-sm text-gray-500 truncate">{pickupRest}</p>}
+                                                        <h4 className="font-semibold text-ink truncate">{pickupMain}</h4>
+                                                        {pickupRest && <p className="text-sm text-ink-muted truncate">{pickupRest}</p>}
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center gap-3">
-                                                    <div className="w-3 h-3 rounded-full bg-primary relative shrink-0"><div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-[var(--foreground)]" /></div>
+                                                    <div className="w-3 h-3 rounded-full bg-primary relative shrink-0"><div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-on-strong" /></div>
                                                     <div className="min-w-0">
-                                                        <h4 className="font-semibold text-[var(--background-primary)] truncate">{dropMain}</h4>
-                                                        {dropRest && <p className="text-sm text-gray-500 truncate">{dropRest}</p>}
+                                                        <h4 className="font-semibold text-ink truncate">{dropMain}</h4>
+                                                        {dropRest && <p className="text-sm text-ink-muted truncate">{dropRest}</p>}
                                                     </div>
                                                 </div>
                                             </div>
                                         </div>
                                         {/* Fare + status + expand toggle */}
                                         <div className="flex flex-col items-end gap-1.5 shrink-0">
-                                            <h3 className="font-semibold text-[var(--background-primary)]">₹{booking.fare}</h3>
+                                            <h3 className="font-semibold text-ink">₹{booking.fare}</h3>
                                             <span className={`${statusChip(booking.status)} text-xs font-semibold px-2.5 py-1 rounded-full capitalize`}>{booking.status.replace("_", " ")}</span>
                                         </div>
                                     </div>
 
-                                    <div className="w-full border-t border-[var(--background-primary)]/10"></div>
+                                    <div className="w-full border-t border-border/50"></div>
 
                                     {/* Trip meta + toggle; details attached so the collapsed grid adds no flex-gap */}
                                     <div className="flex flex-col w-full">
                                         <div className="flex justify-between items-center w-full gap-4">
-                                            <p className="text-base text-gray-500">
+                                            <p className="text-base text-ink-muted">
                                                 {formatDateTime(booking.scheduledAt ?? booking.createdAt)}  •  {vehicleLabel(booking.vehicleClass)}{booking.sharing ? dc("• Sharing") : ""}
                                             </p>
-                                            <div onClick={() => setExpandedRide(isOpen ? null : booking.id)} className="cursor-pointer text-[var(--foreground-muted)] bg-[var(--background-primary)]/80 transition-color duration-300 hover:bg-[var(--background-primary)] p-1 rounded-full shrink-0">
+                                            <div onClick={() => setExpandedRide(isOpen ? null : booking.id)} className="cursor-pointer text-on-strong bg-strong/80 transition-colors duration-300 hover:bg-strong p-1 rounded-full shrink-0">
                                                 <Icon path={mdiChevronDown} size={1} className={`transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`} />
                                             </div>
                                         </div>
@@ -811,17 +811,17 @@ const ManageAccount = () => {
                                         {/* Extra details — hidden until the toggle pops them down */}
                                         <div className={`grid w-full transition-[grid-template-rows] duration-300 ${isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
                                             <div className="overflow-hidden min-h-0 w-full">
-                                                <div className={`${isOpen ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2"} mt-4 flex w-full flex-col gap-4 rounded-2xl bg-white/70 p-4 transition-[opacity,transform] duration-300`}>
+                                                <div className={`${isOpen ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2"} mt-4 flex w-full flex-col gap-4 rounded-2xl bg-surface p-4 transition-[opacity,transform] duration-300`}>
                                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
                                                     <div>
-                                                        <p className="text-xs uppercase tracking-wide text-gray-500 mb-0.5">{tr("Driver")}</p>
+                                                        <p className="text-xs uppercase tracking-wide text-ink-muted mb-0.5">{tr("Driver")}</p>
                                                         {booking.driver
-                                                            ? <h4 className="text-[var(--background-primary)]">{booking.driver.name} <span className="text-gray-500">• {displayPhone(booking.driver.phone)}</span> <CopyBtn value={displayPhone(booking.driver.phone)} onCopy={copyRideId} /></h4>
-                                                            : <h4 className="text-gray-500">{booking.status === "cancelled" ? "—" : upcoming ? "Yet to be assigned" : "Couldn't be assigned"}</h4>}
+                                                            ? <h4 className="text-ink">{booking.driver.name} <span className="text-ink-muted">• {displayPhone(booking.driver.phone)}</span> <CopyBtn value={displayPhone(booking.driver.phone)} onCopy={copyRideId} /></h4>
+                                                            : <h4 className="text-ink-muted">{booking.status === "cancelled" ? "—" : upcoming ? "Yet to be assigned" : "Couldn't be assigned"}</h4>}
                                                     </div>
                                                     <div>
-                                                        <p className="text-xs uppercase tracking-wide text-gray-500 mb-0.5">{tr("Trip")}</p>
-                                                        <h4 className="text-[var(--background-primary)]">
+                                                        <p className="text-xs uppercase tracking-wide text-ink-muted mb-0.5">{tr("Trip")}</p>
+                                                        <h4 className="text-ink">
                                                             {booking.distanceKm ?? "—"}{" " + dc("KM")}{booking.status === "completed" && booking.completedAt && booking.confirmedAt
                                                                 ? dc("• {{value0}} min", {value0: (Math.floor((Date.parse(booking.completedAt) - Date.parse(booking.confirmedAt)) / 60000))})
                                                                 : ""}
@@ -839,12 +839,12 @@ const ManageAccount = () => {
                                                         more fact about the ride, not an alert. */}
                                                     {booking.sharing && booking.soloFare != null && (
                                                         <div>
-                                                            <p className="text-xs uppercase tracking-wide text-gray-500 mb-0.5">{tr("Sharing")}</p>
+                                                            <p className="text-xs uppercase tracking-wide text-ink-muted mb-0.5">{tr("Sharing")}</p>
                                                             {booking.shareGroupId
-                                                                ? <h4 className="text-[var(--background-primary)]">{dc("Saved ₹")}{Math.round(booking.soloFare - booking.fare)} <span className="text-gray-500">{dc("• someone shared this ride")}</span></h4>
+                                                                ? <h4 className="text-ink">{dc("Saved ₹")}{Math.round(booking.soloFare - booking.fare)} <span className="text-ink-muted">{dc("• someone shared this ride")}</span></h4>
                                                                 : booking.status === "completed"
-                                                                    ? <h4 className="text-[var(--background-primary)]">{dc("Solo fare") + " "}<span className="text-gray-500">{dc("• no one shared this ride")}</span></h4>
-                                                                    : <h4 className="text-gray-500">₹{booking.fare}{" " + dc("if someone shares · ₹")}{booking.soloFare}{" " + dc("if not")}</h4>}
+                                                                    ? <h4 className="text-ink">{dc("Solo fare") + " "}<span className="text-ink-muted">{dc("• no one shared this ride")}</span></h4>
+                                                                    : <h4 className="text-ink-muted">₹{booking.fare}{" " + dc("if someone shares · ₹")}{booking.soloFare}{" " + dc("if not")}</h4>}
                                                         </div>
                                                     )}
                                                 </div>
@@ -853,7 +853,7 @@ const ManageAccount = () => {
                                                     {/* The reference, whole — this is the value support asks for,
                                                         and a truncated uuid could not be read back over a phone
                                                         or pasted into the search box above. */}
-                                                    <p className="text-gray-500 text-sm">{dc("Ride ID:") + " "}{booking.reference}</p>
+                                                    <p className="text-ink-muted text-sm">{dc("Ride ID:") + " "}{booking.reference}</p>
                                                     <CopyBtn value={booking?.reference} onCopy={copyRideId} />
                                                 </div>
 
@@ -870,17 +870,17 @@ const ManageAccount = () => {
                                                         <button
                                                             type="button"
                                                             onClick={() => complaintRide === booking.id ? setComplaintRide(null) : openComplaint(booking)}
-                                                            className="rounded-full border border-[var(--background-primary)]/25 px-4 py-2 text-sm font-semibold text-[var(--background-primary)] hover:bg-[var(--background-primary)]/5 transition-colors"
+                                                            className="rounded-full border border-border px-4 py-2 text-sm font-semibold text-ink hover:bg-surface-muted transition-colors"
                                                         >
                                                             {booking.complaint ? dc("Update complaint") : dc("Report driver")}
                                                         </button>
                                                     )}
-                                                    <p>{dc("Need help?") + " "}<u className="text-[var(--background-primary)] cursor-pointer transition-color duration-300 hover:text-[var(--background-primary)]/80">{dc("Talk to us")}</u></p>
+                                                    <p>{dc("Need help?") + " "}<u className="text-ink cursor-pointer transition-colors duration-300 hover:text-ink-muted">{dc("Talk to us")}</u></p>
                                                 </div>
                                                 {complaintRide === booking.id && (
-                                                    <div className="rounded-2xl border border-[var(--background-primary)]/10 bg-[var(--foreground)]/60 p-4">
-                                                        <h4 className="font-semibold text-[var(--background-primary)]">{dc("What happened?")}</h4>
-                                                        <p className="mt-0.5 text-sm text-gray-500">{dc("Choose every option that applies. No written feedback is needed.")}</p>
+                                                    <div className="rounded-2xl border border-border/50 bg-surface p-4">
+                                                        <h4 className="font-semibold text-ink">{dc("What happened?")}</h4>
+                                                        <p className="mt-0.5 text-sm text-ink-muted">{dc("Choose every option that applies. No written feedback is needed.")}</p>
                                                         <div className="mt-3 flex flex-wrap gap-2">
                                                             {COMPLAINT_OPTIONS.map((option) => {
                                                                 const selected = complaintReasons.includes(option.value)
@@ -890,7 +890,7 @@ const ManageAccount = () => {
                                                                         key={option.value}
                                                                         aria-pressed={selected}
                                                                         onClick={() => toggleComplaintReason(option.value)}
-                                                                        className={`${selected ? "bg-primary text-[var(--foreground)] border-primary" : "bg-[var(--foreground)] text-[var(--background-primary)] border-[var(--background-primary)]/20 hover:bg-[var(--background-primary)]/5"} rounded-full border px-3 py-2 text-sm font-medium transition-colors duration-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary`}
+                                                                        className={`${selected ? "bg-primary text-on-strong border-primary" : "bg-surface text-ink border-border hover:bg-surface-muted"} rounded-full border px-3 py-2 text-sm font-medium transition-colors duration-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary`}
                                                                     >
                                                                         {option.label}
                                                                     </button>
@@ -903,11 +903,11 @@ const ManageAccount = () => {
                                                                 type="button"
                                                                 disabled={!complaintReasons.length || complaintBusy}
                                                                 onClick={() => saveComplaint(booking.id)}
-                                                                className="rounded-full bg-primary px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition-opacity duration-300 hover:opacity-[0.9] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-40"
+                                                                className="rounded-full bg-primary px-4 py-2 text-sm font-semibold text-on-strong transition-opacity duration-300 hover:opacity-[0.9] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-40"
                                                             >
                                                                 {complaintBusy ? dc("Saving…") : dc("Submit complaint")}
                                                             </button>
-                                                            <button type="button" onClick={() => setComplaintRide(null)} className="rounded-full px-4 py-2 text-sm font-semibold text-[var(--background-primary)]/60 transition-colors duration-300 hover:bg-[var(--background-primary)]/5 hover:text-[var(--background-primary)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">{dc("Cancel")}</button>
+                                                            <button type="button" onClick={() => setComplaintRide(null)} className="rounded-full px-4 py-2 text-sm font-semibold text-ink-muted transition-colors duration-300 hover:bg-surface-muted hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">{dc("Cancel")}</button>
                                                         </div>
                                                     </div>
                                                 )}
@@ -925,23 +925,23 @@ const ManageAccount = () => {
                 : <ul className="flex flex-col items-start gap-4 justify-center w-full">
                 {selected === 0
                     ? AccountInfo_items.map((item, i) => (
-                        <SettingRow key={i} tone="bg-pastel-primary" trailing={<CircleIconButton icon={mdiPlus} onClick={() => setExpanded(item)} />}>
-                            <p className="flex items-center justify-start gap-1 text-base text-[var(--background-primary)]/50">{item[0]} <Icon className={`${lockedFields.includes(item[0]) ? "block" : "hidden"} -mt-0.5 opacity-[0.9]`} path={mdiLock} size={0.6} /> </p>
+                        <SettingRow key={i} tone="bg-tone-primary" trailing={<CircleIconButton icon={mdiPlus} onClick={() => setExpanded(item)} />}>
+                            <p className="flex items-center justify-start gap-1 text-base text-ink-muted">{item[0]} <Icon className={`${lockedFields.includes(item[0]) ? "block" : "hidden"} -mt-0.5 opacity-[0.9]`} path={mdiLock} size={0.6} /> </p>
                             <h4 className="text-lg font-medium">{item[1] ? dc("{{value0}}", {value0: (item[1])}) : dc("Not added yet")}</h4>
                         </SettingRow>
                     ))
                     : <>
-                        <SettingRow tone="bg-pastel-sand" trailing={<CircleIconButton icon={mdiPlus} onClick={() => setExpanded('drivers')} />}>
+                        <SettingRow tone="bg-tone-sand" trailing={<CircleIconButton icon={mdiPlus} onClick={() => setExpanded('drivers')} />}>
                             <h4 className="text-lg font-medium">{tr("What drivers see")}</h4>
-                            <p className="flex items-center justify-start gap-1 text-base text-[var(--background-primary)]/50">{tr("The details a driver can see about you.")}</p>
+                            <p className="flex items-center justify-start gap-1 text-base text-ink-muted">{tr("The details a driver can see about you.")}</p>
                         </SettingRow>
-                        <SettingRow tone="bg-pastel-sand" trailing={<CircleIconButton icon={mdiTrayArrowDown} size={0.85} disabled={downloading} onClick={handleDownload} />}>
+                        <SettingRow tone="bg-tone-sand" trailing={<CircleIconButton icon={mdiTrayArrowDown} size={0.85} disabled={downloading} onClick={handleDownload} />}>
                             <h4 className="text-lg font-medium">{tr("Download my data")}</h4>
-                            <p className={`flex items-center justify-start gap-1 text-base ${downloadError ? "text-[rgba(239,68,68,0.9)]" : "text-[var(--background-primary)]/50"}`}>{downloadError || (downloading ? dc("Preparing your download…") : dc("Get a copy of your profile and ride history."))}</p>
+                            <p className={`flex items-center justify-start gap-1 text-base ${downloadError ? "text-negative" : "text-ink-muted"}`}>{downloadError || (downloading ? dc("Preparing your download…") : dc("Get a copy of your profile and ride history."))}</p>
                         </SettingRow>
-                        <SettingRow tone="bg-pastel-sand" trailing={<CircleIconButton icon={mdiPlus} onClick={() => setExpanded('deactivate')} />}>
+                        <SettingRow tone="bg-tone-sand" trailing={<CircleIconButton icon={mdiPlus} onClick={() => setExpanded('deactivate')} />}>
                             <h4 className="text-lg font-medium">{tr("Deactivate your account")}</h4>
-                            <p className="flex items-center justify-start gap-1 text-base text-[var(--background-primary)]/50">{tr("Find out how to deactivate your account")}</p>
+                            <p className="flex items-center justify-start gap-1 text-base text-ink-muted">{tr("Find out how to deactivate your account")}</p>
                         </SettingRow>
                     </>
                 }

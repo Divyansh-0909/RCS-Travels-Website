@@ -3,6 +3,121 @@
 /* Generated from shared/theme/tokens.cjs, which the driver app reads too. */
 @import "./theme.generated.css";
 
+/* Semantic colour roles. Components use the same Tailwind utility in every
+   mode; only these variables change. `legacy` preserves the booking surfaces
+   while the account and application routes resolve to light or dark. */
+@theme inline {
+    --color-canvas: var(--canvas);
+    --color-immersive: var(--immersive);
+    --color-surface: var(--surface);
+    --color-surface-muted: var(--surface-muted);
+    --color-raised: var(--raised);
+    --color-surface-raised: var(--raised);
+    --color-ink: var(--ink);
+    --color-ink-muted: var(--ink-muted);
+    --color-border: var(--border);
+    --color-strong: var(--strong);
+    --color-on-strong: var(--on-strong);
+    --color-primary: var(--primary);
+    --color-on-primary: var(--on-primary);
+    --color-tone-primary: var(--tone-primary);
+    --color-tone-teal: var(--tone-teal);
+    --color-tone-violet: var(--tone-violet);
+    --color-tone-sand: var(--tone-sand);
+    --color-status-success: var(--status-success);
+    --color-status-danger: var(--status-danger);
+    --color-status-warning: var(--status-warning);
+}
+
+:root,
+:root[data-theme="legacy"] {
+    color-scheme: dark;
+    --canvas: #0B0B14;
+    --immersive: #0B0B14;
+    --surface: #ffffff;
+    --surface-muted: #f3f3f3;
+    --raised: #ffffff;
+    --ink: #121220;
+    --ink-muted: #4B5563;
+    --border: #D8D8DE;
+    --strong: #121220;
+    --on-strong: #ffffff;
+    --primary: #243AFB;
+    --on-primary: #ffffff;
+    --tone-primary: #E5E9FF;
+    --tone-teal: #DFF3EF;
+    --tone-violet: #EEE8FA;
+    --tone-sand: #F3EEDD;
+    --status-success: #166534;
+    --status-danger: #B91C1C;
+    --status-warning: #92400E;
+}
+
+:root[data-theme="light"] {
+    color-scheme: light;
+    --canvas: #F3F3F3;
+    --immersive: #F3F3F3;
+    --surface: #ffffff;
+    --surface-muted: #E8E8EC;
+    --raised: #ffffff;
+    --ink: #121220;
+    --ink-muted: #4B5563;
+    --border: #D8D8DE;
+    --strong: #121220;
+    --on-strong: #ffffff;
+    --primary: #243AFB;
+    --on-primary: #ffffff;
+    --tone-primary: #E5E9FF;
+    --tone-teal: #DFF3EF;
+    --tone-violet: #EEE8FA;
+    --tone-sand: #F3EEDD;
+    --status-success: #166534;
+    --status-danger: #B91C1C;
+    --status-warning: #92400E;
+}
+
+:root[data-theme="dark"] {
+    color-scheme: dark;
+    --canvas: #1D1D27;
+    --immersive: #121220;
+    --surface: #272634;
+    --surface-muted: #262636;
+    --raised: #323240;
+    --ink: #ffffff;
+    --ink-muted: #C7C7CF;
+    --border: #454552;
+    --strong: #121220;
+    --on-strong: #ffffff;
+    --primary: #243AFB;
+    --on-primary: #ffffff;
+    --tone-primary: #292B4B;
+    --tone-teal: #243C3B;
+    --tone-violet: #353047;
+    --tone-sand: #40392D;
+    --status-success: #86EFAC;
+    --status-danger: #E86A6A;
+    --status-warning: #FBBF24;
+}
+
+/* Compatibility aliases keep existing website call sites semantic until they
+   are migrated. The generated pastel utilities inherit the current tone. */
+:root[data-theme="light"], :root[data-theme="dark"] {
+    --background: var(--canvas);
+    --background-muted: var(--surface-muted);
+    --background-panel: var(--surface);
+    --background-primary: var(--strong);
+    --foreground: var(--surface);
+    --foreground-muted: var(--surface-muted);
+    --text: var(--ink);
+    --text-muted: var(--ink-muted);
+    --text-foreground: var(--ink);
+    --text-muted-foreground: var(--ink-muted);
+    --color-pastel-primary: var(--tone-primary);
+    --color-pastel-teal: var(--tone-teal);
+    --color-pastel-violet: var(--tone-violet);
+    --color-pastel-sand: var(--tone-sand);
+}
+
 /* PP Mori (Pangram Pangram, free personal v1.0). 700 maps to SemiBold so
    font-bold renders real glyphs. Metric overrides copy Poppins' ascent/descent
    so PP Mori lays out pixel-for-pixel like the font it replaced. */
@@ -100,28 +215,10 @@ html[lang="hi"] body {
 }
 
 @custom-variant dark (&:is(.dark *));
+@custom-variant legacy (&:is([data-theme="legacy"] *));
 
 /* The @theme tokens and the :root theme colors now live in
    theme.generated.css, imported above. Edit shared/theme/tokens.cjs. */
-
-:root {
-    /* Tells the UA to paint scrollbars and form controls dark, so transparent
-       scrollbar surfaces reveal dark chrome instead of the light-mode default. */
-    color-scheme: dark;
-}
-
-/* .dark {
-    --background-muted: #211F3C;
-    --background-primary: #121220;
-    --background: #0B0B14;
-    --foreground: #ffffff;
-
-    --text: #ffffff;
-    --text-muted: #AEAEAE;
-    --text-foreground: #000000;
-    --text-muted-foreground: #AEAEAE;
-} */
-
 
 ::view-transition-old(root),
 ::view-transition-new(root) {
@@ -277,6 +374,26 @@ html[lang="hi"] body {
     .animate-backdrop {
         animation: backdrop-in 0.3s ease-out forwards;
         will-change: opacity;
+    }
+
+    @keyframes timing-sheet-in {
+        from { transform: translateY(100%); }
+        to   { transform: translateY(0); }
+    }
+
+    @keyframes timing-sheet-out {
+        from { transform: translateY(0); }
+        to   { transform: translateY(100%); }
+    }
+
+    .animate-timing-sheet-in {
+        animation: timing-sheet-in 0.32s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        will-change: transform;
+    }
+
+    .animate-timing-sheet-out {
+        animation: timing-sheet-out 0.22s cubic-bezier(0.7, 0, 0.84, 0) forwards;
+        will-change: transform;
     }
 
     /* Mobile nav drawer — slides in from the right edge */

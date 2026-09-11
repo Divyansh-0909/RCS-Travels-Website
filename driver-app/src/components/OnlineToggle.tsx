@@ -13,6 +13,7 @@ import { ensureLocationPermission } from "../hooks/useDriverLocation";
 import { useShellHidden } from "./AppBarVisibility";
 import { RideMenuButton } from "./RideMenu";
 import { useData } from "../hooks/useData";
+import { useTheme } from '../theme/ThemeContext';
 
 const Bell = cssInterop(BellIcon, {
     className: { target: false, nativeStyleToProp: { color: true } },
@@ -35,6 +36,7 @@ const OnlineToggle = () => {
 
     const api = useApi()
     const { profile, patchProfile } = useDriver();
+    const { colors } = useTheme();
     const { onActiveRide } = useShellHidden();
 
     // THE SERVER OWNS THIS, not a useState seeded false. The flag lives on the
@@ -72,6 +74,8 @@ const OnlineToggle = () => {
 
         try {
             await commitOnline(next)
+        } catch (cause: unknown) {
+            setError(cause instanceof Error ? cause.message : dc("Could not update your availability. Please try again."))
         } finally {
             setBusy(false)
         }
@@ -134,25 +138,25 @@ const OnlineToggle = () => {
                 swapped for another in place, which reads as the same header doing
                 a different job rather than as a different header. */}
             <View className="flex flex-row w-full justify-between items-center">
-                <View className="flex-row items-center gap-3 rounded-full bg-[var(--background-primary)] p-3">
+                <View className="flex-row items-center gap-3 rounded-full bg-strong p-3">
                     <Pressable
                         role="button"
                         aria-label={dc("Notifications")}
                         onPress={() => navigate("/notifications")}
                         className="w-[22px] h-[22px] items-center justify-center"
                     >
-                        <Bell size={20} weight="regular" className="text-[var(--foreground)]" />
+                        <Bell size={20} weight="regular" className="text-on-strong" />
                         <View className={`absolute transition-opacity duration-200 ${onNotifications ? "opacity-100" : "opacity-0"}`}>
-                            <Bell size={20} weight="fill" className="text-[var(--foreground)]" />
+                            <Bell size={20} weight="fill" className="text-on-strong" />
                         </View>
                     </Pressable>
                 </View>
 
                 {onActiveRide ? <RideMenuButton /> : (
-                <View className="flex-row items-center justify-between w-fit rounded-full bg-[var(--background-primary)] p-3 px-4 pr-6">
+                <View className="flex-row items-center justify-between w-fit rounded-full bg-strong p-3 px-4 pr-6">
                     <AppText
                         numberOfLines={1}
-                        className="w-[70px] text-lg text-[var(--foreground)] font-semibold"
+                        className="w-[70px] text-lg text-on-strong font-semibold"
                     >
                         {online ? dc("Online") : dc("Offline")}
                     </AppText>
@@ -173,7 +177,7 @@ const OnlineToggle = () => {
                                     width: 40,
                                     height: 22,
                                     borderRadius: 999,
-                                    backgroundColor: "#fff",
+                                    backgroundColor: colors.onStrong,
                                     borderBottomWidth: 2,
                                     borderBottomColor: "rgba(255,255,255,0.05)",
                                     boxShadow:
@@ -188,9 +192,9 @@ const OnlineToggle = () => {
             </View>
 
             {connecting && !error ? (
-                <View className="mt-2 self-end flex-row items-center gap-2 rounded-full bg-[var(--background-primary)] px-4 py-2 border border-[var(--background-muted)]">
-                    <ActivityIndicator size="small" color="#243AFB" />
-                    <AppText className="text-sm font-semibold text-[var(--foreground)]">{dc("Connecting to GPS…")}</AppText>
+                <View className="mt-2 self-end flex-row items-center gap-2 rounded-full bg-strong px-4 py-2 border border-surface-raised">
+                    <ActivityIndicator size="small" color={colors.primary} />
+                    <AppText className="text-sm font-semibold text-on-strong">{dc("Connecting to GPS…")}</AppText>
                 </View>
             ) : null}
 
@@ -199,7 +203,7 @@ const OnlineToggle = () => {
                 holding, find signal — and until now none of them were rendered at
                 all, so the switch simply snapped back with no explanation. */}
             {error && (
-                <View className="mt-2 self-end rounded-full bg-[var(--background-primary)] px-4 py-2 border border-[var(--background-muted)]">
+                <View className="mt-2 self-end rounded-full bg-strong px-4 py-2 border border-surface-raised">
                     <AppText className="text-sm font-medium text-red-400">
                         {error}
                     </AppText>

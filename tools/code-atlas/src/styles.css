@@ -1,6 +1,7 @@
 @font-face { font-family: 'PP Mori'; src: local('PP Mori'), local('Poppins'); font-display: swap; }
 :root { color: #fff; background: #0B0B14; font-family: 'PP Mori', Poppins, ui-sans-serif, system-ui, sans-serif; font-synthesis: none; }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 body { min-width: 320px; min-height: 100vh; margin: 0; background: #0B0B14; }
 button, input { font: inherit; }
 button, a { -webkit-tap-highlight-color: transparent; }
@@ -28,3 +29,23 @@ button:focus-visible, a:focus-visible, input:focus-visible, #atlas-graph:focus-v
 @media (max-width: 840px) { .atlas-shell { grid-template-rows: 60px 48px minmax(0, 1fr); }.topbar { padding: 0 12px; }.search { max-width: none; }.atlas-main { grid-template-columns: 184px minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; }.detail-panel { grid-column: 1 / -1; max-height: 330px; border-top: 1px solid #2b2b3b; border-left: 0; }.detail-empty { margin: 24px auto; }.graph-area { min-height: 430px; }.graph-hint { display: none; } }
 @media (max-width: 600px) { .atlas-shell { grid-template-rows: 58px 84px minmax(0, 1fr); }.topbar { gap: 10px; }.brand { gap: 7px; }.brand-mark { width: 25px; }.diagnostics-button { width: 30px; padding: 0; font-size: 0; }.diagnostics-button span { margin: auto; }.search { height: 36px; }.search kbd { display: none; }.viewbar { align-items: stretch; padding: 0 8px; overflow: auto; }.view-tabs { min-width: max-content; }.view-tab { padding: 0 10px; }.generated-status { display: none; }.atlas-main { display: block; overflow: auto; }.left-rail { display: flex; overflow: visible; border-right: 0; border-bottom: 1px solid #2b2b3b; }.overview-panel { display: none; }.filter-panel { min-width: max-content; padding: 9px 12px; border-bottom: 0; border-right: 1px solid #2b2b3b; }.filter-panel .section-heading { font-size: 9px; }.filter-list { display: flex; max-width: 190px; gap: 8px; overflow-x: auto; margin-top: 5px; }.check-row { min-height: 22px; font-size: 10px; white-space: nowrap; }.check-row span { width: 12px; height: 12px; }.confidence-panel { display: none; }.graph-area { min-height: 480px; grid-template-rows: 48px minmax(360px, 1fr) 34px; }.graph-toolbar { padding: 0 12px; }.graph-key { padding: 0 12px; }.graph-key > :nth-of-type(n+3) { display: none; }.detail-panel { max-height: none; min-height: 360px; padding: 16px 12px 28px; }.detail-empty { margin: 32px auto; }.relation { min-height: 42px; }.dialog-head { padding: 16px; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; } }
+
+/* Scanner node types use lower-cased values in the UI. Keep their detail and relation
+   treatment aligned with the Cytoscape graph instead of falling back to generic gray. */
+.type-chip.clientendpoint, .type-chip.serverendpoint, .type-chip.routehandler { background: #133c3a; border-color: #27786f; }
+.type-chip.uiroute { background: #202342; border-color: #3f4898; }
+.type-chip.prismamodel { background: #493719; border-color: #96712c; }
+.type-chip.sourcetext { color: #fff2d5; background: #493719; border-color: #c9953a; }
+.type-chip.context, .type-chip.zustandstore, .type-chip.class { background: #39214b; border-color: #7944a6; }
+.relation-icon.clientendpoint, .relation-icon.serverendpoint, .relation-icon.routehandler { background: #0d806f; }
+.relation-icon.uiroute { background: #243AFB; }
+.relation-icon.prismamodel { background: #9a6817; }
+.relation-icon.sourcetext { color: #fff2d5; background: #9a6817; border-radius: 5px; }
+.relation-icon.context, .relation-icon.zustandstore, .relation-icon.class { background: #7944a6; }
+
+@media (max-width: 600px) {
+  .left-rail { max-width: 100vw; overflow-x: hidden; overscroll-behavior-x: contain; }
+  .filter-panel { width: 100%; min-width: 0; flex: 1 1 auto; }
+  .filter-list { width: 100%; max-width: none; padding-bottom: 2px; scroll-snap-type: x proximity; scrollbar-width: thin; }
+  .filter-list .check-row { scroll-snap-align: start; }
+}

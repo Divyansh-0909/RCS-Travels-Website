@@ -2,17 +2,12 @@ import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { Pressable, type ViewStyle } from 'react-native';
 import AppText from '../AppText';
+import { useTheme } from '../../theme/ThemeContext';
 
 // Same reason as Input: no color-mix() on native, so pressed and error fills are
-// resolved here. Solid fills come from tokens.cjs colours.
-const PRIMARY = '#243AFB';
-const NEGATIVE = '#B91C1C';
+// resolved here. Solid fills come from ThemeContext's semantic palette.
 const BG_ERROR = 'rgba(185,28,28,0.1)';
-const BG_DROPDOWN = '#121220';
 const BG_PRESSED = 'rgba(255,255,255,0.15)';
-
-// The light-shell secondary action keeps its own fill and ink pairing.
-const BG_SECONDARY = '#ffffff';
 
 interface ButtonProp {
     /**
@@ -36,6 +31,7 @@ interface Props {
 }
 
 const Button = ({ prop = {}, className = '', children, onPress }: Props) => {
+    const { colors } = useTheme();
     // Pressable's style-as-a-function never runs here. className routes through
     // NativeWind, which merges the inline style into its own computation and
     // only understands objects and arrays — a function is collected, applied,
@@ -56,19 +52,19 @@ const Button = ({ prop = {}, className = '', children, onPress }: Props) => {
     const surface = (): ViewStyle => {
         if (isSolid) {
             return {
-                backgroundColor: isNegative ? NEGATIVE : PRIMARY,
+                backgroundColor: isNegative ? colors.negative : colors.primary,
                 opacity: isDisabled ? 0.4 : pressed ? 0.8 : 1,
             };
         }
         if (isSecondary) {
             return {
-                backgroundColor: BG_SECONDARY,
+                backgroundColor: colors.surface,
                 opacity: isDisabled ? 0.4 : pressed ? 0.6 : 1,
             };
         }
         if (isDropdown) {
             return {
-                backgroundColor: BG_DROPDOWN,
+                backgroundColor: colors.strong,
                 boxShadow: '0px 4px 20px 2px rgba(0,0,0,0.5)',
                 opacity: isDisabled ? 0.4 : 1,
             };
@@ -108,7 +104,7 @@ const Button = ({ prop = {}, className = '', children, onPress }: Props) => {
                 // to --text, which is #ffffff — right on a solid fill and on the dark
                 // shell the other variants live on, invisible on this one's white.
                 <AppText
-                    className={`text-base ${isSolid || isSecondary ? 'font-semibold' : 'font-medium'} ${isSecondary ? 'text-[var(--background-primary)]' : ''}`}
+                    className={`text-base ${isSolid || isSecondary ? 'font-semibold' : 'font-medium'} ${isSolid || isDropdown ? 'text-on-strong' : 'text-ink'}`}
                 >
                     {children}
                 </AppText>
