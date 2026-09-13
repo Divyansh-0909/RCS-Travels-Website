@@ -16,275 +16,90 @@
     "terms": {
       "tab": "Shartein",
       "title": "Service ki shartein",
-      "standfirst": "Hamare saath ride book karte waqt aap kin baaton se sehmat hote hain, aasan shabdon mein.",
+      "standfirst": "RCS Travels ke saath ride book aur lene ke niyam.",
       "sections": [
         {
-          "heading": "Hum kaun hain",
+          "heading": "In sharton ke baare mein",
           "body": [
-            "RCS Travels ek cab service hai jise [TO CONFIRM: registered business name] chalata hai. Yeh [TO CONFIRM: sole proprietorship / partnership / private limited company] hai aur iska registered address [TO CONFIRM: full registered address with PIN code] hai. In sharton mein “hum” aur “RCS Travels” ka matlab yeh business hai, aur “aap” ka matlab ride book karne ya lene wala vyakti hai.",
-            "Hum aapke aur independent driver-partners ke beech rides arrange karte hain, jo apni gaadi ke maalik hain aur use khud chalate hain. Hum transport operator nahi hain: hum drivers verify karte hain, fare tay karte hain aur har completed ride par commission lete hain. Aapko driver le jaata hai, hum nahi. [TO CONFIRM: this framing decides where liability sits and must be confirmed with the lawyer before publishing. If the business owns the vehicles or employs the drivers, this clause and \"Our responsibility, and its limits\" below both have to be rewritten.]",
-            "Is website ya WhatsApp par ride book karke aap in sharton se sehmat hote hain. Agar sehmat nahi hain, toh service use na karein."
+            "RCS Travels is operated by [TO CONFIRM: registered business name], a [TO CONFIRM: legal form] at [TO CONFIRM: registered address with PIN code]. These terms apply when you use our website, WhatsApp booking flow, or ride services.",
+            "[TO CONFIRM: LAUNCH BLOCKER — RCS Travels’ role, UP aggregator licence and compliance position. UP Motor Vehicle (Aggregator and Delivery Services Provider) Rules, 2026 are reported as operational from 22 May 2026 through upmyfleet.com. Do not represent any licence, training, control-room, tracking, panic-button or insurance compliance unless verified.]"
           ]
         },
         {
-          "heading": "Kaun book kar sakta hai",
+          "heading": "Kaun service use kar sakta hai",
           "body": [
-            "Account rakhne ke liye aapki umar kam se kam 18 saal honi chahiye. Chhoti umar ke log travel kar sakte hain, lekin booking ek adult ko karni hogi aur saath travel bhi karna hoga."
-          ],
+            "You must provide accurate account and booking information, keep your phone number under your control, and protect OTPs and other verification codes. You are responsible for activity carried out through your account unless you promptly report suspected misuse.",
+            "[TO CONFIRM: minimum rider account age and any rules for minors or bookings made for another person.]"
+          ]
+        },
+        {
+          "heading": "Booking aur kiraya",
+          "body": [
+            "A booking request is not a guaranteed ride. A booking is confirmed only when the service shows it as confirmed or assigned. Driver availability, traffic, road conditions, safety restrictions and events outside reasonable control may affect pickup or completion.",
+            "We show the applicable fare or fare basis before confirmation where the product supports it. Tolls, parking, waiting, cleaning, damage or other charges must not be added unless the product and applicable law allow them and they are disclosed to you. [TO CONFIRM: final waiting, toll, parking, cleaning and damage-charge rules.]"
+          ]
+        },
+        {
+          "heading": "Payment kaise hota hai",
+          "body": [
+            "Ride Now rides are paid to the driver at the end of the trip, using the payment method offered for that ride. They are not prepaid through our platform.",
+            "Scheduled rides currently require a 15% advance through Razorpay. The remaining fare is payable as shown for the booking. Payment-provider terms may also apply to the payment service itself."
+          ]
+        },
+        {
+          "heading": "Cancellation",
+          "body": [
+            "Ride Now has no prepaid cancellation charge. For scheduled rides, the cancellation quote returned by our server is authoritative. If it changes before submission, we show the new quote and ask you to confirm it.",
+            "Current product behaviour: no scheduled-ride cancellation amount is retained when no driver is assigned, the assigned driver has no fresh platform location, the driver is farther than 500 metres from pickup, or the driver cancels. It is retained once a fresh assigned-driver location is within 500 metres of pickup, or the ride reaches the corresponding arrival status.",
+            "[TO CONFIRM: LAUNCH BLOCKER — reported final UP Rules limit passenger cancellation charges to 10% of fare capped at ₹100. The current 15% advance-retention behaviour appears capable of exceeding that limit. Reconcile the product, refund flow and legal rule before publication or launch.]"
+          ]
+        },
+        {
+          "heading": "Safe aur sammanjanak safar",
           "list": [
-            "Apna chalu phone number use karein. Ride ke din driver isi par call karega.",
-            "Ek phone number par ek account.",
-            "Sirf apne liye ya aise vyakti ke liye book karein jise pata ho ki aap uski taraf se booking kar rahe hain."
+            "Use accurate contact, pickup and destination details, and keep your verification codes private.",
+            "Follow seatbelt, vehicle-capacity and road-safety rules. Do not carry unlawful, hazardous or dangerous items.",
+            "Treat drivers, co-riders and support staff respectfully. Threats, harassment, discrimination, abuse or unsafe conduct may end a ride or restrict an account."
           ]
         },
         {
-          "heading": "Aapka account",
+          "heading": "Safety aur emergency",
           "body": [
-            "Aap phone number aur hamare bheje one-time code se login karte hain. Password yaad rakhne ki zaroorat nahi. Iska matlab yeh bhi hai ki aapka phone rakhne wala aapke account tak pahunch sakta hai, isliye phone aur codes sirf apne paas rakhein.",
-            "Signup par aapko chaar ankon ka booking code bhi milta hai. Yeh wahi rehta hai aur humein aur driver ko aapki bookings pehchanne mein madad karta hai. Ise kisi aise vyakti ko na dein jise aap apni booking nahi saunpenge.",
-            "Aapki di hui har jaankari sahi honi chahiye. Galat details, aisi rides book karna jo li hi nahi jaati, ya driver-partner se badtameezi karne wale account ko hum suspend ya band kar sakte hain."
+            "RCS Travels is not an emergency-response service. For an immediate emergency or threat to life or safety, call 112 or the appropriate public emergency service first, then report the incident to us when it is safe to do so.",
+            "Do not rely on in-app status, location or support channels as a substitute for police, ambulance, fire or other emergency services."
           ]
         },
         {
-          "heading": "Ride book karna",
+          "heading": "Account par pabandi aur band karna",
           "body": [
-            "Aap pickup se 30 minute se lekar 7 din pehle tak book kar sakte hain. Paas driver ho toh turant ride bhi book kar sakte hain."
-          ],
-          "list": [
-            "Hamari confirmation tak booking ek request hai. Confirmation us waqt aur route par driver milne par nirbhar hai.",
-            "Ek waqt mein ek hi active ride ho sakti hai. Agli booking se pehle maujooda ride poori ya cancel karein.",
-            "Pickup se lagbhag ek ghanta pehle tracking page par driver ka naam, phone aur gaadi number dikhta hai.",
-            "4-seater ya 6-seater chunein, akele travel karein ya apne route ke co-riders ke saath fare baantein. Shehar se bahar ke liye outstation trip chunein.",
-            "Pickup time hamara aap tak pahunchne ka target hai, vaada nahi. Traffic, mausam aur sadak ki haalat baaki waqt tay karte hain."
+            "We may restrict, suspend or close an account where reasonably necessary for safety, fraud prevention, repeated misuse, non-payment, unlawful conduct, material breach of these terms, or a legal or regulatory requirement. Where appropriate, we may ask for information before taking or reviewing action.",
+            "You may stop using the service at any time. Account closure does not remove payment, record-keeping, dispute or legal obligations that arose before closure."
           ]
         },
         {
-          "heading": "Kiraya",
+          "heading": "Third-party services",
           "body": [
-            "Confirm karne se pehle poora fare dikhta hai aur aap wahi dete hain. Hum meter ke bajaye destination aur gaadi ke hisaab se price tay karte hain, isliye demand badhne par fare nahi badhta aur surge nahi hai.",
-            "Kuch cheezein fare mein judti hain. Confirm karne se pehle fare screen par har charge dikhega:"
-          ],
-          "list": [
-            "Safer route chunne par: fixed ₹150.",
-            "Route ke tolls, state permits aur parking.",
-            "Samaan ke liye zaroori ho toh roof carrier.",
-            "Round trip ka fare do alag bookings ke bajaye ek booking ke roop mein tay hota hai."
-          ],
-          "after": [
-            "Booking ke baad fare tabhi badal sakta hai jab ride badle: alag drop, extra stop ya free waiting time se zyada intezaar. [TO CONFIRM: the free waiting time in minutes, and the per-minute or per-hour charge after it. The app does not calculate this today, so whatever you decide has to be told to drivers as well as written here.]",
-            "Driver tracking page ke fare se zyada maange toh extra na dein. Humein call karein."
+            "The service uses third-party providers for functions such as authentication, maps, payments, messaging and notifications. Their services may be governed by their own terms and privacy notices. RCS Travels remains responsible for its own obligations under applicable law."
           ]
         },
         {
-          "heading": "Payment karna",
+          "heading": "Zimmedari aur kanooni adhikar",
           "body": [
-            "Trip ke end mein driver ko seedha cash ya UPI se pay karte hain. Pehle koi charge nahi liya jaata, hum card details kabhi nahi maangte aur koi payment information store nahi karte.",
-            "Amount booking ke waqt dikhaya fare aur upar ke section ke mutabik ride mein jude charges ke barabar hota hai. Receipt chahiye toh driver se maangein ya Manage Account se ride history download karein."
+            "Nothing in these terms excludes or limits rights or remedies that cannot lawfully be excluded, including applicable consumer rights. To the extent permitted by law, each party remains responsible for loss caused by its own unlawful conduct, fraud, wilful misconduct or breach of duty.",
+            "[TO CONFIRM: final limitation-of-liability and indemnity language after counsel reviews the operating model, insurance and licence position.]"
           ]
         },
         {
-          "heading": "Shared rides",
+          "heading": "Badlav aur vivaad",
           "body": [
-            "Shared ride mein aap usi taraf jaane wale co-riders ke saath travel karte hain aur har vyakti solo fare se kam deta hai. Badle mein trip lambi hoti hai: pickup route ke hisaab se hota hai aur aapka pickup pehle hona zaroori nahi.",
-            "Apni booking ke alawa co-riders aapke aur hamare liye anjaan hain. “Sabse kaisa bartaav chahiye” ki har baat unpar bhi utni hi laagu hai. Aisa na ho toh humein batayein, hum action lenge."
+            "We may update these terms when the service, law or operating model changes. Material changes should be shown with an updated effective date and, where required, a fresh notice or consent before they apply.",
+            "Raise booking or account disputes through the grievance process first so the service records can be reviewed. [TO CONFIRM: governing law, courts/jurisdiction and whether mediation or arbitration will be used.]"
           ]
         },
         {
-          "heading": "Safer route",
+          "heading": "Sawaal aur shikayat",
           "body": [
-            "Kuch routes par fixed ₹150 dekar shortest raaste ki jagah lamba, roshni wala highway chun sakte hain. Yeh isliye hai kyunki university ka sabse tez raasta aise hisson se jaata hai jinhe raat mein akele jaane wale riders taalna chahte hain.",
-            "Yeh route ki pasand hai, security service nahi. Ise chunne par driver highway lega; iska matlab sadak par safety ki guarantee nahi. Ise aisi guarantee na samjhein. Safety mein emergency contact jodein aur kuch galat lage toh turant humein ya 112 par call karein."
-          ]
-        },
-        {
-          "heading": "Cancel karna",
-          "body": [
-            "Driver pickup se 500 metre se zyada door ho toh cancellation free hai. Driver ki current location 500 metre ke andar aane par scheduled ride cancel karne se diya gaya 15% advance rakh liya jaata hai. Driver cancel kare ya is area mein aaye hi nahi toh aapko kuch nahi dena hota. Poora rule Refund aur Cancellation page par hai."
-          ]
-        },
-        {
-          "heading": "Sabse kaisa bartaav chahiye",
-          "body": [
-            "Ride kisi ka workplace aur kisi doosre ka safar hai. Dono ek jaisi izzat ke haqdaar hain."
-          ],
-          "list": [
-            "Seatbelt lagayein. Bachchon ke saath aaye adults se unhein theek se sambhalne ko kahein.",
-            "Gaadi mein smoking, alcohol aur drugs nahi.",
-            "Samaan mein koi illegal, khatarnaak ya zinda cheez nahi.",
-            "Driver ko traffic rule todne ya seats se zyada log bithane ko na kahein.",
-            "Driver ko dhamkane, pareshan karne ya gaali dene par ride aur account band ho jaate hain."
-          ],
-          "after": [
-            "Ride ke dauran gaadi damage ya bahut gandi ho toh safai ya repair ka kharcha aapse maanga jaayega. [TO CONFIRM: a flat cleaning charge, or \"at actuals against a receipt\"? Pick one; an unspecified charge is unenforceable and invites arguments at the roadside.]"
-          ]
-        },
-        {
-          "heading": "Hamare driver-partners",
-          "body": [
-            "Pehli ride se pehle har driver-partner apna driving licence aur Aadhaar deta hai, aur hum dono check karte hain. Documents dekhe bina hum driver ko service mein nahi lagate.",
-            "Woh independent contractors hain jo apne hours chunte aur apni gaadi chalate hain. Platform par kise aane dete hain aur kuch galat ho toh action lene ki zimmedari hamari hai; hum unke employer nahi hain."
-          ]
-        },
-        {
-          "heading": "Jo hum ya aap control nahi karte",
-          "body": [
-            "Traffic, mausam, road closures, gaadi kharab hona, protests, strikes, network outages aur sarkari action rides ko affect karte hain. Yeh na hamare control mein hain, na aapke. Inse ride late ya band ho toh hum rebook karne mein madad karenge aur jo ride aapne li hi nahi uska charge nahi lenge."
-          ]
-        },
-        {
-          "heading": "Hamari zimmedari aur uski seema",
-          "body": [
-            "Service imaandari se chalana hamari zimmedari hai: bataya hua fare lena, driver-partners verify karna aur kuch galat ho toh aapko jawab dena.",
-            "Jahan kanoon hamari liability seemit karne deta hai, ek ride ki liability us ride ke fare tak hai. Late ya cancelled ride se flight, exam, interview ya connection chhootne jaise indirect losses ke liye hum zimmedar nahi hain. Yahan kuch bhi aisi liability seemit nahi karta jo kanoon ke tahat seemit nahi ho sakti, jaise negligence se death ya personal injury, ya Consumer Protection Act, 2019 ke tahat aapke adhikaar. [TO CONFIRM: this is the clause most worth the lawyer's time. A cab service carrying students to and from trains and flights will be tested on exactly this, and a cap the court won't enforce is worse than no cap.]"
-          ]
-        },
-        {
-          "heading": "Chhoota hua samaan",
-          "body": [
-            "Pata chalte hi ride ki date aur time ke saath humein batayein. Hum driver se contact karke samaan lautane ki koshish karenge. Milne ka vaada nahi kar sakte aur gaadi mein chhodi cheezon ke liye zimmedar nahi hain."
-          ]
-        },
-        {
-          "heading": "Account band karna",
-          "body": [
-            "Active ride ke dauran chhodkar aap kabhi bhi Manage Account se account delete kar sakte hain. Pehle ride poori ya cancel karein. Delete karne se kya mitta hai aur humein kya rakhna padta hai, yeh Privacy Policy mein hai.",
-            "In sharton mein diye kaaranon se hum account suspend ya band kar sakte hain. Jahan mumkin ho, hum wajah batayenge."
-          ]
-        },
-        {
-          "heading": "In sharton mein badlav",
-          "body": [
-            "Service badalne par hum shartein update karenge. Upar ki date current version dikhati hai. Koi bada badlav laagu hone se pehle app mein batayenge. Badlav ke baad book ki gayi ride par us din laagu version chalega."
-          ]
-        },
-        {
-          "heading": "Kaunsa kanoon laagu hai",
-          "body": [
-            "Yeh shartein Bharat ke kanoon ke tahat hain aur inse nikle vivaadon par [TO CONFIRM: courts of <city>, usually where the business is registered] ka exclusive jurisdiction hai.",
-            "Usse pehle Grievance Redressal page use karein. Lagbhag saari problems wahin sulajh jaati hain."
-          ]
-        }
-      ]
-    },
-    "refunds": {
-      "tab": "Refund",
-      "title": "Refund aur cancellation",
-      "standfirst": "Ride cancel karne, galat charge aur paise wapas milne ke baare mein jaanein.",
-      "sections": [
-        {
-          "heading": "Pehle jaanein: Ride Now prepaid nahi hai",
-          "body": [
-            "Ride Now ka payment trip ke end mein cash ya UPI se hota hai. Scheduled ride mein 15% advance liya jaata hai, jo neeche ke distance rule ke mutabik wapas hota hai ya rakh liya jaata hai."
-          ]
-        },
-        {
-          "heading": "Driver paas aane se pehle cancel karna",
-          "body": [
-            "Driver assign na hua ho ya assigned driver ki current location pickup se 500 metre se zyada door ho toh cancellation free hai. Scheduled ride ka diya advance refund hota hai."
-          ]
-        },
-        {
-          "heading": "Driver paas ho toh cancel karna",
-          "body": [
-            "Driver ki current location pickup ke 500 metre ke andar aane par scheduled ride cancel karne se diya hua 15% advance rakh liya jaata hai. Aap tak pahunchne mein lage fuel aur time ke liye yeh driver ko milta hai."
-          ]
-        },
-        {
-          "heading": "Driver cancel kare ya na aaye",
-          "body": [
-            "Aapko kuch nahi dena hota aur hum doosri ride dhoondhenge. Humein batayein, hum turant madad karenge taaki aapko dobara book na karna pade."
-          ]
-        },
-        {
-          "heading": "Driver na mil paaye",
-          "body": [
-            "Kabhi search ke baad bhi driver nahi milta, khaaskar der raat ya door ke area mein. Booking mein yeh dikhega, koi charge nahi lagega aur aap doosre waqt ke liye phir book kar sakte hain."
-          ]
-        },
-        {
-          "heading": "Galat fare liya jaaye",
-          "body": [
-            "Tracking page par dikhaya fare hi aapka fare hai. Driver ne zyada liya ho ya aisi ride ke liye pay kiya jo hui hi nahi, toh date aur time ke saath batayein. Hum apne booking record se check karenge.",
-            "Zyada payment hone par fark ki rakam UPI se us number par lautate hain jisse aapne book kiya tha. [TO CONFIRM: the timeline you're willing to commit to; 7 working days is the usual promise. Say a number; \"as soon as possible\" is what people complain about.]"
-          ]
-        },
-        {
-          "heading": "Aap na aayein toh",
-          "body": [
-            "Driver pickup ke 500 metre ke andar aane ke baad cancel karne par scheduled ride ka diya 15% advance rakh liya jaata hai. Timed no-show ka alag action abhi nahi hai, isliye aap jawab na dein toh driver ko support se contact karna hoga."
-          ]
-        },
-        {
-          "heading": "Cancel kaise karein",
-          "body": [
-            "Ride ke tracking page se cancel karein ya humein call karein, hum kar denge. Sirf driver ko batana kaafi nahi. Hamare system mein cancel hone tak booking khuli rehti hai."
-          ]
-        }
-      ]
-    },
-    "grievance": {
-      "tab": "Shikayat",
-      "title": "Shikayat ka samadhaan",
-      "standfirst": "Problem par kisse contact karein, kitna waqt lagega aur hal na mile toh aage kahan jaayein.",
-      "sections": [
-        {
-          "heading": "Pehle support se baat karein",
-          "body": [
-            "Galat fare, driver ka na aana ya gaadi mein samaan chhootne jaisi zyadaatar problems call ya message se usi din sulajh jaati hain. Pehle yeh karein. Yeh page tab ke liye hai jab wahan hal na mile ya ghatna itni gambhir ho ki record mein rakhna zaroori ho."
-          ]
-        },
-        {
-          "heading": "Ride mein kuch hua ho toh intezaar na karein",
-          "body": [
-            "Safety ka maamla ho toh pehle 112 par aur turant baad humein call karein. Shikayat ki process aur timeline hoti hai, lekin chal rahi ghatna ke liye intezaar nahi hota."
-          ]
-        },
-        {
-          "heading": "Hamare Grievance Officer",
-          "body": [
-            "Information Technology (Intermediary Guidelines and Digital Media Ethics Code) Rules, 2021 ke tahat hum shikayaton ke liye jawabdeh vyakti appoint karte hain. Unki details:"
-          ],
-          "list": [
-            "Naam: [TO CONFIRM: Grievance Officer's full name]",
-            "Pad: [TO CONFIRM: designation, e.g. Proprietor]",
-            "Email: [TO CONFIRM: grievance email; a domain address reads better than gmail]",
-            "Phone: [TO CONFIRM: grievance phone number and the hours it is answered]",
-            "Pata: [TO CONFIRM: full registered address with PIN code]"
-          ],
-          "after": [
-            "Aapke personal data ki shikayatein bhi yahi officer sambhalte hain."
-          ]
-        },
-        {
-          "heading": "Hum kya aur kab tak karte hain",
-          "list": [
-            "Shikayat milne ke 48 ghante ke andar uski receipt confirm karte hain.",
-            "30 din ke andar hal karte hain, aur mumkin ho toh pehle.",
-            "Jis number ya email se aapne shikayat ki, usi par nateeja aur kiya gaya action batate hain."
-          ]
-        },
-        {
-          "heading": "Humein kya bhejein",
-          "body": [
-            "Inmein se jitni jaankari denge, process utni jaldi hogi:"
-          ],
-          "list": [
-            "Aapke account ka registered phone number,",
-            "Ride ki date, time aur destination,",
-            "Driver ka naam ya gaadi number, agar aapke paas ho,",
-            "Kya hua aur aap humse kya karwana chahte hain."
-          ]
-        },
-        {
-          "heading": "Hal na mila ho toh",
-          "body": [
-            "Aapko sirf hum tak rukne ki zaroorat nahi. Hamare jawab se khush na hon ya 30 din tak jawab na aaye toh aage contact kar sakte hain:"
-          ],
-          "list": [
-            "National Consumer Helpline 1915 ya consumerhelpline.gov.in,",
-            "Apne district ka consumer commission,",
-            "Personal data ki shikayat ke liye Data Protection Board of India,",
-            "[TO CONFIRM: the state transport authority to name here, if the business holds an aggregator licence under the Motor Vehicles Aggregator Guidelines. If it does, that licence also requires a 24×7 control-room number, which belongs on this page.]"
+            "Contact support promptly with the booking date, registered phone number and a description of the issue. Nothing in these terms removes rights that cannot be excluded under applicable law."
           ]
         }
       ]
@@ -292,204 +107,433 @@
     "privacy": {
       "tab": "Privacy",
       "title": "Privacy policy",
-      "standfirst": "Hum aapki kya jaankari rakhte hain, kaun dekhta hai, kab tak rakhte hain aur use kaise hatwayein.",
+      "standfirst": "Hum rider ka kaunsa data use karte hain, kyun aur service ke liye kaun process kar sakta hai.",
       "sections": [
         {
-          "heading": "Parichay",
+          "heading": "Daayra aur maksad",
           "body": [
-            "Yeh Privacy Policy batati hai ki service use karne par hum aapki jaankari kaise collect, use aur disclose karte hain. Yeh aapke privacy rights aur kanoon ki suraksha bhi batati hai.",
-            "Hum service dene aur behtar banane ke liye Personal Data use karte hain. Jaankari is policy ke mutabik collect, use aur disclose hoti hai. Jahan applicable law maangta hai, hum aisa sirf valid legal basis par karte hain, jismein aapki consent bhi shaamil hai jahan zaroori ho. Yeh policy TermsFeed Privacy Policy Generator (https://www.termsfeed.com/privacy-policy-generator/) ki madad se bani hai."
+            "This policy explains how [TO CONFIRM: registered business name] handles rider data for RCS Travels. We use it to run bookings, match rides, take scheduled advances, provide support, prevent fraud and abuse, and meet legal obligations. We do not sell personal data."
           ]
         },
         {
-          "heading": "Matlab aur paribhashayein",
+          "heading": "Data kahan se aata hai",
           "body": [
-            "Original English text mein capital letter se shuru hone wale shabdon ka matlab neeche diya hai. Singular ya plural hone par bhi matlab ek hai.",
-            "Is Privacy Policy ke liye:"
+            "We receive data from you, from your device and use of the service, from driver-partners during a booking, from payment and authentication providers, and from support or safety interactions. We may also receive information when another person books a ride for you or lists you as an emergency contact."
+          ]
+        },
+        {
+          "heading": "Rider ka data jo hum lete hain",
+          "list": [
+            "Name, phone number, gender, date of birth, emergency-contact details and WhatsApp contact information where you choose to use it.",
+            "Saved places and their coordinates, pickup and drop details, bookings, ride status, complaints and support records.",
+            "Scheduled-ride advance, payment status, payment references and refund records. Payment credentials are handled by the payment provider, not collected from you by a driver.",
+            "Device, browser, push-notification and technical log data needed to operate and secure the service."
+          ]
+        },
+        {
+          "heading": "Location aur permissions",
+          "body": [
+            "Location is used when needed for pickup, destination, saved-place, route and trip functions. Depending on your device and the feature you use, this may come from a location you enter, a map selection, or device location permission.",
+            "You can manage device permissions in your operating-system settings, but some booking or safety features may not work correctly without the permissions they need."
+          ]
+        },
+        {
+          "heading": "Hum rider data kaise use karte hain",
+          "list": [
+            "Create and secure accounts, verify phone numbers and prevent duplicate, fraudulent or abusive use.",
+            "Create bookings, estimate routes and fares, match drivers, provide trip status and complete payment or refund workflows.",
+            "Provide customer support, investigate complaints, enforce service rules and improve reliability and safety.",
+            "Comply with tax, accounting, transport, consumer-protection, court, law-enforcement or other legal requirements where applicable."
+          ]
+        },
+        {
+          "heading": "Providers aur sharing",
+          "body": [
+            "Booking poori karne ke liye hum driver-partners aur service chalane wale providers ke saath sirf zaroori data share karte hain. Agar aap trip-share link banate hain, to jis kisi ko yeh link milega woh aapka first name, pickup aur drop addresses aur coordinates, scheduled time, driver ka naam, photo aur vehicle details, aur trip active rehne tak driver ki live location dekh sakta hai. Current link 12 hours ke baad expire ho jata hai aur ride khatam hone par live driver coordinates dikhana band kar deta hai; link ko sensitive samjhein aur sirf un logon ke saath share karein jin par aap bharosa karte hain."
           ],
           "list": [
-            "Account woh unique account hai jo service ya uske hisson tak pahunchne ke liye aapke liye banaya gaya hai.",
-            "Affiliate woh entity hai jo kisi party ko control karti ho, uske control mein ho ya common control mein ho. Control ka matlab directors ya doosri managing authority chunne ke voting rights wale 50% ya zyada shares, equity interest ya doosri securities ki ownership hai.",
-            "Company (is policy mein “Company”, “hum” ya “hamara”) ka matlab R C S Travels, Ramgopal Enclave Colony, G T Road, Dadri, Gautam Buddh Nagar, Uttar Pradesh 203207 hai.",
-            "Cookies website ki rakhi chhoti files hain jo computer, mobile ya doosre device par hoti hain. Inke kai uses mein us website ki browsing history ki details rakhna bhi hai.",
-            "Country/State ka matlab: Uttar Pradesh, India.",
-            "Device koi bhi upkaran hai jisse service access ho, jaise computer, mobile phone ya digital tablet.",
-            "Personal Data (ya Personal Information) kisi pehchaane gaye ya pehchaane ja sakne wale vyakti ki jaankari hai. Jab tak kanoon alag shabd na use kare, hum dono ka ek hi matlab lete hain.",
-            "Service ka matlab Website hai.",
-            "Service Provider koi vyakti ya legal entity hai jo Company ki taraf se data process kare. Ismein service aasaan banane, Company ki taraf se service dene, related kaam karne ya service use ka analysis karne ke liye rakhi third-party companies aur log shaamil hain.",
-            "Usage Data apne aap collect hota hai, service use hone se ya uske infrastructure se, jaise page visit ka duration.",
-            "User koi bhi vyakti hai jo service access ya use kare.",
-            "Website ka matlab RCS Travels hai, jo https://www.rcstravels.co.in/ par hai.",
-            "You ka matlab service access ya use karne wala vyakti, ya woh company ya doosri legal entity hai jiski taraf se woh vyakti use kar raha hai, jaisa laagu ho."
+            "Authentication providers for account access and verification.",
+            "Google Maps, Routes and Places for place search, route and trip functions.",
+            "Razorpay for scheduled-ride advances and related refunds.",
+            "WhatsApp/Meta for WhatsApp flows, Firebase for push notifications, and storage or database providers acting on our instructions."
           ]
         },
         {
-          "heading": "Personal Data ki jaankari",
+          "heading": "Safety, kanooni requests aur business badlav",
           "body": [
-            "Service use karte waqt hum pehchaan ya contact ke liye kuch personally identifiable information maang sakte hain. Ismein neeche di jaankari shaamil ho sakti hai, lekin yeh in tak seemit nahi:"
+            "We may disclose information where reasonably necessary to protect riders, drivers or others, investigate fraud or abuse, comply with a lawful request, or establish or defend legal claims. We should check the validity and scope of requests before disclosing data where the law allows.",
+            "If the business is reorganised, financed, sold or transferred, relevant data may move with the affected service subject to applicable law and appropriate safeguards."
+          ]
+        },
+        {
+          "heading": "Security",
+          "body": [
+            "We use administrative, technical and access controls intended to protect personal data against unauthorised access, alteration, disclosure or loss. No internet, device or storage system can be guaranteed completely secure, so report suspected account or data misuse promptly."
+          ]
+        },
+        {
+          "heading": "Data rakhna aur requests",
+          "body": [
+            "We keep data only as long as reasonably needed for bookings, support, security, tax or other legal obligations, disputes and fraud prevention. Backup copies may expire on their normal schedule.",
+            "You may ask us to correct account information, request access, or request deletion where applicable. Legal, security, fraud-prevention and record-keeping requirements may limit a request."
+          ]
+        },
+        {
+          "heading": "Bachche aur doosre log",
+          "body": [
+            "Do not give us another person’s personal data unless you are authorised to do so and the disclosure is appropriate for the booking or safety purpose. [TO CONFIRM: rider age/minor policy and any verifiable parental-consent flow required by the final product and applicable privacy law.]"
+          ]
+        },
+        {
+          "heading": "India privacy framework",
+          "body": [
+            "We are preparing this notice to support the Digital Personal Data Protection Act, 2023 and other applicable Indian privacy requirements. As of 13 September 2026, substantive DPDP obligations are mostly scheduled to phase in from May 2027; this does not state that every DPDP obligation is already in force.",
+            "[TO CONFIRM: controller/contact details and final privacy notice after lawyer review.]"
+          ]
+        },
+        {
+          "heading": "Policy badlav aur contact",
+          "body": [
+            "If this policy changes materially, we should update the effective date and provide any notice or consent required by law. Privacy questions and requests can be raised through the grievance contact listed on this site."
+          ]
+        }
+      ]
+    },
+    "refunds": {
+      "tab": "Refund",
+      "title": "Refund aur cancellation",
+      "standfirst": "Scheduled ride ka advance aur server ke tay kiya gaya cancellation niyam.",
+      "sections": [
+        {
+          "heading": "Ride Now",
+          "body": [
+            "Ride Now is paid at the end of the trip to the driver. There is no prepaid Ride Now cancellation amount to refund."
+          ]
+        },
+        {
+          "heading": "Scheduled ride advance",
+          "body": [
+            "Scheduled rides currently collect a 15% Razorpay advance. The server calculates the cancellation quote and settlement; the app shows that result for your confirmation."
+          ]
+        },
+        {
+          "heading": "Jab advance nahi rakha jata",
+          "body": [
+            "Cancellation is free when no driver is assigned, the driver has no fresh platform location, the driver’s fresh location is farther than 500 metres from pickup, or the driver cancels. Any paid advance follows the booking’s refund flow."
+          ]
+        },
+        {
+          "heading": "Jab advance rakha jata hai",
+          "body": [
+            "The current product retains the paid advance once an assigned driver’s fresh location is within 500 metres of pickup, or the booking reaches the corresponding arrival status. The server’s location and status record decide the quote."
+          ]
+        },
+        {
+          "heading": "Publish karne se pehle",
+          "body": [
+            "[TO CONFIRM: LAUNCH BLOCKER — reconcile the current 15% retention with the reported UP cancellation limit of 10% of fare capped at ₹100. This operational description is not a statement that the current rule is lawful or final.]"
+          ]
+        },
+        {
+          "heading": "Refund process",
+          "body": [
+            "Where a refund is due, we initiate it through the applicable payment flow. The time for the amount to appear can also depend on Razorpay, the bank, card network or payment method. [TO CONFIRM: refund-initiation target and the customer-facing settlement window the business can reliably support.]"
+          ]
+        },
+        {
+          "heading": "Payment ki dikkat",
+          "body": [
+            "If proximity or status changes before cancellation is submitted, the server may return a changed amount and will request confirmation. For an incorrect charge, duplicate payment, failed payment or refund issue, contact support with booking details and the payment reference."
+          ]
+        },
+        {
+          "heading": "Aapke kanooni adhikar",
+          "body": [
+            "This policy does not reduce any refund, compensation or consumer remedy available under applicable law. If a statutory rule gives you a better outcome than this draft operational policy, the statutory rule controls."
+          ]
+        }
+      ]
+    },
+    "grievance": {
+      "tab": "Shikayat",
+      "title": "Shikayat nivaran",
+      "standfirst": "Rider kaise koi shikayat raise aur aage badha sakte hain.",
+      "sections": [
+        {
+          "heading": "Zaroori safety",
+          "body": [
+            "For an emergency or immediate safety risk, call 112 first. Then contact us with the booking details when you can."
+          ]
+        },
+        {
+          "heading": "Aap kya raise kar sakte hain",
+          "body": [
+            "You may contact us about bookings, fares, payments, cancellations, refunds, driver conduct, safety, account access, privacy requests or other service concerns."
+          ]
+        },
+        {
+          "heading": "Contact aur shikayat ki details",
+          "body": [
+            "Our grievance contact is [TO CONFIRM: grievance officer name and designation]."
           ],
           "list": [
-            "Pehla naam aur surname",
-            "Phone number",
-            "Pata, State, Province, ZIP/Postal code, City"
-          ]
-        },
-        {
-          "heading": "Usage Data ki jaankari",
-          "body": [
-            "Service use karte waqt Usage Data apne aap collect hota hai.",
-            "Ismein device ka Internet Protocol address (jaise IP address), browser type aur version, dekhe gaye service pages, visit ki date aur time, pages par bitaya waqt, unique device identifiers aur doosra diagnostic data ho sakta hai.",
-            "Mobile se service access karne par kuch jaankari automatic collect ho sakti hai, jaise mobile type, unique ID, IP address, mobile operating system, mobile Internet browser type, unique identifiers aur diagnostic data. Yeh list seemit nahi hai.",
-            "Service visit karte waqt ya mobile se access karte waqt browser jo jaankari bhejta hai, hum woh bhi collect kar sakte hain."
-          ]
-        },
-        {
-          "heading": "Tracking technology aur cookies",
-          "body": [
-            "Hum service activity track karne aur kuch jaankari rakhne ke liye Cookies aur milti-julti tracking technologies use karte hain. Beacons, tags aur scripts se jaankari collect aur track hoti hai aur service improve aur analyse hoti hai. Inmein yeh ho sakta hai:"
-          ],
-          "list": [
-            "Cookies ya Browser Cookies: device par rakhi chhoti file. Browser ko sabhi Cookies reject karne ya Cookie aane par batane ko keh sakte hain. Lekin Cookies accept na karne par service ke kuch hisse use nahi ho sakte.",
-            "Web Beacons: service ke kuch sections aur emails mein chhoti electronic files ho sakti hain, jinhe clear gifs, pixel tags ya single-pixel gifs bhi kehte hain. Inse Company page dekhne ya email kholne wale users gin sakti hai aur website statistics, jaise section ki popularity aur system/server integrity, check kar sakti hai."
+            "Email: [TO CONFIRM: grievance email]",
+            "Phone: [TO CONFIRM: grievance phone and service hours]",
+            "Address: [TO CONFIRM: registered address with PIN code]"
           ],
           "after": [
-            "Cookies Persistent ya Session ho sakti hain. Offline hone par Persistent Cookies computer ya mobile par rehti hain; browser band karte hi Session Cookies delete hoti hain.",
-            "Jahan kanoon zaroori kehta hai, non-essential cookies, jaise analytics, advertising aur remarketing, sirf consent se use hoti hain. Cookie preferences tool (agar available ho) ya browser/device settings se consent kabhi bhi badal ya wapas le sakte hain. Isse pehle consent ke basis par hue processing ki legality nahi badalti.",
-            "Hum neeche ke maqsadon ke liye Session aur Persistent dono Cookies use karte hain:",
-            "Necessary/Essential Cookies (Session, hamare dwara managed): website services aur kuch features dene ke liye zaroori hain. Users authenticate karne aur accounts ke fraudulent use ko rokne mein madad karti hain. Inke bina maangi gayi services nahi di ja sakti; hum inhein sirf woh services dene ke liye use karte hain.",
-            "Cookies Policy/Notice Acceptance Cookies (Persistent, hamare dwara managed): pehchaanti hain ki user ne website par cookies ka use accept kiya ya nahi.",
-            "Functionality Cookies (Persistent, hamare dwara managed): website ki choices, jaise login details ya language, yaad rakhti hain. Isse personal experience milta hai aur har visit par preferences dobara nahi bharni padti.",
-            "Hamari cookies aur aapki choices ki aur jaankari ke liye Privacy Policy ka Cookies section dekhein."
+            "Include your registered phone number, booking date and time, relevant vehicle or driver details, what happened, and the outcome you seek. This contact also receives privacy requests."
           ]
         },
         {
-          "heading": "Personal Data ka istemaal",
+          "heading": "Review",
           "body": [
-            "Company Personal Data in maqsadon se use kar sakti hai:"
+            "We will review information available for the booking, payment, account and support history and respond through a suitable contact channel. We may ask for additional information where it is reasonably needed to investigate the concern. [TO CONFIRM: acknowledgement and resolution timelines the business can commit to.]"
+          ]
+        },
+        {
+          "heading": "Aage ke options",
+          "body": [
+            "The Consumer Protection Act, 2019 and Consumer Protection (E-Commerce) Rules, 2020 may be relevant to consumer complaints. You may use available consumer-redressal channels, including the National Consumer Helpline at https://consumerhelpline.gov.in/ and the appropriate consumer commission, where applicable.",
+            "[TO CONFIRM: applicable UP transport authority and escalation route after confirming licence status. Whether the IT Rules apply depends on the facts; this page does not assert intermediary classification.]"
+          ]
+        }
+      ]
+    },
+    "driver-terms": {
+      "tab": "Driver shartein",
+      "title": "Driver ki shartein",
+      "standfirst": "RCS Travels driver app use karne wale driver-partners ke niyam.",
+      "sections": [
+        {
+          "heading": "Driver-partner relationship",
+          "body": [
+            "These terms apply when you register or use the RCS Travels driver app. You must provide accurate information, keep required documents valid, and follow applicable road, transport and safety requirements.",
+            "[TO CONFIRM: driver-partner relationship, aggregator classification, UP licence status, final contract terms, effective version and acceptance-record mechanism. Do not claim compliance with reported UP Rules on 40-hour induction, tracking, panic/control-room, health cover ₹5 lakh, or term/accident cover ₹10 lakh unless verified.]"
+          ]
+        },
+        {
+          "heading": "Account eligibility aur security",
+          "body": [
+            "Use only your own approved driver account and keep your phone, OTPs and login credentials secure. Do not let another person drive through your account or use a vehicle that has not been approved for the ride.",
+            "You must remain legally eligible to drive and provide the service. Tell us promptly if a licence, permit, vehicle document, insurance policy or other eligibility fact expires, is suspended, becomes inaccurate or can no longer be relied on."
+          ]
+        },
+        {
+          "heading": "Documents aur vehicle ki jaankari",
+          "list": [
+            "Driving licence, vehicle registration certificate, insurance, tax, fitness certificate and permit, where applicable.",
+            "PUC/CNG documents and vehicle photographs, where applicable.",
+            "Driver profile and contact information needed to verify, operate and support your account."
+          ]
+        },
+        {
+          "heading": "Ride offers aur service",
+          "body": [
+            "Ride offers, pickup details and other trip information are provided through the app. [TO CONFIRM: whether and when drivers may freely accept or reject ride offers under the final operating model and applicable UP Rules.]",
+            "Once you accept a ride, proceed to the correct pickup, keep trip status accurate, use reasonable care, and complete or cancel the ride only through supported flows unless an emergency makes that impracticable."
+          ]
+        },
+        {
+          "heading": "Location, offers aur conduct",
+          "body": [
+            "The app uses your live location to show availability, match and manage rides, and apply operational safety rules. Keep location services and account information accurate while online or completing a ride.",
+            "Drive lawfully and safely, use the vehicle registered for the ride, respect riders and do not seek extra money, ask a rider to cancel, misrepresent your identity or vehicle, or behave abusively or inappropriately."
+          ]
+        },
+        {
+          "heading": "Kiraya, payment aur tax",
+          "body": [
+            "Collect or receive only the fare and payment amounts shown or authorised for the booking. Do not create off-platform surcharges or ask a rider to pay a different amount to avoid platform rules.",
+            "[TO CONFIRM: driver fare share, RCS commission/service fee, payout method, settlement cycle, deductions, taxes/TDS/GST treatment and any minimum fare-share obligations under the final UP Rules.]"
+          ]
+        },
+        {
+          "heading": "Driver cancellation",
+          "body": [
+            "You may self-cancel only while a ride is assigned or en route. A cancelled Ride Now ride returns to matching; a scheduled ride is re-offered.",
+            "Har successful self-cancellation ek baar count hoti hai. Rolling 30-day period mein, teesri self-cancellation se commission-free benefit hat jata hai aur naya benefit earn karne ki restriction latest qualifying self-cancellation se 30 days ke liye set hoti hai; agar rolling count kam se kam teen bana rahe to aage ki cancellations us date ko extend kar sakti hain. Paanchvi self-cancellation account suspend kar deti hai aur pending offers wapas le liye jate hain."
+          ]
+        },
+        {
+          "heading": "Shikayat aur account action",
+          "body": [
+            "Har submitted customer conduct complaint abhi driver account ke against record ki jati hai. Teen recorded complaints par current system ₹200 fine lagata hai. Paanch par yeh account ko automatically suspend karta hai aur pending offers wapas le leta hai; sirf administrator hi account ko reinstate kar sakta hai. Yeh actions abhi recorded complaint count ke basis par hote hain, bina kisi alag pre-sanction evidence review ke.",
+            "[TO CONFIRM: complaint validation standard, notice to the driver, evidence review, appeal/reconsideration process, refund of an incorrect fine, and whether these thresholds comply with the final driver agreement and applicable law.]"
+          ]
+        },
+        {
+          "heading": "Safety aur incidents",
+          "body": [
+            "For an immediate emergency, call 112 or the appropriate public emergency service first. Report accidents, threats, serious disputes and material safety incidents to support when it is safe to do so, and cooperate with lawful incident or insurance processes.",
+            "[TO CONFIRM: legally required driver induction/training, medical or police checks, control-room/SOS workflow, vehicle tracking, insurance cover and accident-response procedure before publication.]"
+          ]
+        },
+        {
+          "heading": "Suspension, review aur exit",
+          "body": [
+            "We may temporarily restrict offers or suspend access where reasonably necessary for safety, suspected fraud, invalid documents, repeated policy breaches, a serious complaint, non-compliance with law, or a regulator or court requirement. Where appropriate, the driver should have a channel to submit relevant information for review.",
+            "You may stop using the driver app subject to outstanding rides, settlements, records, disputes and legal obligations. [TO CONFIRM: driver termination notice, appeal rights, deactivation criteria and any mandatory regulatory procedure.]"
+          ]
+        },
+        {
+          "heading": "Zimmedari aur vivaad",
+          "body": [
+            "Each party remains responsible for its own unlawful conduct, fraud, wilful misconduct and duties that cannot be excluded by law. [TO CONFIRM: final representations, indemnity, limitation-of-liability, governing-law, jurisdiction and dispute-resolution clauses after counsel confirms the driver relationship and insurance position.]"
+          ]
+        }
+      ]
+    },
+    "driver-privacy": {
+      "tab": "Driver privacy",
+      "title": "Driver privacy policy",
+      "standfirst": "Hum driver-partner, vehicle, location aur device data kaise use karte hain.",
+      "sections": [
+        {
+          "heading": "Daayra",
+          "body": [
+            "This notice explains how [TO CONFIRM: registered business name] handles personal data about driver-partners and their vehicles when they apply for, access or use the RCS Travels driver app."
+          ]
+        },
+        {
+          "heading": "Data jo hum lete hain",
+          "list": [
+            "Profile, contact and verification information, plus driving licence, RC, insurance, tax, fitness, permit, PUC/CNG records and vehicle photos where applicable.",
+            "Live and recent location, speed, bearing and location timestamps where the app provides them, plus ride offers, booking and trip records, cancellation history, complaint and support records.",
+            "Device, app, push-notification and technical log information needed to operate, secure and improve the app."
+          ]
+        },
+        {
+          "heading": "Data kahan se aata hai",
+          "body": [
+            "We receive data from you and your device, riders and booking activity, document-verification or authentication flows, payment or support providers, and lawful safety or compliance interactions."
+          ]
+        },
+        {
+          "heading": "Hum ise kaise use aur share karte hain",
+          "body": [
+            "We use this data to verify eligibility, match and manage rides, provide navigation and rider-facing trip information, prevent fraud and misuse, resolve complaints, make payments and meet legal obligations."
           ],
           "list": [
-            "Service dene aur maintain karne ke liye, jismein service usage monitor karna shaamil hai.",
-            "Account manage karna: service user ke roop mein registration sambhalna. Diya gaya data registered users ke liye available alag features ki access de sakta hai.",
-            "Contract poora karna: kharide products, items ya services ke purchase contract, ya service ke zariye hamare saath kisi doosre contract ka development, compliance aur execution.",
-            "Contact karna: email, phone, SMS ya milte-julte electronic tareeqe, jaise app push notifications. Ismein features, products ya contracted services ke updates aur information, aur unhein laagu karne ke liye zaroori ya reasonable security updates shaamil hain.",
-            "News, special offers aur aisi doosri goods, services aur events ki information dena jo aapki kharidi ya poochhi cheezon jaisi hon. Marketing sirf applicable law ki permission par hoti hai. Jahan pehle consent chahiye, jaise EEA aur UK ke laws, sirf consent se bhejenge; warna opt-out tak bhej sakte hain. Marketing email ke unsubscribe link ya humse contact karke kabhi bhi opt out ya consent withdraw kar sakte hain.",
-            "Requests manage karna: aapki bheji requests dekhna aur sambhalna.",
-            "Business transfers: merger, divestiture, restructuring, reorganisation, dissolution ya kuch/saari assets ki sale ya transfer evaluate ya conduct karna. Yeh going concern ya bankruptcy, liquidation jaisi process mein ho sakta hai, jahan users ka data transferred assets ka hissa ho.",
-            "Doosre maqsad: data analysis, usage trends, promotional campaigns ki effectiveness, aur service, products, services, marketing aur aapke experience ko evaluate aur improve karna."
+            "Riders receive only the details needed for their booked ride.",
+            "Google Maps, Routes and Places may process location and trip data for mapping and routing.",
+            "Firebase may process push-notification data; WhatsApp/Meta may process messages sent through a WhatsApp flow.",
+            "Authentication, storage and database providers may process data on our instructions."
           ]
         },
         {
-          "heading": "Personal Data share karna",
+          "heading": "Driver app use karte waqt location",
           "body": [
-            "Hum in situations mein Personal Data share kar sakte hain:"
+            "When you are online, available, assigned, en route or on a trip, the app may use frequent or background location as needed for matching, pickup, trip status, routing, cancellation rules, safety and operational records. [TO CONFIRM: exact background-location behaviour on iOS/Android and the final just-in-time permission wording.]"
+          ]
+        },
+        {
+          "heading": "Safety, compliance aur kanooni disclosure",
+          "body": [
+            "We may use or disclose relevant records to investigate fraud, safety incidents or complaints, verify legal eligibility, comply with transport or tax obligations, answer lawful requests, or establish or defend legal claims."
+          ]
+        },
+        {
+          "heading": "Security",
+          "body": [
+            "We use access controls and technical and administrative measures intended to protect driver data and documents. No system is completely secure, so report suspected account compromise, document misuse or unauthorised access promptly."
+          ]
+        },
+        {
+          "heading": "Data rakhna aur requests",
+          "body": [
+            "We retain data only as reasonably needed for operations, safety, tax or other legal requirements, dispute handling and fraud prevention. You may request access, correction or deletion where applicable, subject to those requirements and technical backup schedules."
+          ]
+        },
+        {
+          "heading": "India privacy framework",
+          "body": [
+            "We are preparing this policy to support the DPDP Act, 2023 and other applicable requirements. As of 13 September 2026, substantive DPDP obligations are mostly scheduled to phase in from May 2027; this does not claim every DPDP obligation is already in force. [TO CONFIRM: controller/contact details and final privacy notice after lawyer review.]"
+          ]
+        },
+        {
+          "heading": "Badlav aur contact",
+          "body": [
+            "Material changes should be reflected through an updated effective date and any notice or consent required by law. Driver privacy questions and requests can be raised through the driver grievance contact."
+          ]
+        }
+      ]
+    },
+    "driver-payments": {
+      "tab": "Driver payment",
+      "title": "Driver payment",
+      "standfirst": "Drivers ke liye abhi supported payment aur cancellation niyam.",
+      "sections": [
+        {
+          "heading": "Yeh page kya cover karta hai",
+          "body": [
+            "This page describes payment-related rules currently supported in the driver app. It does not create a driver marketplace deposit, a 12% fee or a 10% fee; those are not live terms for driver-partners."
+          ]
+        },
+        {
+          "heading": "Ride ka kiraya",
+          "body": [
+            "Drivers must use the fare and payment status shown or authorised for the booking and must not impose an undisclosed off-platform surcharge. [TO CONFIRM: fare calculation, toll/parking/waiting handling, cash/online payment methods and any permitted adjustments.]"
+          ]
+        },
+        {
+          "heading": "Scheduled rides",
+          "body": [
+            "A customer currently pays a 15% Razorpay advance for a scheduled ride. The service records the advance and its final disposition against the booking. [TO CONFIRM: reconcile this behaviour with the reported UP passenger cancellation cap before launch.]"
+          ]
+        },
+        {
+          "heading": "Customer cancellation",
+          "body": [
+            "The server determines a scheduled-rider cancellation quote. Drivers must not ask customers to make off-platform changes to that result."
+          ]
+        },
+        {
+          "heading": "Driver ki kamai aur deductions",
+          "body": [
+            "[TO CONFIRM: driver settlement timing, payment method, commission/service-fee terms, cancellation allocation, taxes/TDS/GST, adjustments and any UP fare-share compliance. Do not claim the reported 80%/60% minimum split unless verified.]"
+          ]
+        },
+        {
+          "heading": "Sudhaar aur vivaad",
+          "body": [
+            "If a booking’s payment, cancellation, settlement or status looks wrong, contact support with the booking reference and relevant payment details. We should correct verified calculation or processing errors and provide a review route for disputed deductions."
+          ]
+        }
+      ]
+    },
+    "driver-grievance": {
+      "tab": "Driver shikayat",
+      "title": "Driver shikayat",
+      "standfirst": "Driver-partners kaise shikayat raise kar sakte hain.",
+      "sections": [
+        {
+          "heading": "Zaroori safety",
+          "body": [
+            "For an immediate emergency or safety risk, call 112 first. Then report the booking and incident to support when it is safe to do so."
+          ]
+        },
+        {
+          "heading": "Aap kya raise kar sakte hain",
+          "body": [
+            "Driver-partners may raise concerns about onboarding, documents, ride allocation, fares, settlement, cancellations, fines, complaints, suspension, safety, privacy or account access."
+          ]
+        },
+        {
+          "heading": "Shikayat kaise raise karein",
+          "body": [
+            "Contact [TO CONFIRM: grievance officer name and designation] with your driver account phone number, booking details, documents or screenshots that help, and the outcome you seek."
           ],
           "list": [
-            "Service Providers ke saath: service use monitor aur analyse karne aur aapse contact karne ke liye.",
-            "Business transfers ke liye: merger, Company assets ki sale, financing ya doosri company ko kuch/poora business acquisition ke sambandh mein ya uski negotiations ke dauran.",
-            "Affiliates ke saath: unse is policy ka paalan karwayenge. Ismein parent company, subsidiaries, joint venture partners aur hamare ya common control ki companies hain.",
-            "Business partners ke saath: kuch products, services ya promotions dene ke liye. Partners apni privacy policies ke mutabik information apne maqsadon se bhi use kar sakte hain.",
-            "Doosre users ke saath: agar service mein public areas hon, toh wahan Personal Data share karne ya users se interaction ki information sab dekh sakte hain aur service ke bahar publicly distribute ho sakti hai.",
-            "Aapki consent se: kisi doosre maqsad ke liye aapki consent lekar data disclose kar sakte hain."
+            "Email: [TO CONFIRM: grievance email]",
+            "Phone: [TO CONFIRM: grievance phone and service hours]",
+            "Address: [TO CONFIRM: registered address with PIN code]"
           ]
         },
         {
-          "heading": "Personal Data kab tak rakhte hain",
+          "heading": "Review aur escalation",
           "body": [
-            "Company data sirf is policy ke maqsadon ke liye zaroori waqt tak rakhegi. Legal obligations, jaise applicable law ke liye data rakhna, disputes resolve karna aur legal agreements/policies enforce karne ke liye jitna zaroori ho utna retain aur use karenge.",
-            "Mumkin ho toh chhoti retention periods rakhte hain ya data delete, aggregate ya anonymise karke pehchaan kam karte hain. Alag na bataya ho toh neeche ke periods maximum (“up to”) hain; maqsad poora ho toh pehle bhi delete ya anonymise kar sakte hain. Processing ke maqsad aur legal obligations ke hisaab se har category ki period alag hai:"
-          ],
-          "list": [
-            "Account Information—User Accounts: account relationship tak aur closure ke baad issues ya disputes sambhalne ke liye zyada se zyada 24 months.",
-            "Usage Data—Website analytics (cookies, IP addresses, device identifiers): collection se zyada se zyada 24 months, taaki privacy principles ka dhyaan rakhte hue trends analyse hon.",
-            "Usage Data—Server logs (IP addresses, access times): security monitoring aur troubleshooting ke liye zyada se zyada 24 months."
-          ],
-          "after": [
-            "Usage Data upar ki periods ke mutabik rehta hai. Zyada waqt sirf security, fraud prevention ya legal compliance ke liye zaroori hone par reh sakta hai.",
-            "Data upar se zyada waqt rakhne ki wajah ho sakti hai: legal obligation, jaise tax authorities ke financial records; legal claims establish, exercise ya defend karna; aapki explicit request; ya technical limits, jaise routine deletion ke liye scheduled backups mein data.",
-            "Data kab tak rakhenge, yeh jaanne ke liye contact kar sakte hain.",
-            "Retention khatam hone par data securely delete ya anonymise karte hain. Deletion: systems se data hata diya jaata hai aur active processing band hoti hai. Backup retention: bachi copies encrypted backups mein hamare schedule ke hisaab se limited waqt reh sakti hain; sirf security, disaster recovery ya legal compliance ke liye zaroori ho toh restore hoti hain. Anonymisation: kuch data anonymous statistics ban jaata hai jise aapse nahi joda ja sakta; research aur analytics ke liye ise indefinitely rakh sakte hain."
-          ]
-        },
-        {
-          "heading": "Personal Data transfer karna",
-          "body": [
-            "Personal Data samet aapki information Company offices aur processing karne wali parties ke locations par process hoti hai. Isliye data state, province, country ya doosre jurisdiction ke bahar computers par transfer aur maintain ho sakta hai, jahan data protection laws alag hon.",
-            "Jahan applicable law maange, international transfers ke liye suitable safeguards aur relevant supplementary measures ensure karenge. Company data ko secure aur is policy ke mutabik rakhne ke sab reasonable necessary steps legi. Data aur personal information ki security samet adequate controls ke bina kisi organisation ya country ko transfer nahi hoga."
-          ]
-        },
-        {
-          "heading": "Personal Data delete karna",
-          "body": [
-            "Aapko hamare collect kiye apne Personal Data ko delete karne ya usmein hamari madad maangne ka haq hai.",
-            "Service ke andar aapki kuch information delete karne ka option ho sakta hai.",
-            "Account ho toh login karke personal information manage karne wali settings se kabhi bhi update, amend ya delete kar sakte hain. Diye data ko access, correct ya delete karwane ke liye humse contact bhi kar sakte hain.",
-            "Lekin legal obligation ya lawful basis ho toh kuch information rakhni pad sakti hai."
-          ]
-        },
-        {
-          "heading": "Personal Data disclose karna",
-          "body": [
-            "Business Transactions: merger, acquisition ya asset sale mein data transfer ho sakta hai. Data transfer aur alag Privacy Policy ke tahat aane se pehle notice denge.",
-            "Law Enforcement: kuch situations mein kanoon ki maang ya public authorities, jaise court ya government agency, ki valid request par data disclose kar sakte hain.",
-            "Doosri legal requirements: good-faith mein zaroori maanne par Company data disclose kar sakti hai:"
-          ],
-          "list": [
-            "Legal obligation poori karne ke liye",
-            "Company ke rights ya property ki raksha ke liye",
-            "Service se judi possible wrongdoing rokne ya investigate karne ke liye",
-            "Users ya public ki personal safety bachane ke liye",
-            "Legal liability se bachav ke liye"
-          ]
-        },
-        {
-          "heading": "Personal Data ki security",
-          "body": [
-            "Data security hamare liye zaroori hai, lekin Internet transmission ya electronic storage ka koi tareeqa 100% secure nahi. Hum commercially reasonable protection use karne ki koshish karte hain, lekin absolute security ki guarantee nahi de sakte."
-          ]
-        },
-        {
-          "heading": "Hamare Service Providers",
-          "body": [
-            "Hamare Service Providers ko Personal Data ki access ho sakti hai. Yeh third-party vendors apni Privacy Policies ke mutabik service par aapki activity ki information collect, store, use, process aur transfer karte hain.",
-            "Service maintain aur improve karne ke liye third-party providers use kar sakte hain."
-          ],
-          "list": [
-            "Google Places: Google ki service jo HTTP requests se places ki information deti hai. Security ke liye aapse aur device se information collect kar sakti hai. Data Google ki Privacy Policy ke mutabik rakha jaata hai: https://www.google.com/intl/en/policies/privacy/",
-            "Clerk: unki Privacy Policy https://clerk.com/legal/privacy par dekh sakte hain.",
-            "WhatsApp Business Platform: unki Privacy Policy https://www.whatsapp.com/legal/business-app-privacy-policy par dekh sakte hain."
-          ]
-        },
-        {
-          "heading": "Bachchon aur minors ki privacy",
-          "body": [
-            "Service 16 saal se kam logon ke liye nahi hai aur hum jaanboojhkar unki Personal Information collect nahi karte.",
-            "Aap parent ya guardian hain aur lagta hai bachche ne information di hai toh contact karein. 16 saal se kam ki information collect hone ka pata chale toh reasonably jaldi servers se hatane ke steps lenge.",
-            "Kuch countries aur states apni information processing ki consent ke liye zyada age tay karti hain. Jahan hum consent par rely karte hain aur user par laagu law mein age 16 se zyada hai, information collect aur use karne se pehle parent ya guardian ki consent maang sakte hain."
-          ]
-        },
-        {
-          "heading": "Doosri websites ke links",
-          "body": [
-            "Service mein aisi sites ke links ho sakte hain jinhein hum nahi chalate. Third-party link par click karke aap unki site par jaayenge. Har visited site ki Privacy Policy padhne ki hamari zor daar salah hai.",
-            "Third-party sites ya services ke content, privacy policies aur practices par hamara control nahi aur hum unki zimmedari nahi lete."
-          ]
-        },
-        {
-          "heading": "Privacy Policy mein badlav",
-          "body": [
-            "Hum policy waqt-waqt par update kar sakte hain. Nayi policy is page par post karke changes batayenge.",
-            "Badlav effective hone se pehle email aur/ya service par prominent notice se batayenge aur upar Last updated date badlenge.",
-            "Changes ke liye policy waqt-waqt par padhein. Badlav is page par post hone par effective hote hain."
-          ]
-        },
-        {
-          "heading": "Humse sampark karein",
-          "body": [
-            "Privacy Policy ke sawalon ke liye contact karein:"
-          ],
-          "list": [
-            "Email par: rcstravels.business@gmail.com",
-            "Phone par: 8586088085"
+            "We will review relevant ride, account, payment, complaint and support records and respond through a suitable contact channel. Drivers should have a reasonable opportunity to provide relevant information when a complaint, fine or suspension is disputed. [TO CONFIRM: acknowledgement and resolution timelines, formal appeal/reconsideration process, UP transport authority and escalation route after confirming licence status. Whether the IT Rules apply depends on the facts; this page does not assert intermediary classification.]"
           ]
         }
       ]

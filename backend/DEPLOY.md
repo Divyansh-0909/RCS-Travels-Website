@@ -174,6 +174,12 @@ are IPv6-only on new projects and Cloud Run's egress will not reach them.
 and `studio`, which run from a laptop, so shipping it would put an un-pooled
 database credential into the runtime for nothing.
 
+The runtime now requires verified TLS for remote database connections, using the
+public Supabase CA bundled in `db/supabase-ca.crt`. Keep that file in the image.
+See `db/README.md` for certificate maintenance and the metadata-only audit.
+Migration tools and GUI clients need their own verified TLS settings; after
+checking all clients, enable SSL enforcement in Supabase's Database Settings.
+
 ---
 
 ## 4. Deploy

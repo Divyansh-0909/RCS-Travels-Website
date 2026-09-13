@@ -27,6 +27,8 @@ async function request(path, { method = "GET", body, getToken } = {}) {
 
 export const getMe             = (getToken)              => request("/api/users/me", { getToken });
 export const createMe          = (name, getToken)        => request("/api/users/me", { method: "POST", body: { name }, getToken });
+export const getPreferences    = (getToken)              => request("/api/users/me/preferences", { getToken });
+export const updatePreferences = (body, getToken)        => request("/api/users/me/preferences", { method: "PUT", body, getToken });
 export const estimateFare      = (pickupAddress, dropAddress, vehicleClass, pickupCoords, dropCoords, preferSafeRoute, needsCarrier, getToken) => request("/api/fare/estimate", { method: "POST", body: { pickupAddress, dropAddress, vehicleClass, pickupCoords, dropCoords, preferSafeRoute, needsCarrier }, getToken });
 export const createBooking     = (data, getToken)        => request("/api/bookings", { method: "POST", body: data, getToken });
 export const getNearbyDrivers  = (pickupCoords, vehicleClass, getToken) => request(`/api/bookings/nearby-drivers?lat=${encodeURIComponent(pickupCoords.lat)}&lng=${encodeURIComponent(pickupCoords.lng)}&vehicleClass=${encodeURIComponent(vehicleClass)}`, { getToken });
@@ -44,6 +46,7 @@ export const getSharedTrip     = (token)                 => request(`/api/share/
 export const getMyBookings     = (filters, getToken)     => request(`/api/bookings/my-bookings${toQuery(filters)}`, { getToken });
 export const sendOtp           = (phone, intent)         => request("/api/auth/send-otp", { method: "POST", body: { phone, intent } });
 export const verifyOtp         = (phone, otp, intent)    => request("/api/auth/verify-otp", { method: "POST", body: { phone, otp, intent } });
+export const checkName         = (name)                  => request("/api/auth/check-name", { method: "POST", body: { name } });
 export const updateGender      = (gender, getToken)      => request("/api/users/me/updateGender", { method: "POST", body: { gender }, getToken });
 export const updateEmergencyContact = (emergencyContact, getToken) => request("/api/users/me/updateEmergencyContact", { method: "POST", body: { emergencyContact }, getToken });
 export const updateDOB         = (dob, getToken)         => request("/api/users/me/updateDOB", { method: "POST", body: { dob }, getToken });

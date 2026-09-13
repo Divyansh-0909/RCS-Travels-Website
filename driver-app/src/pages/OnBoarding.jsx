@@ -1,5 +1,6 @@
 
 import { driverCopy as dc } from "../lib/copy";
+import { useAuth } from "@clerk/clerk-expo";
 import { Image, Pressable, View } from "react-native";
 import { useNavigate } from "react-router-native";
 import AppText from "../components/AppText";
@@ -15,6 +16,14 @@ const OnBoarding = () => {
 
     const navigate = useNavigate();
     const { t } = useLanguage();
+    const { isSignedIn, signOut } = useAuth();
+
+    const openLogin = async () => {
+        if (isSignedIn) {
+            await signOut();
+        }
+        navigate("/login", { replace: true });
+    };
 
     return (
         <View className="relative flex-1 w-full h-full  overflow-hidden items-center justify-between bg-[var(--background-primary)]">
@@ -31,12 +40,12 @@ const OnBoarding = () => {
                 style={{ experimental_backgroundImage: SCRIMBOTTOM }}
             />
 
-            <View className="w-full max-w-[500px] h-full py-12 justify-between items-center gap-1">
+            <View className="w-full max-w-[500px] h-full py-9 justify-between items-center gap-1">
                 <View className="w-full items-center gap-3 mb-4">
                     <AppText className="text-xl bg-surface my-3 py-2 px-3 rounded-full text-ink flex flex-row justify-center items-center font-semibold text-center" style={TITLE_TRACKING}>
-                        RCS{" "}
+                        RCS{"  "}
                         <AppText className="text-[var(--text-foreground)]">
-                            Travels
+                            captains
                         </AppText>
                     </AppText>
                     <View className="flex justify-center items-left gap-2 w-[85%] h-fit">
@@ -52,13 +61,13 @@ const OnBoarding = () => {
                 <View className="w-full max-w-[500px] justify-end items-center gap-2">
                     <Pressable
                         role="button"
-                        onPress={() => navigate("/signup", { state: { entry: 'login' } })}
+                        onPress={openLogin}
                         className="w-[82%] my-1 py-3 rounded-xl bg-primary items-center justify-center active:opacity-80"
                     >
                         <AppText className="text-base font-semibold">{t('driver.onboarding.access')}</AppText>
                     </Pressable>
 
-                    <AppText className="text-base text-[var(--text-muted)]">
+                    <AppText className="text-sm text-[var(--text-muted)]">
                         {t('driver.onboarding.noAccount')}{" "}
                         <AppText
                             onPress={() => navigate("/signup")}

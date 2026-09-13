@@ -1,6 +1,6 @@
 import { useLanguage as useCopyLanguage } from "../i18n";
 import { driverCopy as dc } from "../lib/copy";
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
   Keyboard,
@@ -11,8 +11,8 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import { CarIcon, PlusIcon, TrashIcon, XIcon } from 'phosphor-react-native';
-import { useNavigate } from 'react-router-native';
+import { CaretDownIcon, CarIcon, PlusIcon, TrashIcon, XIcon } from 'phosphor-react-native';
+import { useLocation, useNavigate } from 'react-router-native';
 import AppText from '../components/AppText';
 import BackButton from '../components/ui/BackButton';
 import Input from '../components/ui/Input';
@@ -20,7 +20,9 @@ import Button from '../components/ui/Button';
 import AccountDetailScreen from '../components/ui/AccountDetailScreen';
 import { DetailSectionsSkeleton } from '../components/ui/LoadingSkeletons';
 import { useApi } from '../hooks/useApi';
+import { useDriver } from '../hooks/useDriver';
 import { verificationLabel, type Vehicle, type VehiclesResponse } from '../lib/documentState';
+import { VEHICLE_NUMBER_INPUT_MAX_LENGTH, VEHICLE_NUMBER_MAX_LENGTH, VEHICLE_NUMBER_MIN_LENGTH, validateVehicleNumber } from '../lib/vehicleNumber';
 import { vehicleClassLabel } from '../constants/documents';
 import { useTheme } from '../theme/ThemeContext';
 
@@ -75,6 +77,9 @@ const Vehicles = () => {
     const { colors } = useTheme();
   const api = useApi();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const isRegistrationFlow = pathname === '/document/vehicle';
+  const { profile, loading: driverLoading, refresh: refreshProfile } = useDriver();
   const { height: windowHeight } = useWindowDimensions();
 
   const [data, setData] = useState<VehiclesResponse | null>(null);
@@ -93,7 +98,12 @@ const Vehicles = () => {
   const [adding, setAdding] = useState(false);
   const [vehicleClass, setVehicleClass] = useState<string | null>(null);
   const [vehicleNumber, setVehicleNumber] = useState('');
+  const [vehicleNumberError, setVehicleNumberError] = useState<string | null>(null);
   const [vehicleModel, setVehicleModel] = useState('');
+  const [vehicleClassStatus, setVehicleClassStatus] = useState<'idle' | 'finding' | 'found' | 'manual' | 'error'>('idle');
+  const [classificationDotCount, setClassificationDotCount] = useState(1);
+  const [classPickerOpen, setClassPickerOpen] = useState(false);
+  const vehicleClassRequestRef = useRef(0);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [closePressed, setClosePressed] = useState(false);
 
@@ -108,6 +118,39 @@ const Vehicles = () => {
   }, [api]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Registration is a server-staged wizard. History/deep links should resume the
+  // same step as HomeGate rather than letting a captain add a car before his
+  // personal papers are present or return to this form after the car already
+  // exists.
+  useEffect(() => {
+    if (!isRegistrationFlow || driverLoading || !profile) return;
+
+    const { stage } = profile.onboarding;
+    if (stage === 'personalDocuments') {
+      navigate('/document', { replace: true });
+      return;
+    }
+    if (stage === 'vehicle') return;
+    if (stage === 'vehicleDocuments' && profile.activeVehicleId) {
+      navigate(`/document?vehicleId=${profile.activeVehicleId}`, { replace: true });
+      return;
+    }
+    if (stage === 'review') navigate('/', { replace: true });
+  }, [driverLoading, isRegistrationFlow, navigate, profile]);
+
+  useEffect(() => {
+    if (vehicleClassStatus !== 'finding') {
+      setClassificationDotCount(1);
+      return;
+    }
+
+    const timer = setInterval(() => {
+      setClassificationDotCount((count) => count >= 3 ? 1 : count + 1);
+    }, 350);
+
+    return () => clearInterval(timer);
+  }, [vehicleClassStatus]);
 
   useEffect(() => {
     if (!adding) return;
@@ -125,7 +168,10 @@ const Vehicles = () => {
   const openAddSheet = useCallback(() => {
     setVehicleClass(null);
     setVehicleNumber('');
+    setVehicleNumberError(null);
     setVehicleModel('');
+    setVehicleClassStatus('idle');
+    setClassPickerOpen(false);
     setFormError(null);
     setClosePressed(false);
     setKeyboardHeight(0);
@@ -139,10 +185,48 @@ const Vehicles = () => {
     setAdding(false);
     setVehicleClass(null);
     setVehicleNumber('');
+    setVehicleNumberError(null);
     setVehicleModel('');
+    setVehicleClassStatus('idle');
+    setClassPickerOpen(false);
     setFormError(null);
     setKeyboardHeight(0);
-  }, [busy]);
+    if (isRegistrationFlow) navigate('/document', { replace: true });
+  }, [busy, isRegistrationFlow, navigate]);
+
+  useEffect(() => {
+    if (!adding && !isRegistrationFlow) return;
+
+    const model = vehicleModel.trim();
+    const requestId = ++vehicleClassRequestRef.current;
+
+    if (model.length < 2) {
+      setVehicleClass(null);
+      setVehicleClassStatus('idle');
+      setClassPickerOpen(false);
+      return;
+    }
+
+    setVehicleClass(null);
+    setVehicleClassStatus('finding');
+    setClassPickerOpen(false);
+
+    const timer = setTimeout(async () => {
+      const result = await api.classifyVehicleModel(model);
+      if (vehicleClassRequestRef.current !== requestId) return;
+
+      if (result?.vehicleClass && CLASSES.includes(result.vehicleClass)) {
+        setVehicleClass(result.vehicleClass);
+        setVehicleClassStatus('found');
+        return;
+      }
+
+      setVehicleClass(null);
+      setVehicleClassStatus('error');
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [adding, api, isRegistrationFlow, vehicleModel]);
 
   const switchTo = useCallback(async (vehicle: Vehicle) => {
     if (vehicle.isActive || busy) return;
@@ -199,8 +283,28 @@ const Vehicles = () => {
   }, [api, load]);
 
   const submitNew = useCallback(async () => {
+    if (vehicleClassStatus === 'finding') return;
     if (!vehicleClass) { setFormError(dc("Pick the kind of car")); return; }
-    if (vehicleNumber.trim().length < 4) { setFormError(dc("Enter the number on the plate")); return; }
+
+    const plate = validateVehicleNumber(vehicleNumber);
+    if (!plate.valid) {
+      const message = plate.reason === 'missing'
+        ? dc("Enter the number on the plate")
+        : plate.reason === 'too_short'
+          ? dc("Registration number must be at least {{value0}} characters", { value0: VEHICLE_NUMBER_MIN_LENGTH })
+          : plate.reason === 'too_long'
+            ? dc("Registration number can be at most {{value0}} characters", { value0: VEHICLE_NUMBER_MAX_LENGTH })
+            : plate.reason === 'characters'
+              ? dc("Use only letters, numbers, spaces, and hyphens")
+              : plate.reason === 'bh_format'
+                ? dc("Check the BH-series registration number")
+                : dc("Check the registration number");
+      setVehicleNumberError(message);
+      setFormError(null);
+      return;
+    }
+
+    setVehicleNumberError(null);
     // Required, like the plate. A rider meeting this car at a gate is looking for
     // "the white Innova Crysta" — the class alone does not pick it out of a queue.
     if (vehicleModel.trim().length < 2) { setFormError(dc("Enter the car's model")); return; }
@@ -208,7 +312,7 @@ const Vehicles = () => {
     setBusy(true);
     const result = await api.addVehicle({
       vehicleClass,
-      vehicleNumber: vehicleNumber.trim().toUpperCase(),
+      vehicleNumber: plate.number,
       vehicleModel: vehicleModel.trim(),
     });
     setBusy(false);
@@ -220,15 +324,175 @@ const Vehicles = () => {
     setKeyboardHeight(0);
     setVehicleClass(null);
     setVehicleNumber('');
+    setVehicleNumberError(null);
     setVehicleModel('');
+    setVehicleClassStatus('idle');
+    setClassPickerOpen(false);
     setFormError(null);
     await load();
+
+    if (isRegistrationFlow) {
+      await refreshProfile();
+      navigate(`/document?vehicleId=${result.vehicle.id}`, { replace: true });
+      return;
+    }
 
     // Straight to the checklist for the car he just added. He added it in order
     // to upload its papers; making him find it in a list first is a step that
     // exists only because the screens are separate.
     navigate(`/account/documents?vehicleId=${result.vehicle.id}`);
-  }, [api, load, navigate, vehicleClass, vehicleNumber, vehicleModel]);
+  }, [api, isRegistrationFlow, load, navigate, refreshProfile, vehicleClass, vehicleClassStatus, vehicleNumber, vehicleModel]);
+
+  if (isRegistrationFlow) {
+    return (
+      <View className="flex-1 w-full py-12">
+        <View className="absolute left-2 right-2 top-10 z-10 h-12 items-center justify-center">
+          <AppText className="text-xl font-normal text-[var(--text)]">
+            <AppText className="font-semibold">RCS</AppText> captains
+          </AppText>
+        </View>
+
+        <ScrollView
+          className="flex-1 w-full bg-canvas"
+          contentContainerStyle={{ paddingTop: 80, paddingBottom: 32 }}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View className="w-full px-6 gap-5">
+            <View className="w-full gap-1">
+              <AppText className={`text-2xl font-semibold text-left ${INK}`}>
+                {dc("Add your vehicle")}
+              </AppText>
+              <AppText className={`text-base text-left ${MUTED}`}>
+                {dc("Enter your vehicle details to continue.")}
+              </AppText>
+            </View>
+
+            <View className="w-full gap-3">
+              <View className="gap-1">
+                <AppText className={`text-sm font-semibold ${INK}`}>{dc("Number plate")}</AppText>
+                <Input
+                  prop={{
+                    variant: 'light',
+                    type: 'text',
+                    get "placeholder"() { return dc("Registration number"); },
+                    value: vehicleNumber,
+                    error: Boolean(vehicleNumberError),
+                    maxLength: VEHICLE_NUMBER_INPUT_MAX_LENGTH,
+                    onChangeFn: (value: string) => {
+                      setVehicleNumber(value.toUpperCase());
+                      setVehicleNumberError(null);
+                      setFormError(null);
+                    },
+                  }}
+                />
+                {vehicleNumberError ? (
+                  <AppText className="text-xs" style={{ color: ERROR_TEXT }}>
+                    {vehicleNumberError}
+                  </AppText>
+                ) : (
+                  <AppText className={`text-xs ${MUTED}`}>
+                    {dc("Spaces and hyphens are okay. We'll verify the number from your RC.")}
+                  </AppText>
+                )}
+              </View>
+
+              <View className="gap-1">
+                <AppText className={`text-sm font-semibold ${INK}`}>{dc("Model")}</AppText>
+                <Input
+                  prop={{
+                    variant: 'light',
+                    type: 'text',
+                    get "placeholder"() { return dc("Model"); },
+                    value: vehicleModel,
+                    onChangeFn: (value: string) => {
+                      vehicleClassRequestRef.current += 1;
+                      setVehicleModel(value);
+                      setFormError(null);
+                    },
+                  }}
+                />
+              </View>
+
+              <View className="gap-2">
+                <AppText className={`text-sm font-semibold ${INK}`}>{dc("Car type")}</AppText>
+                <Pressable
+                  role="button"
+                  aria-label={dc("Car type")}
+                  disabled={vehicleClassStatus === 'finding'}
+                  onPress={() => setClassPickerOpen((open) => !open)}
+                  className="min-h-12 flex-row items-center justify-between rounded-xl border px-4 py-3"
+                  style={{
+                    backgroundColor: colors.surface,
+                    borderColor: colors.borderUi,
+                    opacity: vehicleClassStatus === 'finding' ? 0.75 : 1,
+                  }}
+                >
+                  <AppText className={`text-base ${vehicleClass ? INK : MUTED}`}>
+                    {vehicleClassStatus === 'finding'
+                      ? `${dc("Classifing vehicle type")}${'.'.repeat(classificationDotCount)}`
+                      : vehicleClass
+                        ? vehicleClassLabel(vehicleClass)
+                        : dc("Choose car type")}
+                  </AppText>
+                  <CaretDownIcon size={18} weight="bold" color={colors.inkMuted} />
+                </Pressable>
+
+                {vehicleClassStatus === 'found' ? (
+                  <AppText className={`text-xs ${MUTED}`}>{dc("Suggested from model · Tap to change")}</AppText>
+                ) : vehicleClassStatus === 'error' ? (
+                  <AppText className={`text-xs ${MUTED}`}>{dc("Couldn't identify it · Choose the car type")}</AppText>
+                ) : null}
+
+                {classPickerOpen ? (
+                  <View className="flex-row flex-wrap gap-2">
+                    {CLASSES.map((option) => {
+                      const selected = vehicleClass === option;
+                      return (
+                        <Pressable
+                          key={option}
+                          role="radio"
+                          aria-checked={selected}
+                          onPress={() => {
+                            setVehicleClass(option);
+                            setVehicleClassStatus('manual');
+                            setClassPickerOpen(false);
+                            setFormError(null);
+                          }}
+                          className="min-h-11 justify-center rounded-xl px-3 py-2"
+                          style={{
+                            backgroundColor: selected ? colors.strong : colors.surface,
+                            borderWidth: 1,
+                            borderColor: selected ? colors.strong : colors.borderUi,
+                          }}
+                        >
+                          <AppText className={`text-sm font-semibold ${selected ? 'text-white' : INK}`}>
+                            {vehicleClassLabel(option)}
+                          </AppText>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                ) : null}
+              </View>
+            </View>
+
+            <View className="w-full">
+              {formError ? (
+                <AppText className="text-sm" style={{ color: ERROR_TEXT, marginBottom: 4 }}>
+                  {formError}
+                </AppText>
+              ) : null}
+
+              <Button prop={{ disabled: busy || vehicleClassStatus === 'finding' }} onPress={submitNew}>
+                {busy ? dc("Adding...") : dc("Add Car Documents")}
+              </Button>
+            </View>
+          </View>
+        </ScrollView>
+      </View>
+    );
+  }
 
   if (loading) {
     return (
@@ -407,8 +671,10 @@ const Vehicles = () => {
           >
             <View className="flex-row items-start gap-3 pb-4">
               <View className="flex-1 gap-1">
-                <AppText className={`text-lg font-semibold ${INK}`}>{dc("Add a car")}</AppText>
-                <AppText className={`text-sm ${MUTED}`}>{dc("Choose the type, then enter the number plate and model.")}</AppText>
+                <AppText className={`text-lg font-semibold ${INK}`}>
+                  {isRegistrationFlow ? dc("Add your vehicle") : dc("Add a car")}
+                </AppText>
+                <AppText className={`text-sm ${MUTED}`}>{dc("Enter the model and we'll find the car type. You can change it if needed.")}</AppText>
               </View>
 
               <Pressable
@@ -436,31 +702,83 @@ const Vehicles = () => {
               keyboardShouldPersistTaps="handled"
               contentContainerStyle={{ gap: 12, paddingBottom: 32 }}
             >
+              <View className="gap-1">
+                <AppText className={`text-sm font-semibold ${INK}`}>{dc("Model")}</AppText>
+                <Input
+                  prop={{
+                    variant: 'light',
+                    type: 'text',
+                    get "placeholder"() { return dc("Model"); },
+                    value: vehicleModel,
+                    onChangeFn: (value: string) => {
+                      vehicleClassRequestRef.current += 1;
+                      setVehicleModel(value);
+                      setFormError(null);
+                    },
+                  }}
+                />
+              </View>
+
               <View className="gap-2">
                 <AppText className={`text-sm font-semibold ${INK}`}>{dc("Car type")}</AppText>
-                <View className="flex-row flex-wrap gap-2">
-                  {CLASSES.map((option) => {
-                    const selected = vehicleClass === option;
-                    return (
-                      <Pressable
-                        key={option}
-                        role="radio"
-                        aria-checked={selected}
-                        onPress={() => { setVehicleClass(option); setFormError(null); }}
-                        className="rounded-xl px-3 py-2"
-                        style={{
-                          backgroundColor: selected ? colors.strong : colors.surface,
-                          borderWidth: 1,
-                          borderColor: selected ? colors.strong : colors.borderUi,
-                        }}
-                      >
-                        <AppText className={`text-sm font-semibold ${selected ? 'text-white' : INK}`}>
-                          {vehicleClassLabel(option)}
-                        </AppText>
-                      </Pressable>
-                    );
-                  })}
-                </View>
+                <Pressable
+                  role="button"
+                  aria-label={dc("Car type")}
+                  disabled={vehicleClassStatus === 'finding'}
+                  onPress={() => setClassPickerOpen((open) => !open)}
+                  className="min-h-12 flex-row items-center justify-between rounded-xl border px-4 py-3"
+                  style={{
+                    backgroundColor: colors.surface,
+                    borderColor: colors.borderUi,
+                    opacity: vehicleClassStatus === 'finding' ? 0.75 : 1,
+                  }}
+                >
+                  <AppText className={`text-base ${vehicleClass ? INK : MUTED}`}>
+                    {vehicleClassStatus === 'finding'
+                      ? `${dc("Classifing vehicle type")}${'.'.repeat(classificationDotCount)}`
+                      : vehicleClass
+                        ? vehicleClassLabel(vehicleClass)
+                        : dc("Choose car type")}
+                  </AppText>
+                  <CaretDownIcon size={18} weight="bold" color={colors.inkMuted} />
+                </Pressable>
+
+                {vehicleClassStatus === 'found' ? (
+                  <AppText className={`text-xs ${MUTED}`}>{dc("Suggested from model · Tap to change")}</AppText>
+                ) : vehicleClassStatus === 'error' ? (
+                  <AppText className={`text-xs ${MUTED}`}>{dc("Couldn't identify it · Choose the car type")}</AppText>
+                ) : null}
+
+                {classPickerOpen ? (
+                  <View className="flex-row flex-wrap gap-2">
+                    {CLASSES.map((option) => {
+                      const selected = vehicleClass === option;
+                      return (
+                        <Pressable
+                          key={option}
+                          role="radio"
+                          aria-checked={selected}
+                          onPress={() => {
+                            setVehicleClass(option);
+                            setVehicleClassStatus('manual');
+                            setClassPickerOpen(false);
+                            setFormError(null);
+                          }}
+                          className="min-h-11 justify-center rounded-xl px-3 py-2"
+                          style={{
+                            backgroundColor: selected ? colors.strong : colors.surface,
+                            borderWidth: 1,
+                            borderColor: selected ? colors.strong : colors.borderUi,
+                          }}
+                        >
+                          <AppText className={`text-sm font-semibold ${selected ? 'text-white' : INK}`}>
+                            {vehicleClassLabel(option)}
+                          </AppText>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                ) : null}
               </View>
 
               <View className="gap-1">
@@ -471,28 +789,24 @@ const Vehicles = () => {
                     type: 'text',
                     get "placeholder"() { return dc("Number plate"); },
                     value: vehicleNumber,
+                    error: Boolean(vehicleNumberError),
+                    maxLength: VEHICLE_NUMBER_INPUT_MAX_LENGTH,
                     onChangeFn: (value: string) => {
                       setVehicleNumber(value.toUpperCase());
+                      setVehicleNumberError(null);
                       setFormError(null);
                     },
                   }}
                 />
-              </View>
-
-              <View className="gap-1">
-                <AppText className={`text-sm font-semibold ${INK}`}>{dc("Model")}</AppText>
-                <Input
-                  prop={{
-                    variant: 'light',
-                    type: 'text',
-                    get "placeholder"() { return dc("Model"); },
-                    value: vehicleModel,
-                    onChangeFn: (value: string) => {
-                      setVehicleModel(value);
-                      setFormError(null);
-                    },
-                  }}
-                />
+                {vehicleNumberError ? (
+                  <AppText className="text-xs" style={{ color: ERROR_TEXT }}>
+                    {vehicleNumberError}
+                  </AppText>
+                ) : (
+                  <AppText className={`text-xs ${MUTED}`}>
+                    {dc("Spaces and hyphens are okay. We'll verify the number from your RC.")}
+                  </AppText>
+                )}
               </View>
 
               <View className="pt-1">
@@ -502,8 +816,12 @@ const Vehicles = () => {
                   </AppText>
                 ) : null}
 
-                <Button prop={{ disabled: busy }} onPress={submitNew}>
-                  {busy ? dc("Adding...") : dc("Add car")}
+                <Button prop={{ disabled: busy || vehicleClassStatus === 'finding' }} onPress={submitNew}>
+                  {busy
+                    ? dc("Adding...")
+                    : isRegistrationFlow
+                      ? dc("Add Car Documents")
+                      : dc("Add car")}
                 </Button>
               </View>
             </ScrollView>

@@ -4,7 +4,9 @@
   "type": "module",
   "scripts": {
     "predev": "node scripts/free-port.js",
-    "dev": "tsx watch index.js",
+    "dev": "node ../tools/dev/run.mjs backend",
+    "predev:server": "node scripts/free-port.js",
+    "dev:server": "tsx watch index.js",
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test \"tests/*.test.js\"",
     "prestart": "node scripts/free-port.js",

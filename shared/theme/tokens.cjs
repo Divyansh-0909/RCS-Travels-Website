@@ -48,6 +48,9 @@ const surfaces = {
   'background-panel': '#272634',
   'background-primary': '#121220',
   background: '#0B0B14',
+  'input-background': '#1d1d27',
+  'input-border': 'rgba(255,255,255,0.3)',
+  'input-placeholder': 'rgba(255,255,255,0.42)',
   foreground: '#ffffff',
   'foreground-muted': '#f3f3f3',
 

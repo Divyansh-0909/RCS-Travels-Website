@@ -27,6 +27,8 @@ cannot identify a dedicated development database and Clerk test application.
    DEVELOPMENT_CLERK_PUBLISHABLE_KEY=pk_test_...
    # Optional. Omit to intentionally reuse GOOGLE_MAPS_API_KEY from production.
    DEVELOPMENT_GOOGLE_MAPS_API_KEY=...
+   # Optional. Enables driver-document storage only for this explicit development bucket.
+   DEVELOPMENT_GCS_BUCKET=rcs-travels-driver-documents-dev
 
    # Optional: only needed to exercise payments/AI locally.
    DEVELOPMENT_RAZORPAY_KEY_ID=rzp_test_...
@@ -70,9 +72,24 @@ cannot identify a dedicated development database and Clerk test application.
    development override is provided.
    The runner also blocks ordinary WhatsApp, Firebase, Razorpay, OpenAI, GCS,
    Cloud Tasks, and unrelated production credentials from entering the local
-   backend. Google Maps is deliberately carried across as described above.
+   backend. `DEVELOPMENT_GCS_BUCKET` is the sole GCS exception: it maps to the
+   backend's `GCS_BUCKET`; the ordinary `GCS_BUCKET` is never inherited. Leave
+   it empty to keep document storage disabled locally. Google Maps is deliberately
+   carried across as described above.
    Push notifications use the existing deterministic development stub. Add only
    the explicit development payment/AI values above when those paths need testing.
+
+   GCS uses Application Default Credentials (ADC); do not set
+   `GOOGLE_APPLICATION_CREDENTIALS`. For an account that may impersonate the
+   development storage service account, use:
+
+   ```powershell
+   gcloud auth application-default login --impersonate-service-account=SERVICE_ACCOUNT_EMAIL
+   ```
+
+   The launcher blocks inherited `GOOGLE_APPLICATION_CREDENTIALS`. Restart the
+   launcher after editing any `.env` value so it rebuilds the guarded child
+   environment.
 
    Clerk test secret keys do not encode a public instance identifier, so the
    checker cannot prove that the secret and publishable key came from the same
@@ -95,12 +112,16 @@ cannot identify a dedicated development database and Clerk test application.
 
    ```powershell
    npm run dev
+   npm run dev:backend
    npm run dev:driver:web
    npm run dev:driver
    npm run dev:all
    ```
 
-   `dev` starts the rider website and backend. `dev:driver:web` starts the
+   `dev` starts the rider website and backend. `dev:backend` starts only the
+   backend with the same isolated development database and test Clerk keys; from
+   `backend/`, `npm run dev` uses that same guarded backend-only launcher.
+   `dev:driver:web` starts the
    captain web build and backend. `dev:driver` starts the native Expo development
    client in LAN mode and backend. `dev:all` starts the rider website, native
    captain app, and backend together. The rider website is

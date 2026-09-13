@@ -67,7 +67,7 @@ const AccountLayout = ({ items, selected, onSelect, title, children, startOnCont
                     <ul className="flex w-full flex-col items-start gap-2">
                         {items.map((item, i) => (
                             <li key={i} onClick={() => { onSelect(i); setMenuOpen(false); }} className={`flex w-fit max-w-full cursor-pointer select-none items-center justify-start rounded-full px-4 py-2 transition-opacity duration-200 hover:opacity-80 focus-within:opacity-80 ${selected === i ? "bg-strong text-on-strong" : "bg-surface-muted text-ink"}`}>
-                                <h4 className="break-words text-2xl font-semibold leading-snug sm:text-lg">{item}</h4>
+                                <h4 className="break-words text-xl font-semibold leading-snug sm:text-lg">{item}</h4>
                             </li>
                         ))}
                     </ul>

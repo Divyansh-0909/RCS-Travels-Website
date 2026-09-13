@@ -78,7 +78,7 @@
 
 :root[data-theme="dark"] {
     color-scheme: dark;
-    --canvas: #1D1D27;
+    --canvas: #121220;
     --immersive: #121220;
     --surface: #272634;
     --surface-muted: #262636;
@@ -228,15 +228,9 @@ html[lang="hi"] body {
 
 @layer base {
     .animate-otp-box-in {
-        /* 2.5 = centre index of 6 boxes; step = box width + gap (42+8 mobile, 55+10 at sm) */
-        transform: translateX(calc((2.5 - var(--i)) * 50px));
+        /* 2.5 = centre index of 6 boxes; step = current box width + gap (46 + 8). */
+        transform: translateX(calc((2.5 - var(--i)) * 54px));
         z-index: calc(10 - var(--i));
-    }
-
-    @media (min-width: 640px) {
-        .animate-otp-box-in {
-            transform: translateX(calc((2.5 - var(--i)) * 65px));
-        }
     }
 
     @keyframes otp-badge-in {
@@ -396,10 +390,10 @@ html[lang="hi"] body {
         will-change: transform;
     }
 
-    /* Mobile nav drawer — slides in from the right edge */
+    /* Mobile nav drawer — drops in from the top edge */
     @keyframes sheet-in {
-        from { transform: translateX(100%); }
-        to   { transform: translateX(0); }
+        from { transform: translateY(-100%); }
+        to   { transform: translateY(0); }
     }
 
     .animate-sheet {
@@ -408,8 +402,8 @@ html[lang="hi"] body {
     }
 
     @keyframes sheet-out {
-        from { transform: translateX(0); }
-        to   { transform: translateX(100%); }
+        from { transform: translateY(0); }
+        to   { transform: translateY(-100%); }
     }
 
     .animate-sheet-out {

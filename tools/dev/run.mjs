@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { spawn } from 'node:child_process'
+import { pathToFileURL } from 'node:url'
+import { spawn, spawnSync } from 'node:child_process'
 import process from 'node:process'
 
 const root = resolve(import.meta.dirname, '../..')
@@ -86,10 +87,16 @@ const isolatedKeys = [
   'WHATSAPP_TEMPLATE_SCHEDULED_PAYMENT_CONFIRMED',
 ]
 
-function developmentEnvironment() {
-  const backendFile = readEnv(backendEnvPath)
-  const frontendFile = readEnv(frontendEnvPath)
-  const driverFile = { ...readEnv(driverEnvPath), ...readOptionalEnv(driverLocalEnvPath) }
+export function developmentEnvironment({ projectRoot = root, inheritedEnvironment = process.env } = {}) {
+  const scopedBackendDir = resolve(projectRoot, 'backend')
+  const scopedFrontendDir = resolve(projectRoot, 'frontend')
+  const scopedDriverDir = resolve(projectRoot, 'driver-app')
+  const backendFile = readEnv(resolve(scopedBackendDir, '.env'))
+  const frontendFile = readEnv(resolve(scopedFrontendDir, '.env'))
+  const driverFile = {
+    ...readEnv(resolve(scopedDriverDir, '.env')),
+    ...readOptionalEnv(resolve(scopedDriverDir, '.env.local')),
+  }
   const databaseUrl = requireValue(backendFile, 'DEVELOPMENT_DATABASE_URL', 'backend/.env')
   const directUrl = backendFile.DEVELOPMENT_DIRECT_URL || databaseUrl
   assertDifferentDatabase(databaseUrl, [backendFile.DATABASE_URL, backendFile.DIRECT_URL])
@@ -132,9 +139,10 @@ function developmentEnvironment() {
   }
 
   // Do not let dotenv/config reload backend/.env inside the child: that file may
-  // also carry production integrations. Only explicit DEVELOPMENT_* mappings
-  // below cross into the local backend.
-  const backendEnv = { ...process.env }
+  // also carry production integrations. Only explicit mappings below cross into
+  // the local backend. OpenAI intentionally uses the ordinary production key so
+  // development exercises the same API account as production.
+  const backendEnv = { ...inheritedEnvironment }
   for (const key of [...Object.keys(backendFile), ...isolatedKeys]) delete backendEnv[key]
   Object.assign(backendEnv, {
     DOTENV_CONFIG_PATH: emptyEnvPath,
@@ -154,22 +162,23 @@ function developmentEnvironment() {
     GOOGLE_MAPS_API_KEY: mapsKey,
     FCM_ALWAYS_ACCEPT: '1',
     JOBS_MODE: 'interval',
-    OPENAI_API_KEY: backendFile.DEVELOPMENT_OPENAI_API_KEY || 'development-disabled',
+    OPENAI_API_KEY: requireValue(backendFile, 'OPENAI_API_KEY', 'backend/.env'),
     RAZORPAY_KEY_ID: razorpayKeyId,
     RAZORPAY_KEY_SECRET: backendFile.DEVELOPMENT_RAZORPAY_KEY_SECRET || '',
     RAZORPAY_WEBHOOK_SECRET: backendFile.DEVELOPMENT_RAZORPAY_WEBHOOK_SECRET || '',
   })
+  if (backendFile.DEVELOPMENT_GCS_BUCKET) backendEnv.GCS_BUCKET = backendFile.DEVELOPMENT_GCS_BUCKET
 
   return {
     backendEnv,
     frontendEnv: {
-      ...process.env,
+      ...inheritedEnvironment,
       VITE_API_BASE_URL: 'http://localhost:5000',
       VITE_CLERK_PUBLISHABLE_KEY: frontendPublishableKey,
       VITE_GOOGLE_MAPS_API_KEY: frontendMapsKey,
     },
     driverEnv: {
-      ...process.env,
+      ...inheritedEnvironment,
       NODE_ENV: 'development',
       BABEL_ENV: 'development',
       EXPO_NO_DOTENV: '1',
@@ -217,6 +226,60 @@ function stopTree(child, signal) {
   } else child.kill(signal)
 }
 
+function stopExistingDriverExpo() {
+  if (isWindows) {
+    const script = `
+$driverDir = [IO.Path]::GetFullPath($env:RCS_DRIVER_DIR)
+$expoProcesses = @(Get-CimInstance Win32_Process | Where-Object {
+  $_.ProcessId -ne $PID -and
+  $_.CommandLine -and
+  $_.CommandLine.IndexOf($driverDir, [StringComparison]::OrdinalIgnoreCase) -ge 0 -and
+  ($_.CommandLine -match 'expo[\\\\/]bin[\\\\/]cli' -or $_.CommandLine -match 'expo-cli')
+})
+foreach ($process in $expoProcesses) {
+  & taskkill /pid $process.ProcessId /t /f *> $null
+}
+if ($expoProcesses.Count -gt 0) { Write-Output $expoProcesses.Count }
+`.trim()
+
+    const result = spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script], {
+      encoding: 'utf8',
+      windowsHide: true,
+      env: { ...process.env, RCS_DRIVER_DIR: driverDir },
+    })
+    if (result.status !== 0) {
+      throw new Error(`Could not stop the existing driver Expo process: ${result.stderr?.trim() || 'unknown error'}`)
+    }
+    const stopped = Number.parseInt(result.stdout.trim(), 10) || 0
+    if (stopped > 0) console.log(`Stopped ${stopped} existing driver Expo process${stopped === 1 ? '' : 'es'}.`)
+    return
+  }
+
+  const listing = spawnSync('ps', ['-eo', 'pid=,args='], { encoding: 'utf8' })
+  if (listing.status !== 0) {
+    throw new Error(`Could not inspect existing Expo processes: ${listing.stderr?.trim() || 'unknown error'}`)
+  }
+
+  const normalizedDriverDir = driverDir.replaceAll('\\', '/')
+  const pids = listing.stdout
+    .split(/\r?\n/)
+    .map(line => line.trim().match(/^(\d+)\s+(.+)$/))
+    .filter(Boolean)
+    .filter(([, pid, command]) =>
+      Number(pid) !== process.pid &&
+      command.replaceAll('\\', '/').includes(normalizedDriverDir) &&
+      /expo(?:-cli|\/bin\/cli)/.test(command.replaceAll('\\', '/')),
+    )
+    .map(([, pid]) => Number(pid))
+
+  for (const pid of pids) {
+    try { process.kill(pid, 'SIGTERM') } catch (error) {
+      if (error.code !== 'ESRCH') throw error
+    }
+  }
+  if (pids.length > 0) console.log(`Stopped ${pids.length} existing driver Expo process${pids.length === 1 ? '' : 'es'}.`)
+}
+
 function fail(message) {
   console.error(`\nDevelopment environment check failed: ${message}`)
   process.exitCode = 1
@@ -246,48 +309,61 @@ function startServers(specs) {
   }
 }
 
-const action = process.argv[2] ?? 'start'
-let environments
-try {
-  environments = developmentEnvironment()
-  console.log('Development configuration is structurally valid (isolated database and test-mode keys).')
-} catch (error) {
-  fail(error.message)
-  process.exit()
-}
+const isEntrypoint = process.argv[1] !== undefined &&
+  pathToFileURL(resolve(process.argv[1])).href === import.meta.url
 
-if (action === 'check') {
-  // Validation above is the check; no service is started.
-} else if (action === 'db:deploy') {
-  runOne(environments.backendEnv, 'db:deploy')
-} else if (action === 'db:seed') {
+if (isEntrypoint) {
+  const action = process.argv[2] ?? 'start'
+  let environments
   try {
-    await runAndWait(environments.backendEnv, 'db:seed')
-    await runAndWait(environments.backendEnv, 'db:seed:captain')
+    environments = developmentEnvironment()
+    console.log('Development configuration is structurally valid (isolated database and test-mode keys).')
+    console.log(environments.backendEnv.GCS_BUCKET
+      ? `Development document storage is configured for bucket "${environments.backendEnv.GCS_BUCKET}".`
+      : 'Development document storage is disabled (DEVELOPMENT_GCS_BUCKET is unset).')
   } catch (error) {
-    fail(`Could not seed development fixtures: ${error.message}`)
+    fail(error.message)
+    process.exit()
   }
-} else if (action === 'db:seed:captain') {
-  runOne(environments.backendEnv, 'db:seed:captain')
-} else if (action === 'start') {
-  startServers([
-    { args: ['run', 'dev'], cwd: backendDir, env: environments.backendEnv },
-    { args: ['run', 'dev'], cwd: frontendDir, env: environments.frontendEnv },
-  ])
-} else if (action === 'driver' || action === 'driver:web' || action === 'all') {
-  if (action !== 'driver:web' && !environments.driverEnv.GOOGLE_MAPS_ANDROID_API_KEY) {
-    console.warn('Note: no local Android Maps key is configured. An installed development APK must already have the production Maps key baked in through its EAS development environment; see DEVELOPMENT.md.')
+
+  if (action === 'check') {
+    // Validation above is the check; no service is started.
+  } else if (action === 'db:deploy') {
+    runOne(environments.backendEnv, 'db:deploy')
+  } else if (action === 'db:seed') {
+    try {
+      await runAndWait(environments.backendEnv, 'db:seed')
+      await runAndWait(environments.backendEnv, 'db:seed:captain')
+    } catch (error) {
+      fail(`Could not seed development fixtures: ${error.message}`)
+    }
+  } else if (action === 'db:seed:captain') {
+    runOne(environments.backendEnv, 'db:seed:captain')
+  } else if (action === 'backend') {
+    startServers([
+      { args: ['run', 'dev:server'], cwd: backendDir, env: environments.backendEnv },
+    ])
+  } else if (action === 'start') {
+    startServers([
+      { args: ['run', 'dev:server'], cwd: backendDir, env: environments.backendEnv },
+      { args: ['run', 'dev'], cwd: frontendDir, env: environments.frontendEnv },
+    ])
+  } else if (action === 'driver' || action === 'driver:web' || action === 'all') {
+    stopExistingDriverExpo()
+    if (action !== 'driver:web' && !environments.driverEnv.GOOGLE_MAPS_ANDROID_API_KEY) {
+      console.warn('Note: no local Android Maps key is configured. An installed development APK must already have the production Maps key baked in through its EAS development environment; see DEVELOPMENT.md.')
+    }
+    const specs = [{ args: ['run', 'dev:server'], cwd: backendDir, env: environments.backendEnv }]
+    if (action === 'all') {
+      specs.push({ args: ['run', 'dev'], cwd: frontendDir, env: environments.frontendEnv })
+    }
+    specs.push({
+      args: ['run', action === 'driver:web' ? 'web' : 'start', '--', '--port', '8082', ...(action === 'driver:web' ? [] : ['--lan'])],
+      cwd: driverDir,
+      env: environments.driverEnv,
+    })
+    startServers(specs)
+  } else {
+    fail(`Unknown command "${action}".`)
   }
-  const specs = [{ args: ['run', 'dev'], cwd: backendDir, env: environments.backendEnv }]
-  if (action === 'all') {
-    specs.push({ args: ['run', 'dev'], cwd: frontendDir, env: environments.frontendEnv })
-  }
-  specs.push({
-    args: ['run', action === 'driver:web' ? 'web' : 'start', '--', '--port', '8082', ...(action === 'driver:web' ? [] : ['--lan'])],
-    cwd: driverDir,
-    env: environments.driverEnv,
-  })
-  startServers(specs)
-} else {
-  fail(`Unknown command "${action}".`)
 }

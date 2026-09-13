@@ -4,15 +4,17 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { ActivityIndicator, Alert, Pressable, ScrollView, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { CarIcon, CaretDownIcon } from 'phosphor-react-native';
-import { useNavigate, useSearchParams } from 'react-router-native';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-native';
 import AppText from '../components/AppText';
 import BackButton from '../components/ui/BackButton';
+import Button from '../components/ui/Button';
 import DocumentRow, { type DocumentRowState } from '../components/ui/DocumentRow';
 import DocumentDetailsSheet from '../components/ui/DocumentDetailsSheet';
 import DocumentSourceSheet, { type DocumentSource } from '../components/ui/DocumentSourceSheet';
 import AccountDetailScreen from '../components/ui/AccountDetailScreen';
 import { DetailSectionsSkeleton } from '../components/ui/LoadingSkeletons';
 import { useApi } from '../hooks/useApi';
+import { useDriver } from '../hooks/useDriver';
 import {
   captureDocumentPhoto,
   isFailure,
@@ -169,13 +171,45 @@ const Documents = () => {
     useCopyLanguage();
   const { colors } = useTheme();
   const api = useApi();
+  const { profile, loading: driverLoading, refresh: refreshProfile } = useDriver();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const isRegistrationFlow = pathname === '/document';
   // Which car the caller pointed at. It no longer decides which checklist is on
   // screen — every car is now — it decides which panel starts open. The vehicle
   // list passes an id so a captain who tapped "Documents" against the car parked
   // at home lands with that one already unfolded.
   const [params] = useSearchParams();
   const vehicleId = params.get('vehicleId');
+
+  // Keep the registration route honest even when it is opened from browser/app
+  // history or a stale deep link. The server is the source of truth for which
+  // step has actually been completed, so registration cannot skip ahead just by
+  // navigating directly to a later URL.
+  useEffect(() => {
+    if (!isRegistrationFlow || driverLoading || !profile) return;
+
+    const { stage } = profile.onboarding;
+
+    if (stage === 'personalDocuments') {
+      if (vehicleId) navigate('/document', { replace: true });
+      return;
+    }
+
+    if (stage === 'vehicle') {
+      navigate('/document/vehicle', { replace: true });
+      return;
+    }
+
+    if (stage === 'vehicleDocuments') {
+      if (profile.activeVehicleId && vehicleId !== profile.activeVehicleId) {
+        navigate(`/document?vehicleId=${profile.activeVehicleId}`, { replace: true });
+      }
+      return;
+    }
+
+    navigate('/', { replace: true });
+  }, [driverLoading, isRegistrationFlow, navigate, profile, vehicleId]);
 
   // His cars, and their papers keyed by car.
   //
@@ -404,6 +438,32 @@ const Documents = () => {
   );
 
   if (loading) {
+    if (isRegistrationFlow) {
+      return (
+        <View className="flex-1 w-full py-12">
+          <View className="absolute left-2 right-2 top-10 z-10 h-12 items-center justify-center">
+            <AppText className="text-xl font-normal text-[var(--text)]">
+              <AppText className="font-semibold">RCS</AppText> captains
+            </AppText>
+            <BackButton
+              onPress={() => navigate('/')}
+              className="absolute left-0 rounded-full bg-[var(--input-background)]"
+              iconClassName="text-[var(--text)]"
+              iconSize={24}
+              weight="regular"
+            />
+          </View>
+          <ScrollView
+            className="flex-1 w-full"
+            contentContainerStyle={{ paddingBottom: TAIL_PADDING, paddingTop: 80 }}
+            showsVerticalScrollIndicator={false}
+          >
+            <DetailSectionsSkeleton cards={4} />
+          </ScrollView>
+        </View>
+      );
+    }
+
     return (
       <AccountDetailScreen title={dc("Documents")}>
         <DetailSectionsSkeleton cards={4} />
@@ -421,6 +481,8 @@ const Documents = () => {
   const personalTypes = types.filter((t) => t.owner === 'driver');
   const carTypes = types.filter((t) => t.owner === 'vehicle');
   const carTypeSet = new Set(carTypes.map((t) => t.type));
+  const registrationCarTypes = carTypes.filter((t) => t.required);
+  const registrationCarTypeSet = new Set(registrationCarTypes.map((t) => t.type));
 
   // What one car still owes, counted off the server's own `missing` list rather
   // than off the rows — a closed panel is hiding the rows, so counting them there
@@ -440,6 +502,8 @@ const Documents = () => {
     .filter((t) => !carTypeSet.has(t)).length;
   const totalMissing = personalMissing
     + vehicles.reduce((total, vehicle) => total + missingFor(vehicle), 0);
+  const registrationVehicleMissing = (base?.missing ?? [])
+    .filter((t) => registrationCarTypeSet.has(t)).length;
 
   const renderRow = (
     info: DocumentTypeInfo,
@@ -447,6 +511,8 @@ const Documents = () => {
     list: DocumentTypeInfo[],
     response: DocumentsResponse | undefined,
     carId: string | null,
+    displayLabel?: string,
+    panel = false,
   ) => {
     const byType = (documents: ServerDocument[] | undefined) =>
       (documents ?? []).find((d) => d.type === info.type);
@@ -461,7 +527,7 @@ const Documents = () => {
     return (
       <DocumentRow
         key={info.type}
-        label={info.label}
+        label={displayLabel ?? info.label}
         required={info.required}
         state={state}
         reason={reasonFor(current)}
@@ -474,29 +540,122 @@ const Documents = () => {
         onRetry={inFlight ? undefined : () =>
           pick(info.type, info.label, info.needsNumber, info.expires, carId)}
         last={i === list.length - 1}
+        panel={panel}
       />
     );
   };
 
+  const registrationLabelFor = (info: DocumentTypeInfo) => {
+    if (info.type === 'profile_photo') return dc("Upload a clear photo of yourself");
+    if (info.type === 'dl') return dc("Upload driving licence");
+    if (info.type === 'rc') return dc("Upload registration certificate (RC)");
+    if (info.type === 'insurance') return dc("Upload vehicle insurance");
+    if (info.type === 'tax') return dc("Upload road tax receipt");
+    if (info.type === 'fitness') return dc("Upload fitness certificate");
+    if (info.type === 'permit_all_india') return dc("Upload All India permit");
+    if (info.type === 'permit_one_year') return dc("Upload one-year permit");
+    if (info.type === 'cng_test') return dc("Upload CNG cylinder test certificate");
+    if (info.type === 'car_photo_front') return dc("Upload a clear photo of the car from the front");
+    if (info.type === 'car_photo_back') return dc("Upload a clear photo of the car from the back");
+    return info.label;
+  };
+
   return (
-    <ScrollView
-      // Explicit, because the shell centres its Outlet with alignItems: 'center'
-      // and leaves this auto-width otherwise — which shrink-wraps every mx-4 card
-      // below to the width of its own longest line.
-      className="flex-1 w-full bg-canvas"
-      contentContainerStyle={{ paddingBottom: TAIL_PADDING, gap: 8 }}
-    >
-      <View className="flex-row items-center gap-2 px-4 pt-4" style={{ paddingBottom: HEADING_GAP }}>
-        <BackButton onPress={() => navigate(-1)} icon="caret" className="-ml-3 -mr-3" />
-        <AppText className={`text-xl font-semibold ${INK}`} style={TITLE_TRACKING}>{dc("Documents")}</AppText>
-      </View>
+    <View className={isRegistrationFlow ? "flex-1 w-full py-12" : "flex-1 w-full"}>
+      {isRegistrationFlow ? (
+        <View className="absolute left-2 right-2 top-10 z-10 h-12 items-center justify-center">
+          <AppText className="text-xl font-normal text-[var(--text)]">
+            <AppText className="font-semibold">RCS</AppText> captains
+          </AppText>
+          <BackButton
+            onPress={() => navigate('/')}
+            className="absolute left-0 rounded-full bg-[var(--input-background)]"
+            iconClassName="text-[var(--text)]"
+            iconSize={24}
+            weight="regular"
+          />
+        </View>
+      ) : null}
+
+      <ScrollView
+        // Explicit, because the shell centres its Outlet with alignItems: 'center'
+        // and leaves this auto-width otherwise — which shrink-wraps every mx-4 card
+        // below to the width of its own longest line.
+        className="flex-1 w-full bg-canvas"
+        contentContainerStyle={{
+          paddingBottom: TAIL_PADDING,
+          paddingTop: isRegistrationFlow ? 80 : 0,
+          gap: 8,
+        }}
+        showsVerticalScrollIndicator={false}
+      >
+        {isRegistrationFlow ? null : (
+          <View className="flex-row items-center gap-2 px-4 pt-4" style={{ paddingBottom: HEADING_GAP }}>
+            <BackButton onPress={() => navigate(-1)} icon="caret" className="-ml-3 -mr-3" />
+            <AppText className={`text-xl font-semibold ${INK}`} style={TITLE_TRACKING}>{dc("Documents")}</AppText>
+          </View>
+        )}
 
       {error ? (
-        <View className="mx-4 rounded-2xl p-4" style={{ backgroundColor: colors.surfaceMuted }}>
+        <View className={`${isRegistrationFlow ? 'mx-6' : 'mx-4'} rounded-2xl p-4`} style={{ backgroundColor: colors.surfaceMuted }}>
           <AppText className={`text-sm ${MUTED}`}>{error}</AppText>
         </View>
       ) : null}
 
+      {isRegistrationFlow ? (
+        <View className="w-full px-6 gap-5">
+          <View className="w-full">
+            <AppText className={`text-2xl font-semibold text-left ${INK}`}>
+              {vehicleId ? dc("Upload your car documents") : dc("Upload your personal documents")}
+            </AppText>
+            {vehicleId ? (
+              <AppText className={`text-base text-left mt-1 ${MUTED}`}>
+                {registrationVehicleMissing === 0
+                  ? dc("All required car documents are uploaded. Continue to review your details.")
+                  : dc("Upload the required documents for this car to continue.")}
+              </AppText>
+            ) : null}
+          </View>
+
+          <View className="w-full gap-3">
+            {(vehicleId ? registrationCarTypes : personalTypes).map((info, i, list) =>
+              renderRow(
+                info,
+                i,
+                list,
+                base ?? undefined,
+                vehicleId ?? null,
+                registrationLabelFor(info),
+                true,
+              ))}
+          </View>
+
+          <View className="w-full">
+            <Button
+              prop={{
+                disabled: vehicleId
+                  ? registrationVehicleMissing > 0
+                  : personalMissing > 0,
+              }}
+              onPress={async () => {
+                if (!vehicleId) {
+                  // Upload completion is derived on GET /me. Refresh that server
+                  // stage before entering the guarded vehicle route so this click
+                  // cannot race the still-cached `personalDocuments` profile.
+                  await refreshProfile();
+                  navigate('/document/vehicle');
+                  return;
+                }
+                await refreshProfile();
+                navigate('/onboarding/status', { replace: true });
+              }}
+            >
+              {vehicleId ? dc("Continue") : dc("Add your vehicle")}
+            </Button>
+          </View>
+        </View>
+      ) : (
+        <>
       {/* The one summary line, above the list rather than repeated in it. A
           captain opens this screen to find out whether he is done — and with more
           than one car, "done" means every car, so this counts across all of them
@@ -579,6 +738,8 @@ const Documents = () => {
           </Pressable>
         </View>
       )}
+        </>
+      )}
       <DocumentSourceSheet
         visible={source !== null}
         label={source?.label ?? ''}
@@ -595,7 +756,8 @@ const Documents = () => {
         onCancel={() => sheet?.settle(null)}
         onSubmit={(details) => sheet?.settle(details)}
       />
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 };
 

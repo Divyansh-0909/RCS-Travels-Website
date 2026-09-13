@@ -2,7 +2,6 @@ import { Router } from 'express'
 import { prisma } from '../db/prisma.js'
 import { clerkClient } from '@clerk/express'
 import crypto from 'crypto'
-// Unused while the send below is commented out — kept so putting it back is one edit.
 import { sendOtpWhatsApp } from '../services/notification.js'
 import { normalizedPhone, otpLimiters } from '../middleware/rateLimit.js'
 
@@ -40,8 +39,8 @@ const generateOTP = () => String(crypto.randomInt(100000, 1000000))
 // door on verificationStatus would strand them with nowhere to fix it.
 async function accountFor(phone, audience) {
   return audience === 'driver'
-    ? prisma.driver.findUnique({ where: { phone }, select: { id: true } })
-    : prisma.user.findUnique({ where: { phone }, select: { id: true } })
+    ? prisma.driver.findUnique({ where: { phone }, select: { id: true, name: true, clerkId: true } })
+    : prisma.user.findUnique({ where: { phone }, select: { id: true, name: true, clerkId: true } })
 }
 
 async function intentMismatch(phone, intent, audience) {
@@ -54,9 +53,44 @@ async function intentMismatch(phone, intent, audience) {
   const article = audience === 'driver' ? 'a' : 'an'
 
   if (intent === 'signup')
-    return account ? { status: 409, error: `This number already has ${article} ${noun}` } : null
+    return account
+      ? {
+          status: 409,
+          error: `This number already has ${article} ${noun}`,
+          code: 'ACCOUNT_EXISTS',
+        }
+      : null
   return account ? null : { status: 404, error: `No ${noun} found with this number` }
 }
+
+async function linkAccountToClerk(phone, audience, clerkId) {
+  const account = await accountFor(phone, audience)
+  if (!account || account.clerkId === clerkId) return
+
+  if (audience === 'driver') {
+    await prisma.driver.update({ where: { phone }, data: { clerkId } })
+  } else {
+    await prisma.user.update({ where: { phone }, data: { clerkId } })
+  }
+}
+
+function sendMismatch(res, mismatch) {
+  const { status, ...body } = mismatch
+  return res.status(status).json(body)
+}
+
+hybridAuthRouter.post('/check-name', async (req, res) => {
+  const name = typeof req.body.name === 'string' ? req.body.name.trim() : ''
+
+  if (name.length < 2) {
+    return res.status(400).json({ error: 'Name must be at least 2 characters' })
+  }
+
+  // Public preflight validates syntax only. Database uniqueness is checked by
+  // the authenticated create-me routes after phone verification; exposing it
+  // here lets unauthenticated callers enumerate rider and captain names.
+  return res.json({ available: true })
+})
 
 hybridAuthRouter.post('/send-otp', otpLimiters.send, async (req, res) => {
   const { intent, audience } = req.body
@@ -67,13 +101,14 @@ hybridAuthRouter.post('/send-otp', otpLimiters.send, async (req, res) => {
   }
 
   const mismatch = await intentMismatch(phone, intent, audience)
-  if (mismatch) return res.status(mismatch.status).json({ error: mismatch.error })
+  if (mismatch) return sendMismatch(res, mismatch)
 
   // Per-phone cooldown: expiresAt is always sentAt + 5min, so "sent under 45s
   // ago" reads as expiresAt more than 4m15s away — no sentAt column needed. This,
   // not the per-IP limiter, is what stops someone bombarding one victim's phone.
   const existing = await prisma.otpVerification.findUnique({ where: { phone } })
-  if (existing && !existing.used &&
+  if (process.env.NODE_ENV !== 'development' &&
+      existing && !existing.used &&
       existing.expiresAt > new Date(Date.now() + (5 * 60 - 45) * 1000)) {
     return res.status(429).json({ error: 'Please wait before requesting another OTP' })
   }
@@ -108,11 +143,11 @@ hybridAuthRouter.post('/send-otp', otpLimiters.send, async (req, res) => {
   // Fails loudly. A delivery failure must not answer ok — that is precisely the
   // silence this block replaces, so a 502 sends the user back to a retry button
   // instead of a screen that will never fill in.
-  if (process.env.NODE_ENV === 'production') {
+  if (process.env.NODE_ENV !== 'development') {
     try {
       await sendOtpWhatsApp(phone, otp)
     } catch (err) {
-      console.error(`send-otp: WhatsApp delivery failed for ${phone}:`, err)
+      console.error('send-otp: WhatsApp delivery failed')
       return res.status(502).json({ error: 'Could not send OTP, please retry' })
     }
   } else {
@@ -146,10 +181,18 @@ hybridAuthRouter.post('/verify-otp', otpLimiters.verify, async (req, res) => {
   // it — its send-otp will 429 on the cooldown, which the frontend already
   // reads as "previous code still good, go to the OTP step".
   const mismatch = await intentMismatch(phone, intent, audience)
-  if (mismatch) return res.status(mismatch.status).json({ error: mismatch.error })
+  if (mismatch) return sendMismatch(res, mismatch)
 
-  // Burn it before minting the ticket, so a replayed request can't get a second one.
-  await prisma.otpVerification.update({ where: { phone }, data: { used: true } })
+  // Claim this exact, still-valid code atomically. Parallel requests can both
+  // pass the read above, and a resend can replace the code while we check intent.
+  // Only the request that changes an unused matching row may mint a ticket.
+  const consumed = await prisma.otpVerification.updateMany({
+    where: { phone, otpHash: record.otpHash, used: false, expiresAt: { gt: new Date() } },
+    data: { used: true },
+  })
+  if (consumed.count !== 1) {
+    return res.status(400).json({ error: 'OTP already used or expired' })
+  }
 
   const userEmail = `91${phone}@rcs-travels.com`
 
@@ -170,6 +213,16 @@ hybridAuthRouter.post('/verify-otp', otpLimiters.verify, async (req, res) => {
         emailAddress: [userEmail],
         skipPasswordChecks: true,
       })
+
+  // A local/dev Clerk instance can legitimately change while the database row
+  // survives. The OTP proves ownership of the phone, so repair the account link
+  // before minting the session ticket. Without this, verification succeeds but
+  // /api/users/me and /api/driver/me immediately 404 because they resolve by
+  // clerkId. Signup has no row yet; its authenticated create-me step writes the
+  // freshly minted Clerk id.
+  if (intent !== 'signup') {
+    await linkAccountToClerk(phone, audience, clerkUser.id)
+  }
 
   // 60s is deliberate — the frontend redeems this immediately on the same screen.
   const tokenResource = await clerkClient.signInTokens.createSignInToken({

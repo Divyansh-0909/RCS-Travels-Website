@@ -6,6 +6,7 @@ import {
   ArrowClockwiseIcon,
   CheckCircleIcon,
   ClockIcon,
+  PlusIcon,
   PlusCircleIcon,
   ShieldCheckIcon,
   WarningCircleIcon,
@@ -57,6 +58,7 @@ type Props = {
   onPress?: () => void;
   onRetry?: () => void;
   last?: boolean;
+  panel?: boolean;
 };
 
 const presentationFor = (colors: ThemeColors): Record<DocumentRowState, { Icon: typeof ClockIcon; color: string; word: string }> => ({
@@ -87,20 +89,22 @@ const DocumentRow = ({
   onPress,
   onRetry,
   last,
+  panel,
 }: Props) => {
     useCopyLanguage();
   const { colors } = useTheme();
   const { Icon, color, word } = presentationFor(colors)[state];
+  const RowIcon = panel && state === 'missing' ? PlusIcon : Icon;
   const showProgress = state === 'uploading' && typeof progress === 'number';
   const showRetry = (state === 'rejected' || state === 'unverified') && onRetry != null;
 
   const body = (
     <View className="w-full flex-row items-center gap-3 py-3.5">
       <View
-        className="w-9 h-9 rounded-xl items-center justify-center"
-        style={{ backgroundColor: WELL }}
+        className={`${panel ? 'w-12 h-12 rounded-full' : 'w-9 h-9 rounded-xl'} items-center justify-center`}
+        style={{ backgroundColor: panel ? colors.surfaceRaised : WELL }}
       >
-        <Icon size={18} weight="regular" color={color} />
+        <RowIcon size={panel ? 22 : 18} weight="regular" color={color} />
       </View>
 
       <View className="flex-1 gap-0.5">
@@ -171,7 +175,11 @@ const DocumentRow = ({
   return (
     <View
       className="w-full"
-      style={last ? undefined : { borderBottomWidth: 1, borderBottomColor: HAIRLINE }}
+      style={panel
+        ? { backgroundColor: colors.surfaceMuted, borderRadius: 16, paddingHorizontal: 16 }
+        : last
+          ? undefined
+          : { borderBottomWidth: 1, borderBottomColor: HAIRLINE }}
     >
       {onPress ? (
         <Pressable

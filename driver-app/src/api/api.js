@@ -108,7 +108,7 @@ async function request(path, { method = "GET", body, getToken } = {}) {
     }
 
     if (!res.ok) {
-        return { error: data?.error || `Server error (${res.status})`, status: res.status, code: data?.code, details: data?.details };
+        return { ...data, error: data?.error || `Server error (${res.status})`, status: res.status, code: data?.code, details: data?.details };
     }
 
     return data;
@@ -116,6 +116,7 @@ async function request(path, { method = "GET", body, getToken } = {}) {
 
 export const sendOtp           = (phone, intent)         => request("/api/auth/send-otp", { method: "POST", body: { phone, intent, audience: "driver" } });
 export const verifyOtp         = (phone, otp, intent)    => request("/api/auth/verify-otp", { method: "POST", body: { phone, otp, intent, audience: "driver" } });
+export const checkName         = (name)                  => request("/api/auth/check-name", { method: "POST", body: { name, audience: "driver" } });
 
 export const getMe             = (getToken)              => request("/api/driver/me", { getToken });
 export const getFeedback       = (getToken)              => request("/api/driver/me/feedback", { getToken });
@@ -152,6 +153,7 @@ export const getMyDocuments        = (vehicleId, getToken)  => request(`/api/dri
 // hatchback and an Innova switch between them here, and each car carries its own
 // paperwork and its own verdict.
 export const getVehicles       = (getToken)              => request("/api/driver/me/vehicles", { getToken });
+export const classifyVehicleModel = (vehicleModel, getToken) => request("/api/driver/me/vehicles/classify", { method: "POST", body: { vehicleModel }, getToken });
 export const addVehicle        = (vehicle, getToken)     => request("/api/driver/me/vehicles", { method: "POST", body: vehicle, getToken });
 export const removeVehicle     = (id, getToken)          => request(`/api/driver/me/vehicles/${encodeURIComponent(id)}`, { method: "DELETE", getToken });
 // Changes which car he is driving, and with it his dispatch class, his seat

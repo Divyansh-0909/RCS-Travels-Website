@@ -8,6 +8,8 @@ export function useApi() {
   return {
     getMe:            ()              => api.getMe(getToken),
     createMe:         (name)          => api.createMe(name, getToken),
+    getPreferences:   ()              => api.getPreferences(getToken),
+    updatePreferences:(body)          => api.updatePreferences(body, getToken),
     estimateFare:     (pickupAddress, dropAddress, vehicleClass, pickupCoords, dropCoords, preferSafeRoute, needsCarrier) => api.estimateFare(pickupAddress, dropAddress, vehicleClass, pickupCoords, dropCoords, preferSafeRoute, needsCarrier, getToken),
     createBooking:    (data)          => api.createBooking(data, getToken),
     getNearbyDrivers: (pickupCoords, vehicleClass) => api.getNearbyDrivers(pickupCoords, vehicleClass, getToken),
@@ -22,6 +24,7 @@ export function useApi() {
     getMyBookings:    (filters)       => api.getMyBookings(filters, getToken),
     sendOtp:          (phone, intent)      => api.sendOtp(phone, intent),
     verifyOtp:        (phone, otp, intent) => api.verifyOtp(phone, otp, intent),
+    checkName:        (name)               => api.checkName(name),
     logout:           ()              => signOut(),
     updateGender:     (gender)        => api.updateGender(gender, getToken),
     updateEmergencyContact: (contact) => api.updateEmergencyContact(contact, getToken),

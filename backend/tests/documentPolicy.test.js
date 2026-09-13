@@ -633,6 +633,59 @@ describe('request validation', () => {
     assert.equal(parsed.success, true)
   })
 
+  test('normalizes the app null vehicleId for personal upload signing and confirmation', () => {
+    const signing = UploadUrlRequest.safeParse({
+      vehicleId: null,
+      documents: [
+        { type: 'profile_photo', contentType: 'image/jpeg' },
+        { type: 'dl', contentType: 'image/jpeg' },
+      ],
+    })
+    assert.equal(signing.success, true)
+    assert.equal(signing.data.vehicleId, undefined)
+
+    const confirmation = ConfirmDocumentsRequest.safeParse({
+      vehicleId: null,
+      documents: [
+        { type: 'profile_photo', path: 'x/profile_photo/photo.jpg' },
+        { type: 'dl', path: 'x/dl/licence.jpg' },
+      ],
+    })
+    assert.equal(confirmation.success, true)
+    assert.equal(confirmation.data.vehicleId, undefined)
+  })
+
+  test('accepts omitted vehicleId and preserves an explicit valid vehicleId', () => {
+    const vehicleId = '11111111-1111-4111-8111-111111111111'
+    const requests = [
+      [UploadUrlRequest, { documents: [{ type: 'dl', contentType: 'image/jpeg' }] }],
+      [ConfirmDocumentsRequest, { documents: [{ type: 'dl', path: 'x/dl/licence.jpg' }] }],
+    ]
+
+    for (const [schema, request] of requests) {
+      const omitted = schema.safeParse(request)
+      assert.equal(omitted.success, true)
+      assert.equal(omitted.data.vehicleId, undefined)
+
+      const explicit = schema.safeParse({ ...request, vehicleId })
+      assert.equal(explicit.success, true)
+      assert.equal(explicit.data.vehicleId, vehicleId)
+    }
+  })
+
+  test('rejects invalid vehicleId values for upload signing and confirmation', () => {
+    const requests = [
+      [UploadUrlRequest, { documents: [{ type: 'dl', contentType: 'image/jpeg' }] }],
+      [ConfirmDocumentsRequest, { documents: [{ type: 'dl', path: 'x/dl/licence.jpg' }] }],
+    ]
+
+    for (const vehicleId of ['', 'not-a-uuid', 42]) {
+      for (const [schema, request] of requests) {
+        assert.equal(schema.safeParse({ ...request, vehicleId }).success, false)
+      }
+    }
+  })
+
   test('the confirm payload takes a date, not a timestamp', () => {
     const ok = ConfirmDocumentsRequest.safeParse({
       documents: [{ type: 'dl', path: 'x/dl/y.jpg', number: 'DL-1', expiresAt: '2027-03-31' }],

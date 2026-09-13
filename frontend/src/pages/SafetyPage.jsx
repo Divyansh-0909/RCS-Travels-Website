@@ -29,7 +29,7 @@ const SafetyPage = () => {
     const emergencyContact = useData(state => state.emergencyContact)
     const setEmergencyContact = useData(state => state.setEmergencyContact)
     const [selected, setSelected] = useState(0)
-    const { getMe, updateEmergencyContact: updateEmergencyContactApi } = useApi()
+    const { getMe, updateEmergencyContact: updateEmergencyContactApi, getPreferences, updatePreferences } = useApi()
     const notifyRefreshFailed = useRefreshNotice(state => state.notifyRefreshFailed)
     const clearRefreshNotice = useRefreshNotice(state => state.clearRefreshNotice)
     const mountedRef = useRef(true)
@@ -84,8 +84,44 @@ const SafetyPage = () => {
         }
     }
 
-    // Live-location sharing has no backend yet — local UI state for now.
-    const [autoShare, setAutoShare] = useState(true)
+    const [autoShare, setAutoShare] = useState(false)
+    const [autoShareLoading, setAutoShareLoading] = useState(true)
+    const [autoShareSaving, setAutoShareSaving] = useState(false)
+    const [autoShareError, setAutoShareError] = useState(null)
+
+    useEffect(() => {
+        let mounted = true
+        getPreferences().then(data => {
+            if (!mounted) return
+            if (data?.error || typeof data?.autoShareLiveLocation !== 'boolean') {
+                throw new Error(data?.error || "Request failed")
+            }
+            setAutoShare(data.autoShareLiveLocation)
+            setAutoShareError(null)
+        }).catch(() => {
+            if (mounted) setAutoShareError(tr("Couldn't load your live-location preference."))
+        }).finally(() => {
+            if (mounted) setAutoShareLoading(false)
+        })
+        return () => { mounted = false }
+    }, [])
+
+    const toggleAutoShare = async () => {
+        if (autoShareLoading || autoShareSaving) return
+        const next = !autoShare
+        setAutoShare(next)
+        setAutoShareSaving(true)
+        setAutoShareError(null)
+        try {
+            const res = await updatePreferences({ autoShareLiveLocation: next })
+            if (res?.error) throw new Error(res.error)
+        } catch {
+            setAutoShare(!next)
+            setAutoShareError(tr("Couldn't save this preference. Please try again."))
+        } finally {
+            setAutoShareSaving(false)
+        }
+    }
 
     return (
         <AccountLayout items={items.map(tr)} selected={selected} onSelect={setSelected} title={tr("Safety")}>
@@ -123,10 +159,13 @@ const SafetyPage = () => {
                 )}
 
                 {selected === 1 && (
-                    <SettingRow tone={panelTones[selected]} trailing={<Toggle on={autoShare} onClick={() => setAutoShare(v => !v)} />}>
+                    <SettingRow tone={panelTones[selected]} trailing={<Toggle on={autoShare} disabled={autoShareLoading || autoShareSaving} onClick={toggleAutoShare} />}>
                         <h4 className="text-lg font-medium">{tr("Share my live location")}</h4>
                         <p className="text-base text-ink-muted">{tr("Let your emergency contact follow your ride in real time when a trip starts.")}</p>
                     </SettingRow>
+                )}
+                {selected === 1 && autoShareError && (
+                    <p className="text-sm text-negative px-2">{autoShareError}</p>
                 )}
 
                 {selected === 2 && helplines.map(([title, desc, number]) => (

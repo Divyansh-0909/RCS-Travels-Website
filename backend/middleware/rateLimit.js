@@ -89,7 +89,18 @@ export const paymentWriteLimiter = createPaymentWriteLimiter()
 
 export function createOtpLimiters({ sendLimit = 5, verifyLimit = 5 } = {}) {
   return {
-    send: createLimiter({ policy: 'otp-send', windowMs: 60 * 60 * 1000, limit: sendLimit, keyGenerator: phoneKey }),
+    // Local auth intentionally reissues a fresh OTP on every request so the
+    // current backend terminal always shows the code being verified. Keeping
+    // this limiter active in development can stop the request before the OTP
+    // route runs, leaving the driver app on the code screen with nothing logged.
+    // Production and tests keep the real per-phone abuse protection.
+    send: createLimiter({
+      policy: 'otp-send',
+      windowMs: 60 * 60 * 1000,
+      limit: sendLimit,
+      keyGenerator: phoneKey,
+      skip: () => process.env.NODE_ENV === 'development',
+    }),
     // Successful codes do not consume the failed-attempt budget; the library
     // decrements their count when the response completes.
     verify: createLimiter({ policy: 'otp-verify-failed', windowMs: 5 * 60 * 1000, limit: verifyLimit,

@@ -116,7 +116,20 @@ const HomeGate = () => {
   // driver row to have an onboarding state, so neither screen below can say
   // anything true about him.
   if (notRegistered) {
-    return <Navigate to="/signup" replace />;
+    return <Navigate to="/welcome" replace />;
+  }
+
+  // Registration is resumable from the server's upload-presence state. Keep this
+  // ahead of the normal approval/status routing so a captain who closes the app
+  // halfway through onboarding returns to the step that can actually move him on.
+  if (profile?.onboarding.stage === 'personalDocuments') {
+    return <Navigate to="/document" replace />;
+  }
+  if (profile?.onboarding.stage === 'vehicle') {
+    return <Navigate to="/document/vehicle" replace />;
+  }
+  if (profile?.onboarding.stage === 'vehicleDocuments' && profile.activeVehicleId) {
+    return <Navigate to={`/document?vehicleId=${profile.activeVehicleId}`} replace />;
   }
 
   const screen = homeScreenFor(profile);

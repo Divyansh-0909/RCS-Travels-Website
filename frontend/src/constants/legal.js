@@ -1,560 +1,245 @@
-/* Every word of the four legal documents, kept out of the JSX so the copy can be
-   edited (and handed to a lawyer) without touching layout code — same reason the
-   FAQ list sits at the top of HelpPage.
+/* Operational legal drafts, not legal advice. Do not remove this banner or any
+   TO CONFIRM marker before lawyer review and product/compliance reconciliation. */
+export const DRAFT = true;
+export const LEGAL_UPDATED = "[TO CONFIRM: effective date after lawyer review]";
 
-   ── READ BEFORE PUBLISHING ────────────────────────────────────────────────────
-   This is a DRAFT written from what the code actually does, not legal advice.
-   Two things must happen before it goes live:
-
-   1. Replace every `[TO CONFIRM: …]` marker. They are deliberately loud and they
-      render on the page, so nothing ships half-filled. `grep "TO CONFIRM"` finds
-      all of them.
-   2. Have a lawyer review it, then set DRAFT = false to drop the banner.
-
-   Where a clause depends on a decision only the owner can make (are we the
-   carrier or an intermediary? what happens on a rider no-show?) the marker says
-   so instead of guessing — a wrong guess in those places is the expensive kind.
-
-   Facts below are pulled from the implementation, so if the implementation
-   changes, this file is part of the change:
-     - what a driver receives          → routes/driver.js (the accept response)
-     - what deletion erases            → routes/users.js  (DELETE /me)
-     - what we store about a rider     → prisma/schema.prisma (User, Booking)
-     - the safer-route add-on          → constants/fares.js
-     - the cancellation percentages    → HelpPage's cancellationPolicy
-   Keep those five in step with these documents. */
-
-export const DRAFT = true
-
-export const LEGAL_UPDATED = "[TO CONFIRM: effective date, the day the lawyer signs off]"
-
-/* One place for the details that repeat across all four documents. Every one of
-   these is a fact about the business that the code cannot tell us. */
 export const entity = {
-    name: "[TO CONFIRM: registered business name]",
-    type: "[TO CONFIRM: sole proprietorship / partnership / private limited company]",
-    address: "[TO CONFIRM: full registered address with PIN code]",
-    gstin: "[TO CONFIRM: GSTIN, or delete this line if not registered]",
-    jurisdiction: "[TO CONFIRM: courts of <city>, usually where the business is registered]",
-    grievanceOfficer: "[TO CONFIRM: Grievance Officer's full name]",
-    grievanceDesignation: "[TO CONFIRM: designation, e.g. Proprietor]",
-    grievanceEmail: "[TO CONFIRM: grievance email; a domain address reads better than gmail]",
-    grievancePhone: "[TO CONFIRM: grievance phone number and the hours it is answered]",
-}
+  name: "[TO CONFIRM: registered business name]",
+  type: "[TO CONFIRM: legal form]",
+  address: "[TO CONFIRM: registered address with PIN code]",
+  grievanceOfficer: "[TO CONFIRM: grievance officer name and designation]",
+  grievanceEmail: "[TO CONFIRM: grievance email]",
+  grievancePhone: "[TO CONFIRM: grievance phone and service hours]",
+};
 
-/* ── Terms of Service ──────────────────────────────────────────────────────── */
+const riderTerms = [
+  { heading: "About these terms", body: [
+    "RCS Travels is operated by " + entity.name + ", a " + entity.type + " at " + entity.address + ". These terms apply when you use our website, WhatsApp booking flow, or ride services.",
+    "[TO CONFIRM: LAUNCH BLOCKER — RCS Travels’ role, UP aggregator licence and compliance position. UP Motor Vehicle (Aggregator and Delivery Services Provider) Rules, 2026 are reported as operational from 22 May 2026 through upmyfleet.com. Do not represent any licence, training, control-room, tracking, panic-button or insurance compliance unless verified.]",
+  ] },
+  { heading: "Who may use the service", body: [
+    "You must provide accurate account and booking information, keep your phone number under your control, and protect OTPs and other verification codes. You are responsible for activity carried out through your account unless you promptly report suspected misuse.",
+    "[TO CONFIRM: minimum rider account age and any rules for minors or bookings made for another person.]",
+  ] },
+  { heading: "Bookings and fares", body: [
+    "A booking request is not a guaranteed ride. A booking is confirmed only when the service shows it as confirmed or assigned. Driver availability, traffic, road conditions, safety restrictions and events outside reasonable control may affect pickup or completion.",
+    "We show the applicable fare or fare basis before confirmation where the product supports it. Tolls, parking, waiting, cleaning, damage or other charges must not be added unless the product and applicable law allow them and they are disclosed to you. [TO CONFIRM: final waiting, toll, parking, cleaning and damage-charge rules.]",
+  ] },
+  { heading: "How payment works", body: [
+    "Ride Now rides are paid to the driver at the end of the trip, using the payment method offered for that ride. They are not prepaid through our platform.",
+    "Scheduled rides currently require a 15% advance through Razorpay. The remaining fare is payable as shown for the booking. Payment-provider terms may also apply to the payment service itself.",
+  ] },
+  { heading: "Cancellation", body: [
+    "Ride Now has no prepaid cancellation charge. For scheduled rides, the cancellation quote returned by our server is authoritative. If it changes before submission, we show the new quote and ask you to confirm it.",
+    "Current product behaviour: no scheduled-ride cancellation amount is retained when no driver is assigned, the assigned driver has no fresh platform location, the driver is farther than 500 metres from pickup, or the driver cancels. It is retained once a fresh assigned-driver location is within 500 metres of pickup, or the ride reaches the corresponding arrival status.",
+    "[TO CONFIRM: LAUNCH BLOCKER — reported final UP Rules limit passenger cancellation charges to 10% of fare capped at ₹100. The current 15% advance-retention behaviour appears capable of exceeding that limit. Reconcile the product, refund flow and legal rule before publication or launch.]",
+  ] },
+  { heading: "Safe and respectful travel", list: [
+    "Use accurate contact, pickup and destination details, and keep your verification codes private.",
+    "Follow seatbelt, vehicle-capacity and road-safety rules. Do not carry unlawful, hazardous or dangerous items.",
+    "Treat drivers, co-riders and support staff respectfully. Threats, harassment, discrimination, abuse or unsafe conduct may end a ride or restrict an account.",
+  ] },
+  { heading: "Safety and emergencies", body: [
+    "RCS Travels is not an emergency-response service. For an immediate emergency or threat to life or safety, call 112 or the appropriate public emergency service first, then report the incident to us when it is safe to do so.",
+    "Do not rely on in-app status, location or support channels as a substitute for police, ambulance, fire or other emergency services.",
+  ] },
+  { heading: "Account restrictions and termination", body: [
+    "We may restrict, suspend or close an account where reasonably necessary for safety, fraud prevention, repeated misuse, non-payment, unlawful conduct, material breach of these terms, or a legal or regulatory requirement. Where appropriate, we may ask for information before taking or reviewing action.",
+    "You may stop using the service at any time. Account closure does not remove payment, record-keeping, dispute or legal obligations that arose before closure.",
+  ] },
+  { heading: "Third-party services", body: [
+    "The service uses third-party providers for functions such as authentication, maps, payments, messaging and notifications. Their services may be governed by their own terms and privacy notices. RCS Travels remains responsible for its own obligations under applicable law.",
+  ] },
+  { heading: "Responsibility and statutory rights", body: [
+    "Nothing in these terms excludes or limits rights or remedies that cannot lawfully be excluded, including applicable consumer rights. To the extent permitted by law, each party remains responsible for loss caused by its own unlawful conduct, fraud, wilful misconduct or breach of duty.",
+    "[TO CONFIRM: final limitation-of-liability and indemnity language after counsel reviews the operating model, insurance and licence position.]",
+  ] },
+  { heading: "Changes and disputes", body: [
+    "We may update these terms when the service, law or operating model changes. Material changes should be shown with an updated effective date and, where required, a fresh notice or consent before they apply.",
+    "Raise booking or account disputes through the grievance process first so the service records can be reviewed. [TO CONFIRM: governing law, courts/jurisdiction and whether mediation or arbitration will be used.]",
+  ] },
+  { heading: "Questions and complaints", body: [
+    "Contact support promptly with the booking date, registered phone number and a description of the issue. Nothing in these terms removes rights that cannot be excluded under applicable law.",
+  ] },
+];
 
-const terms = [
-    {
-        heading: "Who we are",
-        body: [
-            `RCS Travels is a cab service run by ${entity.name}, a ${entity.type} registered at ${entity.address}. In these terms, "we", "us" and "RCS Travels" mean that business, and "you" means the person booking or taking a ride.`,
-            `We arrange rides between you and independent driver-partners who own and drive their own vehicles. We are not the transport operator: we verify our driver-partners, set the fare, and take a commission on each completed ride, but the driver, not us, carries you. [TO CONFIRM: this framing decides where liability sits and must be confirmed with the lawyer before publishing. If the business owns the vehicles or employs the drivers, this clause and "Our responsibility, and its limits" below both have to be rewritten.]`,
-            "By booking a ride, whether on this website or over WhatsApp, you agree to these terms. If you don't agree with them, please don't use the service.",
-        ],
-    },
-    {
-        heading: "Who can book",
-        body: [
-            "You need to be 18 or older to hold an account. Anyone younger is welcome to travel, but an adult has to make the booking and travel with them.",
-        ],
-        list: [
-            "Use your own phone number, and one that reaches you. Your driver calls it on the day.",
-            "One account per phone number.",
-            "Book only for yourself or for someone who knows you're booking on their behalf.",
-        ],
-    },
-    {
-        heading: "Your account",
-        body: [
-            "You sign in with your phone number and a one-time code we send you. There's no password to remember, which also means anyone holding your phone can reach your account, so treat your phone and the codes we send as yours alone.",
-            "You also get a four-digit booking code when you sign up. It stays the same and it identifies your bookings to us and to your driver. Don't share it with anyone you wouldn't hand your booking to.",
-            "Everything you tell us should be accurate. We may suspend or close an account that carries false details, that's used to book rides that never get taken, or that's used to abuse a driver-partner.",
-        ],
-    },
-    {
-        heading: "Booking a ride",
-        body: [
-            "You can book from 30 minutes and up to 7 days ahead of your pickup time, and on-spot too if there's a driver near you.",
-        ],
-        list: [
-            "A booking is a request until we confirm it. Confirmation depends on a driver being available for that time and route.",
-            "You can have one active ride at a time. Finish or cancel the ride you have before booking the next one.",
-            "Your driver's name, phone number and vehicle number appear on your ride's tracking page about an hour before pickup.",
-            "Choose a 4-seater or a 6-seater, travel alone or share the fare with co-riders on your route, and pick an outstation trip when you're leaving the city.",
-            "Pickup times are the time we aim to reach you, not a promise. Traffic, weather and the road decide the rest.",
-        ],
-    },
-    {
-        heading: "Fares",
-        body: [
-            "You see the full fare before you confirm, and that's the fare you pay. We price by destination and vehicle rather than by meter, so it doesn't move with demand and there is no surge.",
-            "Some things are added to the fare, and you'll see each of them on the fare screen before you confirm:",
-        ],
-        list: [
-            "The safer route, if you choose it: a flat ₹150.",
-            "Tolls, state permits and parking on the route.",
-            "A roof carrier, if your luggage needs one.",
-            "Round trips, priced as a single booking rather than two.",
-        ],
-        after: [
-            `The fare can change after you book only if the ride itself changes: a different drop point, an extra stop, or waiting beyond the free waiting time. [TO CONFIRM: the free waiting time in minutes, and the per-minute or per-hour charge after it. The app does not calculate this today, so whatever you decide has to be told to drivers as well as written here.]`,
-            "If a driver ever asks you for more than the fare on your tracking page, don't pay it. Call us instead.",
-        ],
-    },
-    {
-        heading: "Paying",
-        body: [
-            "You pay your driver directly at the end of the trip, in cash or by UPI. Nothing is charged up front, we never ask for card details, and we don't store any payment information at all.",
-            "The amount is exactly the fare shown when you booked, plus anything added during the ride under the section above. Ask your driver for a receipt if you need one, or download your ride history from Manage Account.",
-        ],
-    },
-    {
-        heading: "Shared rides",
-        body: [
-            "On a shared ride you travel with co-riders going the same way and each of you pays less than the solo fare. In exchange, the trip takes longer: we pick riders up in an order that suits the route, and yours may not be first.",
-            "Your co-riders are strangers to you and to us beyond their own booking. Everything under \"How we expect everyone to behave\" applies to them as much as to you. If it doesn't, tell us and we'll act on it.",
-        ],
-    },
-    {
-        heading: "The safer route",
-        body: [
-            "On some routes you can ask for a longer, lit highway route instead of the shortest one, for a flat ₹150. It exists because the quickest way to and from the university runs through stretches that riders travelling alone at night would rather avoid.",
-            "It's a route preference, not a security service. Choosing it means your driver takes the highway; it does not mean we can guarantee your safety on the road, and we don't want you relying on it as if we could. Add an emergency contact in Safety, and call us or 112 the moment something feels wrong.",
-        ],
-    },
-    {
-        heading: "Cancelling",
-        body: [
-            "Cancelling is free while your driver is more than 500 metres from pickup. Once the driver's current location is within 500 metres, a scheduled ride cancellation retains the paid 15% advance. If your driver cancels or never comes within that area, you pay nothing. The full policy is on the Refunds & Cancellation page.",
-        ],
-    },
-    {
-        heading: "How we expect everyone to behave",
-        body: [
-            "A ride is somebody's workplace and somebody else's journey. Both deserve the same courtesy.",
-        ],
-        list: [
-            "Wear a seatbelt. Ask children's adults to hold them properly.",
-            "No smoking, no alcohol, and no drugs in the vehicle.",
-            "Nothing illegal, hazardous or live in the luggage.",
-            "Don't ask a driver to break a traffic rule or carry more people than the vehicle seats.",
-            "Threatening, harassing or abusing a driver ends the ride and the account.",
-        ],
-        after: [
-            `If the vehicle is damaged or badly soiled during your ride, you'll be asked to cover the cleaning or repair. [TO CONFIRM: a flat cleaning charge, or "at actuals against a receipt"? Pick one; an unspecified charge is unenforceable and invites arguments at the roadside.]`,
-        ],
-    },
-    {
-        heading: "Our driver-partners",
-        body: [
-            "Every driver-partner gives us their driving licence and Aadhaar before their first ride, and we check both. We don't put a driver on the road with documents we haven't seen.",
-            "They remain independent contractors who choose their own hours and drive their own vehicles. We're responsible for whom we let onto the platform and for acting when something goes wrong; we're not their employer.",
-        ],
-    },
-    {
-        heading: "Things neither of us controls",
-        body: [
-            "Traffic, weather, road closures, breakdowns, protests, strikes, network outages and acts of government all affect rides, and none of them are within our control or yours. When one of them delays or ends a ride, we'll help you rebook and won't charge you for a ride you didn't take.",
-        ],
-    },
-    {
-        heading: "Our responsibility, and its limits",
-        body: [
-            "We're responsible for running the service honestly: quoting the fare we charge, verifying our driver-partners, and answering you when something goes wrong.",
-            `Where the law allows us to limit what we owe you, our liability for any one ride is limited to the fare for that ride, and we're not liable for indirect losses, such as a missed flight, exam, interview or connection, arising from a delayed or cancelled ride. Nothing here limits liability that cannot be limited by law, including for death or personal injury caused by negligence, or your rights under the Consumer Protection Act, 2019. [TO CONFIRM: this is the clause most worth the lawyer's time. A cab service carrying students to and from trains and flights will be tested on exactly this, and a cap the court won't enforce is worse than no cap.]`,
-        ],
-    },
-    {
-        heading: "Things left behind",
-        body: [
-            "Tell us as soon as you notice, with your ride date and time, and we'll contact the driver and try to get your belongings back to you. We can't promise to recover them, and we're not responsible for what's left in a vehicle.",
-        ],
-    },
-    {
-        heading: "Closing your account",
-        body: [
-            "You can delete your account from Manage Account whenever you like, except while a ride is live. Finish or cancel that ride first. What deletion erases and what we have to keep is set out in the Privacy Policy.",
-            "We may suspend or close an account for the reasons listed in these terms. Where we can, we'll tell you why.",
-        ],
-    },
-    {
-        heading: "Changes to these terms",
-        body: [
-            `We'll update these terms as the service changes. The date at the top always shows the current version, and we'll flag anything significant in the app before it takes effect. Rides you book after a change are covered by the version in force that day.`,
-        ],
-    },
-    {
-        heading: "Which law applies",
-        body: [
-            `These terms are governed by the laws of India, and the ${entity.jurisdiction} have exclusive jurisdiction over any dispute arising from them.`,
-            "Before it gets that far, please use the Grievance Redressal page. Nearly everything is resolved there.",
-        ],
-    },
-]
+const riderPrivacy = [
+  { heading: "Scope and purpose", body: [
+    "This policy explains how " + entity.name + " handles rider data for RCS Travels. We use it to run bookings, match rides, take scheduled advances, provide support, prevent fraud and abuse, and meet legal obligations. We do not sell personal data.",
+  ] },
+  { heading: "Where data comes from", body: [
+    "We receive data from you, from your device and use of the service, from driver-partners during a booking, from payment and authentication providers, and from support or safety interactions. We may also receive information when another person books a ride for you or lists you as an emergency contact.",
+  ] },
+  { heading: "Rider data we collect", list: [
+    "Name, phone number, gender, date of birth, emergency-contact details and WhatsApp contact information where you choose to use it.",
+    "Saved places and their coordinates, pickup and drop details, bookings, ride status, complaints and support records.",
+    "Scheduled-ride advance, payment status, payment references and refund records. Payment credentials are handled by the payment provider, not collected from you by a driver.",
+    "Device, browser, push-notification and technical log data needed to operate and secure the service.",
+  ] },
+  { heading: "Location and permissions", body: [
+    "Location is used when needed for pickup, destination, saved-place, route and trip functions. Depending on your device and the feature you use, this may come from a location you enter, a map selection, or device location permission.",
+    "You can manage device permissions in your operating-system settings, but some booking or safety features may not work correctly without the permissions they need.",
+  ] },
+  { heading: "How we use rider data", list: [
+    "Create and secure accounts, verify phone numbers and prevent duplicate, fraudulent or abusive use.",
+    "Create bookings, estimate routes and fares, match drivers, provide trip status and complete payment or refund workflows.",
+    "Provide customer support, investigate complaints, enforce service rules and improve reliability and safety.",
+    "Comply with tax, accounting, transport, consumer-protection, court, law-enforcement or other legal requirements where applicable.",
+  ] },
+  { heading: "Providers and sharing", body: [
+    "We share the minimum data needed with driver-partners to complete a booking and with providers that operate the service. If you create a trip-share link, anyone who receives that link may see your first name, pickup and drop addresses and coordinates, scheduled time, driver name, photo and vehicle details, and live driver location while the trip is active. The current link expires after 12 hours and stops showing live driver coordinates once the ride ends; treat the link as sensitive and share it only with people you trust.",
+  ], list: [
+    "Authentication providers for account access and verification.",
+    "Google Maps, Routes and Places for place search, route and trip functions.",
+    "Razorpay for scheduled-ride advances and related refunds.",
+    "WhatsApp/Meta for WhatsApp flows, Firebase for push notifications, and storage or database providers acting on our instructions.",
+  ] },
+  { heading: "Safety, legal requests and business changes", body: [
+    "We may disclose information where reasonably necessary to protect riders, drivers or others, investigate fraud or abuse, comply with a lawful request, or establish or defend legal claims. We should check the validity and scope of requests before disclosing data where the law allows.",
+    "If the business is reorganised, financed, sold or transferred, relevant data may move with the affected service subject to applicable law and appropriate safeguards.",
+  ] },
+  { heading: "Security", body: [
+    "We use administrative, technical and access controls intended to protect personal data against unauthorised access, alteration, disclosure or loss. No internet, device or storage system can be guaranteed completely secure, so report suspected account or data misuse promptly.",
+  ] },
+  { heading: "Retention and requests", body: [
+    "We keep data only as long as reasonably needed for bookings, support, security, tax or other legal obligations, disputes and fraud prevention. Backup copies may expire on their normal schedule.",
+    "You may ask us to correct account information, request access, or request deletion where applicable. Legal, security, fraud-prevention and record-keeping requirements may limit a request.",
+  ] },
+  { heading: "Children and other people", body: [
+    "Do not give us another person’s personal data unless you are authorised to do so and the disclosure is appropriate for the booking or safety purpose. [TO CONFIRM: rider age/minor policy and any verifiable parental-consent flow required by the final product and applicable privacy law.]",
+  ] },
+  { heading: "India privacy framework", body: [
+    "We are preparing this notice to support the Digital Personal Data Protection Act, 2023 and other applicable Indian privacy requirements. As of 13 September 2026, substantive DPDP obligations are mostly scheduled to phase in from May 2027; this does not state that every DPDP obligation is already in force.",
+    "[TO CONFIRM: controller/contact details and final privacy notice after lawyer review.]",
+  ] },
+  { heading: "Policy changes and contact", body: [
+    "If this policy changes materially, we should update the effective date and provide any notice or consent required by law. Privacy questions and requests can be raised through the grievance contact listed on this site.",
+  ] },
+];
 
-/* ── Privacy Policy ────────────────────────────────────────────────────────── */
+const riderRefunds = [
+  { heading: "Ride Now", body: ["Ride Now is paid at the end of the trip to the driver. There is no prepaid Ride Now cancellation amount to refund."] },
+  { heading: "Scheduled-ride advance", body: ["Scheduled rides currently collect a 15% Razorpay advance. The server calculates the cancellation quote and settlement; the app shows that result for your confirmation."] },
+  { heading: "When the advance is not retained", body: ["Cancellation is free when no driver is assigned, the driver has no fresh platform location, the driver’s fresh location is farther than 500 metres from pickup, or the driver cancels. Any paid advance follows the booking’s refund flow."] },
+  { heading: "When the advance is retained", body: ["The current product retains the paid advance once an assigned driver’s fresh location is within 500 metres of pickup, or the booking reaches the corresponding arrival status. The server’s location and status record decide the quote."] },
+  { heading: "Before publication", body: ["[TO CONFIRM: LAUNCH BLOCKER — reconcile the current 15% retention with the reported UP cancellation limit of 10% of fare capped at ₹100. This operational description is not a statement that the current rule is lawful or final.]"] },
+  { heading: "Refund processing", body: ["Where a refund is due, we initiate it through the applicable payment flow. The time for the amount to appear can also depend on Razorpay, the bank, card network or payment method. [TO CONFIRM: refund-initiation target and the customer-facing settlement window the business can reliably support.]"] },
+  { heading: "Payment issues", body: ["If proximity or status changes before cancellation is submitted, the server may return a changed amount and will request confirmation. For an incorrect charge, duplicate payment, failed payment or refund issue, contact support with booking details and the payment reference."] },
+  { heading: "Your legal rights", body: ["This policy does not reduce any refund, compensation or consumer remedy available under applicable law. If a statutory rule gives you a better outcome than this draft operational policy, the statutory rule controls."] },
+];
 
-/* Generated with the TermsFeed Privacy Policy Generator on July 28, 2026 and
-   converted from its HTML into the section shape LegalPage renders. The nested
-   sub-lists (cookie types, retention periods) are flattened into prose because
-   the renderer draws one flat list per section. */
+const riderGrievance = [
+  { heading: "Urgent safety", body: ["For an emergency or immediate safety risk, call 112 first. Then contact us with the booking details when you can."] },
+  { heading: "What you can raise", body: ["You may contact us about bookings, fares, payments, cancellations, refunds, driver conduct, safety, account access, privacy requests or other service concerns."] },
+  { heading: "Contact and complaint details", body: ["Our grievance contact is " + entity.grievanceOfficer + "."], list: [
+    "Email: " + entity.grievanceEmail, "Phone: " + entity.grievancePhone, "Address: " + entity.address,
+  ], after: ["Include your registered phone number, booking date and time, relevant vehicle or driver details, what happened, and the outcome you seek. This contact also receives privacy requests."] },
+  { heading: "Review", body: ["We will review information available for the booking, payment, account and support history and respond through a suitable contact channel. We may ask for additional information where it is reasonably needed to investigate the concern. [TO CONFIRM: acknowledgement and resolution timelines the business can commit to.]"] },
+  { heading: "Further options", body: [
+    "The Consumer Protection Act, 2019 and Consumer Protection (E-Commerce) Rules, 2020 may be relevant to consumer complaints. You may use available consumer-redressal channels, including the National Consumer Helpline at https://consumerhelpline.gov.in/ and the appropriate consumer commission, where applicable.",
+    "[TO CONFIRM: applicable UP transport authority and escalation route after confirming licence status. Whether the IT Rules apply depends on the facts; this page does not assert intermediary classification.]",
+  ] },
+];
 
-const privacy = [
-    {
-        heading: "Introduction",
-        body: [
-            "This Privacy Policy describes Our policies and procedures on the collection, use and disclosure of Your information when You use the Service and tells You about Your privacy rights and how the law protects You.",
-            "We use Your Personal Data to provide and improve the Service. We collect, use, and disclose Your information as described in this Privacy Policy and, where required by applicable law, only where We have a valid legal basis to do so, including Your consent (where consent is required). This Privacy Policy has been created with the help of the TermsFeed Privacy Policy Generator (https://www.termsfeed.com/privacy-policy-generator/).",
-        ],
-    },
-    {
-        heading: "Interpretation and Definitions",
-        body: [
-            "The words whose initial letters are capitalized have meanings defined under the following conditions. The following definitions shall have the same meaning regardless of whether they appear in singular or in plural.",
-            "For the purposes of this Privacy Policy:",
-        ],
-        list: [
-            "Account means a unique account created for You to access Our Service or parts of Our Service.",
-            `Affiliate means an entity that controls, is controlled by, or is under common control with a party, where "control" means ownership of 50% or more of the shares, equity interest or other securities entitled to vote for election of directors or other managing authority.`,
-            `Company (referred to as either "the Company", "We", "Us" or "Our" in this Privacy Policy) refers to R C S Travels, Ramgopal Enclave Colony, G T Road, Dadri, Gautam Buddh Nagar, Uttar Pradesh 203207.`,
-            "Cookies are small files that are placed on Your computer, mobile device or any other device by a website, containing the details of Your browsing history on that website, among its many uses.",
-            "Country/State refers to: Uttar Pradesh, India.",
-            "Device means any device that can access the Service, such as a computer, a cell phone or a digital tablet.",
-            `Personal Data (or "Personal Information") is any information that relates to an identified or identifiable individual. We use "Personal Data" and "Personal Information" interchangeably unless a law uses a specific term.`,
-            "Service refers to the Website.",
-            "Service Provider means any natural or legal person who processes the data on behalf of the Company. It refers to third-party companies or individuals employed by the Company to facilitate the Service, to provide the Service on behalf of the Company, to perform services related to the Service or to assist the Company in analyzing how the Service is used.",
-            "Usage Data refers to data collected automatically, either generated by the use of the Service or from the Service infrastructure itself (for example, the duration of a page visit).",
-            "User means any individual who accesses or uses the Service.",
-            "Website refers to RCS Travels, accessible from https://www.rcstravels.co.in/",
-            "You means the individual accessing or using the Service, or the company, or other legal entity on behalf of which such individual is accessing or using the Service, as applicable.",
-        ],
-    },
-    {
-        heading: "Personal Data",
-        body: [
-            "While using Our Service, We may ask You to provide Us with certain personally identifiable information that can be used to contact or identify You. Personally identifiable information may include, but is not limited to:",
-        ],
-        list: [
-            "First name and last name",
-            "Phone number",
-            "Address, State, Province, ZIP/Postal code, City",
-        ],
-    },
-    {
-        heading: "Usage Data",
-        body: [
-            "Usage Data is collected automatically when using the Service.",
-            "Usage Data may include information such as Your Device's Internet Protocol address (e.g. IP address), browser type, browser version, the pages of Our Service that You visit, the time and date of Your visit, the time spent on those pages, unique device identifiers and other diagnostic data.",
-            "When You access the Service by or through a mobile device, We may collect certain information automatically, including, but not limited to, the type of mobile device You use, Your mobile device's unique ID, the IP address of Your mobile device, Your mobile operating system, the type of mobile Internet browser You use, unique device identifiers and other diagnostic data.",
-            "We may also collect information that Your browser sends whenever You visit Our Service or when You access the Service by or through a mobile device.",
-        ],
-    },
-    {
-        heading: "Tracking Technologies and Cookies",
-        body: [
-            "We use Cookies and similar tracking technologies to track the activity on Our Service and store certain information. Tracking technologies We use include beacons, tags, and scripts to collect and track information and to improve and analyze Our Service. The technologies We use may include:",
-        ],
-        list: [
-            "Cookies or Browser Cookies. A cookie is a small file placed on Your Device. You can instruct Your browser to refuse all Cookies or to indicate when a Cookie is being sent. However, if You do not accept Cookies, You may not be able to use some parts of Our Service.",
-            "Web Beacons. Certain sections of Our Service and Our emails may contain small electronic files known as web beacons (also referred to as clear gifs, pixel tags, and single-pixel gifs) that permit the Company, for example, to count users who have visited those pages or opened an email and for other related website statistics (for example, recording the popularity of a certain section and verifying system and server integrity).",
-        ],
-        after: [
-            `Cookies can be "Persistent" or "Session" Cookies. Persistent Cookies remain on Your personal computer or mobile device when You go offline, while Session Cookies are deleted as soon as You close Your web browser.`,
-            "Where required by law, We use non-essential cookies (such as analytics, advertising, and remarketing cookies) only with Your consent. You can withdraw or change Your consent at any time using Our cookie preferences tool (if available) or through Your browser/device settings. Withdrawing consent does not affect the lawfulness of processing based on consent before its withdrawal.",
-            "We use both Session and Persistent Cookies for the purposes set out below:",
-            "Necessary / Essential Cookies (Session Cookies, administered by Us). Purpose: These Cookies are essential to provide You with services available through the Website and to enable You to use some of its features. They help to authenticate users and prevent fraudulent use of user accounts. Without these Cookies, the services that You have asked for cannot be provided, and We only use these Cookies to provide You with those services.",
-            "Cookies Policy / Notice Acceptance Cookies (Persistent Cookies, administered by Us). Purpose: These Cookies identify whether users have accepted the use of cookies on the Website.",
-            "Functionality Cookies (Persistent Cookies, administered by Us). Purpose: These Cookies allow Us to remember choices You make when You use the Website, such as remembering Your Account login details or language preference. The purpose of these Cookies is to provide You with a more personal experience and to avoid You having to re-enter Your preferences every time You use the Website.",
-            "For more information about the cookies We use and Your choices regarding cookies, please visit the Cookies section of Our Privacy Policy.",
-        ],
-    },
-    {
-        heading: "Use of Your Personal Data",
-        body: [
-            "The Company may use Personal Data for the following purposes:",
-        ],
-        list: [
-            "To provide and maintain Our Service, including to monitor the usage of Our Service.",
-            "To manage Your Account: to manage Your registration as a user of the Service. The Personal Data You provide can give You access to different functionalities of the Service that are available to You as a registered user.",
-            "For the performance of a contract: the development, compliance and undertaking of the purchase contract for the products, items or services You have purchased or of any other contract with Us through the Service.",
-            "To contact You: To contact You by email, telephone calls, SMS, or other equivalent forms of electronic communication, such as a mobile application's push notifications regarding updates or informative communications related to the functionalities, products or contracted services, including the security updates, when necessary or reasonable for their implementation.",
-            "To provide You with news, special offers, and general information about other goods, services and events which We offer that are similar to those that You have already purchased or inquired about. We send such marketing communications only where permitted by applicable law: where prior consent is required (for example, under the laws applicable in the EEA and the UK), We will send them only with Your consent; otherwise, We may send them until You opt out. You may opt out or withdraw Your consent at any time by using the unsubscribe link in any marketing email We send or by contacting Us.",
-            "To manage Your requests: To attend and manage Your requests to Us.",
-            "For business transfers: We may use Your Personal Data to evaluate or conduct a merger, divestiture, restructuring, reorganization, dissolution, or other sale or transfer of some or all of Our assets, whether as a going concern or as part of bankruptcy, liquidation, or similar proceeding, in which Personal Data held by Us about Our Service users is among the assets transferred.",
-            "For other purposes: We may use Your information for other purposes, such as data analysis, identifying usage trends, determining the effectiveness of Our promotional campaigns, and evaluating and improving Our Service, products, services, marketing and Your experience.",
-        ],
-    },
-    {
-        heading: "Sharing Your Personal Data",
-        body: [
-            "We may share Your Personal Data in the following situations:",
-        ],
-        list: [
-            "With Service Providers: We may share Your Personal Data with Service Providers to monitor and analyze the use of Our Service, and to contact You.",
-            "For business transfers: We may share or transfer Your Personal Data in connection with, or during negotiations of, any merger, sale of Company assets, financing, or acquisition of all or a portion of Our business to another company.",
-            "With Affiliates: We may share Your Personal Data with Our affiliates, in which case We will require those affiliates to honor this Privacy Policy. Affiliates include Our parent company and any other subsidiaries, joint venture partners or other companies that We control or that are under common control with Us.",
-            "With business partners: We may share Your Personal Data with Our business partners to offer You certain products, services or promotions. Business partners may use this information for their own purposes, as described in their own privacy policies.",
-            "With other users: If Our Service offers public areas, when You share Personal Data or otherwise interact in the public areas with other users, such information may be viewed by all users and may be publicly distributed outside the Service.",
-            "With Your consent: We may disclose Your Personal Data for any other purpose with Your consent.",
-        ],
-    },
-    {
-        heading: "Retention of Your Personal Data",
-        body: [
-            "The Company will retain Your Personal Data only for as long as is necessary for the purposes set out in this Privacy Policy. We will retain and use Your Personal Data to the extent necessary to comply with Our legal obligations (for example, if We are required to retain Your data to comply with applicable laws), resolve disputes, and enforce Our legal agreements and policies.",
-            `Where possible, We apply shorter retention periods and/or reduce identifiability by deleting, aggregating, or anonymizing data. Unless otherwise stated, the retention periods below are maximum periods ("up to") and We may delete or anonymize data sooner when it is no longer needed for the relevant purpose. We apply different retention periods to different categories of Personal Data based on the purpose of processing and legal obligations:`,
-        ],
-        list: [
-            "Account Information — User Accounts: retained for the duration of Your Account relationship plus up to 24 months after account closure to handle any post-termination issues or resolve disputes.",
-            "Usage Data — Website analytics data (cookies, IP addresses, device identifiers): up to 24 months from the date of collection, which allows us to analyze trends while respecting privacy principles.",
-            "Usage Data — Server logs (IP addresses, access times): up to 24 months for security monitoring and troubleshooting purposes.",
-        ],
-        after: [
-            "Usage Data is retained in accordance with the retention periods described above, and may be retained longer only where necessary for security, fraud prevention, or legal compliance.",
-            "We may retain Personal Data beyond the periods stated above for different reasons. Legal obligation: We are required by law to retain specific data (e.g., financial records for tax authorities). Legal claims: Data is necessary to establish, exercise, or defend legal claims. Your explicit request: You ask Us to retain specific information. Technical limitations: Data exists in backup systems that are scheduled for routine deletion.",
-            "You may request information about how long We will retain Your Personal Data by contacting Us.",
-            "When retention periods expire, We securely delete or anonymize Personal Data according to the following procedures. Deletion: Personal Data is removed from Our systems and no longer actively processed. Backup retention: Residual copies may remain in encrypted backups for a limited period consistent with Our backup retention schedule and are not restored except where necessary for security, disaster recovery, or legal compliance. Anonymization: In some cases, We convert Personal Data into anonymous statistical data that cannot be linked back to You. This anonymized data may be retained indefinitely for research and analytics.",
-        ],
-    },
-    {
-        heading: "Transfer of Your Personal Data",
-        body: [
-            "Your information, including Personal Data, is processed at the Company's operating offices and in any other places where the parties involved in the processing are located. This means that this information may be transferred to — and maintained on — computers located outside of Your state, province, country or other governmental jurisdiction where the data protection laws may differ from those of Your jurisdiction.",
-            "Where required by applicable law, We will ensure that international transfers of Your Personal Data are subject to appropriate safeguards and, where relevant, supplementary measures. The Company will take all steps reasonably necessary to ensure that Your data is treated securely and in accordance with this Privacy Policy and no transfer of Your Personal Data will take place to an organization or a country unless there are adequate controls in place, including the security of Your data and other personal information.",
-        ],
-    },
-    {
-        heading: "Delete Your Personal Data",
-        body: [
-            "You have the right to delete or request that We assist in deleting the Personal Data that We have collected about You.",
-            "Our Service may give You the ability to delete certain information about You from within the Service.",
-            "You may update, amend, or delete Your information at any time by signing in to Your Account, if You have one, and visiting the account settings section that allows You to manage Your personal information. You may also contact Us to request access to, correct, or delete any Personal Data that You have provided to Us.",
-            "Please note, however, that We may need to retain certain information when We have a legal obligation or lawful basis to do so.",
-        ],
-    },
-    {
-        heading: "Disclosure of Your Personal Data",
-        body: [
-            "Business Transactions. If the Company is involved in a merger, acquisition or asset sale, Your Personal Data may be transferred. We will provide notice before Your Personal Data is transferred and becomes subject to a different Privacy Policy.",
-            "Law Enforcement. Under certain circumstances, the Company may disclose Your Personal Data if required to do so by law or in response to valid requests by public authorities (e.g. a court or a government agency).",
-            "Other Legal Requirements. The Company may disclose Your Personal Data in the good-faith belief that such action is necessary to:",
-        ],
-        list: [
-            "Comply with a legal obligation",
-            "Protect and defend the rights or property of the Company",
-            "Prevent or investigate possible wrongdoing in connection with the Service",
-            "Protect the personal safety of Users of the Service or the public",
-            "Protect against legal liability",
-        ],
-    },
-    {
-        heading: "Security of Your Personal Data",
-        body: [
-            "The security of Your Personal Data is important to Us, but remember that no method of transmission over the Internet, or method of electronic storage, is 100% secure. While We strive to use commercially reasonable means to protect Your Personal Data, We cannot guarantee its absolute security.",
-        ],
-    },
-    {
-        heading: "Service Providers We use",
-        body: [
-            "The Service Providers We use may have access to Your Personal Data. These third-party vendors collect, store, use, process and transfer information about Your activity on Our Service in accordance with their Privacy Policies.",
-            "We may use third-party Service Providers to maintain and improve Our Service.",
-        ],
-        list: [
-            "Google Places: a service that returns information about places using HTTP requests. It is operated by Google. Google Places service may collect information from You and from Your Device for security purposes. The information gathered by Google Places is held in accordance with the Privacy Policy of Google: https://www.google.com/intl/en/policies/privacy/",
-            "Clerk: their Privacy Policy can be viewed at https://clerk.com/legal/privacy",
-            "WhatsApp Business Platform: their Privacy Policy can be viewed at https://www.whatsapp.com/legal/business-app-privacy-policy",
-        ],
-    },
-    {
-        heading: "Children's and Minors' Privacy",
-        body: [
-            "The Service is not directed to, and We do not knowingly collect Personal Information from, anyone under the age of 16.",
-            "If You are a parent or guardian and You believe Your child has provided Us with Personal Information, please contact Us. If We become aware that We have collected Personal Information from anyone under the age of 16, We will take steps to remove that information from Our servers as soon as reasonably possible.",
-            "Some countries and states set a higher age at which an individual can consent to the processing of their own Personal Information. Where We rely on consent as a legal basis and the law applicable to a User sets an age higher than 16, We may require the consent of that User's parent or guardian before We collect and use their Personal Information.",
-        ],
-    },
-    {
-        heading: "Links to Other Websites",
-        body: [
-            "Our Service may contain links to other websites that are not operated by Us. If You click on a third-party link, You will be directed to that third party's site. We strongly advise You to review the Privacy Policy of every site You visit.",
-            "We have no control over and assume no responsibility for the content, privacy policies or practices of any third-party sites or services.",
-        ],
-    },
-    {
-        heading: "Changes to this Privacy Policy",
-        body: [
-            "We may update Our Privacy Policy from time to time. We will notify You of any changes by posting the new Privacy Policy on this page.",
-            `We will let You know via email and/or a prominent notice on Our Service, prior to the change becoming effective and update the "Last updated" date at the top of this Privacy Policy.`,
-            "You are advised to review this Privacy Policy periodically for any changes. Changes to this Privacy Policy are effective when they are posted on this page.",
-        ],
-    },
-    {
-        heading: "Contact Us",
-        body: [
-            "If You have any questions about this Privacy Policy, You can contact Us:",
-        ],
-        list: [
-            "By email: rcstravels.business@gmail.com",
-            "By phone: 8586088085",
-        ],
-    },
-]
+const driverTerms = [
+  { heading: "Driver-partner relationship", body: [
+    "These terms apply when you register or use the RCS Travels driver app. You must provide accurate information, keep required documents valid, and follow applicable road, transport and safety requirements.",
+    "[TO CONFIRM: driver-partner relationship, aggregator classification, UP licence status, final contract terms, effective version and acceptance-record mechanism. Do not claim compliance with reported UP Rules on 40-hour induction, tracking, panic/control-room, health cover ₹5 lakh, or term/accident cover ₹10 lakh unless verified.]",
+  ] },
+  { heading: "Account eligibility and security", body: [
+    "Use only your own approved driver account and keep your phone, OTPs and login credentials secure. Do not let another person drive through your account or use a vehicle that has not been approved for the ride.",
+    "You must remain legally eligible to drive and provide the service. Tell us promptly if a licence, permit, vehicle document, insurance policy or other eligibility fact expires, is suspended, becomes inaccurate or can no longer be relied on.",
+  ] },
+  { heading: "Documents and vehicle information", list: [
+    "Driving licence, vehicle registration certificate, insurance, tax, fitness certificate and permit, where applicable.",
+    "PUC/CNG documents and vehicle photographs, where applicable.",
+    "Driver profile and contact information needed to verify, operate and support your account.",
+  ] },
+  { heading: "Ride offers and service", body: [
+    "Ride offers, pickup details and other trip information are provided through the app. [TO CONFIRM: whether and when drivers may freely accept or reject ride offers under the final operating model and applicable UP Rules.]",
+    "Once you accept a ride, proceed to the correct pickup, keep trip status accurate, use reasonable care, and complete or cancel the ride only through supported flows unless an emergency makes that impracticable.",
+  ] },
+  { heading: "Location, offers and conduct", body: [
+    "The app uses your live location to show availability, match and manage rides, and apply operational safety rules. Keep location services and account information accurate while online or completing a ride.",
+    "Drive lawfully and safely, use the vehicle registered for the ride, respect riders and do not seek extra money, ask a rider to cancel, misrepresent your identity or vehicle, or behave abusively or inappropriately.",
+  ] },
+  { heading: "Fares, payments and taxes", body: [
+    "Collect or receive only the fare and payment amounts shown or authorised for the booking. Do not create off-platform surcharges or ask a rider to pay a different amount to avoid platform rules.",
+    "[TO CONFIRM: driver fare share, RCS commission/service fee, payout method, settlement cycle, deductions, taxes/TDS/GST treatment and any minimum fare-share obligations under the final UP Rules.]",
+  ] },
+  { heading: "Driver cancellations", body: [
+    "You may self-cancel only while a ride is assigned or en route. A cancelled Ride Now ride returns to matching; a scheduled ride is re-offered.",
+    "Each successful self-cancellation is counted once. In a rolling 30-day period, starting with the third self-cancellation, the commission-free benefit is removed and the restriction on earning another benefit is set to 30 days from the latest qualifying self-cancellation; further cancellations while the rolling count remains at least three can extend that date. A fifth self-cancellation suspends the account and withdraws pending offers.",
+  ] },
+  { heading: "Complaints and account action", body: [
+    "Each submitted customer conduct complaint is currently recorded against the driver account. At three recorded complaints, the current system applies a ₹200 fine. At five, it automatically suspends the account and withdraws pending offers; only an administrator may reinstate the account. These actions currently use the recorded complaint count without a separate pre-sanction evidence review.",
+    "[TO CONFIRM: complaint validation standard, notice to the driver, evidence review, appeal/reconsideration process, refund of an incorrect fine, and whether these thresholds comply with the final driver agreement and applicable law.]",
+  ] },
+  { heading: "Safety and incidents", body: [
+    "For an immediate emergency, call 112 or the appropriate public emergency service first. Report accidents, threats, serious disputes and material safety incidents to support when it is safe to do so, and cooperate with lawful incident or insurance processes.",
+    "[TO CONFIRM: legally required driver induction/training, medical or police checks, control-room/SOS workflow, vehicle tracking, insurance cover and accident-response procedure before publication.]",
+  ] },
+  { heading: "Suspension, review and exit", body: [
+    "We may temporarily restrict offers or suspend access where reasonably necessary for safety, suspected fraud, invalid documents, repeated policy breaches, a serious complaint, non-compliance with law, or a regulator or court requirement. Where appropriate, the driver should have a channel to submit relevant information for review.",
+    "You may stop using the driver app subject to outstanding rides, settlements, records, disputes and legal obligations. [TO CONFIRM: driver termination notice, appeal rights, deactivation criteria and any mandatory regulatory procedure.]",
+  ] },
+  { heading: "Responsibility and disputes", body: [
+    "Each party remains responsible for its own unlawful conduct, fraud, wilful misconduct and duties that cannot be excluded by law. [TO CONFIRM: final representations, indemnity, limitation-of-liability, governing-law, jurisdiction and dispute-resolution clauses after counsel confirms the driver relationship and insurance position.]",
+  ] },
+];
 
-/* ── Refunds & Cancellation ────────────────────────────────────────────────── */
+const driverPrivacy = [
+  { heading: "Scope", body: ["This notice explains how " + entity.name + " handles personal data about driver-partners and their vehicles when they apply for, access or use the RCS Travels driver app."] },
+  { heading: "Data we collect", list: [
+    "Profile, contact and verification information, plus driving licence, RC, insurance, tax, fitness, permit, PUC/CNG records and vehicle photos where applicable.",
+    "Live and recent location, speed, bearing and location timestamps where the app provides them, plus ride offers, booking and trip records, cancellation history, complaint and support records.",
+    "Device, app, push-notification and technical log information needed to operate, secure and improve the app.",
+  ] },
+  { heading: "Where data comes from", body: ["We receive data from you and your device, riders and booking activity, document-verification or authentication flows, payment or support providers, and lawful safety or compliance interactions."] },
+  { heading: "How we use and share it", body: ["We use this data to verify eligibility, match and manage rides, provide navigation and rider-facing trip information, prevent fraud and misuse, resolve complaints, make payments and meet legal obligations."], list: [
+    "Riders receive only the details needed for their booked ride.",
+    "Google Maps, Routes and Places may process location and trip data for mapping and routing.",
+    "Firebase may process push-notification data; WhatsApp/Meta may process messages sent through a WhatsApp flow.",
+    "Authentication, storage and database providers may process data on our instructions.",
+  ] },
+  { heading: "Location while using the driver app", body: [
+    "When you are online, available, assigned, en route or on a trip, the app may use frequent or background location as needed for matching, pickup, trip status, routing, cancellation rules, safety and operational records. [TO CONFIRM: exact background-location behaviour on iOS/Android and the final just-in-time permission wording.]",
+  ] },
+  { heading: "Safety, compliance and legal disclosure", body: ["We may use or disclose relevant records to investigate fraud, safety incidents or complaints, verify legal eligibility, comply with transport or tax obligations, answer lawful requests, or establish or defend legal claims."] },
+  { heading: "Security", body: ["We use access controls and technical and administrative measures intended to protect driver data and documents. No system is completely secure, so report suspected account compromise, document misuse or unauthorised access promptly."] },
+  { heading: "Retention and requests", body: ["We retain data only as reasonably needed for operations, safety, tax or other legal requirements, dispute handling and fraud prevention. You may request access, correction or deletion where applicable, subject to those requirements and technical backup schedules."] },
+  { heading: "India privacy framework", body: ["We are preparing this policy to support the DPDP Act, 2023 and other applicable requirements. As of 13 September 2026, substantive DPDP obligations are mostly scheduled to phase in from May 2027; this does not claim every DPDP obligation is already in force. [TO CONFIRM: controller/contact details and final privacy notice after lawyer review.]"] },
+  { heading: "Changes and contact", body: ["Material changes should be reflected through an updated effective date and any notice or consent required by law. Driver privacy questions and requests can be raised through the driver grievance contact."] },
+];
 
-const refunds = [
-    {
-        heading: "Start here: Ride Now is not prepaid",
-        body: [
-            "Ride Now is paid at the end of the trip, in cash or by UPI. Scheduled rides collect a 15% advance, which is either refunded or retained under the proximity rule below.",
-        ],
-    },
-    {
-        heading: "Cancelling before your driver is nearby",
-        body: [
-            "Cancellation is free while no driver is assigned or the assigned driver's current location is more than 500 metres from pickup. Any paid scheduled advance is refunded.",
-        ],
-    },
-    {
-        heading: "Cancelling when your driver is nearby",
-        body: [
-            "Once the driver's current location is within 500 metres of pickup, cancelling a scheduled ride retains the paid 15% advance. That advance is credited to the driver for the fuel and time already spent reaching you.",
-        ],
-    },
-    {
-        heading: "If your driver cancels or doesn't arrive",
-        body: [
-            "You pay nothing, and we'll find you another ride. Tell us and we'll do it straight away rather than leaving you to rebook.",
-        ],
-    },
-    {
-        heading: "If we can't find a driver",
-        body: [
-            "Sometimes a search ends without a driver, particularly late at night or far out. You'll see that on your booking, you're charged nothing, and you're free to book again for another time.",
-        ],
-    },
-    {
-        heading: "If you're charged the wrong fare",
-        body: [
-            "The fare on your tracking page is the fare. If a driver charged you more than that, or you paid for a ride that never happened, tell us with the date and time of the ride and we'll look at it against our own record of that booking.",
-            `Where you've overpaid, we return the difference by UPI to the number you booked with. [TO CONFIRM: the timeline you're willing to commit to; 7 working days is the usual promise. Say a number; "as soon as possible" is what people complain about.]`,
-        ],
-    },
-    {
-        heading: "If you don't turn up",
-        body: [
-            "If you cancel after the driver is within 500 metres of pickup, the scheduled ride's paid 15% advance is retained. A dedicated timed no-show action is not currently available, so the driver must contact support if you do not respond.",
-        ],
-    },
-    {
-        heading: "How to cancel",
-        body: [
-            "Use the cancel option on your ride's tracking page, or call us and we'll do it for you. Cancelling by telling the driver isn't enough on its own. The booking stays open in our system until it's cancelled there.",
-        ],
-    },
-]
+const driverPayments = [
+  { heading: "What this page covers", body: ["This page describes payment-related rules currently supported in the driver app. It does not create a driver marketplace deposit, a 12% fee or a 10% fee; those are not live terms for driver-partners."] },
+  { heading: "Ride fares", body: ["Drivers must use the fare and payment status shown or authorised for the booking and must not impose an undisclosed off-platform surcharge. [TO CONFIRM: fare calculation, toll/parking/waiting handling, cash/online payment methods and any permitted adjustments.]"] },
+  { heading: "Scheduled rides", body: ["A customer currently pays a 15% Razorpay advance for a scheduled ride. The service records the advance and its final disposition against the booking. [TO CONFIRM: reconcile this behaviour with the reported UP passenger cancellation cap before launch.]"] },
+  { heading: "Customer cancellation", body: ["The server determines a scheduled-rider cancellation quote. Drivers must not ask customers to make off-platform changes to that result."] },
+  { heading: "Driver earnings and deductions", body: ["[TO CONFIRM: driver settlement timing, payment method, commission/service-fee terms, cancellation allocation, taxes/TDS/GST, adjustments and any UP fare-share compliance. Do not claim the reported 80%/60% minimum split unless verified.]"] },
+  { heading: "Corrections and disputes", body: ["If a booking’s payment, cancellation, settlement or status looks wrong, contact support with the booking reference and relevant payment details. We should correct verified calculation or processing errors and provide a review route for disputed deductions."] },
+];
 
-/* ── Grievance Redressal ───────────────────────────────────────────────────── */
+const driverGrievance = [
+  { heading: "Urgent safety", body: ["For an immediate emergency or safety risk, call 112 first. Then report the booking and incident to support when it is safe to do so."] },
+  { heading: "What you can raise", body: ["Driver-partners may raise concerns about onboarding, documents, ride allocation, fares, settlement, cancellations, fines, complaints, suspension, safety, privacy or account access."] },
+  { heading: "How to raise a concern", body: ["Contact " + entity.grievanceOfficer + " with your driver account phone number, booking details, documents or screenshots that help, and the outcome you seek."], list: [
+    "Email: " + entity.grievanceEmail, "Phone: " + entity.grievancePhone, "Address: " + entity.address,
+  ] },
+  { heading: "Review and escalation", body: ["We will review relevant ride, account, payment, complaint and support records and respond through a suitable contact channel. Drivers should have a reasonable opportunity to provide relevant information when a complaint, fine or suspension is disputed. [TO CONFIRM: acknowledgement and resolution timelines, formal appeal/reconsideration process, UP transport authority and escalation route after confirming licence status. Whether the IT Rules apply depends on the facts; this page does not assert intermediary classification.]"] },
+];
 
-const grievance = [
-    {
-        heading: "Try support first",
-        body: [
-            "Most problems, such as a fare that looks wrong, a driver who didn't arrive, or something left in a vehicle, are sorted the same day by calling or messaging us. Start there. This page is for when that hasn't worked, or when what happened is serious enough to be put on record.",
-        ],
-    },
-    {
-        heading: "If something happened during a ride, don't wait",
-        body: [
-            "For anything involving your safety, call 112 first and us immediately after. Complaints have a process and a timeline; an incident in progress doesn't get one.",
-        ],
-    },
-    {
-        heading: "Our Grievance Officer",
-        body: [
-            "Under the Information Technology (Intermediary Guidelines and Digital Media Ethics Code) Rules, 2021, we name a person who is answerable for complaints. They are:",
-        ],
-        list: [
-            `Name: ${entity.grievanceOfficer}`,
-            `Designation: ${entity.grievanceDesignation}`,
-            `Email: ${entity.grievanceEmail}`,
-            `Phone: ${entity.grievancePhone}`,
-            `Address: ${entity.address}`,
-        ],
-        after: [
-            "The same officer handles complaints about your personal data.",
-        ],
-    },
-    {
-        heading: "What we do, and by when",
-        list: [
-            "We acknowledge your complaint within 48 hours of receiving it.",
-            "We resolve it within 30 days, and sooner where we can.",
-            "We tell you the outcome, and what we did about it, on the number or email you complained from.",
-        ],
-    },
-    {
-        heading: "What to send us",
-        body: [
-            "The more of this you include, the faster it moves:",
-        ],
-        list: [
-            "the phone number your account is registered with,",
-            "the date and time of the ride, and where you were going,",
-            "your driver's name or vehicle number, if you have it,",
-            "what happened, and what you'd like us to do about it.",
-        ],
-    },
-    {
-        heading: "If we haven't resolved it",
-        body: [
-            "You don't have to stop with us. If you're not satisfied with our answer, or 30 days have passed without one, you can take it further:",
-        ],
-        list: [
-            "the National Consumer Helpline on 1915, or consumerhelpline.gov.in,",
-            "the consumer commission for your district,",
-            "the Data Protection Board of India, for a complaint about your personal data,",
-            "[TO CONFIRM: the state transport authority to name here, if the business holds an aggregator licence under the Motor Vehicles Aggregator Guidelines. If it does, that licence also requires a 24×7 control-room number, which belongs on this page.]",
-        ],
-    },
-]
-
-/* ── The documents, in footer order ────────────────────────────────────────── */
-
-/* Keyed by the paths the footer already links to. Add a key here and the tab
-   rail, the routes and the page meta all need the same key — see LegalPage.jsx
-   and constants/pageMeta.js. */
 export const legalDocs = {
-    "/terms": {
-        tab: "Terms",
-        title: "Terms of Service",
-        standfirst: "What you're agreeing to when you book a ride with us, in the plainest words we could find for it.",
-        sections: terms,
-    },
-    "/privacy": {
-        tab: "Privacy",
-        title: "Privacy Policy",
-        standfirst: "What we hold about you, who gets to see it, how long we keep it, and how to get rid of it.",
-        sections: privacy,
-    },
-    "/refunds": {
-        tab: "Refunds",
-        title: "Refunds & Cancellation",
-        standfirst: "When cancelling is free, when it isn't, and what happens when a ride falls through.",
-        sections: refunds,
-    },
-    "/grievance": {
-        tab: "Grievance",
-        title: "Grievance Redressal",
-        standfirst: "Who to reach when something has gone wrong, how long we'll take, and where to go if we don't fix it.",
-        sections: grievance,
-    },
-}
+  "/terms": { tab: "Terms", title: "Terms of Service", standfirst: "The rules for booking and taking a ride with RCS Travels.", sections: riderTerms },
+  "/privacy": { tab: "Privacy", title: "Privacy Policy", standfirst: "What rider data we use, why, and who may process it for the service.", sections: riderPrivacy },
+  "/refunds": { tab: "Refunds", title: "Refunds & Cancellation", standfirst: "The scheduled-ride advance and server-authoritative cancellation rule.", sections: riderRefunds },
+  "/grievance": { tab: "Grievance", title: "Grievance Redressal", standfirst: "How riders can raise and escalate a concern.", sections: riderGrievance },
+  "/driver-terms": { tab: "Driver terms", title: "Driver Terms", standfirst: "Rules for driver-partners using the RCS Travels driver app.", sections: driverTerms },
+  "/driver-privacy": { tab: "Driver privacy", title: "Driver Privacy Policy", standfirst: "How we use driver-partner, vehicle, location and device data.", sections: driverPrivacy },
+  "/driver-payments": { tab: "Driver payments", title: "Driver Payments", standfirst: "Payment and cancellation rules currently supported for drivers.", sections: driverPayments },
+  "/driver-grievance": { tab: "Driver grievance", title: "Driver Grievance", standfirst: "How driver-partners can raise a concern.", sections: driverGrievance },
+};
 
-export const legalPaths = Object.keys(legalDocs)
-
-/* Stable ids so a section can be linked to directly — the way a lawyer or a
-   support reply cites one: /terms#fares */
-export const sectionId = (heading) =>
-    heading.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
+export const legalPaths = Object.keys(legalDocs);
+export const sectionId = (heading) => heading.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");

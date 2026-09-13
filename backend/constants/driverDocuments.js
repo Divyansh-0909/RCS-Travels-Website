@@ -48,11 +48,10 @@ export const DRIVER_DOCUMENTS = {
   // permit above.
   permit_one_year:  { label: 'One-year permit',            required: false, expires: true,  owner: 'vehicle' },
   cng_test:         { label: 'CNG cylinder test',          required: false, expires: true,  owner: 'vehicle' },
-  // Two rows, not one: a document row holds a single file, and the provider asks
-  // for both faces of the car. Photos of a car are a record of its condition on
-  // the day it was onboarded, so nothing about them lapses.
-  car_photo_front:  { label: 'Car photo (front)',          required: true,  expires: false, owner: 'vehicle' },
-  car_photo_back:   { label: 'Car photo (back)',           required: true,  expires: false, owner: 'vehicle' },
+  // Two rows, not one: a document row holds a single file. These photos can be
+  // added later from Account, so their absence must not block onboarding.
+  car_photo_front:  { label: 'Car photo (front)',          required: false, expires: false, owner: 'vehicle' },
+  car_photo_back:   { label: 'Car photo (back)',           required: false, expires: false, owner: 'vehicle' },
 }
 
 export const DRIVER_DOCUMENT_TYPES = Object.keys(DRIVER_DOCUMENTS)

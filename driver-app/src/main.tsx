@@ -76,7 +76,10 @@ const AppRoutes = () => {
                 {isSignedIn ? (
                     <>
                     <Route element={<AuthLayout />}>
+                        <Route path="welcome" element={<OnBoarding />} />
                         <Route path="signup" element={<Signup />} />
+                        <Route path="document" element={<Documents />} />
+                        <Route path="document/vehicle" element={<Vehicles />} />
                     </Route>
 
                     <Route element={<App />}>

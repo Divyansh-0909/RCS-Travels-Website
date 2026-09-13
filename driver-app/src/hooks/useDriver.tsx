@@ -7,6 +7,8 @@ import type { DriverProfile } from '../types/enums';
 
 
 type OnboardingState = {
+  /** Registration resume point. Upload presence advances this before review. */
+  stage: 'personalDocuments' | 'vehicle' | 'vehicleDocuments' | 'review';
   canDrive: boolean;
   /** null when he can drive; otherwise why not, in one word. */
   blockedBy: 'notUploaded' | 'uploading' | 'scanning' | 'pending' | 'rejected' | 'suspended' | 'inactive' | null;

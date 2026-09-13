@@ -1,5 +1,6 @@
 import { useLanguage as useCopyLanguage } from "../i18n";
 import { driverCopy as dc } from "../lib/copy";
+import { themeColors } from "../theme/colors";
     import { View, Pressable, FlatList, type LayoutChangeEvent } from "react-native"
     import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
     import { useLocation, useNavigate } from "react-router-native";
@@ -83,7 +84,11 @@ import { driverCopy as dc } from "../lib/copy";
             >
                 <View
                     className="flex w-full py-1 justify-center items-center h-fit rounded-full bg-strong"
-                    style={{ minHeight: BAR_HEIGHT }}
+                    style={{
+                        minHeight: BAR_HEIGHT,
+                        borderWidth: 1,
+                        borderColor: themeColors.dark.surfaceMuted,
+                    }}
                 >
                     <FlatList
                         horizontal
@@ -103,7 +108,9 @@ import { driverCopy as dc } from "../lib/copy";
                                     role="button"
                                     aria-label={isPost ? dc("Post a marketplace booking") : item.name}
                                     onPress={() => navigate(isPost ? postPath : item.path, { replace: true })}
-                                    className={`flex gap-1 items-center justify-center ${isPost ? "bg-surface w-12 h-12 my-1.5 rounded-full mx-1" : "w-[14vw]"}`}>
+                                    className={`flex gap-1 items-center justify-center ${isPost ? "bg-surface w-12 h-12 my-1.5 rounded-full mx-1" : "w-[14vw] h-14 rounded-full"}`}
+                                    style={isSelected ? { backgroundColor: themeColors.dark.surface } : undefined}
+                                >
                                     {isPost ? (
                                         <item.Icon size={24} weight="bold" className="text-ink" />
                                     ) : (

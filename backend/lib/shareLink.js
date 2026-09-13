@@ -52,6 +52,41 @@ export const shareIsLive = (booking) =>
 export const shareUrlFor = (token) =>
   `${(process.env.APP_ORIGIN ?? 'http://localhost:1574').replace(/\/+$/, '')}/t/${token}`
 
+/**
+ * Return the booking's current share link or mint one when it has expired.
+ * The conditional update keeps two simultaneous share attempts from leaving
+ * two live handles for the same ride.
+ */
+export async function ensureBookingShareLink(db, booking) {
+  if (shareIsLive(booking)) {
+    return { url: shareUrlFor(booking.shareToken), expiresAt: booking.shareExpiresAt }
+  }
+
+  const now = new Date()
+  const shareToken = newShareToken()
+  const shareExpiresAt = new Date(now.getTime() + SHARE_TTL_MS)
+  const claimed = await db.booking.updateMany({
+    where: {
+      id: booking.id,
+      OR: [
+        { shareToken: null },
+        { shareExpiresAt: null },
+        { shareExpiresAt: { lte: now } },
+      ],
+    },
+    data: { shareToken, shareExpiresAt },
+  })
+
+  if (claimed.count) return { url: shareUrlFor(shareToken), expiresAt: shareExpiresAt }
+
+  const current = await db.booking.findUnique({
+    where: { id: booking.id },
+    select: { shareToken: true, shareExpiresAt: true },
+  })
+  if (!current || !shareIsLive(current)) throw new Error('Could not create a live share link')
+  return { url: shareUrlFor(current.shareToken), expiresAt: current.shareExpiresAt }
+}
+
 // Where a shared trip stops being live. Past these there is nothing to follow,
 // and the page shows how it ended instead of a car on a map.
 export const TERMINAL_STATUSES = ['completed', 'cancelled', 'no_driver']

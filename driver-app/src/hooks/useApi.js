@@ -42,9 +42,11 @@ export function useApi() {
     createMe:      (details)            => api.createMe(details, stableGetToken),
     sendOtp:       (phone, intent)      => api.sendOtp(phone, intent),
     verifyOtp:     (phone, otp, intent) => api.verifyOtp(phone, otp, intent),
+    checkName:     (name)               => api.checkName(name),
     logout:        ()                   => stableSignOut(),
 
     getVehicles:       ()               => api.getVehicles(stableGetToken),
+    classifyVehicleModel: (vehicleModel) => api.classifyVehicleModel(vehicleModel, stableGetToken),
     addVehicle:        (vehicle)        => api.addVehicle(vehicle, stableGetToken),
     removeVehicle:     (id)             => api.removeVehicle(id, stableGetToken),
     setActiveVehicle:  (vehicleId)      => api.setActiveVehicle(vehicleId, stableGetToken),

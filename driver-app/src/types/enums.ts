@@ -98,8 +98,8 @@ export type DriverProfile = {
   // THE CAR HE IS DRIVING RIGHT NOW, not the only one he owns. A captain may
   // keep a hatchback and an Innova and switch between them on /account/vehicles;
   // these four describe whichever is active, and change when he switches.
-  vehicleClass: string;
-  vehicleNumber: string;
+  vehicleClass: string | null;
+  vehicleNumber: string | null;
   // "Toyota Innova Crysta", or null on a row created before the column existed.
   // Every reader falls back to the class label — nothing may branch on this.
   vehicleModel: string | null;

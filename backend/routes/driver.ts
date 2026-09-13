@@ -28,6 +28,7 @@ import {
     EXPIRING_DRIVER_DOCUMENTS,
     NUMBERED_DRIVER_DOCUMENTS,
     REQUIRED_DRIVER_DOCUMENTS,
+    REQUIRED_DRIVER_OWNED_DOCUMENTS,
     REQUIRED_VEHICLE_OWNED_DOCUMENTS,
     documentLabelOf,
     isImageOnly,
@@ -48,9 +49,11 @@ import { addVehicle, removeVehicle, switchActiveVehicle } from '../services/driv
 import { completionGeofence, locationProblem, PICKUP_RADIUS_KM } from '../services/rideGeofence.js'
 import { applyDriverCancellationConsequences } from '../services/driverCancellations.js'
 import { isDriverDispatchReady, restoreIdleDriverCapacity } from '../services/driverAvailability.ts'
-import { notifyWhatsAppDriverCancelled, notifyWhatsAppRideStatus } from '../services/notification.js'
+import { notifyWhatsAppDriverCancelled, notifyWhatsAppEmergencyLiveLocation, notifyWhatsAppRideStatus } from '../services/notification.js'
+import { ensureBookingShareLink } from '../lib/shareLink.js'
 import { getNavigationRoute } from '../services/rideEstimate.js'
-import { locationSchema, UploadUrlRequest, ConfirmDocumentsRequest, rideParamsSchema, driverOnlineSchema, driverAccountInformationSchema, addVehicleSchema, activeVehicleSchema, fcmTokenSchema, rideStatusSchema, driverRidesQuerySchema } from '../types.ts'
+import { classifyVehicle } from '../services/AI/classifyVehicle.ts'
+import { locationSchema, UploadUrlRequest, ConfirmDocumentsRequest, rideParamsSchema, driverOnlineSchema, driverAccountInformationSchema, addVehicleSchema, vehicleClassificationInputSchema, activeVehicleSchema, fcmTokenSchema, rideStatusSchema, driverRidesQuerySchema } from '../types.ts'
 import { recentBookingHistoryWhere } from '../lib/bookingHistory.js'
 
 // The driver-facing API. Nothing calls it yet — the driver app is Phase 5, and until
@@ -186,6 +189,13 @@ async function requireDriver(req: Request, res: Response): Promise<Driver | null
     return driver
 }
 
+type WorkReadyDriver = Driver & {
+    activeVehicleId: string
+    vehicleClass: NonNullable<Driver['vehicleClass']>
+    vehicleCapacity: number
+    vehicleNumber: string
+}
+
 /**
  * The body of the two gates below.
  *
@@ -194,7 +204,7 @@ async function requireDriver(req: Request, res: Response): Promise<Driver | null
  * loosening a suspension takes changing a function name in a diff rather than
  * flipping a boolean nobody reads twice.
  */
-async function resolveDriver(req: Request, res: Response, allowSuspended: boolean): Promise<Driver | null> {
+async function resolveDriver(req: Request, res: Response, allowSuspended: boolean): Promise<WorkReadyDriver | null> {
     const { userId } = getAuth(req)
     if (!userId) {
         res.status(401).json({ error: 'Not signed in' })
@@ -214,6 +224,14 @@ async function resolveDriver(req: Request, res: Response, allowSuspended: boolea
         res.status(403).json({ error: 'Driver not yet approved' })
         return null
     }
+    // A Driver row now exists before the first car is added so personal papers can
+    // be uploaded first. Approval should never normally coexist with this state,
+    // because verification includes active-car paperwork, but keep the work gates
+    // defensive: none of the ride paths may receive nullable cached vehicle data.
+    if (!driver.activeVehicleId || !driver.vehicleClass || driver.vehicleCapacity === null || !driver.vehicleNumber) {
+        res.status(403).json({ error: 'Add a vehicle before driving' })
+        return null
+    }
     if (driver.suspendedAt && !allowSuspended) {
         res.status(403).json({
             error: 'Driver account is suspended',
@@ -223,11 +241,11 @@ async function resolveDriver(req: Request, res: Response, allowSuspended: boolea
         return null
     }
 
-    return driver
+    return driver as WorkReadyDriver
 }
 
 /** Everything that takes on NEW work. A suspended captain is refused, with the reason. */
-async function requireApprovedDriver(req: Request, res: Response): Promise<Driver | null> {
+async function requireApprovedDriver(req: Request, res: Response): Promise<WorkReadyDriver | null> {
     return resolveDriver(req, res, false)
 }
 
@@ -255,7 +273,7 @@ async function requireApprovedDriver(req: Request, res: Response): Promise<Drive
  * themselves. That check is what makes this gate specific rather than a blanket
  * reopening — it is doing real work here, so do not remove it as redundant.
  */
-async function requireDriverForAssignedWork(req: Request, res: Response): Promise<Driver | null> {
+async function requireDriverForAssignedWork(req: Request, res: Response): Promise<WorkReadyDriver | null> {
     return resolveDriver(req, res, true)
 }
 
@@ -265,10 +283,13 @@ driverRouter.post('/me', protect, async (req, res) => {
     if (!parsed.success) {
         return res.status(400).json({ error: 'Invalid request body', issues: parsed.error.issues })
     }
-    const { name, vehicleClass, vehicleNumber, vehicleModel, } = parsed.data
+    const { name } = parsed.data
 
     if (!name || typeof name !== 'string' || name.trim().length < 2)
         return res.status(400).json({ error: 'name must be at least 2 characters' })
+
+    const normalizedName = name.trim()
+    const nameLockKey = `driver-name:${normalizedName.toLocaleLowerCase('en')}`
 
     const { userId } = getAuth(req)
     if (!userId) return res.status(401).json({ error: 'Unauthorized' })
@@ -290,53 +311,34 @@ driverRouter.post('/me', protect, async (req, res) => {
         })
     }
 
-    const seats = seatsOf(vehicleClass)
-    if (seats === null) return res.status(400).json({ error: 'Unknown vehicle class' })
-
-    const number = vehicleNumber.trim().toUpperCase()
-
-    // The driver and his first car, in one transaction. Two writes because the
-    // FK runs Driver -> Vehicle and the vehicle cannot exist before its owner;
-    // one transaction because a captain row with no car is a state no screen in
-    // the app knows how to render, and a crash between the two would leave him
-    // in it permanently with no way to add one (signup 403s on the second try).
-    //
-    // The four vehicle columns on Driver are written from the SAME values as the
-    // Vehicle row rather than from the request twice — see the schema comment on
-    // Driver.vehicleClass. This is the only place outside services/driverVehicles.js
-    // that writes them, and only because the row does not exist yet.
+    // Registration deliberately creates the person before the car. That gives
+    // the document routes a real Driver owner for the profile photo and licence,
+    // while the first POST /me/vehicles later fills activeVehicleId and all four
+    // cached vehicle fields atomically in services/driverVehicles.js.
     const driver = await prisma.$transaction(async (tx) => {
-        const created = await tx.driver.create({
+        await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${nameLockKey}, 0))::text`
+
+        const nameConflict = await tx.driver.findFirst({
+            where: { name: { equals: normalizedName, mode: 'insensitive' } },
+            select: { id: true },
+        })
+        if (nameConflict) return null
+
+        return tx.driver.create({
             data: {
                 clerkId: userId,
-                name,
+                name: normalizedName,
                 phone,
-                vehicleClass,
-                vehicleCapacity: seats,
-                vehicleNumber: number,
-                // No `|| null` on either write: driverAccountInformationSchema
-                // requires a model of at least two characters, so by here there
-                // is always one. A null branch would be unreachable code that
-                // reads as though a captain may still skip the field.
-                vehicleModel: vehicleModel.trim(),
             }
-        })
-
-        const vehicle = await tx.vehicle.create({
-            data: {
-                driverId: created.id,
-                class: vehicleClass,
-                number,
-                model: vehicleModel.trim(),
-            }
-        })
-
-        return tx.driver.update({
-            where: { id: created.id },
-            data: { activeVehicleId: vehicle.id },
-            include: { activeVehicle: true },
         })
     })
+
+    if (!driver) {
+        return res.status(409).json({
+            error: 'That name is already in use. Please choose another.',
+            code: 'NAME_TAKEN',
+        })
+    }
 
     return res.status(201).json(driver)
 })
@@ -384,6 +386,28 @@ driverRouter.get('/me/vehicles', protect, async (req, res) => {
             ),
         })),
     })
+})
+
+driverRouter.post('/me/vehicles/classify', protect, async (req, res) => {
+    const parsed = vehicleClassificationInputSchema.safeParse(req.body)
+    if (!parsed.success) {
+        return res.status(400).json({ error: 'Invalid request body', issues: parsed.error.issues })
+    }
+
+    try {
+        const result = await classifyVehicle(parsed.data.vehicleModel)
+        return res.json({
+            vehicleClass: result.vehicleClass,
+            normalizedModel: result.normalizedModel,
+            confidence: result.confidence,
+            needsLookup: result.needsLookup,
+            webLookupUsed: result.webLookupUsed,
+            cacheHit: result.cacheHit,
+        })
+    } catch (error) {
+        console.error('Vehicle classification failed', error)
+        return res.status(502).json({ error: 'Could not identify this car. Choose the car type manually.' })
+    }
 })
 
 driverRouter.post('/me/vehicles', protect, async (req, res) => {
@@ -1125,7 +1149,7 @@ driverRouter.get('/me', protect, async (req, res) => {
     // board totals, computed the same way so the two screens cannot disagree; and the
     // expiring count moves with the clock rather than with a write, so there is no
     // moment at which a cached copy of it could be refreshed.
-    const [rating, month, expiring, renewing, heldRides, location] = await Promise.all([
+    const [rating, month, expiring, renewing, heldRides, location, onboardingDocuments] = await Promise.all([
         prisma.driverReview.aggregate({
             where: { driverId: driver.id },
             _avg: { rating: true },
@@ -1187,6 +1211,13 @@ driverRouter.get('/me', protect, async (req, res) => {
             where: { driverId: driver.id },
             select: { updatedAt: true },
         }),
+        // Presence, not approval, advances the registration wizard. Review happens
+        // after all required uploads are on file, so a pending/scanning row still
+        // counts as completing its upload step here.
+        prisma.driverDocument.findMany({
+            where: { driverId: driver.id, isReplacement: false },
+            select: { type: true, vehicleId: true },
+        }),
     ])
 
     // Expiring, minus the ones he has already sent a renewal for.
@@ -1213,6 +1244,37 @@ driverRouter.get('/me', protect, async (req, res) => {
         group, walletBalance, activeVehicleId,
     } = driver
 
+    const hasActiveVehicle = Boolean(
+        activeVehicleId
+        && vehicleClass
+        && vehicleNumber
+        && driver.vehicleCapacity !== null,
+    )
+
+    const personalTypesOnFile = new Set<string>(
+        onboardingDocuments
+            .filter((document) => document.vehicleId === null)
+            .map((document) => document.type),
+    )
+    const activeVehicleTypesOnFile = new Set<string>(
+        onboardingDocuments
+            .filter((document) => document.vehicleId === activeVehicleId)
+            .map((document) => document.type),
+    )
+    const hasRequiredPersonalDocuments = REQUIRED_DRIVER_OWNED_DOCUMENTS.every((type) =>
+        personalTypesOnFile.has(type),
+    )
+    const hasRequiredVehicleDocuments = hasActiveVehicle && REQUIRED_VEHICLE_OWNED_DOCUMENTS.every((type) =>
+        activeVehicleTypesOnFile.has(type),
+    )
+    const onboardingStage = !hasRequiredPersonalDocuments
+        ? 'personalDocuments'
+        : !hasActiveVehicle
+            ? 'vehicle'
+            : !hasRequiredVehicleDocuments
+                ? 'vehicleDocuments'
+                : 'review'
+
     // How many cars he keeps. The app shows a switcher only when there is
     // something to switch between — a picker with one entry is a control that
     // does nothing, on the screen a captain uses most.
@@ -1220,14 +1282,14 @@ driverRouter.get('/me', protect, async (req, res) => {
 
     return res.json({
         id, verificationStatus, rejectionReason, isOnline,
-        dispatchReady: isDriverDispatchReady(isOnline, location),
+        dispatchReady: hasActiveVehicle && isDriverDispatchReady(isOnline, location),
         vehicleClass, vehicleNumber, vehicleModel, phone, name,
         // The car these four columns are a copy of. Sent so the app can address
         // the vehicle endpoints without a second call, and so a stale cache is
         // visible rather than silent.
         activeVehicleId,
         vehicleCount,
-        vehicleSeats: seatsOf(vehicleClass),
+        vehicleSeats: vehicleClass ? seatsOf(vehicleClass) : null,
         // A short-lived URL, minted per request, never the stored path. pfpUrl on
         // the row is a private Storage key and nothing outside this server has
         // any business holding one.
@@ -1242,11 +1304,13 @@ driverRouter.get('/me', protect, async (req, res) => {
         // the same condition requireApprovedDriver enforces server-side, so the
         // screen he is shown and the requests he is allowed cannot disagree.
         onboarding: {
-            canDrive: verificationStatus === 'approved' && !driver.suspendedAt && driver.isActive,
+            stage: onboardingStage,
+            canDrive: hasActiveVehicle && verificationStatus === 'approved' && !driver.suspendedAt && driver.isActive,
             // Why not, in the app's words rather than an enum it has to translate.
             // Null when he can drive.
             blockedBy:
-                !driver.isActive ? 'inactive'
+                !hasActiveVehicle ? 'notUploaded'
+                    : !driver.isActive ? 'inactive'
                     : driver.suspendedAt ? 'suspended'
                         : verificationStatus === 'approved' ? null
                             : verificationStatus,
@@ -1803,7 +1867,10 @@ driverRouter.patch('/rides/:id/status', protect, async (req, res) => {
             pickupLng: true,
             dropLat: true,
             dropLng: true,
-            user: { select: { bookingCode: true } },
+            reference: true,
+            shareToken: true,
+            shareExpiresAt: true,
+            user: { select: { bookingCode: true, emergencyContact: true, autoShareLiveLocation: true } },
         },
     })
     if (!booking) return res.status(404).json({ error: 'Booking not found' })
@@ -2013,6 +2080,19 @@ driverRouter.patch('/rides/:id/status', protect, async (req, res) => {
 
     if (!moved) {
         return res.status(409).json({ error: 'Ride changed while the request was in flight' })
+    }
+
+    if (to === 'started' && booking.user.autoShareLiveLocation && booking.user.emergencyContact) {
+        try {
+            const share = await ensureBookingShareLink(prisma, booking)
+            await notifyWhatsAppEmergencyLiveLocation(
+                booking.user.emergencyContact,
+                booking.reference,
+                share.url,
+            )
+        } catch (err) {
+            console.error(`Emergency live-location share failed for ${booking.id}:`, (err as Error).message)
+        }
     }
 
     if (to === 'completed') {

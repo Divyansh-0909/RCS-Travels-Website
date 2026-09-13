@@ -273,6 +273,8 @@ describe('document type constants', () => {
   test('the optional types cannot hold up an approval', () => {
     assert.ok(!REQUIRED_DRIVER_DOCUMENTS.includes('permit_one_year'))
     assert.ok(!REQUIRED_DRIVER_DOCUMENTS.includes('cng_test'))
+    assert.ok(!REQUIRED_DRIVER_DOCUMENTS.includes('car_photo_front'))
+    assert.ok(!REQUIRED_DRIVER_DOCUMENTS.includes('car_photo_back'))
   })
 
   // The captain's photo is the file a RIDER is shown, so it is required and it

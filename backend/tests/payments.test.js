@@ -110,6 +110,20 @@ describe('Checkout verification', () => {
       gateway: { verifyPaymentSignature: () => false }, db }), /Invalid payment signature/)
     assert.equal(db.row.status, 'order_created')
   })
+  test('a captured advance cancelled during checkout reports its refund-pending state', async () => {
+    const db = paymentDb(basePayment({
+      purpose: 'scheduled_ride_advance', status: 'order_created', razorpayOrderId: 'order_1',
+    }))
+    db.booking = { updateMany: async ({ where }) => ({ count: where.status === 'cancelled' ? 1 : 0 }) }
+    const result = await verifyCheckoutPayment({
+      paymentId: db.row.id, userId: 'u1', razorpayOrderId: 'order_1', razorpayPaymentId: 'pay_1', signature: 'sig', db,
+      gateway: { verifyPaymentSignature: () => true, fetchPayment: async () => ({
+        order_id: 'order_1', amount: 12345, currency: 'INR', status: 'captured',
+      }) },
+      refundPaymentFn: async () => ({ status: 'refund_pending' }),
+    })
+    assert.equal(result.status, 'refund_pending')
+  })
   test('delayed gateway messages cannot regress capture/refund states', () => {
     assert.equal(statusAfterGatewayPayment('captured', 'authorized'), 'captured')
     assert.equal(statusAfterGatewayPayment('refund_pending', 'captured'), 'refund_pending')
@@ -117,7 +131,7 @@ describe('Checkout verification', () => {
   })
 })
 
-const webhookDb = ({ duplicate = false, payment = null } = {}) => {
+const webhookDb = ({ duplicate = false, payment = null, capturedAfterCancellation = false } = {}) => {
   let eventStatus = null; let row = payment
   const tx = {
     razorpayWebhookEvent: {
@@ -128,6 +142,9 @@ const webhookDb = ({ duplicate = false, payment = null } = {}) => {
       findFirst: async () => row,
       update: async ({ data }) => { row = { ...row, ...data }; return row },
       updateMany: async ({ data }) => { row = { ...row, ...data }; return { count: 1 } },
+    },
+    booking: {
+      updateMany: async ({ where }) => ({ count: capturedAfterCancellation && where.status === 'cancelled' ? 1 : 0 }),
     },
   }
   return { $transaction: (fn) => fn(tx), get eventStatus() { return eventStatus }, get payment() { return row } }
@@ -144,6 +161,61 @@ describe('Razorpay webhook idempotency and states', () => {
     const body = Buffer.from(JSON.stringify({ event: 'payment.captured', payload: { payment: { entity: { id: 'pay_1', order_id: 'order_1', amount: 12345, currency: 'INR' } } } }))
     assert.deepEqual(await processRazorpayWebhook({ rawBody: body, signature: 'sig', eventId: 'evt1', gateway: webhookGateway, db }), { processed: true })
     assert.equal(db.payment.status, 'captured'); assert.equal(db.eventStatus, 'processed')
+  })
+  test('a delayed advance capture after cancellation immediately requests its refund', async () => {
+    const db = webhookDb({ capturedAfterCancellation: true, payment: basePayment({
+      purpose: 'scheduled_ride_advance', status: 'order_created', razorpayOrderId: 'order_1',
+    }) })
+    const body = Buffer.from(JSON.stringify({ event: 'payment.captured', payload: {
+      payment: { entity: { id: 'pay_1', order_id: 'order_1', amount: 12345, currency: 'INR' } },
+    } }))
+    let refundedPaymentId = null
+    assert.deepEqual(await processRazorpayWebhook({
+      rawBody: body, signature: 'sig', eventId: 'evt-cancelled-capture', gateway: webhookGateway, db,
+      refundPaymentFn: async ({ paymentId }) => { refundedPaymentId = paymentId },
+    }), { processed: true })
+    assert.equal(refundedPaymentId, db.payment.id)
+  })
+  test('a duplicate capture delivery retries a failed late-cancellation refund', async () => {
+    const db = webhookDb({ duplicate: true, capturedAfterCancellation: true, payment: basePayment({
+      purpose: 'scheduled_ride_advance', status: 'captured', razorpayOrderId: 'order_1', razorpayPaymentId: 'pay_1',
+    }) })
+    const body = Buffer.from(JSON.stringify({ event: 'payment.captured', payload: {
+      payment: { entity: { id: 'pay_1', order_id: 'order_1', amount: 12345, currency: 'INR' } },
+    } }))
+    let calls = 0
+    await assert.rejects(processRazorpayWebhook({
+      rawBody: body, signature: 'sig', eventId: 'evt-retry-refund', gateway: webhookGateway, db,
+      refundPaymentFn: async () => { calls++; throw new Error('temporary gateway outage') },
+    }), /temporary gateway outage/)
+    assert.deepEqual(await processRazorpayWebhook({
+      rawBody: body, signature: 'sig', eventId: 'evt-retry-refund', gateway: webhookGateway, db,
+      refundPaymentFn: async () => { calls++ },
+    }), { duplicate: true })
+    assert.equal(calls, 2)
+  })
+  test('a full pending refund event settles the matching payment', async () => {
+    const db = webhookDb({ payment: basePayment({
+      status: 'refund_pending', razorpayPaymentId: 'pay_1', amount: 12345,
+    }) })
+    const body = Buffer.from(JSON.stringify({ event: 'refund.processed', payload: {
+      refund: { entity: { id: 'rfnd_1', payment_id: 'pay_1', amount: 12345, currency: 'INR' } },
+    } }))
+    assert.deepEqual(await processRazorpayWebhook({ rawBody: body, signature: 'sig', eventId: 'evt-full-refund', gateway: webhookGateway, db }), { processed: true })
+    assert.equal(db.payment.status, 'refunded')
+    assert.equal(db.payment.razorpayRefundId, 'rfnd_1')
+  })
+  test('a partial refund event cannot settle a full pending refund', async () => {
+    const db = webhookDb({ payment: basePayment({
+      status: 'refund_pending', razorpayPaymentId: 'pay_1', amount: 12345,
+    }) })
+    const body = Buffer.from(JSON.stringify({ event: 'refund.processed', payload: {
+      refund: { entity: { id: 'rfnd_1', payment_id: 'pay_1', amount: 100, currency: 'INR' } },
+    } }))
+    assert.deepEqual(await processRazorpayWebhook({ rawBody: body, signature: 'sig', eventId: 'evt-refund', gateway: webhookGateway, db }), { ignored: true })
+    assert.equal(db.payment.status, 'refund_pending')
+    assert.equal(db.payment.razorpayRefundId, null)
+    assert.equal(db.eventStatus, 'ignored')
   })
   test('unknown payment and unsupported event are safely ignored', async () => {
     const unknown = webhookDb()
@@ -169,11 +241,12 @@ describe('refund foundation', () => {
     await assert.rejects(refundPayment({ paymentId: db.row.id, gateway: {}, db }), /Only a captured payment/)
   })
   test('refund creation is idempotent', async () => {
-    const db = paymentDb(basePayment({ status: 'captured', razorpayPaymentId: 'pay_1' })); let calls = 0
-    const gateway = { createRefund: async () => { calls++; return { id: 'rfnd_1' } } }
+    const db = paymentDb(basePayment({ status: 'captured', razorpayPaymentId: 'pay_1' })); let calls = 0; let options
+    const gateway = { createRefund: async (_paymentId, input) => { calls++; options = input; return { id: 'rfnd_1' } } }
     await refundPayment({ paymentId: db.row.id, gateway, db })
     await refundPayment({ paymentId: db.row.id, gateway, db })
     assert.equal(calls, 1); assert.equal(db.row.razorpayRefundId, 'rfnd_1')
+    assert.equal(options.idempotencyKey, db.row.id)
   })
   test('an in-progress refund never calls the gateway again', async () => {
     const db = paymentDb(basePayment({ status: 'refund_pending', razorpayPaymentId: 'pay_1' })); let calls = 0

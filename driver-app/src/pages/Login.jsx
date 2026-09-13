@@ -15,12 +15,10 @@ import { useOtpClipboard } from "../hooks/useOtpClipboard";
 import CheckMarkOutline from "../components/illustrations/CheckMarkOutline";
 import CrossOutline from "../components/illustrations/CrossOutline";
 import { useLanguage } from '../i18n';
+import { useTheme } from '../theme/ThemeContext';
 
 const ERROR_TEXT = "#E86A6A";   
 const BOX_BG = "#1d1d27";     
-const BOX_BG_FOCUS = "rgba(255,255,255,0.05)";
-const BOX_BORDER = "rgba(255,255,255,0.3)";
-const BOX_BORDER_FOCUS = "rgba(255,255,255,0.6)";
 const BOX_BORDER_ERROR = "rgba(185,28,28,0.5)";
 const BOX_BORDER_ERROR_FOCUS = "rgba(185,28,28,0.8)";
 const BOX_BG_ERROR = "rgba(185,28,28,0.1)";
@@ -81,12 +79,12 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
   const [resendIn, setResendIn] = useState(0);
-  const [showSignUp, setShowSignUp] = useState(false);
   const [focusedBox, setFocusedBox] = useState(-1);
   const [redirecting, setRedirecting] = useState(false);
 
   const api = useApi();
   const { t } = useLanguage();
+  const { colors } = useTheme();
 
   useEffect(() => {
     if (resendIn <= 0) return;
@@ -105,6 +103,14 @@ const Login = () => {
   }, [expiresIn]);
 
   const back = () => {
+    if (step === "otp") {
+      setStep("phone");
+      setOtp("");
+      setVerdict(null);
+      setError(null);
+      setRedirecting(false);
+      return;
+    }
     navigate("/")
   }
 
@@ -158,9 +164,11 @@ const Login = () => {
     } catch (err) {
       console.error(err);
       setError(err?.message || t('driver.auth.generic'));
-      // A throw after the code was accepted leaves the verdict on "pass", which
-      // would sit a tick above the error message.
-      setVerdict("fail");
+      // Backend-declared OTP failures are handled inside verifyOtp(). Anything
+      // that throws here is a transport/session failure, so don't label it as a
+      // wrong code and don't leave the screen stuck in the redirecting state.
+      setVerdict(null);
+      setRedirecting(false);
     } finally {
       setLoading(false);
     }
@@ -175,8 +183,7 @@ const Login = () => {
       return;
     }
     if (data.status === 404) {
-      setError(data.error);
-      setShowSignUp(true);
+      navigate("/signup", { state: { phone, entry: "login" } });
       return;
     }
     if (data.error) {
@@ -228,13 +235,21 @@ const Login = () => {
     setRedirecting(true);
 
     if (!isSignedIn) {
-      const result = await signIn.create({ strategy: "ticket", ticket: data.ticket });
+      let result;
+      try {
+        result = await signIn.create({ strategy: "ticket", ticket: data.ticket });
+      } catch (err) {
+        console.error('Driver Clerk ticket sign-in failed', err);
+        setError(t('driver.auth.signInFailed'));
+        setVerdict(null);
+        setRedirecting(false);
+        return;
+      }
+
       if (result.status !== "complete") {
         setError(t('driver.auth.signInFailed'));
-        // The code was right, so the verdict was already "pass" — but the sign-in
-        // it was standing in for did not happen, and leaving a tick over an error
-        // message reports the wrong thing.
-        setVerdict("fail");
+        setVerdict(null);
+        setRedirecting(false);
         return;
       }
       await setActive({ session: result.createdSessionId });
@@ -267,12 +282,13 @@ const Login = () => {
   const formatMMSS = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 
   const phoneDisplay = phone ? `+91 ${phone.slice(0, 5)} ${phone.slice(5)}` : "+91 XXXXX XXXXX";
+  const otpBody = t('driver.auth.otpBody', { phone: phoneDisplay });
+  const phoneOffset = otpBody.indexOf(phoneDisplay);
 
   const handlePhoneChange = (value) => {
     const digits = value.replace(/\D/g, "").slice(0, 10);
 
     setPhone(digits);
-    setShowSignUp(false);
 
     if (
       error === dc("Enter a Phone Number") ||
@@ -356,8 +372,8 @@ const Login = () => {
       };
     }
     return {
-      backgroundColor: focused ? BOX_BG_FOCUS : BOX_BG,
-      borderColor: focused ? BOX_BORDER_FOCUS : BOX_BORDER,
+      backgroundColor: BOX_BG,
+      borderColor: focused ? colors.primary : colors.borderUi,
     };
   };
 
@@ -366,16 +382,21 @@ const Login = () => {
       className="flex-1 w-full py-12"
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      <BackButton
-        onPress={back}
-        className="absolute left-2 top-10 z-10"
-        iconClassName="text-[var(--text)]"
-        iconSize={24}
-        weight="regular"
-      />
+      <View className="absolute left-2 right-2 top-10 z-10 h-12 items-center justify-center">
+        <AppText className="text-xl font-normal text-[var(--text)]">
+          <AppText className="font-semibold">RCS</AppText> captains
+        </AppText>
+        <BackButton
+          onPress={back}
+          className="absolute left-0 rounded-full bg-[var(--input-background)]"
+          iconClassName="text-[var(--text)]"
+          iconSize={24}
+          weight="regular"
+        />
+      </View>
 
       <ScrollView
-        contentContainerClassName="flex-grow justify-start items-start px-6 pt-4"
+        contentContainerClassName="flex-grow justify-start items-start px-6 pt-20"
         keyboardShouldPersistTaps="handled"
       >
         {isSignedIn && !redirecting
@@ -400,7 +421,13 @@ const Login = () => {
               <AppText className="text-base text-left text-[var(--text-muted)]">
                 {isPhone
                   ? t('driver.auth.phoneBody')
-                  : t('driver.auth.otpBody', { phone: phoneDisplay })}
+                  : phoneOffset >= 0
+                    ? <>
+                        {otpBody.slice(0, phoneOffset)}
+                        <AppText className="text-[var(--text)]">{phoneDisplay}</AppText>
+                        {otpBody.slice(phoneOffset + phoneDisplay.length)}
+                      </>
+                    : otpBody}
               </AppText>
             </View>
 
@@ -476,10 +503,16 @@ const Login = () => {
                     )}
                   </View>
 
-                  <AppText className={`text-sm text-left text-[var(--text-muted)] mt-2 mb-3 ${busy ? "opacity-0" : ""}`}>
-                    {expiresIn > 0
-                      ? t('driver.auth.expires', { time: formatMMSS(expiresIn) })
-                      : t('driver.auth.expired')}
+                  <AppText className="text-sm text-left text-[var(--text-muted)] mt-2 mb-3">
+                    {loading
+                      ? t('driver.auth.verifying')
+                      : verdict === "pass"
+                        ? t('driver.auth.success')
+                        : verdict === "fail"
+                          ? t('driver.auth.wrongOtp')
+                          : expiresIn > 0
+                            ? t('driver.auth.expires', { time: formatMMSS(expiresIn) })
+                            : t('driver.auth.expired')}
                   </AppText>
                 </View>
                 :
@@ -499,19 +532,17 @@ const Login = () => {
               }
 
               <Button
-                onPress={isPhone && showSignUp
-                  ? () => navigate("/signup", { state: { phone } })
-                  : (isPhone ? handleSubmit : handleOTPSubmit)}
+                onPress={isPhone ? handleSubmit : handleOTPSubmit}
                 prop={{
-                  disabled: (isPhone && showSignUp)
-                    ? false
-                    : (isPhone ? phone.length !== 10 : otp.length !== OTP_LENGTH),
+                  disabled: isPhone
+                    ? loading || phone.length !== 10
+                    : loading || otp.length !== OTP_LENGTH,
                 }}
                 className="mt-3"
               >
                 {isPhone
-                  ? (showSignUp ? t('driver.auth.signUp') : (loading ? t('driver.auth.sendingOtp') : t('common.actions.continue')))
-                  : (loading ? t('driver.auth.redirecting') : t('driver.auth.confirm'))}
+                  ? (loading ? t('driver.auth.sendingOtp') : t('common.actions.continue'))
+                  : ((loading || verdict) ? t('driver.auth.continue') : t('driver.auth.submit'))}
               </Button>
 
               {!isPhone && (

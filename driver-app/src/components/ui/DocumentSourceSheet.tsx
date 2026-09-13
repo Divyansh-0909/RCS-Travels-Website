@@ -1,8 +1,8 @@
 import { useLanguage as useCopyLanguage } from "../../i18n";
 import { driverCopy as dc } from "../../lib/copy";
-import { useState } from 'react';
-import { Modal, Pressable, View } from 'react-native';
-import { CameraIcon, FilePdfIcon, ImageIcon, XIcon } from 'phosphor-react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Animated, Modal, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { CameraIcon, CaretRightIcon, FilePdfIcon, ImageIcon, XIcon } from 'phosphor-react-native';
 import AppText from '../AppText';
 import { useTheme } from '../../theme/ThemeContext';
 
@@ -48,14 +48,24 @@ const Option = ({ Icon, label, onPress }: OptionProps) => {
       onPress={onPress}
       onPressIn={() => setPressed(true)}
       onPressOut={() => setPressed(false)}
-      className="w-full flex-row items-center gap-3 rounded-xl px-3.5 py-3.5"
+      className="w-full flex-row items-center gap-3 rounded-2xl px-4 py-3.5"
       style={{
-        backgroundColor: WELL,
+        backgroundColor: colors.strong,
         opacity: pressed ? 0.7 : 1,
       }}
     >
-          <Icon size={22} weight="regular" color={colors.ink} />
-      <AppText className={`font-semibold ${INK}`}>{label}</AppText>
+      <View
+        className="h-12 w-12 shrink-0 items-center justify-center rounded-full"
+        style={{ backgroundColor: colors.surfaceRaised }}
+      >
+        <Icon size={22} weight="regular" color={colors.ink} />
+      </View>
+
+      <AppText className="flex-1 text-base font-semibold" style={{ color: colors.onStrong }}>
+        {label}
+      </AppText>
+
+      <CaretRightIcon size={20} weight="regular" color={colors.onStrong} />
     </Pressable>
   );
 };
@@ -72,16 +82,72 @@ type Props = {
 const DocumentSourceSheet = ({ visible, label, allowPdf, onCancel, onPick }: Props) => {
     useCopyLanguage();
   const { colors } = useTheme();
+  const { height: windowHeight } = useWindowDimensions();
   const [closePressed, setClosePressed] = useState(false);
+  const [mounted, setMounted] = useState(visible);
+  const scrimOpacity = useRef(new Animated.Value(visible ? 1 : 0)).current;
+  const sheetY = useRef(new Animated.Value(visible ? 0 : windowHeight)).current;
+
+  useEffect(() => {
+    const hiddenY = Math.max(windowHeight * 0.55, 420);
+
+    scrimOpacity.stopAnimation();
+    sheetY.stopAnimation();
+
+    if (visible) {
+      if (!mounted) {
+        scrimOpacity.setValue(0);
+        sheetY.setValue(hiddenY);
+        setMounted(true);
+      }
+
+      Animated.parallel([
+        Animated.timing(scrimOpacity, {
+          toValue: 1,
+          duration: 180,
+          useNativeDriver: true,
+        }),
+        Animated.timing(sheetY, {
+          toValue: 0,
+          duration: 240,
+          useNativeDriver: true,
+        }),
+      ]).start();
+      return;
+    }
+
+    if (!mounted) return;
+
+    Animated.parallel([
+      Animated.timing(scrimOpacity, {
+        toValue: 0,
+        duration: 160,
+        useNativeDriver: true,
+      }),
+      Animated.timing(sheetY, {
+        toValue: hiddenY,
+        duration: 220,
+        useNativeDriver: true,
+      }),
+    ]).start(({ finished }) => {
+      if (finished) setMounted(false);
+    });
+  }, [mounted, scrimOpacity, sheetY, visible, windowHeight]);
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
+    <Modal visible={mounted} transparent animationType="none" onRequestClose={onCancel}>
       {/* The scrim dismisses too. The cross is small and in the far corner, which
           is the wrong end of the screen from a thumb — tapping away from the sheet
           is how most people will actually leave it. */}
-      <Pressable className="flex-1 justify-end" style={{ backgroundColor: SCRIM }} onPress={onCancel}>
+      <View className="flex-1 justify-end">
+        <Animated.View
+          pointerEvents="none"
+          style={[StyleSheet.absoluteFillObject, { backgroundColor: SCRIM, opacity: scrimOpacity }]}
+        />
+        <Pressable style={StyleSheet.absoluteFillObject} onPress={onCancel} />
         {/* Swallows the tap, so pressing the sheet itself does not close it. */}
-        <Pressable className="bg-surface rounded-t-3xl px-5 pt-5 pb-8 gap-4" onPress={() => {}}>
+        <Animated.View style={{ transform: [{ translateY: sheetY }] }}>
+          <Pressable className="bg-surface rounded-t-3xl px-5 pt-5 pb-8 gap-4" onPress={() => {}}>
           {/* The way out, level with the title rather than under the options.
               A full-width Cancel at the foot is a fourth thing the eye has to rule
               out before it can choose one of the three above it; up here it is
@@ -126,8 +192,9 @@ const DocumentSourceSheet = ({ visible, label, allowPdf, onCancel, onPick }: Pro
               <Option Icon={FilePdfIcon} label={dc("Choose a PDF")} onPress={() => onPick('pdf')} />
             ) : null}
           </View>
-        </Pressable>
-      </Pressable>
+          </Pressable>
+        </Animated.View>
+      </View>
     </Modal>
   );
 };

@@ -9,10 +9,9 @@ import * as Clipboard from "expo-clipboard";
 // it: Android's SMS Retriever behind autoComplete="sms-otp" and iOS's
 // oneTimeCode are both wired to SMS. What the WhatsApp authentication template
 // does give us is a "Copy code" button — one tap and the code is on the
-// clipboard, and the captain is coming back to this screen anyway. Returning to
-// the app is the signal, which is why this listens to AppState rather than to
-// Clipboard's own listener: that one never fires for a copy made while the app
-// was in the background, which is every copy that matters here.
+// clipboard. A copy from the notification shade can happen while the app stays
+// active, so Clipboard's native change listener is the primary signal. AppState
+// is still kept as a fallback for copies made while the app is fully backgrounded.
 //
 // The two platforms differ on what reading costs. Android hands the clipboard
 // over (12+ shows its own "pasted from" toast), so the code can land by itself.
@@ -41,11 +40,16 @@ export function useOtpClipboard({ enabled, length = 6, onCode }) {
     // the same rejected code straight back and the captain would sit there
     // pressing Confirm on it. A deliberate tap ignores the guard.
     const filled = useRef(null);
+    // Clipboard contents that were already present when this OTP step opened.
+    // That value belongs to a previous attempt (or something unrelated), so it
+    // must never auto-fill the new code screen. Only a later clipboard change is
+    // eligible for automatic filling.
+    const initialCode = useRef(null);
 
     const fill = useCallback(async (auto) => {
         try {
             const code = extractCode(await Clipboard.getStringAsync(), length);
-            if (!code || (auto && code === filled.current)) return false;
+            if (!code || (auto && (code === filled.current || code === initialCode.current))) return false;
             filled.current = code;
             onCodeRef.current?.(code);
             setCanPaste(false);
@@ -66,6 +70,22 @@ export function useOtpClipboard({ enabled, length = 6, onCode }) {
         }
 
         let cancelled = false;
+        let leftApp = false;
+        let clipboardSub = null;
+
+        // Snapshot the clipboard when the OTP screen becomes active. On Android
+        // this read is silent apart from the OS clipboard toast, and it gives us
+        // a baseline so a code copied during the previous auth attempt cannot be
+        // inserted into this one.
+        const prime = Platform.OS === "android"
+            ? Clipboard.getStringAsync()
+                .then((text) => {
+                    if (!cancelled) initialCode.current = extractCode(text, length);
+                })
+                .catch(() => {
+                    if (!cancelled) initialCode.current = null;
+                })
+            : Promise.resolve();
 
         const check = async () => {
             if (Platform.OS === "android") {
@@ -80,15 +100,44 @@ export function useOtpClipboard({ enabled, length = 6, onCode }) {
             }
         };
 
-        check();
+        // Copying from a WhatsApp notification usually does not background the
+        // app. Listen for that clipboard mutation so the freshly copied OTP can
+        // fill immediately while the old clipboard value remains ignored.
+        prime.then(() => {
+            if (cancelled) return;
+            clipboardSub = Clipboard.addClipboardListener((event) => {
+                if (cancelled) return;
+
+                if (Platform.OS === "android") {
+                    fill(true);
+                    return;
+                }
+
+                // Reading iOS clipboard contents automatically can trigger the
+                // system paste-permission prompt. Surface the existing Paste
+                // affordance only when the new clipboard content is plain text.
+                setCanPaste(event.contentTypes?.includes(Clipboard.ContentType.PLAIN_TEXT) ?? true);
+            });
+        });
+
         const sub = AppState.addEventListener("change", (state) => {
-            if (state === "active") check();
+            if (state !== "active") {
+                leftApp = true;
+                return;
+            }
+
+            if (!leftApp) return;
+            leftApp = false;
+            prime.then(() => {
+                if (!cancelled) check();
+            });
         });
         return () => {
             cancelled = true;
             sub.remove();
+            clipboardSub?.remove();
         };
-    }, [enabled, fill]);
+    }, [enabled, fill, length]);
 
     return { canPaste, paste };
 }

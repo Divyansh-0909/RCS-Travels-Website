@@ -2,6 +2,7 @@ import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 
 import {
+  ensureBookingShareLink,
   newShareToken,
   shareIsLive,
   shareUrlFor,
@@ -79,6 +80,65 @@ describe('share tokens', () => {
     process.env.APP_ORIGIN = 'https://rcstravels.example/'
     assert.equal(shareUrlFor('tok'), 'https://rcstravels.example/t/tok')
     process.env.APP_ORIGIN = before
+  })
+})
+
+describe('ensureBookingShareLink', () => {
+  test('reuses a live link without writing', async () => {
+    const booking = { id: 'booking-1', shareToken: 'live-token', shareExpiresAt: future() }
+    const db = {
+      booking: {
+        updateMany: async () => { throw new Error('should not write') },
+        findUnique: async () => { throw new Error('should not read again') },
+      },
+    }
+
+    const share = await ensureBookingShareLink(db, booking)
+    assert.equal(share.url, shareUrlFor('live-token'))
+    assert.equal(share.expiresAt, booking.shareExpiresAt)
+  })
+
+  test('mints a fresh link when the old one is expired', async () => {
+    let written = null
+    const db = {
+      booking: {
+        updateMany: async ({ data }) => {
+          written = data
+          return { count: 1 }
+        },
+        findUnique: async () => { throw new Error('winner should not need a reread') },
+      },
+    }
+
+    const share = await ensureBookingShareLink(db, {
+      id: 'booking-2',
+      shareToken: 'expired-token',
+      shareExpiresAt: past(),
+    })
+
+    assert.ok(written)
+    assert.equal(share.url, shareUrlFor(written.shareToken))
+    assert.equal(share.expiresAt, written.shareExpiresAt)
+    assert.equal(shareIsLive(written), true)
+  })
+
+  test('uses the winning live link when another caller wins the race', async () => {
+    const winner = { shareToken: 'winner-token', shareExpiresAt: future() }
+    const db = {
+      booking: {
+        updateMany: async () => ({ count: 0 }),
+        findUnique: async () => winner,
+      },
+    }
+
+    const share = await ensureBookingShareLink(db, {
+      id: 'booking-3',
+      shareToken: null,
+      shareExpiresAt: null,
+    })
+
+    assert.equal(share.url, shareUrlFor(winner.shareToken))
+    assert.equal(share.expiresAt, winner.shareExpiresAt)
   })
 })
 

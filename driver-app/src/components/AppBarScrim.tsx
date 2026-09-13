@@ -4,26 +4,25 @@ import { HIDE, useAppBarVisibility, useShellHidden } from './AppBarVisibility';
 import { useTheme } from '../theme/ThemeContext';
 
 /**
- * The white fade every page's content runs out through at the bottom edge.
+ * The page-coloured fade every page's content runs out through at the bottom edge.
  *
  * It exists because the AppBar floats: pages scroll UNDER it rather than above it,
  * so without this a row is cut off by the hard top edge of a pill that is not part
  * of the page. The fade turns that collision into a page that runs out of light.
  *
  * Lives in the shell, not in the routes. Every screen has the same bar over the same
- * white, so a scrim per page would be the same 20 lines six times and would go
+ * shell background, so a scrim per page would be the same 20 lines six times and would go
  * missing on the seventh.
  */
 
-// Page white. --foreground, from tokens.cjs. Read as a literal rather than a var()
+// Read the page colour as a literal rather than a var()
 // because this is a colour PROP on a native gradient, not a style — expo-linear-
 // gradient parses the strings itself and knows nothing about CSS variables.
 
-// NOT 'transparent', and not rgba(0,0,0,0). The keyword resolves to transparent
-// BLACK, and a gradient interpolates all four channels — so the top half of the fade
-// comes out a grey haze over the content instead of clear. Transparent white is the
-// same colour as the bottom stop with the alpha taken off it, which is what makes the
-// ramp invisible at the top.
+// NOT 'transparent', and not a fixed rgba(0,0,0,0). The keyword resolves to
+// transparent black, and a gradient interpolates all four channels — so light mode
+// would pick up a grey haze. Using the same themed colour with zero alpha keeps the
+// ramp invisible at the top in both schemes.
 
 // The bar sits at bottom-6 (24) and runs ~68 tall, so its top edge is 92 up. This used
 // to be 96, level with that edge, so the ramp began exactly where the bar began.
@@ -41,8 +40,8 @@ const SCRIM_HEIGHT = 72;
 const SCRIM_Z = 40;
 
 // How solid the fade gets at its strongest, before the bar's own hide animation is
-// applied on top. Held under 1 on purpose: at full strength the ramp reads as a white
-// band across the foot of the screen rather than as the page running out of light, and
+// applied on top. Held under 1 on purpose: at full strength the ramp reads as a solid
+// band across the foot of the screen rather than as the page running out, and
 // the last row of a list disappears further up than it needs to.
 //
 // Raised from 0.5 to 0.8. At 0.5 this was a veil — content stayed clearly readable in
@@ -52,7 +51,7 @@ const SCRIM_Z = 40;
 // eye can still make out down there is roughly what the thumb can still reach.
 const STRENGTH = 0.8;
 
-// Where the ramp reaches full white, as a fraction of the height above. A gradient
+// Where the ramp reaches its full page colour, as a fraction of the height above. A gradient
 // that only gets there at the last pixel spends its whole height nearly clear, so
 // content stays legible right up against the bar and the scrim does nothing.
 // Landing it at 0.7 gives the bar a solid base to sit on and puts the visible part
@@ -62,7 +61,8 @@ const SOLID_AT = 0.7;
 const AppBarScrim = () => {
   const { hidden } = useAppBarVisibility();
   const { hidden: shellHidden } = useShellHidden();
-  const { colors } = useTheme();
+  const { colors, scheme } = useTheme();
+  const scrimColor = scheme === 'dark' ? colors.canvas : colors.surface;
 
   // Leaves with the bar, on the bar's own curve. Once the bar has gone the scrim is
   // veiling content for nothing — the whole point of the bar sliding off is to hand
@@ -71,9 +71,9 @@ const AppBarScrim = () => {
     opacity: withTiming((1 - hidden.value) * STRENGTH, HIDE),
   }));
 
-  // And it leaves entirely where the bar never appears. This is a white fade with a
+  // And it leaves entirely where the bar never appears. This is a page-coloured fade with a
   // fixed colour and a height measured off the bar; a screen with no bar has nothing
-  // for it to back, so it would be a white ramp over that page's own background and,
+  // for it to back, so it would be a ramp over that page's own background and,
   // at zIndex 40, a lid over anything the page pinned beneath it.
   //
   // Below the hook, so the animated style is created on every render this component
@@ -94,7 +94,7 @@ const AppBarScrim = () => {
       ]}
     >
       <LinearGradient
-        colors={[`${colors.surface}00`, colors.surface]}
+        colors={[`${scrimColor}00`, scrimColor]}
         locations={[0, SOLID_AT]}
         style={{ flex: 1 }}
       />

@@ -44,7 +44,7 @@ const LanguageSelector = ({ value, onSelect, compact = false, light = false }: P
           key={option.id}
           role="radio"
           aria-checked={selected}
-          accessibilityLabel={dc("{{value0}}. {{value1}}", {value0: (option.name), value1: (option.prompt)})}
+          accessibilityLabel={dc("{{value0}}. {{value1}}", {value0: (option.native), value1: (option.prompt)})}
           onPress={() => onSelect(option.id)}
           className={`w-full rounded-2xl border px-4 ${compact ? 'py-3' : 'py-4'}`}
           onPressIn={() => setPressedId(option.id)}
@@ -62,7 +62,7 @@ const LanguageSelector = ({ value, onSelect, compact = false, light = false }: P
                 : <CircleIcon size={22} color={colors.inkMuted} />}
             </View>
             <View className="flex-1">
-              <AppText className="text-base font-semibold text-ink">{option.name}</AppText>
+              <AppText className="text-base font-semibold text-ink">{option.native}</AppText>
               <AppText className="text-sm leading-6 text-ink-muted">{option.prompt}</AppText>
             </View>
           </View>

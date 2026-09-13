@@ -28,7 +28,13 @@ export default function Services() {
     return (
         <section className="services-hero" aria-labelledby="services-heading">
             <header className="services-intro">
-                <h1 id="services-heading">{tr("A ride for wherever")} <span>{tr("you're headed")}</span></h1>
+                <div className="services-intro-visuals" aria-hidden="true">
+                    <span className="services-intro-grid-orb" />
+                </div>
+                <h1 id="services-heading">
+                    <span className="services-title-line services-title-line--primary">{tr("A ride for wherever")}</span>
+                    <span className="services-title-line services-title-line--accent">{tr("you're headed")}</span>
+                </h1>
             </header>
             <div className="services-carousel" role="region" aria-roledescription="carousel"
                 aria-label={tr("Explore our rides")} tabIndex={0}

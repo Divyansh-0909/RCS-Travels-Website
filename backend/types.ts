@@ -5,10 +5,9 @@ import type { Booking, Driver, User } from '@prisma/client';
 import { COMPLETION_OVERRIDE_REASONS } from './services/rideGeofence.js';
 import { COMPLAINT_REASONS } from './constants/complaints.js';
 
-// One car, as the app describes it. Shared by signup — which creates the driver
-// and his first car in one call — and by "add another car" later, because they
-// are the same three facts and a captain adding his second Innova should not be
-// asked for them in a different shape.
+// One car, as the app describes it. Registration creates the captain profile
+// first so personal documents can be uploaded before a car exists; this shape is
+// used when the captain adds that first car and every later one.
 const vehicleInputSchema = z.object({
   vehicleClass: z.enum(VehicleClass),
   // Indian plates run to 10-11 characters ("DL01AB1234", "UP16 AB 1234"). The
@@ -26,7 +25,11 @@ const vehicleInputSchema = z.object({
   vehicleModel: z.string().trim().min(2).max(60),
 })
 
-const driverAccountInformationSchema = vehicleInputSchema.extend({
+const vehicleClassificationInputSchema = z.object({
+  vehicleModel: z.string().trim().min(2).max(60),
+})
+
+const driverAccountInformationSchema = z.object({
   name: z.string().trim().min(2).max(80),
 })
 
@@ -76,7 +79,12 @@ const driverDocumentType = z.enum(DriverDocumentType).refine(isDriverDocumentTyp
 // Innova in his yard while driving the Dzire.
 //
 // Ignored for the two person-owned types whatever it says. See vehicleIdForType.
-const documentVehicleId = z.uuid().optional()
+// Personal-document screens explicitly send null before a car exists. Normalize
+// it to omission for both signing and confirmation; explicit IDs still need a UUID.
+const documentVehicleId = z.preprocess(
+    (value) => value === null ? undefined : value,
+    z.uuid().optional(),
+)
 
 const UploadUrlRequest = z.object({
     vehicleId: documentVehicleId,
@@ -321,5 +329,5 @@ const fareZoneCollectionSchema = z.object({
 export {locationSchema, bookingListQuerySchema,driverListQuerySchema,myBookingsQuerySchema,userListQuerySchema,fareZoneCollectionSchema}
 export {reviewDocumentSchema, suspendDriverSchema, driverGroupSchema}
 export {rideParamsSchema, driverOnlineSchema, fcmTokenSchema, rideStatusSchema, driverRidesQuerySchema, driverAccountInformationSchema, UploadUrlRequest, ConfirmDocumentsRequest}
-export {addVehicleSchema, activeVehicleSchema}
+export {addVehicleSchema, vehicleClassificationInputSchema, activeVehicleSchema}
 export {rideComplaintSchema}

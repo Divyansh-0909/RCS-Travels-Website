@@ -39,6 +39,21 @@ describe('scheduled payment capture effects are guarded and idempotent', () => {
     assert.deepEqual(calls[0].where, { id: 'b1', status: 'payment_pending' })
     assert.equal(calls[0].data.status, 'confirmed'); assert.equal(calls[0].data.scheduledAdvancePaidAmount, 13500)
   })
+  test('a delayed advance capture after cancellation becomes refund-pending', async () => {
+    const calls = []
+    const tx = { booking: { updateMany: async (query) => {
+      calls.push(query)
+      return { count: query.where.status === 'cancelled' ? 1 : 0 }
+    } } }
+    const effect = await applyCapturedPaymentEffect(tx, {
+      id: 'p1', bookingId: 'b1', purpose: 'scheduled_ride_advance', amount: 13500,
+    })
+    assert.deepEqual(calls[1].where, {
+      id: 'b1', status: 'cancelled', scheduledAdvanceDisposition: { in: ['awaiting_payment', 'refund_pending'] },
+    })
+    assert.equal(calls[1].data.scheduledAdvanceDisposition, 'refund_pending')
+    assert.deepEqual(effect, { type: 'scheduled_ride_advance_refund', bookingId: 'b1', paymentId: 'p1' })
+  })
   test('failed/uncaptured payment invokes no confirmation effect', async () => {
     let writes = 0
     await applyCapturedPaymentEffect({ booking: { updateMany: async () => { writes++ } } }, { bookingId: 'b1', purpose: 'other_customer_payment', amount: 1 })

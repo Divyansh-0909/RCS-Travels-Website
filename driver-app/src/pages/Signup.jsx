@@ -2,8 +2,10 @@
 import { driverCopy as dc } from "../lib/copy";
 import { useSignIn, useAuth } from "@clerk/clerk-expo";
 import { useState, useEffect, useRef } from "react";
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, TextInput, View } from "react-native";
+import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, TextInput, View } from "react-native";
 import Animated, { Easing, useAnimatedStyle, withTiming } from "react-native-reanimated";
+import Svg, { Circle, Path } from "react-native-svg";
+import { CaretDownIcon, CheckIcon } from "phosphor-react-native";
 import { useNavigate, useLocation } from "react-router-native";
 import Input from "../components/ui/Input";
 import Button from "../components/ui/Button";
@@ -13,23 +15,25 @@ import { useApi } from "../hooks/useApi";
 import { useData } from "../hooks/useData";
 import { useOtpClipboard } from "../hooks/useOtpClipboard";
 import { useDriver } from "../hooks/useDriver";
+import { VEHICLE_NUMBER_INPUT_MAX_LENGTH, VEHICLE_NUMBER_MAX_LENGTH, VEHICLE_NUMBER_MIN_LENGTH, validateVehicleNumber } from "../lib/vehicleNumber";
 import { vehicleLabel } from "../constants/booking";
 import CheckMarkOutline from "../components/illustrations/CheckMarkOutline";
 import CrossOutline from "../components/illustrations/CrossOutline";
 import LanguageSelector from '../components/LanguageSelector';
 import { useLanguage } from '../i18n';
+import { useTheme } from '../theme/ThemeContext';
+import { openExternalUrl } from '../lib/externalLinks';
 
 
 const ERROR_TEXT = "#E86A6A";
 const BOX_BG = "#1d1d27";
-const BOX_BG_FOCUS = "rgba(255,255,255,0.05)";
 const BOX_BORDER = "rgba(255,255,255,0.3)";
-const BOX_BORDER_FOCUS = "rgba(255,255,255,0.6)";
 const BOX_BORDER_ERROR = "rgba(185,28,28,0.5)";
 const BOX_BORDER_ERROR_FOCUS = "rgba(185,28,28,0.8)";
 const BOX_BG_ERROR = "rgba(185,28,28,0.1)";
 const BOX_PASS = "#16A34A";
 const BOX_FAIL = "#DC2626";
+const LEGAL_BASE_URL = 'https://www.rcstravels.co.in';
 
 // The four classes POST /driver/me accepts, smallest first — the order a captain
 // scanning for his own car expects to read them in.
@@ -84,24 +88,42 @@ const Signup = () => {
     const OTP_TTL = 300; // seconds until the OTP expires — matches the backend's 5-minute window
     const RESEND_COOLDOWN = 45; // matches the backend's per-phone cooldown, which 429s early resends
     const [expiresIn, setExpiresIn] = useState(0);
-    const [step, setStep] = useState("language"); // "language" | "username" | "phone" | "otp" | "vehicle"
+    const [step, setStep] = useState("language"); // "language" | "username" | "phone" | "existing" | "otp" | "vehicle"
     const [verdict, setVerdict] = useState(null); // null | "pass" | "fail"
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(false);
     const [resending, setResending] = useState(false);
     const [resendIn, setResendIn] = useState(0);
-    const [showLoginUp, setShowLoginUp] = useState(false);
+    const [otpIntent, setOtpIntent] = useState("signup");
     const [focusedBox, setFocusedBox] = useState(-1);
     const [redirecting, setRedirecting] = useState(false);
     const [username, setUsername] = useState("");
     const [vehicleClass, setVehicleClass] = useState(null);
     const [vehicleNumber, setVehicleNumber] = useState("");
     const [vehicleModel, setVehicleModel] = useState("");
+    const [categoryPickerOpen, setCategoryPickerOpen] = useState(false);
+    const [vehicleClassStatus, setVehicleClassStatus] = useState("idle");
+    const [classificationDotCount, setClassificationDotCount] = useState(1);
+    const vehicleClassRequestRef = useRef(0);
 
     const api = useApi();
     const { profile, notRegistered, loading: driverLoading, refresh } = useDriver();
     const { language, setLanguage, t } = useLanguage();
+    const { colors } = useTheme();
     const [pendingLanguage, setPendingLanguage] = useState(language);
+
+    useEffect(() => {
+        if (vehicleClassStatus !== "finding") {
+            setClassificationDotCount(1);
+            return;
+        }
+
+        const timer = setInterval(() => {
+            setClassificationDotCount((count) => count >= 3 ? 1 : count + 1);
+        }, 350);
+
+        return () => clearInterval(timer);
+    }, [vehicleClassStatus]);
 
     useEffect(() => {
         if (resendIn <= 0) return;
@@ -132,26 +154,41 @@ const Signup = () => {
     // empty array silently swallowed.
     useEffect(() => {
         setPhone(location.state?.phone ?? "");
-    }, [location.state?.phone, setPhone]);
+        if (location.state?.entry === "login") setStep("username");
+    }, [location.state?.entry, location.state?.phone, setPhone]);
 
-    // Signed in with Clerk and unknown to the fleet — he verified his phone and
-    // closed the app before telling us what he drives. The session survived; the
-    // three steps behind him have nothing left to ask, and re-running them would
-    // send a second OTP to a number already verified. So he lands on the step he
-    // actually stopped on.
+    // Signed in with Clerk and unknown to the fleet — he verified his phone but
+    // the Driver row was never created. The session survived, so only collect the
+    // name needed to create that profile; personal documents come immediately
+    // after profile creation and vehicle details are intentionally later.
     useEffect(() => {
-        if (isSignedIn && notRegistered) setStep("vehicle");
+        if (isSignedIn && notRegistered) setStep("username");
     }, [isSignedIn, notRegistered]);
 
     const back = () => {
-        // No way back from `vehicle`. Everything behind it is already done and
-        // cannot be undone by walking backwards — the phone is verified and the
-        // session exists. The only real "back" from here is to abandon the
-        // account, which is not something to hang off an arrow he might brush.
-        if (step === "vehicle") return;
-        if (step === "otp") { setStep("phone"); return; }
+        // The phone is already verified by the time we reach `vehicle`, so going
+        // back means editing the registration details that are still changeable.
+        // `handleUsernameSubmit` detects this signed-in/no-row state and resumes
+        // directly at vehicle instead of asking for another OTP.
+        if (step === "vehicle") { setError(null); setStep("username"); return; }
+        if (step === "otp") {
+            setOtp("");
+            setVerdict(null);
+            setError(null);
+            setRedirecting(false);
+            setStep(otpIntent === "login" ? "existing" : "phone");
+            return;
+        }
+        if (step === "existing") { setError(null); setStep("phone"); return; }
         if (step === "phone") { setStep("username"); return; }
-        if (step === "username") { setStep("language"); return; }
+        if (step === "username") {
+            if (location.state?.entry === "login") {
+                navigate("/login", { state: { phone } });
+                return;
+            }
+            setStep("language");
+            return;
+        }
         navigate("/");
     };
 
@@ -160,7 +197,7 @@ const Signup = () => {
     // three separate ways — see the Button below. `e.preventDefault()` is gone
     // with the wiring: that is a web idiom, and React Native hands onPress a
     // GestureResponderEvent which has no such method to call.
-    function handleUsernameSubmit() {
+    async function handleUsernameSubmit() {
         if (!username?.trim()) {
             setError(t('driver.signup.nameRequired'));
             return;
@@ -170,8 +207,36 @@ const Signup = () => {
             return;
         }
 
-        setError(null);
-        setStep("phone");
+        try {
+            setError(null);
+            setLoading(true);
+            const availability = await api.checkName(username.trim());
+            if (availability?.error) {
+                setError(availability.code === "NAME_TAKEN"
+                    ? t('driver.signup.nameTaken')
+                    : availability.error);
+                return;
+            }
+            if (isSignedIn && notRegistered) {
+                const created = await api.createMe({ name: username.trim() });
+                if (created?.error) {
+                    setError(created.code === "NAME_TAKEN"
+                        ? t('driver.signup.nameTaken')
+                        : created.error);
+                    return;
+                }
+                await refresh();
+                navigate("/document", { replace: true });
+                return;
+            }
+
+            setStep("phone");
+        } catch (err) {
+            console.error(err);
+            setError(t('driver.auth.generic'));
+        } finally {
+            setLoading(false);
+        }
     }
 
     async function handleSubmit() {
@@ -224,15 +289,18 @@ const Signup = () => {
         } catch (err) {
             console.error(err);
             setError(err?.message || t('driver.auth.generic'));
-            // A throw after the code was accepted leaves the verdict on "pass", which
-            // would sit a tick above the error message.
-            setVerdict("fail");
+            // Backend-declared OTP failures are handled inside verifyOtp(). Anything
+            // that throws here is a transport/session failure, so don't label it as a
+            // wrong code and don't leave the screen stuck in the redirecting state.
+            setVerdict(null);
+            setRedirecting(false);
         } finally {
             setLoading(false);
         }
     }
 
     const sendOtp = async () => {
+        setOtpIntent("signup");
         const data = await api.sendOtp(phone, "signup");
         if (data.status === 429) {
             setStep("otp");
@@ -240,9 +308,9 @@ const Signup = () => {
             setExpiresIn(OTP_TTL - RESEND_COOLDOWN);
             return;
         }
-        if (data.status === 404) {
-            setError(data.error);
-            setShowLoginUp(true);
+        if (data.status === 409) {
+            setError(null);
+            setStep("existing");
             return;
         }
         if (data.error) {
@@ -254,13 +322,44 @@ const Signup = () => {
         setExpiresIn(OTP_TTL);
     };
 
+    const continueWithExistingAccount = async () => {
+        try {
+            setError(null);
+            setLoading(true);
+            setOtpIntent("login");
+            const data = await api.sendOtp(phone, "login");
+            if (data.status === 429) {
+                setOtp("");
+                setVerdict(null);
+                setStep("otp");
+                setResendIn(RESEND_COOLDOWN);
+                setExpiresIn(OTP_TTL - RESEND_COOLDOWN);
+                return;
+            }
+            if (data.error) {
+                setError(data.error);
+                return;
+            }
+            setOtp("");
+            setVerdict(null);
+            setStep("otp");
+            setResendIn(RESEND_COOLDOWN);
+            setExpiresIn(OTP_TTL);
+        } catch (err) {
+            console.error(err);
+            setError(t('driver.auth.generic'));
+        } finally {
+            setLoading(false);
+        }
+    };
+
     async function handleResend() {
         if (resendIn > 0 || resending) return;
 
         try {
             setError(null);
             setResending(true);
-            const data = await api.sendOtp(phone, "signup");
+            const data = await api.sendOtp(phone, otpIntent);
             if (data.error) {
                 setError(data.error);
                 // The client timer normally prevents a 429, but clocks can disagree
@@ -281,7 +380,7 @@ const Signup = () => {
     }
 
     const verifyOtp = async () => {
-        const data = await api.verifyOtp(phone, otp, "signup");
+        const data = await api.verifyOtp(phone, otp, otpIntent);
         if (data.error) {
             setError(data.error);
             setVerdict("fail");
@@ -293,22 +392,71 @@ const Signup = () => {
         setVerdict("pass");
         setRedirecting(true);
 
-        const result = await signIn.create({ strategy: "ticket", ticket: data.ticket });
-        if (result.status !== "complete") { setError(t('driver.auth.verification')); setVerdict("fail"); return; }
+        let result;
+        try {
+            result = await signIn.create({ strategy: "ticket", ticket: data.ticket });
+        } catch (err) {
+            console.error('Driver Clerk ticket sign-in failed', err);
+            setError(t('driver.auth.signInFailed'));
+            setVerdict(null);
+            setRedirecting(false);
+            return;
+        }
+
+        if (result.status !== "complete") {
+            setError(t('driver.auth.signInFailed'));
+            setVerdict(null);
+            setRedirecting(false);
+            return;
+        }
 
         await setActive({ session: result.createdSessionId });
 
-        // On to the last step rather than creating the row here. POST /driver/me
-        // wants a vehicle class, a registration number and a model, and none of
-        // them have been asked for yet — and it is behind `protect`, so it could
-        // not have run before the setActive above anyway.
-        setRedirecting(false);
-        setStep("vehicle");
+        if (otpIntent === "login") {
+            navigate("/", { replace: true });
+            return;
+        }
+
+        const created = await api.createMe({ name: username.trim() });
+        if (created?.error) {
+            setVerdict(null);
+            setRedirecting(false);
+            if (created.code === "NAME_TAKEN") {
+                setStep("username");
+                setError(t('driver.signup.nameTaken'));
+                return;
+            }
+            setError(created.error);
+            return;
+        }
+
+        // The Driver row now exists without a car. Refresh before routing so the
+        // provider no longer sees this authenticated session as notRegistered.
+        await refresh();
+        navigate("/document", { replace: true });
     };
 
     const handleVehicleSubmit = async () => {
         if (!vehicleClass) { setError(t('driver.auth.vehicleClass')); return; }
-        if (vehicleNumber.trim().length < 4) { setError(t('driver.auth.plate')); return; }
+
+        const plate = validateVehicleNumber(vehicleNumber);
+        if (!plate.valid) {
+            setError(
+                plate.reason === 'missing'
+                    ? t('driver.auth.plate')
+                    : plate.reason === 'too_short'
+                        ? dc("Registration number must be at least {{value0}} characters", { value0: VEHICLE_NUMBER_MIN_LENGTH })
+                        : plate.reason === 'too_long'
+                            ? dc("Registration number can be at most {{value0}} characters", { value0: VEHICLE_NUMBER_MAX_LENGTH })
+                            : plate.reason === 'characters'
+                                ? dc("Use only letters, numbers, spaces, and hyphens")
+                                : plate.reason === 'bh_format'
+                                    ? dc("Check the BH-series registration number")
+                                    : dc("Check the registration number"),
+            );
+            return;
+        }
+
         // Required, like the plate. A rider meeting this car at a gate is looking
         // for "the white Innova Crysta" — the class alone does not pick it out of
         // a queue, and this is the one moment the captain is already typing.
@@ -321,11 +469,22 @@ const Signup = () => {
             const created = await api.createMe({
                 name: username.trim(),
                 vehicleClass,
-                vehicleNumber: vehicleNumber.trim().toUpperCase(),
+                vehicleNumber: plate.number,
                 vehicleModel: vehicleModel.trim(),
             });
 
-            if (created?.error) { setError(created.error); return; }
+            if (created?.error) {
+                if (created.code === "NAME_TAKEN") {
+                    await api.logout();
+                    setVerdict(null);
+                    setRedirecting(false);
+                    setStep("username");
+                    setError(t('driver.signup.nameTaken'));
+                    return;
+                }
+                setError(created.error);
+                return;
+            }
 
             // The provider has to learn about the new row before the router asks
             // it who this is — without the refresh, VerifiedRoute still holds
@@ -344,19 +503,20 @@ const Signup = () => {
     const isUsername = step === "username";
     const isPhone = step === "phone";
     const isOtp = step === "otp";
+    const isExisting = step === "existing";
     const isVehicle = step === "vehicle";
 
     const busy = loading || redirecting;
 
     useEffect(() => {
-        if (isLanguage) return;
+        if (isLanguage || isExisting) return;
         const activeInput = isOtp
             ? otpRefs.current[0]
             : isVehicle
                 ? vehicleNumberInputRef.current
                 : activeInputRef.current;
         activeInput?.focus();
-    }, [step, isLanguage, isOtp, isVehicle]);
+    }, [step, isLanguage, isOtp, isExisting, isVehicle]);
 
     // The collapse reports an answer, so it waits for one. busy alone starts on the
     // press, which would have the boxes merging over a request that might still
@@ -367,6 +527,9 @@ const Signup = () => {
     const formatMMSS = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 
     const phoneDisplay = phone ? `+91 ${phone.slice(0, 5)} ${phone.slice(5)}` : "+91 XXXXX XXXXX";
+    const maskedPhone = phone.length === 10 ? `+91 ••••• ••${phone.slice(-3)}` : phoneDisplay;
+    const otpBody = t('driver.auth.otpBody', { phone: phoneDisplay });
+    const phoneOffset = otpBody.indexOf(phoneDisplay);
 
     const handleUsernameChange = (value) => {
         setUsername(value);
@@ -377,7 +540,6 @@ const Signup = () => {
         const digits = value.replace(/\D/g, "").slice(0, 10);
 
         setPhone(digits);
-        setShowLoginUp(false);
 
         if (
             error === dc("Enter a Phone Number") ||
@@ -461,32 +623,71 @@ const Signup = () => {
             };
         }
         return {
-            backgroundColor: focused ? BOX_BG_FOCUS : BOX_BG,
-            borderColor: focused ? BOX_BORDER_FOCUS : BOX_BORDER,
+            backgroundColor: BOX_BG,
+            borderColor: focused ? colors.primary : colors.borderUi,
         };
     };
+
+    const handleVehicleModelChange = (value) => {
+        vehicleClassRequestRef.current += 1;
+        setVehicleModel(value);
+        if (error) setError(null);
+    };
+
+    useEffect(() => {
+        if (step !== "vehicle") return;
+
+        const model = vehicleModel.trim();
+        const requestId = ++vehicleClassRequestRef.current;
+
+        if (model.length < 2) {
+            setVehicleClass(null);
+            setVehicleClassStatus("idle");
+            setCategoryPickerOpen(false);
+            return;
+        }
+
+        setVehicleClass(null);
+        setVehicleClassStatus("finding");
+        setCategoryPickerOpen(false);
+
+        const timer = setTimeout(async () => {
+            const result = await api.classifyVehicleModel(model);
+            if (vehicleClassRequestRef.current !== requestId) return;
+
+            if (result?.vehicleClass && VEHICLE_CLASSES.includes(result.vehicleClass)) {
+                setVehicleClass(result.vehicleClass);
+                setVehicleClassStatus("found");
+                return;
+            }
+
+            setVehicleClass(null);
+            setVehicleClassStatus("error");
+        }, 300);
+
+        return () => clearTimeout(timer);
+    }, [api, step, vehicleModel]);
 
     return (
         <KeyboardAvoidingView
             className="flex-1 w-full py-12"
             behavior={Platform.OS === "ios" ? "padding" : undefined}
         >
-            {/* Hidden on the vehicle step. Everything behind it is done and
-                cannot be walked back — the phone is verified and the session
-                exists — so an arrow there would be a promise the screen cannot
-                keep. */}
-            {isVehicle ? null : (
+            <View className="absolute left-2 right-2 top-10 z-10 h-12 items-center justify-center">
+                <AppText className="text-xl font-normal text-[var(--text)]">
+                    <AppText className="font-semibold">RCS</AppText> captains
+                </AppText>
                 <BackButton
                     onPress={back}
-                    className="absolute left-2 top-10 z-10"
+                    className="absolute left-0 rounded-full bg-[var(--input-background)]"
                     iconClassName="text-[var(--text)]"
                     iconSize={24}
                     weight="regular"
                 />
-            )}
+            </View>
 
             <ScrollView
-                contentContainerClassName="flex-grow justify-start items-start px-6 pt-4"
+                contentContainerClassName="flex-grow justify-start items-start px-6 pt-20"
                 keyboardShouldPersistTaps="handled"
             >
                 {/* Only for somebody who is signed in AND already has a driver
@@ -507,8 +708,7 @@ const Signup = () => {
                         <Button
                             onPress={async () => {
                                 try { await setLanguage(pendingLanguage); } catch { /* use this session's selected language */ }
-                                if (location.state?.entry === 'login') navigate('/login', { replace: true });
-                                else setStep('username');
+                                setStep('username');
                             }}
                             className="mt-5"
                         >{t('driver.auth.confirm')}</Button>
@@ -532,8 +732,10 @@ const Signup = () => {
                                     ? t('driver.signup.nameTitle')
                                     : isPhone
                                         ? t('driver.signup.phoneTitle')
-                                        : isOtp
-                                            ? t('driver.signup.otpTitle')
+                                        : isExisting
+                                            ? t('driver.signup.existingTitle')
+                                            : isOtp
+                                            ? t('driver.auth.confirmTitle')
                                             : t('driver.signup.vehicleTitle')}
                             </AppText>
                             <AppText className="text-base text-left text-[var(--text-muted)]">
@@ -541,9 +743,17 @@ const Signup = () => {
                                     ? t('driver.signup.nameBody')
                                     : isPhone
                                         ? t('driver.signup.phoneBody')
+                                        : isExisting
+                                            ? t('driver.signup.existingBody')
                                         : isVehicle
                                             ? t('driver.signup.vehicleBody')
-                                            : t('driver.auth.otpBody', { phone: phoneDisplay })}
+                                            : phoneOffset >= 0
+                                                ? <>
+                                                    {otpBody.slice(0, phoneOffset)}
+                                                    <AppText className="text-[var(--text)]">{phoneDisplay}</AppText>
+                                                    {otpBody.slice(phoneOffset + phoneDisplay.length)}
+                                                  </>
+                                                : otpBody}
                             </AppText>
                         </View>
 
@@ -559,8 +769,8 @@ const Signup = () => {
 
                             {/* Explicitly `isOtp`, not `!isPhone`. The old
                                 condition also caught the USERNAME step — isPhone
-                                is false there as well — so the "Make it yours"
-                                screen rendered six OTP boxes and no name field,
+                                is false there as well — so the name step
+                                rendered six OTP boxes and no name field,
                                 and its Input branch below was unreachable. A
                                 fourth step made that impossible to leave alone. */}
                             {isOtp
@@ -625,42 +835,44 @@ const Signup = () => {
                                         )}
                                     </View>
 
-                                    <AppText className={`text-sm text-left text-[var(--text-muted)] mt-2 mb-3 ${busy ? "opacity-0" : ""}`}>
-                                        {expiresIn > 0
-                      ? t('driver.auth.expires', { time: formatMMSS(expiresIn) })
-                      : t('driver.auth.expired')}
+                                    <AppText className="text-sm text-left text-[var(--text-muted)] mt-2 mb-3">
+                                        {loading
+                                            ? t('driver.auth.verifying')
+                                            : verdict === "pass"
+                                                ? t('driver.auth.success')
+                                                : verdict === "fail"
+                                                    ? t('driver.auth.wrongOtp')
+                                                    : expiresIn > 0
+                                                        ? t('driver.auth.expires', { time: formatMMSS(expiresIn) })
+                                                        : t('driver.auth.expired')}
                                     </AppText>
                                 </View>
+                                : isExisting
+                                    ? <View
+                                        className="w-full rounded-2xl border p-4 flex-row items-center gap-3"
+                                        style={{ backgroundColor: BOX_BG, borderColor: BOX_BORDER }}
+                                    >
+                                        <View
+                                            accessible={false}
+                                            className="h-12 w-12 shrink-0 items-center justify-center rounded-full"
+                                            style={{ backgroundColor: colors.canvas }}
+                                        >
+                                            <Svg width={30} height={30} viewBox="0 0 24 24" fill="none">
+                                                <Circle cx="12" cy="8" r="4" fill={colors.inkMuted} />
+                                                <Path d="M4 21c0-4.42 3.58-8 8-8s8 3.58 8 8H4Z" fill={colors.inkMuted} />
+                                            </Svg>
+                                        </View>
+                                        <View className="min-w-0 flex-1 gap-1">
+                                            <AppText className="font-semibold text-[var(--text)]">
+                                                {t('driver.signup.existingNameFallback')}
+                                            </AppText>
+                                            <AppText className="text-sm text-[var(--text-muted)]">
+                                                {maskedPhone}
+                                            </AppText>
+                                        </View>
+                                    </View>
                                 : isVehicle
                                     ? <View className="w-full gap-3">
-                                        {/* Buttons, not a picker. Four options is
-                                            below the threshold where a dropdown
-                                            earns its extra tap, and which one he
-                                            is decides which rides he is offered
-                                            — worth seeing all four at once. */}
-                                        <View className="flex-row flex-wrap justify-start gap-2">
-                                            {VEHICLE_CLASSES.map((option) => {
-                                                const selected = vehicleClass === option;
-                                                return (
-                                                    <Pressable
-                                                        key={option}
-                                                        role="button"
-                                                        aria-label={vehicleLabel(option)}
-                                                        onPress={() => { setVehicleClass(option); if (error) setError(null); }}
-                                                        className="rounded-xl px-4 py-3 border"
-                                                        style={{
-                                                            backgroundColor: selected ? "#243AFB" : BOX_BG,
-                                                            borderColor: selected ? "transparent" : BOX_BORDER,
-                                                        }}
-                                                    >
-                                                        <AppText className="font-semibold text-[var(--text)]">
-                                                            {vehicleLabel(option)}
-                                                        </AppText>
-                                                    </Pressable>
-                                                );
-                                            })}
-                                        </View>
-
                                         <Input
                                                 prop={{
                                                     type: "text",
@@ -668,9 +880,14 @@ const Signup = () => {
                                                     autoFocus: true,
                                                     get "placeholder"() { return dc("Registration number"); },
                                                 value: vehicleNumber,
-                                                onChangeFn: (value) => { setVehicleNumber(value); if (error) setError(null); },
-                                                maxLength: 20,
-                                                error: error === dc("Enter the number on the plate"),
+                                                onChangeFn: (value) => { setVehicleNumber(value.toUpperCase()); if (error) setError(null); },
+                                                maxLength: VEHICLE_NUMBER_INPUT_MAX_LENGTH,
+                                                error: [
+                                                    t('driver.auth.plate'),
+                                                    dc("Use only letters, numbers, spaces, and hyphens"),
+                                                    dc("Check the BH-series registration number"),
+                                                    dc("Check the registration number"),
+                                                ].includes(error),
                                                 bg: BOX_BG,
                                             }}
                                         />
@@ -680,12 +897,45 @@ const Signup = () => {
                                                 type: "text",
                                                 get "placeholder"() { return dc("Model"); },
                                                 value: vehicleModel,
-                                                onChangeFn: setVehicleModel,
+                                                onChangeFn: handleVehicleModelChange,
                                                 maxLength: 60,
                                                 error: error === dc("Enter the car's model"),
                                                 bg: BOX_BG,
                                             }}
                                         />
+
+                                        <Pressable
+                                            role="button"
+                                            aria-label={t('driver.signup.vehicleCategory')}
+                                            disabled={vehicleClassStatus === "finding"}
+                                            onPress={() => setCategoryPickerOpen(true)}
+                                            className="w-full my-1 flex-row items-center justify-between rounded-xl border px-4 py-3"
+                                            style={{
+                                                backgroundColor: BOX_BG,
+                                                borderColor: error === t('driver.auth.vehicleClass') ? BOX_BORDER_ERROR : colors.borderUi,
+                                            }}
+                                        >
+                                            <AppText
+                                                className="text-base"
+                                                style={{ color: vehicleClass ? colors.ink : colors.inkMuted }}
+                                            >
+                                                {vehicleClassStatus === "finding"
+                                                    ? `${dc("Classifing vehicle type")}${".".repeat(classificationDotCount)}`
+                                                    : vehicleClass
+                                                        ? vehicleLabel(vehicleClass)
+                                                        : dc("Choose car type")}
+                                            </AppText>
+                                            <CaretDownIcon size={18} weight="bold" color={colors.inkMuted} />
+                                        </Pressable>
+                                        {vehicleClassStatus === "found" ? (
+                                            <AppText className="text-xs" style={{ color: colors.inkMuted }}>
+                                                {dc("Suggested from model · Tap to change")}
+                                            </AppText>
+                                        ) : vehicleClassStatus === "error" ? (
+                                            <AppText className="text-xs" style={{ color: colors.inkMuted }}>
+                                                {dc("Couldn't identify it · Choose the car type")}
+                                            </AppText>
+                                        ) : null}
                                     </View>
                                 : <Input
                                     prop={{
@@ -705,44 +955,54 @@ const Signup = () => {
                             }
 
                             <Button
-                                onPress={isPhone && showLoginUp
-                                    ? () => navigate("/login", { state: { phone } })
+                                onPress={isExisting
+                                    ? continueWithExistingAccount
                                     : isUsername
                                         ? handleUsernameSubmit
                                         : isVehicle
                                             ? handleVehicleSubmit
                                             : (isPhone ? handleSubmit : handleOTPSubmit)}
                                 prop={{
-                                    disabled: (isPhone && showLoginUp)
-                                        ? false
-                                        // Every step names its own rule. The
-                                        // fallback used to be the OTP length,
-                                        // which meant the USERNAME step's button
-                                        // was disabled until a code he had not
-                                        // been sent yet was six digits long — so
-                                        // it could never be pressed at all.
+                                    disabled: isExisting
+                                        ? loading
                                         : isUsername
-                                            ? username.trim().length < 2
+                                            ? loading || username.trim().length < 2
                                             // Validated on press rather than
                                             // disabled: three fields behind one
                                             // button makes a dead control that
                                             // never says which is the problem.
                                             : isVehicle
-                                                ? loading
-                                                : (isPhone ? phone.length !== 10 : otp.length !== OTP_LENGTH),
+                                                ? loading || vehicleClassStatus === "finding"
+                                                : isPhone
+                                                    ? loading || phone.length !== 10
+                                                    : loading || otp.length !== OTP_LENGTH,
                                 }}
-                                className="mt-3"
+                                className={isExisting ? "mt-6" : "mt-3"}
                             >
-                                {isPhone
-                                    ? (showLoginUp ? dc("Login Up") : (loading ? dc("Sending OTP...") : t('common.actions.continue')))
+                                {isExisting
+                                    ? (loading ? t('driver.auth.sendingOtp') : t('driver.signup.continueExisting'))
+                                    : isPhone
+                                    ? (loading ? dc("Sending OTP...") : t('common.actions.continue'))
                                     : isUsername
-                                        ? t('common.actions.continue')
+                                        ? (loading ? t('driver.signup.checkingName') : t('common.actions.continue'))
                                         : isVehicle
-                                            ? (loading ? t('driver.auth.saving') : t('driver.signup.finish'))
-                                            : (loading ? t('driver.auth.redirecting') : t('driver.auth.confirm'))}
+                                            ? (loading ? t('driver.auth.saving') : t('driver.signup.addDocuments'))
+                                            : ((loading || verdict) ? t('driver.auth.continue') : t('driver.auth.submit'))}
                             </Button>
 
-                            {isPhone && !showLoginUp && (
+                            {isExisting && (
+                <AppText className="mt-3 text-sm text-[var(--text-muted)]">
+                                    {t('driver.signup.notYourAccount')}{" "}
+                                    <AppText
+                                        onPress={() => { setError(null); setStep("phone"); }}
+                                        className="text-[var(--text)] underline"
+                                    >
+                                        {t('driver.signup.useAnotherNumber')}
+                                    </AppText>
+                                </AppText>
+                            )}
+
+                            {isPhone && (
                                 <AppText className="mt-3 text-sm text-left text-[var(--text-muted)]">
                                     <AppText className="text-[var(--text)]">{t('driver.signup.haveAccount')}</AppText>{" "}
                                     <AppText
@@ -778,9 +1038,28 @@ const Signup = () => {
                                 {t('driver.auth.phoneHint')}
                             </AppText>)}
 
-                            {isOtp && (<AppText className="text-sm text-left text-[var(--text-muted)] mt-5">
-                                {t('driver.auth.consent')}
-                            </AppText>)}
+                            {isPhone && (<View className="mt-2">
+                                <AppText className="text-sm text-left text-[var(--text-muted)]">
+                                    {dc("Please review the draft driver terms and driver privacy policy before continuing.")}
+                                </AppText>
+                                <View className="flex-row items-center mt-1">
+                                    <AppText
+                                        accessibilityRole="link"
+                                        className="text-sm font-semibold text-[var(--text)] underline"
+                                        onPress={() => openExternalUrl(`${LEGAL_BASE_URL}/driver-terms`)}
+                                    >
+                                        {dc("Terms of service")}
+                                    </AppText>
+                                    <AppText className="text-sm text-[var(--text-muted)]"> · </AppText>
+                                    <AppText
+                                        accessibilityRole="link"
+                                        className="text-sm font-semibold text-[var(--text)] underline"
+                                        onPress={() => openExternalUrl(`${LEGAL_BASE_URL}/driver-privacy`)}
+                                    >
+                                        {dc("Privacy policy")}
+                                    </AppText>
+                                </View>
+                            </View>)}
 
                             {isVehicle && (<AppText className="text-sm text-left text-[var(--text-muted)] mt-5">
                                 {t('driver.auth.vehicleHint')}
@@ -788,6 +1067,64 @@ const Signup = () => {
                         </View>
                     </View>}
             </ScrollView>
+
+            <Modal
+                visible={categoryPickerOpen}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setCategoryPickerOpen(false)}
+            >
+                <Pressable
+                    className="flex-1 items-center justify-center px-6"
+                    style={{ backgroundColor: "rgba(0,0,0,0.68)" }}
+                    onPress={() => setCategoryPickerOpen(false)}
+                >
+                    <Pressable
+                        accessibilityViewIsModal
+                        className="w-full rounded-3xl border p-5"
+                        style={{
+                            maxWidth: 420,
+                            backgroundColor: colors.surfaceRaised,
+                            borderColor: colors.borderUi,
+                        }}
+                        onPress={() => {}}
+                    >
+                        <AppText className="text-xl font-semibold text-[var(--text)] mb-4">
+                            {t('driver.signup.vehicleCategory')}
+                        </AppText>
+
+                        <View className="gap-2">
+                            {VEHICLE_CLASSES.map((option) => {
+                                const selected = vehicleClass === option;
+
+                                return (
+                                    <Pressable
+                                        key={option}
+                                        role="radio"
+                                        aria-checked={selected}
+                                        onPress={() => {
+                                            setVehicleClass(option);
+                                            setVehicleClassStatus("manual");
+                                            setCategoryPickerOpen(false);
+                                            if (error) setError(null);
+                                        }}
+                                        className="flex-row items-center justify-between rounded-xl border px-4 py-3"
+                                        style={{
+                                            backgroundColor: selected ? colors.canvas : BOX_BG,
+                                            borderColor: selected ? colors.primary : colors.borderUi,
+                                        }}
+                                    >
+                                        <AppText className="text-base font-semibold text-[var(--text)]">
+                                            {vehicleLabel(option)}
+                                        </AppText>
+                                        {selected ? <CheckIcon size={18} weight="bold" color={colors.primary} /> : null}
+                                    </Pressable>
+                                );
+                            })}
+                        </View>
+                    </Pressable>
+                </Pressable>
+            </Modal>
         </KeyboardAvoidingView>
     );
 };

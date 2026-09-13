@@ -53,7 +53,7 @@ export const themeColors: Record<ThemeScheme, ThemeColors> = {
   },
   dark: {
     ...invariant,
-    canvas: '#1D1D27',
+    canvas: '#121220',
     immersive: '#121220',
     surface: '#272634',
     surfaceMuted: '#262636',

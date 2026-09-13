@@ -67,7 +67,7 @@ const Input = ({ prop, className = '', leading, trailing }: Props) => {
     // palette; `light` only asks for a filled field on an already-light card.
     const borderColor = hasError
         ? focused ? BORDER_ERROR_FOCUS : BORDER_ERROR
-        : focused ? colors.ink : colors.borderUi;
+        : focused ? colors.primary : colors.borderUi;
 
     const backgroundColor = hasError
         ? BG_ERROR

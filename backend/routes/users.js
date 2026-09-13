@@ -11,12 +11,86 @@ const usersRouter = Router()
 
 const generateBookingCode = () => String(crypto.randomInt(0, 10000)).padStart(4, '0')
 
+const preferenceView = user => ({
+  notifications: {
+    whatsapp: user.notifyWhatsapp,
+    push: user.notifyPush,
+    promotions: user.notifyPromotions,
+  },
+  autoShareLiveLocation: user.autoShareLiveLocation,
+})
+
 usersRouter.get('/me', protect, async (req, res) => {
   const user = await prisma.user.findUnique({ where: { clerkId: req.auth.userId } })
   if (!user) return res.status(404).json({ error: 'User has not signed up' })
 
   const { id, phone, name, bookingCode, gender, dob, emergencyContact } = user
   return res.json({ id, phone, name, bookingCode, gender, dob, emergencyContact })
+})
+
+usersRouter.get('/me/preferences', protect, async (req, res) => {
+  const user = await prisma.user.findUnique({
+    where: { clerkId: req.auth.userId },
+    select: {
+      notifyWhatsapp: true,
+      notifyPush: true,
+      notifyPromotions: true,
+      autoShareLiveLocation: true,
+    },
+  })
+  if (!user) return res.status(404).json({ error: 'User has not signed up' })
+  return res.json(preferenceView(user))
+})
+
+usersRouter.put('/me/preferences', protect, async (req, res) => {
+  const notifications = req.body?.notifications
+  const hasAutoShare = Object.prototype.hasOwnProperty.call(req.body ?? {}, 'autoShareLiveLocation')
+  const data = {}
+
+  if (notifications !== undefined) {
+    if (!notifications || typeof notifications !== 'object' || Array.isArray(notifications)) {
+      return res.status(400).json({ error: 'notifications must be an object' })
+    }
+    const fields = [
+      ['whatsapp', 'notifyWhatsapp'],
+      ['push', 'notifyPush'],
+      ['promotions', 'notifyPromotions'],
+    ]
+    for (const [inputKey, dbKey] of fields) {
+      if (!Object.prototype.hasOwnProperty.call(notifications, inputKey)) continue
+      if (typeof notifications[inputKey] !== 'boolean') {
+        return res.status(400).json({ error: `${inputKey} must be a boolean` })
+      }
+      data[dbKey] = notifications[inputKey]
+    }
+  }
+
+  if (hasAutoShare) {
+    if (typeof req.body.autoShareLiveLocation !== 'boolean') {
+      return res.status(400).json({ error: 'autoShareLiveLocation must be a boolean' })
+    }
+    data.autoShareLiveLocation = req.body.autoShareLiveLocation
+  }
+
+  if (Object.keys(data).length === 0) {
+    return res.status(400).json({ error: 'No preference values supplied' })
+  }
+
+  try {
+    const user = await prisma.user.update({
+      where: { clerkId: req.auth.userId },
+      data,
+      select: {
+        notifyWhatsapp: true,
+        notifyPush: true,
+        notifyPromotions: true,
+        autoShareLiveLocation: true,
+      },
+    })
+    return res.json(preferenceView(user))
+  } catch {
+    return res.status(404).json({ error: 'User not found' })
+  }
 })
 
 // Recents derived from booking history, in the frontend's local shape so the
@@ -299,6 +373,9 @@ usersRouter.post('/me', protect, async (req, res) => {
   if (!name || typeof name !== 'string' || name.trim().length < 2)
     return res.status(400).json({ error: 'name must be at least 2 characters' })
 
+  const normalizedName = name.trim()
+  const nameLockKey = `rider-name:${normalizedName.toLocaleLowerCase('en')}`
+
   // Phone is encoded in the fake Clerk email: 91{10-digit-phone}@rcs-travels.com
   const clerkUser = await clerkClient.users.getUser(req.auth.userId)
   const email = clerkUser.emailAddresses[0]?.emailAddress
@@ -314,11 +391,36 @@ usersRouter.post('/me', protect, async (req, res) => {
 
   for (let attempt = 0; attempt < 5; attempt++) {
     try {
-      const user = await prisma.user.upsert({
-        where: { clerkId: req.auth.userId },
-        update: { name: name.trim(), phone },
-        create: { clerkId: req.auth.userId, name: name.trim(), phone, bookingCode: generateBookingCode() },
+      const user = await prisma.$transaction(async (tx) => {
+        // Name is a product-level unique identifier even though the legacy schema
+        // stores it as an ordinary display-name column. Serialize claim attempts
+        // by normalized name so two signups cannot both pass the read-before-write
+        // check and create the same case-insensitive name concurrently.
+        await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${nameLockKey}, 0))`
+
+        const nameConflict = await tx.user.findFirst({
+          where: {
+            name: { equals: normalizedName, mode: 'insensitive' },
+            clerkId: { not: req.auth.userId },
+          },
+          select: { id: true },
+        })
+
+        if (nameConflict) return null
+
+        return tx.user.upsert({
+          where: { clerkId: req.auth.userId },
+          update: { name: normalizedName, phone },
+          create: { clerkId: req.auth.userId, name: normalizedName, phone, bookingCode: generateBookingCode() },
+        })
       })
+
+      if (!user) {
+        return res.status(409).json({
+          error: 'That name is already in use. Please choose another.',
+          code: 'NAME_TAKEN',
+        })
+      }
 
       return res.json({ id: user.id, name: user.name, phone: user.phone, bookingCode: user.bookingCode })
     } catch (e) {
@@ -326,8 +428,9 @@ usersRouter.post('/me', protect, async (req, res) => {
       // are unique on User. A booking_code clash just needs a fresh code + retry;
       // a clerk_id clash means two concurrent requests both took the create path,
       // and retrying lands on the update path now that the row exists; a phone
-      // clash means the derived phone is tied to another account. `name` is not
-      // unique, so it can never be the constraint that failed here.
+      // clash means the derived phone is tied to another account. Name uniqueness
+      // is enforced above with an advisory lock because the legacy schema does not
+      // have a name unique index.
       if (e.code === 'P2002') {
         const target = String(e.meta?.target)
         if (target.includes('booking_code') || target.includes('clerk_id')) {

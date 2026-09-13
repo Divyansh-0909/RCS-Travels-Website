@@ -98,7 +98,7 @@ const FACES: Record<string, Face> = {
     Icon: ClockIcon,
     tone: AMBER,
     get "title"() { return dc("With the office"); },
-    get "body"() { return dc("Your documents passed our checks and someone is reviewing them now. We’ll message you as soon as it’s done — you can close the app."); },
+    get "body"() { return dc("Your documents passed our checks and someone is reviewing them now. We’ll message you as soon as it’s done."); },
     action: 'documents',
     get "actionLabel"() { return dc("See documents"); },
   },

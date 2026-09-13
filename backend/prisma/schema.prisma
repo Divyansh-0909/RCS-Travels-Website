@@ -186,6 +186,10 @@ model User {
   // Stable 4-digit code generated once at signup.
   bookingCode      String    @unique @map("booking_code")
   whatsappNumber   String?   @map("whatsapp_number")
+  notifyWhatsapp   Boolean   @default(true) @map("notify_whatsapp")
+  notifyPush       Boolean   @default(true) @map("notify_push")
+  notifyPromotions Boolean   @default(false) @map("notify_promotions")
+  autoShareLiveLocation Boolean @default(false) @map("auto_share_live_location")
   createdAt        DateTime  @default(now()) @map("created_at")
   deletedAt        DateTime? @map("deleted_at")
 
@@ -237,7 +241,9 @@ model Driver {
   // table is the source of truth, this is the read path, and BOTH ARE WRITTEN IN
   // ONE TRANSACTION — see switchActiveVehicle in services/driverVehicles.js,
   // which is the only supported way to move them.
-  vehicleClass       VehicleClass       @map("vehicle_class")
+  // Null only while onboarding has reached the personal-document stage but the
+  // captain has not added his first car yet, or after his final car is removed.
+  vehicleClass       VehicleClass?      @map("vehicle_class")
   // LIVE REMAINING SEATS, not the size of the car. It is decremented as riders board
   // a shared ride and reset to seatsOf(vehicleClass) on completion, so it is only
   // ever the answer to "can another rider fit right now". Never show it to anyone as
@@ -246,12 +252,12 @@ model Driver {
   // Belongs to the driver-in-a-car rather than to the car: it is guarded inside
   // claimBookingForDriver's transaction, and a switch resets it to the new car's
   // seat count.
-  vehicleCapacity    Int                @map("vehicle_capacity")
-  vehicleNumber      String             @map("vehicle_number")
+  vehicleCapacity    Int?               @map("vehicle_capacity")
+  vehicleNumber      String?            @map("vehicle_number")
   vehicleModel       String?            @map("vehicle_model")
-  // Which of his cars he is driving right now. Nullable only for the instant
-  // between the driver row and his first vehicle being created, and for a
-  // captain whose last car was deleted.
+  // Which of his cars he is driving right now. Null while the captain is in the
+  // personal-document stage before adding his first car, and after his last car
+  // is deleted.
   activeVehicleId    String?            @unique @map("active_vehicle_id")
   isActive           Boolean            @default(true) @map("is_active")
   isOnline           Boolean            @default(false) @map("is_online")

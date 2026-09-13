@@ -11,6 +11,10 @@ import { mdiKeyboardBackspace } from '@mdi/js';
 import { useData } from "../hooks/useData";
 import { useOtpClipboard } from "../hooks/useOtpClipboard";
 import { useWebsiteCopy } from "../hooks/useWebsiteCopy";
+import CheckMarkOutline from "../components/illustrations/CheckMarkOutline";
+import CrossOutline from "../components/illustrations/CrossOutline";
+
+const OTP_REDIRECT_DELAY = 900;
 
 const LoginPage = () => {
     useCopyLanguage();
@@ -33,7 +37,6 @@ const LoginPage = () => {
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
   const [resendIn, setResendIn] = useState(0);
-  const [showSignUp, setShowSignUp] = useState(false);
   const [continueTo, setContinueTo] = useState(null);
   const pickupLocation = useData(state => state.pickupLocation);
 
@@ -56,6 +59,14 @@ const LoginPage = () => {
   }, [expiresIn]);
 
   const back = () => {
+    if (step === "otp") {
+      setStep("phone");
+      setOtp("");
+      setVerdict(null);
+      setContinueTo(null);
+      setError(null);
+      return;
+    }
     navigate("/")
   }
 
@@ -133,8 +144,7 @@ const LoginPage = () => {
     // No account behind this number — no OTP was sent. Flip the button into the
     // Sign Up escape hatch instead of leaving a dead end; typing again flips back.
     if (data.status === 404) {
-      setError(data.error);
-      setShowSignUp(true);
+      navigate('/signup', { state: { phone, entry: 'login' } });
       return;
     }
     if (data.error) {
@@ -212,6 +222,17 @@ const LoginPage = () => {
 
   const busy = loading;
   const otpReadyToContinue = verdict === "pass" && Boolean(continueTo);
+  const otpSettled = verdict === "pass" || verdict === "fail";
+
+  useEffect(() => {
+    if (!otpReadyToContinue) return;
+
+    const timer = setTimeout(() => {
+      navigate(continueTo);
+    }, OTP_REDIRECT_DELAY);
+
+    return () => clearTimeout(timer);
+  }, [continueTo, navigate, otpReadyToContinue]);
 
   const formatMMSS = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 
@@ -221,7 +242,6 @@ const LoginPage = () => {
     const digits = value.replace(/\D/g, "").slice(0, 10);
 
     setPhone(digits);
-    setShowSignUp(false);
 
     if (
       error === tr("Enter a Phone Number") ||
@@ -310,9 +330,19 @@ const LoginPage = () => {
   });
 
   return (
-    <div className="relative bg-transparent text-center flex justify-center items-center w-[100vw] h-[100dvh] bg-panel-gradient">
-      <div onClick={back} className="flex cursor-pointer justify-center items-center gap-2 sm:gap-3 absolute left-3 top-3 text-[var(--text)] sm:opacity-80 hover:opacity-100 transition-opacity duration-300">
-        <Icon path={mdiKeyboardBackspace} size={1.2} />
+    <div className="relative text-center flex justify-center items-center w-[100vw] h-[100dvh] bg-immersive">
+      <div className="absolute left-3 right-3 top-3 z-10 flex h-12 items-center justify-center">
+        <button
+          type="button"
+          aria-label="Back"
+          onClick={back}
+          className="absolute left-0 flex h-12 w-12 cursor-pointer items-center justify-center rounded-full bg-[var(--input-background)] text-[var(--text)] transition-opacity duration-300 hover:opacity-80"
+        >
+          <Icon path={mdiKeyboardBackspace} size={1.2} />
+        </button>
+        <p className="pointer-events-none text-xl font-normal text-[var(--text)]">
+          <span className="font-semibold">RCS</span> travels
+        </p>
       </div>
       {isSignedIn && !loading && verdict !== "pass"
         ? <div className="flex flex-col justify-center items-center">
@@ -331,25 +361,31 @@ const LoginPage = () => {
         </div>
 
         : <form
-          className="flex flex-col justify-start sm:justify-center h-full py-15 items-start gap-5 sm:gap-7"
+          className="flex flex-col justify-start sm:justify-center h-full pt-24 pb-15 items-start gap-5 sm:gap-7"
           noValidate
           onSubmit={isPhone ? handleSubmit : handleOTPSubmit}
         >
-          <div className="w-full flex flex-col justify-center items-start sm:items-center sm:text-center text-left gap-2 sm:gap-3">
+          <div className={`w-full flex flex-col justify-center items-start text-left gap-1 ${isPhone ? "sm:items-center sm:text-center sm:gap-3" : "sm:items-start sm:text-left"}`}>
             <h2 className="font-bold text-[var(--text)]">
               {isPhone ? tr("Login to continue.") : tr("OTP Verification.")}
             </h2>
             <p className="text-base sm:text-lg text-[var(--text-muted)]">
               {isPhone
                 ? tr("We'll send a OTP to this number.")
-                : <>{tr("Enter the 6-digit OTP we sent to")} <br/> <span className="font-semibold text-[var(--text)]">{phoneDisplay}</span></>}
+                : <>{tr("Enter the 6-digit OTP we sent to")} <br/> <span className="text-[var(--text)]">{phoneDisplay}</span></>}
             </p>
           </div>
-          <div className="flex flex-col justify-center items-start sm:items-center">
+          <div className={`flex flex-col justify-center items-start ${isPhone ? "sm:items-center" : "sm:items-start"}`}>
+
+            {error && !isPhone && (
+              <div className="mt-2 mb-1 flex items-center justify-start">
+                <p className="text-status-danger text-sm text-left">{error}</p>
+              </div>
+            )}
 
             {!isPhone
-              ? <div className="flex flex-col justify-center items-center">
-                <div className="relative flex justify-center items-center gap-2 sm:gap-2.5">
+              ? <div className="flex flex-col justify-center items-start">
+                <div className="relative flex justify-center items-center gap-2">
                 {Array.from({ length: OTP_LENGTH }).map((_, i) => {
                   const otpError = Boolean(error);
                   return (
@@ -367,13 +403,15 @@ const LoginPage = () => {
                       onKeyDown={(e) => handleOtpKeyDown(i, e)}
                       onPaste={handleOtpPaste}
                       readOnly={loading || verdict === "pass"}
+                      style={{ "--i": i, transitionDuration: otpSettled ? "600ms" : undefined }}
                       className={`
-                      relative flex justify-center text-center items-center font-medium text-2xl sm:text-3xl my-1
-                      text-ink
-                      py-2 w-[46px] h-[46px] sm:w-[55px] sm:h-[55px] rounded-xl transition-all duration-300 ease-in-out
+                      relative flex justify-center text-center items-center font-medium text-2xl my-1
+                      ${otpSettled ? "text-transparent placeholder-transparent" : "text-ink"}
+                      p-0 w-[46px] h-[46px] rounded-xl transition-all duration-300 ease-in-out
+                      ${otpSettled && `animate-otp-box-in ${i === 0 && `${verdict === "fail" ? "bg-red-600!" : "bg-green-600!"}`}`}
                       ${otpError
                           ? "border border-negative/50 bg-negative/10 focus:border-negative/80"
-                          : "border border-[var(--foreground)]/30 bg-[var(--background-muted)] focus:border-primary"
+                          : "border border-[var(--input-border)] bg-[var(--input-background)] focus:border-primary"
                         }
                       focus:outline-none
                       transition-all duration-200
@@ -381,16 +419,17 @@ const LoginPage = () => {
                     />
                   );
                 })}
+                  {otpSettled && (
+                    <span className="animate-otp-badge absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
+                      {verdict === "fail"
+                        ? <CrossOutline size={38} />
+                        : <CheckMarkOutline size={38} />}
+                    </span>
+                  )}
                 </div>
                 <p
                   aria-live="polite"
-                  className={`text-sm mt-1 sm:mt-2 mb-3 sm:mb-3 ${
-                    verdict === "pass"
-                      ? "text-status-success"
-                      : verdict === "fail"
-                        ? "text-status-danger"
-                        : "text-[var(--text-muted)]"
-                  }`}
+                  className="text-sm text-left text-[var(--text-muted)] mt-2 mb-3"
                 >
                   {loading
                     ? tr("Verifying...")
@@ -416,33 +455,25 @@ const LoginPage = () => {
                   onChangeFn: handlePhoneChange,
                   error: error === tr("Enter a Mobile Number") ||
                     error === tr("Number should be exactly 10 digits"),
-                  bg: "var(--background-muted)",
                 }}
                 className="scale-[1] sm:scale-[1.3] mb-2"
               />
             }
             <Button
-              onClick={isPhone && showSignUp
-                // Carry the number over so signup can prefill its phone step —
-                // it was just typed here and the backend confirmed it's unclaimed.
-                ? () => navigate('/signup', { state: { phone } })
-                : undefined}
               prop={{
-                type: isPhone && showSignUp ? "button" : "submit",
-                disabled: (isPhone && showSignUp)
-                  ? false
-                  : (isPhone
-                    ? phone.length !== 10
-                    : loading || verdict === "fail" || (!otpReadyToContinue && otp.length !== OTP_LENGTH)),
+                type: "submit",
+                disabled: isPhone
+                  ? loading || phone.length !== 10
+                  : loading || verdict === "fail" || (!otpReadyToContinue && otp.length !== OTP_LENGTH),
               }}
-              className="scale-[1] sm:scale-[1.3] mt-1 sm:mt-5"
+              className={isPhone ? "scale-[1] sm:scale-[1.3] mt-1 sm:mt-5" : "mt-3"}
             >
               {isPhone
-                ? (showSignUp ? tr("Sign Up") : (loading ? tr("Sending OTP...") : tr("Continue")))
+                ? (loading ? tr("Sending OTP...") : tr("Continue"))
                 : (loading || verdict ? tr("Continue") : tr("Submit"))}
             </Button>
             {!isPhone && (
-              <p className={`mt-3 sm:mt-6 text-sm text-[var(--text-muted)] ${busy ? "invisible" : ""}`}>
+              <p className={`mt-3 text-sm text-left text-[var(--text-muted)] ${busy ? "invisible" : ""}`}>
                 <span className="text-[var(--text-muted)]">{dc("Didn't get it or expired?")}</span>{" "}
                 {resending
                   ? dc("Sending...")
@@ -451,7 +482,7 @@ const LoginPage = () => {
                     : <button
                       type="button"
                       onClick={handleResend}
-                      className="cursor-pointer text-[var(--text)] underline underline-offset-2 rounded-sm outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]/70"
+                      className="cursor-pointer font-semibold text-[var(--text)] underline underline-offset-2 rounded-sm outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]/70"
                     >{dc("Resend")}</button>}
               </p>
             )}

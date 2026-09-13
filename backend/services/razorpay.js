@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from 'node:crypto'
+import axios from 'axios'
 import Razorpay from 'razorpay'
 import { getRazorpayConfig, getRazorpayWebhookSecret } from '../config/razorpay.js'
 
@@ -21,11 +22,32 @@ export function verifyWebhookSignature({ rawBody, signature, secret }) {
 
 export function createRazorpayGateway({ config = getRazorpayConfig(), client } = {}) {
   const sdk = client ?? new Razorpay({ key_id: config.keyId, key_secret: config.keySecret })
+  // The bundled Razorpay SDK does not forward X-Refund-Idempotency. Refund
+  // retries must carry this stable key because a network timeout can happen
+  // after Razorpay has accepted the original request.
+  const refundClient = axios.create({
+    baseURL: 'https://api.razorpay.com/v1',
+    timeout: 10000,
+    auth: { username: config.keyId, password: config.keySecret },
+  })
   return {
     keyId: config.keyId,
     createOrder: (options) => sdk.orders.create(options),
     fetchPayment: (paymentId) => sdk.payments.fetch(paymentId),
-    createRefund: (paymentId, options) => sdk.payments.refund(paymentId, options),
+    createRefund: async (paymentId, { idempotencyKey, ...options }) => {
+      try {
+        const response = await refundClient.post(`/payments/${encodeURIComponent(paymentId)}/refund`, options, {
+          headers: { 'X-Refund-Idempotency': idempotencyKey },
+        })
+        return response.data
+      } catch {
+        // Axios errors retain the request's Basic-auth credentials. Never let
+        // that object reach the route logger or persisted failure description.
+        const error = new Error('Payment refund request failed; retry with the same idempotency key')
+        error.code = 'REFUND_GATEWAY_ERROR'
+        throw error
+      }
+    },
     verifyPaymentSignature: (input) => verifyPaymentSignature({ ...input, secret: config.keySecret }),
   }
 }

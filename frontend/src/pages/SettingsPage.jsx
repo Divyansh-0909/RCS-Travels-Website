@@ -35,16 +35,49 @@ const SettingsPage = () => {
     const tr = useWebsiteCopy()
     const [selected, setSelected] = useState(0)
 
-    // Notifications have no backend yet — local UI state for now.
     const [notifs, setNotifs] = useState({ whatsapp: true, push: true, promotions: false })
-    const toggleNotif = (key) => setNotifs(n => ({ ...n, [key]: !n[key] }))
+    const [notifsLoading, setNotifsLoading] = useState(true)
+    const [savingNotif, setSavingNotif] = useState(null)
+    const [notifsError, setNotifsError] = useState(null)
 
     // Saved places live on the account. The store holds the last fetched copy
     // (persisted, so the booking form can suggest them before any refresh);
     // every edit here goes through the API and lands back in the store.
     const savedPlaces = useData(state => state.savedPlaces)
     const setSavedPlaces = useData(state => state.setSavedPlaces)
-    const { getSavedPlaces, saveSavedPlace, deleteSavedPlace } = useApi()
+    const { getSavedPlaces, saveSavedPlace, deleteSavedPlace, getPreferences, updatePreferences } = useApi()
+
+    useEffect(() => {
+        let mounted = true
+        getPreferences().then(data => {
+            if (!mounted) return
+            if (data?.error || !data?.notifications) throw new Error(data?.error || "Request failed")
+            setNotifs(data.notifications)
+            setNotifsError(null)
+        }).catch(() => {
+            if (mounted) setNotifsError(tr("Couldn't load notification preferences."))
+        }).finally(() => {
+            if (mounted) setNotifsLoading(false)
+        })
+        return () => { mounted = false }
+    }, [])
+
+    const toggleNotif = async (key) => {
+        if (notifsLoading || savingNotif) return
+        const nextValue = !notifs[key]
+        setNotifs(n => ({ ...n, [key]: nextValue }))
+        setSavingNotif(key)
+        setNotifsError(null)
+        try {
+            const res = await updatePreferences({ notifications: { [key]: nextValue } })
+            if (res?.error) throw new Error(res.error)
+        } catch {
+            setNotifs(n => ({ ...n, [key]: !nextValue }))
+            setNotifsError(tr("Couldn't save this preference. Please try again."))
+        } finally {
+            setSavingNotif(null)
+        }
+    }
 
     // Refresh silently, same as the booking form's recents: the persisted copy
     // still renders, and each edit surfaces its own error when it fails.
@@ -139,11 +172,12 @@ const SettingsPage = () => {
             {selected === 2 && (
                 <ul className={settingsListClass}>
                 {notifRows.map(([title, desc, key]) => (
-                    <SettingRow key={key} tone={panelTones.notifications} trailing={<Toggle on={notifs[key]} onClick={() => toggleNotif(key)} />}>
+                    <SettingRow key={key} tone={panelTones.notifications} trailing={<Toggle on={notifs[key]} disabled={notifsLoading || savingNotif !== null} onClick={() => toggleNotif(key)} />}>
                         <h4 className="break-words text-lg font-medium">{tr(title)}</h4>
                         <p className="break-words text-base text-ink-muted">{tr(desc)}</p>
                     </SettingRow>
                 ))}
+                {notifsError && <li className="px-2 text-sm text-negative">{notifsError}</li>}
                 </ul>
             )}
 

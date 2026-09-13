@@ -1,6 +1,7 @@
 import 'dotenv/config'
 import { PrismaClient } from '@prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
+import { secureDatabaseUrl } from './connection.js'
 
 // The pool is capped, and the number is arithmetic rather than taste.
 //
@@ -19,7 +20,7 @@ import { PrismaPg } from '@prisma/adapter-pg'
 const POOL_MAX = Number(process.env.DATABASE_POOL_MAX ?? 5)
 
 const adapter = new PrismaPg({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: secureDatabaseUrl(process.env.DATABASE_URL),
   max: POOL_MAX,
 
   // Shorter than a pooler would normally warrant, because of what Cloud Run does

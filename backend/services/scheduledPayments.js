@@ -42,7 +42,19 @@ export async function applyCapturedPaymentEffect(tx, payment) {
       status: 'confirmed', confirmedAt: new Date(), scheduledAdvancePaidAmount: payment.amount,
       scheduledAdvanceDisposition: 'paid',
     } })
-    return result?.count ? { type: 'scheduled_ride_advance', bookingId: payment.bookingId } : null
+    if (result?.count) return { type: 'scheduled_ride_advance', bookingId: payment.bookingId }
+
+    // A gateway capture can arrive after the rider cancelled while checkout was
+    // still pending. The cancellation could not refund an uncaptured payment,
+    // so turn that now-captured advance into the same durable refund state.
+    const refund = await tx.booking.updateMany({ where: {
+      id: payment.bookingId,
+      status: 'cancelled',
+      scheduledAdvanceDisposition: { in: ['awaiting_payment', 'refund_pending'] },
+    }, data: { scheduledAdvanceDisposition: 'refund_pending' } })
+    return refund?.count
+      ? { type: 'scheduled_ride_advance_refund', bookingId: payment.bookingId, paymentId: payment.id }
+      : null
   } else if (payment.purpose === 'scheduled_ride_final') {
     const result = await tx.booking.updateMany({ where: { id: payment.bookingId, status: 'completed', scheduledFinalPaidAmount: 0 },
       data: { scheduledFinalPaidAmount: payment.amount } })

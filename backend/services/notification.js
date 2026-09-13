@@ -97,6 +97,15 @@ export async function sendWhatsAppTemplate(phone, name, parameters = {}) {
     }
 }
 
+export async function notifyWhatsAppEmergencyLiveLocation(phone, reference, url) {
+    const template = process.env.WHATSAPP_TEMPLATE_EMERGENCY_LIVE_LOCATION
+    if (template) {
+        return sendWhatsAppTemplate(phone, template, { body: [reference, url] })
+    }
+    return sendWhatsApp(phone,
+        `RCS Travels: Ride ${reference} has started. Follow the ride live here: ${url}`)
+}
+
 const bookingButton = id => ({ index: 0, text: id })
 const isWhatsAppBooking = booking => booking?.source === 'whatsapp'
 const formatPickup = value => new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata',

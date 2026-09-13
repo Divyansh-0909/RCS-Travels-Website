@@ -10,10 +10,10 @@ import { openExternalUrl } from '../lib/externalLinks';
 const BASE = 'https://www.rcstravels.co.in';
 
 const documents = [
-  { get "label"() { return dc("Terms of service"); }, get "detail"() { return dc("Rules for using RCS Travels"); }, path: '/terms', Icon: FileTextIcon },
-  { get "label"() { return dc("Privacy policy"); }, get "detail"() { return dc("How account and ride data is handled"); }, path: '/privacy', Icon: ShieldCheckIcon },
-  { get "label"() { return dc("Refunds & cancellation"); }, get "detail"() { return dc("When charges are kept or returned"); }, path: '/refunds', Icon: FileTextIcon },
-  { get "label"() { return dc("Grievance redressal"); }, get "detail"() { return dc("How to make and escalate a complaint"); }, path: '/grievance', Icon: ShieldCheckIcon },
+  { get "label"() { return dc("Terms of service"); }, get "detail"() { return dc("Rules for driver-partners"); }, path: '/driver-terms', Icon: FileTextIcon },
+  { get "label"() { return dc("Privacy policy"); }, get "detail"() { return dc("How driver, vehicle and location data is handled"); }, path: '/driver-privacy', Icon: ShieldCheckIcon },
+  { get "label"() { return dc("Payments & cancellation"); }, get "detail"() { return dc("Scheduled ride payment and cancellation rules"); }, path: '/driver-payments', Icon: FileTextIcon },
+  { get "label"() { return dc("Grievance redressal"); }, get "detail"() { return dc("How to make and escalate a driver concern"); }, path: '/driver-grievance', Icon: ShieldCheckIcon },
 ] as const;
 
 const Legal = () => (

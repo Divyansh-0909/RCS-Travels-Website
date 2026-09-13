@@ -71,8 +71,8 @@ export const DRIVER_DOCUMENTS = {
   permit_all_india: { get "label"() { return dc("All India permit"); }, required: true, expires: true, owner: 'vehicle' },
   permit_one_year: { get "label"() { return dc("One-year permit"); }, required: false, expires: true, owner: 'vehicle' },
   cng_test: { get "label"() { return dc("CNG cylinder test"); }, required: false, expires: true, owner: 'vehicle' },
-  car_photo_front: { get "label"() { return dc("Car photo (front)"); }, required: true, expires: false, owner: 'vehicle' },
-  car_photo_back: { get "label"() { return dc("Car photo (back)"); }, required: true, expires: false, owner: 'vehicle' },
+  car_photo_front: { get "label"() { return dc("Car photo (front)"); }, required: false, expires: false, owner: 'vehicle' },
+  car_photo_back: { get "label"() { return dc("Car photo (back)"); }, required: false, expires: false, owner: 'vehicle' },
 } as const;
 
 export type DriverDocumentType = keyof typeof DRIVER_DOCUMENTS;

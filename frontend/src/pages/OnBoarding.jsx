@@ -1323,7 +1323,6 @@ const OnBoarding = ({ bookingStage = false, timingStep = false, highlightRideNow
                         }
                       },
                       error: error === "No Pickup Location",
-                      bg: "var(--background-muted)",
                       foreground: pickupAutocomplete.locatingCurrentLocation,
                       readOnly: pickupAutocomplete.locatingCurrentLocation,
                       ariaBusy: pickupAutocomplete.locatingCurrentLocation,
@@ -1397,7 +1396,6 @@ const OnBoarding = ({ bookingStage = false, timingStep = false, highlightRideNow
                         }
                       },
                       error: error === "No Drop Location",
-                      bg: "var(--background-muted)",
                       inputRef: dropInputRef,
                       autoComplete: "off",
                       onFocusFn: () => {

@@ -3,6 +3,7 @@
   "private": true,
   "scripts": {
     "dev": "node tools/dev/run.mjs start",
+    "dev:backend": "node tools/dev/run.mjs backend",
     "dev:check": "node tools/dev/run.mjs check",
     "dev:driver": "node tools/dev/run.mjs driver",
     "dev:driver:web": "node tools/dev/run.mjs driver:web",

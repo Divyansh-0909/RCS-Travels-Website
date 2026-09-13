@@ -511,22 +511,21 @@ const ManageAccount = () => {
                                 <h2 className="text-2xl">{panel === "deactivate" ? dc("Before you deactivate") : panel === "drivers" ? dc("What your driver sees") : dc(field)}</h2>
                                 <p className="-mt-2 mb-5 text-sm text-[var(--foreground-muted)]/70">{panel === "deactivate" ? dc("This can't be undone.") : panel === "drivers" ? dc("The details shared with a driver when they accept your ride.") : dc(fieldDescriptions[field])}</p>
 
-                                {/* PLACEHOLDER — reconcile with the real driver route once it exists (see ROADMAP IMP) */}
                                 {panel === "drivers" && (
                                     <div className="w-full flex flex-col gap-4 mb-1 text-left">
                                         <div className="flex flex-col gap-2">
                                             <p className="text-xs uppercase tracking-wide text-[var(--foreground-muted)]/50">{tr("Shared with your driver")}</p>
                                             <ul className="flex flex-col gap-2 text-sm text-[var(--text)]">
-                                                {["Your phone number", "Your pickup & drop location"].map(t => (
-                                                    <li key={t} className="flex items-center gap-2"><Icon path={mdiCheck} size={0.7} /> {t}</li>
+                                                {["Your name", "Your phone number", "Your pickup & drop location", "Ride details needed to complete the trip"].map(item => (
+                                                    <li key={item} className="flex items-center gap-2"><Icon path={mdiCheck} size={0.7} /> {tr(item)}</li>
                                                 ))}
                                             </ul>
                                         </div>
                                         <div className="flex flex-col gap-2">
                                             <p className="text-xs uppercase tracking-wide text-[var(--foreground-muted)]/50">{tr("Never shared")}</p>
                                             <ul className="flex flex-col gap-2 text-sm text-[var(--foreground-muted)]/70">
-                                                {["Your name", "Gender", "Date of birth", "Emergency contact"].map(t => (
-                                                    <li key={t} className="flex items-center gap-2"><Icon path={mdiClose} size={0.7} /> {t}</li>
+                                                {["Gender", "Date of birth", "Emergency contact"].map(item => (
+                                                    <li key={item} className="flex items-center gap-2"><Icon path={mdiClose} size={0.7} /> {tr(item)}</li>
                                                 ))}
                                             </ul>
                                         </div>

@@ -8,7 +8,7 @@ import { myBookingsQuerySchema, rideComplaintSchema } from '../types.ts'
 import { VEHICLE_CLASS_NAMES, isVehicleClass, seatsOf } from '../constants/vehicles.js'
 import { normalizeReference } from '../lib/bookingReference.js'
 import { signedRiderPhotoUrl } from '../services/driverPhoto.js'
-import { newShareToken, shareIsLive, shareUrlFor, SHARE_TTL_MS } from '../lib/shareLink.js'
+import { ensureBookingShareLink } from '../lib/shareLink.js'
 import { getNavigationEtaMinutes, getNavigationRoute } from '../services/rideEstimate.js'
 import { applyComplaintConsequences } from '../services/complaints.js'
 import { createOrderForPayment, refundPayment, PaymentError } from '../services/payments.js'
@@ -271,21 +271,7 @@ bookingsRouter.post('/:id/share', protect, async (req, res) => {
     return res.status(409).json({ error: `A ${booking.status} ride cannot be shared`, status: booking.status })
   }
 
-  if (shareIsLive(booking)) {
-    return res.json({
-      url: shareUrlFor(booking.shareToken),
-      expiresAt: booking.shareExpiresAt,
-    })
-  }
-
-  const shareToken = newShareToken()
-  const shareExpiresAt = new Date(Date.now() + SHARE_TTL_MS)
-  await prisma.booking.update({
-    where: { id: booking.id },
-    data: { shareToken, shareExpiresAt },
-  })
-
-  return res.json({ url: shareUrlFor(shareToken), expiresAt: shareExpiresAt })
+  return res.json(await ensureBookingShareLink(prisma, booking))
 })
 
 // Kill the link. Clears the token rather than only the expiry, so the handle

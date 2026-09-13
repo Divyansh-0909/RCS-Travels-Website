@@ -1107,8 +1107,9 @@ reload and change nothing server-side. Each needs an API endpoint + persistence
 (and store hydration) before it's real.
 
   Settings page (pages/SettingsPage.jsx)
-    [ ] Notifications toggles — whatsapp / push / promotions. Local `notifs`
-        state. Needs a notification-preferences column(s) + GET/PUT endpoint.
+    [x] Notifications toggles — whatsapp / push / promotions persist on User via
+        /api/users/me/preferences (GET/PUT). Defaults: WhatsApp + push on,
+        promotions off.
     [x] Saved places — wired to the saved_places table via
         /api/users/me/saved-places (GET/PUT/DELETE, capped at 12). Home/Work are
         fixed slots; the booking form suggests saved places above recents.
@@ -1117,23 +1118,19 @@ reload and change nothing server-side. Each needs an API endpoint + persistence
         three selections at 390px and 1440px without horizontal overflow.
 
   Safety page (pages/SafetyPage.jsx)
-    [ ] Live location — "Share my live location" toggle. Local `autoShare` state.
-        Needs a preference field + endpoint, and the actual share-on-ride-start
-        behaviour on the tracking side. THE MANUAL HALF NOW EXISTS (13 Aug 2026):
-        the Share pill on TrackingPage mints a real, expiring, revocable link. What
-        this toggle would add is doing it automatically, to a chosen contact —
-        which needs somewhere to store that contact's number and a channel to send
-        on, so it is blocked on real sendWhatsApp, not on the link.
+    [x] Live location — "Share my live location" persists via
+        /api/users/me/preferences. When enabled, a successful ride-start transition
+        mints/reuses the same expiring share link as the manual Share action and
+        sends it to the stored emergency contact over WhatsApp. Default is off.
     [x] Helpline — DONE. "RCS Support" reads supportTel() rather than the old
         +911800000000 placeholder, alongside Police (112) and Ambulance (108).
     [x] Emergency contact — already wired to the real updateEmergencyContact
         endpoint (this one persists; listed only for contrast).
 
   Manage Account page (pages/ManageAccount.jsx)
-    [ ] "What drivers see" panel (Privacy & Data) — the shared / never-shared
-        lists are a PLACEHOLDER. The driver-facing ride route isn't finalised, so
-        reconcile this panel with whatever the real driver payload exposes once
-        that route exists (currently only customerPhone + trip locations are sent).
+    [x] "What drivers see" panel (Privacy & Data) — reconciled with the current
+        captain ride payload/UI: rider name, phone, pickup/drop, and operational
+        ride details are shared; gender, DOB, and emergency contact are not.
 
 
 LEARNING PLAN — FULL STACK OPEN PART 10 -> DRIVER APP (PHASE 5)
@@ -1409,10 +1406,10 @@ each numbered block unblocks the ones after it. Outstation is PARKED (see bottom
    because these are owner-drivers and what he checks is that the vehicle is
    road-legal. POLICE VERIFICATION WAS ON THE EARLIER DRAFT AND HE REMOVED IT;
    do not put it back without hearing that from him.
-     compulsory: RC, insurance, road tax, fitness certificate, All India permit,
-                 car photo front, car photo back
-     optional:   one-year permit (only if the cab holds an All India permit),
-                 CNG cylinder test certificate (only if the car runs on CNG)
+      compulsory: RC, insurance, road tax, fitness certificate, All India permit
+      optional:   one-year permit (only if the cab holds an All India permit),
+                  CNG cylinder test certificate (only if the car runs on CNG),
+                  car photo front, car photo back
    DL is ours, not his: his list never mentions it, but valid vehicle paperwork
    does not make an unlicensed driver legal to send to a rider. Ten types total —
    backend/constants/driverDocuments.js is the single source, mirrored by the
