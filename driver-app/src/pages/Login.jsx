@@ -89,7 +89,8 @@ const Login = () => {
 
   const api = useApi();
   const { t } = useLanguage();
-  const { colors } = useTheme();
+  const { colors, scheme } = useTheme();
+  const inputBackground = scheme === "dark" ? BOX_BG : colors.surface;
 
   useEffect(() => {
     if (resendIn <= 0) return;
@@ -384,7 +385,7 @@ const Login = () => {
       };
     }
     return {
-      backgroundColor: BOX_BG,
+      backgroundColor: inputBackground,
       borderColor: focused ? colors.primary : colors.borderUi,
     };
   };
@@ -466,9 +467,7 @@ const Login = () => {
                           onFocus={() => setFocusedBox(i)}
                           onBlur={() => setFocusedBox(-1)}
                           selectTextOnFocus
-                          // text-[24px] and text-white do not collide — Tailwind
-                          // reads the first as a length and the second as a colour.
-                          className="font-sans text-[24px] text-center text-white w-[46px] h-[46px] my-1 rounded-xl border"
+                          className="font-sans text-[24px] text-center text-[var(--text)] w-[46px] h-[46px] my-1 rounded-xl border"
                           style={{
                             padding: 0,
                             includeFontPadding: false,
@@ -537,7 +536,7 @@ const Login = () => {
                     onChangeFn: handlePhoneChange,
                     maxLength: 10,
                     error: phoneFieldError,
-                    bg: BOX_BG,
+                    bg: inputBackground,
                   }}
                 />
               }

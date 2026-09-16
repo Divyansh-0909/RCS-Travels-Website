@@ -29,7 +29,7 @@ const ThemeContext = createContext<ThemeContextValue | null>(null);
 const isPreference = (value: string | null): value is ThemePreference =>
   value === 'system' || value === 'light' || value === 'dark';
 
-const themeVariables = (colors: ThemeColors) => ({
+const themeVariables = (colors: ThemeColors, scheme: ThemeScheme) => ({
   '--canvas': colors.canvas,
   '--immersive': colors.immersive,
   '--surface': colors.surface,
@@ -53,6 +53,9 @@ const themeVariables = (colors: ThemeColors) => ({
   '--text-muted': colors.inkMuted,
   '--text-foreground': colors.ink,
   '--text-muted-foreground': colors.inkMuted,
+  '--input-background': scheme === 'dark' ? '#1d1d27' : colors.surface,
+  '--input-border': scheme === 'dark' ? 'rgba(255,255,255,0.3)' : colors.borderUi,
+  '--input-placeholder': scheme === 'dark' ? 'rgba(255,255,255,0.42)' : colors.inkMuted,
 });
 
 export const ThemeProvider = ({ children }: { children: ReactNode }) => {
@@ -89,8 +92,8 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     [colors, preference, ready, scheme, setPreference],
   );
   const rootVariables = useMemo(
-    () => vars(themeVariables(colors)) as unknown as ViewStyle,
-    [colors],
+    () => vars(themeVariables(colors, scheme)) as unknown as ViewStyle,
+    [colors, scheme],
   );
 
   return (

@@ -115,7 +115,9 @@ const Signup = () => {
     const api = useApi();
     const { profile, notRegistered, loading: driverLoading, refresh } = useDriver();
     const { language, setLanguage, t } = useLanguage();
-    const { colors } = useTheme();
+    const { colors, scheme } = useTheme();
+    const inputBackground = scheme === "dark" ? BOX_BG : colors.surface;
+    const inputBorder = scheme === "dark" ? BOX_BORDER : colors.borderUi;
     const [pendingLanguage, setPendingLanguage] = useState(language);
     const categoryCaret = useSharedValue(0);
 
@@ -659,7 +661,7 @@ const Signup = () => {
             };
         }
         return {
-            backgroundColor: BOX_BG,
+            backgroundColor: inputBackground,
             borderColor: focused ? colors.primary : colors.borderUi,
         };
     };
@@ -822,9 +824,7 @@ const Signup = () => {
                                                     onFocus={() => setFocusedBox(i)}
                                                     onBlur={() => setFocusedBox(-1)}
                                                     selectTextOnFocus
-                                                    // text-[24px] and text-white do not collide — Tailwind
-                                                    // reads the first as a length and the second as a colour.
-                                                    className="font-sans text-[24px] text-center text-white w-[46px] h-[46px] my-1 rounded-xl border"
+                                                    className="font-sans text-[24px] text-center text-[var(--text)] w-[46px] h-[46px] my-1 rounded-xl border"
                                                     style={{
                                                         padding: 0,
                                                         includeFontPadding: false,
@@ -886,7 +886,7 @@ const Signup = () => {
                                     ? <Animated.View
                                         entering={CARD_ENTER}
                                         className="w-full rounded-2xl border p-4 flex-row items-center gap-3"
-                                        style={{ backgroundColor: BOX_BG, borderColor: BOX_BORDER }}
+                                        style={{ backgroundColor: inputBackground, borderColor: inputBorder }}
                                     >
                                         <View
                                             accessible={false}
@@ -920,7 +920,7 @@ const Signup = () => {
                                                 onChangeFn: (value) => { setVehicleNumber(value.toUpperCase()); if (error) setError(null); },
                                                 maxLength: VEHICLE_NUMBER_INPUT_MAX_LENGTH,
                                                 error: vehicleNumberFieldError,
-                                                bg: BOX_BG,
+                                                bg: inputBackground,
                                             }}
                                             />
                                             {vehicleNumberFieldError && (
@@ -939,7 +939,7 @@ const Signup = () => {
                                                     onChangeFn: handleVehicleModelChange,
                                                     maxLength: 60,
                                                     error: vehicleModelFieldError,
-                                                    bg: BOX_BG,
+                                                    bg: inputBackground,
                                                 }}
                                             />
                                             {vehicleModelFieldError && (
@@ -957,7 +957,7 @@ const Signup = () => {
                                                 onPress={() => setCategoryPickerOpen(true)}
                                                 className="w-full my-1 flex-row items-center justify-between rounded-xl border px-4 py-3"
                                                 style={{
-                                                    backgroundColor: BOX_BG,
+                                                    backgroundColor: inputBackground,
                                                     borderColor: vehicleClassFieldError ? BOX_BORDER_ERROR : colors.borderUi,
                                                 }}
                                             >
@@ -1012,7 +1012,7 @@ const Signup = () => {
                                             onChangeFn: isUsername ? handleUsernameChange : handlePhoneChange,
                                             maxLength: isUsername ? null : 10,
                                             error: isUsername ? usernameFieldError : phoneFieldError,
-                                            bg: BOX_BG,
+                                            bg: inputBackground,
                                         }}
                                     />
                                     {(usernameFieldError || phoneFieldError) && (
@@ -1190,7 +1190,7 @@ const Signup = () => {
                                         }}
                                         className="flex-row items-center justify-between rounded-xl border px-4 py-3"
                                         style={{
-                                            backgroundColor: selected ? colors.canvas : BOX_BG,
+                                            backgroundColor: selected ? colors.canvas : inputBackground,
                                             borderColor: selected ? colors.primary : colors.borderUi,
                                         }}
                                     >
