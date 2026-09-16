@@ -120,6 +120,7 @@ export const checkName         = (name)                  => request("/api/auth/c
 
 export const getMe             = (getToken)              => request("/api/driver/me", { getToken });
 export const getFeedback       = (getToken)              => request("/api/driver/me/feedback", { getToken });
+export const deleteMe          = (getToken)              => request("/api/driver/me", { method: "DELETE", getToken });
 // Creates the driver row. Needs a Clerk session, so it can only run after the
 // OTP has been verified — which is why the details it takes are collected on
 // their own screen after sign-in rather than alongside the phone number.

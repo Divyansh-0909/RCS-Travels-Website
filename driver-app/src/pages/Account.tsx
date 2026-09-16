@@ -2,7 +2,7 @@ import { useLanguage as useCopyLanguage } from "../i18n";
 import { driverCopy as dc } from "../lib/copy";
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
 import { AppState, Image, Linking, Modal, Platform, Pressable, Share, StyleSheet, View, useWindowDimensions } from 'react-native';
-import Animated from 'react-native-reanimated';
+import Animated, { Easing, FadeInDown, ReduceMotion } from 'react-native-reanimated';
 import { cssInterop } from 'nativewind';
 import * as Notifications from 'expo-notifications';
 import {
@@ -15,6 +15,7 @@ import {
   DeviceMobileIcon,
   GlobeIcon,
   InfoIcon,
+  LinkIcon,
   MoonIcon,
   QuestionIcon,
   SignOutIcon,
@@ -75,6 +76,12 @@ const TITLE_TRACKING = { letterSpacing: -0.72 };
 const PANEL_GAP = 8;
 const SETTINGS_MENU_WIDTH = 184;
 const SETTINGS_MENU_GUTTER = 16;
+const EASE_OUT = Easing.bezier(0.23, 1, 0.32, 1);
+const ASYNC_CONTENT_ENTER = FadeInDown
+  .duration(190)
+  .easing(EASE_OUT)
+  .reduceMotion(ReduceMotion.System)
+  .withInitialValues({ opacity: 0, transform: [{ translateY: 6 }] });
 
 type SettingsMenuAnchor = { x: number; y: number; width: number; height: number };
 type OpenSetting = 'language' | 'appearance';
@@ -306,7 +313,11 @@ const Account = () => {
           height off the top of every scroll. That is the trade for keeping the
           captain's own name and standing on screen while he reads the rest. */}
       {loading && !profile ? <AccountIdentitySkeleton /> : profile && (
-        <View className="w-full flex-row items-center gap-4" style={{ paddingBottom: 4 }}>
+        <Animated.View
+          entering={ASYNC_CONTENT_ENTER}
+          className="w-full flex-row items-center gap-4"
+          style={{ paddingBottom: 4 }}
+        >
           {/* Who he is. The avatar is the only primary-blue circle in the app, so
               it reads as him rather than as a control.
 
@@ -409,7 +420,7 @@ const Account = () => {
               )}
             </View>
           </View>
-        </View>
+        </Animated.View>
       )}
 
       <Animated.ScrollView
@@ -427,7 +438,7 @@ const Account = () => {
         {loading && !profile ? <AccountOverviewSkeleton /> : null}
 
         {profile && (
-          <>
+          <Animated.View entering={ASYNC_CONTENT_ENTER} style={{ width: '100%', gap: PANEL_GAP }}>
             {/* A rejection is the one thing on this page he cannot act on from a
                 chip alone, so the reason gets its own line rather than a tooltip
                 nobody on a phone can open. */}
@@ -470,7 +481,7 @@ const Account = () => {
                     that needed separating. */}
                 <Car size={26} weight="fill" className={INK} />
                 <View className="flex-1">
-                  <AppText numberOfLines={1} className={`text-base font-semibold ${INK}`}>{dc("Your cars")}</AppText>
+                  <AppText numberOfLines={1} className={`text-sm font-semibold ${INK}`}>{dc("Your cars")}</AppText>
                   <AppText numberOfLines={1} className={`text-xs ${MUTED}`}>
                     {profile.vehicleCount > 1
                       ? dc("{{value0}} · {{value1}} cars", {value0: (profile.vehicleNumber), value1: (profile.vehicleCount)})
@@ -493,7 +504,7 @@ const Account = () => {
                 The month here, the week on the Rides board: History answers "how did
                 this week go" beside a list of recent rides, and this answers "how am
                 I doing" against costs a captain pays monthly. */}
-            <View className="w-full flex-row" style={{ gap: TILE_GAP, marginBottom: 18 }}>
+            <View className="w-full flex-row" style={{ gap: TILE_GAP }}>
               <WalletCard balance={profile.walletBalance} />
               <MonthEarningsCard summary={profile.month} />
             </View>
@@ -510,11 +521,11 @@ const Account = () => {
                 rounded. The parent clips those outer corners; each row stays square. */}
             <View
               className="w-full rounded-2xl overflow-hidden"
-              style={{ backgroundColor: colors.canvas, gap: 3 }}
+              style={{ backgroundColor: colors.canvas, gap: 3, marginTop: 18 }}
             >
               <AccountRow
                 label={dc("Linked UPI account")}
-                Icon={BankIcon}
+                Icon={LinkIcon}
                 value={dc("Not linked")}
                 onPress={() => navigate('/account/payout')}
                 grouped
@@ -704,7 +715,7 @@ const Account = () => {
 
             <AppText className={`text-xs text-center ${MUTED}`}>{dc("RCS Captains v")}{version}
             </AppText>
-          </>
+          </Animated.View>
         )}
       </Animated.ScrollView>
     </View>

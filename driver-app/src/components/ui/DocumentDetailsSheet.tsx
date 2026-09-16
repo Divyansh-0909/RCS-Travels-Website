@@ -1,10 +1,13 @@
 import { useLanguage as useCopyLanguage } from "../../i18n";
 import { driverCopy as dc } from "../../lib/copy";
 import { useEffect, useState } from 'react';
-import { Keyboard, Modal, Platform, Pressable, TextInput, View } from 'react-native';
+import { Keyboard, Modal, Platform, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
+import Animated from 'react-native-reanimated';
 import { XIcon } from 'phosphor-react-native';
 import AppText from '../AppText';
+import Input from './Input';
 import { numberFieldFor, type DriverDocumentType } from '../../constants/documents';
+import { useBottomSheetMotion } from '../../hooks/useBottomSheetMotion';
 import { useTheme } from '../../theme/ThemeContext';
 
 // What has to be typed in before a document can be registered: the number
@@ -14,13 +17,10 @@ import { useTheme } from '../../theme/ThemeContext';
 // the camera should not have spent thirty seconds typing a policy number for a
 // document he never sent.
 //
-// Its own sheet rather than the shared Input component: that one is tuned for
-// the dark auth shell (white borders, translucent fills) and this page is white,
-// so reusing it would mean a field with an invisible border. Same shapes and the
-// same radii, resolved for a light surface.
+// The shared Input resolves its light variant for this sheet. The document number
+// keeps a native field because its all-caps, no-autocorrect behavior is not part
+// of the shared component's API.
 
-const HAIRLINE = 'rgba(18,18,32,0.12)';
-const ERROR_BORDER = 'rgba(185,28,28,0.55)';
 const WELL = 'rgba(18,18,32,0.03)';
 const SCRIM = 'rgba(18,18,32,0.45)';
 
@@ -73,6 +73,7 @@ const toIso = (masked: string): string | null => {
 const DocumentDetailsSheet = ({ visible, type, label, needsNumber, needsExpiry, onCancel, onSubmit }: Props) => {
     useCopyLanguage();
   const { colors } = useTheme();
+  const { height: windowHeight } = useWindowDimensions();
   const numberField = numberFieldFor(type);
 
   const [number, setNumber] = useState('');
@@ -90,6 +91,10 @@ const DocumentDetailsSheet = ({ visible, type, label, needsNumber, needsExpiry, 
   // needs in order to fill the screen then overrides. Reading the event and
   // padding the container has no platform behaviour left in it to be wrong about.
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const { mounted, scrimStyle, sheetStyle } = useBottomSheetMotion(
+    visible,
+    Math.max(windowHeight * 0.55, 420),
+  );
 
   useEffect(() => {
     // The `Will` pair fires with the keyboard's own animation on iOS, so the sheet
@@ -130,7 +135,7 @@ const DocumentDetailsSheet = ({ visible, type, label, needsNumber, needsExpiry, 
   const invalid = numberBad || expiryBad;
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
+    <Modal visible={mounted} transparent animationType="none" onRequestClose={onCancel}>
       {/* The sheet is parked on the bottom edge, which is exactly where the
           keyboard arrives — so without the padding it opens over the field it was
           summoned by, and over the Upload button under that.
@@ -140,9 +145,14 @@ const DocumentDetailsSheet = ({ visible, type, label, needsNumber, needsExpiry, 
           keyboard's height and leaves the scrim covering the whole screen. */}
       <View
         className="flex-1 justify-end"
-        style={{ backgroundColor: SCRIM, paddingBottom: keyboardHeight }}
+        style={{ paddingBottom: keyboardHeight }}
       >
-        <View className="bg-surface rounded-t-3xl px-5 pt-5 pb-8 gap-4">
+        <Animated.View
+          pointerEvents="none"
+          style={[StyleSheet.absoluteFillObject, { backgroundColor: SCRIM }, scrimStyle]}
+        />
+        <Animated.View style={sheetStyle}>
+          <View className="bg-surface rounded-t-3xl px-5 pt-5 pb-8 gap-4">
           {/* The way out, level with the title — same as the source sheet, which is
               the step immediately before this one. A full-width Cancel beside
               Upload gave equal weight to finishing and abandoning, on a sheet the
@@ -189,20 +199,17 @@ const DocumentDetailsSheet = ({ visible, type, label, needsNumber, needsExpiry, 
           {needsNumber ? (
             <View className="gap-1.5">
               <AppText className={`text-sm font-semibold ${INK}`}>{numberField.label}</AppText>
-              <TextInput
-                value={number}
-                onChangeText={setNumber}
-                placeholder={numberField.placeholder}
-                placeholderTextColor={colors.inkMuted}
-                autoCapitalize="characters"
-                autoCorrect={false}
-                maxLength={60}
-                className="w-full rounded-xl px-3.5 py-3 text-base"
-                style={{
-                  backgroundColor: WELL,
-                  borderWidth: 1,
-                  borderColor: touched && numberBad ? ERROR_BORDER : HAIRLINE,
-                  color: colors.ink,
+              <Input
+                prop={{
+                  variant: 'light',
+                  type: 'text',
+                  value: number,
+                  onChangeFn: setNumber,
+                  placeholder: numberField.placeholder,
+                  autoCapitalize: 'characters',
+                  autoCorrect: false,
+                  maxLength: 60,
+                  error: touched && numberBad,
                 }}
               />
               {/* Names the field it sits under, for the same reason the heading
@@ -218,19 +225,15 @@ const DocumentDetailsSheet = ({ visible, type, label, needsNumber, needsExpiry, 
           {needsExpiry ? (
             <View className="gap-1.5">
               <AppText className={`text-sm font-semibold ${INK}`}>{dc("Valid until")}</AppText>
-              <TextInput
-                value={expiry}
-                onChangeText={(raw) => setExpiry(maskDate(raw))}
-                placeholder={dc("DD/MM/YYYY")}
-                placeholderTextColor={colors.inkMuted}
-                keyboardType="number-pad"
-                maxLength={10}
-                className="w-full rounded-xl px-3.5 py-3 text-base"
-                style={{
-                  backgroundColor: WELL,
-                  borderWidth: 1,
-                  borderColor: touched && expiryBad ? ERROR_BORDER : HAIRLINE,
-                  color: colors.ink,
+              <Input
+                prop={{
+                  variant: 'light',
+                  type: 'number',
+                  value: expiry,
+                  onChangeFn: (raw) => setExpiry(maskDate(raw)),
+                  placeholder: dc("DD/MM/YYYY"),
+                  maxLength: 10,
+                  error: touched && expiryBad,
                 }}
               />
               {touched && expiryBad ? (
@@ -272,7 +275,8 @@ const DocumentDetailsSheet = ({ visible, type, label, needsNumber, needsExpiry, 
               <AppText className="font-semibold text-white">{dc("Upload")}</AppText>
             </Pressable>
           </View>
-        </View>
+          </View>
+        </Animated.View>
       </View>
     </Modal>
   );

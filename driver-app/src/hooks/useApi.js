@@ -39,6 +39,7 @@ export function useApi() {
   return useMemo(() => ({
     getMe:         ()                   => api.getMe(stableGetToken),
     getFeedback:   ()                   => api.getFeedback(stableGetToken),
+    deleteMe:      ()                   => api.deleteMe(stableGetToken),
     createMe:      (details)            => api.createMe(details, stableGetToken),
     sendOtp:       (phone, intent)      => api.sendOtp(phone, intent),
     verifyOtp:     (phone, otp, intent) => api.verifyOtp(phone, otp, intent),

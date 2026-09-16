@@ -17,7 +17,7 @@ const PAGE_ENTER = FadeInDown
     .withInitialValues({ opacity: 0, transform: [{ translateY: 8 }] });
 const PAGE_EXIT = FadeOut
     .duration(90)
-    .easing(Easing.in(Easing.quad))
+    .easing(Easing.out(Easing.quad))
     .reduceMotion(ReduceMotion.System);
 
 const AuthLayout = () => {

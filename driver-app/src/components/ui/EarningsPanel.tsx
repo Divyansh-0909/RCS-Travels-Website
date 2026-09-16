@@ -1,6 +1,14 @@
 import { driverCopy as dc } from "../../lib/copy";
-import { useEffect, useRef, useState } from 'react';
-import { Animated, Easing, Pressable, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Pressable, View } from 'react-native';
+import * as Haptics from 'expo-haptics';
+import Animated, {
+    Easing,
+    useAnimatedStyle,
+    useReducedMotion,
+    useSharedValue,
+    withTiming,
+} from 'react-native-reanimated';
 import { CaretDownIcon, CheckIcon } from 'phosphor-react-native';
 import AppText from '../AppText';
 import { RidesSummary } from '../../types/enums';
@@ -30,32 +38,42 @@ type Props = {
 };
 
 const MENU_WIDTH = 184;
+const MOTION_DURATION = 180;
+const EASE_OUT = Easing.bezier(0.23, 1, 0.32, 1);
 
 const EarningsPanel = ({ summary, period, periodOptions, onPeriodChange }: Props) => {
     const { colors } = useTheme();
     const [menuOpen, setMenuOpen] = useState(false);
-    const caretProgress = useRef(new Animated.Value(0)).current;
+    const reducedMotion = useReducedMotion();
+    const caretProgress = useSharedValue(0);
+    const summaryProgress = useSharedValue(1);
 
     const selected = periodOptions.find((option) => option.key === period) ?? periodOptions[0];
-    const caretRotation = caretProgress.interpolate({
-        inputRange: [0, 1],
-        outputRange: ['0deg', '180deg'],
-    });
+    const caretStyle = useAnimatedStyle(() => ({
+        transform: [{ rotate: `${caretProgress.get() * 180}deg` }],
+    }));
+    const earnedStyle = useAnimatedStyle(() => ({ opacity: summaryProgress.get() }));
+    const ridesStyle = useAnimatedStyle(() => ({ opacity: summaryProgress.get() }));
 
     useEffect(() => {
-        const animation = Animated.timing(caretProgress, {
-            toValue: menuOpen ? 1 : 0,
-            duration: 160,
-            easing: Easing.out(Easing.cubic),
-            useNativeDriver: true,
-        });
+        const target = menuOpen ? 1 : 0;
+        if (reducedMotion) {
+            caretProgress.set(target);
+            return;
+        }
 
-        animation.start();
-        return () => animation.stop();
-    }, [caretProgress, menuOpen]);
+        caretProgress.set(withTiming(target, { duration: MOTION_DURATION, easing: EASE_OUT }));
+    }, [caretProgress, menuOpen, reducedMotion]);
+
+    useEffect(() => {
+        summaryProgress.set(0);
+        summaryProgress.set(withTiming(1, { duration: MOTION_DURATION, easing: EASE_OUT }));
+    }, [period, summary.earned, summary.rides, summaryProgress]);
 
     const choosePeriod = (next: EarningsPeriodKey) => {
         setMenuOpen(false);
+        if (next === period) return;
+        void Haptics.selectionAsync();
         onPeriodChange(next);
     };
 
@@ -77,7 +95,7 @@ const EarningsPanel = ({ summary, period, periodOptions, onPeriodChange }: Props
                             style={({ pressed }) => ({ opacity: pressed ? 0.78 : 1 })}
                         >
                             <AppText className="text-sm font-semibold leading-5 text-white">{selected.label}</AppText>
-                            <Animated.View style={{ height: 20, justifyContent: 'center', transform: [{ rotate: caretRotation }] }}>
+                            <Animated.View style={[{ height: 20, justifyContent: 'center' }, caretStyle]}>
                                 <CaretDownIcon size={13} weight="bold" color={colors.onStrong} />
                             </Animated.View>
                         </Pressable>
@@ -123,23 +141,25 @@ const EarningsPanel = ({ summary, period, periodOptions, onPeriodChange }: Props
 
                 {/* tracking is points here, not em â€” see tailwind.config.js. -1px is
                     the display-type equivalent of the -0.02em the token carries. */}
-                <AppText
-                    numberOfLines={1}
-                    className="text-4xl font-semibold text-white"
-                    style={{ letterSpacing: -1 }}
-                >
-                    {rupees(summary.earned)}
-                </AppText>
+                <Animated.View style={earnedStyle}>
+                    <AppText
+                        numberOfLines={1}
+                        className="text-4xl font-semibold text-white"
+                        style={{ letterSpacing: -1 }}
+                    >
+                        {rupees(summary.earned)}
+                    </AppText>
+                </Animated.View>
                 </View>
 
-                <View className="items-end">
+                <Animated.View className="items-end" style={ridesStyle}>
                     <AppText className="text-3xl font-semibold text-white" style={{ letterSpacing: -0.6 }}>
                         {summary.rides}
                     </AppText>
                     <AppText className={`text-xs ${MUTED}`}>
                         {summary.rides === 1 ? dc("ride done") : dc("rides done")}
                     </AppText>
-                </View>
+                </Animated.View>
             </View>
 
         </View>

@@ -22,8 +22,15 @@ type Props = {
     bottomSheetHeight?: number;
 };
 
-const topView = require('../../../assets/captain-car-marker.png');
-const topViewSedan = require('../../../assets/captain-sedan-marker.png');
+const driverMarkerImages: Record<string, number> = {
+    hatchback: require('../../../assets/captain-hatchback-marker.png'),
+    sedan: require('../../../assets/captain-sedan-marker.png'),
+    suv: require('../../../assets/captain-suv-marker.png'),
+    suv_premium: require('../../../assets/captain-suv-premium-marker.png'),
+};
+
+const driverMarkerImageFor = (carType?: string | null) =>
+    driverMarkerImages[carType ?? ''] ?? driverMarkerImages.hatchback;
 
 
 const INITIAL_REGION_DELTA = 0.003;
@@ -394,7 +401,7 @@ const MapSlot = ({
                 <Marker
                     coordinate={driverPoint}
                     anchor={{ x: 0.5, y: 0.5 }}
-                    image={carType === 'sedan' ? topViewSedan : topView}
+                    image={driverMarkerImageFor(carType)}
                     rotation={driverRotation}
                     tracksViewChanges={false}
                     zIndex={10}

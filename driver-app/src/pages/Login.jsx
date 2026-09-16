@@ -3,11 +3,12 @@ import { driverCopy as dc } from "../lib/copy";
 import { useSignIn, useAuth } from "@clerk/clerk-expo";
 import { useState, useEffect, useRef } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, TextInput, View } from "react-native";
-import Animated, { Easing, useAnimatedStyle, withTiming } from "react-native-reanimated";
+import Animated, { Easing, FadeIn, FadeInDown, FadeOut, ReduceMotion, useAnimatedStyle, withTiming } from "react-native-reanimated";
 import { useNavigate } from "react-router-native";
 import Input from "../components/ui/Input";
 import Button from "../components/ui/Button";
 import BackButton from "../components/ui/BackButton";
+import InlineError from "../components/ui/InlineError";
 import AppText from "../components/AppText";
 import { useApi } from "../hooks/useApi";
 import { useData } from "../hooks/useData";
@@ -27,7 +28,11 @@ const BOX_FAIL = "#DC2626";
 
 const BOX_SIZE = 46;  // w-[46px]/h-[46px] on the inputs
 const BOX_GAP = 8;    // gap-2 on the row holding them
-const CONVERGE = { duration: 600, easing: Easing.inOut(Easing.ease) };
+const EASE_OUT = Easing.bezier(0.23, 1, 0.32, 1);
+const CONVERGE = { duration: 220, easing: EASE_OUT, reduceMotion: ReduceMotion.System };
+const CONTENT_ENTER = FadeInDown.duration(220).easing(EASE_OUT).reduceMotion(ReduceMotion.System);
+const CONTENT_EXIT = FadeOut.duration(140).easing(EASE_OUT).reduceMotion(ReduceMotion.System);
+const ERROR_ENTER = FadeInDown.duration(160).easing(EASE_OUT).reduceMotion(ReduceMotion.System);
 
 // The website does this with a transform on --i and `transition-all duration-600`
 // (see .animate-otp-box-in in frontend/src/index.css). There is no transition
@@ -278,6 +283,14 @@ const Login = () => {
   // come back rejected. Both halves are needed: verdict outlives the request it
   // came from, and without busy the mark would stay up after the row reopens.
   const settled = busy && Boolean(verdict);
+  const phoneFieldError = isPhone && [
+    t('driver.auth.phoneRequired'),
+    t('driver.auth.phoneInvalid'),
+  ].includes(error);
+  const otpFieldError = !isPhone && Boolean(error) && (
+    [t('driver.auth.otpRequired'), t('driver.auth.otpInvalid')].includes(error) || verdict === "fail"
+  );
+  const formError = error && !phoneFieldError && !otpFieldError ? error : null;
 
   const formatMMSS = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 
@@ -356,7 +369,6 @@ const Login = () => {
   });
 
   const boxStyle = (i) => {
-    const otpError = Boolean(error);
     const focused = focusedBox === i;
 
     // Only once the answer is in. While the boxes are still converging there is
@@ -365,7 +377,7 @@ const Login = () => {
     if (settled && i === 0) {
       return { backgroundColor: verdict === "fail" ? BOX_FAIL : BOX_PASS, borderColor: "transparent" };
     }
-    if (otpError) {
+    if (otpFieldError) {
       return {
         backgroundColor: BOX_BG_ERROR,
         borderColor: focused ? BOX_BORDER_ERROR_FOCUS : BOX_BORDER_ERROR,
@@ -413,7 +425,7 @@ const Login = () => {
             </Button>
           </View>
 
-          : <View className="w-full justify-start items-start gap-5">
+          : <Animated.View key={step} entering={CONTENT_ENTER} exiting={CONTENT_EXIT} className="w-full justify-start items-start gap-5">
             <View className="w-full justify-center items-start gap-1">
               <AppText className="text-2xl font-semibold text-left">
                 {isPhone ? t('driver.auth.loginTitle') : t('driver.auth.confirmTitle')}
@@ -432,15 +444,6 @@ const Login = () => {
             </View>
 
             <View className="w-full justify-center items-start">
-
-              {error && (
-                <View className="mt-2 mb-1 items-start justify-center">
-                  <AppText className="text-sm text-left" style={{ color: ERROR_TEXT }}>
-                    {error}
-                  </AppText>
-                </View>
-              )}
-
               {!isPhone
                 ? <View className="justify-center items-start">
                   <View className="relative flex-row justify-center items-center gap-2">
@@ -497,12 +500,19 @@ const Login = () => {
                             for the whole round trip, which is not the same thing
                             as the code being right. */}
                         {verdict === "fail"
-                          ? <CrossOutline size={38} delay={450} />
-                          : <CheckMarkOutline size={38} delay={450} />}
+                          ? <CrossOutline size={38} delay={220} />
+                          : <CheckMarkOutline size={38} delay={220} />}
                       </Animated.View>
                     )}
                   </View>
 
+                  {otpFieldError && (
+                    <Animated.View entering={ERROR_ENTER} exiting={CONTENT_EXIT} className="mt-1 w-full">
+                      <InlineError message={error} color={ERROR_TEXT} />
+                    </Animated.View>
+                  )}
+
+                  <Animated.View key={`${loading}-${verdict}-${expiresIn > 0}`} entering={FadeIn.duration(140).easing(EASE_OUT).reduceMotion(ReduceMotion.System)} exiting={FadeOut.duration(100).reduceMotion(ReduceMotion.System)}>
                   <AppText className="text-sm text-left text-[var(--text-muted)] mt-2 mb-3">
                     {loading
                       ? t('driver.auth.verifying')
@@ -514,6 +524,7 @@ const Login = () => {
                             ? t('driver.auth.expires', { time: formatMMSS(expiresIn) })
                             : t('driver.auth.expired')}
                   </AppText>
+                  </Animated.View>
                 </View>
                 :
                 <Input
@@ -525,11 +536,17 @@ const Login = () => {
                     value: phone,
                     onChangeFn: handlePhoneChange,
                     maxLength: 10,
-                    error: error === t('driver.auth.phoneRequired') || error === t('driver.auth.phoneInvalid'),
+                    error: phoneFieldError,
                     bg: BOX_BG,
                   }}
                 />
               }
+
+              {phoneFieldError && (
+                <Animated.View entering={ERROR_ENTER} exiting={CONTENT_EXIT} className="mt-1 w-full">
+                  <InlineError message={error} color={ERROR_TEXT} />
+                </Animated.View>
+              )}
 
               <Button
                 onPress={isPhone ? handleSubmit : handleOTPSubmit}
@@ -542,8 +559,14 @@ const Login = () => {
               >
                 {isPhone
                   ? (loading ? t('driver.auth.sendingOtp') : t('common.actions.continue'))
-                  : ((loading || verdict) ? t('driver.auth.continue') : t('driver.auth.submit'))}
+                : ((loading || verdict) ? t('driver.auth.continue') : t('driver.auth.submit'))}
               </Button>
+
+              {formError && (
+                <Animated.View entering={ERROR_ENTER} exiting={CONTENT_EXIT} className="mt-2 w-full">
+                  <InlineError message={formError} color={ERROR_TEXT} />
+                </Animated.View>
+              )}
 
               {!isPhone && (
                 <AppText className={`mt-3 text-sm text-left text-[var(--text-muted)] ${busy ? "opacity-0" : ""}`}>
@@ -567,7 +590,7 @@ const Login = () => {
                 </AppText>
               )}
             </View>
-          </View>}
+          </Animated.View>}
       </ScrollView>
     </KeyboardAvoidingView>
   );

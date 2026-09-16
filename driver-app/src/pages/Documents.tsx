@@ -1,18 +1,30 @@
 import { useLanguage as useCopyLanguage } from "../i18n";
 import { driverCopy as dc } from "../lib/copy";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, View } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { Alert, Pressable, ScrollView, View } from 'react-native';
+import Animated, {
+  Easing,
+  FadeInDown,
+  ReduceMotion,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import { CarIcon, CaretDownIcon } from 'phosphor-react-native';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-native';
 import AppText from '../components/AppText';
 import BackButton from '../components/ui/BackButton';
 import Button from '../components/ui/Button';
+import InlineError from '../components/ui/InlineError';
 import DocumentRow, { type DocumentRowState } from '../components/ui/DocumentRow';
 import DocumentDetailsSheet from '../components/ui/DocumentDetailsSheet';
 import DocumentSourceSheet, { type DocumentSource } from '../components/ui/DocumentSourceSheet';
 import AccountDetailScreen from '../components/ui/AccountDetailScreen';
-import { DetailSectionsSkeleton } from '../components/ui/LoadingSkeletons';
+import {
+  DetailSectionsSkeleton,
+  DocumentRowsSkeleton,
+  DocumentsSkeleton,
+} from '../components/ui/LoadingSkeletons';
 import { useApi } from '../hooks/useApi';
 import { useDriver } from '../hooks/useDriver';
 import {
@@ -48,10 +60,12 @@ const TITLE_TRACKING = { letterSpacing: -0.72 };
 // last row. What is left is the ordinary breathing room at the end of a list.
 const TAIL_PADDING = 32;
 
-// Under the title band only. The scroller's gap of 8 is the rhythm BETWEEN cards,
-// and letting the heading sit at that same distance made it read as the first card
-// in the stack rather than as the thing the stack is under.
-const HEADING_GAP = 12;
+const EASE_OUT = Easing.bezier(0.23, 1, 0.32, 1);
+const ASYNC_CONTENT_ENTER = FadeInDown
+  .duration(190)
+  .easing(EASE_OUT)
+  .reduceMotion(ReduceMotion.System)
+  .withInitialValues({ opacity: 0, transform: [{ translateY: 6 }] });
 
 const POLL_MS = 3000;
 
@@ -158,7 +172,7 @@ const CarPanel = ({
       {open ? (
         <View
           className="px-4"
-          style={{ backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: HAIRLINE }}
+           style={{ backgroundColor: colors.surfaceMuted, borderTopWidth: 1, borderTopColor: HAIRLINE }}
         >
           {children}
         </View>
@@ -465,8 +479,8 @@ const Documents = () => {
     }
 
     return (
-      <AccountDetailScreen title={dc("Documents")}>
-        <DetailSectionsSkeleton cards={4} />
+      <AccountDetailScreen title={dc("Documents")} centeredHeader>
+        <DocumentsSkeleton />
       </AccountDetailScreen>
     );
   }
@@ -500,8 +514,6 @@ const Documents = () => {
 
   const personalMissing = (base?.missing ?? [])
     .filter((t) => !carTypeSet.has(t)).length;
-  const totalMissing = personalMissing
-    + vehicles.reduce((total, vehicle) => total + missingFor(vehicle), 0);
   const registrationVehicleMissing = (base?.missing ?? [])
     .filter((t) => registrationCarTypeSet.has(t)).length;
 
@@ -561,7 +573,10 @@ const Documents = () => {
   };
 
   return (
-    <View className={isRegistrationFlow ? "flex-1 w-full py-12" : "flex-1 w-full"}>
+    <Animated.View
+      entering={isRegistrationFlow ? undefined : ASYNC_CONTENT_ENTER}
+      className={isRegistrationFlow ? "flex-1 w-full py-12" : "flex-1 w-full"}
+    >
       {isRegistrationFlow ? (
         <View className="absolute left-2 right-2 top-10 z-10 h-12 items-center justify-center">
           <AppText className="text-xl font-normal text-[var(--text)]">
@@ -584,19 +599,26 @@ const Documents = () => {
         className="flex-1 w-full bg-canvas"
         contentContainerStyle={{
           paddingBottom: TAIL_PADDING,
-          paddingTop: isRegistrationFlow ? 80 : 0,
+          paddingTop: isRegistrationFlow ? 80 : 8,
           gap: 8,
         }}
         showsVerticalScrollIndicator={false}
       >
         {isRegistrationFlow ? null : (
-          <View className="flex-row items-center gap-2 px-4 pt-4" style={{ paddingBottom: HEADING_GAP }}>
-            <BackButton onPress={() => navigate(-1)} icon="caret" className="-ml-3 -mr-3" />
-            <AppText className={`text-xl font-semibold ${INK}`} style={TITLE_TRACKING}>{dc("Documents")}</AppText>
+          <View className="relative mx-4 mb-4">
+            <View className="flex-row items-baseline justify-center pt-1 mb-1">
+              <AppText className={`text-xl font-semibold text-center ${INK}`} style={TITLE_TRACKING}>
+                {dc("Documents")}
+              </AppText>
+            </View>
+            <BackButton
+              onPress={() => navigate(-1)}
+              className="absolute -top-2 left-0 rounded-full bg-surface-muted"
+            />
           </View>
         )}
 
-      {error ? (
+      {error && !isRegistrationFlow ? (
         <View className={`${isRegistrationFlow ? 'mx-6' : 'mx-4'} rounded-2xl p-4`} style={{ backgroundColor: colors.surfaceMuted }}>
           <AppText className={`text-sm ${MUTED}`}>{error}</AppText>
         </View>
@@ -652,43 +674,21 @@ const Documents = () => {
             >
               {vehicleId ? dc("Continue") : dc("Add your vehicle")}
             </Button>
+            {error ? <InlineError message={error} className="mt-2" /> : null}
           </View>
         </View>
       ) : (
         <>
-      {/* The one summary line, above the list rather than repeated in it. A
-          captain opens this screen to find out whether he is done — and with more
-          than one car, "done" means every car, so this counts across all of them
-          rather than only the one whose panel happens to be open. */}
-      <View className="mx-4 rounded-2xl p-4" style={{ backgroundColor: colors.surfaceMuted }}>
-        <AppText className={`font-semibold ${INK}`}>
-          {totalMissing === 0
-            ? dc("All required documents are on file")
-            : dc("{{value0}} still to upload", {value0: (totalMissing)})}
-        </AppText>
-        <AppText className={`text-sm mt-1 ${MUTED}`}>{dc("Every document is checked automatically, then reviewed by the RCS team. Both have to pass before you can go online.")}</AppText>
-      </View>
-
       {/* Personal documents carry no car. Passing null rather than the active
           car's id is also what the upload asks the server for — see
           resolveUploadVehicle: a batch of his licence and his photograph involves
           no car and must not name one. */}
-      <View className="mx-4 mt-2">
-        <AppText className={`text-sm font-semibold ${INK}`}>{dc("Your documents")}</AppText>
-      </View>
-      <View className="mx-4">
-        {personalTypes.map((info, i) => renderRow(info, i, personalTypes, base ?? undefined, null))}
+      <View className="mx-4 rounded-2xl overflow-hidden" style={{ backgroundColor: colors.surfaceMuted }}>
+        {personalTypes.map((info, i) => renderRow(info, i, personalTypes, base ?? undefined, null, undefined, true))}
       </View>
 
       {vehicles.length > 0 ? (
         <>
-          {/* The same heading the personal list gets. That one names what a captain
-              owes as a driver, this names what a car owes — and each panel below
-              names which car. */}
-          <View className="mx-4 mt-2">
-            <AppText className={`text-sm font-semibold ${INK}`}>{dc("Car documents")}</AppText>
-          </View>
-
           {/* One panel per car, all shut but the one the caller named. The toggle
               clears the id rather than flipping a flag, so opening a second closes
               the first without either of them being taught about the other.
@@ -713,9 +713,7 @@ const Documents = () => {
                 {response
                   ? carTypes.map((info, i) => renderRow(info, i, carTypes, response, vehicle.id))
                   : (
-                    <View className="items-center py-6">
-                      <ActivityIndicator />
-                    </View>
+                    <DocumentRowsSkeleton rows={3} />
                   )}
               </CarPanel>
             );
@@ -757,7 +755,7 @@ const Documents = () => {
         onSubmit={(details) => sheet?.settle(details)}
       />
       </ScrollView>
-    </View>
+    </Animated.View>
   );
 };
 

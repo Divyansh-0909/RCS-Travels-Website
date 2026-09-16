@@ -8,20 +8,31 @@ import {
   Platform,
   Pressable,
   ScrollView,
+  StyleSheet,
   useWindowDimensions,
   View,
 } from 'react-native';
+import Animated, {
+  Easing,
+  FadeIn,
+  FadeInDown,
+  FadeOut,
+  ReduceMotion,
+  useAnimatedStyle,
+  withTiming,
+} from 'react-native-reanimated';
 import { CaretDownIcon, CarIcon, PlusIcon, TrashIcon, XIcon } from 'phosphor-react-native';
 import { useLocation, useNavigate } from 'react-router-native';
 import AppText from '../components/AppText';
-import BackButton from '../components/ui/BackButton';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
+import InlineError from '../components/ui/InlineError';
 import AccountDetailScreen from '../components/ui/AccountDetailScreen';
-import { DetailSectionsSkeleton } from '../components/ui/LoadingSkeletons';
+import { VehiclesSkeleton } from '../components/ui/LoadingSkeletons';
 import { useApi } from '../hooks/useApi';
+import { useBottomSheetMotion } from '../hooks/useBottomSheetMotion';
 import { useDriver } from '../hooks/useDriver';
-import { verificationLabel, type Vehicle, type VehiclesResponse } from '../lib/documentState';
+import { type Vehicle, type VehiclesResponse, verificationLabel } from '../lib/documentState';
 import { VEHICLE_NUMBER_INPUT_MAX_LENGTH, VEHICLE_NUMBER_MAX_LENGTH, VEHICLE_NUMBER_MIN_LENGTH, validateVehicleNumber } from '../lib/vehicleNumber';
 import { vehicleClassLabel } from '../constants/documents';
 import { useTheme } from '../theme/ThemeContext';
@@ -47,30 +58,36 @@ const TITLE_TRACKING = { letterSpacing: -0.72 };
 // Solid negative, the same one Account's Log out uses. The auth shell's error red is
 // tuned for a dark page and drops under AA here.
 const ERROR_TEXT = '#B91C1C';
-// Not the 132 the boards reserve, for the reason Documents gives: this screen is a
-// drill-down (see isDrillDown), so there is no floating bar at the foot of it and no
-// scrim either. The clearance those needed would just be an inch of white under the
-// add-another row. What is left is the ordinary breathing room at the end of a list.
-const TAIL_PADDING = 32;
-
-// Under the title band only, and the same 12 the Documents screen uses. The
-// scroller's gap of 8 is the rhythm BETWEEN cards, and letting the heading sit at
-// that same distance made it read as the first card in the stack rather than as the
-// thing the stack is under. The two screens are one tap apart, so if that number
-// changes there, change it here with it.
-const HEADING_GAP = 12;
-
 // The four the fare card is priced against. Kept in the same order the rider's
 // booking screen lists them, so a captain picking his class sees the words a
 // rider saw.
 const CLASSES = ['hatchback', 'sedan', 'suv', 'suv_premium'] as const;
+const EASE_OUT = Easing.bezier(0.23, 1, 0.32, 1);
+const STATE_ENTER = FadeIn.duration(170).easing(EASE_OUT).reduceMotion(ReduceMotion.System);
+const STATE_EXIT = FadeOut.duration(110).easing(EASE_OUT).reduceMotion(ReduceMotion.System);
+const ASYNC_CONTENT_ENTER = FadeInDown
+  .duration(190)
+  .easing(EASE_OUT)
+  .reduceMotion(ReduceMotion.System)
+  .withInitialValues({ opacity: 0, transform: [{ translateY: 6 }] });
 
-// Green only for a car that can actually be driven today; amber for one that
-// needs him to do something; grey for one still working its way through.
-const toneFor = (status: Vehicle['verificationStatus']) =>
-  status === 'approved' ? 'text-[#166534]'
-    : status === 'rejected' ? 'text-[#92400E]'
-      : MUTED;
+const AnimatedCaret = ({ open, color }: { open: boolean; color: string }) => {
+  const style = useAnimatedStyle(() => ({
+    transform: [{
+      rotate: withTiming(open ? '180deg' : '0deg', {
+        duration: 180,
+        easing: EASE_OUT,
+        reduceMotion: ReduceMotion.System,
+      }),
+    }],
+  }));
+
+  return (
+    <Animated.View style={style}>
+      <CaretDownIcon size={18} weight="bold" color={color} />
+    </Animated.View>
+  );
+};
 
 const Vehicles = () => {
     useCopyLanguage();
@@ -101,11 +118,19 @@ const Vehicles = () => {
   const [vehicleNumberError, setVehicleNumberError] = useState<string | null>(null);
   const [vehicleModel, setVehicleModel] = useState('');
   const [vehicleClassStatus, setVehicleClassStatus] = useState<'idle' | 'finding' | 'found' | 'manual' | 'error'>('idle');
-  const [classificationDotCount, setClassificationDotCount] = useState(1);
   const [classPickerOpen, setClassPickerOpen] = useState(false);
   const vehicleClassRequestRef = useRef(0);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [closePressed, setClosePressed] = useState(false);
+  const { mounted: addSheetMounted, scrimStyle, sheetStyle } = useBottomSheetMotion(
+    adding,
+    Math.max(windowHeight * 0.55, 420),
+  );
+  const vehicleClassError = formError === dc("Pick the kind of car") ? formError : null;
+  const vehicleModelError = formError === dc("Enter the car's model") ? formError : null;
+  const globalFormError = (
+    formError && !vehicleClassError && !vehicleModelError ? formError : null
+  ) ?? (isRegistrationFlow ? error : null);
 
   const load = useCallback(async () => {
     const result = await api.getVehicles();
@@ -140,19 +165,6 @@ const Vehicles = () => {
   }, [driverLoading, isRegistrationFlow, navigate, profile]);
 
   useEffect(() => {
-    if (vehicleClassStatus !== 'finding') {
-      setClassificationDotCount(1);
-      return;
-    }
-
-    const timer = setInterval(() => {
-      setClassificationDotCount((count) => count >= 3 ? 1 : count + 1);
-    }, 350);
-
-    return () => clearInterval(timer);
-  }, [vehicleClassStatus]);
-
-  useEffect(() => {
     if (!adding) return;
 
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
@@ -183,13 +195,6 @@ const Vehicles = () => {
 
     Keyboard.dismiss();
     setAdding(false);
-    setVehicleClass(null);
-    setVehicleNumber('');
-    setVehicleNumberError(null);
-    setVehicleModel('');
-    setVehicleClassStatus('idle');
-    setClassPickerOpen(false);
-    setFormError(null);
     setKeyboardHeight(0);
     if (isRegistrationFlow) navigate('/document', { replace: true });
   }, [busy, isRegistrationFlow, navigate]);
@@ -387,9 +392,7 @@ const Vehicles = () => {
                   }}
                 />
                 {vehicleNumberError ? (
-                  <AppText className="text-xs" style={{ color: ERROR_TEXT }}>
-                    {vehicleNumberError}
-                  </AppText>
+                  <InlineError message={vehicleNumberError} color={ERROR_TEXT} />
                 ) : (
                   <AppText className={`text-xs ${MUTED}`}>
                     {dc("Spaces and hyphens are okay. We'll verify the number from your RC.")}
@@ -405,6 +408,7 @@ const Vehicles = () => {
                     type: 'text',
                     get "placeholder"() { return dc("Model"); },
                     value: vehicleModel,
+                    error: Boolean(vehicleModelError),
                     onChangeFn: (value: string) => {
                       vehicleClassRequestRef.current += 1;
                       setVehicleModel(value);
@@ -412,6 +416,7 @@ const Vehicles = () => {
                     },
                   }}
                 />
+                <InlineError message={vehicleModelError} color={ERROR_TEXT} />
               </View>
 
               <View className="gap-2">
@@ -424,28 +429,41 @@ const Vehicles = () => {
                   className="min-h-12 flex-row items-center justify-between rounded-xl border px-4 py-3"
                   style={{
                     backgroundColor: colors.surface,
-                    borderColor: colors.borderUi,
+                    borderColor: vehicleClassError ? ERROR_TEXT : colors.borderUi,
                     opacity: vehicleClassStatus === 'finding' ? 0.75 : 1,
                   }}
                 >
-                  <AppText className={`text-base ${vehicleClass ? INK : MUTED}`}>
-                    {vehicleClassStatus === 'finding'
-                      ? `${dc("Classifing vehicle type")}${'.'.repeat(classificationDotCount)}`
-                      : vehicleClass
-                        ? vehicleClassLabel(vehicleClass)
-                        : dc("Choose car type")}
-                  </AppText>
-                  <CaretDownIcon size={18} weight="bold" color={colors.inkMuted} />
+                  <Animated.View
+                    key={`${vehicleClassStatus}-${vehicleClass ?? 'none'}`}
+                    entering={STATE_ENTER}
+                    exiting={STATE_EXIT}
+                    style={{ flex: 1 }}
+                  >
+                    <AppText className={`text-base ${vehicleClass ? INK : MUTED}`}>
+                      {vehicleClassStatus === 'finding'
+                        ? `${dc("Classifing vehicle type")}…`
+                        : vehicleClass
+                          ? vehicleClassLabel(vehicleClass)
+                          : dc("Choose car type")}
+                    </AppText>
+                  </Animated.View>
+                  <AnimatedCaret open={classPickerOpen} color={colors.inkMuted} />
                 </Pressable>
 
-                {vehicleClassStatus === 'found' ? (
-                  <AppText className={`text-xs ${MUTED}`}>{dc("Suggested from model · Tap to change")}</AppText>
-                ) : vehicleClassStatus === 'error' ? (
-                  <AppText className={`text-xs ${MUTED}`}>{dc("Couldn't identify it · Choose the car type")}</AppText>
+                <InlineError message={vehicleClassError} color={ERROR_TEXT} />
+
+                {(vehicleClassStatus === 'found' || vehicleClassStatus === 'error') ? (
+                  <Animated.View key={vehicleClassStatus} entering={STATE_ENTER} exiting={STATE_EXIT}>
+                    <AppText className={`text-xs ${MUTED}`}>
+                      {vehicleClassStatus === 'found'
+                        ? dc("Suggested from model · Tap to change")
+                        : dc("Couldn't identify it · Choose the car type")}
+                    </AppText>
+                  </Animated.View>
                 ) : null}
 
                 {classPickerOpen ? (
-                  <View className="flex-row flex-wrap gap-2">
+                  <Animated.View entering={STATE_ENTER} exiting={STATE_EXIT} className="flex-row flex-wrap gap-2">
                     {CLASSES.map((option) => {
                       const selected = vehicleClass === option;
                       return (
@@ -472,21 +490,16 @@ const Vehicles = () => {
                         </Pressable>
                       );
                     })}
-                  </View>
+                  </Animated.View>
                 ) : null}
               </View>
             </View>
 
             <View className="w-full">
-              {formError ? (
-                <AppText className="text-sm" style={{ color: ERROR_TEXT, marginBottom: 4 }}>
-                  {formError}
-                </AppText>
-              ) : null}
-
               <Button prop={{ disabled: busy || vehicleClassStatus === 'finding' }} onPress={submitNew}>
                 {busy ? dc("Adding...") : dc("Add Car Documents")}
               </Button>
+              <InlineError message={globalFormError} color={ERROR_TEXT} className="mt-2" />
             </View>
           </View>
         </ScrollView>
@@ -497,178 +510,157 @@ const Vehicles = () => {
   if (loading) {
     return (
       <AccountDetailScreen title={dc("Your Cars")} centeredHeader>
-        <DetailSectionsSkeleton cards={3} />
+        <VehiclesSkeleton />
       </AccountDetailScreen>
     );
   }
 
   const vehicles = data?.vehicles ?? [];
+  const orderedVehicles = [...vehicles].sort((a, b) => Number(b.isActive) - Number(a.isActive));
 
   return (
     <>
-      <ScrollView
-        // Same reason as Documents: the shell centres its Outlet, so without an
-        // explicit width this scroller sizes to its content and takes every card
-        // below in with it.
-        className="flex-1 w-full bg-canvas"
-        contentContainerStyle={{ paddingBottom: TAIL_PADDING, paddingTop: 8, gap: 8 }}
-      >
-      <View className="relative mx-4" style={{ paddingBottom: HEADING_GAP }}>
-        <View className="flex-row h-full items-baseline justify-center pt-1 mb-1">
-          <AppText className={`text-xl font-semibold text-center ${INK}`} style={TITLE_TRACKING}>{dc("Your Cars")}</AppText>
-        </View>
-        <BackButton
-          onPress={() => navigate(-1)}
-          className="absolute -top-2 left-0 rounded-full bg-surface-muted"
-        />
-      </View>
-
-      {error ? (
-        <View className="mx-4 rounded-2xl p-4" style={{ backgroundColor: colors.surfaceMuted }}>
-          <AppText className={`text-sm ${MUTED}`}>{error}</AppText>
-        </View>
-      ) : null}
-
-      <View className="mx-4 gap-2">
-        {vehicles.map((vehicle) => (
-          <View
-            key={vehicle.id}
-            className="rounded-2xl p-4"
-            // Muted, the same --foreground-muted every other panel in the app sits
-            // on. A car is a thing to READ here; white-on-white left the card
-            // outlined onto the page rather than resting on it, and the primary ring
-            // that marks the one he is driving had to fight a hairline around every
-            // other card to say so.
-            style={{
-              backgroundColor: colors.surfaceMuted,
-              borderWidth: vehicle.isActive ? 2 : 1,
-              borderColor: vehicle.isActive ? colors.primary : colors.borderUi,
-            }}
-          >
-            <View className="flex-row items-center gap-3">
-              <View
-                className="w-9 h-9 rounded-xl items-center justify-center"
-                style={{ backgroundColor: 'rgba(18,18,32,0.04)' }}
-              >
-                <CarIcon size={18} weight="regular" color={colors.ink} />
-              </View>
-              <View className="flex-1">
-                <AppText numberOfLines={1} className={`font-semibold ${INK}`}>
-                  {vehicle.number}
-                </AppText>
-                <AppText numberOfLines={1} className={`text-sm ${MUTED}`}>
-                  {vehicleClassLabel(vehicle.class)}
-                  {vehicle.model ? dc("· {{value0}}", {value0: (vehicle.model)}) : ''}
-                </AppText>
-              </View>
+      <Animated.View entering={ASYNC_CONTENT_ENTER} style={{ flex: 1, width: '100%' }}>
+        <AccountDetailScreen title={dc("Your Cars")} centeredHeader>
+          {error ? (
+            <View className="mx-4 rounded-2xl p-4" style={{ backgroundColor: colors.surfaceMuted }}>
+              <AppText className={`text-sm ${MUTED}`}>{error}</AppText>
             </View>
+          ) : null}
 
-            <View className="flex-row items-center justify-between gap-2 mt-3">
-              <AppText className={`flex-1 text-sm ${toneFor(vehicle.verificationStatus)}`}>
-                {verificationLabel(vehicle.verificationStatus)}
-                {vehicle.missing?.length ? dc("· {{value0}} to upload", {value0: (vehicle.missing.length)}) : ''}
-              </AppText>
-              {vehicle.isActive ? (
+          <View className="mx-4" style={{ backgroundColor: colors.canvas, gap: 3 }}>
+          {orderedVehicles.map((vehicle, index) => (
+            <View
+              key={vehicle.id}
+              className={`${index === 0 ? 'rounded-t-3xl rounded-b-sm' : 'rounded-sm'} ${vehicle.isActive ? 'px-5 py-5' : 'px-4 py-3.5'}`}
+              // Match Account's grouped rows: the narrow canvas gap separates each
+              // panel, while the first and last items own the outer rounded corners.
+              style={{ backgroundColor: colors.surfaceMuted, minHeight: vehicle.isActive ? 156 : undefined }}
+            >
+              <View className="flex-row items-center gap-3">
                 <View
-                  className="shrink-0 rounded-lg px-2.5 py-1"
-                  style={{ backgroundColor: colors.primary }}
+                  className={`${vehicle.isActive ? 'w-11 h-11 rounded-xl' : 'w-8 h-8'} items-center justify-center`}
+                  style={{ backgroundColor: vehicle.isActive ? WELL : undefined }}
                 >
-                  <AppText className="text-xs font-semibold uppercase tracking-wide text-white">{dc("Driving now")}</AppText>
+                  <CarIcon size={vehicle.isActive ? 22 : 20} weight={vehicle.isActive ? 'fill' : 'regular'} color={colors.ink} />
+                </View>
+                <View className="flex-1">
+                  <AppText
+                    numberOfLines={1}
+                    className={`${vehicle.isActive ? 'text-xl' : 'text-sm'} font-semibold ${INK}`}
+                    style={vehicle.isActive ? TITLE_TRACKING : undefined}
+                  >
+                    {vehicle.number}
+                  </AppText>
+                  <AppText numberOfLines={1} className={`${vehicle.isActive ? 'text-sm' : 'text-xs'} ${MUTED}`}>
+                    {verificationLabel(vehicle.verificationStatus)}
+                    {vehicle.model ? dc("· {{value0}}", {value0: (vehicle.model)}) : ''}
+                  </AppText>
+                </View>
+              </View>
+
+              {vehicle.isActive ? (
+                <View className="flex-row justify-end mt-3">
+                  <View
+                    className="shrink-0 rounded-lg px-2.5 py-1"
+                    style={{ backgroundColor: colors.primary }}
+                  >
+                    <AppText numberOfLines={1} className="text-xs font-semibold uppercase tracking-wide text-white">
+                      {vehicle.model ? `${vehicle.model} · ${vehicle.number}` : vehicle.number}
+                    </AppText>
+                  </View>
                 </View>
               ) : null}
+
+              <View className="flex-row items-center gap-4 mt-3">
+                <View className="rounded-lg" style={{ backgroundColor: colors.surface }}>
+                  <Pressable
+                    role="button"
+                    onPress={() => navigate(`/account/documents?vehicleId=${vehicle.id}`)}
+                    hitSlop={8}
+                    className="rounded-lg px-3 py-2"
+                    style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+                  >
+                    <AppText className={`text-sm font-semibold ${INK}`}>{dc("Documents")}</AppText>
+                  </Pressable>
+                </View>
+
+                {!vehicle.isActive ? (
+                  <Pressable
+                    role="button"
+                    disabled={busy}
+                    onPress={() => switchTo(vehicle)}
+                    hitSlop={8}
+                    style={({ pressed }) => ({
+                      backgroundColor: colors.strong,
+                      borderRadius: 999,
+                      paddingHorizontal: 12,
+                      paddingVertical: 8,
+                      opacity: pressed || busy ? 0.6 : 1,
+                    })}
+                  >
+                    <AppText className="text-sm font-semibold text-white">{dc("Drive this one")}</AppText>
+                  </Pressable>
+                ) : null}
+
+                {/* Not offered for the car he is driving. The server refuses it too
+                    — the four cached columns on his row are non-nullable and would
+                    be left describing a car that no longer exists — but a button
+                    that only ever produces an error is not a button. */}
+                {!vehicle.isActive ? (
+                  <Pressable
+                    role="button"
+                    aria-label={dc("Remove {{value0}}", {value0: (vehicle.number)})}
+                    disabled={busy}
+                    onPress={() => remove(vehicle)}
+                    hitSlop={8}
+                    style={({ pressed }) => ({ opacity: pressed || busy ? 0.6 : 1, marginLeft: 'auto' })}
+                  >
+                    <TrashIcon size={18} weight="regular" color="#92400E" />
+                  </Pressable>
+                ) : null}
+              </View>
             </View>
+          ))}
 
-            <View className="flex-row items-center gap-4 mt-3">
-              <Pressable
-                role="button"
-                onPress={() => navigate(`/account/documents?vehicleId=${vehicle.id}`)}
-                hitSlop={8}
-                style={({ pressed }) => ({
-                  backgroundColor: colors.strong,
-                  borderRadius: 999,
-                  paddingHorizontal: 12,
-                  paddingVertical: 8,
-                  opacity: pressed ? 0.7 : 1,
-                })}
-              >
-                <AppText className="text-sm font-semibold text-white">{dc("Documents")}</AppText>
-              </Pressable>
-
-              {!vehicle.isActive ? (
-                <Pressable
-                  role="button"
-                  disabled={busy}
-                  onPress={() => switchTo(vehicle)}
-                  hitSlop={8}
-                  style={({ pressed }) => ({
-                    backgroundColor: colors.strong,
-                    borderRadius: 999,
-                    paddingHorizontal: 12,
-                    paddingVertical: 8,
-                    opacity: pressed || busy ? 0.6 : 1,
-                  })}
-                >
-                  <AppText className="text-sm font-semibold text-white">{dc("Drive this one")}</AppText>
-                </Pressable>
-              ) : null}
-
-              {/* Not offered for the car he is driving. The server refuses it too
-                  — the four cached columns on his row are non-nullable and would
-                  be left describing a car that no longer exists — but a button
-                  that only ever produces an error is not a button. */}
-              {!vehicle.isActive ? (
-                <Pressable
-                  role="button"
-                  aria-label={dc("Remove {{value0}}", {value0: (vehicle.number)})}
-                  disabled={busy}
-                  onPress={() => remove(vehicle)}
-                  hitSlop={8}
-                  style={({ pressed }) => ({ opacity: pressed || busy ? 0.6 : 1, marginLeft: 'auto' })}
-                >
-                  <TrashIcon size={18} weight="regular" color="#92400E" />
-                </Pressable>
-              ) : null}
+          <View className="rounded-b-3xl" style={{ backgroundColor: colors.surfaceMuted }}>
+            <Pressable
+              role="button"
+              onPress={openAddSheet}
+              className="rounded-b-3xl px-4 py-3.5 flex-row items-center gap-3"
+              style={({ pressed }) => ({
+                opacity: pressed ? 0.6 : 1,
+              })}
+            >
+            <View className="w-8 h-8 items-center justify-center">
+              <PlusIcon size={20} weight="bold" color={colors.ink} />
             </View>
+            <AppText className={`text-sm font-semibold ${INK}`}>{dc("Add another car")}</AppText>
+            </Pressable>
           </View>
-        ))}
-      </View>
-
-      <Pressable
-        role="button"
-        onPress={openAddSheet}
-        className="mx-4 rounded-2xl p-4 flex-row items-center gap-3"
-        style={({ pressed }) => ({
-          backgroundColor: colors.surfaceMuted,
-          opacity: pressed ? 0.6 : 1,
-        })}
-      >
-        <View
-          className="w-9 h-9 rounded-xl items-center justify-center"
-          style={{ backgroundColor: WELL }}
-        >
-          <PlusIcon size={18} weight="bold" color={colors.ink} />
-        </View>
-        <AppText className={`font-semibold ${INK}`}>{dc("Add another car")}</AppText>
-      </Pressable>
-      </ScrollView>
+          </View>
+        </AccountDetailScreen>
+      </Animated.View>
 
       <Modal
-        visible={adding}
+        visible={addSheetMounted}
         transparent
-        animationType="fade"
+        animationType="none"
         onRequestClose={closeAddSheet}
       >
-        <Pressable
-          className="flex-1 justify-end"
-          style={{ backgroundColor: SCRIM, paddingBottom: keyboardHeight }}
-          onPress={closeAddSheet}
-        >
-          <Pressable
+        <View className="flex-1 justify-end" style={{ paddingBottom: keyboardHeight }}>
+          <Animated.View
+            pointerEvents="none"
+            style={[StyleSheet.absoluteFillObject, { backgroundColor: SCRIM }, scrimStyle]}
+          />
+          <Pressable style={StyleSheet.absoluteFillObject} onPress={closeAddSheet} />
+          <Animated.View style={sheetStyle}>
+            <Pressable
             accessibilityViewIsModal
             className="bg-surface rounded-t-3xl px-5 pt-5"
             style={{ maxHeight: Math.max(windowHeight - keyboardHeight - 16, 240) }}
             onPress={() => {}}
-          >
+            >
             <View className="flex-row items-start gap-3 pb-4">
               <View className="flex-1 gap-1">
                 <AppText className={`text-lg font-semibold ${INK}`}>
@@ -710,6 +702,7 @@ const Vehicles = () => {
                     type: 'text',
                     get "placeholder"() { return dc("Model"); },
                     value: vehicleModel,
+                    error: Boolean(vehicleModelError),
                     onChangeFn: (value: string) => {
                       vehicleClassRequestRef.current += 1;
                       setVehicleModel(value);
@@ -717,6 +710,7 @@ const Vehicles = () => {
                     },
                   }}
                 />
+                <InlineError message={vehicleModelError} color={ERROR_TEXT} />
               </View>
 
               <View className="gap-2">
@@ -729,28 +723,41 @@ const Vehicles = () => {
                   className="min-h-12 flex-row items-center justify-between rounded-xl border px-4 py-3"
                   style={{
                     backgroundColor: colors.surface,
-                    borderColor: colors.borderUi,
+                    borderColor: vehicleClassError ? ERROR_TEXT : colors.borderUi,
                     opacity: vehicleClassStatus === 'finding' ? 0.75 : 1,
                   }}
                 >
-                  <AppText className={`text-base ${vehicleClass ? INK : MUTED}`}>
-                    {vehicleClassStatus === 'finding'
-                      ? `${dc("Classifing vehicle type")}${'.'.repeat(classificationDotCount)}`
-                      : vehicleClass
-                        ? vehicleClassLabel(vehicleClass)
-                        : dc("Choose car type")}
-                  </AppText>
-                  <CaretDownIcon size={18} weight="bold" color={colors.inkMuted} />
+                  <Animated.View
+                    key={`${vehicleClassStatus}-${vehicleClass ?? 'none'}`}
+                    entering={STATE_ENTER}
+                    exiting={STATE_EXIT}
+                    style={{ flex: 1 }}
+                  >
+                    <AppText className={`text-base ${vehicleClass ? INK : MUTED}`}>
+                      {vehicleClassStatus === 'finding'
+                        ? `${dc("Classifing vehicle type")}…`
+                        : vehicleClass
+                          ? vehicleClassLabel(vehicleClass)
+                          : dc("Choose car type")}
+                    </AppText>
+                  </Animated.View>
+                  <AnimatedCaret open={classPickerOpen} color={colors.inkMuted} />
                 </Pressable>
 
-                {vehicleClassStatus === 'found' ? (
-                  <AppText className={`text-xs ${MUTED}`}>{dc("Suggested from model · Tap to change")}</AppText>
-                ) : vehicleClassStatus === 'error' ? (
-                  <AppText className={`text-xs ${MUTED}`}>{dc("Couldn't identify it · Choose the car type")}</AppText>
+                <InlineError message={vehicleClassError} color={ERROR_TEXT} />
+
+                {(vehicleClassStatus === 'found' || vehicleClassStatus === 'error') ? (
+                  <Animated.View key={vehicleClassStatus} entering={STATE_ENTER} exiting={STATE_EXIT}>
+                    <AppText className={`text-xs ${MUTED}`}>
+                      {vehicleClassStatus === 'found'
+                        ? dc("Suggested from model · Tap to change")
+                        : dc("Couldn't identify it · Choose the car type")}
+                    </AppText>
+                  </Animated.View>
                 ) : null}
 
                 {classPickerOpen ? (
-                  <View className="flex-row flex-wrap gap-2">
+                  <Animated.View entering={STATE_ENTER} exiting={STATE_EXIT} className="flex-row flex-wrap gap-2">
                     {CLASSES.map((option) => {
                       const selected = vehicleClass === option;
                       return (
@@ -777,7 +784,7 @@ const Vehicles = () => {
                         </Pressable>
                       );
                     })}
-                  </View>
+                  </Animated.View>
                 ) : null}
               </View>
 
@@ -799,9 +806,7 @@ const Vehicles = () => {
                   }}
                 />
                 {vehicleNumberError ? (
-                  <AppText className="text-xs" style={{ color: ERROR_TEXT }}>
-                    {vehicleNumberError}
-                  </AppText>
+                  <InlineError message={vehicleNumberError} color={ERROR_TEXT} />
                 ) : (
                   <AppText className={`text-xs ${MUTED}`}>
                     {dc("Spaces and hyphens are okay. We'll verify the number from your RC.")}
@@ -810,12 +815,6 @@ const Vehicles = () => {
               </View>
 
               <View className="pt-1">
-                {formError ? (
-                  <AppText className="text-sm" style={{ color: ERROR_TEXT, marginBottom: 4 }}>
-                    {formError}
-                  </AppText>
-                ) : null}
-
                 <Button prop={{ disabled: busy || vehicleClassStatus === 'finding' }} onPress={submitNew}>
                   {busy
                     ? dc("Adding...")
@@ -823,13 +822,18 @@ const Vehicles = () => {
                       ? dc("Add Car Documents")
                       : dc("Add car")}
                 </Button>
+                <InlineError message={globalFormError} color={ERROR_TEXT} className="mt-2" />
               </View>
             </ScrollView>
-          </Pressable>
-        </Pressable>
+            </Pressable>
+          </Animated.View>
+        </View>
       </Modal>
     </>
   );
 };
 
 export default Vehicles;
+
+
+

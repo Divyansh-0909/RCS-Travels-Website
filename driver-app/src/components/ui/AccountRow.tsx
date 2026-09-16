@@ -106,7 +106,7 @@ const AccountRow = ({
       <View className="flex-1">
         <AppText
           numberOfLines={detail || (grouped && value) ? 2 : 1}
-          className={`${grouped ? 'text-base ' : ''}font-semibold ${danger ? 'text-[#B91C1C]' : INK}`}
+          className={`${grouped ? 'text-sm ' : ''}font-semibold ${danger ? 'text-[#B91C1C]' : INK}`}
         >
           {label}
         </AppText>

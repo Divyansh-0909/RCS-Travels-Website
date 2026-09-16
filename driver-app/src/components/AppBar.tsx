@@ -52,7 +52,7 @@ import { themeColors } from "../theme/colors";
         // shoulder either side that the five-tab bar has — so the short bar reads as
         // the same object with fewer things in it, rather than as a different one.
         // The third tab is one more 14vw on the same ~10vw of shoulder, hence 52.
-        const barWidth = canDrive ? "87%" : owesRides ? "52%" : "38%";
+        const barWidth = canDrive ? "96%" : owesRides ? "64%" : "46%";
 
         // Off the bottom edge rather than under a fade alone: the bar is opaque
         // and sits over the list, so anything short of leaving the screen would
@@ -83,7 +83,7 @@ import { themeColors } from "../theme/colors";
                 ]}
             >
                 <View
-                    className="flex w-full py-1 justify-center items-center h-fit rounded-full bg-strong"
+                    className="flex w-full py-2 px-2 justify-center items-center h-fit rounded-full bg-strong"
                     style={{
                         minHeight: BAR_HEIGHT,
                         borderWidth: 1,
@@ -92,10 +92,18 @@ import { themeColors } from "../theme/colors";
                 >
                     <FlatList
                         horizontal
+                        scrollEnabled={false}
+                        showsHorizontalScrollIndicator={false}
+                        style={{ width: "100%" }}
                         data={tabs}
                         keyExtractor={(item) => item.name}
                         extraData={`${pathname}:${canDrive}:${owesRides}`}
-                        contentContainerClassName="gap-1.5"
+                        contentContainerStyle={{
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: 0,
+                            flexGrow: 1,
+                        }}
                         renderItem={({ item }) => {
                             const isPost = item.name === "Post";
                             const isSelected = !isPost && pathname === item.path;
@@ -108,7 +116,7 @@ import { themeColors } from "../theme/colors";
                                     role="button"
                                     aria-label={isPost ? dc("Post a marketplace booking") : item.name}
                                     onPress={() => navigate(isPost ? postPath : item.path, { replace: true })}
-                                    className={`flex gap-1 items-center justify-center ${isPost ? "bg-surface w-12 h-12 my-1.5 rounded-full mx-1" : "w-[14vw] h-14 rounded-full"}`}
+                                    className={`flex gap-1 items-center justify-center ${isPost ? "bg-surface w-12 h-12 my-1.5 rounded-full mx-1" : "w-[20vw] h-14 rounded-full"}`}
                                     style={isSelected ? { backgroundColor: themeColors.dark.surface } : undefined}
                                 >
                                     {isPost ? (
@@ -136,3 +144,4 @@ import { themeColors } from "../theme/colors";
     }
 
     export default AppBar
+

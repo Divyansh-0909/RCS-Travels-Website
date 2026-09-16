@@ -17,7 +17,7 @@ const documents = [
 ] as const;
 
 const Legal = () => (
-  <AccountDetailScreen title={dc("Legal")}>
+  <AccountDetailScreen title={dc("Legal")} centeredHeader>
     <AccountSectionLabel>{dc("RCS Travels documents")}</AccountSectionLabel>
     <AccountList>
       {documents.map(({ label, detail, path, Icon }, index) => (
@@ -27,6 +27,7 @@ const Legal = () => (
           detail={detail}
           Icon={Icon}
           external
+          grouped
           onPress={() => openExternalUrl(`${BASE}${path}`)}
           last={index === documents.length - 1}
         />

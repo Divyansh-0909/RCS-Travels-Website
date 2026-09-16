@@ -39,6 +39,61 @@ const AccountMenuRowSkeleton = ({
   </View>
 );
 
+const DetailMenuRowSkeleton = ({
+  secondary = true,
+  trailing = true,
+}: {
+  secondary?: boolean;
+  trailing?: boolean;
+}) => (
+  <SkeletonSection
+    className="w-full flex-row items-center gap-3 px-4 py-3.5"
+    surface="surfaceMuted"
+  >
+    <View className="w-8 h-8 items-center justify-center">
+      <SkeletonBlock width={24} height={24} radius={8} />
+    </View>
+    <View className="flex-1 gap-1">
+      <SkeletonBlock width="44%" height={15} />
+      {secondary ? <SkeletonBlock width="66%" height={12} /> : null}
+    </View>
+    {trailing ? <SkeletonBlock width={8} height={14} radius={4} /> : null}
+  </SkeletonSection>
+);
+
+const DetailGroupSkeleton = ({
+  rows,
+  secondary = true,
+  trailing = true,
+}: {
+  rows: number;
+  secondary?: boolean;
+  trailing?: boolean;
+}) => {
+  const { colors } = useTheme();
+
+  return (
+    <View
+      className="mx-4 rounded-2xl overflow-hidden"
+      style={{ backgroundColor: colors.canvas, gap: 3 }}
+    >
+      {Array.from({ length: rows }, (_, index) => (
+        <DetailMenuRowSkeleton
+          key={index}
+          secondary={secondary}
+          trailing={trailing}
+        />
+      ))}
+    </View>
+  );
+};
+
+const DetailSectionLabelSkeleton = ({ width = '34%' }: { width?: `${number}%` }) => (
+  <SkeletonSection className="mx-4 mt-2">
+    <SkeletonBlock width={width} height={14} />
+  </SkeletonSection>
+);
+
 /** Cards used under an already-rendered detail-page header. */
 export const DetailSectionsSkeleton = ({ cards = 3 }: { cards?: number }) => (
   <View
@@ -56,6 +111,152 @@ export const DetailSectionsSkeleton = ({ cards = 3 }: { cards?: number }) => (
         </View>
       </Card>
     ))}
+  </View>
+);
+
+/** Manage-account loader that keeps the final section labels and grouped rows in place. */
+export const ManageAccountSkeleton = () => (
+  <View
+    accessible
+    accessibilityLabel={dc("Loading account details")}
+    accessibilityState={{ busy: true }}
+    className="w-full gap-2"
+  >
+    <DetailSectionLabelSkeleton width="30%" />
+    <DetailGroupSkeleton rows={2} trailing={false} />
+    <DetailSectionLabelSkeleton width="32%" />
+    <DetailGroupSkeleton rows={2} trailing={false} />
+  </View>
+);
+
+/** Feedback loader mirrors the rating summary followed by one grouped review list. */
+export const FeedbackSkeleton = () => (
+  <View
+    accessible
+    accessibilityLabel={dc("Loading feedback")}
+    accessibilityState={{ busy: true }}
+    className="w-full gap-2"
+  >
+    <SkeletonSection className="mx-4 rounded-2xl p-4" surface="surfaceMuted">
+      <View className="flex-row items-center gap-4">
+        <SkeletonBlock width={54} height={38} radius={10} />
+        <View className="flex-1 gap-2">
+          <View className="flex-row gap-1">
+            {[0, 1, 2, 3, 4].map((index) => (
+              <SkeletonBlock key={index} width={18} height={18} radius={6} />
+            ))}
+          </View>
+          <SkeletonBlock width="38%" height={12} />
+        </View>
+      </View>
+    </SkeletonSection>
+    <DetailSectionLabelSkeleton width="39%" />
+    <DetailGroupSkeleton rows={3} />
+  </View>
+);
+
+/** Vehicle loader preserves the large active-car card, compact car row and add row. */
+export const VehiclesSkeleton = () => {
+  const { colors } = useTheme();
+
+  return (
+    <View
+      accessible
+      accessibilityLabel={dc("Loading cars")}
+      accessibilityState={{ busy: true }}
+      className="mx-4 rounded-3xl overflow-hidden"
+      style={{ backgroundColor: colors.canvas, gap: 3 }}
+    >
+      <SkeletonSection className="w-full px-5 py-5" surface="surfaceMuted" style={{ minHeight: 156 }}>
+        <View className="flex-row items-center gap-3">
+          <SkeletonBlock width={44} height={44} radius={12} />
+          <View className="flex-1 gap-1.5">
+            <SkeletonBlock width="42%" height={22} />
+            <SkeletonBlock width="34%" height={13} />
+          </View>
+        </View>
+        <View className="mt-3 flex-row items-center justify-between gap-3">
+          <SkeletonBlock width="37%" height={13} />
+          <SkeletonBlock width={78} height={24} radius={8} />
+        </View>
+        <View className="mt-3 flex-row items-center gap-4">
+          <SkeletonBlock width={86} height={32} radius={8} />
+        </View>
+      </SkeletonSection>
+
+      <SkeletonSection className="w-full px-4 py-3.5" surface="surfaceMuted">
+        <View className="flex-row items-center gap-3">
+          <View className="w-8 h-8 items-center justify-center">
+            <SkeletonBlock width={20} height={20} radius={7} />
+          </View>
+          <View className="flex-1 gap-1">
+            <SkeletonBlock width="36%" height={15} />
+            <SkeletonBlock width="30%" height={12} />
+          </View>
+        </View>
+      </SkeletonSection>
+
+      <SkeletonSection className="w-full flex-row items-center gap-3 px-4 py-3.5" surface="surfaceMuted">
+        <View className="w-8 h-8 items-center justify-center">
+          <SkeletonBlock width={20} height={20} radius={7} />
+        </View>
+        <SkeletonBlock width="34%" height={15} />
+      </SkeletonSection>
+    </View>
+  );
+};
+
+const DocumentRowSkeleton = ({ panel = false }: { panel?: boolean }) => (
+  <SkeletonSection
+    className={`w-full flex-row items-center gap-3 py-3.5 ${panel ? 'rounded-2xl px-4' : ''}`}
+    surface={panel ? 'surfaceMuted' : undefined}
+  >
+    <SkeletonBlock width={panel ? 48 : 36} height={panel ? 48 : 36} radius={panel ? 24 : 12} />
+    <View className="flex-1 gap-1">
+      <SkeletonBlock width="48%" height={15} />
+      <SkeletonBlock width="31%" height={12} />
+    </View>
+  </SkeletonSection>
+);
+
+export const DocumentRowsSkeleton = ({ rows = 3, panel = false }: { rows?: number; panel?: boolean }) => (
+  <View className={panel ? "gap-3" : "w-full"}>
+    {Array.from({ length: rows }, (_, index) => (
+      <DocumentRowSkeleton key={index} panel={panel} />
+    ))}
+  </View>
+);
+
+/** Account Documents loader mirrors the summary, personal checklist and car panel. */
+export const DocumentsSkeleton = () => (
+  <View
+    accessible
+    accessibilityLabel={dc("Loading documents")}
+    accessibilityState={{ busy: true }}
+    className="w-full gap-2"
+  >
+    <SkeletonSection className="mx-4 rounded-2xl p-4 gap-2" surface="surfaceMuted">
+      <SkeletonBlock width="58%" height={16} />
+      <SkeletonBlock width="88%" height={12} />
+      <SkeletonBlock width="72%" height={12} />
+    </SkeletonSection>
+
+    <DetailSectionLabelSkeleton width="31%" />
+    <View className="mx-4">
+      <DocumentRowsSkeleton rows={2} />
+    </View>
+
+    <DetailSectionLabelSkeleton width="29%" />
+    <SkeletonSection className="mx-4 rounded-2xl px-4 py-4" surface="surfaceMuted">
+      <View className="flex-row items-center gap-3">
+        <SkeletonBlock width={40} height={40} radius={12} />
+        <View className="flex-1 gap-1">
+          <SkeletonBlock width="35%" height={15} />
+          <SkeletonBlock width="28%" height={12} />
+        </View>
+        <SkeletonBlock width={14} height={14} radius={5} />
+      </View>
+    </SkeletonSection>
   </View>
 );
 
@@ -145,29 +346,39 @@ export const AccountOverviewSkeleton = () => {
   );
 };
 
-export const AccountIdentitySkeleton = () => (
-  <View
-    accessible
-    accessibilityLabel={dc("Loading captain profile")}
-    accessibilityState={{ busy: true }}
-    className="w-full"
-  >
-    <SkeletonSection className="w-full flex-row items-center gap-4" style={{ paddingBottom: 4 }}>
-      <SkeletonBlock width={76} height={76} radius={38} />
-      <View className="flex-1" style={{ gap: 2 }}>
-        <View className="flex-row items-center gap-2">
-          <SkeletonBlock width="48%" height={24} />
-          <SkeletonBlock width={48} height={26} radius={12} />
+export const AccountIdentitySkeleton = () => {
+  const { colors } = useTheme();
+
+  return (
+    <View
+      accessible
+      accessibilityLabel={dc("Loading captain profile")}
+      accessibilityState={{ busy: true }}
+      className="w-full"
+    >
+      <SkeletonSection className="w-full flex-row items-center gap-4" style={{ paddingBottom: 4 }}>
+        <SkeletonBlock width={76} height={76} radius={38} />
+        <View className="flex-1" style={{ gap: 2 }}>
+          <View className="flex-row items-center gap-2">
+            <SkeletonBlock width="46%" height={24} />
+            <View
+              className="flex-row items-center gap-1 rounded-xl"
+              style={{ backgroundColor: colors.surfaceMuted, padding: 6 }}
+            >
+              <SkeletonBlock width={14} height={14} radius={5} />
+              <SkeletonBlock width={20} height={12} />
+            </View>
+          </View>
+          <SkeletonBlock width="40%" height={14} />
+          <View className="flex-row items-center gap-1">
+            <SkeletonBlock width={22} height={22} radius={11} />
+            <SkeletonBlock width={76} height={16} />
+          </View>
         </View>
-        <SkeletonBlock width="42%" height={14} />
-        <View className="flex-row items-center gap-1">
-          <SkeletonBlock width={22} height={22} radius={11} />
-          <SkeletonBlock width={84} height={16} />
-        </View>
-      </View>
-    </SkeletonSection>
-  </View>
-);
+      </SkeletonSection>
+    </View>
+  );
+};
 
 export const OfferListSkeleton = ({ cards = 3 }: { cards?: number }) => (
   <View
@@ -177,24 +388,24 @@ export const OfferListSkeleton = ({ cards = 3 }: { cards?: number }) => (
     className="w-full gap-3"
   >
     {Array.from({ length: cards }, (_, index) => (
-      <Card key={index}>
-        <View className="flex-row justify-between items-end mb-4">
-          <SkeletonBlock width={86} height={28} />
-          <SkeletonBlock width={74} height={18} />
+      <SkeletonSection key={index} className="w-full rounded-2xl px-4 py-3" surface="surfaceMuted">
+        <View className="flex-row justify-between items-end mb-3">
+          <SkeletonBlock width={76} height={22} />
+          <SkeletonBlock width={68} height={14} />
         </View>
-        <View className="flex-row gap-2 mb-4">
-          <SkeletonBlock width={62} height={26} radius={10} />
-          <SkeletonBlock width={82} height={26} radius={10} />
+        <View className="flex-row gap-2 mb-3">
+          <SkeletonBlock width={58} height={22} radius={10} />
+          <SkeletonBlock width={76} height={22} radius={10} />
         </View>
-        <View className="gap-3">
-          <SkeletonBlock width="76%" height={15} />
-          <SkeletonBlock width="62%" height={15} />
+        <View className="gap-2">
+          <SkeletonBlock width="78%" height={14} />
+          <SkeletonBlock width="66%" height={14} />
         </View>
-        <View className="flex-row gap-2 mt-4">
-          <SkeletonBlock width="48%" height={44} radius={12} />
-          <SkeletonBlock width="48%" height={44} radius={12} />
+        <View className="flex-row gap-2 mt-3">
+          <SkeletonBlock width="48%" height={40} radius={12} />
+          <SkeletonBlock width="48%" height={40} radius={12} />
         </View>
-      </Card>
+      </SkeletonSection>
     ))}
   </View>
 );

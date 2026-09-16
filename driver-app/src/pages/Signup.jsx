@@ -3,13 +3,14 @@ import { driverCopy as dc } from "../lib/copy";
 import { useSignIn, useAuth } from "@clerk/clerk-expo";
 import { useState, useEffect, useRef } from "react";
 import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, TextInput, View } from "react-native";
-import Animated, { Easing, useAnimatedStyle, withTiming } from "react-native-reanimated";
+import Animated, { Easing, FadeIn, FadeInDown, FadeOut, ReduceMotion, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import Svg, { Circle, Path } from "react-native-svg";
 import { CaretDownIcon, CheckIcon } from "phosphor-react-native";
 import { useNavigate, useLocation } from "react-router-native";
 import Input from "../components/ui/Input";
 import Button from "../components/ui/Button";
 import BackButton from "../components/ui/BackButton";
+import InlineError from "../components/ui/InlineError";
 import AppText from "../components/AppText";
 import { useApi } from "../hooks/useApi";
 import { useData } from "../hooks/useData";
@@ -41,7 +42,13 @@ const VEHICLE_CLASSES = ["hatchback", "sedan", "suv", "suv_premium"];
 
 const BOX_SIZE = 46;  // w-[46px]/h-[46px] on the inputs
 const BOX_GAP = 8;    // gap-2 on the row holding them
-const CONVERGE = { duration: 600, easing: Easing.inOut(Easing.ease) };
+const EASE_OUT = Easing.bezier(0.23, 1, 0.32, 1);
+const CONVERGE = { duration: 220, easing: EASE_OUT, reduceMotion: ReduceMotion.System };
+const CONTENT_ENTER = FadeInDown.duration(220).easing(EASE_OUT).reduceMotion(ReduceMotion.System);
+const CONTENT_EXIT = FadeOut.duration(140).easing(EASE_OUT).reduceMotion(ReduceMotion.System);
+const ERROR_ENTER = FadeInDown.duration(160).easing(EASE_OUT).reduceMotion(ReduceMotion.System);
+const CARD_ENTER = FadeIn.duration(180).easing(EASE_OUT).withInitialValues({ opacity: 0, transform: [{ scale: 0.97 }] }).reduceMotion(ReduceMotion.System);
+const MODAL_ENTER = FadeIn.duration(180).easing(EASE_OUT).withInitialValues({ opacity: 0, transform: [{ scale: 0.96 }] }).reduceMotion(ReduceMotion.System);
 
 // The website does this with a transform on --i and `transition-all duration-600`
 // (see .animate-otp-box-in in frontend/src/index.css). There is no transition
@@ -103,7 +110,6 @@ const Signup = () => {
     const [vehicleModel, setVehicleModel] = useState("");
     const [categoryPickerOpen, setCategoryPickerOpen] = useState(false);
     const [vehicleClassStatus, setVehicleClassStatus] = useState("idle");
-    const [classificationDotCount, setClassificationDotCount] = useState(1);
     const vehicleClassRequestRef = useRef(0);
 
     const api = useApi();
@@ -111,19 +117,19 @@ const Signup = () => {
     const { language, setLanguage, t } = useLanguage();
     const { colors } = useTheme();
     const [pendingLanguage, setPendingLanguage] = useState(language);
+    const categoryCaret = useSharedValue(0);
 
     useEffect(() => {
-        if (vehicleClassStatus !== "finding") {
-            setClassificationDotCount(1);
-            return;
-        }
+        categoryCaret.set(withTiming(categoryPickerOpen ? 1 : 0, {
+            duration: 170,
+            easing: EASE_OUT,
+            reduceMotion: ReduceMotion.System,
+        }));
+    }, [categoryPickerOpen, categoryCaret]);
 
-        const timer = setInterval(() => {
-            setClassificationDotCount((count) => count >= 3 ? 1 : count + 1);
-        }, 350);
-
-        return () => clearInterval(timer);
-    }, [vehicleClassStatus]);
+    const categoryCaretStyle = useAnimatedStyle(() => ({
+        transform: [{ rotate: `${categoryCaret.get() * 180}deg` }],
+    }));
 
     useEffect(() => {
         if (resendIn <= 0) return;
@@ -384,7 +390,7 @@ const Signup = () => {
         if (data.error) {
             setError(data.error);
             setVerdict("fail");
-            await new Promise((resolve) => setTimeout(resolve, 2000));
+            await new Promise((resolve) => setTimeout(resolve, 900));
             setOtp("")
             return;
         }
@@ -523,6 +529,37 @@ const Signup = () => {
     // come back rejected. Both halves are needed: verdict outlives the request it
     // came from, and without busy the mark would stay up after the row reopens.
     const settled = busy && Boolean(verdict);
+    const usernameFieldError = isUsername && [
+        t('driver.signup.nameRequired'),
+        t('driver.signup.nameShort'),
+        t('driver.signup.nameTaken'),
+    ].includes(error);
+    const phoneFieldError = isPhone && [
+        t('driver.signup.phoneRequired'),
+        t('driver.signup.phoneInvalid'),
+    ].includes(error);
+    const otpFieldError = isOtp && Boolean(error) && (
+        [t('driver.auth.otpRequired'), t('driver.auth.otpInvalid')].includes(error) || verdict === "fail"
+    );
+    const vehicleNumberFieldError = isVehicle && [
+        t('driver.auth.plate'),
+        dc("Registration number must be at least {{value0}} characters", { value0: VEHICLE_NUMBER_MIN_LENGTH }),
+        dc("Registration number can be at most {{value0}} characters", { value0: VEHICLE_NUMBER_MAX_LENGTH }),
+        dc("Use only letters, numbers, spaces, and hyphens"),
+        dc("Check the BH-series registration number"),
+        dc("Check the registration number"),
+    ].includes(error);
+    const vehicleModelFieldError = isVehicle && error === t('driver.auth.model');
+    const vehicleClassFieldError = isVehicle && error === t('driver.auth.vehicleClass');
+    const formError = error
+        && !usernameFieldError
+        && !phoneFieldError
+        && !otpFieldError
+        && !vehicleNumberFieldError
+        && !vehicleModelFieldError
+        && !vehicleClassFieldError
+        ? error
+        : null;
 
     const formatMMSS = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 
@@ -542,8 +579,8 @@ const Signup = () => {
         setPhone(digits);
 
         if (
-            error === dc("Enter a Phone Number") ||
-            error === dc("Number should be exactly 10 digits")
+            error === t('driver.signup.phoneRequired') ||
+            error === t('driver.signup.phoneInvalid')
         ) {
             setError(null);
         }
@@ -607,7 +644,6 @@ const Signup = () => {
     });
 
     const boxStyle = (i) => {
-        const otpError = Boolean(error);
         const focused = focusedBox === i;
 
         // Only once the answer is in. While the boxes are still converging there is
@@ -616,7 +652,7 @@ const Signup = () => {
         if (settled && i === 0) {
             return { backgroundColor: verdict === "fail" ? BOX_FAIL : BOX_PASS, borderColor: "transparent" };
         }
-        if (otpError) {
+        if (otpFieldError) {
             return {
                 backgroundColor: BOX_BG_ERROR,
                 borderColor: focused ? BOX_BORDER_ERROR_FOCUS : BOX_BORDER_ERROR,
@@ -696,7 +732,7 @@ const Signup = () => {
                     back rather than flashing "already logged in" at him for the
                     length of one request. */}
                 {isLanguage
-                    ? <View className="w-full max-w-[440px] justify-start items-start">
+                    ? <Animated.View key="language" entering={CONTENT_ENTER} exiting={CONTENT_EXIT} className="w-full max-w-[440px] justify-start items-start">
                         <View className="w-full items-start gap-1 mb-7">
                             <AppText className="text-2xl font-semibold text-left">{t('driver.language.title')}</AppText>
                             <AppText className="text-base text-left text-[var(--text-muted)]">{t('driver.language.body')}</AppText>
@@ -712,7 +748,7 @@ const Signup = () => {
                             }}
                             className="mt-5"
                         >{t('driver.auth.confirm')}</Button>
-                    </View>
+                    </Animated.View>
                     : isSignedIn && !redirecting && !isVehicle && !driverLoading && profile
                     ? <View className="justify-center items-center">
                         <AppText className="text-2xl font-semibold text-center">
@@ -725,7 +761,7 @@ const Signup = () => {
                         >{dc("Back")}</Button>
                     </View>
 
-                    : <View className="w-full justify-start items-start gap-5">
+                    : <Animated.View key={step} entering={CONTENT_ENTER} exiting={CONTENT_EXIT} className="w-full justify-start items-start gap-5">
                         <View className="w-full justify-center items-start gap-1">
                             <AppText className="text-2xl font-semibold text-left">
                                 {isUsername
@@ -758,15 +794,6 @@ const Signup = () => {
                         </View>
 
                         <View className="w-full justify-center items-start">
-
-                            {error && (
-                                <View className="mt-2 mb-1 items-start justify-center">
-                                    <AppText className="text-sm text-left" style={{ color: ERROR_TEXT }}>
-                                        {error}
-                                    </AppText>
-                                </View>
-                            )}
-
                             {/* Explicitly `isOtp`, not `!isPhone`. The old
                                 condition also caught the USERNAME step — isPhone
                                 is false there as well — so the name step
@@ -829,12 +856,19 @@ const Signup = () => {
                             for the whole round trip, which is not the same thing
                             as the code being right. */}
                                                 {verdict === "fail"
-                                                    ? <CrossOutline size={38} delay={450} />
-                                                    : <CheckMarkOutline size={38} delay={450} />}
+                                                    ? <CrossOutline size={38} delay={220} />
+                                                    : <CheckMarkOutline size={38} delay={220} />}
                                             </Animated.View>
                                         )}
                                     </View>
 
+                                    {otpFieldError && (
+                                        <Animated.View entering={ERROR_ENTER} exiting={CONTENT_EXIT} className="mt-1 w-full">
+                                            <InlineError message={error} color={ERROR_TEXT} />
+                                        </Animated.View>
+                                    )}
+
+                                    <Animated.View key={`${loading}-${verdict}-${expiresIn > 0}`} entering={FadeIn.duration(140).easing(EASE_OUT).reduceMotion(ReduceMotion.System)} exiting={FadeOut.duration(100).reduceMotion(ReduceMotion.System)}>
                                     <AppText className="text-sm text-left text-[var(--text-muted)] mt-2 mb-3">
                                         {loading
                                             ? t('driver.auth.verifying')
@@ -846,9 +880,11 @@ const Signup = () => {
                                                         ? t('driver.auth.expires', { time: formatMMSS(expiresIn) })
                                                         : t('driver.auth.expired')}
                                     </AppText>
+                                    </Animated.View>
                                 </View>
                                 : isExisting
-                                    ? <View
+                                    ? <Animated.View
+                                        entering={CARD_ENTER}
                                         className="w-full rounded-2xl border p-4 flex-row items-center gap-3"
                                         style={{ backgroundColor: BOX_BG, borderColor: BOX_BORDER }}
                                     >
@@ -870,10 +906,11 @@ const Signup = () => {
                                                 {maskedPhone}
                                             </AppText>
                                         </View>
-                                    </View>
+                                    </Animated.View>
                                 : isVehicle
                                     ? <View className="w-full gap-3">
-                                        <Input
+                                        <View className="w-full gap-1">
+                                            <Input
                                                 prop={{
                                                     type: "text",
                                                     inputRef: vehicleNumberInputRef,
@@ -882,76 +919,108 @@ const Signup = () => {
                                                 value: vehicleNumber,
                                                 onChangeFn: (value) => { setVehicleNumber(value.toUpperCase()); if (error) setError(null); },
                                                 maxLength: VEHICLE_NUMBER_INPUT_MAX_LENGTH,
-                                                error: [
-                                                    t('driver.auth.plate'),
-                                                    dc("Use only letters, numbers, spaces, and hyphens"),
-                                                    dc("Check the BH-series registration number"),
-                                                    dc("Check the registration number"),
-                                                ].includes(error),
+                                                error: vehicleNumberFieldError,
                                                 bg: BOX_BG,
                                             }}
-                                        />
+                                            />
+                                            {vehicleNumberFieldError && (
+                                                <Animated.View entering={ERROR_ENTER} exiting={CONTENT_EXIT} className="w-full">
+                                                    <InlineError message={error} color={ERROR_TEXT} />
+                                                </Animated.View>
+                                            )}
+                                        </View>
 
-                                        <Input
-                                            prop={{
-                                                type: "text",
-                                                get "placeholder"() { return dc("Model"); },
-                                                value: vehicleModel,
-                                                onChangeFn: handleVehicleModelChange,
-                                                maxLength: 60,
-                                                error: error === dc("Enter the car's model"),
-                                                bg: BOX_BG,
-                                            }}
-                                        />
+                                        <View className="w-full gap-1">
+                                            <Input
+                                                prop={{
+                                                    type: "text",
+                                                    get "placeholder"() { return dc("Model"); },
+                                                    value: vehicleModel,
+                                                    onChangeFn: handleVehicleModelChange,
+                                                    maxLength: 60,
+                                                    error: vehicleModelFieldError,
+                                                    bg: BOX_BG,
+                                                }}
+                                            />
+                                            {vehicleModelFieldError && (
+                                                <Animated.View entering={ERROR_ENTER} exiting={CONTENT_EXIT} className="w-full">
+                                                    <InlineError message={error} color={ERROR_TEXT} />
+                                                </Animated.View>
+                                            )}
+                                        </View>
 
-                                        <Pressable
-                                            role="button"
-                                            aria-label={t('driver.signup.vehicleCategory')}
-                                            disabled={vehicleClassStatus === "finding"}
-                                            onPress={() => setCategoryPickerOpen(true)}
-                                            className="w-full my-1 flex-row items-center justify-between rounded-xl border px-4 py-3"
-                                            style={{
-                                                backgroundColor: BOX_BG,
-                                                borderColor: error === t('driver.auth.vehicleClass') ? BOX_BORDER_ERROR : colors.borderUi,
-                                            }}
-                                        >
-                                            <AppText
-                                                className="text-base"
-                                                style={{ color: vehicleClass ? colors.ink : colors.inkMuted }}
+                                        <View className="w-full gap-1">
+                                            <Pressable
+                                                role="button"
+                                                aria-label={t('driver.signup.vehicleCategory')}
+                                                disabled={vehicleClassStatus === "finding"}
+                                                onPress={() => setCategoryPickerOpen(true)}
+                                                className="w-full my-1 flex-row items-center justify-between rounded-xl border px-4 py-3"
+                                                style={{
+                                                    backgroundColor: BOX_BG,
+                                                    borderColor: vehicleClassFieldError ? BOX_BORDER_ERROR : colors.borderUi,
+                                                }}
                                             >
-                                                {vehicleClassStatus === "finding"
-                                                    ? `${dc("Classifing vehicle type")}${".".repeat(classificationDotCount)}`
-                                                    : vehicleClass
-                                                        ? vehicleLabel(vehicleClass)
-                                                        : dc("Choose car type")}
-                                            </AppText>
-                                            <CaretDownIcon size={18} weight="bold" color={colors.inkMuted} />
-                                        </Pressable>
-                                        {vehicleClassStatus === "found" ? (
-                                            <AppText className="text-xs" style={{ color: colors.inkMuted }}>
-                                                {dc("Suggested from model · Tap to change")}
-                                            </AppText>
-                                        ) : vehicleClassStatus === "error" ? (
-                                            <AppText className="text-xs" style={{ color: colors.inkMuted }}>
-                                                {dc("Couldn't identify it · Choose the car type")}
-                                            </AppText>
-                                        ) : null}
+                                                <Animated.View
+                                                    key={`${vehicleClassStatus}-${vehicleClass ?? "empty"}`}
+                                                    entering={FadeIn.duration(150).easing(EASE_OUT).reduceMotion(ReduceMotion.System)}
+                                                    exiting={FadeOut.duration(100).reduceMotion(ReduceMotion.System)}
+                                                >
+                                                <AppText
+                                                    className="text-base"
+                                                    style={{ color: vehicleClass ? colors.ink : colors.inkMuted }}
+                                                >
+                                                    {vehicleClassStatus === "finding"
+                                                        ? `${dc("Classifing vehicle type")}…`
+                                                        : vehicleClass
+                                                            ? vehicleLabel(vehicleClass)
+                                                            : dc("Choose car type")}
+                                                </AppText>
+                                                </Animated.View>
+                                                <Animated.View style={categoryCaretStyle}>
+                                                    <CaretDownIcon size={18} weight="bold" color={colors.inkMuted} />
+                                                </Animated.View>
+                                            </Pressable>
+                                            {vehicleClassFieldError && (
+                                                <Animated.View entering={ERROR_ENTER} exiting={CONTENT_EXIT} className="w-full">
+                                                    <InlineError message={error} color={ERROR_TEXT} />
+                                                </Animated.View>
+                                            )}
+                                            {vehicleClassStatus === "found" ? (
+                                                <Animated.View key="classification-found" entering={FadeIn.duration(150).easing(EASE_OUT).reduceMotion(ReduceMotion.System)} exiting={FadeOut.duration(100).reduceMotion(ReduceMotion.System)}>
+                                                <AppText className="text-xs" style={{ color: colors.inkMuted }}>
+                                                    {dc("Suggested from model · Tap to change")}
+                                                </AppText>
+                                                </Animated.View>
+                                            ) : vehicleClassStatus === "error" ? (
+                                                <Animated.View key="classification-error" entering={FadeIn.duration(150).easing(EASE_OUT).reduceMotion(ReduceMotion.System)} exiting={FadeOut.duration(100).reduceMotion(ReduceMotion.System)}>
+                                                <AppText className="text-xs" style={{ color: colors.inkMuted }}>
+                                                    {dc("Couldn't identify it · Choose the car type")}
+                                                </AppText>
+                                                </Animated.View>
+                                            ) : null}
+                                        </View>
                                     </View>
-                                : <Input
-                                    prop={{
-                                        type: isUsername ? "text" : "tel",
-                                        inputRef: activeInputRef,
-                                        autoFocus: true,
-                                        placeholder: isUsername ? dc("Full Name") : dc("Mobile number"),
-                                        value: isUsername ? username : phone,
-                                        onChangeFn: isUsername ? handleUsernameChange : handlePhoneChange,
-                                        maxLength: isUsername ? null : 10,
-                                        error: isUsername
-                                            ? error === dc("Enter your name") || error === dc("Name must be at least 2 characters") || error === dc("Username is already taken")
-                                            : error === dc("Enter a Phone Number") || error === dc("Number should be exactly 10 digits"),
-                                        bg: BOX_BG,
-                                    }}
-                                />
+                                : <View className="w-full gap-1">
+                                    <Input
+                                        prop={{
+                                            type: isUsername ? "text" : "tel",
+                                            inputRef: activeInputRef,
+                                            autoFocus: true,
+                                            placeholder: isUsername ? dc("Full Name") : dc("Mobile number"),
+                                            value: isUsername ? username : phone,
+                                            onChangeFn: isUsername ? handleUsernameChange : handlePhoneChange,
+                                            maxLength: isUsername ? null : 10,
+                                            error: isUsername ? usernameFieldError : phoneFieldError,
+                                            bg: BOX_BG,
+                                        }}
+                                    />
+                                    {(usernameFieldError || phoneFieldError) && (
+                                        <Animated.View entering={ERROR_ENTER} exiting={CONTENT_EXIT} className="w-full">
+                                            <InlineError message={error} color={ERROR_TEXT} />
+                                        </Animated.View>
+                                    )}
+                                </View>
                             }
 
                             <Button
@@ -989,6 +1058,12 @@ const Signup = () => {
                                             ? (loading ? t('driver.auth.saving') : t('driver.signup.addDocuments'))
                                             : ((loading || verdict) ? t('driver.auth.continue') : t('driver.auth.submit'))}
                             </Button>
+
+                            {formError && (
+                                <Animated.View entering={ERROR_ENTER} exiting={CONTENT_EXIT} className="mt-2 w-full">
+                                    <InlineError message={formError} color={ERROR_TEXT} />
+                                </Animated.View>
+                            )}
 
                             {isExisting && (
                 <AppText className="mt-3 text-sm text-[var(--text-muted)]">
@@ -1065,20 +1140,25 @@ const Signup = () => {
                                 {t('driver.auth.vehicleHint')}
                             </AppText>)}
                         </View>
-                    </View>}
+                    </Animated.View>}
             </ScrollView>
 
             <Modal
                 visible={categoryPickerOpen}
                 transparent
-                animationType="fade"
+                animationType="none"
                 onRequestClose={() => setCategoryPickerOpen(false)}
             >
-                <Pressable
-                    className="flex-1 items-center justify-center px-6"
+                <Animated.View
+                    entering={FadeIn.duration(160).easing(EASE_OUT).reduceMotion(ReduceMotion.System)}
+                    className="flex-1"
                     style={{ backgroundColor: "rgba(0,0,0,0.68)" }}
-                    onPress={() => setCategoryPickerOpen(false)}
                 >
+                    <Pressable
+                        className="flex-1 items-center justify-center px-6"
+                        onPress={() => setCategoryPickerOpen(false)}
+                    >
+                    <Animated.View entering={MODAL_ENTER} className="w-full">
                     <Pressable
                         accessibilityViewIsModal
                         className="w-full rounded-3xl border p-5"
@@ -1117,13 +1197,19 @@ const Signup = () => {
                                         <AppText className="text-base font-semibold text-[var(--text)]">
                                             {vehicleLabel(option)}
                                         </AppText>
-                                        {selected ? <CheckIcon size={18} weight="bold" color={colors.primary} /> : null}
+                                        {selected ? (
+                                            <Animated.View entering={FadeIn.duration(150).easing(EASE_OUT).reduceMotion(ReduceMotion.System)}>
+                                                <CheckIcon size={18} weight="bold" color={colors.primary} />
+                                            </Animated.View>
+                                        ) : null}
                                     </Pressable>
                                 );
                             })}
                         </View>
                     </Pressable>
-                </Pressable>
+                    </Animated.View>
+                    </Pressable>
+                </Animated.View>
             </Modal>
         </KeyboardAvoidingView>
     );

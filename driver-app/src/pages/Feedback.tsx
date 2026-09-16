@@ -2,6 +2,7 @@ import { useLanguage as useCopyLanguage } from "../i18n";
 import { driverCopy as dc } from "../lib/copy";
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, View } from 'react-native';
+import Animated, { Easing, FadeIn, FadeOut, ReduceMotion } from 'react-native-reanimated';
 import { StarIcon } from 'phosphor-react-native';
 import AppText from '../components/AppText';
 import AccountRow from '../components/ui/AccountRow';
@@ -12,7 +13,7 @@ import AccountDetailScreen, {
   AccountSectionLabel,
 } from '../components/ui/AccountDetailScreen';
 import { useApi } from '../hooks/useApi';
-import { DetailSectionsSkeleton } from '../components/ui/LoadingSkeletons';
+import { FeedbackSkeleton } from '../components/ui/LoadingSkeletons';
 import { useTheme } from '../theme/ThemeContext';
 
 type Review = {
@@ -48,6 +49,10 @@ const Stars = ({ value, size = 17 }: { value: number; size?: number }) => {
   </View>;
 };
 
+const EASE_OUT = Easing.bezier(0.23, 1, 0.32, 1);
+const ASYNC_ENTER = FadeIn.duration(180).easing(EASE_OUT).reduceMotion(ReduceMotion.System);
+const ASYNC_EXIT = FadeOut.duration(110).easing(EASE_OUT).reduceMotion(ReduceMotion.System);
+
 type FeedbackViewProps = {
   data: FeedbackResponse | null;
   loading: boolean;
@@ -57,62 +62,66 @@ type FeedbackViewProps = {
 
 export const FeedbackView = ({ data, loading, error, onRetry }: FeedbackViewProps) => {
   const { colors } = useTheme();
+  const stateKey = loading ? 'loading' : error ? 'error' : !data?.summary ? 'empty' : 'ready';
   return (
-  <AccountDetailScreen title={dc("Feedback")}>
-    {loading ? (
-      <DetailSectionsSkeleton cards={3} />
-    ) : error ? (
-      <AccountSection>
-        <AppText className={`text-sm ${ACCOUNT_MUTED}`}>{error}</AppText>
-        <Pressable
-          role="button"
-          onPress={onRetry}
-          hitSlop={8}
-          style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1, marginTop: 8 })}
-        >
-          <AppText className="text-sm font-semibold text-primary">{dc("Try again")}</AppText>
-        </Pressable>
-      </AccountSection>
-    ) : !data?.summary ? (
-      <AccountSection>
-        <View className="items-center py-6">
-          <View className="w-12 h-12 rounded-full items-center justify-center bg-surface">
-            <StarIcon size={24} weight="regular" color={colors.ink} />
-          </View>
-          <AppText className="font-semibold mt-3 text-ink">{dc("No feedback yet")}</AppText>
-          <AppText className={`text-sm text-center mt-1 ${ACCOUNT_MUTED}`}>{dc("Ratings and comments from completed rides will appear here.")}</AppText>
-        </View>
-      </AccountSection>
-    ) : (
-      <>
+  <AccountDetailScreen title={dc("Feedback")} centeredHeader>
+    <Animated.View key={stateKey} entering={ASYNC_ENTER} exiting={ASYNC_EXIT} style={{ gap: 8 }}>
+      {loading ? (
+        <FeedbackSkeleton />
+      ) : error ? (
         <AccountSection>
-          <View className="flex-row items-center gap-4">
-            <AppText className="text-4xl font-semibold text-ink">
-              {data.summary.average.toFixed(1)}
-            </AppText>
-            <View className="flex-1 gap-1">
-              <Stars value={Math.round(data.summary.average)} size={19} />
-              <AppText className={`text-sm ${ACCOUNT_MUTED}`}>{dc("From") + " "}{data.summary.count} {data.summary.count === 1 ? dc("ride") : dc("rides")}
-              </AppText>
+          <AppText className={`text-sm ${ACCOUNT_MUTED}`}>{error}</AppText>
+          <Pressable
+            role="button"
+            onPress={onRetry}
+            hitSlop={8}
+            style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1, marginTop: 8 })}
+          >
+            <AppText className="text-sm font-semibold text-primary">{dc("Try again")}</AppText>
+          </Pressable>
+        </AccountSection>
+      ) : !data?.summary ? (
+        <AccountSection>
+          <View className="items-center py-6">
+            <View className="w-12 h-12 rounded-full items-center justify-center bg-surface">
+              <StarIcon size={24} weight="regular" color={colors.ink} />
             </View>
+            <AppText className="font-semibold mt-3 text-ink">{dc("No feedback yet")}</AppText>
+            <AppText className={`text-sm text-center mt-1 ${ACCOUNT_MUTED}`}>{dc("Ratings and comments from completed rides will appear here.")}</AppText>
           </View>
         </AccountSection>
+      ) : (
+        <>
+          <AccountSection>
+            <View className="flex-row items-center gap-4">
+              <AppText className="text-4xl font-semibold text-ink">
+                {data.summary.average.toFixed(1)}
+              </AppText>
+              <View className="flex-1 gap-1">
+                <Stars value={Math.round(data.summary.average)} size={19} />
+                <AppText className={`text-sm ${ACCOUNT_MUTED}`}>{dc("From") + " "}{data.summary.count} {data.summary.count === 1 ? dc("ride") : dc("rides")}
+                </AppText>
+              </View>
+            </View>
+          </AccountSection>
 
-        <AccountSectionLabel>{dc("Recent rider feedback")}</AccountSectionLabel>
-        <AccountList>
-          {data.reviews.map((review, index) => (
-            <AccountRow
-              key={review.id}
-              label={review.comment || dc("Rating only")}
-              detail={`Ride ${review.booking.reference} · ${dateLabel(review.createdAt)}`}
-              value={`${review.rating}/5`}
-              Icon={StarIcon}
-              last={index === data.reviews.length - 1}
-            />
-          ))}
-        </AccountList>
-      </>
-    )}
+          <AccountSectionLabel>{dc("Recent rider feedback")}</AccountSectionLabel>
+          <AccountList>
+            {data.reviews.map((review, index) => (
+              <AccountRow
+                key={review.id}
+                label={review.comment || dc("Rating only")}
+                detail={`Ride ${review.booking.reference} · ${dateLabel(review.createdAt)}`}
+                value={`${review.rating}/5`}
+                Icon={StarIcon}
+                grouped
+                last={index === data.reviews.length - 1}
+              />
+            ))}
+          </AccountList>
+        </>
+      )}
+    </Animated.View>
   </AccountDetailScreen>
   );
 };

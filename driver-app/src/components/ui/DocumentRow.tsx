@@ -1,7 +1,17 @@
 import { useLanguage as useCopyLanguage } from "../../i18n";
 import { driverCopy as dc } from "../../lib/copy";
+import { useEffect } from 'react';
 import { Pressable, View } from 'react-native';
 import { cssInterop } from 'nativewind';
+import Animated, {
+  Easing,
+  FadeIn,
+  FadeOut,
+  ReduceMotion,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import {
   ArrowClockwiseIcon,
   CheckCircleIcon,
@@ -25,6 +35,39 @@ const TRACK = 'rgba(18,18,32,0.08)';
 
 const INK = 'text-ink';
 const MUTED = 'text-ink-muted';
+
+const STATUS_ENTER = FadeIn.duration(140).reduceMotion(ReduceMotion.System);
+const STATUS_EXIT = FadeOut.duration(100).reduceMotion(ReduceMotion.System);
+const PROGRESS_TIMING = {
+  duration: 280,
+  easing: Easing.linear,
+  reduceMotion: ReduceMotion.System,
+} as const;
+
+const UploadProgress = ({ progress, color }: { progress: number; color: string }) => {
+  const target = Math.min(Math.max(progress, 0.02), 1);
+  const width = useSharedValue(0);
+
+  useEffect(() => {
+    width.set(withTiming(target, PROGRESS_TIMING));
+  }, [target, width]);
+
+  const fillStyle = useAnimatedStyle(() => ({
+    width: `${width.get() * 100}%`,
+  }));
+
+  return (
+    <View
+      className="h-1 w-full rounded-full mt-1 overflow-hidden"
+      style={{ backgroundColor: TRACK }}
+    >
+      <Animated.View
+        className="h-full rounded-full"
+        style={[{ backgroundColor: color }, fillStyle]}
+      />
+    </View>
+  );
+};
 
 
 /**
@@ -104,7 +147,9 @@ const DocumentRow = ({
         className={`${panel ? 'w-12 h-12 rounded-full' : 'w-9 h-9 rounded-xl'} items-center justify-center`}
         style={{ backgroundColor: panel ? colors.surfaceRaised : WELL }}
       >
-        <RowIcon size={panel ? 22 : 18} weight="regular" color={color} />
+        <Animated.View key={state} entering={STATUS_ENTER} exiting={STATUS_EXIT}>
+          <RowIcon size={panel ? 22 : 18} weight="regular" color={color} />
+        </Animated.View>
       </View>
 
       <View className="flex-1 gap-0.5">
@@ -120,9 +165,11 @@ const DocumentRow = ({
           )}
         </View>
 
-        <AppText numberOfLines={2} className="text-sm" style={{ color }}>
-          {word}
-        </AppText>
+        <Animated.View key={state} entering={STATUS_ENTER} exiting={STATUS_EXIT}>
+          <AppText numberOfLines={2} className="text-sm" style={{ color }}>
+            {word}
+          </AppText>
+        </Animated.View>
 
         {/* The admin's own sentence, verbatim. "Photo is blurry" is exactly what
             he needs and exactly what it was written for. */}
@@ -146,15 +193,7 @@ const DocumentRow = ({
         ) : null}
 
         {showProgress ? (
-          <View
-            className="h-1 w-full rounded-full mt-1 overflow-hidden"
-            style={{ backgroundColor: TRACK }}
-          >
-            <View
-              className="h-full rounded-full"
-              style={{ backgroundColor: colors.primary, width: `${Math.round((progress ?? 0) * 100)}%` }}
-            />
-          </View>
+          <UploadProgress progress={progress ?? 0} color={colors.primary} />
         ) : null}
       </View>
 

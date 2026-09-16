@@ -96,6 +96,7 @@ const Notifications = () => {
                             canAccept={canAccept}
                             onAccept={() => answer(offer.offerId, accept)}
                             onReject={() => answer(offer.offerId, reject)}
+                            compact
                         />
                     ))}
                 </View>

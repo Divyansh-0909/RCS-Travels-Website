@@ -2,6 +2,7 @@ import { useLanguage as useCopyLanguage } from "../i18n";
 import { driverCopy as dc } from "../lib/copy";
 import { useEffect } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
+import Animated, { Easing, FadeIn, FadeOut, ReduceMotion } from 'react-native-reanimated';
 import {
   ClockIcon,
   ShieldCheckIcon,
@@ -51,6 +52,14 @@ const CONTENT_MAX = 320;
 const PRIMARY = '#243AFB';
 const AMBER = '#92400E';
 const RED = '#B91C1C';
+const FACE_ENTER = FadeIn
+  .duration(180)
+  .easing(Easing.out(Easing.cubic))
+  .reduceMotion(ReduceMotion.System);
+const FACE_EXIT = FadeOut
+  .duration(120)
+  .easing(Easing.out(Easing.quad))
+  .reduceMotion(ReduceMotion.System);
 
 type Face = {
   Icon: typeof ClockIcon;
@@ -181,7 +190,12 @@ const OnboardingStatus = () => {
           across, and a button that wide stops looking like a thing to press.
           Below CONTENT_MAX the padding above still governs, so on a small phone
           this changes nothing. */}
-      <View style={{ width: '100%', maxWidth: CONTENT_MAX, gap: 16 }}>
+      <Animated.View
+        key={blockedBy}
+        entering={FACE_ENTER}
+        exiting={FACE_EXIT}
+        style={{ width: '100%', maxWidth: CONTENT_MAX, gap: 16 }}
+      >
       <View className="items-center gap-4">
         <View
           className="w-16 h-16 rounded-2xl items-center justify-center"
@@ -281,7 +295,7 @@ const OnboardingStatus = () => {
           </AppText>
         </Pressable>
       ) : null}
-      </View>
+      </Animated.View>
     </ScrollView>
   );
 };

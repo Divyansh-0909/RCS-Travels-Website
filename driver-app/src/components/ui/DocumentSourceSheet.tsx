@@ -1,9 +1,11 @@
 import { useLanguage as useCopyLanguage } from "../../i18n";
 import { driverCopy as dc } from "../../lib/copy";
-import { useEffect, useRef, useState } from 'react';
-import { Animated, Modal, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { useState } from 'react';
+import { Modal, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
+import Animated from 'react-native-reanimated';
 import { CameraIcon, CaretRightIcon, FilePdfIcon, ImageIcon, XIcon } from 'phosphor-react-native';
 import AppText from '../AppText';
+import { useBottomSheetMotion } from '../../hooks/useBottomSheetMotion';
 import { useTheme } from '../../theme/ThemeContext';
 
 // Where the file is coming from: the camera, the gallery, or the files app.
@@ -84,55 +86,10 @@ const DocumentSourceSheet = ({ visible, label, allowPdf, onCancel, onPick }: Pro
   const { colors } = useTheme();
   const { height: windowHeight } = useWindowDimensions();
   const [closePressed, setClosePressed] = useState(false);
-  const [mounted, setMounted] = useState(visible);
-  const scrimOpacity = useRef(new Animated.Value(visible ? 1 : 0)).current;
-  const sheetY = useRef(new Animated.Value(visible ? 0 : windowHeight)).current;
-
-  useEffect(() => {
-    const hiddenY = Math.max(windowHeight * 0.55, 420);
-
-    scrimOpacity.stopAnimation();
-    sheetY.stopAnimation();
-
-    if (visible) {
-      if (!mounted) {
-        scrimOpacity.setValue(0);
-        sheetY.setValue(hiddenY);
-        setMounted(true);
-      }
-
-      Animated.parallel([
-        Animated.timing(scrimOpacity, {
-          toValue: 1,
-          duration: 180,
-          useNativeDriver: true,
-        }),
-        Animated.timing(sheetY, {
-          toValue: 0,
-          duration: 240,
-          useNativeDriver: true,
-        }),
-      ]).start();
-      return;
-    }
-
-    if (!mounted) return;
-
-    Animated.parallel([
-      Animated.timing(scrimOpacity, {
-        toValue: 0,
-        duration: 160,
-        useNativeDriver: true,
-      }),
-      Animated.timing(sheetY, {
-        toValue: hiddenY,
-        duration: 220,
-        useNativeDriver: true,
-      }),
-    ]).start(({ finished }) => {
-      if (finished) setMounted(false);
-    });
-  }, [mounted, scrimOpacity, sheetY, visible, windowHeight]);
+  const { mounted, scrimStyle, sheetStyle } = useBottomSheetMotion(
+    visible,
+    Math.max(windowHeight * 0.55, 420),
+  );
 
   return (
     <Modal visible={mounted} transparent animationType="none" onRequestClose={onCancel}>
@@ -142,11 +99,11 @@ const DocumentSourceSheet = ({ visible, label, allowPdf, onCancel, onPick }: Pro
       <View className="flex-1 justify-end">
         <Animated.View
           pointerEvents="none"
-          style={[StyleSheet.absoluteFillObject, { backgroundColor: SCRIM, opacity: scrimOpacity }]}
+          style={[StyleSheet.absoluteFillObject, { backgroundColor: SCRIM }, scrimStyle]}
         />
         <Pressable style={StyleSheet.absoluteFillObject} onPress={onCancel} />
         {/* Swallows the tap, so pressing the sheet itself does not close it. */}
-        <Animated.View style={{ transform: [{ translateY: sheetY }] }}>
+        <Animated.View style={sheetStyle}>
           <Pressable className="bg-surface rounded-t-3xl px-5 pt-5 pb-8 gap-4" onPress={() => {}}>
           {/* The way out, level with the title rather than under the options.
               A full-width Cancel at the foot is a fourth thing the eye has to rule

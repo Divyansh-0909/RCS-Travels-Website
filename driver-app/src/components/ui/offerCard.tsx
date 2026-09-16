@@ -54,13 +54,13 @@ const whenLabel = (scheduledAt: string | null) => {
  * fare: a shared cabin, a roof carrier he may not own, a day out of the city, a
  * longer road. Rendered only when true — a row of "no" chips is noise.
  */
-const Chip = ({ label, strong }: { label: string; strong?: boolean }) => {
+const Chip = ({ label, strong, compact }: { label: string; strong?: boolean; compact?: boolean }) => {
     const { colors } = useTheme();
     return <View
-        className="rounded-xl px-2.5 py-1"
-        style={{ backgroundColor: strong ? colors.strong : colors.surfaceMuted }}
+        className={`rounded-xl ${compact ? 'px-2 py-0.5' : 'px-2.5 py-1'}`}
+        style={{ backgroundColor: strong ? colors.strong : compact ? colors.surface : colors.surfaceMuted }}
     >
-        <AppText className={`text-sm font-semibold ${strong ? 'text-white' : INK_TEXT}`}>
+        <AppText className={`${compact ? 'text-xs' : 'text-sm'} font-semibold ${strong ? 'text-white' : INK_TEXT}`}>
             {label}
         </AppText>
     </View>;
@@ -73,6 +73,7 @@ export const OfferCard = ({
     onAccept,
     onReject,
     timerProgress,
+    compact = false,
 }: {
     offer: Offer;
     here: { lat: number; lng: number } | null;
@@ -80,6 +81,8 @@ export const OfferCard = ({
     onAccept: () => void | Promise<void>;
     onReject: () => void | Promise<void>;
     timerProgress?: SharedValue<number>;
+    /** Dense list treatment for Notifications; the floating interruption stays prominent. */
+    compact?: boolean;
 }) => {
     useCopyLanguage();
     const { colors } = useTheme();
@@ -108,30 +111,42 @@ export const OfferCard = ({
     const toPickup = here ? kmBetween(here, offer.pickup) : null;
 
     return (
-        <View className="w-full rounded-2xl p-4" style={{ backgroundColor: colors.surface }}>
-            <View className="flex-row items-end justify-between mb-3">
-                <AppText className={`text-3xl font-bold ${INK_TEXT}`} style={{ letterSpacing: -0.8 }}>
+        <View
+            className={`w-full rounded-2xl ${compact ? 'px-4 py-3' : 'p-4'}`}
+            style={{ backgroundColor: compact ? colors.surfaceMuted : colors.surface }}
+        >
+            <View className={`flex-row items-end justify-between ${compact ? 'mb-2' : 'mb-3'}`}>
+                <AppText
+                    className={`${compact ? 'text-xl' : 'text-3xl'} font-bold ${INK_TEXT}`}
+                    style={{ letterSpacing: compact ? -0.4 : -0.8 }}
+                >
                     {rupees(offer.fare)}
                 </AppText>
-                <AppText className={`text-xl font-semibold ${offer.scheduledAt ? MUTED : 'text-primary'}`}>
+                <AppText className={`${compact ? 'text-sm' : 'text-xl'} font-semibold ${offer.scheduledAt ? MUTED : 'text-primary'}`}>
                     {whenLabel(offer.scheduledAt)}
                 </AppText>
             </View>
 
-            <View className="flex-row flex-wrap items-center gap-2">
-                <Chip label={offer.additionalPickup ? dc("Additional pickup") : offer.sharing ? 'Sharing' : 'Solo'} />
-                <Chip strong label={vehicleLabel(offer.vehicleClass)} />
-                {offer.isOutstation ? <Chip label={dc("Outstation")} strong /> : null}
-                {offer.needsCarrier ? <Chip label={dc("Carrier")} /> : null}
-                {offer.safeRoute ? <Chip label={dc("Safer route")} /> : null}
+            <View className={`flex-row flex-wrap items-center ${compact ? 'gap-1.5' : 'gap-2'}`}>
+                <Chip compact={compact} label={offer.additionalPickup ? dc("Additional pickup") : offer.sharing ? 'Sharing' : 'Solo'} />
+                <Chip compact={compact} strong label={vehicleLabel(offer.vehicleClass)} />
+                {offer.isOutstation ? <Chip compact={compact} label={dc("Outstation")} strong /> : null}
+                {offer.needsCarrier ? <Chip compact={compact} label={dc("Carrier")} /> : null}
+                {offer.safeRoute ? <Chip compact={compact} label={dc("Safer route")} /> : null}
             </View>
 
-            <View className="gap-3 mt-4">
+            <View className={`${compact ? 'gap-2 mt-3' : 'gap-3 mt-4'}`}>
                 <View className="flex-row items-center justify-between gap-3">
                     <View className="flex-1">
                         <RouteLeg address={offer.pickup.address} />
                     </View>
-                    {toPickup != null ? <FactPill>{formatDistance(toPickup)}{" " + dc("away")}</FactPill> : null}
+                    {toPickup != null ? (
+                        compact ? (
+                            <AppText className={`text-xs font-semibold ${MUTED}`}>
+                                {formatDistance(toPickup)}{" " + dc("away")}
+                            </AppText>
+                        ) : <FactPill>{formatDistance(toPickup)}{" " + dc("away")}</FactPill>
+                    ) : null}
                 </View>
 
                 <View className="flex-row items-center justify-between gap-3">
@@ -140,11 +155,15 @@ export const OfferCard = ({
                     </View>
                     {/* Nullable by design — a booking exists before its route is
                         priced — so this is a pill or nothing, never "null km". */}
-                    {offer.distanceKm != null ? <FactPill>{formatDistance(offer.distanceKm)}</FactPill> : null}
+                    {offer.distanceKm != null ? (
+                        compact ? (
+                            <AppText className={`text-xs font-semibold ${MUTED}`}>{formatDistance(offer.distanceKm)}</AppText>
+                        ) : <FactPill>{formatDistance(offer.distanceKm)}</FactPill>
+                    ) : null}
                 </View>
             </View>
 
-            <View className="flex-row gap-2 mt-4" style={{ opacity: busy ? 0.5 : 1 }}>
+            <View className={`flex-row gap-2 ${compact ? 'mt-3' : 'mt-4'}`} style={{ opacity: busy ? 0.5 : 1 }}>
                 {/* Both flex-1, so they split the row exactly. Reject is the plain
                     fill and Accept the solid one: the pair has to read as one
                     decision with an obvious default, not two equal options. */}
@@ -152,6 +171,7 @@ export const OfferCard = ({
                     label={dc("Reject")}
                     leading={<Cross size={18} weight="bold" className={INK_TEXT} />}
                     onPress={() => run(onReject)}
+                    padY={compact ? 'py-2.5' : 'py-3'}
                 />
                 <ActionButton
                     label={canAccept ? dc("Accept") : dc("Go online")}
@@ -165,6 +185,7 @@ export const OfferCard = ({
                     onPress={() => run(onAccept)}
                     solid
                     progress={timerProgress}
+                    padY={compact ? 'py-2.5' : 'py-3'}
                 />
             </View>
         </View>

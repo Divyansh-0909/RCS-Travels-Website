@@ -1,6 +1,14 @@
 import { useLanguage as useCopyLanguage } from "../i18n";
 import { driverCopy as dc } from "../lib/copy";
+import { useEffect, useRef } from "react";
 import { Pressable, View } from "react-native";
+import Animated, {
+    Easing,
+    useAnimatedStyle,
+    useReducedMotion,
+    useSharedValue,
+    withTiming,
+} from "react-native-reanimated";
 import { cssInterop } from "nativewind";
 import { CaretRightIcon } from "phosphor-react-native";
 import AppText from "../components/AppText";
@@ -18,6 +26,10 @@ const Caret = cssInterop(CaretRightIcon, {
 });
 
 const MAX_ROWS = 2;
+const MOTION_DURATION = 180;
+const RIDE_ENTER_SCALE = 0.97;
+const RIDE_ENTER_Y = 8;
+const EASE_OUT = Easing.bezier(0.23, 1, 0.32, 1);
 // AppBar is 68px tall and floats 24px from the bottom. The remaining 16px keeps
 // the coupon panel visually separate while placing it directly above the bar.
 const BAR_CLEARANCE = 108;
@@ -29,12 +41,64 @@ type Props = {
     onRefresh: () => Promise<void>;
 };
 
+const OverviewRide = ({ booking, onPress }: { booking: UpcomingBooking; onPress: () => void }) => {
+    const reducedMotion = useReducedMotion();
+    const progress = useSharedValue(0);
+
+    useEffect(() => {
+        progress.set(0);
+        progress.set(withTiming(1, { duration: MOTION_DURATION, easing: EASE_OUT }));
+    }, [progress]);
+
+    const animatedStyle = useAnimatedStyle(() => {
+        const value = progress.get();
+        return {
+            opacity: value,
+            transform: reducedMotion
+                ? [{ translateY: 0 }, { scale: 1 }]
+                : [
+                    { translateY: (1 - value) * RIDE_ENTER_Y },
+                    { scale: RIDE_ENTER_SCALE + (1 - RIDE_ENTER_SCALE) * value },
+                ],
+        };
+    });
+
+    return (
+        <Animated.View style={animatedStyle}>
+            <ScheduledRide booking={booking} onPress={onPress} />
+        </Animated.View>
+    );
+};
+
 const Home = ({ scheduled, loading, error, onRefresh }: Props) => {
     useCopyLanguage();
     const navigate = useNavigate()
     const { profile } = useDriver()
     const { colors } = useTheme()
     const online = profile?.isOnline ?? false
+    const statusProgress = useSharedValue(1)
+    const rideStateProgress = useSharedValue(1)
+    const previousOnline = useRef(online)
+    const rideState = loading && scheduled.length === 0
+        ? 'loading'
+        : scheduled.length === 0
+            ? 'empty'
+            : 'rides'
+
+    useEffect(() => {
+        if (previousOnline.current === online) return
+        previousOnline.current = online
+        statusProgress.set(0)
+        statusProgress.set(withTiming(1, { duration: MOTION_DURATION, easing: EASE_OUT }))
+    }, [online, statusProgress])
+
+    useEffect(() => {
+        rideStateProgress.set(0)
+        rideStateProgress.set(withTiming(1, { duration: MOTION_DURATION, easing: EASE_OUT }))
+    }, [rideState, rideStateProgress])
+
+    const statusAnimatedStyle = useAnimatedStyle(() => ({ opacity: statusProgress.get() }))
+    const rideStateAnimatedStyle = useAnimatedStyle(() => ({ opacity: rideStateProgress.get() }))
 
     return (
         <View
@@ -47,13 +111,16 @@ const Home = ({ scheduled, loading, error, onRefresh }: Props) => {
                 paddingBottom: BAR_CLEARANCE,
             }}
         >
-            <View className="flex-1 items-center justify-center w-full rounded-2xl px-4 gap-0.5">
+            <Animated.View
+                className="flex-1 items-center justify-center w-full rounded-2xl px-4 gap-0.5"
+                style={statusAnimatedStyle}
+            >
                 <AppText className="text-2xl font-semibold text-ink">{dc("You're") + " "}{online ? dc("online") : dc("offline")}
                 </AppText>
                 <AppText className="text-base text-ink-muted">
                     {online ? dc("Waiting for a new ride.") : dc("Go online to start getting rides.")}
                 </AppText>
-            </View>
+            </Animated.View>
 
             <View className="w-full gap-4">
                 {error && (
@@ -83,22 +150,24 @@ const Home = ({ scheduled, loading, error, onRefresh }: Props) => {
                         </Pressable>
                     </View>
 
-                    {loading && scheduled.length === 0 ? (
-                        <HomeRideListSkeleton />
-                    ) : scheduled.length === 0 ? (
-                        <View className="w-full rounded-2xl px-4 py-5 gap-0.5" style={{ backgroundColor: colors.surfaceMuted }}>
-                            <AppText className="text-lg font-semibold text-ink">{dc("No ride scheduled")}</AppText>
-                            <AppText className="text-sm text-ink-muted">{dc("Your next assigned ride shows up here.")}</AppText>
-                        </View>
-                    ) : (
-                        scheduled.slice(0, MAX_ROWS).map((ride) => (
-                            <ScheduledRide
-                                key={ride.id}
-                                booking={ride}
-                                onPress={() => navigate(`/rides/${ride.id}`)}
-                            />
-                        ))
-                    )}
+                    <Animated.View className="w-full gap-2" style={rideStateAnimatedStyle}>
+                        {loading && scheduled.length === 0 ? (
+                            <HomeRideListSkeleton />
+                        ) : scheduled.length === 0 ? (
+                            <View className="w-full rounded-2xl px-4 py-5 gap-0.5" style={{ backgroundColor: colors.surfaceMuted }}>
+                                <AppText className="text-lg font-semibold text-ink">{dc("No ride scheduled")}</AppText>
+                                <AppText className="text-sm text-ink-muted">{dc("Your next assigned ride shows up here.")}</AppText>
+                            </View>
+                        ) : (
+                            scheduled.slice(0, MAX_ROWS).map((ride) => (
+                                <OverviewRide
+                                    key={ride.id}
+                                    booking={ride}
+                                    onPress={() => navigate(`/rides/${ride.id}`)}
+                                />
+                            ))
+                        )}
+                    </Animated.View>
                 </View>
 
                 <MarketPromo />

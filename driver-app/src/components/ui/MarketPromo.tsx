@@ -2,6 +2,7 @@ import { useLanguage as useCopyLanguage } from "../../i18n";
 import { driverCopy as dc } from "../../lib/copy";
 import { Image, Pressable, View } from 'react-native';
 import { useNavigate } from 'react-router-native';
+import { memo } from 'react';
 import AppText from '../AppText';
 
 const MarketIllustration = require('../../../assets/market-illustration.webp');
@@ -12,7 +13,7 @@ const SUBTLE = '#544A3D';
 const TITLE = { letterSpacing: -0.4, lineHeight: 24 };
 const PANEL_WIDTH = '34%';
 
-const MarketPromo = () => {
+const MarketPromo = memo(function MarketPromo() {
     useCopyLanguage();
     const navigate = useNavigate();
 
@@ -49,6 +50,6 @@ const MarketPromo = () => {
             </View>
         </View>
     );
-};
+});
 
 export default MarketPromo;

@@ -14,7 +14,7 @@ import {
 import { callPhoneNumber, openExternalUrl } from '../lib/externalLinks';
 
 const Help = () => (
-  <AccountDetailScreen title={dc("Help")}>
+  <AccountDetailScreen title={dc("Help")} centeredHeader>
     <AccountSectionLabel>{dc("RCS support")}</AccountSectionLabel>
     <AccountList>
       <AccountRow
@@ -22,6 +22,7 @@ const Help = () => (
         detail={dc("Usually the quickest way to get help")}
         Icon={ChatCircleIcon}
         caret={false}
+        grouped
         onPress={() => openSupportWhatsApp(dc("Hi, I need help with my captain account."))}
       />
       <AccountRow
@@ -29,6 +30,7 @@ const Help = () => (
         value={supportPhoneDisplay()}
         Icon={PhoneIcon}
         caret={false}
+        grouped
         onPress={callSupport}
       />
       <AccountRow
@@ -36,6 +38,7 @@ const Help = () => (
         detail={supportEmail()}
         Icon={EnvelopeIcon}
         caret={false}
+        grouped
         onPress={() => openExternalUrl(
           `mailto:${supportEmail()}?subject=Captain%20support`,
           dc("Could not open the email app. Please try again."),
@@ -52,6 +55,7 @@ const Help = () => (
         Icon={WarningCircleIcon}
         tone="danger"
         caret={false}
+        grouped
         onPress={() => callPhoneNumber('112')}
         last
       />

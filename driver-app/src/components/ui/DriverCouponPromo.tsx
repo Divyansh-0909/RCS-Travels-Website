@@ -1,7 +1,7 @@
 import { useLanguage as useCopyLanguage } from "../../i18n";
 import { driverCopy as dc } from "../../lib/copy";
 import { Image, Pressable, View } from 'react-native';
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import AppText from '../AppText';
 import { useApi } from '../../hooks/useApi';
 import { useDriver } from '../../hooks/useDriver';
@@ -15,7 +15,7 @@ const SUBTLE = '#c9c6c6';
 const TITLE = { letterSpacing: -0.4, lineHeight: 24 };
 const PANEL_WIDTH = '34%';
 
-const DriverCouponPromo = () => {
+const DriverCouponPromo = memo(function DriverCouponPromo() {
     useCopyLanguage();
     const api = useApi();
     const { patchProfile } = useDriver();
@@ -65,6 +65,6 @@ const DriverCouponPromo = () => {
             </View>
         </View>
     );
-};
+});
 
 export default DriverCouponPromo;

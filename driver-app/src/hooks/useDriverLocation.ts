@@ -97,7 +97,7 @@ const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const FOREGROUND_SERVICE = {
   get "notificationTitle"() { return dc("Online with RCS Captains"); },
-  get "notificationBody"() { return dc("Sharing your location so nearby rides reach you."); },
+  get "notificationBody"() { return dc("Using your location while you are online for ride offers and live trip progress."); },
   notificationColor: '#243AFB',
   // FALSE, so swiping the app away does not quietly take him off the map. He is
   // still online — the server still thinks so, and riders are still being
@@ -135,7 +135,7 @@ export async function ensureLocationPermission(): Promise<LocationPermission> {
       kind: 'location',
       title: canRequest ? dc("Share your location") : dc("Turn on location access"),
       message: canRequest
-        ? dc("RCS Captains uses your location to find nearby rides and guide customers to your live position.")
+        ? dc("RCS Captains uses your precise location while you are online to find nearby rides, support navigation, and show live trip progress.")
         : dc("Location access is off. Turn it on in app settings before going online."),
       actionLabel: canRequest ? dc("Continue") : dc("Open app settings"),
     });
@@ -159,8 +159,8 @@ export async function ensureLocationPermission(): Promise<LocationPermission> {
       kind: 'background-location',
       title: canRequest ? dc("Keep rides reaching you") : dc("Allow location all the time"),
       message: canRequest
-        ? dc("Choose “Allow all the time” so dispatch can find you while you drive with the app in the background.")
-        : dc("Open app settings and set Location to “Allow all the time” before going online."),
+        ? dc("RCS Captains collects your precise location while you are online, including when the app is in the background or not in use, so RCS can find nearby rides, dispatch offers, and show your live progress during assigned rides. Choose “Allow all the time” to go online.")
+        : dc("To go online, open app settings and set Location to “Allow all the time”. RCS Captains uses your precise location in the background for nearby ride dispatch and live progress during assigned rides."),
       actionLabel: canRequest ? dc("Continue") : dc("Open app settings"),
     });
 

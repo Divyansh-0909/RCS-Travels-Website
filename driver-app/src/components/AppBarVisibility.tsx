@@ -119,7 +119,7 @@ export const AppBarVisibilityProvider = ({ children }: { children: ReactNode }) 
     // Every route opens with the bar down. Without this, leaving a screen
     // mid-scroll hands the next one a hidden bar and no scroll to bring it back.
     useEffect(() => {
-        hidden.value = 0;
+        hidden.set(0);
     }, [pathname, hidden]);
 
     const value = useMemo(() => ({ hidden }), [hidden]);
@@ -150,19 +150,19 @@ export const useHideAppBarOnScroll = () => {
     return useAnimatedScrollHandler({
         onScroll: (event) => {
             const y = event.contentOffset.y;
-            const delta = y - lastY.value;
+            const delta = y - lastY.get();
 
             if (y <= TOP_ZONE) {
-                hidden.value = 0;
-                lastY.value = y;
+                hidden.set(0);
+                lastY.set(y);
                 return;
             }
 
-            if (delta > DIRECTION_THRESHOLD) hidden.value = 1;
-            else if (delta < -DIRECTION_THRESHOLD) hidden.value = 0;
+            if (delta > DIRECTION_THRESHOLD) hidden.set(1);
+            else if (delta < -DIRECTION_THRESHOLD) hidden.set(0);
             else return;
 
-            lastY.value = y;
+            lastY.set(y);
         },
     });
 };

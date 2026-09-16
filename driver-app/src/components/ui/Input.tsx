@@ -1,6 +1,7 @@
 import type { ReactNode, Ref } from 'react';
 import { useState } from 'react';
 import { TextInput, View, type KeyboardTypeOptions, type TextInputProps } from 'react-native';
+import Animated, { Easing, ReduceMotion, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { useLanguage } from '../../i18n';
 import { devanagariFonts } from '../../theme/fonts';
 import { useTheme } from '../../theme/ThemeContext';
@@ -8,6 +9,13 @@ import { useTheme } from '../../theme/ThemeContext';
 const BORDER_ERROR = 'rgba(185,28,28,0.5)';
 const BORDER_ERROR_FOCUS = 'rgba(185,28,28,0.8)';
 const BG_ERROR = 'rgba(185,28,28,0.1)';
+const FIELD_TRANSITION = {
+    duration: 160,
+    easing: Easing.out(Easing.cubic),
+    reduceMotion: ReduceMotion.System,
+};
+
+const AnimatedTextInput = Animated.createAnimatedComponent(TextInput);
 
 // The light-surface set. Everything above is tuned for the dark auth shell — white
 // borders, a translucent white fill and #ffffff text — so a field dropped onto a
@@ -38,6 +46,8 @@ interface InputProp {
     onFocusFn?: () => void;
     onBlurFn?: () => void;
     autoComplete?: TextInputProps['autoComplete'];
+    autoCapitalize?: TextInputProps['autoCapitalize'];
+    autoCorrect?: TextInputProps['autoCorrect'];
     inputRef?: Ref<TextInput>;
     autoFocus?: boolean;
     type?: InputType;
@@ -73,9 +83,14 @@ const Input = ({ prop, className = '', leading, trailing }: Props) => {
         ? BG_ERROR
         : prop.bg ?? (light ? colors.surface : focused ? colors.surfaceRaised : 'transparent');
 
+    const fieldStyle = useAnimatedStyle(() => ({
+        borderColor: withTiming(borderColor, FIELD_TRANSITION),
+        backgroundColor: withTiming(backgroundColor, FIELD_TRANSITION),
+    }), [backgroundColor, borderColor]);
+
     return (
         <View className={`${className} relative w-full my-1`}>
-            <TextInput
+            <AnimatedTextInput
                 ref={prop.inputRef}
                 value={prop.value != null ? `${prop.value}` : ''}
                 onChangeText={prop.onChangeFn}
@@ -85,13 +100,13 @@ const Input = ({ prop, className = '', leading, trailing }: Props) => {
                 placeholderTextColor={colors.inkMuted}
                 autoComplete={prop.autoComplete}
                 autoFocus={prop.autoFocus}
-                autoCapitalize={plain ? 'sentences' : 'none'}
-                autoCorrect={plain}
+                autoCapitalize={prop.autoCapitalize ?? (plain ? 'sentences' : 'none')}
+                autoCorrect={prop.autoCorrect ?? plain}
                 secureTextEntry={type === 'password'}
                 keyboardType={KEYBOARD[type]}
                 maxLength={prop.maxLength}
                 className={`font-sans text-base text-ink w-full px-4 py-3 rounded-xl border ${leading ? 'pl-9' : ''} ${trailing ? 'pr-10' : ''}`}
-                style={{ borderColor, backgroundColor, ...(language === 'hi' ? { fontFamily: devanagariFonts.normal } : {}) }}
+                style={[fieldStyle, language === 'hi' ? { fontFamily: devanagariFonts.normal } : undefined]}
             />
 
             {leading && (

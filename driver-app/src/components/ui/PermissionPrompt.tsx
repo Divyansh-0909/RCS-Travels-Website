@@ -17,7 +17,6 @@ import {
   CameraIcon,
   ImageIcon,
   MapPinIcon,
-  NavigationArrowIcon,
   XIcon,
   type IconProps,
 } from 'phosphor-react-native';
@@ -27,10 +26,10 @@ import { useTheme } from '../../theme/ThemeContext';
 /**
  * The app-owned half of a permission request.
  *
- * Android and iOS own the final permission dialog (and Android owns the
- * display-over-other-apps settings page), so those screens cannot carry our
- * type, spacing, or colours. This sheet is the explanation immediately before
- * them: one consistent, honest place to say what is being requested and why.
+ * Android and iOS own the final permission dialog, so those screens cannot
+ * carry our type, spacing, or colours. This sheet is the explanation
+ * immediately before them: one consistent, honest place to say what is being
+ * requested and why.
  * Its shell deliberately matches DocumentSourceSheet, which is already the
  * captain app's established presentation for choosing camera or gallery.
  */
@@ -43,8 +42,7 @@ export type PermissionPromptKind =
   | 'photos'
   | 'location'
   | 'background-location'
-  | 'notifications'
-  | 'overlay';
+  | 'notifications';
 
 export type PermissionPromptRequest = {
   kind: PermissionPromptKind;
@@ -75,7 +73,6 @@ const iconFor = (kind: PermissionPromptKind): ComponentType<IconProps> => {
   if (kind === 'camera') return CameraIcon;
   if (kind === 'photos') return ImageIcon;
   if (kind === 'notifications') return BellIcon;
-  if (kind === 'overlay') return NavigationArrowIcon;
   return MapPinIcon;
 };
 

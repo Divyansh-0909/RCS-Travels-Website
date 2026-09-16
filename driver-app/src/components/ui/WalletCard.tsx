@@ -39,7 +39,7 @@ const WalletCard = ({ balance }: Props) => {
   const owing = balance < 0;
 
   return (
-    <View className={`${TILE} bg-[var(--background-primary)]`}>
+    <View className={`${TILE} border border-[rgba(255,255,255,0.12)] bg-[var(--background-primary)]`}>
       <View className="flex-row items-center gap-1.5">
         <Wallet size={13} weight="fill" className={LABEL} />
         <AppText className={`${TILE_LABEL} ${LABEL}`}>{dc("Wallet")}</AppText>

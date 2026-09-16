@@ -34,8 +34,8 @@ const AccountDetailScreen = ({ title, children, contentContainerStyle, centeredH
       keyboardShouldPersistTaps="handled"
     >
       {centeredHeader ? (
-        <View className="relative mx-4" style={{ paddingBottom: 12 }}>
-          <View className="flex-row h-full items-baseline justify-center pt-1 mb-1">
+        <View className="relative mx-4 mb-4">
+          <View className="flex-row items-baseline justify-center pt-1 mb-1">
             <AppText
               className="text-xl font-semibold text-center text-ink"
               style={TITLE_TRACKING}
@@ -71,9 +71,17 @@ export const AccountSection = ({ children }: { children: ReactNode }) => (
   </View>
 );
 
-/** Flat, inset menu used by Account and its drill-downs. */
+/**
+ * Inset grouped menu used by Account drill-downs. The narrow canvas gap and
+ * clipped outer radius mirror the stacked settings panels on the Account page.
+ */
 export const AccountList = ({ children }: { children: ReactNode }) => (
-  <View className="mx-4">{children}</View>
+  <View
+    className="mx-4 rounded-2xl overflow-hidden bg-canvas"
+    style={{ gap: 3 }}
+  >
+    {children}
+  </View>
 );
 
 export const AccountSectionLabel = ({ children }: { children: ReactNode }) => (

@@ -2,7 +2,6 @@ import { useLanguage as useCopyLanguage } from "../../i18n";
 import { driverCopy as dc } from "../../lib/copy";
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Animated,
   Keyboard,
   Modal,
   PanResponder,
@@ -13,6 +12,14 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
+import Animated, {
+  ReduceMotion,
+  cancelAnimation,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 import { XIcon } from 'phosphor-react-native';
 import AppText from '../AppText';
 import { rupees, vehicleLabel } from '../../constants/booking';
@@ -136,6 +143,7 @@ const MarketplacePostSheet = ({ visible, onClose, onSubmit }: Props) => {
   const { height: windowHeight } = useWindowDimensions();
   const [form, setForm] = useState<Form>(EMPTY_FORM);
   const [submitted, setSubmitted] = useState(false);
+  const [step, setStep] = useState(0);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [expanded, setExpanded] = useState(false);
 
@@ -144,7 +152,8 @@ const MarketplacePostSheet = ({ visible, onClose, onSubmit }: Props) => {
     fullHeight,
     Math.max(Math.round(fullHeight * MIDDLE_SNAP_RATIO), MIN_MIDDLE_HEIGHT),
   );
-  const sheetHeight = useRef(new Animated.Value(middleHeight)).current;
+  const sheetHeight = useSharedValue(middleHeight);
+  const sheetTranslateY = useSharedValue(120);
   const gestureStartY = useRef(0);
   const snapHeights = useRef({ middle: middleHeight, full: fullHeight });
   const expandedRef = useRef(expanded);
@@ -154,13 +163,12 @@ const MarketplacePostSheet = ({ visible, onClose, onSubmit }: Props) => {
   const animateTo = useCallback((nextExpanded: boolean) => {
     const target = nextExpanded ? snapHeights.current.full : snapHeights.current.middle;
     setExpanded(nextExpanded);
-    Animated.spring(sheetHeight, {
-      toValue: target,
+    sheetHeight.set(withSpring(target, {
       damping: SNAP_ANIMATION.damping,
       stiffness: SNAP_ANIMATION.stiffness,
       mass: SNAP_ANIMATION.mass,
-      useNativeDriver: false,
-    }).start();
+      reduceMotion: ReduceMotion.System,
+    }));
   }, [sheetHeight]);
 
   const handlePan = useMemo(() => PanResponder.create({
@@ -169,7 +177,7 @@ const MarketplacePostSheet = ({ visible, onClose, onSubmit }: Props) => {
       Math.abs(gesture.dy) > 4 && Math.abs(gesture.dy) > Math.abs(gesture.dx),
     onPanResponderGrant: (event) => {
       gestureStartY.current = event.nativeEvent.pageY;
-      sheetHeight.stopAnimation();
+      cancelAnimation(sheetHeight);
     },
     onPanResponderRelease: (event, gesture) => {
       const dragDistance = event.nativeEvent.pageY - gestureStartY.current;
@@ -186,6 +194,10 @@ const MarketplacePostSheet = ({ visible, onClose, onSubmit }: Props) => {
   }), [animateTo, sheetHeight]);
 
   const errors = useMemo(() => validate(form), [form]);
+  const sheetMotionStyle = useAnimatedStyle(() => ({
+    height: sheetHeight.get(),
+    transform: [{ translateY: sheetTranslateY.get() }],
+  }));
   const fare = Number(form.fare) || 0;
   const deposit = Number(form.deposit) || 0;
   const fee = deposit * MARKETPLACE_POSTER_FEE_RATE;
@@ -199,9 +211,14 @@ const MarketplacePostSheet = ({ visible, onClose, onSubmit }: Props) => {
 
     setForm(EMPTY_FORM);
     setSubmitted(false);
+    setStep(0);
     setKeyboardHeight(0);
     setExpanded(false);
-    sheetHeight.setValue(snapHeights.current.middle);
+    sheetHeight.set(snapHeights.current.middle);
+    sheetTranslateY.set(withTiming(0, {
+      duration: 240,
+      reduceMotion: ReduceMotion.System,
+    }));
 
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
     const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
@@ -214,7 +231,7 @@ const MarketplacePostSheet = ({ visible, onClose, onSubmit }: Props) => {
     const hidden = Keyboard.addListener(hideEvent, () => setKeyboardHeight(0));
 
     return () => { shown.remove(); hidden.remove(); };
-  }, [visible, sheetHeight]);
+  }, [visible, sheetHeight, sheetTranslateY]);
 
   useEffect(() => {
     if (!visible) return;
@@ -231,6 +248,16 @@ const MarketplacePostSheet = ({ visible, onClose, onSubmit }: Props) => {
   };
 
   const submit = () => {
+    if (step < 2) {
+      setSubmitted(true);
+      const invalidStep = step === 0
+        ? Boolean(errors.pickup || errors.drop || errors.date)
+        : Boolean(errors.riderName || errors.riderPhone || errors.vehicleClass);
+      if (invalidStep) return;
+      setSubmitted(false);
+      setStep((current) => current + 1);
+      return;
+    }
     setSubmitted(true);
     if (!canSubmit) return;
 
@@ -264,13 +291,12 @@ const MarketplacePostSheet = ({ visible, onClose, onSubmit }: Props) => {
         />
         <Animated.View
           accessibilityViewIsModal
-          style={{
-            height: sheetHeight,
+          style={[sheetMotionStyle, {
             backgroundColor: colors.surface,
             borderTopLeftRadius: 24,
             borderTopRightRadius: 24,
             overflow: 'hidden',
-          }}
+          }]}
         >
           <View
             {...handlePan.panHandlers}
@@ -318,7 +344,16 @@ const MarketplacePostSheet = ({ visible, onClose, onSubmit }: Props) => {
             style={{ flex: 1 }}
             contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 16, gap: 16 }}
           >
-            <View className="gap-3">
+            <View className="flex-row items-center justify-between mb-2">
+              {[dc("Route"), dc("Rider"), dc("Money")].map((label, index) => (
+                <View key={label} className="items-center gap-1">
+                  <View className="w-2 h-2 rounded-full" style={{ backgroundColor: step >= index ? colors.strong : colors.borderUi }} />
+                  <AppText className={`text-xs ${step >= index ? INK : MUTED}`}>{label}</AppText>
+                </View>
+              ))}
+            </View>
+
+            <View className="gap-3" style={{ display: step === 0 ? 'flex' : 'none' }}>
               <AppText className={`text-xs font-semibold uppercase tracking-wide ${MUTED}`}>{dc("Route")}</AppText>
               <View>
                 <AppText className={`text-sm font-semibold ${INK}`}>{dc("Pickup")}</AppText>
@@ -332,7 +367,7 @@ const MarketplacePostSheet = ({ visible, onClose, onSubmit }: Props) => {
               </View>
             </View>
 
-            <View className="gap-3">
+            <View className="gap-3" style={{ display: step === 0 ? 'flex' : 'none' }}>
               <AppText className={`text-xs font-semibold uppercase tracking-wide ${MUTED}`}>{dc("Pickup time")}</AppText>
               <View className="flex-row gap-3">
                 <View className="flex-1">
@@ -347,7 +382,7 @@ const MarketplacePostSheet = ({ visible, onClose, onSubmit }: Props) => {
               <FieldError>{submitted ? errors.date : undefined}</FieldError>
             </View>
 
-            <View className="gap-3">
+            <View className="gap-3" style={{ display: step === 1 ? 'flex' : 'none' }}>
               <AppText className={`text-xs font-semibold uppercase tracking-wide ${MUTED}`}>{dc("Rider")}</AppText>
               <View>
                 <AppText className={`text-sm font-semibold ${INK}`}>{dc("Name")}</AppText>
@@ -362,7 +397,7 @@ const MarketplacePostSheet = ({ visible, onClose, onSubmit }: Props) => {
               <AppText className={`text-xs ${MUTED}`}>{dc("Rider details stay private until another captain pays the deposit.")}</AppText>
             </View>
 
-            <View className="gap-2">
+            <View className="gap-2" style={{ display: step === 1 ? 'flex' : 'none' }}>
               <AppText className={`text-xs font-semibold uppercase tracking-wide ${MUTED}`}>{dc("Vehicle")}</AppText>
               <View className="flex-row flex-wrap gap-2">
                 {VEHICLE_CLASSES.map((option) => {
@@ -393,7 +428,7 @@ const MarketplacePostSheet = ({ visible, onClose, onSubmit }: Props) => {
               <FieldError>{submitted ? errors.vehicleClass : undefined}</FieldError>
             </View>
 
-            <View className="gap-3">
+            <View className="gap-3" style={{ display: step === 2 ? 'flex' : 'none' }}>
               <AppText className={`text-xs font-semibold uppercase tracking-wide ${MUTED}`}>{dc("Money")}</AppText>
               <View>
                 <AppText className={`text-sm font-semibold ${INK}`}>{dc("Fare the rider pays")}</AppText>
@@ -410,7 +445,7 @@ const MarketplacePostSheet = ({ visible, onClose, onSubmit }: Props) => {
               </View>
             </View>
 
-            <View className="rounded-2xl p-4 gap-2" style={{ backgroundColor: colors.surfaceMuted }}>
+            <View className="rounded-2xl p-4 gap-2" style={{ display: step === 2 ? 'flex' : 'none', backgroundColor: colors.surfaceMuted }}>
               <View className="flex-row justify-between gap-3">
                 <AppText className={`text-sm ${MUTED}`}>{dc("Deposit")}</AppText>
                 <AppText className={`text-sm font-semibold ${INK}`}>{rupees(deposit)}</AppText>
@@ -431,7 +466,7 @@ const MarketplacePostSheet = ({ visible, onClose, onSubmit }: Props) => {
           </ScrollView>
 
           <View className="w-full gap-1 px-5 pt-3 pb-6 bg-surface">
-            <Button onPress={submit}>{dc("Post booking")}</Button>
+            <Button onPress={submit}>{step < 2 ? dc("Continue") : dc("Post booking")}</Button>
             <AppText className={`text-xs text-center ${MUTED}`}>{dc("The rider pays the claiming captain") + " "}{rupees(fare)}{" " + dc("directly.")}</AppText>
           </View>
         </Animated.View>

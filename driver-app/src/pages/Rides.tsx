@@ -2,7 +2,13 @@ import { useLanguage as useCopyLanguage } from "../i18n";
 import { driverCopy as dc } from "../lib/copy";
 import { useCallback, useEffect, useMemo, useRef, useState, type ComponentType } from 'react';
 import { ActivityIndicator, AppState, Pressable, SectionList, TextInput, View, type SectionListProps } from 'react-native';
-import Animated from 'react-native-reanimated';
+import Animated, {
+    Easing,
+    useAnimatedStyle,
+    useReducedMotion,
+    useSharedValue,
+    withTiming,
+} from 'react-native-reanimated';
 import { cssInterop } from 'nativewind';
 import { MagnifyingGlassIcon, XIcon } from 'phosphor-react-native';
 import { useLocation, useNavigate } from 'react-router-native';
@@ -39,6 +45,11 @@ const IST_OFFSET_MS = 330 * 60 * 1000;
 // was tuned for, and a shared token with no size attached to it would invite being
 // applied at the wrong one. If a third title appears, give it a real named style.
 const TITLE_TRACKING = { letterSpacing: -0.72 };
+const MOTION_DURATION = 180;
+const SEARCH_SCALE = 0.98;
+const TAB_TRACK_PADDING = 4;
+const EASE_OUT = Easing.bezier(0.23, 1, 0.32, 1);
+const EASE_IN_OUT = Easing.bezier(0.77, 0, 0.175, 1);
 
 type ApiError = { error: string; status: number; code?: string };
 type GetRidesResponse =
@@ -147,9 +158,31 @@ const Rides = () => {
 
     const [searching, setSearching] = useState(false);
     const [query, setQuery] = useState('');
+    const reducedMotion = useReducedMotion();
+    const tabTrackWidth = useSharedValue(0);
+    const tabProgress = useSharedValue(scope === 'history' ? 1 : 0);
+    const headerProgress = useSharedValue(1);
+    const contentProgress = useSharedValue(1);
     // Opening search is a prompt to start a new lookup, not another way to browse
     // the current board. Keep the results area clear until the captain types.
     const isSearchIdle = searching && query.trim().length === 0;
+
+    const tabIndicatorStyle = useAnimatedStyle(() => {
+        const tabWidth = Math.max((tabTrackWidth.get() - TAB_TRACK_PADDING * 2) / TABS.length, 0);
+        return {
+            width: tabWidth,
+            opacity: tabWidth > 0 ? 1 : 0,
+            transform: [{ translateX: tabProgress.get() * tabWidth }],
+        };
+    });
+
+    const headerAnimatedStyle = useAnimatedStyle(() => {
+        const progress = headerProgress.get();
+        return {
+            opacity: progress,
+            transform: [{ scale: reducedMotion ? 1 : SEARCH_SCALE + (1 - SEARCH_SCALE) * progress }],
+        };
+    });
 
     const latestRequest = useRef(0);
 
@@ -246,6 +279,21 @@ const Rides = () => {
         setQuery('');
     }, [location.key, location.search]);
 
+    useEffect(() => {
+        const target = scope === 'history' ? 1 : 0;
+        if (reducedMotion) {
+            tabProgress.set(target);
+            return;
+        }
+
+        tabProgress.set(withTiming(target, { duration: MOTION_DURATION, easing: EASE_IN_OUT }));
+    }, [reducedMotion, scope, tabProgress]);
+
+    useEffect(() => {
+        headerProgress.set(0);
+        headerProgress.set(withTiming(1, { duration: MOTION_DURATION, easing: EASE_OUT }));
+    }, [headerProgress, searching]);
+
     // Recompute the boundary on every render, then memoise downstream work by its
     // timestamp. Today/week/month therefore stay stable during ordinary renders but
     // naturally roll over after a refresh or foreground transition crosses a boundary.
@@ -299,6 +347,20 @@ const Rides = () => {
     // Gating on `firstLoad` alone closes the window: unknown renders the skeleton whether
     // or not the request has started yet.
     const failedFirstLoad = firstLoad && error !== null;
+    const contentState = isSearchIdle
+        ? 'search-idle'
+        : firstLoad && !failedFirstLoad
+            ? 'loading'
+            : failedFirstLoad
+                ? 'error'
+                : 'content';
+
+    useEffect(() => {
+        contentProgress.set(0);
+        contentProgress.set(withTiming(1, { duration: MOTION_DURATION, easing: EASE_OUT }));
+    }, [contentProgress, contentState]);
+
+    const contentAnimatedStyle = useAnimatedStyle(() => ({ opacity: contentProgress.get() }));
 
     const switchTo = (next: RidesScope) => {
         if (next === scope) return;
@@ -319,7 +381,7 @@ const Rides = () => {
 
     return (
         <View className="flex-1 w-[92%] gap-3">
-            <View className="flex-row items-center justify-between gap-3">
+            <Animated.View className="flex-row items-center justify-between gap-3" style={headerAnimatedStyle}>
                 {searching ? (
                     <View
                         className="flex-1 flex-row items-center gap-2 rounded-full px-4 h-11"
@@ -367,26 +429,36 @@ const Rides = () => {
                         </Pressable>
                     </>
                 )}
-            </View>
+            </Animated.View>
 
-            <View className="flex-row rounded-full p-1" style={{ backgroundColor: colors.surfaceMuted }}>
+            <View
+                className="flex-row rounded-full p-1"
+                style={{ backgroundColor: colors.surfaceMuted }}
+                onLayout={(event) => tabTrackWidth.set(event.nativeEvent.layout.width)}
+            >
+                <Animated.View
+                    pointerEvents="none"
+                    style={[
+                        {
+                            position: 'absolute',
+                            left: TAB_TRACK_PADDING,
+                            top: TAB_TRACK_PADDING,
+                            bottom: TAB_TRACK_PADDING,
+                            borderRadius: 999,
+                            backgroundColor: colors.strong,
+                        },
+                        tabIndicatorStyle,
+                    ]}
+                />
                 {TABS.map((tab) => {
                     const active = tab.key === scope;
                     return (
-                        // One element, styled entirely by className, with no style prop
-                        // anywhere near it. Layout, radius and fill set two different
-                        // ways on two nested elements is what left this a square slab:
-                        // a style function drops whole, and a style object beside a
-                        // className competes with it over who owns the box. The Post FAB
-                        // in AppBar is a circle drawn exactly this way — className only,
-                        // on the Pressable itself — so this is the shape that is known
-                        // to survive the interop.
                         <Pressable
                             key={tab.key}
                             role="tab"
                             aria-selected={active}
                             onPress={() => switchTo(tab.key)}
-                            className={`flex-1 items-center justify-center rounded-full py-2.5 px-3 ${active ? 'bg-strong' : 'bg-transparent'}`}
+                            className="relative z-10 flex-1 items-center justify-center rounded-full bg-transparent py-2.5 px-3"
                         >
                             <AppText
                                 className={`text-base font-semibold ${active ? 'text-white' : MUTED}`}
@@ -439,76 +511,78 @@ const Rides = () => {
                 />
             )}
 
-            {isSearchIdle ? (
-                <View className="flex-1" />
-            ) : firstLoad && !failedFirstLoad ? (
-                // The board's own shape rather than a spinner in the middle of nothing.
-                // History reserves the panel's height too, so the rows do not shunt down
-                // when the week's total lands a frame after them.
-                //
-                // No `loading` in this condition — see the note on failedFirstLoad. An
-                // unknown board draws the skeleton from the frame the tab is tapped,
-                // which is a frame before the request it is waiting on even exists.
-                <RidesSkeleton withPanel={scope === 'history' && !searching} />
-            ) : failedFirstLoad ? (
-                <ErrorState
-                    title={dc("Can't load your rides")}
-                    message={error}
-                    actionLabel={dc("Try again")}
-                    onAction={() => refresh(scope)}
-                />
-            ) : (
-                <AnimatedSectionList
-                    sections={sections}
-                    keyExtractor={(item) => item.id}
-                    stickySectionHeadersEnabled={false}
-                    showsVerticalScrollIndicator={false}
-                    onScroll={onScroll}
-                    scrollEventThrottle={16}
-                    // The week's total used to head this list. It is pinned above the
-                    // scroller now — see the block before the spinner branch.
+            <Animated.View style={[{ flex: 1, width: '100%' }, contentAnimatedStyle]}>
+                {isSearchIdle ? (
+                    <View className="flex-1" />
+                ) : firstLoad && !failedFirstLoad ? (
+                    // The board's own shape rather than a spinner in the middle of nothing.
+                    // History reserves the panel's height too, so the rows do not shunt down
+                    // when the week's total lands a frame after them.
                     //
-                    // flex:1 is load-bearing. Without it the list takes its content's
-                    // height inside a flex-1 column, so a full board runs off the
-                    // bottom of the screen instead of scrolling inside it.
-                    style={{ flex: 1, width: '100%' }}
-                    contentContainerStyle={{ gap: 8, paddingBottom: BAR_CLEARANCE, flexGrow: 1 }}
-                    renderSectionHeader={({ section }) => (
-                        <AppText className={`text-xs font-semibold uppercase tracking-wide px-1 pt-2 ${MUTED}`}>
-                            {section.title}
-                        </AppText>
-                    )}
-                    renderItem={({ item }) => (
-                        <RideRow
-                            booking={item}
-                            historic={scope === 'history'}
-                            onPress={() => navigate(`/rides/${item.id}`)}
-                        />
-                    )}
-                    ListEmptyComponent={
-                        <View className="flex-1 items-center justify-center gap-1 pb-24 px-6">
-                            <AppText className={`text-base font-semibold text-center ${INK_TEXT}`}>
-                                {query
-                                    ? dc("No rides match that")
-                                    : scope === 'history' && (cached?.length ?? 0) > 0
-                                        ? dc("No rides in this period")
-                                    : scope === 'upcoming'
-                                        ? dc("No rides booked yet")
-                                        : dc("No finished rides yet")}
+                    // No `loading` in this condition — see the note on failedFirstLoad. An
+                    // unknown board draws the skeleton from the frame the tab is tapped,
+                    // which is a frame before the request it is waiting on even exists.
+                    <RidesSkeleton withPanel={scope === 'history' && !searching} />
+                ) : failedFirstLoad ? (
+                    <ErrorState
+                        title={dc("Can't load your rides")}
+                        message={error}
+                        actionLabel={dc("Try again")}
+                        onAction={() => refresh(scope)}
+                    />
+                ) : (
+                    <AnimatedSectionList
+                        sections={sections}
+                        keyExtractor={(item) => item.id}
+                        stickySectionHeadersEnabled={false}
+                        showsVerticalScrollIndicator={false}
+                        onScroll={onScroll}
+                        scrollEventThrottle={16}
+                        // The week's total used to head this list. It is pinned above the
+                        // scroller now — see the block before the spinner branch.
+                        //
+                        // flex:1 is load-bearing. Without it the list takes its content's
+                        // height inside a flex-1 column, so a full board runs off the
+                        // bottom of the screen instead of scrolling inside it.
+                        style={{ flex: 1, width: '100%' }}
+                        contentContainerStyle={{ gap: 8, paddingBottom: BAR_CLEARANCE, flexGrow: 1 }}
+                        renderSectionHeader={({ section }) => (
+                            <AppText className={`text-xs font-semibold uppercase tracking-wide px-1 pt-2 ${MUTED}`}>
+                                {section.title}
                             </AppText>
-                            <AppText className={`text-sm text-center ${MUTED}`}>
-                                {query
-                                    ? dc("Try a place, a rider name, or a ride ID.")
-                                    : scope === 'history' && (cached?.length ?? 0) > 0
-                                        ? dc("Try a wider date range.")
-                                    : scope === 'upcoming'
-                                        ? dc("Go online and rides you accept will queue up here.")
-                                        : dc("Rides you complete or cancel are kept here.")}
-                            </AppText>
-                        </View>
-                    }
-                />
-            )}
+                        )}
+                        renderItem={({ item }) => (
+                            <RideRow
+                                booking={item}
+                                historic={scope === 'history'}
+                                onPress={() => navigate(`/rides/${item.id}`)}
+                            />
+                        )}
+                        ListEmptyComponent={
+                            <View className="flex-1 items-center justify-center gap-1 pb-24 px-6">
+                                <AppText className={`text-base font-semibold text-center ${INK_TEXT}`}>
+                                    {query
+                                        ? dc("No rides match that")
+                                        : scope === 'history' && (cached?.length ?? 0) > 0
+                                            ? dc("No rides in this period")
+                                        : scope === 'upcoming'
+                                            ? dc("No rides booked yet")
+                                            : dc("No finished rides yet")}
+                                </AppText>
+                                <AppText className={`text-sm text-center ${MUTED}`}>
+                                    {query
+                                        ? dc("Try a place, a rider name, or a ride ID.")
+                                        : scope === 'history' && (cached?.length ?? 0) > 0
+                                            ? dc("Try a wider date range.")
+                                        : scope === 'upcoming'
+                                            ? dc("Go online and rides you accept will queue up here.")
+                                            : dc("Rides you complete or cancel are kept here.")}
+                                </AppText>
+                            </View>
+                        }
+                    />
+                )}
+            </Animated.View>
 
             {/* Kept out of the list so a refresh never steals the captain's scroll
                 position — the rows already on screen stay exactly where they are.

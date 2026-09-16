@@ -64,14 +64,14 @@ const OnBoarding = () => {
                         onPress={openLogin}
                         className="w-[82%] my-1 py-3 rounded-xl bg-primary items-center justify-center active:opacity-80"
                     >
-                        <AppText className="text-base font-semibold">{t('driver.onboarding.access')}</AppText>
+                        <AppText className="text-base font-semibold text-white">{t('driver.onboarding.access')}</AppText>
                     </Pressable>
 
-                    <AppText className="text-sm text-[var(--text-muted)]">
+                    <AppText className="text-sm text-[#AEAEAE]">
                         {t('driver.onboarding.noAccount')}{" "}
                         <AppText
                             onPress={() => navigate("/signup")}
-                            className="font-semibold text-[var(--text)]"
+                            className="font-semibold text-white"
                         >
                             {t('driver.onboarding.signUp')}
                         </AppText>
