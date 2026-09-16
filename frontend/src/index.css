@@ -74,6 +74,9 @@
     --status-success: #166534;
     --status-danger: #B91C1C;
     --status-warning: #92400E;
+    --input-background: var(--surface);
+    --input-border: var(--border);
+    --input-placeholder: var(--ink-muted);
 }
 
 :root[data-theme="dark"] {
@@ -97,6 +100,9 @@
     --status-success: #86EFAC;
     --status-danger: #E86A6A;
     --status-warning: #FBBF24;
+    --input-background: #1d1d27;
+    --input-border: rgba(255,255,255,0.3);
+    --input-placeholder: rgba(255,255,255,0.42);
 }
 
 /* Compatibility aliases keep existing website call sites semantic until they
