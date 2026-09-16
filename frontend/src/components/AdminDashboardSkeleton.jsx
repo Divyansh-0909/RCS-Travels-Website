@@ -1,95 +1,98 @@
 import Skeleton from "./ui/Skeleton";
 
-// Bar wrapped in a container with the exact line-box height of the text it
-// stands in for, so skeleton cards match the real cards' height exactly.
-const Line = ({ h, bar, w }) => (
-    <div className={`${h} flex items-center`}>
-        <Skeleton tone="light" className={`${bar} ${w}`} />
-    </div>
+const Line = ({ className = "" }) => (
+    <Skeleton tone="light" className={className} />
 );
 
-// One placeholder booking card — clones the admin booking card's structure.
 const BookingCardSkeleton = () => (
-    <div className="my-2 flex flex-col justify-center items-start gap-3 rounded-3xl bg-tone-primary px-5 py-5 sm:px-6">
-        <div className="flex justify-between items-start gap-4 w-full">
-            {/* route: pickup → drop */}
-            <div className="flex flex-col gap-3">
-                <div className="flex items-center gap-3">
-                    <Skeleton tone="light" rounded="rounded-full" className="w-3 h-3 shrink-0" />
-                    <div>
-                        <Line h="h-5 sm:h-7" bar="h-3.5 sm:h-4" w="w-36 sm:w-48" />
-                        <Line h="h-5" bar="h-3" w="w-28 sm:w-40" />
+    <div className="w-full min-w-0 rounded-2xl bg-surface-muted p-4">
+        <div className="flex min-h-[7.75rem] flex-col gap-3">
+            <div className="flex items-center gap-3">
+                <Line className="h-16 w-24 shrink-0 rounded-xl sm:h-20 sm:w-28" />
+                <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                        <Line className="h-6 w-20 rounded-lg" />
+                        <Line className="h-3 w-24" />
                     </div>
-                </div>
-                <div className="flex items-center gap-3">
-                    <Skeleton tone="light" rounded="rounded-full" className="w-3 h-3 shrink-0" />
-                    <div>
-                        <Line h="h-5 sm:h-7" bar="h-3.5 sm:h-4" w="w-40 sm:w-56" />
-                        <Line h="h-5" bar="h-3" w="w-24 sm:w-36" />
-                    </div>
+                    <Line className="mt-3 h-5 w-3/4" />
+                    <Line className="mt-2 h-4 w-1/2" />
                 </div>
             </div>
-            {/* fare (h3) + status chip */}
-            <div className="flex flex-col items-end gap-1.5 shrink-0">
-                <Line h="h-7" bar="h-4" w="w-16" />
-                <Skeleton tone="light" rounded="rounded-full" className="h-6 w-20" />
+            <div>
+                <div className="mt-3 flex items-center gap-2">
+                    <Line className="h-5 w-16" />
+                    <Line className="h-3 w-14" />
+                </div>
+                <div className="mt-3 grid min-w-0 grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2">
+                    <div className="min-w-0">
+                        <Line className="h-3 w-16" />
+                        <Line className="mt-2 h-4 w-24" />
+                        <Line className="mt-2 h-3 w-20" />
+                    </div>
+                    <div className="min-w-0">
+                        <Line className="h-3 w-14" />
+                        <Line className="mt-2 h-4 w-24" />
+                        <Line className="mt-2 h-3 w-20" />
+                    </div>
+                </div>
             </div>
         </div>
-
-        <div className="w-full border-t border-border/50"></div>
-
-        {/* meta line (text-base) */}
-        <Line h="h-6" bar="h-4" w="w-64 sm:w-80" />
-
-        {/* people columns: label (text-xs, mb-0.5) + value (h4) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
-            <div>
-                <div className="h-4 mb-0.5 flex items-center"><Skeleton tone="light" className="h-2.5 w-16" /></div>
-                <Line h="h-5 sm:h-7" bar="h-3.5 sm:h-4" w="w-44 sm:w-52" />
-            </div>
-            <div>
-                <div className="h-4 mb-0.5 flex items-center"><Skeleton tone="light" className="h-2.5 w-12" /></div>
-                <Line h="h-5 sm:h-7" bar="h-3.5 sm:h-4" w="w-44 sm:w-52" />
-            </div>
-        </div>
-
-        {/* ride id (text-sm) */}
-        <Line h="h-5" bar="h-3" w="w-28" />
     </div>
 );
 
-// One placeholder driver card — name + online dot, phone, divider, meta line, chip.
-const DriverCardSkeleton = ({ tone = "bg-tone-teal" }) => (
-    <div className={`my-2 flex flex-col justify-center items-start gap-3 rounded-3xl ${tone} px-5 py-5 sm:px-6`}>
-        <div className="flex justify-between items-start gap-4 w-full">
-            <div>
-                {/* name (h3) + online dot + status (text-sm) */}
-                <div className="flex items-center gap-2">
-                    <Line h="h-6 sm:h-7" bar="h-4" w="w-36 sm:w-44" />
-                    <Skeleton tone="light" rounded="rounded-full" className="w-2 h-2 shrink-0" />
-                    <Line h="h-5" bar="h-3" w="w-12" />
-                </div>
-                {/* phone (p, text-sm) */}
-                <Line h="h-5" bar="h-3" w="w-28" />
+const DriverCardSkeleton = () => (
+    <div className="w-full min-w-0 overflow-hidden rounded-2xl bg-surface-muted p-3 sm:p-4">
+        <div className="flex min-w-0 items-center gap-3">
+            <Line className="h-12 w-12 shrink-0 rounded-full sm:h-14 sm:w-14" />
+            <div className="min-w-0">
+                <Line className="h-5 w-28" />
+                <Line className="mt-2 h-4 w-24" />
             </div>
-            <Skeleton tone="light" rounded="rounded-full" className="h-6 w-20 shrink-0" />
+            <div className="ml-auto flex shrink-0 flex-col items-end">
+                <Line className="h-4 w-24" />
+                <Line className="mt-2 h-4 w-16" />
+            </div>
         </div>
-
-        <div className="w-full border-t border-border/50"></div>
-
-        {/* meta line (text-base) */}
-        <Line h="h-6" bar="h-4" w="w-72 sm:w-96" />
+        <div className="mt-3 flex flex-wrap items-center gap-x-2.5 gap-y-1.5 border-t border-border/50 pt-2.5">
+            <Line className="h-6 w-20 rounded-lg" />
+            <Line className="h-4 w-16" />
+            <Line className="h-4 w-24" />
+            <Line className="ml-auto h-4 w-4" />
+        </div>
     </div>
 );
 
-// First-load placeholder for the admin list — 3 cards of the active tab's shape.
+const UserCardSkeleton = () => (
+    <div className="w-full min-w-0 overflow-hidden rounded-2xl bg-surface-muted p-3 sm:p-4">
+        <div className="flex items-center gap-3">
+            <Line className="h-14 w-14 shrink-0 rounded-full" />
+            <div className="min-w-0 flex-1">
+                <Line className="h-6 w-32" />
+                <Line className="mt-2 h-4 w-24" />
+            </div>
+            <Line className="h-10 w-px shrink-0 rounded-none" />
+            <div className="flex min-w-[5.25rem] shrink-0 flex-col items-end">
+                <Line className="h-5 w-8" />
+                <Line className="mt-2 h-3 w-12" />
+            </div>
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-border/50 pt-3">
+            <Line className="h-4 w-16" />
+            <Line className="h-4 w-28" />
+            <Line className="ml-auto h-4 w-4" />
+        </div>
+    </div>
+);
+
 const AdminDashboardSkeleton = ({ variant = "bookings" }) => (
-    <div className="w-full">
-        {[0, 1, 2].map((i) =>
+    <div className="grid w-full min-w-0 max-w-full grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-3">
+        {[1, 2, 3, 4, 5, 6].map((item) => (
             variant === "bookings"
-                ? <BookingCardSkeleton key={i} />
-                : <DriverCardSkeleton key={i} tone={variant === "users" ? "bg-tone-violet" : "bg-tone-teal"} />
-        )}
+                ? <BookingCardSkeleton key={item} />
+                : variant === "drivers"
+                    ? <DriverCardSkeleton key={item} />
+                    : <UserCardSkeleton key={item} />
+        ))}
     </div>
 );
 

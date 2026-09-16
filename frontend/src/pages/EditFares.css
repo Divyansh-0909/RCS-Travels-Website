@@ -88,7 +88,77 @@
     font-size: 10px;
 }
 
+/* The editor is used occasionally and changes modes (list -> edit -> publish).
+   These short transitions make those state changes legible without moving the
+   map or the values the admin is actively reading. */
+@keyframes fare-panel-enter {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fare-modal-enter {
+    from {
+        opacity: 0;
+        transform: translateY(10px) scale(0.96);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes fare-backdrop-enter {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.fare-panel-enter {
+    animation: fare-panel-enter 180ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+.fare-probe-enter {
+    animation: fare-panel-enter 180ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+.fare-modal-enter {
+    animation: fare-modal-enter 220ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+.fare-backdrop-enter {
+    animation: fare-backdrop-enter 180ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .leaflet-container .marker-icon,
+    .leaflet-container .marker-icon-middle {
+        transition: transform 150ms cubic-bezier(0.23, 1, 0.32, 1);
+    }
+
+    .leaflet-container .marker-icon:hover,
+    .leaflet-container .marker-icon-middle:hover {
+        transform: scale(1.08);
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
+    .fare-panel-enter,
+    .fare-probe-enter,
+    .fare-modal-enter,
+    .fare-backdrop-enter {
+        animation: fare-backdrop-enter 150ms linear both;
+    }
+
+    .leaflet-container .marker-icon,
+    .leaflet-container .marker-icon-middle {
+        transition: none;
+    }
+
     .leaflet-container .leaflet-fade-anim .leaflet-tile,
     .leaflet-container .leaflet-zoom-anim .leaflet-zoom-animated {
         transition: none !important;

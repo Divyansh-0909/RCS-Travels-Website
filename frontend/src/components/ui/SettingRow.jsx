@@ -1,9 +1,9 @@
 // Settings-page row card: left-hand content plus an optional `trailing` control.
-const SettingRow = ({ children, trailing, onClick, className = "", tone = "bg-surface", ...props }) => (
+const SettingRow = ({ children, trailing, onClick, className = "", tone = "bg-surface-muted", ...props }) => (
     <li
         {...props}
         onClick={onClick}
-        className={`font-normal text-3xl w-full select-none py-5 px-5 sm:px-6 rounded-3xl flex justify-between items-center gap-5 ${tone} text-ink ${onClick ? "cursor-pointer transition-opacity duration-200 hover:opacity-80" : ""} ${className}`}
+        className={`account-panel-motion font-normal text-3xl w-full select-none py-5 px-5 sm:px-6 rounded-3xl flex justify-between items-center gap-5 ${tone} text-ink ${onClick ? "cursor-pointer transition-transform duration-150 ease-out active:scale-[0.99]" : ""} ${className}`}
     >
         <div className="min-w-0 flex-1 pr-2 break-words">{children}</div>
         <div className="shrink-0">{trailing}</div>

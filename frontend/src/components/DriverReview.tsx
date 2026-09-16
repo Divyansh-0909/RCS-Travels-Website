@@ -101,7 +101,7 @@ const groupChipFor = (group: DriverGroup) =>
         : group === "admin" ? "text-amber-700 bg-amber-500/10"
             : "text-ink-muted bg-surface-muted"
 
-const plainChip = "text-xs font-semibold px-2.5 py-1 rounded-full shrink-0"
+const plainChip = "text-[11px] leading-4 font-medium px-2 py-0.5 rounded-full shrink-0"
 // Every other chip on this screen prints an enum key straight from the wire, so
 // it needs the capitalize. The group chip does not — its words are written above,
 // and "RCS fleet" would come out of that rule as "RCS Fleet".
@@ -109,6 +109,33 @@ const chip = `${plainChip} capitalize`
 
 const shortDate = (value: string) =>
     new Date(value).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
+
+// Keep the loading state shaped like the finished review. Showing the panel
+// structure while documents arrive avoids a sudden layout jump.
+const PaperworkSkeleton = () => (
+    <div className="w-full animate-pulse space-y-4" aria-label="Loading paperwork">
+        {[0, 1, 2].map((section) => (
+            <section key={section} className="rounded-2xl bg-surface p-4 sm:p-5">
+                <div className="h-3 w-36 rounded bg-surface-muted" />
+                {[0, 1].map((row) => (
+                    <div key={row} className="mt-4 rounded-lg bg-surface-muted/30 p-3">
+                        <div className="flex items-start justify-between gap-4">
+                            <div className="space-y-2">
+                                <div className="h-4 w-40 rounded bg-surface-muted" />
+                                <div className="h-3 w-44 rounded bg-surface-muted" />
+                            </div>
+                            <div className="h-6 w-16 rounded-full bg-surface-muted" />
+                        </div>
+                        <div className="mt-4 flex gap-2">
+                            <div className="h-8 w-24 rounded-xl bg-surface-muted" />
+                            <div className="h-8 w-20 rounded-xl bg-surface-muted" />
+                        </div>
+                    </div>
+                ))}
+            </section>
+        ))}
+    </div>
+)
 
 // An expiry is a date on a piece of paper, so it is compared by date and not by
 // instant — a certificate valid "until 30 Aug" is valid all day on the 30th.
@@ -204,7 +231,7 @@ const DriverReview = ({ driverId, onVerificationChange, onGroupChange }: {
         onGroupChange?.(result.group)
     }
 
-    if (loading) return <p className="text-sm text-ink-muted py-4">{dc("Loading paperwork…")}</p>
+    if (loading) return <PaperworkSkeleton />
 
     if (error && !data) return (
         <div className="w-full py-4">
@@ -223,23 +250,41 @@ const DriverReview = ({ driverId, onVerificationChange, onGroupChange }: {
         const isBusy = busyId === document.id
 
         return (
-            <div key={document.id} className="w-full py-3 border-b border-border/50 last:border-b-0">
-                <div className="flex flex-wrap items-center gap-2">
-                    <h4 className="font-medium text-ink">{document.label}</h4>
-                    {document.isReplacement && (
-                        <span className={`${chip} text-blue-600 bg-blue-500/10`}>{dc("Renewal")}</span>
-                    )}
-                    <span className={`${chip} ${statusChipFor(document.status)}`}>{document.status}</span>
-                    <span className={`${chip} ${scanChip(document.scanStatus)}`}>
-                        {document.scanStatus === "clean" ? dc("file ok") : dc("scan {{value0}}", {value0: (document.scanStatus)})}
-                    </span>
-                    {lapsed && <span className={`${chip} text-red-600 bg-red-500/10`}>{dc("Expired")}</span>}
+            <div key={document.id} className="w-full rounded-xl bg-surface-muted/40 p-4 sm:p-5">
+                <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                        <h4 className="text-base font-semibold leading-6 text-ink">{document.label}</h4>
+                        <div className="mt-1.5 flex flex-wrap gap-1.5">
+                            {document.isReplacement && (
+                                <span className={`${chip} text-blue-600 bg-blue-500/10`}>{dc("Renewal")}</span>
+                            )}
+                            <span className={`${chip} ${scanChip(document.scanStatus)}`}>
+                                {document.scanStatus === "clean" ? dc("file ok") : dc("scan {{value0}}", {value0: (document.scanStatus)})}
+                            </span>
+                            {lapsed && <span className={`${chip} text-red-600 bg-red-500/10`}>{dc("Expired")}</span>}
+                        </div>
+                    </div>
+                    <span className={`${chip} ${statusChipFor(document.status)} capitalize`}>{document.status}</span>
                 </div>
 
-                <p className="text-sm text-ink-muted mt-1">
-                    {document.number ? dc("{{value0}} •", {value0: (document.number)}) : ""}
-                    {document.expiresAt ? dc("Expires {{value0}} •", {value0: (shortDate(document.expiresAt))}) : ""}{dc("Uploaded") + " "}{shortDate(document.uploadedAt)}
-                </p>
+                <dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3">
+                    {document.number && (
+                        <div className="min-w-0">
+                            <dt className="text-[11px] font-medium uppercase tracking-[0.08em] text-ink-muted">{dc("Document number")}</dt>
+                            <dd className="mt-0.5 break-words text-sm font-medium leading-5 text-ink">{document.number}</dd>
+                        </div>
+                    )}
+                    {document.expiresAt && (
+                        <div>
+                            <dt className="text-[11px] font-medium uppercase tracking-[0.08em] text-ink-muted">{dc("Expires")}</dt>
+                            <dd className={`mt-0.5 text-sm font-medium leading-5 ${lapsed ? "text-red-600" : "text-ink"}`}>{shortDate(document.expiresAt)}</dd>
+                        </div>
+                    )}
+                    <div>
+                        <dt className="text-[11px] font-medium uppercase tracking-[0.08em] text-ink-muted">{dc("Uploaded")}</dt>
+                        <dd className="mt-0.5 text-sm font-medium leading-5 text-ink">{shortDate(document.uploadedAt)}</dd>
+                    </div>
+                </dl>
 
                 {document.status === "rejected" && document.rejectionReason && (
                     <p className="text-sm text-red-600 mt-1">{dc("Rejected:") + " "}{document.rejectionReason}</p>
@@ -261,12 +306,12 @@ const DriverReview = ({ driverId, onVerificationChange, onGroupChange }: {
                 )}
 
                 {document.reviewable && (
-                    <div className="flex flex-wrap items-center gap-2 mt-3">
+                    <div className="mt-5 flex flex-wrap items-center gap-2">
                         <a
                             href={document.url ?? undefined}
                             target="_blank"
                             rel="noreferrer"
-                            className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-xl border border-border text-ink hover:bg-surface-muted focus-visible:outline-2 focus-visible:outline-offset-2 transition-colors duration-300"
+                            className="flex h-9 items-center gap-1.5 rounded-lg border border-border/70 bg-surface px-3 text-sm font-medium text-ink hover:bg-surface-muted active:scale-[0.98] transition-[transform,background-color] duration-150"
                         >
                             <Icon path={mdiOpenInNew} size={0.7} />{dc("Open document")}</a>
 
@@ -274,7 +319,7 @@ const DriverReview = ({ driverId, onVerificationChange, onGroupChange }: {
                             <button
                                 disabled={isBusy}
                                 onClick={() => review(document, "approved")}
-                                className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-xl bg-primary text-on-strong font-semibold hover:opacity-90 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 transition-opacity duration-300"
+                                className="flex h-9 items-center gap-1.5 rounded-lg bg-primary px-3 text-sm font-semibold text-on-strong hover:opacity-90 active:scale-[0.98] disabled:opacity-50 transition-[transform,opacity] duration-150 sm:ml-auto"
                             >
                                 <Icon path={mdiCheck} size={0.7} />
                                 {isBusy ? dc("Saving…") : dc("Approve")}
@@ -285,7 +330,7 @@ const DriverReview = ({ driverId, onVerificationChange, onGroupChange }: {
                             <button
                                 disabled={isBusy}
                                 onClick={() => { setRejecting(rejecting === document.id ? null : document.id); setReason("") }}
-                                className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-xl border border-red-500/40 text-red-600 hover:bg-red-500/5 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 transition-colors duration-300"
+                                className={`flex h-9 items-center gap-1.5 rounded-lg bg-red-500/10 px-3 text-sm font-medium text-red-600 hover:bg-red-500/15 active:scale-[0.98] disabled:opacity-50 transition-[transform,background-color] duration-150 ${document.status === "approved" ? "sm:ml-auto" : ""}`}
                             >
                                 <Icon path={mdiClose} size={0.7} />{dc("Reject")}</button>
                         )}
@@ -337,11 +382,14 @@ const DriverReview = ({ driverId, onVerificationChange, onGroupChange }: {
         <div className="w-full">
             {error && <p className="text-sm text-red-600 mb-3">{error}</p>}
 
-            <section className="w-full">
-                <h4 className="text-xs uppercase tracking-wide text-ink-muted mb-1">{dc("The captain")}</h4>
+            <section className="w-full rounded-2xl border border-border/40 bg-surface p-4 sm:p-5 shadow-sm">
+                <div className="flex items-center justify-between gap-3 mb-3">
+                    <h4 className="text-sm font-semibold text-ink">{dc("The captain")}</h4>
+                    <span className="text-xs text-ink-muted">{driverOwned.length} documents</span>
+                </div>
                 {driverOwned.length === 0
                     ? <p className="text-sm text-ink-muted py-2">{dc("Nothing uploaded yet.")}</p>
-                    : driverOwned.map(row)}
+                    : <div className="space-y-3">{driverOwned.map((document) => row(document))}</div>}
                 {missingNote(data.missing)}
             </section>
 
@@ -350,22 +398,22 @@ const DriverReview = ({ driverId, onVerificationChange, onGroupChange }: {
                 because approving paperwork on a car he is not driving changes
                 nothing about whether he can work today. */}
             {data.vehicles.map((vehicle) => (
-                <section key={vehicle.id} className="w-full mt-5">
-                    <h4 className="text-xs uppercase tracking-wide text-ink-muted mb-1">
+                <section key={vehicle.id} className="w-full mt-4 rounded-2xl border border-border/40 bg-surface p-4 sm:p-5 shadow-sm">
+                    <h4 className="flex items-center text-sm font-semibold text-ink mb-3">
                         {/* labelOf, not the raw class. Cars added before the model
                             was required have none, and the fallback was printing
                             the wire value — "suv_premium" — into a heading. */}
                         {vehicle.number} · {vehicle.model || labelOf(vehicle.class)}
-                        {vehicle.isActive && <span className="ml-2 normal-case text-green-700">{dc("driving this one")}</span>}
+                        {vehicle.isActive && <span className="ml-2 rounded-full bg-green-500/10 px-2 py-0.5 text-xs normal-case text-green-700">{dc("driving this one")}</span>}
                     </h4>
                     {forVehicle(vehicle.id).length === 0
                         ? <p className="text-sm text-ink-muted py-2">{dc("Nothing uploaded for this car yet.")}</p>
-                        : forVehicle(vehicle.id).map(row)}
+                        : <div className="space-y-3">{forVehicle(vehicle.id).map((document) => row(document))}</div>}
                     {missingNote(vehicle.missing)}
                 </section>
             ))}
 
-            <section className="w-full mt-6 pt-4 border-t border-border/50">
+            <section className="w-full mt-6 rounded-2xl border border-border/40 bg-surface p-4 sm:p-5 shadow-sm">
                 <h4 className="font-medium text-ink">{dc("Conduct")}</h4>
                 <div className="mt-2 flex flex-wrap gap-2">
                     <span className={`${plainChip} ${data.conduct.cancellationCount30Days >= 5 ? "bg-red-500/10 text-red-700" : data.conduct.cancellationCount30Days >= 3 ? "bg-amber-500/10 text-amber-700" : "bg-surface-muted text-ink-muted"}`}>
@@ -399,7 +447,7 @@ const DriverReview = ({ driverId, onVerificationChange, onGroupChange }: {
                 destructive action stays last on the screen, and separated from the
                 paperwork because it is not a fact about his papers: a partner
                 captain is not a captain with something missing. */}
-            <section className="w-full mt-6 pt-4 border-t border-border/50">
+            <section className="w-full mt-6 rounded-2xl border border-border/40 bg-surface p-4 sm:p-5 shadow-sm">
                 <div className="flex flex-wrap items-center gap-2">
                     <h4 className="font-medium text-ink">{dc("Fleet")}</h4>
                     <span className={`${plainChip} ${groupChipFor(data.driver.group)}`}>
@@ -439,7 +487,7 @@ const DriverReview = ({ driverId, onVerificationChange, onGroupChange }: {
             {/* Suspension sits apart from the documents on purpose. It is a
                 judgement about conduct, not about paperwork, and a captain can be
                 fully approved and suspended at the same time. */}
-            <section className="w-full mt-6 pt-4 border-t border-border/50">
+            <section className="w-full mt-6 rounded-2xl border border-border/40 bg-surface p-4 sm:p-5 shadow-sm">
                 {data.driver.suspendedAt ? (
                     <>
                         <h4 className="font-medium text-red-600">{dc("Suspended") + " "}{shortDate(data.driver.suspendedAt)}</h4>
@@ -483,7 +531,7 @@ const DriverReview = ({ driverId, onVerificationChange, onGroupChange }: {
                 ) : (
                     <button
                         onClick={() => setSuspendOpen(true)}
-                        className="text-sm px-3 py-1.5 rounded-xl border border-red-500/40 text-red-600 hover:bg-red-500/5 transition-colors duration-300"
+                        className="flex h-9 items-center gap-1.5 rounded-lg bg-red-500/10 px-3 text-sm font-medium text-red-600 hover:bg-red-500/15 active:scale-[0.98] transition-[transform,background-color] duration-150"
                     >{dc("Suspend captain")}</button>
                 )}
             </section>

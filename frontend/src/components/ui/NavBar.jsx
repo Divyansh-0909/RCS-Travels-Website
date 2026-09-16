@@ -327,7 +327,7 @@ const NavBar = ({ invert = false, hideExpanded = false, hideDestinationInput = f
     // account destinations so they sit beside the profile control.
     const navLinks = [...primaryNavLinks, ...accountNavLinks]
 
-    const userDropDownList = [[<Icon path={mdiAccountCircle} size={1.2} />, t("nav.manageAccount"), "/manage-account"], [<Icon path={mdiCog} size={1.1} />, t("nav.settings"), "/settings"], [<Icon path={mdiShieldCheck} size={1.1} />, t("nav.safety"), "/safety"], [<Icon path={mdiInformation} size={1.1} />, t("nav.legal"), "/"]]
+    const userDropDownList = [[<Icon path={mdiAccountCircle} size={1.2} />, t("nav.manageAccount"), "/manage-account"], [<Icon path={mdiCog} size={1.1} />, t("nav.settings"), "/settings"], [<Icon path={mdiShieldCheck} size={1.1} />, t("nav.safety"), "/safety"], [<Icon path={mdiInformation} size={1.1} />, t("nav.legal"), "/terms"]]
 
     const displayName = user?.name?.length > 15 ? `${user.name.slice(0, 15)}...` : user?.name
     const accountPhone = user?.phone || clerkUser?.primaryPhoneNumber?.phoneNumber
@@ -541,7 +541,7 @@ const NavBar = ({ invert = false, hideExpanded = false, hideDestinationInput = f
                                         type="button"
                                         aria-expanded="true"
                                         onClick={() => setExpand(false)}
-                                        className='flex w-full items-center gap-3 rounded-t-3xl rounded-b-sm bg-[var(--foreground)] p-3 text-left text-[var(--text-foreground)] outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary'
+                                        className='flex w-full items-center gap-3 rounded-xl bg-[var(--foreground)] p-3 text-left text-[var(--text-foreground)] outline-none transition-colors duration-200 hover:bg-surface-muted/60 active:bg-surface-muted/60 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary'
                                     >
                                         <Avatar themed initial={user?.name?.charAt(0)} box='h-12 w-12 shrink-0' text={"text-2xl"} />
                                         <span className='min-w-0 flex-1'>
@@ -557,7 +557,7 @@ const NavBar = ({ invert = false, hideExpanded = false, hideDestinationInput = f
                                                     type="button"
                                                     role="menuitem"
                                                     onClick={() => go(() => navigate(`${item[2]}`))}
-                                                    className='flex w-full items-center gap-3 rounded-sm bg-[var(--foreground)] px-4 py-3 text-left text-[var(--text-foreground)] outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary hover:opacity-80 active:opacity-70'
+                                                    className='flex w-full items-center gap-3 rounded-xl bg-[var(--foreground)] px-4 py-3 text-left text-[var(--text-foreground)] outline-none transition-colors duration-200 hover:bg-surface-muted/60 active:bg-surface-muted/60 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary'
                                                 >
                                                     <span className='shrink-0'>{cloneElement(item[0], { size: 1 })}</span>
                                                     <span className={mobileAccountLabel}>{item[1]}</span>
@@ -569,7 +569,7 @@ const NavBar = ({ invert = false, hideExpanded = false, hideDestinationInput = f
                                                 type="button"
                                                 role="menuitem"
                                                 onClick={handleSignOut}
-                                                className='flex w-full items-center gap-3 rounded-t-sm rounded-b-2xl bg-[var(--foreground)] px-4 py-3 text-left text-status-danger outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary hover:opacity-80 active:opacity-70'
+                                                className='flex w-full items-center gap-3 rounded-xl bg-[var(--foreground)] px-4 py-3 text-left text-status-danger outline-none transition-colors duration-200 hover:bg-surface-muted/60 active:bg-surface-muted/60 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary'
                                             >
                                                 <Icon path={mdiLogout} size={1} className='shrink-0' />
                                                 <span className={mobileAccountLabel}>{t("nav.signout")}</span>

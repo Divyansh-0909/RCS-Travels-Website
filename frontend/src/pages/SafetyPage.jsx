@@ -14,7 +14,7 @@ import { useRefreshNotice } from "../hooks/useRefreshNotice";
 import { useWebsiteCopy } from "../hooks/useWebsiteCopy";
 
 const items = ["Emergency contact", "Live location", "Helpline"]
-const panelTones = ["bg-tone-primary", "bg-tone-teal", "bg-tone-violet"]
+const panelTones = ["bg-surface-muted", "bg-surface-muted", "bg-surface-muted"]
 
 // tel: numbers reachable from the Helpline section.
 const helplines = [
@@ -128,7 +128,7 @@ const SafetyPage = () => {
             <ul className="flex flex-col items-start gap-4 justify-center w-full">
                 {selected === 0 && (
                     editingContact ? (
-                        <li className="w-full flex flex-col gap-2 select-none py-5 px-6 rounded-3xl bg-tone-primary">
+                        <li className="account-panel-motion w-full flex flex-col gap-2 select-none py-5 px-6 rounded-3xl bg-surface-muted">
                             <div className="w-full flex items-center gap-2">
                                 <input
                                     autoFocus

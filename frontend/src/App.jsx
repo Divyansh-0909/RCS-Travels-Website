@@ -2,13 +2,17 @@ import { Suspense, useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import LoadingScreen from "./components/LoadingScreen";
 import NavBar from "./components/ui/NavBar";
-import HowItWorks from "./pages/HowItWorks";
-import WhyUs from "./pages/WhyUs";
-import Services from "./pages/Services";
-import AboutUs from "./pages/AboutUs";
-import Footer from "./components/Footer";
-import FinalCTA from "./components/FinalCTA";
+import { lazy } from "react";
 import { useSmoothScroll, useSectionTone, scrollToSection } from "./hooks/useSmoothScroll";
+
+// Marketing sections are below the booking entry point. Keep their code out of
+// the initial customer bundle and fetch them when React needs to render them.
+const HowItWorks = lazy(() => import("./pages/HowItWorks"));
+const WhyUs = lazy(() => import("./pages/WhyUs"));
+const Services = lazy(() => import("./pages/Services"));
+const AboutUs = lazy(() => import("./pages/AboutUs"));
+const Footer = lazy(() => import("./components/Footer"));
+const FinalCTA = lazy(() => import("./components/FinalCTA"));
 
 function App() {
   const location = useLocation();

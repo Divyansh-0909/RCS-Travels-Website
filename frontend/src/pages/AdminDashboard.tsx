@@ -1,9 +1,10 @@
 import { useTranslation as useCopyLanguage } from "react-i18next";
 import { websiteCopy as dc } from "../i18nCopy";
 import AccountLayout from "../components/ui/AccountLayout"
-import { act, lazy, Suspense, useEffect, useRef, useState } from "react"
+import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from "react"
+import { createPortal } from "react-dom"
 import Icon from '@mdi/react';
-import { mdiMagnify, mdiTuneVertical, mdiSortCalendarDescending, mdiContentCopy, mdiSortCalendarAscending } from '@mdi/js';
+import { mdiMagnify, mdiTuneVertical, mdiSortCalendarDescending, mdiContentCopy, mdiSortCalendarAscending, mdiClose, mdiChevronRight, mdiCarOutline, mdiCalendarRange, mdiWeb, mdiCancel, mdiShieldCheckOutline, mdiAccountGroupOutline, mdiAccessPoint, mdiCardTextOutline, mdiPhoneOutline, mdiGenderMaleFemale } from '@mdi/js';
 import { useApi } from "../hooks/useApi";
 import { useExitAnim } from "../hooks/useExitAnim";
 import AdminDashboardSkeleton from "../components/AdminDashboardSkeleton";
@@ -15,6 +16,13 @@ import FailureState from "../components/ui/FailureState";
 import Chips, { filterLabel, filterField } from "../components/ui/Chips";
 import { VerificationStatus, BookingStatus, CancelledBy, BookingSource, VehicleClass, DriverGroup } from "../types/enums";
 import { VEHICLE_CLASS_NAMES } from "../constants/vehicles";
+import { angledVehicleImageOf } from "../constants/vehicleImages";
+import pfpPlaceholder from "../assets/pfp-placeholder.webp";
+
+const driverInitials = (name: string | null | undefined) => {
+    const parts = (name ?? "").trim().split(/\s+/).filter(Boolean);
+    return parts.length ? parts.slice(0, 2).map((part) => part[0]).join("").toUpperCase() : "D";
+};
 
 
 // Leaflet, Geoman and the whole rate card are a few hundred KB that the three
@@ -46,6 +54,21 @@ const fleetBadge = (group: DriverGroup) => {
     )
 }
 
+// Collapsed admin rows follow the same scan rhythm as the captain app's ride-history
+// rows: one compact information row, one quiet separator, then status/context. Keeping
+// the shell shared also stops each admin tab from feeling like a different product.
+const collapsedCardClass = "w-full min-w-0 overflow-hidden cursor-pointer rounded-2xl bg-surface-muted p-3 text-left transition-transform duration-150 ease-out active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:p-4"
+const collapsedBookingCardClass = "w-full min-w-0 cursor-pointer rounded-2xl bg-surface-muted p-4 text-left transition-transform duration-150 ease-out active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+const collapsedListGridClass = "grid w-full min-w-0 max-w-full grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-3"
+
+const listDateParts = (value: string) => {
+    const date = new Date(value)
+    return {
+        time: date.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" }),
+        day: date.toLocaleDateString("en-GB", { day: "numeric", month: "short" }),
+    }
+}
+
 const bookingStatuses: BookingStatus[] = ["pending", "confirmed", "assigned", "en_route", "reached", "started", "completed", "cancelled", "no_driver"]
 
 // Shapes returned by the admin API (backend/routes/admin.ts); DateTimes arrive as ISO strings.
@@ -74,6 +97,7 @@ type Driver = {
     id: string
     name: string
     phone: string
+    photoUrl?: string | null
     isOnline: boolean
     verificationStatus: VerificationStatus
     // Separate from verificationStatus on purpose: a suspended captain's
@@ -93,12 +117,59 @@ type User = {
     id: string
     name: string | null
     phone: string
+    photoUrl?: string | null
     gender: string | null
     bookingCode: string
     createdAt: string
     deletedAt: string | null
     _count: { bookings: number }
 }
+
+type DetailTarget = {
+    kind: "booking" | "driver" | "user"
+    id: string
+}
+
+const DetailModal = ({ title, onClose, children }: {
+    title: string
+    onClose: () => void
+    children: ReactNode
+}) => createPortal(
+    <section
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        className="fixed left-1/2 top-1/2 z-200 flex h-[100dvh] w-screen max-h-none max-w-none -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-none border-0 bg-surface-muted shadow-2xl animate-datetime motion-reduce:animate-none sm:h-auto sm:max-h-[calc(100dvh-24px)] sm:w-[760px] sm:max-w-[calc(100vw-24px)] sm:rounded-2xl sm:border sm:border-border/60"
+    >
+        <div className="flex shrink-0 items-center justify-between px-4 pt-4 sm:px-5 sm:pt-5">
+            <h2 className="text-2xl font-semibold tracking-[-0.02em] text-ink">{title}</h2>
+            <button
+                type="button"
+                aria-label={dc("Close")}
+                onClick={onClose}
+                className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl bg-surface text-ink-muted transition-[color,transform] duration-150 hover:text-ink active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            >
+                <Icon path={mdiClose} size={0.9} />
+            </button>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto bg-surface-muted py-4 pl-4 pr-1 sm:flex-auto sm:px-5 sm:py-5">
+            <div className="flex w-full flex-col gap-4">{children}</div>
+        </div>
+    </section>,
+    document.body,
+)
+
+const DetailCard = ({ children, className = "" }: { children: ReactNode; className?: string }) => (
+    <div className={`w-full rounded-2xl border border-border/50 bg-surface p-4 sm:p-5 ${className}`}>{children}</div>
+)
+
+const DetailLabel = ({ children }: { children: ReactNode }) => (
+    <p className="px-1 text-xs font-semibold uppercase tracking-[0.12em] text-ink-muted">{children}</p>
+)
+
+const FactPill = ({ children }: { children: ReactNode }) => (
+    <span className="rounded-full bg-surface-muted px-2.5 py-1 text-xs font-semibold text-ink-muted">{children}</span>
+)
 
 // One chip per car.
 // constants/vehicles.js is plain JS, so its keys widen to string — the cast puts
@@ -109,6 +180,21 @@ const bookingSections = ["Status", "Vehicle type", "Dates", "Source", "Cancelled
 // captain himself; everything after is about his car, his number, or his dates.
 const driverSections = ["Vehicle type", "Verification", "Fleet", "Availability", "Vehicle number", "Driver phone", "Joined"]
 const userSections = ["Gender", "User phone", "Joined"]
+const filterSectionIcons: Record<string, string> = {
+    Status: mdiTuneVertical,
+    "Vehicle type": mdiCarOutline,
+    Dates: mdiCalendarRange,
+    Source: mdiWeb,
+    "Cancelled by": mdiCancel,
+    Verification: mdiShieldCheckOutline,
+    Fleet: mdiAccountGroupOutline,
+    Availability: mdiAccessPoint,
+    "Vehicle number": mdiCardTextOutline,
+    "Driver phone": mdiPhoneOutline,
+    Gender: mdiGenderMaleFemale,
+    "User phone": mdiPhoneOutline,
+    Joined: mdiCalendarRange,
+}
 // Same values ManageAccount writes, so the filter matches what's stored
 const genderOptions = ["Male", "Female", "Others", "Rather not say"].map(g => ({ value: g, label: g }))
 
@@ -159,15 +245,10 @@ const AdminDashboard = () => {
 
     const api = useApi()
 
-    // Whether the results list is scrolled off its top — drives the top fade,
-    // which must stay invisible while the first row is still in place.
-    const [listScrolled, setListScrolled] = useState(false)
-    // Booking card whose people/ride-id details are popped open (one at a time).
-    const [expandedBooking, setExpandedBooking] = useState<string | null>(null)
-    // One open at a time. Each open panel holds signed URLs that expire in
-    // minutes, so leaving several expanded would mean dead links on the ones the
-    // admin came back to.
-    const [expandedDriver, setExpandedDriver] = useState<string | null>(null)
+    // One fixed detail panel at a time. Driver paperwork still loads lazily only
+    // after its captain is opened, so signed document URLs are not minted for the
+    // entire result set.
+    const [detail, setDetail] = useState<DetailTarget | null>(null)
 
     const copyId = (id: string) => {
         if (!id) return
@@ -211,7 +292,7 @@ const AdminDashboard = () => {
         setError(null)
         setLoading(true)
         try {
-            const data = await api.getBookings({ search: searchParam, status, startDate, endDate, customerPhone, customerName, driverName, vehicleClass, source, isOutstation, cancelledBy, page, limit, ...overrides })
+            const data = await api.getBookings({ search: searchParam, status, startDate, endDate, customerPhone, customerName, driverName, vehicleClass, source, isOutstation, cancelledBy, sortOrder: order ? "desc" : "asc", page, limit, ...overrides })
             if (id !== reqRef.current) return // a newer request superseded this one
             if (data?.error) {
                 setError(data.error)
@@ -232,7 +313,7 @@ const AdminDashboard = () => {
         setError(null)
         setLoading(true)
         try {
-            const data = await api.getDrivers({ search: searchParam, driverName, driverPhone, vehicleClass, vehicleNumber, verificationStatus, group, isOnline, startDate, endDate, page, limit, ...overrides })
+            const data = await api.getDrivers({ search: searchParam, driverName, driverPhone, vehicleClass, vehicleNumber, verificationStatus, group, isOnline, startDate, endDate, sortOrder: order ? "desc" : "asc", page, limit, ...overrides })
             if (id !== reqRef.current) return
             if (data?.error) {
                 setError(data.error)
@@ -253,7 +334,7 @@ const AdminDashboard = () => {
         setError(null)
         setLoading(true)
         try {
-            const data = await api.getUsers({ search: searchParam, userName: customerName, userPhone, gender, startDate, endDate, page, limit, ...overrides })
+            const data = await api.getUsers({ search: searchParam, userName: customerName, userPhone, gender, startDate, endDate, sortOrder: order ? "desc" : "asc", page, limit, ...overrides })
             if (id !== reqRef.current) return
             if (data?.error) {
                 setError(data.error)
@@ -274,6 +355,20 @@ const AdminDashboard = () => {
             return
         }
         refetch()
+    }
+
+    function toggleSortOrder() {
+        const nextOrder = !order
+        setOrder(nextOrder)
+        setDetail(null)
+
+        if (page !== 1) {
+            setPage(1)
+            return
+        }
+
+        const overrides = { sortOrder: nextOrder ? "desc" : "asc" }
+        selected === 0 ? searchBooking(null, overrides) : selected === 1 ? searchDrivers(null, overrides) : searchUsers(null, overrides)
     }
 
     // Re-runs the active tab's request on the CURRENT page — what the failure
@@ -372,15 +467,239 @@ const AdminDashboard = () => {
         </div>
     )
 
+    const activeBooking = detail?.kind === "booking" ? bookings.find((booking) => booking.id === detail.id) ?? null : null
+    const activeDriver = detail?.kind === "driver" ? drivers.find((driver) => driver.id === detail.id) ?? null : null
+    const activeUser = detail?.kind === "user" ? users.find((user) => user.id === detail.id) ?? null : null
+
+    const headerActions = selected === FARES_TAB ? null : (
+        <form
+            onSubmit={(e) => { e.preventDefault(); clearTimeout(debounceRef.current); runSearch() }}
+            className="flex items-center justify-end gap-2 max-sm:w-full max-sm:flex-wrap"
+        >
+            <div className={`flex h-11 w-[min(320px,28vw)] items-center gap-2 rounded-full border-2 px-4 text-ink transition-colors duration-200 max-sm:w-full ${active ? "border-border" : "border-border/40"}`}>
+                <Icon path={mdiMagnify} size={0.85} className="shrink-0 text-ink/40" />
+                <input
+                    onFocus={() => setActive(true)}
+                    onBlur={() => setActive(false)}
+                    type="text"
+                    name={`${selected === 0 ? "booking" : selected === 1 ? "driver" : "user"}`}
+                    id={`${selected === 0 ? "booking" : selected === 1 ? "driver" : "user"}`}
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder={selected === 0 ? dc("Name, phone, location, ID") : selected === 1 ? "Name, phone, vehicle no." : "Name, phone, booking code"}
+                    className="min-w-0 flex-1 border-none bg-transparent text-ink outline-none"
+                />
+            </div>
+            <button type="button" onClick={toggleSortOrder} aria-label={order ? dc("Sort oldest first") : dc("Sort newest first")} className="flex h-11 cursor-pointer items-center justify-center gap-1.5 rounded-full bg-strong/90 px-4 text-on-strong transition-[background-color,transform] duration-150 hover:bg-strong active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
+                <Icon path={order ? mdiSortCalendarDescending : mdiSortCalendarAscending} size={1.05} />
+                <h4>{dc("Sort")}</h4>
+            </button>
+            <button type="button" onClick={() => { setDetail(null); setExpanded(!expanded) }} className="flex h-11 cursor-pointer items-center justify-center gap-1.5 rounded-full bg-strong/90 px-4 text-on-strong transition-[background-color,transform] duration-150 hover:bg-strong active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
+                <Icon path={mdiTuneVertical} size={0.95} className="rotate-[90deg]" />
+                <h4>{dc("Filter")}</h4>
+            </button>
+        </form>
+    )
+
     return (
         <AccountLayout
             items={items}
             selected={selected}
-            onSelect={(i : number) => { setSelected(i); setPage(1); setFilterSection(0); setListScrolled(false) }}
+            onSelect={(i : number) => { setSelected(i); setPage(1); setFilterSection(0); setDetail(null); setExpanded(false) }}
             title={dc("Admin Dashboard")}
-            panelOpen={expanded}
-            onPanelClose={() => setExpanded(false)}
+            headerActions={headerActions}
+            panelOpen={expanded || detail !== null}
+            onPanelClose={() => { setExpanded(false); setDetail(null) }}
         >
+            {activeBooking && (
+                <DetailModal title={dc("Ride details")} onClose={() => setDetail(null)}>
+                    <div className="w-full overflow-hidden rounded-2xl border border-border/50 bg-surface">
+                        <div className={`${statusChip(activeBooking.status)} w-full py-2 text-center text-xs font-semibold uppercase tracking-[0.12em]`}>
+                            {activeBooking.status.replace(/_/g, " ")}
+                        </div>
+                        <div className="p-4 sm:p-5">
+                            <div className="min-w-0">
+                                <h3 className="text-2xl font-semibold tracking-[-0.02em] text-ink">{vehicleLabel(activeBooking.vehicleClass)} {dc("Ride")}</h3>
+                                <p className="mt-1 text-sm text-ink-muted">{formatDateTime(activeBooking.scheduledAt ?? activeBooking.createdAt)}</p>
+                                <p className="mt-2 text-3xl font-semibold tracking-[-0.03em] text-ink">₹{activeBooking.fare}</p>
+                            </div>
+
+                            <div className="my-4 h-px w-full bg-border/50" />
+
+                            <div>
+                                <DetailLabel>{dc("Ride ID")}</DetailLabel>
+                                <div className="mt-1 flex items-center gap-2 px-1">
+                                    <p className="text-sm font-semibold text-ink">{activeBooking.reference}</p>
+                                    <CopyBtn value={activeBooking.reference} onCopy={copyId} />
+                                </div>
+                            </div>
+
+                            <div className="mt-5 flex flex-col gap-4">
+                                <div className="flex items-start gap-3">
+                                    <span className="mt-1.5 h-3 w-3 shrink-0 rounded-full bg-strong" />
+                                    <div className="min-w-0">
+                                        <DetailLabel>{dc("Pickup")}</DetailLabel>
+                                        <p className="mt-1 break-words px-1 text-base font-medium text-ink">{activeBooking.pickupAddress}</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-start gap-3">
+                                    <span className="relative mt-1.5 h-3 w-3 shrink-0 rounded-full bg-primary"><span className="absolute left-1/2 top-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-on-strong" /></span>
+                                    <div className="min-w-0">
+                                        <DetailLabel>{dc("Drop")}</DetailLabel>
+                                        <p className="mt-1 break-words px-1 text-base font-medium text-ink">{activeBooking.dropAddress}</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="mt-5 flex flex-wrap gap-2 pl-6">
+                                <FactPill>{activeBooking.source.charAt(0).toUpperCase() + activeBooking.source.slice(1)}</FactPill>
+                                {activeBooking.isOutstation && <FactPill>{dc("Outstation")}</FactPill>}
+                                {activeBooking.sharing && <FactPill>{dc("Sharing")}</FactPill>}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                        <DetailLabel>{dc("People")}</DetailLabel>
+                        <DetailCard className="flex flex-col gap-4">
+                            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                                <div>
+                                    <DetailLabel>{dc("Customer")}</DetailLabel>
+                                    <p className="mt-1 px-1 font-semibold text-ink">{activeBooking.user?.name ?? "—"}</p>
+                                </div>
+                                <div className="flex items-center gap-2 px-1 text-sm text-ink-muted">
+                                    <span>{displayPhone(activeBooking.customerPhone)}</span>
+                                    <CopyBtn value={displayPhone(activeBooking.customerPhone)} onCopy={copyId} />
+                                </div>
+                            </div>
+
+                            {activeBooking.sharing && activeBooking.coRiders?.map((rider, index) => (
+                                <div key={`${rider.phone}-${index}`} className="border-t border-border/50 pt-4 sm:flex sm:items-center sm:justify-between sm:gap-4">
+                                    <div>
+                                        <DetailLabel>{dc("Co-rider")}</DetailLabel>
+                                        <p className="mt-1 px-1 font-medium text-ink">{rider.name ?? "—"}</p>
+                                    </div>
+                                    <div className="mt-1 flex items-center gap-2 px-1 text-sm text-ink-muted sm:mt-0">
+                                        <span>{displayPhone(rider.phone)}</span>
+                                        <CopyBtn value={displayPhone(rider.phone)} onCopy={copyId} />
+                                    </div>
+                                </div>
+                            ))}
+
+                            <div className="border-t border-border/50 pt-4 sm:flex sm:items-center sm:justify-between sm:gap-4">
+                                <div>
+                                    <DetailLabel>{dc("Driver")}</DetailLabel>
+                                    <p className="mt-1 px-1 font-semibold text-ink">
+                                        {activeBooking.driver?.name ?? (activeBooking.status === "cancelled" ? "—" : new Date(activeBooking.scheduledAt ?? activeBooking.createdAt) > new Date() ? dc("Yet to be assigned") : dc("Couldn't be assigned"))}
+                                    </p>
+                                </div>
+                                {activeBooking.driver && (
+                                    <div className="mt-1 flex items-center gap-2 px-1 text-sm text-ink-muted sm:mt-0">
+                                        <span>{displayPhone(activeBooking.driver.phone)}</span>
+                                        <CopyBtn value={displayPhone(activeBooking.driver.phone)} onCopy={copyId} />
+                                    </div>
+                                )}
+                            </div>
+                        </DetailCard>
+                    </div>
+                </DetailModal>
+            )}
+
+            {activeDriver && (
+                <DetailModal title={dc("Driver details")} onClose={() => setDetail(null)}>
+                    <div className="w-full overflow-hidden rounded-2xl border border-border/50 bg-surface">
+                        <div className={`${verificationChip(activeDriver.verificationStatus)} w-full py-2 text-center text-xs font-semibold uppercase tracking-[0.12em]`}>
+                            {activeDriver.verificationStatus.replace(/_/g, " ")}
+                        </div>
+                        <div className="p-4 sm:p-5">
+                            <div className="flex items-start justify-between gap-4">
+                                <div className="min-w-0">
+                                    <div className="flex items-center gap-2">
+                                        <h3 className="truncate text-2xl font-semibold tracking-[-0.02em] text-ink">{activeDriver.name}</h3>
+                                        <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${activeDriver.isOnline ? "bg-green-500" : "bg-border"}`} />
+                                    </div>
+                                    <div className="mt-1 flex items-center gap-2 text-sm text-ink-muted">
+                                        <span>{displayPhone(activeDriver.phone)}</span>
+                                        <CopyBtn value={displayPhone(activeDriver.phone)} onCopy={copyId} />
+                                    </div>
+                                </div>
+                                {activeDriver.suspendedAt && <span className="rounded-full bg-red-500/10 px-2.5 py-1 text-xs font-semibold text-red-600">{dc("Suspended")}</span>}
+                            </div>
+
+                            <div className="my-4 h-px w-full bg-border/50" />
+
+                            <div className="grid gap-4 sm:grid-cols-2">
+                                <div>
+                                    <DetailLabel>{dc("Vehicle")}</DetailLabel>
+                                    <p className="mt-1 px-1 font-semibold text-ink">{vehicleLabel(activeDriver.vehicleClass)}</p>
+                                    <p className="px-1 text-sm text-ink-muted">{activeDriver.vehicleNumber}</p>
+                                </div>
+                                <div>
+                                    <DetailLabel>{dc("Fleet")}</DetailLabel>
+                                    <p className="mt-1 px-1 font-semibold text-ink">{activeDriver.group === "rcs" ? dc("RCS fleet") : activeDriver.group === "admin" ? dc("Owner") : dc("Partner captain")}</p>
+                                    <p className="px-1 text-sm text-ink-muted">{dc("Joined") + " "}{new Date(activeDriver.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</p>
+                                </div>
+                            </div>
+
+                            {activeDriver.suspensionReason && (
+                                <p className="mt-4 rounded-xl bg-red-500/5 px-3 py-2 text-sm text-red-700">{activeDriver.suspensionReason}</p>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                        <DetailLabel>{dc("Paperwork and captain review")}</DetailLabel>
+                        <DetailCard>
+                            <DriverReview
+                                driverId={activeDriver.id}
+                                onVerificationChange={(status) => setDrivers((current) => current.map((driver) => driver.id === activeDriver.id ? { ...driver, verificationStatus: status } : driver))}
+                                onGroupChange={(group) => setDrivers((current) => current.map((driver) => driver.id === activeDriver.id ? { ...driver, group } : driver))}
+                            />
+                        </DetailCard>
+                    </div>
+                </DetailModal>
+            )}
+
+            {activeUser && (
+                <DetailModal title={dc("User details")} onClose={() => setDetail(null)}>
+                    <div className="w-full overflow-hidden rounded-2xl border border-border/50 bg-surface">
+                        <div className="flex w-full items-center justify-center gap-2 bg-surface-muted py-2 text-center text-xs font-semibold uppercase tracking-[0.12em] text-ink-muted">
+                            <span>{dc("Booking code")}: {activeUser.bookingCode}</span>
+                            <CopyBtn value={activeUser.bookingCode} onCopy={copyId} />
+                        </div>
+                        <div className="p-4 sm:p-5">
+                            <div className="flex items-start justify-between gap-4">
+                                <div className="min-w-0">
+                                    <h3 className="truncate text-2xl font-semibold tracking-[-0.02em] text-ink">{activeUser.name ?? "—"}</h3>
+                                    <div className="mt-1 flex items-center gap-2 text-sm text-ink-muted">
+                                        <span>{displayPhone(activeUser.phone)}</span>
+                                        <CopyBtn value={displayPhone(activeUser.phone)} onCopy={copyId} />
+                                    </div>
+                                </div>
+                                {activeUser.deletedAt && <span className="shrink-0 rounded-full bg-red-500/10 px-2.5 py-1 text-xs font-semibold text-red-600">{dc("Deleted")}</span>}
+                            </div>
+
+                            <div className="my-4 h-px w-full bg-border/50" />
+
+                            <div className="grid gap-4 sm:grid-cols-3">
+                                <div>
+                                    <DetailLabel>{dc("Gender")}</DetailLabel>
+                                    <p className="mt-1 px-1 font-semibold text-ink">{activeUser.gender ?? "—"}</p>
+                                </div>
+                                <div>
+                                    <DetailLabel>{dc("Rides")}</DetailLabel>
+                                    <p className="mt-1 px-1 font-semibold text-ink">{activeUser._count.bookings}</p>
+                                </div>
+                                <div>
+                                    <DetailLabel>{dc("Joined")}</DetailLabel>
+                                    <p className="mt-1 px-1 font-semibold text-ink">{new Date(activeUser.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </DetailModal>
+            )}
+
             {selected === FARES_TAB ? (
                 <Suspense
                     fallback={
@@ -394,37 +713,38 @@ const AdminDashboard = () => {
             ) : (
             <>
             {filterDropdown.mounted && (
-                <Button
-                    prop={{
-                        variant: "dropdown",
-                        width: "380px",
-                        paddingX: "0px",
-                        innerClassName: "justify-start max-sm:w-full! max-sm:h-full!",
-                    }}
-                    className={`block ${filterDropdown.closing ? "animate-datetime-out" : "animate-datetime"} z-200 max-sm:fixed max-sm:inset-0 max-sm:my-0 max-sm:w-screen! max-sm:h-dvh! max-sm:rounded-none! sm:absolute sm:scale-[1.1] sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 active:opacity-[1] hover:opacity-[1]`}
+                <section
+                    role="dialog"
+                    aria-modal="true"
+                    aria-label={dc("Filters")}
+                    className={`${filterDropdown.closing ? "animate-datetime-out" : "animate-datetime"} z-200 flex overflow-hidden bg-surface-muted text-ink shadow-2xl motion-reduce:animate-none max-sm:fixed max-sm:inset-0 max-sm:h-dvh max-sm:w-screen max-sm:rounded-none sm:absolute sm:left-1/2 sm:top-1/2 sm:max-h-[calc(100dvh-48px)] sm:w-[680px] sm:max-w-[calc(100vw-48px)] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl sm:border sm:border-border/60`}
+                    onClick={(e) => e.stopPropagation()}
                 >
-                    <div
-                        className="flex flex-col w-full py-3 text-left max-sm:h-full"
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <div className="flex w-full items-stretch h-[360px] max-h-[70vh] max-sm:h-auto max-sm:max-h-none max-sm:flex-1 max-sm:min-h-0">
-                            {/* Section list */}
-                            <div className="w-[38%] shrink-0 flex flex-col border-r border-border/50 overflow-y-auto">
-                                {sections.map((s, i) => (
-                                    <div
-                                        key={s}
-                                        onClick={() => setFilterSection(i)}
-                                        className={`py-3 pl-5 pr-3 text-sm cursor-pointer select-none border-b border-border/50 border-l-[3px] transition-colors duration-300 ${i === sectionIndex
-                                            ? "text-ink font-semibold bg-surface-muted border-l-primary"
-                                            : "text-ink-muted border-l-transparent hover:bg-surface-muted"}`}
-                                    >
-                                        {s}
-                                    </div>
-                                ))}
-                            </div>
+                    <div className="flex h-full min-h-0 w-full flex-col text-left sm:h-auto">
+                        <div className="flex min-h-0 flex-1 items-stretch gap-3 p-3 sm:min-h-[360px] sm:max-h-[70vh] sm:p-4">
+                            {/* Settings-style section list: quiet rows, a filled active item, and a single divider. */}
+                            <nav className="w-[43%] shrink-0 overflow-y-auto border-r border-border/50 pr-2 sm:w-[210px] sm:pr-3" aria-label={dc("Filter sections")}>
+                                <div className="flex flex-col gap-1">
+                                    {sections.map((s, i) => (
+                                        <button
+                                            type="button"
+                                            key={s}
+                                            onClick={() => setFilterSection(i)}
+                                            aria-current={i === sectionIndex ? "page" : undefined}
+                                            className={`flex w-full cursor-pointer select-none items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition-[background-color,color,transform] duration-150 ease-out active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${i === sectionIndex
+                                                ? "bg-surface font-semibold text-ink"
+                                                : "text-ink-muted hover:bg-surface/70 hover:text-ink"}`}
+                                        >
+                                            <Icon path={filterSectionIcons[s] ?? mdiTuneVertical} size={0.82} className="shrink-0" />
+                                            <span className="min-w-0 truncate">{s}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </nav>
                             {/* Active section's options */}
-                            <div className="flex-1 min-w-0 flex flex-col gap-3 px-4 py-1 overflow-y-auto">
-                                <h4 className="font-semibold text-base">{sections[sectionIndex]}</h4>
+                            <div className="min-w-0 flex-1 overflow-y-auto rounded-2xl border border-border/50 bg-surface p-4 sm:p-5">
+                                <div className="flex min-h-full flex-col gap-3">
+                                <h4 className="text-base font-semibold text-ink">{sections[sectionIndex]}</h4>
                                 {selected === 0 ? (
                                     <>
                                         {sectionIndex === 0 && <Chips options={bookingStatuses.map(s => ({ value: s, label: s.replace("_", " ") }))} value={status} onChange={setStatus} />}
@@ -474,51 +794,24 @@ const AdminDashboard = () => {
                                         )}
                                     </>
                                 )}
+                                </div>
                             </div>
                         </div>
-                        <div className="w-full flex gap-2 px-3 pt-3 mt-3 border-t border-border/50">
-                            <div onClick={clearFilters} className="flex-1 flex justify-center items-center py-2 rounded-xl border border-border text-sm cursor-pointer hover:bg-surface-muted transition-colors duration-300">{dc("Clear")}</div>
-                            <div onClick={applyFilters} className="flex-1 flex justify-center items-center py-2 rounded-xl bg-primary text-on-strong text-sm font-semibold cursor-pointer hover:opacity-[0.9] transition-opacity duration-300">{dc("Apply")}</div>
+                        <div className="flex w-full shrink-0 gap-2 border-t border-border/50 px-3 py-3 sm:px-4 sm:py-4">
+                            <button type="button" onClick={clearFilters} className="flex flex-1 cursor-pointer items-center justify-center rounded-xl border border-border/60 bg-surface py-2.5 text-sm font-medium text-ink transition-[background-color,transform] duration-150 ease-out hover:bg-surface/70 active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">{dc("Clear")}</button>
+                            <button type="button" onClick={applyFilters} className="flex flex-1 cursor-pointer items-center justify-center rounded-xl bg-primary py-2.5 text-sm font-semibold text-on-strong transition-[opacity,transform] duration-150 ease-out hover:opacity-90 active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">{dc("Apply")}</button>
                         </div>
                     </div>
-                </Button>
+                </section>
             )}
-            <form onSubmit={(e) => { e.preventDefault(); clearTimeout(debounceRef.current); runSearch() }} className="flex w-full flex-wrap justify-between px-5 max-sm:px-0 gap-2 gap-y-3 items-center">
-                <div className="flex w-fit max-sm:w-full max-sm:flex-wrap justify-start gap-2 items-center">
-                    <div className={`flex justify-start gap-1 items-center rounded-xl py-5 px-3 w-[20vw] max-sm:w-full ${active ? "border-border" : "border-border/40"} h-[5vh] text-ink transition-all duration-300 border-2`}>
-                        <Icon path={mdiMagnify} size={0.9} className="cursor-pointer text-sm sm:text-lg hover:text-ink transition-colors duration-300 text-ink/40" />
-                        <input
-                            onFocus={() => setActive(true)}
-                            onBlur={() => setActive(false)}
-                            type="text"
-                            name={`${selected === 0 ? "booking" : selected === 1 ? "driver" : "user"}`}
-                            id={`${selected === 0 ? "booking" : selected === 1 ? "driver" : "user"}`}
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                            placeholder={selected === 0 ? dc("Name, phone, location, ID") : selected === 1 ? "Name, phone, vehicle no." : "Name, phone, booking code"}
-                            className={`w-[95%] h-[5vh] text-ink outline-none border-none`}
-                        />
-                    </div>
-                    <button onClick={(e) => { e.preventDefault(); setOrder(!order); }} className="py-2 px-3 flex items-center justify-center gap-1 cursor-pointer text-on-strong bg-strong/90 hover:bg-strong transition-colors duration-300 rounded-xl">
-                        <Icon path={order ? mdiSortCalendarDescending : mdiSortCalendarAscending} size={1.1} />
-                        <h4>{dc("Sort")}</h4>
-                    </button>
-                    <button onClick={(e) => { e.preventDefault(); setExpanded(!expanded); }} className="py-2 px-3 flex items-center justify-center gap-1 cursor-pointer text-on-strong bg-strong/90 hover:bg-strong transition-colors duration-300 rounded-xl">
-                        <Icon path={mdiTuneVertical} size={1} className="rotate-[90deg]" />
-                        <h4>{dc("Filter")}</h4>
-                    </button>
-                </div>
-                {pagination && <div className="max-sm:hidden">{pagination}</div>}
-            </form>
+            {pagination && <div className="hidden w-full justify-end px-5 sm:flex">{pagination}</div>}
 
             <div
                 className={`${copied ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"} flex justify-center items-center w-[230px] fixed z-100 left-1/2 -translate-x-1/2 bottom-8 sm:bottom-10 bg-primary text-on-strong text-sm font-semibold px-5 py-3 rounded-full shadow-lg flex items-center gap-2 transition-[opacity,transform] duration-300`}
             >
                 <Icon path={mdiContentCopy} size={0.7} />{dc("Copied to clipboard")}</div>
 
-            <div onScroll={(e) => setListScrolled(e.currentTarget.scrollTop > 4)} className="w-full flex-1 min-h-0 overflow-y-auto mt-4 px-5 max-sm:px-0">
-                {/* Top fade — sticky so it hugs the scroll edge; hidden until the list is actually scrolled. */}
-                <div aria-hidden="true" className={`${listScrolled ? "opacity-100" : "opacity-0"} pointer-events-none sticky top-0 z-10 h-14 -mb-14 w-full bg-gradient-to-b from-[var(--foreground)] to-transparent transition-opacity duration-300`} />
+            <div className="w-full min-w-0 max-w-full flex-1 min-h-0 overflow-x-hidden overflow-y-auto mt-4 px-5 max-sm:px-0">
                 {loading ? (
                     <AdminDashboardSkeleton variant={selected === 0 ? "bookings" : selected === 1 ? "drivers" : "users"} />
                 ) : error ? (
@@ -546,96 +839,61 @@ const AdminDashboard = () => {
                             />
                         )
                     ) : (
-                        (order ? bookings : [...bookings].reverse()).map((booking) => {
-                            const [pickupMain, pickupRest] = splitAddress(booking.pickupAddress)
-                            const [dropMain, dropRest] = splitAddress(booking.dropAddress)
-                            const isOpen = expandedBooking === booking.id
+                        <div className="grid w-full min-w-0 max-w-full grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-3">
+                        {bookings.map((booking) => {
+                            const [pickupMain] = splitAddress(booking.pickupAddress)
+                            const [dropMain] = splitAddress(booking.dropAddress)
+                            const when = listDateParts(booking.scheduledAt ?? booking.createdAt)
+                            const customerName = booking.user?.name ?? displayPhone(booking.customerPhone)
                             return (
-                                <div key={booking.id} onClick={() => setExpandedBooking(isOpen ? null : booking.id)} className={`${booking.status === "cancelled" ? "opacity-60" : ""} my-2 flex cursor-pointer flex-col items-start justify-center gap-3 rounded-3xl bg-tone-primary px-5 py-5 sm:px-6`}>
-                                    <div className="flex justify-between items-start gap-4 w-full">
-                                        {/* Route: pickup → drop */}
-                                        <div className="flex flex-col gap-3 min-w-0">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-3 h-3 rounded-full bg-strong shrink-0"></div>
-                                                <div className="min-w-0">
-                                                    <h4 className="font-semibold text-ink truncate">{pickupMain}</h4>
-                                                    {pickupRest && <p className="text-sm text-ink-muted truncate">{pickupRest}</p>}
-                                                </div>
+                                <button
+                                    type="button"
+                                    key={booking.id}
+                                    onClick={() => { setExpanded(false); setDetail({ kind: "booking", id: booking.id }) }}
+                                    className={collapsedBookingCardClass}
+                                >
+                                    <div className="flex min-h-[7.75rem] flex-col gap-3">
+                                        <div className="flex items-center gap-3">
+                                            <img
+                                                src={angledVehicleImageOf(booking.vehicleClass)}
+                                                alt={dc("{{value0}} vehicle", { value0: vehicleLabel(booking.vehicleClass) })}
+                                                className="h-16 w-24 shrink-0 object-contain sm:h-20 sm:w-28"
+                                            />
+                                            <div className="min-w-0 flex-1">
+                                            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                                                <span className={`${statusChip(booking.status)} rounded-lg px-2 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.06em]`}>{booking.status.replace("_", " ")}</span>
+                                                <span className="text-xs text-ink-muted">{when.day} • {when.time}</span>
+                                                {booking.sharing && <span className="text-xs text-ink-muted">• {dc("Sharing")}</span>}
                                             </div>
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-3 h-3 rounded-full bg-primary relative shrink-0"><div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-on-strong" /></div>
-                                                <div className="min-w-0">
-                                                    <h4 className="font-semibold text-ink truncate">{dropMain}</h4>
-                                                    {dropRest && <p className="text-sm text-ink-muted truncate">{dropRest}</p>}
-                                                </div>
+                                            <p className="mt-3 truncate text-lg font-semibold leading-tight text-ink">{dropMain}</p>
+                                            <p className="mt-1 truncate text-sm text-ink-muted">{dc("from") + " "}{pickupMain}</p>
                                             </div>
                                         </div>
-                                        {/* Fare + status */}
-                                        <div className="flex flex-col items-end gap-1.5 shrink-0">
-                                        <h3 className="font-semibold text-ink">₹{booking.fare}</h3>
-                                            <span className={`${statusChip(booking.status)} text-xs font-semibold px-2.5 py-1 rounded-full capitalize`}>{booking.status.replace("_", " ")}</span>
+                                        <div>
+                                            <div className="mt-3 flex items-baseline gap-2">
+                                                <p className="font-semibold text-ink">₹{booking.fare.toLocaleString("en-IN")}</p>
+                                                <p className="text-xs text-ink-muted">{vehicleLabel(booking.vehicleClass)}</p>
+                                            </div>
+                                            <div className="mt-3 grid min-w-0 grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2">
+                                                <div className="min-w-0">
+                                                    <p className="text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-ink-muted">{dc("Customer")}</p>
+                                                    <p className="mt-0.5 truncate text-sm font-semibold leading-tight text-ink">{customerName}</p>
+                                                    {booking.user?.name && <p className="mt-0.5 truncate text-xs leading-tight text-ink-muted">{displayPhone(booking.customerPhone)}</p>}
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <p className="text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-ink-muted">{dc("Driver")}</p>
+                                                    <p className="mt-0.5 truncate text-sm font-semibold leading-tight text-ink">{booking.driver ? booking.driver.name : dc("Unassigned")}</p>
+                                                    {booking.driver && <p className="mt-0.5 truncate text-xs leading-tight text-ink-muted">{displayPhone(booking.driver.phone)}</p>}
+                                                </div>
+                                            </div>
+
+
                                         </div>
                                     </div>
-
-                                    <div className="w-full border-t border-border/50"></div>
-
-                                    {/* Trip meta; details attached so the collapsed grid adds no flex-gap */}
-                                    <div className="flex flex-col w-full">
-                                        <p className="text-base text-ink-muted">
-                                            {[
-                                                formatDateTime(booking.scheduledAt ?? booking.createdAt),
-                                                `${vehicleLabel(booking.vehicleClass)}${booking.sharing ? " • Sharing" : ""}`,
-                                                booking.isOutstation ? "Outstation" : null,
-                                                booking.source.charAt(0).toUpperCase() + booking.source.slice(1),
-                                            ].filter(Boolean).join("  •  ")}
-                                        </p>
-
-                                        {/* People + ride id — hidden until the card is clicked open. Clicks
-                                            inside don't bubble, so copying a number can't collapse the card. */}
-                                        <div className={`grid w-full transition-[grid-template-rows] duration-300 ${isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
-                                            <div className="overflow-hidden min-h-0 w-full" onClick={(e) => e.stopPropagation()}>
-                                                <div className={`${isOpen ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2"} mt-4 flex w-full cursor-default flex-col gap-4 rounded-2xl bg-surface p-4 transition-[opacity,transform] duration-300`}>
-                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
-                                                        <div>
-                                                            <p className="text-xs uppercase tracking-wide text-ink-muted mb-0.5">{dc("Customer")}</p>
-                                                            <h4 className="text-ink">{booking.user?.name ?? "—"} <span className="text-ink-muted">• {displayPhone(booking.customerPhone)}</span> <CopyBtn value={displayPhone(booking.customerPhone)} onCopy={copyId} /></h4>
-                                                            {booking.sharing && booking.coRiders?.length > 0 && (
-                                                                <div className="mt-1">
-                                                                    <p className="text-xs uppercase tracking-wide text-ink-muted mb-0.5">{dc("Sharing with")}</p>
-                                                                    {booking.coRiders.map((rider, i) => (
-                                                                        <h4 key={i} className="text-ink">{rider.name ?? "—"} <span className="text-ink-muted">• {displayPhone(rider.phone)}</span> <CopyBtn value={displayPhone(rider.phone)} onCopy={copyId} /></h4>
-                                                                    ))}
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                        <div>
-                                                            <p className="text-xs uppercase tracking-wide text-ink-muted mb-0.5">{dc("Driver")}</p>
-                                                            {booking.driver
-                                                                ? <h4 className="text-ink">{booking.driver.name} <span className="text-ink-muted">• {displayPhone(booking.driver.phone)}</span> <CopyBtn value={displayPhone(booking.driver.phone)} onCopy={copyId} /></h4>
-                                                                : <h4 className="text-ink-muted">{booking.status === "cancelled" ? "—" : new Date(booking.scheduledAt ?? booking.createdAt) > new Date() ? dc("Yet to be assigned") : dc("Couldn't be assigned")}</h4>}
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="flex flex-row gap-2 h-fit justify-center items-start sm:items-center">
-                                                        {/* The reference, whole. It replaces a first-eight-and-an-ellipsis
-                                                            of the uuid, which was unreadable down a phone line and could
-                                                            not be pasted back into this search box as shown. */}
-                                                        <p className="text-ink-muted text-sm">{dc("Ride ID:") + " "}{booking.reference}</p>
-                                                        <CopyBtn value={booking?.reference} onCopy={copyId} />
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* "hover: hover" picks the wording — no JS device sniffing */}
-                                    <p className="w-full text-center text-xs text-ink-muted/70 select-none -mt-1">
-                                        <span className="hidden [@media(hover:hover)]:inline">{isOpen ? dc("Click to collapse") : dc("Click to expand")}</span>
-                                        <span className="[@media(hover:hover)]:hidden">{isOpen ? dc("Tap to collapse") : dc("Tap to expand")}</span>
-                                    </p>
-                                </div>
+                                </button>
                             )
                         })
+                        }</div>
                     )
                 ) : selected === 1 ? (
                     drivers.length === 0 ? (
@@ -655,77 +913,46 @@ const AdminDashboard = () => {
                             />
                         )
                     ) : (
-                        drivers.map((driver) => (
-                            <div key={driver.id} className="my-2 flex cursor-default flex-col items-start justify-center gap-3 rounded-3xl bg-tone-teal px-5 py-5 sm:px-6"
-                                data-suspended={Boolean(driver.suspendedAt)}>
-                                <div className="flex justify-between items-start gap-4 w-full">
-                                    <div className="min-w-0">
-                                        <div className="flex items-center gap-2">
-                                            <h3 className="font-semibold text-ink truncate">{driver.name}</h3>
-                                            <span className={`w-2 h-2 rounded-full shrink-0 ${driver.isOnline ? "bg-green-500" : "bg-border"}`} title={driver.isOnline ? dc("Online") : dc("Offline")}></span>
-                                            <span className="text-sm text-ink-muted">{driver.isOnline ? dc("Online") : dc("Offline")}</span>
+                        <div className={collapsedListGridClass}>
+                        {drivers.map((driver) => (
+                            <button
+                                type="button"
+                                key={driver.id}
+                                onClick={() => { setExpanded(false); setDetail({ kind: "driver", id: driver.id }) }}
+                                data-suspended={Boolean(driver.suspendedAt)}
+                                className={collapsedCardClass}
+                            >
+                                <div className="flex min-w-0 items-center gap-3">
+                                    {driver.photoUrl ? (
+                                        <img src={driver.photoUrl} alt="" className="h-12 w-12 shrink-0 rounded-full object-cover sm:h-14 sm:w-14" />
+                                    ) : (
+                                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary text-lg font-semibold text-on-primary sm:h-14 sm:w-14">
+                                            {driverInitials(driver.name)}
                                         </div>
-                                        <p className="text-ink-muted">{displayPhone(driver.phone)} <CopyBtn value={displayPhone(driver.phone)} onCopy={copyId} /></p>
+                                    )}
+                                    <div className="min-w-0">
+                                        <p className="truncate text-base font-semibold leading-5 text-ink">{driver.name}</p>
+                                        <p className="mt-0.5 truncate text-sm leading-5 text-ink-muted">{displayPhone(driver.phone)}</p>
                                     </div>
-                                    <div className="flex flex-col items-end gap-1 shrink-0">
-                                        <span className={`${verificationChip(driver.verificationStatus)} text-xs font-semibold px-2.5 py-1 rounded-full capitalize`}>{driver.verificationStatus}</span>
-                                        {/* Shown alongside, never instead of, the
-                                            verification chip. A suspended captain is
-                                            usually "approved" — his papers are fine
-                                            and he is still stopped — so replacing one
-                                            with the other would hide whichever the
-                                            admin happened to need. */}
-                                        {driver.suspendedAt && (
-                                            <span className="text-xs font-semibold px-2.5 py-1 rounded-full text-red-600 bg-red-500/10">{dc("Suspended")}</span>
-                                        )}
-                                        {/* Last of the three: it is the one that
-                                            does not change day to day, so it should
-                                            not push the two that do further from
-                                            the name they belong to. */}
-                                        {fleetBadge(driver.group)}
+                                    <div className="ml-auto min-w-0 shrink-0 text-right">
+                                        <p className="max-w-32 truncate text-sm font-semibold leading-5 text-ink">{driver.vehicleNumber}</p>
+                                        <p className="mt-0.5 flex items-center justify-end gap-1.5 text-xs font-medium leading-5 text-ink-muted">
+                                            <span aria-hidden="true" className={`h-2 w-2 rounded-full ${driver.isOnline ? "bg-green-500" : "bg-border"}`} />
+                                            <span className="text-sm">{driver.isOnline ? dc("Online") : dc("Offline")}</span>
+                                        </p>
                                     </div>
                                 </div>
 
-                                <div className="w-full border-t border-border/50"></div>
-
-                                <p className="text-base text-ink-muted">
-                                    {vehicleLabel(driver.vehicleClass)}  •  {driver.vehicleNumber}{" " + dc("• Joined") + " "}{new Date(driver.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
-                                </p>
-
-                                {/* Loaded only when opened. A captain's paperwork is
-                                    eleven rows, a signed URL per document and a
-                                    round trip to storage to mint each one — fetching
-                                    that for every card on the page would be twenty
-                                    of those to show a list. */}
-                                <button
-                                    onClick={() => setExpandedDriver(expandedDriver === driver.id ? null : driver.id)}
-                                    aria-expanded={expandedDriver === driver.id}
-                                    className="w-full text-sm text-center text-ink py-2 rounded-xl border border-border hover:bg-surface-muted focus-visible:outline-2 focus-visible:outline-offset-2 transition-colors duration-300"
-                                >
-                                    {expandedDriver === driver.id ? dc("Hide paperwork") : dc("Review paperwork")}
-                                </button>
-
-                                {expandedDriver === driver.id && (
-                                    <DriverReview
-                                        driverId={driver.id}
-                                        // Patches the chip on this card so an approval
-                                        // that completes his file is visible without
-                                        // re-running the list query and losing the
-                                        // admin's place in it.
-                                        onVerificationChange={(status) => setDrivers(
-                                            drivers.map((d) => d.id === driver.id ? { ...d, verificationStatus: status } : d),
-                                        )}
-                                        // Same reason: the fleet chip on this card
-                                        // has to follow the move made in the panel
-                                        // below it, and a refetch would drop the
-                                        // admin back to the top of the list.
-                                        onGroupChange={(group) => setDrivers(
-                                            drivers.map((d) => d.id === driver.id ? { ...d, group } : d),
-                                        )}
-                                    />
-                                )}
-                            </div>
-                        ))
+                                <div className="mt-3 flex flex-wrap items-center gap-x-2.5 gap-y-1.5 border-t border-border/50 pt-2.5 text-xs text-ink-muted">
+                                    <span className={`${verificationChip(driver.verificationStatus)} shrink-0 rounded-lg px-2.5 py-1 font-semibold uppercase tracking-[0.06em]`}>{driver.verificationStatus}</span>
+                                    {driver.suspendedAt && <span className="shrink-0 rounded-lg bg-red-500/10 px-2.5 py-1 font-semibold uppercase tracking-[0.06em] text-red-600">{dc("Suspended")}</span>}
+                                    {fleetBadge(driver.group)}
+                                    <span>{dc("Joined") + " "}{new Date(driver.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</span>
+                                    <Icon className="ml-auto shrink-0 text-ink-muted" path={mdiChevronRight} size={0.72} />
+                                </div>
+                            </button>
+                        ))}
+                        </div>
                     )
                 ) : (
                     users.length === 0 ? (
@@ -745,30 +972,36 @@ const AdminDashboard = () => {
                             />
                         )
                     ) : (
-                        users.map((user) => (
-                            <div key={user.id} className={`${user.deletedAt ? "opacity-60" : ""} my-2 flex cursor-default flex-col items-start justify-center gap-3 rounded-3xl bg-tone-violet px-5 py-5 sm:px-6`}>
-                                <div className="flex justify-between items-start gap-4 w-full">
-                                    <div className="min-w-0">
-                                        <div className="flex items-center gap-2">
-                                            <h3 className="font-semibold text-ink truncate">{user.name ?? "—"}</h3>
-                                            {user.deletedAt && <span className="text-red-600 bg-red-500/10 text-xs font-semibold px-2.5 py-1 rounded-full shrink-0">{dc("Deleted")}</span>}
-                                        </div>
-                                        <p className="text-ink-muted">{displayPhone(user.phone)} <CopyBtn value={displayPhone(user.phone)} onCopy={copyId} /></p>
+                        <div className={collapsedListGridClass}>
+                        {users.map((user) => (
+                            <button
+                                type="button"
+                                key={user.id}
+                                onClick={() => { setExpanded(false); setDetail({ kind: "user", id: user.id }) }}
+                                className={collapsedCardClass}
+                            >
+                                <div className="flex items-center gap-3">
+                                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary text-lg font-semibold text-on-primary">{(user.name ?? "U").charAt(0).toUpperCase()}</div>
+                                    <div className="min-w-0 flex-1">
+                                        <p className="truncate text-lg font-semibold leading-6 tracking-[-0.01em] text-ink">{user.name ?? dc("Unnamed user")}</p>
+                                        <p className="mt-0.5 truncate text-sm leading-5 text-ink-muted">{displayPhone(user.phone)}</p>
                                     </div>
-                                    <span className="text-primary bg-primary/10 text-xs font-semibold px-2.5 py-1 rounded-full shrink-0">{dc("Code") + " "}{user.bookingCode}</span>
+                                    <span aria-hidden="true" className="h-10 w-px shrink-0 bg-border/60" />
+                                    <div className="min-w-[5.25rem] shrink-0 text-right">
+                                        <p className="font-semibold text-ink">{user._count.bookings}</p>
+                                        <p className="mt-0.5 text-xs font-semibold uppercase tracking-[0.08em] text-ink-muted">{user._count.bookings === 1 ? dc("Ride") : dc("Rides")}</p>
+                                    </div>
                                 </div>
 
-                                <div className="w-full border-t border-border/50"></div>
-
-                                <p className="text-base text-ink-muted">
-                                    {[
-                                        user.gender,
-                                        `${user._count.bookings} ${user._count.bookings === 1 ? "ride" : "rides"}`,
-                                        `Joined ${new Date(user.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}`,
-                                    ].filter(Boolean).join("  •  ")}
-                                </p>
-                            </div>
-                        ))
+                                <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-border/50 pt-3 text-xs text-ink-muted">
+                                    {user.deletedAt && <span className="shrink-0 rounded-lg bg-red-500/10 px-2.5 py-1 font-semibold uppercase tracking-[0.06em] text-red-600">{dc("Deleted")}</span>}
+                                    {user.gender && <span>{user.gender}</span>}
+                                    <span>{dc("Joined") + " "}{new Date(user.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</span>
+                                    <Icon className="ml-auto shrink-0 text-ink-muted" path={mdiChevronRight} size={0.72} />
+                                </div>
+                            </button>
+                        ))}
+                        </div>
                     )
                 )}
             </div>
@@ -780,3 +1013,4 @@ const AdminDashboard = () => {
 }
 
 export default AdminDashboard
+

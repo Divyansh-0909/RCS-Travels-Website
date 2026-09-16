@@ -68,7 +68,7 @@ const HelpPage = () => {
                     <li
                         key={q}
                         onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                        className="font-normal w-full select-none cursor-pointer py-5 px-6 rounded-3xl flex flex-col bg-tone-primary text-ink transition-opacity duration-200 hover:opacity-80"
+                        className="account-panel-motion font-normal w-full select-none cursor-pointer py-5 px-6 rounded-3xl flex flex-col bg-surface-muted text-ink transition-transform duration-150 ease-out active:scale-[0.99]"
                     >
                         <div className="w-full flex justify-between items-center gap-3">
                             <h4 className="break-words text-lg font-medium">{tr(q)}</h4>
@@ -86,7 +86,7 @@ const HelpPage = () => {
                 )}
 
                 {selected === 1 && contacts.map(([title, desc, value, icon, onClick]) => (
-                    <SettingRow key={title} tone="bg-tone-teal" trailing={<CircleIconButton icon={icon} size={0.85} onClick={onClick} />}>
+                    <SettingRow key={title} tone="bg-surface-muted" trailing={<CircleIconButton icon={icon} size={0.85} onClick={onClick} />}>
                         <h4 className="break-words text-lg font-medium">{tr(title)}</h4>
                         <p className="break-words text-base text-ink-muted">{tr(desc)}</p>
                         <p className="text-sm text-ink-muted pt-1">{value}</p>
@@ -94,7 +94,7 @@ const HelpPage = () => {
                 ))}
 
                 {selected === 2 && cancellationPolicy.map(([title, desc]) => (
-                    <SettingRow key={title} tone="bg-tone-sand">
+                    <SettingRow key={title} tone="bg-surface-muted">
                         <h4 className="break-words text-lg font-medium">{tr(title)}</h4>
                         <p className="break-words text-base text-ink-muted">{tr(desc)}</p>
                     </SettingRow>

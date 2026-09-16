@@ -1,31 +1,32 @@
-import { StrictMode } from 'react'
+import { StrictMode, lazy, Suspense } from 'react'
 import { createRoot } from 'react-dom/client'
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { ClerkProvider, useAuth, useUser } from '@clerk/clerk-react'
-import LoginPage from './pages/LoginPage'
 import './index.css'
-import App from './App'
+const App = lazy(() => import('./App'))
 import {ThemeProvider} from './context/ThemeContext';
 import ThemeRouteSync from './components/ThemeRouteSync';
 import ErrorBoundary, { RouteErrorBoundary } from './components/ErrorBoundary';
-import BookingFlow from './pages/BookingFlow';
-import SignUpPage from './pages/SignUpPage';
+const LoginPage = lazy(() => import('./pages/LoginPage'))
+const BookingFlow = lazy(() => import('./pages/BookingFlow'))
+const SignUpPage = lazy(() => import('./pages/SignUpPage'))
 import ProtectedRoute from './components/ProtectedRoute';
-import TrackingPage from './pages/TrackingPage';
-import SharedTrip from './pages/SharedTrip';
-import ManageAccount from './pages/ManageAccount';
-import SettingsPage from './pages/SettingsPage';
-import SafetyPage from './pages/SafetyPage';
-import AdminDashboard from './pages/AdminDashboard';
-import HelpPage from './pages/HelpPage';
-import Outstation from './pages/Outstation';
+const TrackingPage = lazy(() => import('./pages/TrackingPage'))
+const SharedTrip = lazy(() => import('./pages/SharedTrip'))
+const ManageAccount = lazy(() => import('./pages/ManageAccount'))
+const SettingsPage = lazy(() => import('./pages/SettingsPage'))
+const SafetyPage = lazy(() => import('./pages/SafetyPage'))
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'))
+const HelpPage = lazy(() => import('./pages/HelpPage'))
+const Outstation = lazy(() => import('./pages/Outstation'))
 import RideCancelledToast from './components/ui/RideCancelledToast';
 import RefreshNotice from './components/ui/RefreshNotice';
-import DevPreview from './pages/DevPreview';
+const DevPreview = lazy(() => import('./pages/DevPreview'))
 import PageMeta from './components/PageMeta';
 import NotFound from './pages/NotFound';
-import OpenDriverApp from './pages/OpenDriverApp';
-import LegalPage from './pages/LegalPage';
+const OpenDriverApp = lazy(() => import('./pages/OpenDriverApp'))
+const CaptainAccountDeletion = lazy(() => import('./pages/CaptainAccountDeletion'))
+const LegalPage = lazy(() => import('./pages/LegalPage'))
 import { legalPaths } from './constants/legal';
 import LoadingScreen from './components/LoadingScreen';
 import './i18n';
@@ -104,6 +105,10 @@ const router = createBrowserRouter([{
     element: <OpenDriverApp />,
   },
   {
+    path: "/captains/delete-account",
+    element: <CaptainAccountDeletion />,
+  },
+  {
     path: "/manage-account",
     element: <ProtectedRoute><ManageAccount /></ProtectedRoute>,
   },
@@ -158,7 +163,9 @@ createRoot(document.getElementById('root')).render(
       <ThemeProvider>
         <ErrorBoundary>
           <AuthLoadingGate>
-            <RouterProvider router={router} />
+            <Suspense fallback={<LoadingScreen />}>
+              <RouterProvider router={router} />
+            </Suspense>
             <RideCancelledToast />
             {/* Global, like the toast above: any page can raise a stale-data
                 notice through the useRefreshNotice store without threading props */}

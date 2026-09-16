@@ -96,8 +96,8 @@ const ringOf = (z) => z.layer.toGeoJSON().geometry.coordinates[0]
 
 // Shared input chrome, so the fare boxes and the notes field cannot drift apart.
 const field =
-    'w-full rounded-xl border border-border bg-surface-muted px-3 py-2 text-ink outline-none transition-colors duration-300 focus-visible:border-primary'
-const labelCls = 'block text-xs text-ink-muted mt-3 mb-1'
+    'w-full min-h-10 rounded-xl border border-border/80 bg-surface px-3 py-2 text-sm text-ink outline-none transition-[border-color,box-shadow] duration-150 focus-visible:border-primary focus-visible:shadow-[0_0_0_3px_rgba(36,58,251,0.10)]'
+const labelCls = 'block text-xs font-semibold text-ink-muted mt-4 mb-1.5'
 
 const EditFares = () => {
     useCopyLanguage();
@@ -111,6 +111,8 @@ const EditFares = () => {
     // What the rate card looked like when it was loaded, so the save screen can
     // list what actually changed rather than asking him to remember.
     const baselineRef = useRef(new Map())
+    const undoStackRef = useRef([])
+    const fieldEditRef = useRef(null)
 
     const [loading, setLoading] = useState(true)
     const [loadError, setLoadError] = useState(null)
@@ -125,6 +127,7 @@ const EditFares = () => {
     const [selected, setSelected] = useState(null)
     const [probe, setProbe] = useState(null)
     const [modal, setModal] = useState(null)
+    const [undoCount, setUndoCount] = useState(0)
     // Layers are mutable objects Leaflet owns, so edits to them are invisible to
     // React. Bumping this is what the old refreshAll() did — one redraw signal.
     const [, setTick] = useState(0)
@@ -166,10 +169,35 @@ const EditFares = () => {
     )
 
     // ---------- change tracking ----------
-    const snapshot = (z) => JSON.stringify({ p: z.props, r: roundRing(ringOf(z)) })
+    const snapshot = useCallback((z) => JSON.stringify({ p: z.props, r: roundRing(ringOf(z)) }), [])
+    const captureEditorState = useCallback(
+        () => zonesRef.current.map((z) => ({ z, state: snapshot(z) })),
+        [snapshot],
+    )
+    const pushUndo = useCallback(() => {
+        undoStackRef.current.push(captureEditorState())
+        if (undoStackRef.current.length > 30) undoStackRef.current.shift()
+        setUndoCount(undoStackRef.current.length)
+    }, [captureEditorState])
+    const clearUndo = useCallback(() => {
+        undoStackRef.current = []
+        fieldEditRef.current = null
+        setUndoCount(0)
+    }, [])
+    const beginFieldEdit = useCallback(
+        (key) => {
+            if (fieldEditRef.current === key) return
+            fieldEditRef.current = key
+            pushUndo()
+        },
+        [pushUndo],
+    )
+    const endFieldEdit = useCallback(() => {
+        fieldEditRef.current = null
+    }, [])
     const captureBaseline = useCallback(() => {
         baselineRef.current = new Map(zonesRef.current.map((z) => [z, snapshot(z)]))
-    }, [])
+    }, [snapshot])
     const isChanged = (z) => !baselineRef.current.has(z) || baselineRef.current.get(z) !== snapshot(z)
 
     const changeList = useCallback(() => {
@@ -251,6 +279,33 @@ const EditFares = () => {
         [refreshZone, bump],
     )
 
+    const undoLastChange = useCallback(() => {
+        const previous = undoStackRef.current.pop()
+        if (!previous) return
+
+        fieldEditRef.current = null
+        const previousZones = new Set(previous.map(({ z }) => z))
+        zonesRef.current.forEach((z) => {
+            if (!previousZones.has(z)) z.layer.remove()
+        })
+
+        previous.forEach(({ z, state }) => {
+            const parsed = JSON.parse(state)
+            z.props = parsed.p
+            z.layer.setLatLngs(ringToLatLngs(parsed.r))
+            if (!mapRef.current.hasLayer(z.layer)) z.layer.addTo(mapRef.current)
+            z.layer.redraw()
+        })
+
+        zonesRef.current = previous.map(({ z }) => z)
+        select(null)
+        zonesRef.current.forEach(refreshZone)
+        setProbe(null)
+        setUndoCount(undoStackRef.current.length)
+        setStatus('Pichla badlaav wapas kar diya.')
+        bump()
+    }, [select, refreshZone, bump])
+
     const addZone = useCallback(
         (feature, layer) => {
             const incoming = feature.properties ?? {}
@@ -272,10 +327,14 @@ const EditFares = () => {
                 L.DomEvent.stop(e)
                 select(z)
             })
+            layer.on('pm:markerdragstart', () => {
+                fieldEditRef.current = null
+                pushUndo()
+            })
             zonesRef.current.push(z)
             return z
         },
-        [zoneStyle, labelHtml, select],
+        [zoneStyle, labelHtml, select, pushUndo],
     )
 
     // ---------- map boot ----------
@@ -342,6 +401,7 @@ const EditFares = () => {
                     addZone(f, L.polygon(ringToLatLngs(f.geometry.coordinates[0])))
                 })
                 captureBaseline()
+                clearUndo()
                 setSelected(null)
                 setMeta(data.meta ?? null)
                 if (zonesRef.current.length)
@@ -417,6 +477,7 @@ const EditFares = () => {
                 priority = (inside.props.priority ?? 0) + 2
             }
 
+            pushUndo()
             const z = addZone({ properties: { name: 'Naya area', priority, fares: {} } }, e.layer)
             select(z)
             setStatus('Naya area ban gaya — ab iska naam aur Wagon R ka rate bhar dein.')
@@ -428,7 +489,7 @@ const EditFares = () => {
             map.off('click', onClick)
             map.off('pm:create', onCreate)
         }
-    }, [ready, matchZone, addZone, select])
+    }, [ready, matchZone, addZone, select, pushUndo])
 
     // ---------- form bindings ----------
     // One editable source. Sedan, Ertiga and Innova Crysta are always derived
@@ -446,6 +507,8 @@ const EditFares = () => {
         const z = selectedRef.current
         if (!z) return
         if (!window.confirm(`“${z.props.name}” hata dein? Wahan ki ride ka kiraya phir distance ke hisaab se lagega.`)) return
+        fieldEditRef.current = null
+        pushUndo()
         z.layer.remove()
         zonesRef.current = zonesRef.current.filter((x) => x !== z)
         selectedRef.current = null
@@ -489,6 +552,7 @@ const EditFares = () => {
                 return
             }
             captureBaseline()
+            clearUndo()
             setMeta({ updatedAt: res.updatedAt, updatedBy: res.updatedBy })
             setModal(null)
             setStatus(`Live ho gaya — ab se har nayi ride in hi rates par lagegi. ${res.count} area save hue.`)
@@ -518,39 +582,46 @@ const EditFares = () => {
     return (
         <div className="w-full flex-1 min-h-0 flex flex-col-reverse sm:flex-row gap-4 px-5 max-sm:px-0 pb-1">
             {/* ---------- sidebar ---------- */}
-            <aside className="w-full sm:w-[340px] sm:shrink-0 flex flex-col min-h-0 max-sm:h-[70%] rounded-2xl bg-surface-muted overflow-hidden">
-                <div className="px-5 pt-4 pb-3 border-b border-border/50">
-                    <h4 className="font-semibold text-ink">{dc("Kiraya zone editor")}</h4>
-                    <p className="text-xs text-ink-muted leading-relaxed mt-1">{dc("Kisi bhi area par tap karke uska rate badlein. Safed golon ko kheench kar area ki shape badlein. Map par kahin bhi tap karke dekhein wahan ka kiraya kitna banta hai.")}</p>
+            <aside className="w-full sm:w-[380px] lg:w-[400px] sm:shrink-0 flex flex-col min-h-0 max-sm:h-[64%] rounded-2xl border border-border/50 bg-surface-muted overflow-hidden">
+                <div className="px-5 pt-5 pb-4 border-b border-border/50">
+                    <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                            <h4 className="text-base font-semibold tracking-[-0.01em] text-ink">{dc("Kiraya zones")}</h4>
+                            <p className="mt-1 max-w-[34ch] text-xs leading-relaxed text-ink-muted">{dc("Area chunein, rate edit karein, phir changes live karein.")}</p>
+                        </div>
+                        <span className="shrink-0 rounded-full bg-surface px-2.5 py-1 text-[11px] font-semibold tabular-nums text-ink-muted">
+                            {zonesRef.current.length} {dc("areas")}
+                        </span>
+                    </div>
                 </div>
 
-                <div className="flex gap-2 px-5 py-3 border-b border-border">
+                <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] gap-2 px-5 py-3 border-b border-border/60">
                     <button
                         type="button"
                         onClick={startDraw}
                         disabled={loading || !!loadError}
-                        className="flex-1 rounded-xl border border-border px-3 py-2 text-sm font-semibold text-ink cursor-pointer transition-colors duration-300 hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary active:opacity-[0.7] disabled:opacity-50 disabled:cursor-not-allowed"
-                    >{dc("Naya area banayein")}</button>
+                        className="min-h-10 rounded-xl border border-border bg-surface px-3 py-2 text-sm font-semibold text-ink cursor-pointer transition-[background-color,transform] duration-150 ease-out hover:bg-surface/70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                    >{dc("Naya area")}</button>
                     <button
                         type="button"
                         onClick={openSave}
                         disabled={loading || !!loadError}
-                        className="flex-1 rounded-xl bg-primary px-3 py-2 text-sm font-semibold text-on-strong cursor-pointer transition-opacity duration-300 hover:opacity-[0.9] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary active:opacity-[0.7] disabled:opacity-50 disabled:cursor-not-allowed"
-                    >{dc("Save karke live karein")}</button>
+                        className="min-h-10 rounded-xl bg-primary px-3 py-2 text-sm font-semibold text-on-strong cursor-pointer transition-[opacity,transform] duration-150 ease-out hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                    >{dc("Changes live karein")}</button>
                 </div>
 
                 {/* All four customer prices remain inspectable, even though only
                     the Wagon R source fare is editable. */}
-                <div className="flex px-5 py-3 border-b border-border">
-                    {CLASSES.map((c, i) => (
+                <div className="grid grid-cols-4 gap-1.5 px-5 py-3 border-b border-border/60" aria-label={dc("Gaadi ke fares")}>
+                    {CLASSES.map((c) => (
                         <button
                             key={c.key}
                             type="button"
                             onClick={() => setActiveClass(c.key)}
-                            className={`flex-1 border border-border px-1 py-1.5 text-xs font-semibold cursor-pointer transition-colors duration-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${i === 0 ? 'rounded-l-lg' : ''} ${i === CLASSES.length - 1 ? 'rounded-r-lg border-l-0' : ''} ${i > 0 && i < CLASSES.length - 1 ? 'border-l-0' : ''} ${
+                            className={`min-w-0 rounded-lg border px-1.5 py-2 text-[11px] font-semibold leading-tight cursor-pointer transition-[background-color,color,border-color,transform] duration-150 ease-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary active:scale-[0.97] ${
                                 c.key === activeClass
-                                    ? 'bg-primary border-primary text-[var(--foreground)]'
-                                    : 'text-ink-muted hover:bg-surface-muted'
+                                    ? 'border-primary bg-primary text-on-strong'
+                                    : 'border-border/70 bg-surface text-ink-muted hover:bg-surface/70'
                             }`}
                         >
                             {c.shortLabel}
@@ -573,7 +644,11 @@ const EditFares = () => {
                     </div>
                 ) : selected ? (
                     /* ---------- edit form ---------- */
-                    <div className="flex-1 min-h-0 overflow-y-auto px-5 py-1">
+                    <div key={selected.props.name ?? 'selected-zone'} className="fare-panel-enter flex-1 min-h-0 overflow-y-auto px-5 pb-4 pt-1">
+                        <div className="mt-3 rounded-xl bg-surface px-3.5 py-3">
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-ink-muted">{dc("Area edit ho raha hai")}</p>
+                            <p className="mt-1 truncate text-sm font-semibold text-ink">{selected.props.name || dc("Naam nahi diya")}</p>
+                        </div>
                         <label className={labelCls} htmlFor="f-name">{dc("Area ka naam")}</label>
                         <input
                             id="f-name"
@@ -581,6 +656,8 @@ const EditFares = () => {
                             autoComplete="off"
                             className={field}
                             value={selected.props.name ?? ''}
+                            onFocus={() => beginFieldEdit('name')}
+                            onBlur={endFieldEdit}
                             onChange={(e) => {
                                 selected.props.name = e.target.value
                                 refreshZone(selected)
@@ -588,7 +665,7 @@ const EditFares = () => {
                             }}
                         />
 
-                        <label className={labelCls} htmlFor="f-hatchback">{dc("Wagon R base rate (₹, Shiv Nadar se one way)")}</label>
+                        <label className={labelCls} htmlFor="f-hatchback">{dc("Wagon R ka base fare")}</label>
                         <input
                             id="f-hatchback"
                             type="number"
@@ -597,21 +674,23 @@ const EditFares = () => {
                             inputMode="numeric"
                             className={field}
                             value={selected.props.fares?.hatchback ?? ''}
+                            onFocus={() => beginFieldEdit('hatchback')}
+                            onBlur={endFieldEdit}
                             onChange={(e) => onHatchback(e.target.value)}
                         />
                         <div className="mt-3 grid grid-cols-2 gap-2" aria-label={dc("Calculated fares")}>
                             {CLASSES.map(({ key, label }) => (
-                                <div key={key} className="rounded-xl bg-surface-muted px-3 py-2">
-                                    <div className="text-[10.5px] text-ink-muted">{label}</div>
-                                    <div className="mt-0.5 text-sm font-semibold tabular-nums text-[var(--text-foreground)]">
+                                <div key={key} className="rounded-xl border border-border/50 bg-surface px-3 py-2.5">
+                                    <div className="truncate text-[10.5px] font-medium text-ink-muted">{label}</div>
+                                    <div className="mt-0.5 text-sm font-semibold tabular-nums text-ink">
                                         {fmt(fareFor(selected.props, key))}
                                     </div>
                                 </div>
                             ))}
                         </div>
-                        <p className="text-[11.5px] text-ink-muted leading-relaxed mt-2">{dc("Sirf Wagon R ka rate badlein. Website hamesha Sedan +₹100, Ertiga 1.6× aur Innova Crysta 2.75× calculate karegi; alag car rate save nahi hota.")}</p>
+                        <p className="mt-2 text-[11.5px] leading-relaxed text-ink-muted">{dc("Baaki fares Wagon R ke rate se apne aap calculate honge.")}</p>
 
-                        <label className={labelCls} htmlFor="f-toll">{dc("Raste mein toll (₹)")}</label>
+                        <label className={labelCls} htmlFor="f-toll">{dc("Toll (agar ho)")}</label>
                         <input
                             id="f-toll"
                             type="number"
@@ -620,20 +699,24 @@ const EditFares = () => {
                             inputMode="numeric"
                             className={field}
                             value={selected.props.toll ?? ''}
+                            onFocus={() => beginFieldEdit('toll')}
+                            onBlur={endFieldEdit}
                             onChange={(e) => {
                                 if (e.target.value === '' || +e.target.value === 0) delete selected.props.toll
                                 else selected.props.toll = +e.target.value
                                 bump()
                             }}
                         />
-                        <p className="text-[11.5px] text-ink-muted leading-relaxed mt-2">{dc("Yeh kiraye mein jud kar customer ko dikhta hai. Toll nahi hai to khaali chhod dein.")}</p>
+                        <p className="mt-2 text-[11.5px] leading-relaxed text-ink-muted">{dc("Yeh customer ke fare mein jud jayega.")}</p>
 
-                        <label className={labelCls} htmlFor="f-notes">{dc("Notes (is area mein kaun kaun si jagah aati hain)")}</label>
+                        <label className={labelCls} htmlFor="f-notes">{dc("Area ke notes")}</label>
                         <textarea
                             id="f-notes"
                             rows={3}
                             className={field}
                             value={selected.props.notes ?? ''}
+                            onFocus={() => beginFieldEdit('notes')}
+                            onBlur={endFieldEdit}
                             onChange={(e) => {
                                 if (e.target.value) selected.props.notes = e.target.value
                                 else delete selected.props.notes
@@ -641,16 +724,16 @@ const EditFares = () => {
                             }}
                         />
 
-                        <div className="flex gap-2 mt-5 mb-4">
+                        <div className="grid grid-cols-[1fr_auto] gap-2 mt-5">
                             <button
                                 type="button"
                                 onClick={() => select(null)}
-                                className="flex-1 rounded-xl bg-primary px-3 py-2 text-sm font-semibold text-[var(--foreground)] cursor-pointer transition-opacity duration-300 hover:opacity-[0.9] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary active:opacity-[0.7]"
+                                className="min-h-10 rounded-xl bg-primary px-3 py-2 text-sm font-semibold text-on-strong cursor-pointer transition-[opacity,transform] duration-150 ease-out hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary active:scale-[0.98]"
                             >{dc("Ho gaya")}</button>
                             <button
                                 type="button"
                                 onClick={deleteZone}
-                                className="rounded-xl border border-border px-3 py-2 text-sm font-semibold text-negative-light cursor-pointer transition-colors duration-300 hover:border-negative-light focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-negative-light active:opacity-[0.7]"
+                                className="min-h-10 rounded-xl border border-border bg-surface px-3 py-2 text-sm font-semibold text-negative-light cursor-pointer transition-[border-color,background-color,transform] duration-150 ease-out hover:border-negative-light hover:bg-negative-light/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-negative-light active:scale-[0.98]"
                             >{dc("Hata dein")}</button>
                         </div>
                     </div>
@@ -661,12 +744,12 @@ const EditFares = () => {
                                 type="search"
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
-                                placeholder={dc("Jagah ka naam dhoondhein…")}
+                                placeholder={dc("Area dhoondhein…")}
                                 autoComplete="off"
                                 className={field}
                             />
                         </div>
-                        <div className="flex-1 min-h-0 overflow-y-auto mt-2">
+                        <div className="fare-panel-enter flex-1 min-h-0 overflow-y-auto mt-2 px-2 pb-2">
                             {visible.length === 0 ? (
                                 <EmptyState
                                     tone="light"
@@ -684,10 +767,10 @@ const EditFares = () => {
                                             select(z)
                                             mapRef.current.fitBounds(z.layer.getBounds(), { maxZoom: 14 })
                                         }}
-                                        className="w-full flex items-center gap-2.5 px-5 py-2.5 text-left border-b border-border cursor-pointer transition-colors duration-300 hover:bg-surface-muted focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary"
+                                        className="w-full flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-left cursor-pointer transition-[background-color,transform] duration-150 ease-out hover:bg-surface focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary active:scale-[0.99]"
                                     >
                                         <span
-                                            className="w-3 h-3 rounded shrink-0"
+                                            className="h-2.5 w-2.5 shrink-0 rounded-full"
                                             style={{ background: bandColor(fareFor(z.props, activeClass)) }}
                                         />
                                         <span className="flex-1 min-w-0 truncate text-sm font-semibold text-[var(--text-foreground)]">
@@ -704,7 +787,7 @@ const EditFares = () => {
                     </>
                 )}
 
-                <div className="px-5 py-3 border-t border-border">
+                <div className="px-5 py-3 border-t border-border/60 bg-surface/50">
                     <p className="text-[11.5px] text-ink-muted leading-relaxed">{status}</p>
                     {savedAt && (
                         <p className="text-[11.5px] text-ink-muted opacity-75 mt-1">{dc("Aakhri baar live kiya:") + " "}{savedAt}</p>
@@ -713,12 +796,21 @@ const EditFares = () => {
             </aside>
 
             {/* ---------- map ---------- */}
-            <main className="relative flex-1 min-h-0 max-sm:h-[30%] rounded-2xl overflow-hidden">
+            <main className="relative flex-1 min-h-0 max-sm:h-[36%] rounded-2xl overflow-hidden border border-border/50">
                 <div ref={mapNodeRef} className="absolute inset-0 bg-[#e8e8e8]" />
 
+                <button
+                    type="button"
+                    onClick={undoLastChange}
+                    disabled={!undoCount || loading || saving}
+                    className="absolute left-3 bottom-3 z-[800] min-h-10 rounded-xl border border-border/70 bg-surface/95 px-3 py-2 text-xs font-semibold text-ink shadow-[0_8px_24px_rgba(18,18,32,0.14)] backdrop-blur-sm transition-[background-color,transform,opacity] duration-150 ease-out hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 disabled:active:scale-100"
+                >
+                    {dc("Pichla badlaav wapas")}
+                </button>
+
                 {/* ---------- price checker ---------- */}
-                <div className="absolute right-3 top-3 z-[800] w-[234px] max-sm:w-[190px] rounded-xl border border-border bg-surface px-3.5 py-3 text-xs shadow-[0_4px_16px_rgba(18,18,32,0.18)]">
-                    <h2 className="text-[11px] font-bold text-ink-muted mb-2">{dc("YAHAN KA KIRAYA KITNA?")}</h2>
+                <div className="fare-probe-enter absolute right-3 top-3 z-[800] w-[228px] max-w-[calc(100%_-_24px)] rounded-xl border border-border/70 bg-surface/95 px-3.5 py-3 text-xs shadow-[0_8px_24px_rgba(18,18,32,0.16)] backdrop-blur-sm">
+                    <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-muted">{dc("Kiraya check karein")}</h2>
                     {probe === null ? (
                         <p className="text-ink-muted leading-relaxed">{dc("Map par kahin bhi tap karein.")}</p>
                     ) : probe === 'none' ? (
@@ -754,17 +846,17 @@ const EditFares = () => {
             {/* ---------- save summary ---------- */}
             {modal && (
                 <div
-                    className="fixed inset-0 z-[1200] flex items-center justify-center bg-[rgba(6,6,12,0.72)] p-6"
+                    className="fare-backdrop-enter fixed inset-0 z-[1200] flex items-center justify-center bg-[rgba(6,6,12,0.72)] p-4 sm:p-6"
                     onClick={() => !saving && setModal(null)}
                 >
                     <div
-                        className="flex w-full max-w-[460px] max-h-[80vh] flex-col rounded-2xl bg-[var(--foreground)] p-5 shadow-[0_18px_48px_rgba(6,6,12,0.35)]"
+                        className="fare-modal-enter flex w-full max-w-[460px] max-h-[80vh] flex-col rounded-2xl bg-[var(--foreground)] p-5 shadow-[0_18px_48px_rgba(6,6,12,0.35)]"
                         onClick={(e) => e.stopPropagation()}
                     >
                         <h2 className="text-base font-semibold text-ink">
                             {modal.changes.length ? dc("{{value0}} badlaav live karein", {value0: (modal.changes.length)}) : dc("Abhi tak kuch nahi badla")}
                         </h2>
-                        <p className="mt-1 text-[12.5px] leading-relaxed text-ink-muted">{dc("List ek baar dekh lein. Save karte hi website par yeh rates chalu ho jaayenge — har nayi ride inhi par lagegi.")}</p>
+                        <p className="mt-1 text-[12.5px] leading-relaxed text-ink-muted">{dc("Ek baar check kar lein. Live karte hi naye rates website par lag jayenge.")}</p>
 
                         <ul className="my-3.5 flex-1 overflow-y-auto text-[12.5px] leading-relaxed">
                             {modal.changes.length === 0 && (
@@ -802,14 +894,14 @@ const EditFares = () => {
                                 onClick={() => setModal(null)}
                                 disabled={saving}
                                 className="rounded-xl border border-border px-3 py-2 text-sm font-semibold text-ink cursor-pointer transition-colors duration-300 hover:bg-surface-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary active:opacity-[0.7] disabled:opacity-50 disabled:cursor-not-allowed"
-                            >{dc("Abhi aur badlein")}</button>
+                            >{dc("Aur badlein")}</button>
                             <button
                                 type="button"
                                 onClick={confirmSave}
                                 disabled={saving}
                                 className="flex-1 rounded-xl bg-primary px-3 py-2 text-sm font-semibold text-[var(--foreground)] cursor-pointer transition-opacity duration-300 hover:opacity-[0.9] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary active:opacity-[0.7] disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                {saving ? dc("Live kiya ja raha hai…") : dc("Live karein")}
+                                {saving ? dc("Live ho raha hai…") : dc("Live karein")}
                             </button>
                         </div>
                     </div>
@@ -820,3 +912,4 @@ const EditFares = () => {
 }
 
 export default EditFares
+

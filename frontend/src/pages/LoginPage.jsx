@@ -5,6 +5,7 @@ import { useState, useEffect, useRef } from "react";
 import { useViewNavigate } from "../hooks/useViewNavigate";
 import Input from "../components/ui/Input";
 import Button from "../components/ui/Button";
+import InlineError from "../components/ui/InlineError";
 import { useApi } from "../hooks/useApi";
 import Icon from '@mdi/react';
 import { mdiKeyboardBackspace } from '@mdi/js';
@@ -223,6 +224,15 @@ const LoginPage = () => {
   const busy = loading;
   const otpReadyToContinue = verdict === "pass" && Boolean(continueTo);
   const otpSettled = verdict === "pass" || verdict === "fail";
+  const phoneFieldError = isPhone && (
+    error === tr("Enter a Phone Number") ||
+    error === tr("Number should be exactly 10 digits")
+  );
+  const otpFieldError = !isPhone && (
+    error === tr("Enter OTP") ||
+    error === tr("OTP should be exactly 6 digit")
+  );
+  const formError = error && !phoneFieldError && !otpFieldError ? error : null;
 
   useEffect(() => {
     if (!otpReadyToContinue) return;
@@ -377,17 +387,10 @@ const LoginPage = () => {
           </div>
           <div className={`flex flex-col justify-center items-start ${isPhone ? "sm:items-center" : "sm:items-start"}`}>
 
-            {error && !isPhone && (
-              <div className="mt-2 mb-1 flex items-center justify-start">
-                <p className="text-status-danger text-sm text-left">{error}</p>
-              </div>
-            )}
-
             {!isPhone
               ? <div className="flex flex-col justify-center items-start">
                 <div className="relative flex justify-center items-center gap-2">
                 {Array.from({ length: OTP_LENGTH }).map((_, i) => {
-                  const otpError = Boolean(error);
                   return (
                     <input
                       key={i}
@@ -409,7 +412,7 @@ const LoginPage = () => {
                       ${otpSettled ? "text-transparent placeholder-transparent" : "text-ink"}
                       p-0 w-[46px] h-[46px] rounded-xl transition-all duration-300 ease-in-out
                       ${otpSettled && `animate-otp-box-in ${i === 0 && `${verdict === "fail" ? "bg-red-600!" : "bg-green-600!"}`}`}
-                      ${otpError
+                      ${otpFieldError
                           ? "border border-negative/50 bg-negative/10 focus:border-negative/80"
                           : "border border-[var(--input-border)] bg-[var(--input-background)] focus:border-primary"
                         }
@@ -427,6 +430,7 @@ const LoginPage = () => {
                     </span>
                   )}
                 </div>
+                <InlineError className="mt-1 w-full">{otpFieldError ? error : null}</InlineError>
                 <p
                   aria-live="polite"
                   className="text-sm text-left text-[var(--text-muted)] mt-2 mb-3"
@@ -443,21 +447,23 @@ const LoginPage = () => {
                 </p>
               </div>
               :
-              <Input
-                prop={{
-                  type: "tel",
-                  name: "phone-number",
-                  id: "phone-number",
-                  inputRef: phoneInputRef,
-                  autoFocus: true,
-                  placeholder: tr("Mobile number"),
-                  value: phone,
-                  onChangeFn: handlePhoneChange,
-                  error: error === tr("Enter a Mobile Number") ||
-                    error === tr("Number should be exactly 10 digits"),
-                }}
-                className="scale-[1] sm:scale-[1.3] mb-2"
-              />
+              <div className="w-[290px] max-sm:w-full">
+                <Input
+                  prop={{
+                    type: "tel",
+                    name: "phone-number",
+                    id: "phone-number",
+                    inputRef: phoneInputRef,
+                    autoFocus: true,
+                    placeholder: tr("Mobile number"),
+                    value: phone,
+                    onChangeFn: handlePhoneChange,
+                    error: phoneFieldError,
+                  }}
+                  className="scale-[1] sm:scale-[1.3] mb-2"
+                />
+                <InlineError className="mt-1">{phoneFieldError ? error : null}</InlineError>
+              </div>
             }
             <Button
               prop={{
@@ -472,6 +478,9 @@ const LoginPage = () => {
                 ? (loading ? tr("Sending OTP...") : tr("Continue"))
                 : (loading || verdict ? tr("Continue") : tr("Submit"))}
             </Button>
+            <InlineError className={`mt-2 ${isPhone ? "w-[290px] max-sm:w-full" : "w-full"}`}>
+              {formError}
+            </InlineError>
             {!isPhone && (
               <p className={`mt-3 text-sm text-left text-[var(--text-muted)] ${busy ? "invisible" : ""}`}>
                 <span className="text-[var(--text-muted)]">{dc("Didn't get it or expired?")}</span>{" "}

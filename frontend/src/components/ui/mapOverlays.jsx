@@ -2,8 +2,10 @@ import { websiteCopy as dc } from "../../i18nCopy";
 import { haversineKm } from "../../lib/trip";
 import { headingBetween, pointAlongPreparedPath, preparePathMotion, remainingRoadPath, roadPathBetween } from "../../lib/routeMotion";
 import { labelOf } from "../../constants/vehicles";
-import topViewVehicle from "../../assets/top-view.webp";
-import topViewSedan from "../../assets/top-view-sedan.webp";
+import hatchbackMapVehicle from "../../assets/vehicles-v2/hatchback-map.webp";
+import sedanMapVehicle from "../../assets/vehicles-v2/sedan-map.webp";
+import suvMapVehicle from "../../assets/vehicles-v2/suv-map.webp";
+import premiumSuvMapVehicle from "../../assets/vehicles-v2/suv-premium-map.webp";
 
 // Shared map furniture for every screen that draws a ride on the singleton
 // map (VehicleSelect, TrackingPage). Overlay handles are module-level for the
@@ -29,11 +31,13 @@ const PICKUP_MARKER_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="${ENDP
 const DROP_MARKER_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="${ENDPOINT_ICON_WIDTH}" height="${ENDPOINT_ICON_HEIGHT}">${MARKER_SHADOW}<g filter="url(#ms)"><path d="M${ENDPOINT_X} ${ENDPOINT_CIRCLE_Y}V${ENDPOINT_TIP_Y}" stroke="#243AFB" stroke-width="2" stroke-linecap="round"/><circle cx="${ENDPOINT_X}" cy="${ENDPOINT_CIRCLE_Y}" r="8" fill="#243AFB"/><circle cx="${ENDPOINT_X}" cy="${ENDPOINT_CIRCLE_Y}" r="3" fill="#0B0B14"/></g></svg>`;
 const LIVE_DRIVER_MARKER_SIZE = 72;
 const LIVE_VEHICLE_CLASSES = new Set(["hatchback", "sedan", "suv", "suv_premium"]);
-// These are the same top-view assets already used by the captain map. Sedan has
-// its own art; every other current class uses the established larger-car image.
+// Keep these logical sizes aligned with the generated captain-app marker assets.
+// The hatchback master uses a 3:2 canvas; the other map masters use 2:1.
 const LIVE_VEHICLE_IMAGE = {
-    sedan: { src: topViewSedan, width: 60, height: 28 },
-    default: { src: topViewVehicle, width: 60, height: 33 },
+    hatchback: { src: hatchbackMapVehicle, width: 60, height: 40 },
+    sedan: { src: sedanMapVehicle, width: 60, height: 30 },
+    suv: { src: suvMapVehicle, width: 60, height: 30 },
+    suv_premium: { src: premiumSuvMapVehicle, width: 60, height: 30 },
 };
 const loadedVehicleImages = new Map();
 const rotatedVehicleIcons = new Map();
@@ -47,7 +51,7 @@ const normaliseHeading = (heading, fallback = 0) => {
 };
 
 const vehicleImageFor = (vehicleClass) =>
-    normaliseVehicleClass(vehicleClass) === "sedan" ? LIVE_VEHICLE_IMAGE.sedan : LIVE_VEHICLE_IMAGE.default;
+    LIVE_VEHICLE_IMAGE[normaliseVehicleClass(vehicleClass)];
 
 const loadVehicleImage = (src) => {
     if (!loadedVehicleImages.has(src)) {

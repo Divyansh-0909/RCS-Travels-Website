@@ -6,6 +6,7 @@ import { Link, useLocation } from "react-router-dom";
 import { useViewNavigate } from "../hooks/useViewNavigate";
 import Input from "../components/ui/Input";
 import Button from "../components/ui/Button";
+import InlineError from "../components/ui/InlineError";
 import { useApi } from "../hooks/useApi";
 import Icon from '@mdi/react';
 import { mdiAccount, mdiKeyboardBackspace } from '@mdi/js';
@@ -325,6 +326,20 @@ const SignUpPage = () => {
   const busy = loading;
   const otpReadyToContinue = verdict === "pass" && Boolean(continueTo);
   const otpSettled = verdict === "pass" || verdict === "fail";
+  const usernameFieldError = isUsername && (
+    error === dc("Enter your name") ||
+    error === dc("Name must be at least 2 characters") ||
+    error === tr("That name is already in use. Please choose another.")
+  );
+  const phoneFieldError = isPhone && (
+    error === tr("Enter a Phone Number") ||
+    error === tr("Number should be exactly 10 digits")
+  );
+  const otpFieldError = isOtp && (
+    error === dc("Enter OTP") ||
+    error === tr("OTP should be exactly 6 digit")
+  );
+  const formError = error && !usernameFieldError && !phoneFieldError && !otpFieldError ? error : null;
 
   useEffect(() => {
     if (!otpReadyToContinue) return;
@@ -502,19 +517,10 @@ const SignUpPage = () => {
             </div>
             <div className={`flex flex-col justify-center items-start ${isOtp ? "sm:items-start" : "sm:items-center"}`}>
 
-              {error && (
-                <div className={`mt-2 mb-1 flex items-center justify-start ${isOtp ? "" : "sm:mt-4 sm:mb-2 sm:justify-center"}`}>
-                  <p className="text-status-danger text-sm text-left">
-                    {error}
-                  </p>
-                </div>
-              )}
-
               {isOtp
                 ? <div className="flex flex-col justify-center items-start">
                   <div className="relative flex justify-center items-center gap-2">
                   {Array.from({ length: OTP_LENGTH }).map((_, i) => {
-                    const otpError = Boolean(error);
                     return (
                       <input
                         key={i}
@@ -536,7 +542,7 @@ const SignUpPage = () => {
                         ${otpSettled ? "text-transparent placeholder-transparent" : "text-ink"}
                         p-0 w-[46px] h-[46px] rounded-xl transition-all duration-300 ease-in-out
                         ${otpSettled && `animate-otp-box-in ${i === 0 && `${verdict === "fail" ? "bg-red-600!" : "bg-green-600!"}`}`}
-                        ${otpError
+                        ${otpFieldError
                             ? "border border-negative/50 bg-negative/10 focus:border-negative/80"
                             : "border border-[var(--input-border)] bg-[var(--input-background)] focus:border-primary"
                           }
@@ -554,6 +560,7 @@ const SignUpPage = () => {
                       </span>
                     )}
                   </div>
+                  <InlineError className="mt-1 w-full">{otpFieldError ? error : null}</InlineError>
                   <p
                     aria-live="polite"
                     className="text-sm text-left text-[var(--text-muted)] mt-2 mb-3"
@@ -582,22 +589,25 @@ const SignUpPage = () => {
                       <p className="mt-1 text-sm text-[var(--text-muted)]">{maskedPhone}</p>
                     </div>
                   </div>
-                : <Input
-                  prop={{
-                    type: isUsername ? "text" : "tel",
-                    name: isUsername ? "username" : "phone-number",
-                    id: isUsername ? "username" : "phone-number",
-                    inputRef: activeInputRef,
-                    autoFocus: true,
-                    placeholder: isUsername ? tr("Full Name") : tr("Mobile number"),
-                    value: isUsername ? username : phone,
-                    onChangeFn: isUsername ? handleUsernameChange : handlePhoneChange,
-                    error: isUsername
-                      ? error === "Enter your name" || error === "Name must be at least 2 characters" || error === "Username is already taken"
-                      : error === tr("Enter a Phone Number") || error === tr("Number should be exactly 10 digits"),
-                  }}
-                  className="scale-[1] sm:scale-[1.3] mb-2"
-                />}
+                : <div className="w-[290px] max-sm:w-full">
+                    <Input
+                      prop={{
+                        type: isUsername ? "text" : "tel",
+                        name: isUsername ? "username" : "phone-number",
+                        id: isUsername ? "username" : "phone-number",
+                        inputRef: activeInputRef,
+                        autoFocus: true,
+                        placeholder: isUsername ? tr("Full Name") : tr("Mobile number"),
+                        value: isUsername ? username : phone,
+                        onChangeFn: isUsername ? handleUsernameChange : handlePhoneChange,
+                        error: isUsername ? usernameFieldError : phoneFieldError,
+                      }}
+                      className="scale-[1] sm:scale-[1.3] mb-2"
+                    />
+                    <InlineError className="mt-1">
+                      {(usernameFieldError || phoneFieldError) ? error : null}
+                    </InlineError>
+                  </div>}
 
               <Button
                 prop={{
@@ -624,6 +634,9 @@ const SignUpPage = () => {
                   ? (loading ? tr("Sending OTP...") : tr("Continue with this account"))
                   : (loading || verdict ? tr("Continue") : tr("Submit"))}
               </Button>
+              <InlineError className={`mt-2 ${isOtp || isExisting ? "w-full" : "w-[290px] max-sm:w-full"}`}>
+                {formError}
+              </InlineError>
 
               {isExisting && (
                 <p className="mt-3 text-sm text-[var(--text-muted)]">

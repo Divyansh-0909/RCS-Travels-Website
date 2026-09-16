@@ -15,10 +15,10 @@ import { useTranslation } from "react-i18next";
 import { useWebsiteCopy } from "../hooks/useWebsiteCopy";
 
 const panelTones = {
-    theme: "bg-tone-primary",
-    language: "bg-tone-primary",
-    notifications: "bg-tone-teal",
-    savedPlaces: "bg-tone-violet",
+    theme: "bg-surface-muted",
+    language: "bg-surface-muted",
+    notifications: "bg-surface-muted",
+    savedPlaces: "bg-surface-muted",
 }
 
 const settingsListClass = "flex flex-col items-start gap-4 justify-center w-full"
@@ -185,7 +185,7 @@ const SettingsPage = () => {
                 <ul className={settingsListClass}>
                         {places.map((p, i) => (
                             editingPlace === i ? (
-                                <li key={i} className="w-full select-none py-5 px-6 rounded-3xl flex items-center justify-between gap-3 bg-tone-violet">
+                                <li key={i} className="account-panel-motion w-full select-none py-5 px-6 rounded-3xl flex items-center justify-between gap-3 bg-surface-muted">
                                     <input
                                         autoFocus
                                         value={placeInput}
@@ -223,7 +223,7 @@ const SettingsPage = () => {
                             )
                         ))}
                         {placeError && <li className="text-sm text-negative px-2">{placeError}</li>}
-                        <li onClick={addPlace} className="font-medium text-lg w-full cursor-pointer select-none py-5 px-6 rounded-3xl flex justify-center items-center gap-2 bg-tone-violet text-ink transition-opacity duration-200 hover:opacity-80">
+                        <li onClick={addPlace} className="account-panel-motion font-medium text-lg w-full cursor-pointer select-none py-5 px-6 rounded-3xl flex justify-center items-center gap-2 bg-surface-muted text-ink transition-transform duration-150 ease-out active:scale-[0.99]">
                             <Icon path={mdiPlus} size={0.9} /> {t("settings.addPlace")}
                         </li>
                 </ul>

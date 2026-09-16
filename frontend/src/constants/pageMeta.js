@@ -37,6 +37,11 @@ export const pageMeta = {
         description:
             "Questions about fares, drivers, or cancelling a booking? The answers are here, or message us on WhatsApp and we'll pick it up.",
     },
+    "/captains/delete-account": {
+        title: "Delete RCS Captains Account | RCS Travels",
+        description:
+            "Delete your RCS Captains account in the app, or contact RCS Travels if you can no longer access your captain account.",
+    },
     "/outstation": {
         title: "Outstation Trips | RCS Travels",
         description:

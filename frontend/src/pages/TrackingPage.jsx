@@ -25,6 +25,11 @@ import { useRefreshNotice } from "../hooks/useRefreshNotice";
 import BackgroundPanel from "../components/ui/BackgroundPanel";
 import NoticePill from "../components/ui/NoticePill";
 import pfpPlaceholder from "../assets/pfp-placeholder.webp"
+
+const driverInitials = (name) => {
+    const parts = (name || "").trim().split(/\s+/).filter(Boolean);
+    return parts.length ? parts.slice(0, 2).map((part) => part[0]).join("").toUpperCase() : "D";
+};
 import RideDetails from "../components/RideDetails";
 import Skeleton from "../components/ui/Skeleton";
 import OtpDisplay from "../components/ui/OtpDisplay";
@@ -565,17 +570,23 @@ const TrackingPage = () => {
             {bookingLoading ? (
                 <Skeleton rounded="rounded-full" className="w-16 h-16 sm:w-20 sm:h-20 shrink-0" />
             ) : (
-                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden shrink-0">
-                    <img
-                        src={driver?.photoUrl || pfpPlaceholder}
-                        onError={(e) => {
-                            markDriverPhotoFailed(driver?.photoUrl);
-                            e.currentTarget.src = pfpPlaceholder;
-                        }}
-                        alt={driver?.name ? dc("{{value0}}, your driver", {value0: (driver.name)}) : ""}
-                        className="w-full h-full object-cover"
-                    />
-                </div>
+                driver?.photoUrl ? (
+                    <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden shrink-0">
+                        <img
+                            src={driver.photoUrl}
+                            onError={(e) => {
+                                markDriverPhotoFailed(driver.photoUrl);
+                                e.currentTarget.src = pfpPlaceholder;
+                            }}
+                            alt={driver?.name ? dc("{{value0}}, your driver", {value0: (driver.name)}) : ""}
+                            className="w-full h-full object-cover"
+                        />
+                    </div>
+                ) : (
+                    <div className="flex w-16 h-16 sm:w-20 sm:h-20 rounded-full shrink-0 items-center justify-center bg-primary text-xl font-semibold text-on-primary">
+                        {driverInitials(driver?.name)}
+                    </div>
+                )
             )}
             {bookingLoading ? (
                 <div className="flex flex-col items-end justify-center gap-1">
@@ -587,12 +598,6 @@ const TrackingPage = () => {
                 <div className="flex flex-col text-right justify-center gap-0.5">
                     <h4 className="text-sm sm:text-base text-[var(--text-muted)] leading-tight">{driver?.name}</h4>
                     <h3 className="text-lg sm:text-2xl font-medium leading-tight">{formatPlate(driver?.vehicleNumber)}</h3>
-                    {/* The model is what a rider picks a car out of traffic with,
-                        so it leads. Naming a car is required of a captain now, so
-                        the class below is a fallback for old data only — a ride
-                        booked before the model was snapshotted, or a car added
-                        before the name was asked for — and it still says which
-                        size of car to look for. */}
                     <h4 className="text-sm sm:text-base text-[var(--text-muted)] leading-tight">{driver?.vehicleModel ?? labelOf(vehicleClass)}</h4>
                 </div>
             )}
@@ -681,17 +686,23 @@ const TrackingPage = () => {
     // never reached, and unlike a live read it cannot become wrong.
     const driverRow = driver && (
         <div className="flex items-center gap-3 w-full">
-            <div className="w-10 h-10 rounded-full overflow-hidden shrink-0">
-                <img
-                    src={driver.photoUrl || pfpPlaceholder}
-                    onError={(e) => {
-                        markDriverPhotoFailed(driver.photoUrl);
-                        e.currentTarget.src = pfpPlaceholder;
-                    }}
-                    alt=""
-                    className="w-full h-full object-cover"
-                />
-            </div>
+            {driver.photoUrl ? (
+                <div className="w-10 h-10 rounded-full overflow-hidden shrink-0">
+                    <img
+                        src={driver.photoUrl}
+                        onError={(e) => {
+                            markDriverPhotoFailed(driver.photoUrl);
+                            e.currentTarget.src = pfpPlaceholder;
+                        }}
+                        alt=""
+                        className="w-full h-full object-cover"
+                    />
+                </div>
+            ) : (
+                <div className="flex w-10 h-10 rounded-full shrink-0 items-center justify-center bg-primary text-sm font-semibold text-on-primary">
+                    {driverInitials(driver.name)}
+                </div>
+            )}
             <div className="flex flex-col min-w-0 text-left">
                 <h4 className="text-base sm:text-lg font-medium leading-tight">{formatPlate(driver.vehicleNumber)}</h4>
                 <p className="text-xs sm:text-sm text-[var(--text-muted)] leading-tight truncate">

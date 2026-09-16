@@ -17,15 +17,17 @@ type ChipsProps<T> = {
 const Chips = <T,>({ options, value, onChange }: ChipsProps<T>) => (
     <div className="flex flex-wrap gap-2">
         {options.map((o) => (
-            <div
+            <button
+                type="button"
                 key={String(o.value)}
                 onClick={() => onChange(value === o.value ? null : o.value)}
-                className={`px-3 py-1.5 rounded-full border text-sm capitalize cursor-pointer select-none transition-colors duration-300 ${value === o.value
-                    ? "bg-primary text-[var(--foreground)] border-transparent font-semibold"
-                    : "border-[var(--foreground)]/30 hover:bg-[var(--foreground)]/10"}`}
+                aria-pressed={value === o.value}
+                className={`cursor-pointer select-none rounded-full px-3 py-1.5 text-sm capitalize transition-[background-color,color,transform] duration-150 active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${value === o.value
+                    ? "bg-primary text-on-strong font-semibold"
+                    : "bg-surface-muted text-ink hover:bg-surface-raised"}`}
             >
                 {o.label}
-            </div>
+            </button>
         ))}
     </div>
 )
