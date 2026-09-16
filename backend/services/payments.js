@@ -1,12 +1,15 @@
-import { createHash } from 'node:crypto'
 import { prisma } from '../db/prisma.js'
-import { createRazorpayGateway, createRazorpayWebhookVerifier } from './razorpay.js'
+import { createRazorpayGateway } from './razorpay.js'
 import { PaymentError } from './paymentErrors.js'
 import { createPaymentIntent, MIN_PAYMENT_SUBUNITS, toSubunits } from './paymentIntents.js'
-import { applyCapturedPaymentEffect, applyRefundedPaymentEffect } from './scheduledPayments.js'
+import { applyCapturedPaymentEffect } from './scheduledPayments.js'
 import { notifyWhatsAppScheduledPaymentConfirmed } from './notification.js'
+import { followCapturedPaymentEffect } from './paymentEffects.js'
+import { statusAfterGatewayPayment } from './paymentStatus.js'
+import { processRazorpayWebhookEvent } from './razorpayWebhook.js'
 
 export { PaymentError, createPaymentIntent, toSubunits }
+export { statusAfterGatewayPayment } from './paymentStatus.js'
 
 const gatewayOrderError = (error) => {
   if (error?.statusCode === 401 || error?.status === 401)
@@ -14,25 +17,10 @@ const gatewayOrderError = (error) => {
   return new PaymentError('RAZORPAY_ORDER_FAILED', 'Could not create payment order', 500)
 }
 
-const TERMINAL_OR_REFUNDING = new Set(['refund_pending', 'refunded'])
-export function statusAfterGatewayPayment(current, gatewayStatus) {
-  if (TERMINAL_OR_REFUNDING.has(current) || current === 'captured') return current
-  if (gatewayStatus === 'captured') return 'captured'
-  if (gatewayStatus === 'authorized' && ['order_created', 'authorized'].includes(current)) return 'authorized'
-  return current
-}
-
 const checkoutOf = (payment, keyId) => ({
   paymentId: payment.id, keyId, orderId: payment.razorpayOrderId,
   amount: payment.amount, currency: payment.currency, status: payment.status,
 })
-
-async function followCapturedPaymentEffect(effect, { db, refundPaymentFn }) {
-  if (effect?.type === 'scheduled_ride_advance_refund') {
-    return refundPaymentFn({ paymentId: effect.paymentId, db })
-  }
-  return null
-}
 
 export async function createOrderForPayment({ paymentId, userId, gateway = createRazorpayGateway(), db = prisma }) {
   const payment = await db.payment.findFirst({ where: { id: paymentId, userId } })
@@ -87,92 +75,11 @@ export async function verifyCheckoutPayment({ paymentId, userId, razorpayPayment
   return { paymentId: updated.id, status: refund?.status ?? updated.status }
 }
 
-export async function processRazorpayWebhook({ rawBody, signature, eventId, gateway = createRazorpayWebhookVerifier(),
-  db = prisma, notifyPayment = null, refundPaymentFn = refundPayment }) {
-  if (!gateway.verifyWebhookSignature(rawBody, signature)) throw new PaymentError('INVALID_WEBHOOK_SIGNATURE', 'Invalid webhook signature', 400)
-  let event
-  try { event = JSON.parse(rawBody.toString('utf8')) } catch { throw new PaymentError('MALFORMED_WEBHOOK', 'Malformed webhook payload', 400) }
-  if (!event || typeof event.event !== 'string') throw new PaymentError('MALFORMED_WEBHOOK', 'Webhook event type is missing', 400)
-  const stableEventId = eventId || createHash('sha256').update(rawBody).digest('hex')
-  const outcome = await db.$transaction(async (tx) => {
-    const paymentEntity = event.payload?.payment?.entity
-    const refundEntity = event.payload?.refund?.entity
-    const orderId = paymentEntity?.order_id
-    const externalPaymentId = paymentEntity?.id ?? refundEntity?.payment_id
-    const matchingPayment = () => tx.payment.findFirst({ where: { OR: [
-      ...(orderId ? [{ razorpayOrderId: orderId }] : []), ...(externalPaymentId ? [{ razorpayPaymentId: externalPaymentId }] : []),
-    ] } })
-    const inserted = await tx.razorpayWebhookEvent.createMany({ data: [{ eventId: stableEventId, eventType: event.event }], skipDuplicates: true })
-    if (!inserted.count) {
-      // The capture and the cancellation refund cannot be one transaction: the
-      // latter calls Razorpay after the durable state change. If that network
-      // call fails, Razorpay retries this same event. Re-drive only this narrow,
-      // already-marked refund state; ordinary duplicate events stay no-ops.
-      if (event.event !== 'payment.captured') return { duplicate: true }
-      const payment = await matchingPayment()
-      if (!payment || paymentEntity?.amount !== payment.amount || paymentEntity?.currency !== payment.currency)
-        return { duplicate: true }
-      const effect = await applyCapturedPaymentEffect(tx, payment)
-      return { duplicate: true, effect }
-    }
-    const payment = await matchingPayment()
-    const finishEvent = (status, result, paymentId = null) => tx.razorpayWebhookEvent.update({ where: { eventId: stableEventId },
-      data: { status, result, paymentId, processedAt: new Date() } })
-    if (!payment) { await finishEvent('ignored', 'payment_not_found'); return { ignored: true } }
-
-    if (event.event === 'payment.authorized' || event.event === 'payment.captured') {
-      if (paymentEntity.amount !== payment.amount || paymentEntity.currency !== payment.currency) {
-        await finishEvent('failed', 'amount_or_currency_mismatch', payment.id); return { ignored: true }
-      }
-      const captured = event.event === 'payment.captured'
-      const updatedPayment = await tx.payment.update({ where: { id: payment.id }, data: {
-        status: statusAfterGatewayPayment(payment.status, captured ? 'captured' : 'authorized'),
-        razorpayPaymentId: paymentEntity.id,
-        ...(captured ? { capturedAt: new Date() } : {}),
-      } })
-      const effect = captured ? await applyCapturedPaymentEffect(tx, updatedPayment) : null
-      await finishEvent('processed', event.event, payment.id)
-      return { processed: true, effect, notificationBookingId:
-        effect?.type === 'scheduled_ride_advance' ? effect.bookingId : null }
-    }
-    if (event.event === 'payment.failed') {
-      if (payment.status !== 'captured' && payment.status !== 'refunded') await tx.payment.update({ where: { id: payment.id }, data: {
-        status: 'failed', razorpayPaymentId: paymentEntity.id,
-        failureCode: paymentEntity.error_code ?? null, failureDescription: paymentEntity.error_description ?? null,
-      } })
-      await finishEvent('processed', event.event, payment.id); return { processed: true }
-    }
-    if (event.event === 'refund.processed') {
-      // This product only requests full refunds. A signed event is evidence that
-      // Razorpay emitted it, not that it settles the specific refund this row is
-      // awaiting: a dashboard-initiated partial refund must not erase the full
-      // advance or mark its booking refundable.
-      if (payment.status !== 'refund_pending' || typeof refundEntity?.id !== 'string' ||
-          refundEntity.amount !== payment.amount ||
-          refundEntity?.currency !== payment.currency) {
-        await finishEvent('ignored', 'unexpected_or_partial_refund', payment.id)
-        return { ignored: true }
-      }
-      const refundedPayment = await tx.payment.update({ where: { id: payment.id }, data: {
-        status: 'refunded', razorpayRefundId: refundEntity.id, refundedAt: new Date(),
-      } })
-      await applyRefundedPaymentEffect(tx, refundedPayment)
-      await finishEvent('processed', event.event, payment.id); return { processed: true }
-    }
-    if (event.event === 'refund.failed') {
-      await tx.payment.updateMany({ where: { id: payment.id, status: 'refund_pending' }, data: {
-        status: 'captured', failureCode: 'REFUND_FAILED', failureDescription: refundEntity.error_description ?? null,
-      } })
-      await finishEvent('processed', event.event, payment.id); return { processed: true }
-    }
-    await finishEvent('ignored', 'unsupported_event', payment.id)
-    return { ignored: true }
+export async function processRazorpayWebhook(args) {
+  return processRazorpayWebhookEvent({
+    ...args,
+    refundPaymentFn: args.refundPaymentFn ?? refundPayment,
   })
-  await followCapturedPaymentEffect(outcome.effect, { db, refundPaymentFn })
-  const notify = notifyPayment ?? (db === prisma ? notifyWhatsAppScheduledPaymentConfirmed : null)
-  if (outcome.notificationBookingId && notify) await notify(outcome.notificationBookingId).catch(() => {})
-  const { notificationBookingId: _notificationBookingId, effect: _effect, ...result } = outcome
-  return result
 }
 
 export async function refundPayment({ paymentId, gateway = createRazorpayGateway(), db = prisma }) {

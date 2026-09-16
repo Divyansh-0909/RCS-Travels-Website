@@ -1,7 +1,6 @@
 import { prisma } from '../db/prisma.js'
-import { Prisma } from '@prisma/client'
 import { randomUUID } from 'node:crypto'
-import { sendPush, notifyWhatsAppNoDriver, notifyWhatsAppRideStatus, notifyWhatsAppPoolJoined } from './notification.js'
+import { notifyWhatsAppNoDriver, notifyWhatsAppRideStatus, notifyWhatsAppPoolJoined } from './notification.js'
 
 /**
  * getDriver's answer when the ride has gone OUT to captains but nobody has taken
@@ -14,174 +13,19 @@ import { sendPush, notifyWhatsAppNoDriver, notifyWhatsAppRideStatus, notifyWhats
  */
 export const OFFERED = 'offered'
 import { seatsOf } from '../constants/vehicles.js'
-import { LOCATION_STALE_AFTER_MS } from '../constants/dispatch.js'
 import {
-  evaluatePool, hostBookingOf, HOST_ACTIVE_STATUSES, POOLABLE_HOST_STATUSES, POOL_RADIUS_KM,
+  evaluatePool, hostBookingOf, POOLABLE_HOST_STATUSES, POOL_RADIUS_KM,
 } from './ridePooling.js'
-
-// `bearingDeg` and `inSameDirectionCorridor` were removed here. They were the
-// old pooling test — do two drops leave the pickup within 45° of each other —
-// and they only ever fed the pass that never ran. Two drops can share a bearing
-// with a divided carriageway, a river or a one-way system between them, so the
-// test is replaced rather than repaired: services/ridePooling.js projects points
-// onto the road the driver is actually on (geo.js `projectOntoPath`) and then
-// prices the detour in minutes against the routing API.
-
-// THE ONE PLACE A { lat, lng } PAIR BECOMES A POSTGIS VALUE.
-//
-// ST_MakePoint takes (x, y) — LONGITUDE FIRST. That is the same disagreement
-// services/geo.js has a header comment about, and it is silent when written
-// backwards: a pickup in NCR is lat 28, lng 77, and both are legal latitudes, so
-// a reversed pair does not error. It searches empty ocean off Somalia and every
-// booking comes back `no_driver`. Building the value here, once, is that file's
-// defence applied to SQL — no query below states an order, so none can state it
-// wrong.
-//
-// Every PostGIS name is schema-qualified because that is where Supabase installs
-// the extension. Unqualified calls would resolve in production, where Supabase
-// puts `extensions` on the role's search_path, and then fail on a plain local
-// Postgres where it is not.
-const geographyOf = (lat, lng) =>
-  Prisma.sql`extensions.ST_SetSRID(extensions.ST_MakePoint(${lng}::float8, ${lat}::float8), 4326)::extensions.geography`
-
-/**
- * Every dispatchable driver within `radiusKm` of the booking's pickup, each
- * carrying the distance that ranks him and the active bookings the sharing pass
- * reads. Drivers already offered this ride are excluded.
- *
- * WHY THIS IS TWO QUERIES. The first is the geography one and has to be raw:
- * `geog` is `Unsupported` in the Prisma schema, so ST_DWithin — the whole point
- * of the GiST index — is unreachable through the query builder. It returns ids
- * and distances only. The second is an ordinary Prisma read that hydrates those
- * ids with their relations, which keeps the nested `bookings` include typed and
- * keeps a hand-written join out of a function that would otherwise have to
- * reassemble one driver's rows from many.
- *
- * The radius filter is now the DATABASE's. It used to be a bounding box here
- * plus a haversine re-measure in JS, which had to over-fetch: a square around a
- * circle is ~27% larger than the circle, and every row in the corners was loaded
- * with all its relations only to be dropped. ST_DWithin asks for the circle.
- *
- * `updated_at` is checked alongside `is_online` because the two make different
- * claims. Online is a switch he flipped; the timestamp is the last time his
- * phone actually said where it was. A captain whose battery died, who parked
- * under a building, or whose app the OS killed stays online forever and stays
- * frozen at his last fix — near the pickup, ranked first, and unable to answer.
- * See LOCATION_STALE_AFTER_MS: the cutoff is tied to the app's idle heartbeat
- * and neither number can move on its own.
- */
-async function candidatesWithin(row, radiusKm, triedDriverIds) {
-  const origin = geographyOf(row.pickupLat, row.pickupLng)
-
-  // `use_spheroid = false` on both calls, and not only because the sphere is the
-  // cheaper of the two. It is what the haversine this replaced computed, so the
-  // numbers below land in the same FAIRNESS_TIER_KM bands they used to — a
-  // switch to spheroid distances would silently re-rank every driver sitting
-  // near a 3 km boundary.
-  const near = await prisma.$queryRaw`
-    SELECT dl."driver_id" AS "driverId",
-           dl."latitude"  AS "latitude",
-           dl."longitude" AS "longitude",
-           extensions.ST_Distance(dl."geog", ${origin}, false) / 1000 AS "distanceKm"
-    FROM "driver_locations" dl
-    JOIN "drivers" d ON d."id" = dl."driver_id"
-    WHERE extensions.ST_DWithin(dl."geog", ${origin}, ${radiusKm * 1000}::float8, false)
-      AND dl."updated_at" > ${new Date(Date.now() - LOCATION_STALE_AFTER_MS)}
-      AND d."is_online"
-      AND d."is_active"
-      AND d."suspended_at" IS NULL
-      AND d."verification_status" = 'approved'
-      AND d."vehicle_class" = ${row.vehicleClass}::"VehicleClass"
-      AND NOT (dl."driver_id" = ANY(${[...triedDriverIds]}::text[]))
-  `
-
-  if (near.length === 0) return []
-
-  const drivers = await prisma.driver.findMany({
-    where: { id: { in: near.map((n) => n.driverId) } },
-    include: {
-      bookings: {
-        where: { status: { in: HOST_ACTIVE_STATUSES } },
-        // Everything services/ridePooling.js needs to judge a host, loaded here
-        // because the alternative is a query per candidate inside the ranking
-        // loop. `sharing` and `status` decide whether he can host at all;
-        // `routePolyline` is the road a joiner's pickup is measured against; the
-        // four coordinates build the stop sequence.
-        select: {
-          id: true, status: true, sharing: true,
-          pickupLat: true, pickupLng: true,
-          dropLat: true, dropLng: true,
-          routePolyline: true,
-        },
-      },
-    },
-  })
-  const byId = new Map(drivers.map((d) => [d.id, d]))
-
-  // No ordering here: the comparator in getDriver ranks by group, then distance
-  // band, then whose turn it is, and would only have to undo one imposed by SQL.
-  // The filter is for the driver deleted between the two queries — a row that
-  // cannot be offered anything and would blow up the sort on `driver.group`.
-  return near
-    .map((n) => ({ ...n, driver: byId.get(n.driverId) }))
-    .filter((c) => c.driver)
-}
+import {
+  candidatesWithin,
+  markOffered,
+  offerRideNow,
+  rankCandidates,
+} from './driverDispatchCandidates.js'
+export { FAIRNESS_TIER_KM } from './driverDispatchCandidates.js'
 
 /** @type {import('@prisma/client').BookingStatus[]} */
 export const ASSIGNABLE_STATUSES = ['pending', 'confirmed']
-const GROUP_RANK = { admin: 0, rcs: 1, partner: 2 }
-const rankOf = (group) => GROUP_RANK[group] ?? GROUP_RANK.partner
-
-/**
- * How close two drivers have to be before the fairness key outranks distance.
- *
- * Sorting on raw distance concentrates every ride on one driver — see the
- * comment on Driver.lastOfferedAt. Sorting on fairness alone is the opposite
- * mistake: it would send a rider the driver 18 km away because it was his turn.
- * The tier is the compromise. Inside one 3 km band the difference is a couple of
- * minutes of approach and the queue decides; across bands distance still wins
- * outright, so a driver at 2 km always beats one at 9 km however long he has
- * been waiting.
- *
- * 3 km is roughly campus-and-its-immediate-surroundings, which is the radius the
- * whole fleet actually sits in. Widen it and genuinely distant drivers start
- * winning rides; narrow it and the bands stop containing more than one driver,
- * which is just the old behaviour with extra arithmetic.
- */
-export const FAIRNESS_TIER_KM = 3
-const tierOf = (km) => Math.floor(km / FAIRNESS_TIER_KM)
-
-/**
- * Position in the queue: least-recently-offered first. A driver who has never
- * been offered anything goes to the very front, which is what makes a new
- * captain's first ride arrive quickly instead of after the incumbents have had
- * their turn.
- */
-const turnKey = (driver) => (driver.lastOfferedAt ? new Date(driver.lastOfferedAt).getTime() : 0)
-
-/**
- * Record that this driver has had his turn, whatever he does with it.
- *
- * CALLED BEFORE THE PUSH, NOT AFTER. sendFCM waits 30 seconds for an answer, and
- * two bookings created inside that window run their searches concurrently: if the
- * mark landed after the answer, both would sort the same driver to the front and
- * offer him both rides while the queue still showed him as waiting. Writing it
- * first costs nothing and closes that window.
- *
- * A rejection and a silence both count as a turn taken. They are the same event
- * from here — sendFCM's boolean cannot tell "no thanks" from "phone in a pocket"
- * — and treating silence as no turn at all would let an unresponsive driver sit
- * at the head of the queue forever, delaying every ride by one dead offer.
- */
-async function markOffered(driverId, at = new Date()) {
-  try {
-    await prisma.driver.update({ where: { id: driverId }, data: { lastOfferedAt: at } })
-  } catch (err) {
-    // Never fail a dispatch over bookkeeping — a rider waiting on a spinner
-    // cares more about getting a car than about the queue staying tidy.
-    console.error(`could not mark driver ${driverId} as offered:`, err)
-  }
-}
 
 class ClaimFailure extends Error {
   constructor(reason) {
@@ -367,30 +211,7 @@ export async function getDriver(bookingId) {
 
     const candidates = await candidatesWithin(row, 20 + i, triedDriverIds)
 
-    const sorted = candidates
-      .sort((a, b) => {
-        // Group first — see GROUP_RANK. Both passes below iterate this array, so
-        // sorting here is what makes the sharing pass respect priority too.
-        const byGroup = rankOf(a.driver.group) - rankOf(b.driver.group)
-        if (byGroup !== 0) return byGroup
-
-        // Then distance, but in 3 km bands rather than metre by metre, and then
-        // whose turn it is within the band. Raw distance was the whole problem:
-        // it is a stable ranking over a fleet that parks in fixed spots, so the
-        // nearest driver to the gate won every booking forever. See
-        // FAIRNESS_TIER_KM.
-        const byTier = tierOf(a.distanceKm) - tierOf(b.distanceKm)
-        if (byTier !== 0) return byTier
-
-        const byTurn = turnKey(a.driver) - turnKey(b.driver)
-        if (byTurn !== 0) return byTurn
-
-        // Both waiting exactly as long — two drivers who have never been offered
-        // anything, in practice. Distance and seniority settle it as before.
-        return a.distanceKm !== b.distanceKm
-          ? a.distanceKm - b.distanceKm
-          : new Date(a.driver.createdAt) - new Date(b.driver.createdAt)
-      })
+    const sorted = rankCandidates(candidates)
     
     const pickupTimeLabel = row.scheduledAt
       ? new Date(row.scheduledAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'medium', timeStyle: 'short' })
@@ -514,35 +335,6 @@ export async function getDriver(bookingId) {
   }
 
   return null
-}
-
-/**
- * Put a ride-now booking on one captain's notification page and nudge his phone.
- *
- * Neither half is allowed to fail the search. The ROW is the offer — a captain
- * with a dead FCM token still finds the ride when he next opens the app — so a
- * push that does not send costs immediacy and nothing else. And the unique on
- * (bookingId, driverId) means a re-run of the ring quietly does nothing rather
- * than offering the same ride twice.
- */
-async function offerRideNow(row, x, poolHostBookingId = null) {
-  try {
-    await prisma.rideOffer.create({
-      data: { bookingId: row.id, driverId: x.driverId, group: x.driver.group, poolHostBookingId },
-    })
-  } catch {
-    // Already offered to him. Nothing to do and nothing to report.
-    return
-  }
-
-  // sendPush, not sendFCM: the real one. It takes the driver row, puts title and
-  // body at the top level, and clears the token when Firebase says the install
-  // is gone. `screen` is what usePushRegistration reads to route the tap.
-  await sendPush(x.driver, {
-    title: poolHostBookingId ? 'New shared pickup on your route' : row.sharing ? 'New sharing ride' : 'New ride',
-    body: `${row.pickupAddress} → ${row.dropAddress} · ₹${row.fare}`,
-    data: { screen: 'notifications', bookingId: row.id },
-  }).catch(() => {})
 }
 
 // How long a booking may sit in `pending` before it's written off. Only a crash

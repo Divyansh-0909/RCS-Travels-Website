@@ -5,7 +5,7 @@ import { sendPush } from '../services/notification.js'
 import { prisma } from '../db/prisma.js'
 import { verifyQuote } from '../services/fareQuote.js'
 import { myBookingsQuerySchema, rideComplaintSchema } from '../types.ts'
-import { VEHICLE_CLASS_NAMES, isVehicleClass, seatsOf } from '../constants/vehicles.js'
+import { VEHICLE_CLASS_NAMES, isVehicleClass } from '../constants/vehicles.js'
 import { normalizeReference } from '../lib/bookingReference.js'
 import { signedRiderPhotoUrl } from '../services/driverPhoto.js'
 import { ensureBookingShareLink } from '../lib/shareLink.js'
@@ -13,9 +13,8 @@ import { getNavigationEtaMinutes, getNavigationRoute } from '../services/rideEst
 import { applyComplaintConsequences } from '../services/complaints.js'
 import { createOrderForPayment, refundPayment, PaymentError } from '../services/payments.js'
 import { createScheduledFinalIntent } from '../services/scheduledPayments.js'
-import { postWalletEntry } from '../services/wallet.js'
-import { walletEvent } from '../services/walletKeys.js'
 import { freshLocationWithinPickup } from '../services/rideGeofence.js'
+import { applyCustomerCancellation } from '../services/customerCancellation.js'
 import { createBookingFromQuote, BookingCreationError } from '../services/bookingCreation.js'
 import { nearbyDriverAvailability, nearbyDriverEta } from '../services/nearbyDrivers.js'
 import { driverLocationVisibleToRider } from '../services/riderDriverLocation.js'
@@ -495,71 +494,11 @@ bookingsRouter.post('/cancel', protect, async (req, res) => {
         })
     }
 
-    const cancelled = await prisma.$transaction(async (tx) => {
-        const moved = await tx.booking.updateMany({
-            where: { id: booking.id, status: booking.status },
-            data: {
-                status: 'cancelled',
-                cancelledBy: 'user',
-                cancellationCharge,
-                ...(shouldRefund ? { scheduledAdvanceDisposition: 'refund_pending' } : {}),
-                ...(shouldForfeit ? { scheduledAdvanceDisposition: 'forfeited_to_driver' } : {}),
-            },
-        })
-        if (!moved.count) return false
-
-        // Take the ride off every driver's notification page. Inside the same
-        // transaction as the cancel: a scheduled ride that is cancelled but still
-        // showing as a live offer is one a driver can tap accept on, and the
-        // status guard would then reject him for a ride he was still being shown.
-        await tx.rideOffer.updateMany({
-            where: { bookingId: booking.id, status: 'pending' },
-            data: { status: 'withdrawn', respondedAt: new Date() },
-        })
-
-        const seats = booking.driver ? seatsOf(booking.driver.vehicleClass) : null
-
-        // seats === null means an unrecognised class, and there is no full mark to
-        // restore to — leave the counter alone rather than write a null into it.
-        if (booking.driver && seats !== null) {
-            if (booking.sharing) {
-                // Sharing ride freed a single seat — give it back, capped at full.
-                // The cap is a WHERE rather than an `if` over the row we read
-                // before the transaction: two rides ending on the same vehicle at
-                // once would both read the same capacity, both find it under the
-                // cap, and both increment past it. Re-checked against the live row
-                // here, the second one simply matches nothing.
-                await tx.driver.updateMany({
-                    where: { id: booking.driver.id, vehicleCapacity: { lt: seats } },
-                    data: {
-                        vehicleCapacity: {
-                            increment: 1,
-                        },
-                    },
-                })
-            } else {
-                // Solo ride had the whole vehicle — restore it to full capacity.
-                // Absolute, so it needs no guard and cannot overshoot.
-                await tx.driver.update({
-                    where: { id: booking.driver.id },
-                    data: {
-                        vehicleCapacity: seats,
-                    },
-                })
-            }
-        }
-        if (booking.driverId && booking.scheduledAt) {
-            const hold = await tx.walletEntry.findUnique({ where: { eventKey: walletEvent.depositHold(booking.id) } })
-            if (hold) await postWalletEntry(tx, { driverId: booking.driverId, amount: Math.abs(hold.amount),
-                type: 'deposit_refund', eventKey: walletEvent.depositRefund(booking.id), bookingId: booking.id,
-                note: 'Scheduled ride acceptance deposit released after customer cancellation' })
-        }
-        if (shouldForfeit && booking.driverId) await postWalletEntry(tx, {
-            driverId: booking.driverId, amount: booking.scheduledAdvancePaidAmount / 100,
-            type: 'cancellation_compensation', eventKey: walletEvent.scheduledCancellationCompensation(booking.id),
-            bookingId: booking.id, note: 'Scheduled customer advance forfeited after late cancellation',
-        })
-        return true
+    const cancelled = await applyCustomerCancellation({
+        booking,
+        cancellationCharge,
+        shouldRefund,
+        shouldForfeit,
     })
 
     if (!cancelled) return res.status(409).json({ error: 'Booking changed while cancellation was in flight' })
@@ -590,7 +529,7 @@ bookingsRouter.get('/my-bookings', protect, async (req, res) => {
     if (!parsed.success) {
         return res.status(400).json({ error: 'Invalid query parameters', issues: parsed.error.issues })
     }
-    const { search, status, vehicleClass, startDate, endDate, page, limit } = parsed.data
+    const { search, status, vehicleClass, startDate, endDate, sortOrder, page, limit } = parsed.data
 
     const user = await prisma.user.findUnique({ where: { clerkId: req.auth.userId } })
     if (!user) return res.status(401).json({ error: 'User not found' })
@@ -635,7 +574,7 @@ bookingsRouter.get('/my-bookings', protect, async (req, res) => {
     const [bookings, total] = await Promise.all([
         prisma.booking.findMany({
             where,
-            orderBy: { createdAt: 'desc' },
+            orderBy: { createdAt: sortOrder },
             include: { driver: { include: { location: true } }, complaint: true },
             skip: (page - 1) * limit,
             take: limit,

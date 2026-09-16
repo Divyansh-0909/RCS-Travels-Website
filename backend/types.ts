@@ -195,6 +195,7 @@ const bookingListQuerySchema = z.object({
     .transform(value => value === "true")
     .optional(),
   cancelledBy: z.enum(CancelledBy).optional(),
+  sortOrder: z.enum(['asc', 'desc']).default('desc'),
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().positive().max(100).default(20),
 });
@@ -205,6 +206,7 @@ const myBookingsQuerySchema = z.object({
   vehicleClass: z.enum(VehicleClass).optional(),
   startDate: z.iso.date().optional(),
   endDate: z.iso.date().optional(),
+  sortOrder: z.enum(['asc', 'desc']).default('desc'),
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().positive().max(100).default(10),
 });
@@ -227,6 +229,7 @@ const driverListQuerySchema = z.object({
     .optional(),
   startDate: z.iso.date().optional(),
   endDate: z.iso.date().optional(),
+  sortOrder: z.enum(['asc', 'desc']).default('desc'),
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().positive().max(100).default(20),
 });
@@ -288,6 +291,7 @@ const userListQuerySchema = z.object({
   gender: z.string().trim().optional(),
   startDate: z.iso.date().optional(),
   endDate: z.iso.date().optional(),
+  sortOrder: z.enum(['asc', 'desc']).default('desc'),
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().positive().max(100).default(20),
 });

@@ -9,12 +9,9 @@ import { ASSIGNABLE_STATUSES, claimBookingForDriver, joinPool, startAssignment }
 import { evaluatePool, POOLABLE_HOST_STATUSES } from '../services/ridePooling.js'
 import { offerScheduledRide, withdrawOtherOffers } from '../services/scheduledOffers.js'
 import { seatsOf } from '../constants/vehicles.js'
-import { commissionOn } from '../services/commission.js'
 import { postWalletEntry } from '../services/wallet.js'
 import { walletEvent } from '../services/walletKeys.js'
 import { scheduledDepositFor } from '../services/scheduledDeposit.js'
-import { commissionWithReward, loyaltyRewardsEarned } from '../services/loyalty.js'
-import { createScheduledFinalIntent } from '../services/scheduledPayments.js'
 import { driverPaymentView } from '../services/driverPaymentView.js'
 import { isStorageConfigured, signedUploadUrl, stat, remove } from '../lib/storage.js'
 import { sniffUpload, scanDocument, discardUpload, DRIVER_SCAN_MESSAGE } from '../services/documentScan.js'
@@ -47,7 +44,8 @@ import {
 } from '../services/driverDocuments.js'
 import { addVehicle, removeVehicle, switchActiveVehicle } from '../services/driverVehicles.js'
 import { completionGeofence, locationProblem, PICKUP_RADIUS_KM } from '../services/rideGeofence.js'
-import { applyDriverCancellationConsequences } from '../services/driverCancellations.js'
+import { cancelDriverRide, DRIVER_CANCELLABLE_STATUSES } from '../services/driverRideCancellation.js'
+import { settleRideTransition } from '../services/rideSettlement.js'
 import { isDriverDispatchReady, restoreIdleDriverCapacity } from '../services/driverAvailability.ts'
 import { notifyWhatsAppDriverCancelled, notifyWhatsAppEmergencyLiveLocation, notifyWhatsAppRideStatus } from '../services/notification.js'
 import { ensureBookingShareLink } from '../lib/shareLink.js'
@@ -341,6 +339,62 @@ driverRouter.post('/me', protect, async (req, res) => {
     }
 
     return res.status(201).json(driver)
+})
+
+driverRouter.delete('/me', protect, async (req, res) => {
+    const driver = await requireDriver(req, res)
+    if (!driver) return
+
+    const activeRide = await prisma.booking.findFirst({
+        where: { driverId: driver.id, status: { in: ACTIVE_STATUSES } },
+        select: { id: true },
+    })
+    if (activeRide) {
+        return res.status(409).json({
+            error: 'Finish your active ride before deleting your account.',
+            code: 'ACTIVE_RIDE',
+        })
+    }
+
+    const { userId } = getAuth(req)
+    const sentinel = `deleted:${driver.id}`
+    const profilePhotoPath = driver.pfpUrl
+
+    // Preserve ride, wallet and safety/audit history on the stable Driver id,
+    // while removing the live profile identifiers and dispatch state.
+    await prisma.$transaction(async (tx) => {
+        await tx.driverLocation.deleteMany({ where: { driverId: driver.id } })
+        await tx.driver.update({
+            where: { id: driver.id },
+            data: {
+                name: 'Deleted captain',
+                phone: sentinel,
+                clerkId: sentinel,
+                pfpUrl: null,
+                fcmToken: null,
+                isOnline: false,
+                isActive: false,
+            },
+        })
+    })
+
+    if (profilePhotoPath && isStorageConfigured()) {
+        try {
+            await remove([profilePhotoPath])
+        } catch (error) {
+            console.error('Driver profile photo cleanup failed after account deletion:', error)
+        }
+    }
+
+    if (userId) {
+        try {
+            await clerkClient.users.deleteUser(userId)
+        } catch (error) {
+            console.error('Clerk driver cleanup failed after account deletion:', error)
+        }
+    }
+
+    return res.json({ ok: true })
 })
 
 // The captain's fleet. One car for almost everybody; two or three for the
@@ -1450,17 +1504,13 @@ driverRouter.post('/location', protect, async (req, res) => {
  * its own copy of the rule because a client that has been open a while can be
  * showing a button for a state the ride has already left.
  *
- * The booking returns to `confirmed`, not `pending`: it was confirmed once and
- * the rider has not changed anything. Its offers are all withdrawn — the ride is
- * about to be offered again and stale rows would let a second captain accept a
- * ride he was never re-offered — and the seats come back, the same way and for
- * the same reasons as in the rider's cancel.
+ * A scheduled booking returns to `confirmed`; Ride Now returns to `pending`, the
+ * lane its assignment loop searches. Its offers are all withdrawn before it is
+ * dispatched again, and the vehicle capacity is restored in the same transaction.
  *
  * NO CANCELLATION CHARGE. That number is the rider's for changing her mind; a
  * captain handing back a ride owes nothing under any rule written so far.
  */
-const DRIVER_CANCELLABLE_STATUSES: BookingStatus[] = ['assigned', 'en_route']
-
 driverRouter.patch('/rides/:id/cancel', protect, async (req, res) => {
     const driver = await requireDriverForAssignedWork(req, res)
     if (!driver) return
@@ -1483,46 +1533,8 @@ driverRouter.patch('/rides/:id/cancel', protect, async (req, res) => {
         })
     }
 
-    const seats = seatsOf(driver.vehicleClass)
-
-    const consequence = await prisma.$transaction(async (tx) => {
-        // Guarded on the status it was read at, so two taps — or a tap racing the
-        // rider's own cancel — cannot both take effect.
-        const returnedStatus: BookingStatus = booking.scheduledAt ? 'confirmed' : 'pending'
-        const { count } = await tx.booking.updateMany({
-            where: { id: booking.id, status: booking.status },
-            data: { status: returnedStatus, driverId: null },
-        })
-        if (count === 0) return null
-
-        await tx.rideOffer.updateMany({
-            where: { bookingId: booking.id, status: 'pending' },
-            data: { status: 'withdrawn', respondedAt: new Date() },
-        })
-
-        if (seats !== null) {
-            if (booking.sharing) {
-                // One seat back, capped in the WHERE rather than in JS — see the
-                // identical guard in the rider's cancel for why the cap cannot be
-                // decided against a value read before the transaction.
-                await tx.driver.updateMany({
-                    where: { id: driver.id, vehicleCapacity: { lt: seats } },
-                    data: { vehicleCapacity: { increment: 1 } },
-                })
-            } else {
-                await tx.driver.update({
-                    where: { id: driver.id },
-                    data: { vehicleCapacity: seats },
-                })
-            }
-        }
-        return applyDriverCancellationConsequences(tx, driver.id, {
-            bookingId: booking.id,
-            fromStatus: booking.status,
-        })
-    })
-
-    if (!consequence) return res.status(409).json({ error: 'Ride changed while cancellation was in flight' })
+    const cancelled = await cancelDriverRide(booking, driver)
+    if (!cancelled) return res.status(409).json({ error: 'Ride changed while cancellation was in flight' })
 
     // Put the rider back into the correct dispatch lane immediately. Ride Now
     // searches only `pending`; scheduled offers search `confirmed`. Leaving both
@@ -1534,7 +1546,7 @@ driverRouter.patch('/rides/:id/cancel', protect, async (req, res) => {
     try { await notifyWhatsAppDriverCancelled(booking.id) }
     catch (error) { console.error(`driver cancellation WhatsApp failed for ${booking.id}:`, (error as Error).message) }
 
-    return res.json({ bookingId: booking.id, status: booking.scheduledAt ? 'confirmed' : 'pending', consequence })
+    return res.json({ bookingId: booking.id, status: cancelled.status, consequence: cancelled.consequence })
 })
 
 driverRouter.post('/fcm-token', protect, async (req, res) => {
@@ -1937,145 +1949,16 @@ driverRouter.patch('/rides/:id/status', protect, async (req, res) => {
         }
     }
 
-    // EVERY TRANSITION NEEDS ITS OWN ARM HERE. The last one is a catch-all, not a
-    // test for 'completed' — so a status added to the schema and the table above
-    // and forgotten here does not error, it falls through and stamps completedAt
-    // on a ride that has barely begun. The row then reads as finished to
-    // everything that goes by timestamps while its status says otherwise, and
-    // nothing anywhere complains.
-    //
-    // en_route carries no timestamp because there is no column for one. An
-    // `enRouteAt` would be worth a migration if the accept-to-set-off lag is ever
-    // worth measuring — it is the number that says whether captains sit on rides
-    // they have accepted — but the status works without it.
-    const now = new Date()
-    let settlementCommissionAmt = booking.commissionAmt
-    const data: Record<string, unknown> =
-        to === 'en_route' ? { status: to } :
-            to === 'reached' ? { status: to, reachedAt: now, reachedDistanceKm: distanceKm,
-                reachedAccuracyM: accuracy, reachedLocationAt: new Date(capturedAt!) } :
-                to === 'started' ? { status: to, startedAt: now } :
-                    { status: to, completedAt: now, completedDistanceKm: distanceKm,
-                        completedAccuracyM: accuracy, completedLocationAt: new Date(capturedAt!),
-                        completionOverrideReason: completionOverrideReason ?? null,
-                        completionCustomerConfirmed: customerConfirmedCompletion }
-
-    // THE UNMATCHED-SHARE FARE SWITCH.
-    //
-    // A rider who chose sharing was quoted two prices and shown both: the
-    // discounted one if somebody joins, the solo one if nobody does. This is
-    // where the second one is applied. `shareGroupId` is the test and the only
-    // one needed — it is written solely by a successful join, so a shared ride
-    // arriving at `completed` without one was driven alone.
-    //
-    // COMPLETION IS THE EARLIEST HONEST MOMENT, not merely a convenient one. A
-    // joiner can be added right up until the host's drop (rule B), so any earlier
-    // switch would charge a rider the solo fare for a ride that then went on to
-    // be shared.
-    //
-    // A joiner who matched and then cancelled leaves shareGroupId set, and the
-    // discount stands. That is deliberate: the rider did nothing wrong, and the
-    // rule stays a single column test rather than an audit of who cancelled when.
-    if (
-        to === 'completed' &&
-        booking.sharing &&
-        !booking.shareGroupId &&
-        booking.soloFare != null &&
-        booking.rideFare != null
-    ) {
-        // The pass-through charges are identical under both prices — one toll
-        // barrier, one roof carrier — so the gap between fare and rideFare
-        // carries across unchanged and the solo ride fare needs no re-itemising.
-        const extras = booking.fare - booking.rideFare
-        const soloRideFare = Math.max(0, booking.soloFare - extras)
-
-        // Recomputed, never scaled. Commission only applies above
-        // COMMISSION_MIN_FARE, so a shared fare under the floor pays nothing
-        // while the solo fare above it pays 5% — scaling the stored amount would
-        // keep a zero at zero and quietly hand the cut away.
-        // couponAmount 0: an unmatched share reverts to the solo fare, and no
-        // coupon has been redeemed against this booking (redemption ships with
-        // ROADMAP block 12). Passed explicitly — the floor is post-coupon now.
-        const { pct, amt } = commissionOn({ rideFare: soloRideFare, couponAmount: booking.couponAmount })
-
-        data.fare = booking.soloFare
-        data.rideFare = soloRideFare
-        data.customerPayment = Math.max(0, booking.soloFare - booking.couponAmount)
-        data.commissionPct = pct
-        data.commissionAmt = amt
-        settlementCommissionAmt = amt
-    }
-
-    const seats = seatsOf(driver.vehicleClass)
-
-    // The transition and the seats it frees go together: a completed ride whose
-    // capacity write never landed leaves the vehicle permanently short a seat, and
-    // nothing later recomputes it.
-    const moved = await prisma.$transaction(async (tx) => {
-        const { count } = await tx.booking.updateMany({
-            where: { id: booking.id, status: from },
-            data,
-        })
-        if (count === 0) return false
-
-        if (to === 'completed' && seats !== null) {
-            if (booking.sharing) {
-                // The cap belongs in the WHERE, not in a ternary over the snapshot
-                // read at the top of the request. `increment: stale < seats ? 1 : 0`
-                // decides against a value another finishing ride may already have
-                // changed, which can walk the vehicle past its own seat count.
-                await tx.driver.updateMany({
-                    where: { id: driver.id, vehicleCapacity: { lt: seats } },
-                    data: { vehicleCapacity: { increment: 1 } },
-                })
-            } else {
-                // Solo had the whole vehicle, so this is an absolute write back to
-                // full — idempotent, and needs no guard.
-                await tx.driver.update({
-                    where: { id: driver.id },
-                    data: { vehicleCapacity: seats },
-                })
-            }
-        }
-
-        if (to === 'completed') {
-            if (booking.scheduledAt) {
-                const hold = await tx.walletEntry.findUnique({ where: { eventKey: walletEvent.depositHold(booking.id) } })
-                if (hold) await postWalletEntry(tx, { driverId: driver.id, amount: Math.abs(hold.amount),
-                    type: 'deposit_refund', eventKey: walletEvent.depositRefund(booking.id), bookingId: booking.id,
-                    note: 'Scheduled ride acceptance deposit released' })
-            }
-            if (booking.couponAmount > 0) await postWalletEntry(tx, { driverId: driver.id,
-                amount: booking.couponAmount, type: 'coupon_reimbursement',
-                eventKey: walletEvent.couponReimbursement(booking.id), bookingId: booking.id,
-                note: 'Full coupon reimbursement' })
-
-            const liveDriver = await tx.driver.findUniqueOrThrow({ where: { id: driver.id },
-                select: { commissionFreeRidesRemaining: true, cancellationBenefitRestrictedUntil: true } })
-            const reward = commissionWithReward(settlementCommissionAmt, liveDriver.commissionFreeRidesRemaining)
-            if (reward.consumeReward) {
-                await tx.driver.update({ where: { id: driver.id }, data: { commissionFreeRidesRemaining: { decrement: 1 } } })
-                await tx.booking.update({ where: { id: booking.id }, data: { commissionAmt: 0, commissionPct: 0 } })
-            }
-            const completed = await tx.booking.count({ where: { driverId: driver.id, status: 'completed' } })
-            const benefitsRestricted = Boolean(liveDriver.cancellationBenefitRestrictedUntil &&
-                liveDriver.cancellationBenefitRestrictedUntil > now)
-            const earned = benefitsRestricted ? 0 : loyaltyRewardsEarned(completed - 1, completed)
-            if (earned) await tx.driver.update({ where: { id: driver.id },
-                data: { commissionFreeRidesRemaining: { increment: earned } } })
-
-            if (booking.scheduledAt) {
-                const completedBooking = await tx.booking.findUniqueOrThrow({ where: { id: booking.id } })
-                const remaining = Math.max(0, Math.round(completedBooking.customerPayment * 100) - completedBooking.scheduledAdvancePaidAmount)
-                if (remaining !== completedBooking.scheduledRemainingAmount) {
-                    await tx.booking.update({ where: { id: booking.id }, data: { scheduledRemainingAmount: remaining } })
-                    completedBooking.scheduledRemainingAmount = remaining
-                }
-                await createScheduledFinalIntent(tx, completedBooking)
-            }
-        }
-
-        return true
+    const moved = await settleRideTransition({
+        booking,
+        driver,
+        from,
+        to,
+        distanceKm,
+        accuracy,
+        capturedAt,
+        completionOverrideReason,
+        customerConfirmedCompletion,
     })
 
     if (!moved) {

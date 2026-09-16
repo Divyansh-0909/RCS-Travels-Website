@@ -52,7 +52,7 @@ adminRouter.get('/booking', protect, protectAdmin, async (req, res) => {
     if (!parsed.success) {
         return res.status(400).json({ error: 'Invalid query parameters', issues: parsed.error.issues })
     }
-    const { search, status, startDate, endDate, customerPhone, customerName, driverName, vehicleClass, source, isOutstation, cancelledBy, page, limit } = parsed.data
+    const { search, status, startDate, endDate, customerPhone, customerName, driverName, vehicleClass, source, isOutstation, cancelledBy, sortOrder, page, limit } = parsed.data
 
     const where: Prisma.BookingWhereInput = {}
     if (search) {
@@ -134,7 +134,7 @@ adminRouter.get('/booking', protect, protectAdmin, async (req, res) => {
             select: bookingSelect,
             skip: (page - 1) * limit,
             take: limit,
-            orderBy: { createdAt: 'desc' },
+            orderBy: { createdAt: sortOrder },
         }),
         prisma.booking.count({ where }),
     ])
@@ -169,7 +169,7 @@ adminRouter.get('/driver', protect, protectAdmin, async (req, res) => {
     if (!parsed.success) {
         return res.status(400).json({ error: 'Invalid query parameters', issues: parsed.error.issues })
     }
-    const { search, driverName, driverPhone, vehicleClass, vehicleNumber, verificationStatus, group, isOnline, startDate, endDate, page, limit } = parsed.data
+    const { search, driverName, driverPhone, vehicleClass, vehicleNumber, verificationStatus, group, isOnline, startDate, endDate, sortOrder, page, limit } = parsed.data
 
     const where: Prisma.DriverWhereInput = {}
     if (search) {
@@ -248,7 +248,7 @@ adminRouter.get('/user', protect, protectAdmin, async (req, res) => {
     if (!parsed.success) {
         return res.status(400).json({ error: 'Invalid query parameters', issues: parsed.error.issues })
     }
-    const { search, userName, userPhone, gender, startDate, endDate, page, limit } = parsed.data
+    const { search, userName, userPhone, gender, startDate, endDate, sortOrder, page, limit } = parsed.data
 
     const where: Prisma.UserWhereInput = {}
     if (search) {
@@ -297,7 +297,7 @@ adminRouter.get('/user', protect, protectAdmin, async (req, res) => {
             },
             skip: (page - 1) * limit,
             take: limit,
-            orderBy: { createdAt: 'desc' },
+            orderBy: { createdAt: sortOrder },
         }),
         prisma.user.count({ where }),
     ])
