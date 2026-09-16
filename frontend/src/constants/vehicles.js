@@ -1,8 +1,8 @@
 import { websiteCopy as dc } from "../i18nCopy";
-import HatchBackImage from '../assets/angled-view-hatchback.webp'
-import SedanImage from '../assets/angled-view-sedan.webp'
-import SUVImage from '../assets/angled-view-SUV.webp'
-import PremiumSUVImage from '../assets/angled-view-Premium-SUV.webp'
+import HatchBackImage from '../assets/vehicles-v2/hatchback-panel.webp'
+import SedanImage from '../assets/vehicles-v2/sedan-panel.webp'
+import SUVImage from '../assets/vehicles-v2/suv-panel.webp'
+import PremiumSUVImage from '../assets/vehicles-v2/suv-premium-panel.webp'
 // Mirrors backend/constants/vehicles.js — the keys are what crosses the wire, so
 // the two files must agree. Everything here is display: the seat counts and the
 // prices themselves are the server's answer, never re-derived on the client.

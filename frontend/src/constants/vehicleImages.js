@@ -1,7 +1,7 @@
-import hatchback from "../assets/angled-view-hatchback.webp";
-import sedan from "../assets/angled-view-sedan.webp";
-import suv from "../assets/angled-view-SUV.webp";
-import premiumSuv from "../assets/angled-view-Premium-SUV.webp";
+import hatchback from "../assets/vehicles-v2/hatchback-panel.webp";
+import sedan from "../assets/vehicles-v2/sedan-panel.webp";
+import suv from "../assets/vehicles-v2/suv-panel.webp";
+import premiumSuv from "../assets/vehicles-v2/suv-premium-panel.webp";
 
 const ANGLED_VEHICLE_IMAGES = {
     hatchback,
