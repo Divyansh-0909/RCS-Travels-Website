@@ -59,14 +59,22 @@ export type UpcomingBooking = {
   // scheduled amounts remain paise, just like the customer booking financials.
   // The captain app uses these only to explain collection — never to launch checkout.
   customerPayment?: number;
-  collectionMode?: 'direct' | 'online';
   scheduledPayment?: {
     advanceAmount: number;
     advancePaidAmount: number;
     advanceDisposition: 'not_applicable' | 'awaiting_payment' | 'paid' | 'refund_pending' | 'refunded' | 'forfeited_to_driver';
     remainingAmount: number;
     finalPaidAmount: number;
+    finalPaymentMethod: 'cash' | 'upi' | null;
+    finalPaidAt: string | null;
   } | null;
+  ridePayment: {
+    state: 'pending' | 'paid';
+    method: 'cash' | 'upi' | null;
+    amount: number;
+    paidAmount: number;
+    paidAt: string | null;
+  };
 };
 
 export type RidesScope = 'upcoming' | 'history';
@@ -133,6 +141,8 @@ export type DriverProfile = {
   month: RidesSummary;
   // Documents inside 30 days of lapsing, or already lapsed.
   expiringDocuments: number;
+  completedRides: number;
+  commissionFreeRidesRemaining: number;
 };
 
 // The History board's header panel. Aggregated over the whole account server-side, not

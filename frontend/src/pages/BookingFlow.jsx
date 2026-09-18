@@ -21,7 +21,7 @@ const BookingFlow = () => {
   const [mapPickerActive, setMapPickerActive] = useState(false);
 
   return (
-    <div className="relative h-[100dvh] overflow-hidden bg-[var(--background-primary)]">
+    <div className="relative h-[100dvh] overflow-hidden bg-immersive">
       {!vehicleStage && !mapPickerActive && (
         <button
           type="button"

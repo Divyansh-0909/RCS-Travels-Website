@@ -1,4 +1,7 @@
 import { createPaymentIntent, toSubunits } from './paymentIntents.js'
+import { postWalletEntry } from './wallet.js'
+import { walletEvent } from './walletKeys.js'
+import { applyRidePaymentCaptureEffect } from './ridePayments.ts'
 
 export const SCHEDULED_CUSTOMER_ADVANCE_PCT = 15
 
@@ -35,7 +38,41 @@ export function createScheduledFinalIntent(tx, booking) {
     } })
 }
 
+const driverDebtCaptureEffect = (payment, refundAmount) => refundAmount > 0
+  ? { type: 'driver_debt_excess_refund', paymentId: payment.id, amount: refundAmount }
+  : { type: 'driver_debt_settlement', paymentId: payment.id, driverId: payment.driverId }
+
+async function applyDriverDebtCapture(tx, payment) {
+  if (payment.driverDebtAppliedAmount !== null && payment.driverDebtAppliedAmount !== undefined) {
+    return driverDebtCaptureEffect(payment, payment.driverDebtRefundAmount ?? 0)
+  }
+
+  const driver = await tx.driver.findUniqueOrThrow({ where: { id: payment.driverId }, select: { walletBalance: true } })
+  const liveDebtPaise = Math.max(0, Math.round(-driver.walletBalance * 100))
+  const appliedAmount = Math.min(payment.amount, liveDebtPaise)
+  const refundAmount = payment.amount - appliedAmount
+
+  if (appliedAmount > 0) {
+    await postWalletEntry(tx, {
+      driverId: payment.driverId,
+      amount: appliedAmount / 100,
+      type: 'debt_payment',
+      method: 'upi',
+      eventKey: walletEvent.debtPayment(payment.id),
+      note: 'Negative wallet balance cleared through Razorpay',
+    })
+  }
+  await tx.payment.update({
+    where: { id: payment.id },
+    data: { driverDebtAppliedAmount: appliedAmount, driverDebtRefundAmount: refundAmount },
+  })
+  return driverDebtCaptureEffect(payment, refundAmount)
+}
+
 export async function applyCapturedPaymentEffect(tx, payment) {
+  if (payment.purpose === 'driver_debt_settlement' && payment.driverId) {
+    return applyDriverDebtCapture(tx, payment)
+  }
   if (!payment.bookingId) return null
   if (payment.purpose === 'scheduled_ride_advance') {
     const result = await tx.booking.updateMany({ where: { id: payment.bookingId, status: 'payment_pending' }, data: {
@@ -55,12 +92,9 @@ export async function applyCapturedPaymentEffect(tx, payment) {
     return refund?.count
       ? { type: 'scheduled_ride_advance_refund', bookingId: payment.bookingId, paymentId: payment.id }
       : null
-  } else if (payment.purpose === 'scheduled_ride_final') {
-    const result = await tx.booking.updateMany({ where: { id: payment.bookingId, status: 'completed', scheduledFinalPaidAmount: 0 },
-      data: { scheduledFinalPaidAmount: payment.amount } })
-    return result?.count ? { type: 'scheduled_ride_final', bookingId: payment.bookingId } : null
   }
-  return null
+  const ridePaymentEffect = await applyRidePaymentCaptureEffect(tx, payment)
+  return ridePaymentEffect === undefined ? null : ridePaymentEffect
 }
 
 export async function applyRefundedPaymentEffect(tx, payment) {

@@ -148,7 +148,11 @@ const DocumentRow = ({
         style={{ backgroundColor: panel ? colors.surfaceRaised : WELL }}
       >
         <Animated.View key={state} entering={STATUS_ENTER} exiting={STATUS_EXIT}>
-          <RowIcon size={panel ? 22 : 18} weight="regular" color={color} />
+          <RowIcon
+            size={panel ? 22 : 18}
+            weight={state === 'missing' ? 'regular' : 'fill'}
+            color={color}
+          />
         </Animated.View>
       </View>
 

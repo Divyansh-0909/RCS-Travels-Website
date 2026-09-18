@@ -1,7 +1,7 @@
 import { useTranslation as useCopyLanguage } from "react-i18next";
 import { websiteCopy as dc } from "../../i18nCopy";
 import Icon from '@mdi/react';
-import { mdiMenu, mdiClose, mdiAccountCircle, mdiChevronDown, mdiCog, mdiInformation, mdiShieldCheck, mdiLogout, mdiMapMarkerOutline, mdiClockTimeFourOutline } from '@mdi/js';
+import { mdiMenu, mdiClose, mdiAccountCircle, mdiChevronDown, mdiChevronRight, mdiCog, mdiInformation, mdiShieldCheck, mdiLogout, mdiMapMarkerOutline, mdiClockTimeFourOutline } from '@mdi/js';
 import { useViewNavigate } from "../../hooks/useViewNavigate";
 import { cloneElement, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -15,6 +15,8 @@ import { useLocation } from 'react-router-dom';
 import pfpPlaceholder from "../../assets/pfp-placeholder.webp"
 import { angledVehicleImageOf } from "../../constants/vehicleImages"
 import { labelOf } from "../../constants/vehicles"
+import { statusLabels } from "../../constants/statusLabels"
+import { formatDateTime, splitAddress } from "./bookingDisplay"
 import Skeleton from './Skeleton';
 import ErrorPanel from './ErrorPanel';
 import BorderGlow from './BorderGlow';
@@ -29,6 +31,66 @@ const Avatar = ({ invert, themed = false, initial, box, text }) => (
         </h3>
     </div>
 )
+
+const FINISHED_RIDE_STATUSES = new Set(["completed", "cancelled", "no_driver"])
+
+const isUpcomingScheduledRide = (booking) => {
+    if (!booking?.scheduledAt || FINISHED_RIDE_STATUSES.has(booking.status)) return false
+    const scheduledAt = new Date(booking.scheduledAt).getTime()
+    return Number.isFinite(scheduledAt) && scheduledAt > Date.now()
+}
+
+const ScheduledRideMenu = ({ booking, onOpenRideHistory, t }) => {
+    const [dropMain] = splitAddress(booking.dropAddress)
+    const [pickupMain] = splitAddress(booking.pickupAddress)
+    const statusLabel = statusLabels[booking.status] ?? booking.status?.replace(/_/g, " ")
+
+    return (
+        <div className="w-full">
+            <p className="px-1 pb-2 text-xs font-semibold uppercase tracking-[0.12em] text-ink-muted">
+                {t("nav.scheduledRide")}
+            </p>
+            <button
+                type="button"
+                onClick={onOpenRideHistory}
+                className="flex w-full items-center gap-3 rounded-xl bg-[var(--foreground)] p-3 text-left text-[var(--text-foreground)] outline-none transition-colors duration-200 hover:bg-surface-muted/60 active:bg-surface-muted/60 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
+            >
+                <span className="min-w-0 flex-1">
+                    <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                        <span className="text-sm font-semibold text-primary">{formatDateTime(booking.scheduledAt)}</span>
+                        {statusLabel && <span className="text-xs font-medium capitalize text-ink-muted">{statusLabel}</span>}
+                    </span>
+                    <span className="mt-2 block truncate text-base font-semibold text-ink">
+                        {dropMain || booking.dropAddress || t("nav.destination")}
+                    </span>
+                    {pickupMain && <span className="mt-0.5 block truncate text-sm text-ink-muted">{t("nav.from")} {pickupMain}</span>}
+                    <span className="mt-2 block text-sm text-ink-muted">
+                        {labelOf(booking.vehicleClass)}
+                        {booking.fare != null ? ` • ₹${booking.fare}` : ""}
+                    </span>
+                </span>
+                {booking.vehicleClass && (
+                    <img
+                        className="h-14 w-20 shrink-0 object-contain"
+                        src={angledVehicleImageOf(booking.vehicleClass)}
+                        alt=""
+                        aria-hidden="true"
+                    />
+                )}
+            </button>
+            <div className="mt-2 border-t border-border pt-2">
+                <button
+                    type="button"
+                    onClick={onOpenRideHistory}
+                    className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-base font-semibold text-ink outline-none transition-colors duration-200 hover:bg-surface-muted/60 active:bg-surface-muted/60 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
+                >
+                    <span>{t("nav.rideHistory")}</span>
+                    <Icon path={mdiChevronRight} size={0.8} aria-hidden="true" />
+                </button>
+            </div>
+        </div>
+    )
+}
 
 const NavBar = ({ invert = false, hideExpanded = false, hideDestinationInput = false, className = "" }) => {
     useCopyLanguage();
@@ -45,6 +107,7 @@ const NavBar = ({ invert = false, hideExpanded = false, hideDestinationInput = f
     const bookingId = useData(state => state.bookingId);
     const bookingCode = useData(state => state.bookingCode);
     const status = useData(state => state.status);
+    const activeBooking = useData(state => state.activeBooking);
     const sharing = useData(state => state.sharing);
     const vehicleClass = useData(state => state.vehicleClass);
     const fare = useData(state => state.fare);
@@ -69,6 +132,11 @@ const NavBar = ({ invert = false, hideExpanded = false, hideDestinationInput = f
     const [reducedMotion, setReducedMotion] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches)
     const profileTriggerRef = useRef(null)
     const [desktopMenuPosition, setDesktopMenuPosition] = useState(null)
+    const ridesTriggerRef = useRef(null)
+    const ridesMenuRef = useRef(null)
+    const [ridesOpen, setRidesOpen] = useState(false)
+    const [ridesMenuPosition, setRidesMenuPosition] = useState(null)
+    const [scheduledRide, setScheduledRide] = useState(() => isUpcomingScheduledRide(activeBooking) ? activeBooking : null)
     const [collapsed, setCollapsed] = useState(false)
     const [mobileAccountOpen, setMobileAccountOpen] = useState(false)
     const destinationOnly = collapsed && !hideDestinationInput
@@ -103,6 +171,40 @@ const NavBar = ({ invert = false, hideExpanded = false, hideDestinationInput = f
             })()
         }
     }, [isSignedIn])
+
+    useEffect(() => {
+        if (!isSignedIn) {
+            setScheduledRide(null)
+            setRidesOpen(false)
+            return
+        }
+
+        let cancelled = false
+        const localRide = isUpcomingScheduledRide(activeBooking) ? activeBooking : null
+        setScheduledRide(localRide)
+
+        ;(async () => {
+            try {
+                const today = new Date()
+                const startDate = [
+                    today.getFullYear(),
+                    String(today.getMonth() + 1).padStart(2, "0"),
+                    String(today.getDate()).padStart(2, "0"),
+                ].join("-")
+                const data = await api.getMyBookings({ startDate, sortOrder: "asc", page: 1, limit: 50 })
+                if (data?.error) throw new Error(data.error)
+                const nextRide = (data?.bookings ?? [])
+                    .filter(isUpcomingScheduledRide)
+                    .sort((a, b) => new Date(a.scheduledAt) - new Date(b.scheduledAt))[0] ?? null
+                if (!cancelled) setScheduledRide(nextRide)
+            } catch (err) {
+                console.error(err)
+                if (!cancelled && !localRide) setScheduledRide(null)
+            }
+        })()
+
+        return () => { cancelled = true }
+    }, [isSignedIn, activeBooking?.id, activeBooking?.scheduledAt, activeBooking?.status])
 
     // One `expand` drives both surfaces — the avatar chip is hidden on mobile and
     // the hamburger on desktop, so only one of them can ever be the trigger.
@@ -182,11 +284,15 @@ const NavBar = ({ invert = false, hideExpanded = false, hideDestinationInput = f
 
     useEffect(() => {
         setExpand(false)
+        setRidesOpen(false)
         return () => clearTimeout(navigationTimer.current)
     }, [pathname])
 
     // Crossing the breakpoint would swap the drawer for the dropdown mid-open.
-    useEffect(() => { setExpand(false) }, [isMobile])
+    useEffect(() => {
+        setExpand(false)
+        setRidesOpen(false)
+    }, [isMobile])
 
     useEffect(() => {
         if (!expand) return
@@ -196,8 +302,19 @@ const NavBar = ({ invert = false, hideExpanded = false, hideDestinationInput = f
     }, [expand])
 
     useEffect(() => {
-        if (!expand) setMobileAccountOpen(false)
-    }, [expand])
+        if (!expand) {
+            setMobileAccountOpen(false)
+            if (isMobile) setRidesOpen(false)
+        }
+    }, [expand, isMobile])
+
+    useEffect(() => {
+        if (!scheduledRide) setRidesOpen(false)
+    }, [scheduledRide])
+
+    useEffect(() => {
+        if (collapsed) setRidesOpen(false)
+    }, [collapsed])
 
     // Lock the page behind the drawer. Cleanup also covers unmount, so a route
     // change with the drawer open can't leave the body frozen.
@@ -253,6 +370,52 @@ const NavBar = ({ invert = false, hideExpanded = false, hideDestinationInput = f
             window.removeEventListener("scroll", positionMenu, true)
         }
     }, [menuMounted, isMobile, collapsed])
+
+    useLayoutEffect(() => {
+        if (!(ridesOpen && scheduledRide && !isMobile)) {
+            setRidesMenuPosition(null)
+            return
+        }
+
+        const positionMenu = () => {
+            const rect = ridesTriggerRef.current?.getBoundingClientRect()
+            if (!rect) return
+            setRidesMenuPosition({
+                top: rect.bottom + 8,
+                right: Math.max(16, window.innerWidth - rect.right),
+            })
+        }
+
+        positionMenu()
+        window.addEventListener("resize", positionMenu)
+        window.addEventListener("scroll", positionMenu, true)
+        return () => {
+            window.removeEventListener("resize", positionMenu)
+            window.removeEventListener("scroll", positionMenu, true)
+        }
+    }, [ridesOpen, scheduledRide, isMobile, collapsed])
+
+    useEffect(() => {
+        if (!(ridesOpen && !isMobile)) return
+
+        const onPointerDown = (event) => {
+            if (ridesTriggerRef.current?.contains(event.target) || ridesMenuRef.current?.contains(event.target)) return
+            setRidesOpen(false)
+        }
+        const onKeyDown = (event) => {
+            if (event.key === "Escape") {
+                setRidesOpen(false)
+                ridesTriggerRef.current?.focus()
+            }
+        }
+
+        document.addEventListener("pointerdown", onPointerDown)
+        window.addEventListener("keydown", onKeyDown)
+        return () => {
+            document.removeEventListener("pointerdown", onPointerDown)
+            window.removeEventListener("keydown", onKeyDown)
+        }
+    }, [ridesOpen, isMobile])
 
     const dropdownTone = invert ? "dark" : "light"
 
@@ -314,19 +477,30 @@ const NavBar = ({ invert = false, hideExpanded = false, hideDestinationInput = f
         navigationTimer.current = setTimeout(fn, mobileMenuActive && !reducedMotion ? mobileDuration + 20 : 0)
     }
 
+    const openRideHistory = () => {
+        setRidesOpen(false)
+        navigate('/manage-account', { state: { tab: "Ride History" } })
+    }
+
+    const handleMyRidesClick = () => {
+        if (!scheduledRide) {
+            if (mobileMenuActive) go(openRideHistory)
+            else openRideHistory()
+            return
+        }
+
+        if (!isMobile) setExpand(false)
+        setRidesOpen(open => !open)
+    }
+
     const primaryNavLinks = [
         [t("nav.about"), () => goToSection('about')],
         [t("nav.outstation"), () => goToTopOf('/outstation')],
         [t("nav.help"), () => navigate('/help')],
     ]
     const accountNavLinks = [
-        ...(isSignedIn ? [[t("nav.rideHistory"), () => navigate('/manage-account', { state: { tab: "Ride History" } })]] : []),
         ...(clerkUser?.publicMetadata?.role === "admin" ? [[t("nav.dashboard"), () => navigate('/dashboard')]] : []),
     ]
-    // The drawer keeps every destination in one list; desktop separates
-    // account destinations so they sit beside the profile control.
-    const navLinks = [...primaryNavLinks, ...accountNavLinks]
-
     const userDropDownList = [[<Icon path={mdiAccountCircle} size={1.2} />, t("nav.manageAccount"), "/manage-account"], [<Icon path={mdiCog} size={1.1} />, t("nav.settings"), "/settings"], [<Icon path={mdiShieldCheck} size={1.1} />, t("nav.safety"), "/safety"], [<Icon path={mdiInformation} size={1.1} />, t("nav.legal"), "/terms"]]
 
     const displayName = user?.name?.length > 15 ? `${user.name.slice(0, 15)}...` : user?.name
@@ -429,9 +603,55 @@ const NavBar = ({ invert = false, hideExpanded = false, hideDestinationInput = f
                     </div>
                 }
 
-                <ul className='flex flex-col items-start gap-2 px-5'>
-                    {navLinks.map(([label, action], i) => (
+                <ul className='flex w-full flex-col items-start gap-2 px-5'>
+                    {primaryNavLinks.map(([label, action], i) => (
                         <li key={i}>
+                            <button type="button" onClick={() => go(action)} className={mobileDrawerLink}>
+                                <span className={mobileDrawerLabel}>{label}</span>
+                            </button>
+                        </li>
+                    ))}
+                    {isSignedIn && (
+                        <li className='w-full'>
+                            <button
+                                type="button"
+                                aria-haspopup={scheduledRide ? "dialog" : undefined}
+                                aria-expanded={scheduledRide ? ridesOpen : undefined}
+                                onClick={handleMyRidesClick}
+                                className={mobileDrawerLink + " gap-2"}
+                            >
+                                <span className={mobileDrawerLabel}>{t("nav.myRides")}</span>
+                                {scheduledRide && (
+                                    <Icon
+                                        path={mdiChevronDown}
+                                        size={0.75}
+                                        className='transition-transform duration-200 motion-reduce:transition-none'
+                                        style={{ transform: ridesOpen ? "rotate(180deg)" : "rotate(0deg)" }}
+                                        aria-hidden="true"
+                                    />
+                                )}
+                            </button>
+                            {scheduledRide && (
+                                <div
+                                    inert={ridesOpen ? undefined : ''}
+                                    aria-hidden={!ridesOpen}
+                                    className={"grid transition-[grid-template-rows,opacity] duration-200 ease-out motion-reduce:transition-none " + (ridesOpen ? 'grid-rows-[1fr] opacity-100' : 'pointer-events-none grid-rows-[0fr] opacity-0')}
+                                >
+                                    <div className='min-h-0 overflow-hidden pt-2'>
+                                        <div className='rounded-2xl border border-border bg-surface-raised p-3 shadow-[0_12px_28px_rgba(0,0,0,0.18)]'>
+                                            <ScheduledRideMenu
+                                                booking={scheduledRide}
+                                                onOpenRideHistory={() => go(openRideHistory)}
+                                                t={t}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </li>
+                    )}
+                    {accountNavLinks.map(([label, action], i) => (
+                        <li key={"account-" + i}>
                             <button type="button" onClick={() => go(action)} className={mobileDrawerLink}>
                                 <span className={mobileDrawerLabel}>{label}</span>
                             </button>
@@ -490,6 +710,25 @@ const NavBar = ({ invert = false, hideExpanded = false, hideDestinationInput = f
                 <div className='order-3 relative -mr-1.5 hidden items-center justify-center gap-3 sm:flex sm:justify-self-end'>
                     {isSignedIn
                         ? <>
+                            <button
+                                ref={ridesTriggerRef}
+                                type="button"
+                                aria-haspopup={scheduledRide ? "dialog" : undefined}
+                                aria-expanded={scheduledRide ? ridesOpen : undefined}
+                                onClick={handleMyRidesClick}
+                                className={desktopSecondaryButton + " flex items-center gap-1.5"}
+                            >
+                                <span>{t("nav.myRides")}</span>
+                                {scheduledRide && (
+                                    <Icon
+                                        path={mdiChevronDown}
+                                        size={0.7}
+                                        className='transition-transform duration-200 motion-reduce:transition-none'
+                                        style={{ transform: ridesOpen ? "rotate(180deg)" : "rotate(0deg)" }}
+                                        aria-hidden="true"
+                                    />
+                                )}
+                            </button>
                             <ul className="flex gap-2">
                                 {accountNavLinks.map(([label, action], i) => (
                                     <li key={i}>
@@ -503,7 +742,10 @@ const NavBar = ({ invert = false, hideExpanded = false, hideDestinationInput = f
                                 aria-haspopup="menu"
                                 aria-expanded={expand}
                                 aria-label={t("nav.menu")}
-                                onClick={() => setExpand(!expand)}
+                                onClick={() => {
+                                    setRidesOpen(false)
+                                    setExpand(!expand)
+                                }}
                                 className={`flex ${invert ? "bg-[var(--foreground)]/10 text-[var(--text)] hover:bg-[var(--foreground)]/15 active:bg-[var(--foreground)]/20" : "bg-[var(--background)]/10 text-[var(--text-foreground)] hover:bg-[var(--background)]/20 active:bg-[var(--background)]/15"} items-center rounded-xl px-1 py-1 justify-center gap-1 cursor-pointer outline-none transition-colors duration-300 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 motion-reduce:transition-none`}
                             >
                                 <Avatar invert={invert} initial={user?.name?.charAt(0)} box='w-8 h-8' text='' />
@@ -578,6 +820,22 @@ const NavBar = ({ invert = false, hideExpanded = false, hideDestinationInput = f
                                     </ul>
                                 </div>
                             }
+                        </div>,
+                        document.body
+                    )}
+                    {ridesOpen && scheduledRide && !isMobile && ridesMenuPosition && createPortal(
+                        <div
+                            ref={ridesMenuRef}
+                            role="dialog"
+                            aria-label={t("nav.myRides")}
+                            className='fixed z-[1010] w-[360px] max-w-[calc(100vw-2rem)] rounded-2xl border border-border bg-surface-raised p-3 text-ink shadow-[0_12px_36px_rgba(0,0,0,0.32)] animate-dropdown motion-reduce:animate-none'
+                            style={ridesMenuPosition}
+                        >
+                            <ScheduledRideMenu
+                                booking={scheduledRide}
+                                onOpenRideHistory={openRideHistory}
+                                t={t}
+                            />
                         </div>,
                         document.body
                     )}

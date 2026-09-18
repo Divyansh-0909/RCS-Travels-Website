@@ -125,7 +125,7 @@ IMPORTANT:
   ~~Options: add nullable pendingFileUrl/pendingExpiresAt to the row, or relax the unique to a plain
   index and read "latest approved by uploadedAt". The schema comment argues against history rows,
   but history also gives you the audit trail for a disputed suspension — I'd relax the unique.~~
-- if the user pays through cash give driver a pop up saying did user pay with cash? untill that is sorted driver can't continue same for user
+- [DONE 18 Sep 2026] Customer payment settlement is authoritative. Ride Now can be paid after completion by Razorpay UPI or cash; scheduled rides keep the 15% Razorpay advance and allow the remaining fare after completion by Razorpay UPI or cash. The driver sees payment status but does not confirm the rider's payment method or block ride completion on that confirmation.
 - check all thing like race conditions and all.
 - add gst billing
 - Add big panel for upcoming scheduled ride if no active ride on the home screen app
@@ -1319,10 +1319,12 @@ each numbered block unblocks the ones after it. Outstation is PARKED (see bottom
    Scheduler choice (external cron vs Supabase pg_cron) STILL OPEN.
 
 5. PAYMENTS + MONTHLY ACCOUNTS — PARTLY BUILT; RAZORPAY NOT ACTIVATED.
-   [DONE 18 Aug 2026] The reusable payment foundation and scheduled-customer
+   [DONE 18 Sep 2026] The reusable payment foundation and customer settlement
    flow are implemented: server-owned amounts, idempotent Orders, Checkout,
-   server signature/API verification, raw-body signed webhooks, refunds, the
-   15% scheduled advance, and the post-completion remaining payment.
+   server signature/API verification, raw-body signed webhooks, refunds, Ride
+   Now final payment by UPI or cash, the 15% scheduled advance, and scheduled
+   post-completion remaining payment by UPI or cash. The customer controls the
+   authoritative final settlement; the driver only sees the resulting status.
    [LIVE AUDIT 4 Sep 2026] Production has no RAZORPAY_KEY_ID,
    RAZORPAY_KEY_SECRET or RAZORPAY_WEBHOOK_SECRET binding, and the Payment table
    is empty. Add the three Secret Manager values, configure and test the live
@@ -1362,11 +1364,12 @@ each numbered block unblocks the ones after it. Outstation is PARKED (see bottom
    no-op rather than a second credit. Coupon.bookingId and
    OverchargeFlag.bookingId already have one; WalletEntry does NOT — see the
    !! at the end of block 10.
-   RAZORPAY TOUCHES EXACTLY THREE THINGS: customer payments (the scheduled
-   advance and the remaining fare), payouts via RazorpayX (a positive driver
+   RAZORPAY TOUCHES EXACTLY THREE THINGS: customer payments (Ride Now final UPI,
+   the scheduled advance and scheduled final UPI), payouts via RazorpayX (a positive driver
    balance settled out, and the marketplace poster in block 7), and a driver
    clearing a NEGATIVE balance (block 10 — capped at the debt). It is NOT in
-   the ride-now accept path, deliberately and permanently.
+   the ride-now accept path; Ride Now only uses Razorpay after completion when
+   the rider chooses UPI.
 
 6. DRIVER DOCUMENTS — BUILT END TO END (12-13 Aug 2026). Read this header first;
    the block below is the original spec and three of its decisions were reversed.

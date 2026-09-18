@@ -13,3 +13,27 @@ export async function issueMonthlyCoupon(tx, { userId, earnedFor, from, to }) {
   await tx.coupon.createMany({ data: [{ userId, earnedFor, amount }], skipDuplicates: true })
   return tx.coupon.findUnique({ where: { userId_earnedFor: { userId, earnedFor } } })
 }
+
+export async function issuePreviousMonthCoupons() {
+  const now = new Date()
+  const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1))
+  const start = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth() - 1, 1))
+  const earnedFor = `${start.getUTCFullYear()}-${String(start.getUTCMonth() + 1).padStart(2, '0')}`
+
+  const users = await prisma.user.findMany({
+    where: { bookings: { some: { status: 'completed', completedAt: { gte: start, lt: end } } } },
+    select: { id: true },
+  })
+
+  let issued = 0
+  for (const user of users) {
+    const coupon = await prisma.$transaction((tx) => issueMonthlyCoupon(tx, {
+      userId: user.id,
+      earnedFor,
+      from: start,
+      to: end,
+    }))
+    if (coupon) issued += 1
+  }
+  return { issued, earnedFor }
+}

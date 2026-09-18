@@ -21,6 +21,13 @@ import { driverLocationVisibleToRider } from '../services/riderDriverLocation.js
 import { assignmentWindowStartedAt } from '../services/driverCancellations.js'
 import { paymentWriteLimiter } from '../middleware/rateLimit.js'
 import { recentBookingHistoryWhere } from '../lib/bookingHistory.js'
+import {
+  createRideNowFinalIntent,
+  recordRideNowCashPayment,
+  recordScheduledFinalCashPayment,
+  RidePaymentError,
+  ridePaymentView,
+} from '../services/ridePayments.ts'
 
 const bookingsRouter = Router()
 
@@ -89,7 +96,7 @@ bookingsRouter.get('/nearby-drivers', protect, async (req, res) => {
       !Number.isFinite(lng) || lng < -180 || lng > 180) {
     return res.status(400).json({ error: 'Valid pickup latitude and longitude are required' })
   }
-  if (!isVehicleClass(vehicleClass)) {
+  if (vehicleClass && !isVehicleClass(vehicleClass)) {
     return res.status(400).json({ error: `vehicleClass must be one of: ${VEHICLE_CLASS_NAMES.join(', ')}` })
   }
 
@@ -224,6 +231,12 @@ async function ownedBooking(req, res) {
   return { user, booking }
 }
 
+const answerRidePaymentError = (res, error) => {
+  if (!(error instanceof RidePaymentError)) return false
+  res.status(error.status).json({ error: error.message, code: error.code })
+  return true
+}
+
 bookingsRouter.post('/:id/scheduled-advance/order', protect, paymentWriteLimiter, async (req, res) => {
   const owned = await ownedBooking(req, res)
   if (!owned) return
@@ -246,6 +259,43 @@ bookingsRouter.post('/:id/scheduled-final/order', protect, paymentWriteLimiter, 
   const payment = await prisma.$transaction((tx) => createScheduledFinalIntent(tx, owned.booking))
   try { return res.json(await createOrderForPayment({ paymentId: payment.id, userId: owned.user.id })) }
   catch (err) { if (err instanceof PaymentError) return res.status(err.status).json({ error: err.message, code: err.code }); throw err }
+})
+
+bookingsRouter.post('/:id/scheduled-final/cash', protect, paymentWriteLimiter, async (req, res) => {
+  const owned = await ownedBooking(req, res)
+  if (!owned) return
+  try {
+    const ridePayment = await prisma.$transaction((tx) => recordScheduledFinalCashPayment(tx, owned.booking.id))
+    return res.json({ bookingId: owned.booking.id, ridePayment })
+  } catch (error) {
+    if (answerRidePaymentError(res, error)) return
+    throw error
+  }
+})
+
+bookingsRouter.post('/:id/ride-now-final/order', protect, paymentWriteLimiter, async (req, res) => {
+  const owned = await ownedBooking(req, res)
+  if (!owned) return
+  try {
+    const payment = await prisma.$transaction((tx) => createRideNowFinalIntent(tx, owned.booking))
+    return res.json(await createOrderForPayment({ paymentId: payment.id, userId: owned.user.id }))
+  } catch (error) {
+    if (answerRidePaymentError(res, error)) return
+    if (error instanceof PaymentError) return res.status(error.status).json({ error: error.message, code: error.code })
+    throw error
+  }
+})
+
+bookingsRouter.post('/:id/ride-now-final/cash', protect, paymentWriteLimiter, async (req, res) => {
+  const owned = await ownedBooking(req, res)
+  if (!owned) return
+  try {
+    const ridePayment = await prisma.$transaction((tx) => recordRideNowCashPayment(tx, owned.booking.id))
+    return res.json({ bookingId: owned.booking.id, ridePayment })
+  } catch (error) {
+    if (answerRidePaymentError(res, error)) return
+    throw error
+  }
 })
 
 // Mint (or hand back) this ride's "follow my ride" link.
@@ -336,11 +386,14 @@ bookingsRouter.get('/:id/status', protect, async (req, res) => {
     fare: Math.round(booking.fare * 100), coupon: Math.round(booking.couponAmount * 100),
     finalFare: Math.round(booking.customerPayment * 100), advance: booking.scheduledAdvanceAmount,
     advancePaid: booking.scheduledAdvancePaidAmount, remaining: booking.scheduledRemainingAmount,
-    finalPaid: booking.scheduledFinalPaidAmount, advanceDisposition: booking.scheduledAdvanceDisposition,
+    finalPaid: booking.scheduledFinalPaidAmount, finalPaymentMethod: booking.scheduledFinalPaymentMethod,
+    finalPaidAt: booking.scheduledFinalPaidAt, advanceDisposition: booking.scheduledAdvanceDisposition,
     payments: booking.payments,
   } : null
 
-  if (!booking.driverId) return res.json({ bookingId: booking.id, reference: booking.reference, bookingCode: user.bookingCode, status, scheduledAt: booking.scheduledAt, cancellationCharge, financials: paymentSummary, driverCancellation, driver: null })
+  const ridePayment = ridePaymentView(booking)
+
+  if (!booking.driverId) return res.json({ bookingId: booking.id, reference: booking.reference, bookingCode: user.bookingCode, status, scheduledAt: booking.scheduledAt, cancellationCharge, financials: paymentSummary, ridePayment, driverCancellation, driver: null })
 
   const location = driverLocationVisibleToRider({ status, scheduledAt: booking.scheduledAt })
     ? booking.driver.location
@@ -376,6 +429,7 @@ bookingsRouter.get('/:id/status', protect, async (req, res) => {
     scheduledAt: booking.scheduledAt,
     cancellationCharge,
     financials: paymentSummary,
+    ridePayment,
     driverCancellation,
     navigationEtaMinutes,
     navigationPolyline,

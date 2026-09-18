@@ -11,7 +11,7 @@ import { INITIAL_SHEET_SNAP, useBottomSheet } from "../../hooks/useBottomSheet"
 // Without it nothing about the panel changes; with it, nothing changes from sm
 // up either — the hook is inert unless useIsMobile() is true, so the desktop
 // side panel keeps its layout, animation and scrolling exactly as before.
-const BackgroundPanel = ({ show = true, duration = 250, className, children, sheet = false, fillAvailable = false, bottomInset = 0, contentKey, dismissible = false, expandedTopGap, lockExpanded = false, onDismiss, onSnapChange }) => {
+const BackgroundPanel = ({ show = true, duration = 250, className, children, sheet = false, fillAvailable = false, bottomInset = 0, contentKey, dismissible = false, expandedTopGap, lockExpanded = false, solid = false, onDismiss, onSnapChange }) => {
     const [mounted, setMounted] = useState(show)
     const [closing, setClosing] = useState(false)
     const isMobile = useIsMobile()
@@ -74,7 +74,7 @@ const BackgroundPanel = ({ show = true, duration = 250, className, children, she
             // may reuse this DOM node across ride statuses, and the hook needs the
             // node on that transition to clear its old inline height/transform.
             ref={sheetRef}
-            className={`${className} ${animation} absolute bottom-0 bg-transparent shadow-[inset_0px_2px_4px_rgba(255,255,255,0.25),0px_0px_90px_25px_rgba(0,0,0,0.25)] rounded-t-4xl sm:rounded-none sm:h-[100dvh] w-[100vw] bg-panel-gradient ${isSheet ? "overscroll-contain" : ""}`}
+            className={`${className} ${animation} absolute bottom-0 rounded-t-4xl sm:rounded-none sm:h-[100dvh] w-[100vw] ${solid ? "bg-immersive" : "bg-panel-gradient"} shadow-[inset_0px_2px_4px_rgba(255,255,255,0.25),0px_0px_90px_25px_rgba(0,0,0,0.25)] ${isSheet ? "overscroll-contain" : ""}`}
         >
             {isSheet && !lockExpanded && (
                 // The affordance. Its hit area is still taller than the 4px it

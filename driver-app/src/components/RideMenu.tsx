@@ -98,8 +98,9 @@ export const RideMenuDrawer = () => {
 
     const canDrive = profile?.onboarding?.canDrive ?? false;
     const owesRides = (profile?.onboarding?.assignedRides ?? 0) > 0;
+    const hasActiveRide = owesRides;
     const tabs = useMemo(
-        () => tabsFor(canDrive, owesRides).filter((tab) => tab.name !== 'Post'),
+        () => tabsFor(canDrive, owesRides),
         [canDrive, owesRides],
     );
 
@@ -118,7 +119,7 @@ export const RideMenuDrawer = () => {
             <Animated.View
                 entering={SlideInRight.duration(240)}
                 exiting={SlideOutRight.duration(180)}
-                className="bg-strong"
+                className={hasActiveRide ? 'bg-surface-muted' : 'bg-strong'}
                 style={{
                     position: 'absolute',
                     right: 0, top: 0, bottom: 0,
@@ -131,7 +132,7 @@ export const RideMenuDrawer = () => {
             >
                 <View className="flex-row items-center justify-between px-3 mb-6">
                     <AppText
-                        className="text-xl font-semibold text-on-strong"
+                        className={`text-xl font-semibold ${hasActiveRide ? 'text-ink' : 'text-on-strong'}`}
                         style={{ letterSpacing: -0.72 }}
                     >
                         RCS Captains
@@ -143,7 +144,7 @@ export const RideMenuDrawer = () => {
                         hitSlop={10}
                         style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
                     >
-                        <Cross size={22} weight="bold" className="text-on-strong" />
+                        <Cross size={22} weight="bold" className={hasActiveRide ? 'text-ink' : 'text-on-strong'} />
                     </Pressable>
                 </View>
 
@@ -159,7 +160,7 @@ export const RideMenuDrawer = () => {
                                 navigate(tab.path, { replace: true });
                             }}
                             style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
-                            className={`flex-row items-center gap-4 px-3 py-3.5 rounded-2xl ${isSelected ? 'bg-surface-raised' : ''}`}
+                            className={`flex-row items-center gap-4 px-3 py-3.5 rounded-2xl ${isSelected ? 'bg-surface' : ''}`}
                         >
                             {/* De-emphasised with OPACITY rather than --text-muted, which
                                 is what the bar uses. That token does not clear AA on this
@@ -169,11 +170,11 @@ export const RideMenuDrawer = () => {
                                 <tab.Icon
                                     size={22}
                                     weight={isSelected ? 'fill' : 'regular'}
-                                    className="text-on-strong"
+                                    className={hasActiveRide ? 'text-ink' : 'text-on-strong'}
                                 />
                             </View>
                             <AppText
-                                className={`text-base text-on-strong ${isSelected ? 'font-semibold' : 'font-medium'}`}
+                                className={`text-base ${hasActiveRide ? 'text-ink' : 'text-on-strong'} ${isSelected ? 'font-semibold' : 'font-medium'}`}
                                 style={{ opacity: isSelected ? 1 : 0.65 }}
                             >
                                 {tab.name}

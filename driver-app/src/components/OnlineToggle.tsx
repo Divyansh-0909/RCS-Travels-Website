@@ -14,6 +14,7 @@ import { useShellHidden } from "./AppBarVisibility";
 import { RideMenuButton } from "./RideMenu";
 import { useData } from "../hooks/useData";
 import { useTheme } from '../theme/ThemeContext';
+import { useOffers } from "../hooks/useOffers";
 
 const Bell = cssInterop(BellIcon, {
     className: { target: false, nativeStyleToProp: { color: true } },
@@ -28,7 +29,6 @@ const OnlineToggle = () => {
     const [error, setError] = useState<string | null>(null)
     const navigate = useNavigate();
     const { pathname } = useLocation();
-    const onNotifications = pathname === "/notifications";
     // The whole header is Home's, not the shell's: going online is a decision a
     // captain makes from the ride list, and the bell does not belong to Account or
     // Post. Home is the index route, so it answers to "/".
@@ -36,8 +36,10 @@ const OnlineToggle = () => {
 
     const api = useApi()
     const { profile, patchProfile } = useDriver();
+    const { offers } = useOffers();
     const { colors } = useTheme();
     const { onActiveRide } = useShellHidden();
+    const hasNotifications = offers.length > 0;
 
     // THE SERVER OWNS THIS, not a useState seeded false. The flag lives on the
     // driver row, so a captain who was online when he last closed the app is
@@ -146,9 +148,22 @@ const OnlineToggle = () => {
                         className="w-[22px] h-[22px] items-center justify-center"
                     >
                         <Bell size={20} weight="regular" className="text-on-strong" />
-                        <View className={`absolute transition-opacity duration-200 ${onNotifications ? "opacity-100" : "opacity-0"}`}>
+                        <View className={`absolute transition-opacity duration-200 ${hasNotifications ? "opacity-100" : "opacity-0"}`}>
                             <Bell size={20} weight="fill" className="text-on-strong" />
                         </View>
+                        {hasNotifications ? (
+                            <View
+                                pointerEvents="none"
+                                className="absolute bg-primary"
+                                style={{
+                                    width: 7,
+                                    height: 7,
+                                    borderRadius: 999,
+                                    top: -2,
+                                    right: -2,
+                                }}
+                            />
+                        ) : null}
                     </Pressable>
                 </View>
 

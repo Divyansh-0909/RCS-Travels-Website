@@ -7,6 +7,7 @@ import {
     paymentIsSatisfied,
     paymentNeedsRefresh,
     paymentPhaseForError,
+    ridePaymentAmount,
 } from "../src/lib/paymentUi.js";
 
 const financials = {
@@ -38,6 +39,27 @@ test("scheduled settlements keep refreshing until capture or refund finishes", (
         scheduledAt: "2026-09-07",
         financials: { ...financials, finalPaid: 16100 },
     }), false);
+});
+
+test("payment refresh helpers cover settled and non-payment states", () => {
+    assert.equal(paymentIsSatisfied("advance", null), false);
+    assert.equal(paymentIsSatisfied("advance", { ...financials, advance: 0 }), false);
+    assert.equal(paymentIsSatisfied("advance", { ...financials, advancePaid: Number.NaN }), false);
+    assert.equal(paymentNeedsRefresh({ status: "confirmed", scheduledAt: null, financials }), false);
+    assert.equal(paymentNeedsRefresh({ status: "confirmed", scheduledAt: "2026-09-07", financials: null }), false);
+    assert.equal(paymentNeedsRefresh({
+        status: "payment_pending",
+        scheduledAt: "2026-09-07",
+        financials: { ...financials, advancePaid: 2900 },
+    }), false);
+    assert.equal(paymentNeedsRefresh({ status: "confirmed", scheduledAt: "2026-09-07", financials }), false);
+});
+
+test("completed ride settlement polling follows the authoritative ride payment state", () => {
+    assert.equal(paymentNeedsRefresh({ status: "completed", scheduledAt: null, ridePayment: { state: "pending" } }), true);
+    assert.equal(paymentNeedsRefresh({ status: "completed", scheduledAt: "2026-09-07", ridePayment: { state: "paid" } }), false);
+    assert.equal(ridePaymentAmount({ amount: 19000 }), 19000);
+    assert.equal(ridePaymentAmount(null), null);
 });
 
 test("checkout cancellation is distinct from payment failure", () => {

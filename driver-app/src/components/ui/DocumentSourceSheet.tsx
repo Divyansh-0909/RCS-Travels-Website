@@ -6,6 +6,7 @@ import Animated from 'react-native-reanimated';
 import { CameraIcon, CaretRightIcon, FilePdfIcon, ImageIcon, XIcon } from 'phosphor-react-native';
 import AppText from '../AppText';
 import { useBottomSheetMotion } from '../../hooks/useBottomSheetMotion';
+import { sheetSurfaceStyle } from './sheetSurfaceStyle';
 import { useTheme } from '../../theme/ThemeContext';
 
 // Where the file is coming from: the camera, the gallery, or the files app.
@@ -104,7 +105,7 @@ const DocumentSourceSheet = ({ visible, label, allowPdf, onCancel, onPick }: Pro
         <Pressable style={StyleSheet.absoluteFillObject} onPress={onCancel} />
         {/* Swallows the tap, so pressing the sheet itself does not close it. */}
         <Animated.View style={sheetStyle}>
-          <Pressable className="bg-surface rounded-t-3xl px-5 pt-5 pb-8 gap-4" onPress={() => {}}>
+          <Pressable className="bg-surface rounded-t-3xl px-5 pt-5 pb-8 gap-4" style={sheetSurfaceStyle} onPress={() => {}}>
           {/* The way out, level with the title rather than under the options.
               A full-width Cancel at the foot is a fourth thing the eye has to rule
               out before it can choose one of the three above it; up here it is

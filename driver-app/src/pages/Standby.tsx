@@ -53,7 +53,7 @@ const whenLabel = (scheduledAt: string | null) => {
 const Standby = ({ next, onChanged }: { next: UpcomingBooking | null; onChanged: () => void }) => {
     useCopyLanguage();
     const api = useApi();
-    const { refresh: refreshDriver } = useDriver();
+    const { profile, refresh: refreshDriver } = useDriver();
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [liveFix, setLiveFix] = useState<Location.LocationObject | null>(getRememberedDriverLocation);
@@ -154,7 +154,7 @@ const Standby = ({ next, onChanged }: { next: UpcomingBooking | null; onChanged:
                 driver={liveFix ? { latitude: liveFix.coords.latitude, longitude: liveFix.coords.longitude } : null}
                 driverBearing={liveFix?.coords.heading}
                 bottomSheetHeight={mapBottomInset}
-                carType={next?.vehicleClass}
+                carType={profile?.vehicleClass}
                 routePolyline={next?.routePolyline}
             />
 

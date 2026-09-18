@@ -26,14 +26,12 @@ import { useData } from "../hooks/useData";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { useExitAnim } from "../hooks/useExitAnim";
 import { useSignIn, useAuth } from "@clerk/clerk-react";
-import { statusLabels } from "../constants/statusLabels";
 import { useRefreshNotice } from "../hooks/useRefreshNotice";
 import GoogleMap from "../components/ui/GoogleMap";
 import BackgroundPanel from "../components/ui/BackgroundPanel";
 import { INITIAL_SHEET_SNAP } from "../hooks/useBottomSheet";
 import { CenterPin } from "../components/ui/mapOverlays";
 import { useWebsiteCopy } from "../hooks/useWebsiteCopy";
-import { useTranslation } from "react-i18next";
 
 // ---- Shared layout + type scale -------------------------------------------
 // Same tokens as VehicleSelect / TrackingPage / RideDetails. 377px is the width
@@ -42,8 +40,6 @@ import { useTranslation } from "react-i18next";
 const COL = "w-[min(86vw,100%)] sm:w-[377px]";
 const TITLE = "font-bold text-3xl sm:text-5xl leading-tight";
 const STACK = "gap-6 sm:gap-8";
-// Current Trip sets its own step between its heading, status and CTA.
-const TRIP_STEP = "gap-4 sm:gap-5";
 // The booking form sits just inside the page rail on phones. Marked important:
 // it has to beat the 86vw default Button and Input carry for every other
 // screen. sm+ is untouched — the components keep their fixed widths there.
@@ -131,12 +127,12 @@ export function useAddressSuggestions(value, setValue, setCoords, api, exclusive
       .filter(item => typeof item.label === "string" && item.label.trim())
     : [...(allowCurrentLocation ? [currentLocationItem] : []), ...saved, ...recents.map(p => ({ id: p.label, label: p.label, lat: p.lat, lng: p.lng }))];
 
-  function selectResolvedAddress(label, coords) {
+  function selectResolvedAddress(label, coords, keepOpen = false) {
     if (typeof label !== "string" || !label.trim() || !coords) return;
     justSelectedRef.current = true;
     setCoords(coords);
     setValue(label);
-    setExpanded(false);
+    setExpanded(keepOpen);
     addRecentPlace(label, coords);
   }
 
@@ -192,7 +188,7 @@ export function useAddressSuggestions(value, setValue, setCoords, api, exclusive
     return () => clearTimeout(timer);
   }, [value]);
 
-  async function select(item) {
+  async function select(item, keepOpen = false) {
     if (item.isCurrentLocation) {
       if (locatingCurrentLocation) return;
 
@@ -229,7 +225,7 @@ export function useAddressSuggestions(value, setValue, setCoords, api, exclusive
             lng: longitude,
           });
           setValue(address);
-          setExpanded(false);
+          setExpanded(keepOpen);
           addRecentPlace(address, {
             lat: latitude,
             lng: longitude,
@@ -252,7 +248,7 @@ export function useAddressSuggestions(value, setValue, setCoords, api, exclusive
 
     justSelectedRef.current = true;
     setValue(item.label);
-    setExpanded(false);
+    setExpanded(keepOpen);
 
     let coords = item.lat != null
       ? { lat: item.lat, lng: item.lng }
@@ -503,7 +499,7 @@ const TimingChoiceSheet = ({ anim, timing, onSelect, onClose, isMobile }) => {
               data-timing-dialog-control
               aria-pressed={selected}
               onClick={() => onSelect(option.value)}
-              className={`flex min-h-16 w-full items-center gap-3 rounded-2xl bg-[var(--background-muted)] px-3 py-3 text-left text-[var(--text)] outline-primary transition-colors hover:bg-[var(--foreground)]/10 focus-visible:outline-2 focus-visible:outline-offset-2 ${selected ? "outline-2" : "outline-0"}`}
+              className={`flex min-h-16 w-full items-center gap-3 rounded-2xl bg-[var(--background-muted)] px-3 py-3 text-left text-[var(--text)] outline-primary transition-colors hover:bg-[var(--foreground)]/10 ${isMobile ? "focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary" : "focus-visible:outline-2 focus-visible:outline-offset-2"} ${selected ? (isMobile ? "ring-2 ring-inset ring-primary" : "outline-2") : (isMobile ? "ring-0" : "outline-0")}`}
             >
               <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[var(--background-primary)] text-[var(--text)]">
                 <Icon path={option.icon} size={0.95} aria-hidden="true" />
@@ -531,6 +527,7 @@ const TimingChoiceSheet = ({ anim, timing, onSelect, onClose, isMobile }) => {
       {isMobile ? (
         <BackgroundPanel
           sheet
+          solid
           dismissible
           onDismiss={onClose}
           show={!anim.closing}
@@ -543,7 +540,7 @@ const TimingChoiceSheet = ({ anim, timing, onSelect, onClose, isMobile }) => {
             data-timing-dialog-control
             onClick={onClose}
             aria-label={dc("Close timing options")}
-            className="absolute z-20 -top-12 right-4 flex size-9 items-center justify-center rounded-full border border-[var(--foreground)]/30 bg-[var(--background-muted)] text-[var(--text)] shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)] transition-opacity duration-300 active:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]/70"
+            className="absolute z-20 -top-12 right-4 flex size-9 items-center justify-center rounded-full border border-[var(--foreground)]/30 bg-immersive text-[var(--text)] shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)] transition-opacity duration-300 active:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]/70"
           >
             <Icon path={mdiClose} size={0.8} aria-hidden="true" />
           </button>
@@ -568,6 +565,7 @@ const RoutePanel = ({ sheet, isMobile, className, children, bottomInset = 0, con
     return (
       <BackgroundPanel
         sheet
+        solid
         fillAvailable={fillAvailable}
         duration={420}
         bottomInset={bottomInset}
@@ -591,8 +589,6 @@ const OUTSTATION_DISTANCE_KM = 200;
 const OnBoarding = ({ bookingStage = false, timingStep = false, highlightRideNow = false, onMapPickerChange }) => {
     useCopyLanguage();
   const tr = useWebsiteCopy();
-  const { i18n } = useTranslation();
-  const dateLocale = i18n.language === "hi" ? "hi-IN" : "en-IN";
   const formWidth = bookingStage ? "max-sm:w-full!" : FORM_W;
   const timing = useData(state => state.timing);
   const setTiming = useData(state => state.setTiming);
@@ -613,22 +609,14 @@ const OnBoarding = ({ bookingStage = false, timingStep = false, highlightRideNow
   const scheduledTime = useData(state => state.scheduledTime);
   const setScheduledTime = useData(state => state.setScheduledTime);
   const timingButtonRef = useRef(null);
-  const setBookingId = useData(state => state.setBookingId);
   const setFare = useData(state => state.setFare);
   const setVehicleClass = useData(state => state.setVehicleClass);
-  const setStatus = useData(state => state.setStatus);
-  const setBookingCode = useData(state => state.setBookingCode);
   const activeBooking = useData(state => state.activeBooking);
   const setActiveBooking = useData(state => state.setActiveBooking);
   const clearActiveBooking = useData(state => state.clearActiveBooking);
   const mergeRecentPlaces = useData(state => state.mergeRecentPlaces);
   const setSavedPlaces = useData(state => state.setSavedPlaces);
   const { isSignedIn } = useAuth();
-  const devAuthBypass = useData(state => state.devAuthBypass);
-  // Render gate only; the hydration effect stays on real isSignedIn so the
-  // dev preview never hits the API.
-  const authed = isSignedIn || devAuthBypass;
-  const [showForm, setShowForm] = useState(false);
   const api = useApi();
   const navigate = useViewNavigate();
   const notifyRefreshFailed = useRefreshNotice(state => state.notifyRefreshFailed);
@@ -638,39 +626,13 @@ const OnBoarding = ({ bookingStage = false, timingStep = false, highlightRideNow
   const hydrationCancelledRef = useRef(false);
   const [isRoundTrip, setIsRoundTrip] = useState(false)
 
-  // Copy the active booking into the shared tracking fields and open tracking.
-  function openActiveBooking() {
-    if (!activeBooking) return;
-    setBookingId(activeBooking.id);
-    setBookingCode(activeBooking.code);
-    setStatus(activeBooking.status);
-    setPickup(activeBooking.pickupAddress);
-    setDrop(activeBooking.dropAddress);
-    // the booking's own coords, so tracking maps the ride that was booked
-    // (the form's coords may since have moved on to another route)
-    if (activeBooking.pickupLat != null) setPickupCoords({ lat: activeBooking.pickupLat, lng: activeBooking.pickupLng });
-    if (activeBooking.dropLat != null) setDropCoords({ lat: activeBooking.dropLat, lng: activeBooking.dropLng });
-    setDistanceKm(activeBooking.distanceKm ?? null);
-    setDurationMin(activeBooking.durationMin ?? null);
-    setFare(activeBooking.fare);
-    setScheduledTime(activeBooking.scheduledAt);
-    // freshStatus: the status set above is the one the card the user just tapped
-    // was displaying, so tracking opens on it directly. A skeleton here would
-    // hide a status they had already read and flash a panel past on the way to
-    // the same answer; the poll on the other side refreshes it either way.
-    navigate(`/booking/${activeBooking.id}`, { state: { freshStatus: true } });
-  }
-
   const timingDropdown = useExitAnim(expand, 420);
   const calendarDropdown = useExitAnim(expandCalendar, 300);
 
-  // Hydrate activeBooking so the trip cards survive reloads. Deliberately
-  // leaves the form fields alone — they belong to the new-booking form.
-  //
-  // A failure here is not cosmetic: with no trip card the page shows only the
-  // booking form, so a rider who already has a live ride can't tell it exists
-  // and may book a second one. It can't take the page over either — the form
-  // underneath is perfectly usable — so it raises the ambient notice.
+  // Hydrate activeBooking so duplicate/overlap protection survives reloads.
+  // Leave the form fields alone because they belong to the new-booking form.
+  // A failure here means we cannot reliably enforce that protection, so keep
+  // the existing ambient refresh notice and retry path.
   async function hydrateActiveBooking({ isRetry = false } = {}) {
     let data;
     try {
@@ -785,19 +747,31 @@ const OnBoarding = ({ bookingStage = false, timingStep = false, highlightRideNow
   }, [mapPickerTarget, onMapPickerChange]);
 
   const selectPickupSuggestion = (item) => {
-    document.activeElement?.blur();
-    setEditingLocation(null);
-    setActiveSuggestion(null);
+    const keepActive = bookingStage && isMobile;
+    if (keepActive) {
+      setEditingLocation("pickup");
+      setActiveSuggestion("pickup");
+    } else {
+      document.activeElement?.blur();
+      setEditingLocation(null);
+      setActiveSuggestion(null);
+    }
     setSavedSuggestionTarget(null);
-    return pickupAutocomplete.select(item);
+    return pickupAutocomplete.select(item, keepActive);
   };
 
   const selectDropSuggestion = (item) => {
-    document.activeElement?.blur();
-    setEditingLocation(null);
-    setActiveSuggestion(null);
+    const keepActive = bookingStage && isMobile;
+    if (keepActive) {
+      setEditingLocation("drop");
+      setActiveSuggestion("drop");
+    } else {
+      document.activeElement?.blur();
+      setEditingLocation(null);
+      setActiveSuggestion(null);
+    }
     setSavedSuggestionTarget(null);
-    return dropAutocomplete.select(item);
+    return dropAutocomplete.select(item, keepActive);
   };
 
   const autocompleteFor = (target) => target === "pickup" ? pickupAutocomplete : dropAutocomplete;
@@ -873,10 +847,7 @@ const OnBoarding = ({ bookingStage = false, timingStep = false, highlightRideNow
   // The route step uses the same mobile sheet contract as vehicle selection:
   // the primary action lives in a measured bar below the sheet, and the sheet
   // reports its settled stop so secondary copy can disappear when collapsed.
-  const showsCurrentTrip = !!(activeBooking && authed && !activeBooking.scheduledAt);
-  const showsRouteForm = !showsCurrentTrip
-    && (!(activeBooking && authed && activeBooking.scheduledAt) || showForm);
-  const pinPriceBar = bookingStage && isMobile && showsRouteForm && !mapPickerTarget;
+  const pinPriceBar = bookingStage && isMobile && !mapPickerTarget;
   const priceBarRef = useRef(null);
   const [priceBarHeight, setPriceBarHeight] = useState(0);
   const [sheetSnap, setSheetSnap] = useState(INITIAL_SHEET_SNAP);
@@ -902,13 +873,13 @@ const OnBoarding = ({ bookingStage = false, timingStep = false, highlightRideNow
   const priceBarCollapsed = pinPriceBar && sheetSnap === "collapsed";
 
   useEffect(() => {
-    if (!bookingStage || !isMobile || timingStep || mapPickerTarget || !showsRouteForm || dropAutoFocusedRef.current) return undefined;
+    if (!bookingStage || !isMobile || timingStep || mapPickerTarget || dropAutoFocusedRef.current) return undefined;
     const frame = window.requestAnimationFrame(() => {
       dropInputRef.current?.focus({ preventScroll: true });
       if (document.activeElement === dropInputRef.current) dropAutoFocusedRef.current = true;
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [bookingStage, isMobile, timingStep, mapPickerTarget, showsRouteForm]);
+  }, [bookingStage, isMobile, timingStep, mapPickerTarget]);
 
   // The route form now follows the destination-first landing bar. A pickup is
   // therefore useful immediately, rather than asking the rider to re-enter
@@ -1113,7 +1084,7 @@ const OnBoarding = ({ bookingStage = false, timingStep = false, highlightRideNow
         }}
         className={`scale-[1] sm:scale-[1.3] sm:origin-left ${formWidth}`}
       >
-        {loading ? tr("Loading...") : tr("See prices")}
+        {loading ? tr("Loading...") : timing === "Schedule" ? tr("Set date & time") : tr("See prices")}
       </Button>
 
       {!priceBarCollapsed && (
@@ -1129,13 +1100,13 @@ const OnBoarding = ({ bookingStage = false, timingStep = false, highlightRideNow
   );
 
   return (
-    <div className={`relative flex h-[100dvh] flex-col items-center bg-[var(--background-primary)] sm:flex-row sm:justify-center sm:px-[9%] md:px-[5%] lg:justify-between xl:px-[13%] ${bookingStage ? "overflow-hidden" : "sm:pt-16"}`}>
+    <div className={`relative flex h-[100dvh] flex-col items-center sm:flex-row sm:justify-center sm:px-[9%] md:px-[5%] lg:justify-between xl:px-[13%] ${bookingStage ? "overflow-hidden bg-immersive" : "bg-[var(--background-primary)] sm:pt-16"}`}>
       <RoutePanel
         key={mapPickerTarget ? `map-${mapPickerTarget}` : timingStep ? "timing" : "details"}
         sheet={bookingStage}
         isMobile={isMobile}
         bottomInset={pinPriceBar ? priceBarHeight : 0}
-        contentKey={`${showsRouteForm}-${timingStep}-${timing}-${activeSuggestion ?? "none"}-${mapPickerTarget ?? "form"}`}
+        contentKey={`${timingStep}-${timing}-${activeSuggestion ?? "none"}-${mapPickerTarget ?? "form"}`}
         fillAvailable={!mapPickerTarget && !timingStep}
         expandedTopGap={0}
         lockExpanded={timingStep}
@@ -1149,7 +1120,7 @@ const OnBoarding = ({ bookingStage = false, timingStep = false, highlightRideNow
               ? navigate("/book", { replace: true })
               : navigate("/")}
             aria-label={timingStep ? tr("Back to route details") : tr("Back to home")}
-            className="absolute -top-12 left-4 z-20 my-1 flex h-9 cursor-pointer items-center justify-center rounded-full border border-[var(--foreground)]/30 bg-[var(--background-muted)] px-3 text-[var(--text)] shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)] transition-opacity duration-300 hover:opacity-100 active:opacity-70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)] sm:hidden"
+            className="absolute -top-12 left-4 z-20 my-1 flex h-9 cursor-pointer items-center justify-center rounded-full border border-[var(--foreground)]/30 bg-immersive px-3 text-[var(--text)] shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)] transition-opacity duration-300 hover:opacity-100 active:opacity-70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)] sm:hidden"
           >
             <Icon path={mdiKeyboardBackspace} size={1.2} aria-hidden="true" />
           </button>
@@ -1171,54 +1142,9 @@ const OnBoarding = ({ bookingStage = false, timingStep = false, highlightRideNow
                 <span className="text-base sm:text-lg">{mapPickerLoading ? tr("Finding address...") : dc("{{value0}} {{value1}} {{value2}}", {value0: (tr("Confirm")), value1: (mapPickerTarget === "pickup" ? tr("pickup") : tr("drop")), value2: (tr("location"))})}</span>
               </Button>
             </div>
-          : (activeBooking && authed && !activeBooking.scheduledAt)
-          ? <div className={`flex w-full flex-col items-center justify-center lg:items-start ${TRIP_STEP}`}>
-            <div className={`flex flex-col items-center ${COL}`}>
-              <h1 className="w-full text-center text-2xl font-semibold leading-tight tracking-[-0.03em] sm:text-4xl">{tr("Current Trip")}</h1>
-            </div>
-
-            <div className={`flex flex-col items-stretch gap-3 text-left ${COL}`}>
-              <div className="rounded-2xl bg-[var(--background-muted)] px-5 py-4 text-center" aria-live="polite">
-                <p className="text-lg font-semibold leading-tight sm:text-xl">
-                  {tr(statusLabels[activeBooking.status] || "On trip")}
-                </p>
-              </div>
-              <Button onClick={openActiveBooking} className="my-0!" prop={{ variant: "", width: "100%" }}>
-                <span className="text-base sm:text-lg">{tr("Track Ride")}</span>
-              </Button>
-            </div>
-          </div>
           : <div className={`flex flex-col text-center lg:text-left justify-center items-center lg:items-start gap-1 sm:gap-5 ${bookingStage ? "max-sm:min-h-0 max-sm:w-full max-sm:flex-1 max-sm:items-start max-sm:justify-start max-sm:gap-3 max-sm:text-left" : ""}`}>
-            {activeBooking && authed && activeBooking.scheduledAt && !showForm
-              ? <div className={`flex w-[86vw] flex-col items-center justify-center sm:w-[377px] ${TRIP_STEP}`}>
-                <div className="flex w-full flex-col items-center">
-                  <h1 className="w-full text-center text-2xl font-semibold leading-tight tracking-[-0.03em] sm:text-4xl">{tr("Scheduled Ride")}</h1>
-                </div>
-                <div className="flex w-full flex-col items-stretch gap-3 text-left">
-                  <div className="rounded-2xl bg-[var(--background-muted)] px-5 py-4 text-center" aria-live="polite">
-                    <p className="text-sm leading-snug text-[var(--text-muted)] sm:text-base">
-                      {new Date(activeBooking.scheduledAt).toLocaleString(dateLocale, {
-                        day: "numeric", month: "short", hour: "numeric", minute: "2-digit", hour12: true,
-                      })}
-                    </p>
-                    <p className="mt-1 text-lg font-semibold leading-tight sm:text-xl">
-                      {tr(statusLabels[activeBooking.status] || activeBooking.status)}
-                    </p>
-                  </div>
-
-                  <Button onClick={openActiveBooking} className="my-0!" prop={{ variant: "", width: "100%" }}>
-                    <span className="text-base sm:text-lg">{tr("View Ride")}</span>
-                  </Button>
-
-                  <Button onClick={() => setShowForm(true)} className="my-0!" prop={{ variant: "input", width: "100%", bg: "var(--background-primary)" }}>
-                    <span className="text-base sm:text-lg">{tr("Book another ride")}</span>
-                  </Button>
-                </div>
-              </div>
-              : ""}
-
-            {(!(activeBooking && authed && activeBooking.scheduledAt) || showForm) && (timingStep ? (
-              <section className={`flex w-full min-h-0 flex-1 flex-col items-center gap-4 sm:w-[377px] sm:flex-none sm:items-start sm:gap-5`}>
+            {timingStep ? (
+              <section className={`flex w-full min-h-0 flex-1 flex-col items-center gap-1 sm:w-[377px] sm:flex-none sm:items-start sm:gap-3`}>
                 <div className="w-full shrink-0">
                   <h1 className="text-left text-3xl font-bold leading-tight sm:text-4xl">{tr("Set date and time")}</h1>
                 </div>
@@ -1255,7 +1181,7 @@ const OnBoarding = ({ bookingStage = false, timingStep = false, highlightRideNow
                   </p>
                 )}
                 <div className={`flex items-center justify-start gap-1 max-[335px]:flex-wrap max-[335px]:gap-y-2 ${formWidth} sm:w-[377px]`}>
-                  <div className="-mr-5 flex shrink-0 origin-left scale-[0.9] gap-1 rounded-full bg-[var(--background-muted)] p-1.5 sm:gap-2 sm:p-2 [&>*]:cursor-pointer [&>*]:rounded-full [&>*]:px-3 [&>*]:py-1 [&>*]:text-base [&>*]:sm:px-3 [&>*]:sm:py-2 [&>*]:sm:text-xl">
+                  <div className="-mr-5 flex shrink-0 origin-left scale-[0.9] gap-1 rounded-full bg-[var(--background-muted)] p-1.5 sm:gap-2 [&>*]:cursor-pointer [&>*]:rounded-full [&>*]:px-3 [&>*]:py-1 [&>*]:text-base [&>*]:sm:px-3 [&>*]:sm:py-2 [&>*]:sm:text-xl">
                     <button type="button" aria-pressed={!isRoundTrip} onClick={() => setIsRoundTrip(false)} className={`transition-colors duration-300 text-[var(--text)] ${isRoundTrip ? "" : "bg-primary"}`}>
                       {tr("One way")}
                     </button>
@@ -1268,7 +1194,6 @@ const OnBoarding = ({ bookingStage = false, timingStep = false, highlightRideNow
                     <Button
                       containerRef={timingButtonRef}
                       onClick={() => {
-                        closeSuggestions();
                         setExpandCalendar(false);
                         setExpand(!expand);
                       }}
@@ -1283,13 +1208,13 @@ const OnBoarding = ({ bookingStage = false, timingStep = false, highlightRideNow
                           ? "var(--foreground)"
                           : expand ? "var(--background-primary)" : "var(--background-muted)",
                       }}
-                      className={`relative my-0! origin-left scale-[0.9] rounded-full px-2 ${highlightRideNow && timing === "Now"
+                      className={`relative my-0! origin-left scale-[0.9] rounded-full px-1.5 sm:p-1.5 sm:text-xl sm:[&>button]:py-1.5 ${highlightRideNow && timing === "Now"
                         ? "text-[var(--text-foreground)]! hover:bg-[var(--foreground)]! active:bg-[var(--foreground)]/90!"
                         : ""
                       }`}
                     >
-                      <div className="flex w-full items-center justify-center gap-1 whitespace-nowrap">
-                        <Icon path={mdiClockTimeFourOutline} size={isMobile ? 0.8 : 0.9} />
+                      <div className="flex w-full items-center justify-center gap-1.5 whitespace-nowrap">
+                        <Icon path={mdiClockTimeFourOutline} size={isMobile ? 1 : 1.1} className="ml-1"/>
                         {timing === "Schedule" ? tr("Later") : tr(timing)}
                         <Icon
                           className="opacity-70 transition-opacity duration-300 hover:opacity-100"
@@ -1333,6 +1258,7 @@ const OnBoarding = ({ bookingStage = false, timingStep = false, highlightRideNow
                         pickupAutocomplete.onFocus();
                       },
                       onBlurFn: () => {
+                        if (bookingStage && isMobile) return;
                         setEditingLocation(null);
                         pickupAutocomplete.onBlur();
                       },
@@ -1340,12 +1266,11 @@ const OnBoarding = ({ bookingStage = false, timingStep = false, highlightRideNow
                     className={`scale-[1] sm:scale-[1.3] sm:origin-left ${formWidth}`}
                     leading={
                       pickupAutocomplete.locatingCurrentLocation ? (
-                        <span
-                          className="size-3.5 animate-spin rounded-full border-2 border-[var(--text-foreground)] border-r-transparent motion-reduce:animate-none"
-                          aria-hidden="true"
-                        />
+                        <Icon path={mdiCrosshairs} className="-ml-0.5 text-black" size={0.75} aria-hidden="true" />
                       ) : (
-                        <div className="w-3 h-3 rounded-full bg-[var(--foreground)]" />
+                        <div className="w-3 h-3 flex justify-center items-center rounded-full bg-[var(--foreground)]">
+                          <div className="w-1.5 h-1.5 rounded-full bg-[var(--background)]"/>
+                        </div>
                       )
                     }
                     trailing={
@@ -1404,14 +1329,15 @@ const OnBoarding = ({ bookingStage = false, timingStep = false, highlightRideNow
                         dropAutocomplete.onFocus();
                       },
                       onBlurFn: () => {
+                        if (bookingStage && isMobile) return;
                         setEditingLocation(null);
                         dropAutocomplete.onBlur();
                       },
                     }}
                     className={`scale-[1] sm:scale-[1.3] sm:origin-left ${formWidth}`}
                     leading={
-                      <div className="w-3 h-3 rounded-full bg-primary relative">
-                        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-[var(--background)]" />
+                      <div className="w-3 h-3 flex justify-center items-center rounded-full bg-primary relative">
+                        <div className="w-1.5 h-1.5 rounded-full bg-[var(--background)]" />
                       </div>
                     }
                     trailing={
@@ -1558,7 +1484,7 @@ const OnBoarding = ({ bookingStage = false, timingStep = false, highlightRideNow
 
                 {(!bookingStage || !isMobile) && priceAction}
               </form>
-            </>)}
+            </>}
           </div>
         }
       </RoutePanel>
@@ -1574,7 +1500,7 @@ const OnBoarding = ({ bookingStage = false, timingStep = false, highlightRideNow
       {pinPriceBar && (
         <div
           ref={priceBarRef}
-          className="absolute inset-x-0 bottom-0 z-20 flex justify-center border-t border-[var(--foreground)]/10 bg-panel-gradient px-[7vw] pt-3 pb-[calc(1.25rem+env(safe-area-inset-bottom))]"
+          className="absolute inset-x-0 bottom-0 z-20 flex justify-center border-t border-[var(--foreground)]/10 bg-immersive px-[7vw] pt-3 pb-[calc(1.25rem+env(safe-area-inset-bottom))]"
         >
           <div className={COL}>{priceAction}</div>
         </div>
@@ -1605,7 +1531,7 @@ const OnBoarding = ({ bookingStage = false, timingStep = false, highlightRideNow
             type="button"
             onClick={closeMapPicker}
             aria-label={tr("Back to location search")}
-            className="absolute left-4 top-[calc(1rem+env(safe-area-inset-top))] z-30 flex h-10 cursor-pointer items-center justify-center rounded-full border border-[var(--foreground)]/30 bg-[var(--background-muted)] px-3 text-[var(--text)] shadow-[0_4px_20px_2px_rgba(0,0,0,0.45)] transition-opacity duration-300 hover:opacity-100 active:opacity-70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)] sm:left-8 sm:top-8"
+            className="absolute left-4 top-[calc(1rem+env(safe-area-inset-top))] z-30 flex h-10 cursor-pointer items-center justify-center rounded-full border border-[var(--foreground)]/30 bg-immersive px-3 text-[var(--text)] shadow-[0_4px_20px_2px_rgba(0,0,0,0.45)] transition-opacity duration-300 hover:opacity-100 active:opacity-70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)] sm:left-8 sm:top-8"
           >
             <Icon path={mdiKeyboardBackspace} size={1.2} aria-hidden="true" />
           </button>

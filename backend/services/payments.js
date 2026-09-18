@@ -22,8 +22,13 @@ const checkoutOf = (payment, keyId) => ({
   amount: payment.amount, currency: payment.currency, status: payment.status,
 })
 
-export async function createOrderForPayment({ paymentId, userId, gateway = createRazorpayGateway(), db = prisma }) {
-  const payment = await db.payment.findFirst({ where: { id: paymentId, userId } })
+const ownerWhere = ({ paymentId, userId, driverId }) => ({
+  id: paymentId,
+  ...(driverId ? { driverId, userId: null } : { userId, driverId: null }),
+})
+
+export async function createOrderForPayment({ paymentId, userId, driverId, gateway = createRazorpayGateway(), db = prisma }) {
+  const payment = await db.payment.findFirst({ where: ownerWhere({ paymentId, userId, driverId }) })
   if (!payment) throw new PaymentError('PAYMENT_NOT_FOUND', 'Payment not found', 404)
   if (!Number.isInteger(payment.amount) || payment.amount < MIN_PAYMENT_SUBUNITS)
     throw new PaymentError('INVALID_AMOUNT', 'Payment amount must be at least 100 subunits', 400)
@@ -48,9 +53,10 @@ export async function createOrderForPayment({ paymentId, userId, gateway = creat
   }
 }
 
-export async function verifyCheckoutPayment({ paymentId, userId, razorpayPaymentId, razorpayOrderId, signature,
-  gateway = createRazorpayGateway(), db = prisma, notifyPayment = null, refundPaymentFn = refundPayment }) {
-  const payment = await db.payment.findFirst({ where: { id: paymentId, userId } })
+export async function verifyCheckoutPayment({ paymentId, userId, driverId, razorpayPaymentId, razorpayOrderId, signature,
+  gateway = createRazorpayGateway(), db = prisma, notifyPayment = null,
+  refundPaymentFn = refundPayment, refundDebtExcessFn = refundDriverDebtExcess }) {
+  const payment = await db.payment.findFirst({ where: ownerWhere({ paymentId, userId, driverId }) })
   if (!payment) throw new PaymentError('PAYMENT_NOT_FOUND', 'Payment not found', 404)
   if (!payment.razorpayOrderId || payment.razorpayOrderId !== razorpayOrderId)
     throw new PaymentError('ORDER_MISMATCH', 'Payment order does not match', 400)
@@ -69,7 +75,7 @@ export async function verifyCheckoutPayment({ paymentId, userId, razorpayPayment
     return { updated, effect }
   }
   const { updated, effect } = db.$transaction ? await db.$transaction(write) : await write(db)
-  const refund = await followCapturedPaymentEffect(effect, { db, refundPaymentFn })
+  const refund = await followCapturedPaymentEffect(effect, { db, refundPaymentFn, refundDebtExcessFn })
   const notify = notifyPayment ?? (db === prisma ? notifyWhatsAppScheduledPaymentConfirmed : null)
   if (effect?.type === 'scheduled_ride_advance' && notify) await notify(effect.bookingId).catch(() => {})
   return { paymentId: updated.id, status: refund?.status ?? updated.status }
@@ -79,6 +85,7 @@ export async function processRazorpayWebhook(args) {
   return processRazorpayWebhookEvent({
     ...args,
     refundPaymentFn: args.refundPaymentFn ?? refundPayment,
+    refundDebtExcessFn: args.refundDebtExcessFn ?? refundDriverDebtExcess,
   })
 }
 
@@ -105,4 +112,24 @@ export async function refundPayment({ paymentId, gateway = createRazorpayGateway
     } })
     throw error
   }
+}
+
+export async function refundDriverDebtExcess({ paymentId, amount, gateway = createRazorpayGateway(), db = prisma }) {
+  const payment = await db.payment.findUnique({ where: { id: paymentId } })
+  if (!payment || payment.purpose !== 'driver_debt_settlement')
+    throw new PaymentError('PAYMENT_NOT_FOUND', 'Driver debt payment not found', 404)
+  if (payment.status !== 'captured' || !payment.razorpayPaymentId)
+    throw new PaymentError('REFUND_NOT_ALLOWED', 'Only a captured debt payment can return excess funds')
+  if (!Number.isInteger(amount) || amount <= 0 || amount > payment.amount || payment.driverDebtRefundAmount !== amount)
+    throw new PaymentError('INVALID_REFUND_AMOUNT', 'Debt-payment refund amount does not match the captured excess')
+  if (payment.razorpayRefundId) {
+    return { paymentId, status: payment.status, refundId: payment.razorpayRefundId, alreadyApplied: true }
+  }
+  const refund = await gateway.createRefund(payment.razorpayPaymentId, {
+    amount,
+    idempotencyKey: `driver-debt-excess:${payment.id}`,
+    notes: { internal_payment_id: payment.id, reason: 'driver_debt_excess' },
+  })
+  const updated = await db.payment.update({ where: { id: payment.id }, data: { razorpayRefundId: refund.id } })
+  return { paymentId, status: updated.status, refundId: updated.razorpayRefundId }
 }

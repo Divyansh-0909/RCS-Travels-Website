@@ -1,7 +1,8 @@
 import { useLanguage as useCopyLanguage } from "../i18n";
 import { driverCopy as dc } from "../lib/copy";
-import { useEffect, useRef } from "react";
-import { Pressable, View } from "react-native";
+import { useEffect, useState } from "react";
+import { AppState, Pressable, View } from "react-native";
+import * as Location from 'expo-location';
 import Animated, {
     Easing,
     useAnimatedStyle,
@@ -16,10 +17,14 @@ import ScheduledRide from "../components/ui/ScheduledRide";
 import MarketPromo from "../components/ui/MarketPromo";
 import DriverCouponPromo from "../components/ui/DriverCouponPromo";
 import { HomeRideListSkeleton } from "../components/ui/LoadingSkeletons";
+import MapSlot from "../components/ui/MapSlot";
 import { useNavigate } from "react-router-native";
 import { useDriver } from "../hooks/useDriver";
+import { useApi } from "../hooks/useApi";
+import { ensureLocationPermission } from "../hooks/useDriverLocation";
 import type { UpcomingBooking } from "../types/enums";
 import { useTheme } from '../theme/ThemeContext';
+import { getRememberedDriverLocation, rememberDriverLocation } from '../lib/driverLocationCache';
 
 const Caret = cssInterop(CaretRightIcon, {
     className: { target: false, nativeStyleToProp: { color: true } },
@@ -29,6 +34,7 @@ const MAX_ROWS = 2;
 const MOTION_DURATION = 180;
 const RIDE_ENTER_SCALE = 0.97;
 const RIDE_ENTER_Y = 8;
+const OFFLINE_MARKER_OPACITY = 0.42;
 const EASE_OUT = Easing.bezier(0.23, 1, 0.32, 1);
 // AppBar is 68px tall and floats 24px from the bottom. The remaining 16px keeps
 // the coupon panel visually separate while placing it directly above the bar.
@@ -73,31 +79,72 @@ const OverviewRide = ({ booking, onPress }: { booking: UpcomingBooking; onPress:
 const Home = ({ scheduled, loading, error, onRefresh }: Props) => {
     useCopyLanguage();
     const navigate = useNavigate()
-    const { profile } = useDriver()
+    const api = useApi()
+    const { profile, patchProfile } = useDriver()
     const { colors } = useTheme()
-    const online = profile?.isOnline ?? false
-    const statusProgress = useSharedValue(1)
+    const [mapLocation, setMapLocation] = useState<Location.LocationObject | null>(getRememberedDriverLocation)
     const rideStateProgress = useSharedValue(1)
-    const previousOnline = useRef(online)
     const rideState = loading && scheduled.length === 0
         ? 'loading'
         : scheduled.length === 0
             ? 'empty'
             : 'rides'
 
+    const openMapAndGoOnline = async () => {
+        if (profile?.isOnline) return
+
+        const permission = await ensureLocationPermission()
+        if (permission !== "granted") return
+
+        const result = await api.setOnline(true)
+        if (result?.error) return
+
+        patchProfile({ isOnline: true, dispatchReady: false })
+    }
+
     useEffect(() => {
-        if (previousOnline.current === online) return
-        previousOnline.current = online
-        statusProgress.set(0)
-        statusProgress.set(withTiming(1, { duration: MOTION_DURATION, easing: EASE_OUT }))
-    }, [online, statusProgress])
+        let stopped = false
+
+        const acceptFix = (fix: Location.LocationObject) => {
+            if (stopped) return
+            rememberDriverLocation(fix)
+            setMapLocation((current) => !current || fix.timestamp >= current.timestamp ? fix : current)
+        }
+
+        const locate = async () => {
+            const permission = await Location.getForegroundPermissionsAsync().catch(() => null)
+            if (!permission?.granted || stopped) return
+
+            const cached = await Location.getLastKnownPositionAsync({
+                maxAge: 60_000,
+                requiredAccuracy: 200,
+            }).catch(() => null)
+            if (cached) acceptFix(cached)
+            if (stopped) return
+
+            const current = await Location.getCurrentPositionAsync({
+                accuracy: Location.Accuracy.Balanced,
+            }).catch(() => null)
+            if (current) acceptFix(current)
+        }
+
+        void locate()
+        const appStateSubscription = AppState.addEventListener('change', (state) => {
+            if (state === 'active') void locate()
+        })
+
+        return () => {
+            stopped = true
+            appStateSubscription.remove()
+        }
+    }, [])
 
     useEffect(() => {
         rideStateProgress.set(0)
         rideStateProgress.set(withTiming(1, { duration: MOTION_DURATION, easing: EASE_OUT }))
     }, [rideState, rideStateProgress])
 
-    const statusAnimatedStyle = useAnimatedStyle(() => ({ opacity: statusProgress.get() }))
+
     const rideStateAnimatedStyle = useAnimatedStyle(() => ({ opacity: rideStateProgress.get() }))
 
     return (
@@ -111,16 +158,25 @@ const Home = ({ scheduled, loading, error, onRefresh }: Props) => {
                 paddingBottom: BAR_CLEARANCE,
             }}
         >
-            <Animated.View
-                className="flex-1 items-center justify-center w-full rounded-2xl px-4 gap-0.5"
-                style={statusAnimatedStyle}
+            <View
+                className="flex-1 w-full rounded-xl border overflow-hidden"
+                style={{
+                    minHeight: 220,
+                    borderColor: colors.borderUi,
+                }}
             >
-                <AppText className="text-2xl font-semibold text-ink">{dc("You're") + " "}{online ? dc("online") : dc("offline")}
-                </AppText>
-                <AppText className="text-base text-ink-muted">
-                    {online ? dc("Waiting for a new ride.") : dc("Go online to start getting rides.")}
-                </AppText>
-            </Animated.View>
+                <MapSlot
+                    driver={mapLocation ? {
+                        latitude: mapLocation.coords.latitude,
+                        longitude: mapLocation.coords.longitude,
+                    } : null}
+                    driverBearing={mapLocation?.coords.heading}
+                    carType={profile?.vehicleClass}
+                    driverMarkerOpacity={OFFLINE_MARKER_OPACITY}
+                    showRecenterControl={false}
+                    onPress={openMapAndGoOnline}
+                />
+            </View>
 
             <View className="w-full gap-4">
                 {error && (

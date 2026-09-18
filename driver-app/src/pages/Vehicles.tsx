@@ -31,6 +31,7 @@ import AccountDetailScreen from '../components/ui/AccountDetailScreen';
 import { VehiclesSkeleton } from '../components/ui/LoadingSkeletons';
 import { useApi } from '../hooks/useApi';
 import { useBottomSheetMotion } from '../hooks/useBottomSheetMotion';
+import { sheetSurfaceStyle } from '../components/ui/sheetSurfaceStyle';
 import { useDriver } from '../hooks/useDriver';
 import { type Vehicle, type VehiclesResponse, verificationLabel } from '../lib/documentState';
 import { VEHICLE_NUMBER_INPUT_MAX_LENGTH, VEHICLE_NUMBER_MAX_LENGTH, VEHICLE_NUMBER_MIN_LENGTH, validateVehicleNumber } from '../lib/vehicleNumber';
@@ -249,7 +250,7 @@ const Vehicles = () => {
       return;
     }
 
-    await load();
+    await Promise.all([load(), refreshProfile()]);
 
     // Said plainly, because it is the consequence he did not ask for. Switching
     // to a car whose papers are not through takes him off the road, and finding
@@ -261,7 +262,7 @@ const Vehicles = () => {
         dc("This car's documents aren't approved yet, so you can't go online in it. Switch back any time."),
       );
     }
-  }, [api, busy, load]);
+  }, [api, busy, load, refreshProfile]);
 
   const remove = useCallback(async (vehicle: Vehicle) => {
     const confirmed = await new Promise<boolean>((resolve) => {
@@ -535,7 +536,7 @@ const Vehicles = () => {
               className={`${index === 0 ? 'rounded-t-3xl rounded-b-sm' : 'rounded-sm'} ${vehicle.isActive ? 'px-5 py-5' : 'px-4 py-3.5'}`}
               // Match Account's grouped rows: the narrow canvas gap separates each
               // panel, while the first and last items own the outer rounded corners.
-              style={{ backgroundColor: colors.surfaceMuted, minHeight: vehicle.isActive ? 156 : undefined }}
+              style={{ backgroundColor: colors.surfaceMuted }}
             >
               <View className="flex-row items-center gap-3">
                 <View
@@ -560,19 +561,32 @@ const Vehicles = () => {
               </View>
 
               {vehicle.isActive ? (
-                <View className="flex-row justify-end mt-3">
+                <View className="flex-row items-center justify-between gap-3 mt-3">
                   <View
-                    className="shrink-0 rounded-lg px-2.5 py-1"
+                    className="shrink rounded-lg px-2.5 py-1"
                     style={{ backgroundColor: colors.primary }}
                   >
                     <AppText numberOfLines={1} className="text-xs font-semibold uppercase tracking-wide text-white">
                       {vehicle.model ? `${vehicle.model} · ${vehicle.number}` : vehicle.number}
                     </AppText>
                   </View>
+
+                  <View className="shrink-0 rounded-lg" style={{ backgroundColor: colors.surface }}>
+                    <Pressable
+                      role="button"
+                      onPress={() => navigate(`/account/documents?vehicleId=${vehicle.id}`)}
+                      hitSlop={8}
+                      className="rounded-lg px-3 py-2"
+                      style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+                    >
+                      <AppText className={`text-sm font-semibold ${INK}`}>{dc("Documents")}</AppText>
+                    </Pressable>
+                  </View>
                 </View>
               ) : null}
 
-              <View className="flex-row items-center gap-4 mt-3">
+              {!vehicle.isActive ? (
+                <View className="flex-row items-center gap-4 mt-3">
                 <View className="rounded-lg" style={{ backgroundColor: colors.surface }}>
                   <Pressable
                     role="button"
@@ -585,41 +599,38 @@ const Vehicles = () => {
                   </Pressable>
                 </View>
 
-                {!vehicle.isActive ? (
-                  <Pressable
-                    role="button"
-                    disabled={busy}
-                    onPress={() => switchTo(vehicle)}
-                    hitSlop={8}
-                    style={({ pressed }) => ({
-                      backgroundColor: colors.strong,
-                      borderRadius: 999,
-                      paddingHorizontal: 12,
-                      paddingVertical: 8,
-                      opacity: pressed || busy ? 0.6 : 1,
-                    })}
-                  >
-                    <AppText className="text-sm font-semibold text-white">{dc("Drive this one")}</AppText>
-                  </Pressable>
-                ) : null}
+                <Pressable
+                  role="button"
+                  disabled={busy}
+                  onPress={() => switchTo(vehicle)}
+                  hitSlop={8}
+                  style={({ pressed }) => ({
+                    backgroundColor: colors.strong,
+                    borderRadius: 999,
+                    paddingHorizontal: 12,
+                    paddingVertical: 8,
+                    opacity: pressed || busy ? 0.6 : 1,
+                  })}
+                >
+                  <AppText className="text-sm font-semibold text-white">{dc("Drive this one")}</AppText>
+                </Pressable>
 
                 {/* Not offered for the car he is driving. The server refuses it too
                     — the four cached columns on his row are non-nullable and would
                     be left describing a car that no longer exists — but a button
                     that only ever produces an error is not a button. */}
-                {!vehicle.isActive ? (
-                  <Pressable
-                    role="button"
-                    aria-label={dc("Remove {{value0}}", {value0: (vehicle.number)})}
-                    disabled={busy}
-                    onPress={() => remove(vehicle)}
-                    hitSlop={8}
-                    style={({ pressed }) => ({ opacity: pressed || busy ? 0.6 : 1, marginLeft: 'auto' })}
-                  >
-                    <TrashIcon size={18} weight="regular" color="#92400E" />
-                  </Pressable>
-                ) : null}
+                <Pressable
+                  role="button"
+                  aria-label={dc("Remove {{value0}}", {value0: (vehicle.number)})}
+                  disabled={busy}
+                  onPress={() => remove(vehicle)}
+                  hitSlop={8}
+                  style={({ pressed }) => ({ opacity: pressed || busy ? 0.6 : 1, marginLeft: 'auto' })}
+                >
+                  <TrashIcon size={18} weight="regular" color="#92400E" />
+                </Pressable>
               </View>
+              ) : null}
             </View>
           ))}
 
@@ -658,7 +669,7 @@ const Vehicles = () => {
             <Pressable
             accessibilityViewIsModal
             className="bg-surface rounded-t-3xl px-5 pt-5"
-            style={{ maxHeight: Math.max(windowHeight - keyboardHeight - 16, 240) }}
+            style={[sheetSurfaceStyle, { maxHeight: Math.max(windowHeight - keyboardHeight - 16, 240) }]}
             onPress={() => {}}
             >
             <View className="flex-row items-start gap-3 pb-4">

@@ -45,6 +45,12 @@ function AuthLoadingGate({ children }) {
   const { isLoaded: authLoaded } = useAuth();
   const { isLoaded: userLoaded } = useUser();
 
+  // /dev is an existing local preview harness for auth-gated and isolated UI.
+  // Let it render even when Clerk cannot restore a session in a local/headless
+  // browser. This branch is compiled only for Vite dev mode.
+  const isDevPreview = import.meta.env.DEV && window.location.pathname.startsWith('/dev');
+  if (isDevPreview) return <>{children}</>;
+
   if (!authLoaded || !userLoaded) return <LoadingScreen />;
 
   return <>{children}</>;

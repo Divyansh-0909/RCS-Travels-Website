@@ -41,7 +41,7 @@ const Notifications = () => {
 
     return (
         <ScrollView
-            className="w-[92%] h-full"
+            className="w-[92%]"
             contentContainerStyle={{ paddingBottom: 180, paddingTop: 8 }}
             showsVerticalScrollIndicator={false}
         >

@@ -33,7 +33,7 @@ This file is the working source for the RCS Captains Play Console submission. It
 
 `The app also helps captains complete onboarding and vehicle verification, upload required driver and vehicle documents, receive document-status updates, manage vehicles, view ride history, and contact RCS Travels support.`
 
-`Location is used while a captain is online so RCS Travels can find nearby captains, dispatch relevant ride offers, and provide live progress for assigned rides. Background location is used only for the online-driving workflow, including when the app is in the background. Captains can stop this use by going offline.`
+`Location is used in the foreground to show captains their position on the Home map. When a captain is online, location is also sent to RCS Travels so nearby captains can be found, relevant ride offers can be dispatched, and assigned rides can show live progress. Background location is used only for the online-driving workflow, including when the app is in the background. Captains can stop background use and server reporting by going offline.`
 
 `RCS Captains is intended for approved RCS Travels drivers and requires an RCS Captains account.`
 

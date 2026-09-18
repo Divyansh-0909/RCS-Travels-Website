@@ -133,7 +133,7 @@ export function developmentEnvironment({ projectRoot = root, inheritedEnvironmen
     requireValue(backendFile, 'GOOGLE_MAPS_API_KEY', 'backend/.env')
   const frontendMapsKey = frontendFile.VITE_DEVELOPMENT_GOOGLE_MAPS_API_KEY ||
     requireValue(frontendFile, 'VITE_GOOGLE_MAPS_API_KEY', 'frontend/.env')
-  const razorpayKeyId = backendFile.DEVELOPMENT_RAZORPAY_KEY_ID || ''
+  const razorpayKeyId = backendFile.DEVELOPMENT_RAZORPAY_KEY_ID || backendFile.RAZORPAY_KEY_ID || ''
   if (razorpayKeyId && !razorpayKeyId.startsWith('rzp_test_')) {
     throw new Error('DEVELOPMENT_RAZORPAY_KEY_ID must be a Razorpay test-mode key.')
   }
@@ -164,8 +164,8 @@ export function developmentEnvironment({ projectRoot = root, inheritedEnvironmen
     JOBS_MODE: 'interval',
     OPENAI_API_KEY: requireValue(backendFile, 'OPENAI_API_KEY', 'backend/.env'),
     RAZORPAY_KEY_ID: razorpayKeyId,
-    RAZORPAY_KEY_SECRET: backendFile.DEVELOPMENT_RAZORPAY_KEY_SECRET || '',
-    RAZORPAY_WEBHOOK_SECRET: backendFile.DEVELOPMENT_RAZORPAY_WEBHOOK_SECRET || '',
+    RAZORPAY_KEY_SECRET: backendFile.DEVELOPMENT_RAZORPAY_KEY_SECRET || backendFile.RAZORPAY_KEY_SECRET || '',
+    RAZORPAY_WEBHOOK_SECRET: backendFile.DEVELOPMENT_RAZORPAY_WEBHOOK_SECRET || backendFile.RAZORPAY_WEBHOOK_SECRET || '',
   })
   if (backendFile.DEVELOPMENT_GCS_BUCKET) backendEnv.GCS_BUCKET = backendFile.DEVELOPMENT_GCS_BUCKET
 

@@ -29,7 +29,9 @@ export const paymentIsSatisfied = (purpose, financials) => {
     return Number.isFinite(paid) && paid >= due;
 };
 
-export const paymentNeedsRefresh = ({ status, scheduledAt, financials }) => {
+export const paymentNeedsRefresh = ({ status, scheduledAt, financials, ridePayment }) => {
+    if (status === "completed" && ridePayment?.state === "pending") return true;
+    if (status === "completed" && ridePayment?.state === "paid") return false;
     if (!scheduledAt) return false;
     // A deployment boundary or a transient status response can omit the
     // derived financials. Keep polling in the payment-bearing states so the UI
@@ -40,6 +42,10 @@ export const paymentNeedsRefresh = ({ status, scheduledAt, financials }) => {
     if (status === "completed") return !paymentIsSatisfied("final", financials);
     return false;
 };
+
+export const ridePaymentAmount = (ridePayment) => (
+    Number.isFinite(ridePayment?.amount) ? ridePayment.amount : null
+);
 
 export const formatPaymentAmount = (paise) => {
     if (!Number.isFinite(paise)) return "₹—";

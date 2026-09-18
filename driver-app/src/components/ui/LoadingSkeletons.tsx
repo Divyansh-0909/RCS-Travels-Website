@@ -167,7 +167,7 @@ export const VehiclesSkeleton = () => {
       className="mx-4 rounded-3xl overflow-hidden"
       style={{ backgroundColor: colors.canvas, gap: 3 }}
     >
-      <SkeletonSection className="w-full px-5 py-5" surface="surfaceMuted" style={{ minHeight: 156 }}>
+      <SkeletonSection className="w-full px-5 py-5" surface="surfaceMuted">
         <View className="flex-row items-center gap-3">
           <SkeletonBlock width={44} height={44} radius={12} />
           <View className="flex-1 gap-1.5">
@@ -176,10 +176,7 @@ export const VehiclesSkeleton = () => {
           </View>
         </View>
         <View className="mt-3 flex-row items-center justify-between gap-3">
-          <SkeletonBlock width="37%" height={13} />
-          <SkeletonBlock width={78} height={24} radius={8} />
-        </View>
-        <View className="mt-3 flex-row items-center gap-4">
+          <SkeletonBlock width="48%" height={24} radius={8} />
           <SkeletonBlock width={86} height={32} radius={8} />
         </View>
       </SkeletonSection>
@@ -220,7 +217,7 @@ const DocumentRowSkeleton = ({ panel = false }: { panel?: boolean }) => (
 );
 
 export const DocumentRowsSkeleton = ({ rows = 3, panel = false }: { rows?: number; panel?: boolean }) => (
-  <View className={panel ? "gap-3" : "w-full"}>
+  <View className="w-full" style={panel ? { gap: 3 } : undefined}>
     {Array.from({ length: rows }, (_, index) => (
       <DocumentRowSkeleton key={index} panel={panel} />
     ))}
@@ -243,7 +240,7 @@ export const DocumentsSkeleton = () => (
 
     <DetailSectionLabelSkeleton width="31%" />
     <View className="mx-4">
-      <DocumentRowsSkeleton rows={2} />
+      <DocumentRowsSkeleton rows={2} panel />
     </View>
 
     <DetailSectionLabelSkeleton width="29%" />
@@ -341,6 +338,47 @@ export const AccountOverviewSkeleton = () => {
 
       <SkeletonSection className="w-full items-center">
         <SkeletonBlock width={92} height={12} />
+      </SkeletonSection>
+    </View>
+  );
+};
+
+export const AccountProfileSectionsSkeleton = () => {
+  return (
+    <View
+      accessible
+      accessibilityLabel={dc("Loading account profile sections")}
+      accessibilityState={{ busy: true }}
+      className="w-full"
+      style={{ gap: 8 }}
+    >
+      <SkeletonSection
+        className="w-full flex-row items-center gap-3 rounded-2xl px-4 py-3.5"
+        surface="surfaceMuted"
+      >
+        <View className="w-8 h-8 items-center justify-center">
+          <SkeletonBlock width={26} height={26} radius={8} />
+        </View>
+        <View className="flex-1 gap-1">
+          <SkeletonBlock width="34%" height={16} />
+          <SkeletonBlock width="44%" height={12} />
+        </View>
+        <SkeletonBlock width={8} height={14} radius={4} />
+      </SkeletonSection>
+
+      <View className="w-full flex-row" style={{ gap: 8 }}>
+        {[0, 1].map((index) => (
+          <SkeletonSection key={index} className="flex-1 rounded-3xl p-4 gap-1" surface="surfaceMuted">
+            <SkeletonBlock width="42%" height={11} />
+            <SkeletonBlock width="72%" height={24} />
+            <SkeletonBlock width="60%" height={12} />
+          </SkeletonSection>
+        ))}
+      </View>
+
+      <SkeletonSection className="w-full rounded-2xl overflow-hidden" surface="canvas">
+        <AccountMenuRowSkeleton surface="surfaceMuted" secondary />
+        <AccountMenuRowSkeleton surface="surfaceMuted" secondary />
       </SkeletonSection>
     </View>
   );

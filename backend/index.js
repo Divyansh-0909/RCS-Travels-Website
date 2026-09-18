@@ -11,6 +11,7 @@ import driverRouter from './routes/driver.js'
 import startAssignmentJob from './services/assignScheduledRides.js'
 import { startDocumentScanJob } from './services/documentScan.js'
 import { startDocumentExpiryJob } from './services/driverDocuments.js'
+import { issuePreviousMonthCoupons } from './services/coupons.js'
 import { initFareZones } from './services/fareZones.js'
 import usersRouter from './routes/users.js'
 import hybridAuthRouter from './routes/hybridAuth.js'
@@ -21,6 +22,7 @@ import shareRouter from './routes/share.js'
 import { JOBS_MODE } from './lib/jobs.js'
 import paymentsRouter, { razorpayWebhookHandler } from './routes/payments.js'
 import whatsappRouter from './routes/whatsapp.js'
+import driverCheckoutRouter from './routes/driverCheckout.js'
 
 const app = express()
 const PORT = process.env.PORT || 5000
@@ -66,6 +68,12 @@ app.post('/api/payments/razorpay/webhook', express.raw({ type: 'application/json
 // JSON parser. GET is the one-time webhook verification challenge.
 app.use('/webhooks/whatsapp', express.raw({ type: 'application/json', limit: '1mb' }), whatsappRouter)
 app.use(express.json())
+
+// Public only in the sense that the system browser cannot carry Clerk cookies.
+// The short-lived HMAC token binds the page to one already-created driver debt
+// payment; the page cannot credit the wallet. The authenticated app still has to
+// verify Razorpay's signature through /api/driver before any payment effect runs.
+app.use('/captain-payment', driverCheckoutRouter)
 
 // BEFORE clerkAuth, and that ordering is the point. These endpoints carry a
 // Google-signed OIDC token in the Authorization header, not a Clerk session, and
@@ -147,6 +155,7 @@ const server = app.listen(PORT, async () => {
     // ran out this morning must not still be taking rides tonight because the job
     // runs at 02:00. Recomputes his verification, which is what takes him offline.
     startDocumentExpiryJob()
+    setInterval(() => issuePreviousMonthCoupons().catch((err) => console.error('customer coupons:', err)), 24 * 60 * 60 * 1000)
   }
 
   // Logged at boot, loudly, on both paths. A service in `scheduler` mode with

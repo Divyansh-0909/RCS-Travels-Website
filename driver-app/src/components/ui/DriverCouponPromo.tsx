@@ -1,11 +1,9 @@
 import { useLanguage as useCopyLanguage } from "../../i18n";
 import { driverCopy as dc } from "../../lib/copy";
-import { Image, Pressable, View } from 'react-native';
-import { memo, useState } from 'react';
+import { Image, View } from 'react-native';
+import { memo } from 'react';
 import AppText from '../AppText';
-import { useApi } from '../../hooks/useApi';
 import { useDriver } from '../../hooks/useDriver';
-import { ensureLocationPermission } from '../../hooks/useDriverLocation';
 
 const CouponIllustration = require('../../../assets/market-illustration.webp');
 const AMBER = '#940F22';
@@ -17,28 +15,10 @@ const PANEL_WIDTH = '34%';
 
 const DriverCouponPromo = memo(function DriverCouponPromo() {
     useCopyLanguage();
-    const api = useApi();
-    const { patchProfile } = useDriver();
-    const [goingOnline, setGoingOnline] = useState(false);
-
-    const goOnline = async () => {
-        if (goingOnline) return;
-        setGoingOnline(true);
-
-        try {
-            // Match the header toggle's guard: the driver must be locatable before
-            // dispatch can mark them available for rides.
-            if (await ensureLocationPermission() !== 'granted') return;
-
-            const result = await api.setOnline(true);
-
-            if (!result?.error) patchProfile({ isOnline: true, dispatchReady: false });
-        } catch {
-            patchProfile({ isOnline: false, dispatchReady: false });
-        } finally {
-            setGoingOnline(false);
-        }
-    };
+    const { profile } = useDriver();
+    const completedRides = profile?.completedRides ?? 0;
+    const rewards = profile?.commissionFreeRidesRemaining ?? 0;
+    const progress = completedRides % 20;
 
     return (
         <View
@@ -47,8 +27,8 @@ const DriverCouponPromo = memo(function DriverCouponPromo() {
         >
             <View className="flex-1 px-5 py-5 gap-1">
                 <View>
-                    <AppText className="text-xl font-semibold" style={{ ...TITLE, color: INK }}>{dc("Complete 20 rides.")}</AppText>
-                    <AppText className="text-xl font-semibold" style={{ ...TITLE, color: INK }}>{dc("No service fee on next 3 rides.")}</AppText>
+                    <AppText className="text-xl font-semibold" style={{ ...TITLE, color: INK }}>{rewards > 0 ? `${rewards} fee free rides available.` : `${progress}/20 rides completed.`}</AppText>
+                    <AppText className="text-xl font-semibold" style={{ ...TITLE, color: INK }}>{rewards > 0 ? 'Drive more to unlock the next reward.' : 'No service fee on next 3 rides.'}</AppText>
                 </View>
 
                 <AppText className="text-sm" style={{ color: SUBTLE }}>{dc("Keep driving to unlock your reward.")}</AppText>

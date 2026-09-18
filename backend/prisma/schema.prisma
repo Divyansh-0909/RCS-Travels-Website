@@ -113,6 +113,12 @@ enum WalletEntryType {
   commission
   // Money actually paid out to the driver, closing the balance.
   payout
+  // Razorpay payment used only to clear a negative captain balance. This is
+  // deliberately separate from a normal top-up: the service caps the credit at
+  // the live debt, so this entry can never create spendable positive balance.
+  debt_payment
+  // A RazorpayX payout that later reverses has to put the exact debit back.
+  payout_reversal
   // Admin correction. Always carries a note — an unexplained adjustment is
   // indistinguishable from a bug.
   adjustment
@@ -128,9 +134,26 @@ enum PaymentMethod {
 enum PaymentPurpose {
   scheduled_ride_advance
   scheduled_ride_final
+  ride_now_final
   marketplace_deposit
   cancellation_charge
+  driver_debt_settlement
   other_customer_payment
+}
+
+enum DriverPayoutBatchStatus {
+  draft
+  processing
+  completed
+  partial
+}
+
+enum DriverPayoutStatus {
+  pending
+  processing
+  paid
+  failed
+  reversed
 }
 
 enum ExternalPaymentStatus {
@@ -299,6 +322,8 @@ model Driver {
   // Goes NEGATIVE on purpose: an unpaid fine larger than the credit on hand is
   // the state that blocks going online until it clears.
   walletBalance Float @default(0) @map("wallet_balance")
+  payoutUpiId String? @map("payout_upi_id")
+  payoutUpiVerifiedAt DateTime? @map("payout_upi_verified_at")
 
   // Loyalty: rides on which the 5% PLATFORM COMMISSION is waived, granted
   // LOYALTY_REWARD_RIDES at a time every LOYALTY_REQUIRED_RIDES completed rides
@@ -342,6 +367,9 @@ model Driver {
   reviews         DriverReview[]
   overchargeFlags OverchargeFlag[]
   walletEntries   WalletEntry[]
+  payments        Payment[]
+  payouts         DriverPayout[]
+  walletRepairAudits WalletCacheRepairAudit[]
   offers          RideOffer[]
   cancellations   DriverCancellation[]
   complaints      RideComplaint[]
@@ -546,7 +574,8 @@ model RideComplaint {
 // External gateway attempts only. Driver accounting remains in WalletEntry.
 model Payment {
   id                 String                @id @default(uuid())
-  userId             String                @map("user_id")
+  userId             String?               @map("user_id")
+  driverId           String?               @map("driver_id")
   bookingId          String?               @map("booking_id")
   purpose            PaymentPurpose
   status             ExternalPaymentStatus @default(created)
@@ -564,18 +593,79 @@ model Payment {
   finalFareAmount    Int?                  @map("final_fare_amount")
   advancePercentage Int?                  @map("advance_percentage")
   remainingAmount   Int?                  @map("remaining_amount")
+  // Only populated for driver_debt_settlement. Both values are in paise. The
+  // applied value is capped against the live debt at capture time; any excess
+  // is immediately queued for a partial refund and never enters the wallet.
+  driverDebtAppliedAmount Int?             @map("driver_debt_applied_amount")
+  driverDebtRefundAmount  Int?             @map("driver_debt_refund_amount")
   createdAt          DateTime              @default(now()) @map("created_at")
   updatedAt          DateTime              @updatedAt @map("updated_at")
   capturedAt         DateTime?             @map("captured_at")
   refundedAt         DateTime?             @map("refunded_at")
 
-  user          User                     @relation(fields: [userId], references: [id], onDelete: Restrict)
+  user          User?                    @relation(fields: [userId], references: [id], onDelete: Restrict)
+  driver        Driver?                  @relation(fields: [driverId], references: [id], onDelete: Restrict)
   booking       Booking?                 @relation(fields: [bookingId], references: [id], onDelete: Restrict)
   webhookEvents RazorpayWebhookEvent[]
 
   @@index([userId, createdAt])
+  @@index([driverId, createdAt])
   @@unique([bookingId, purpose])
   @@map("payments")
+}
+
+model DriverPayoutBatch {
+  id          String                  @id @default(uuid())
+  reference   String                  @unique
+  status      DriverPayoutBatchStatus @default(draft)
+  createdBy   String                  @map("created_by")
+  createdAt   DateTime                @default(now()) @map("created_at")
+  executedAt  DateTime?               @map("executed_at")
+  payouts     DriverPayout[]
+
+  @@index([createdAt])
+  @@map("driver_payout_batches")
+}
+
+model DriverPayout {
+  id               String             @id @default(uuid())
+  batchId          String             @map("batch_id")
+  driverId         String             @map("driver_id")
+  amount           Int
+  currency         String             @default("INR")
+  status           DriverPayoutStatus @default(pending)
+  idempotencyKey   String             @unique @map("idempotency_key")
+  externalPayoutId String?            @unique @map("external_payout_id")
+  payoutUpiId      String             @map("payout_upi_id")
+  failureCode      String?            @map("failure_code")
+  failureReason    String?            @map("failure_reason")
+  createdAt        DateTime           @default(now()) @map("created_at")
+  updatedAt        DateTime           @updatedAt @map("updated_at")
+  paidAt           DateTime?          @map("paid_at")
+
+  batch  DriverPayoutBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  driver Driver            @relation(fields: [driverId], references: [id], onDelete: Restrict)
+
+  @@index([batchId, status])
+  @@index([driverId, createdAt])
+  @@map("driver_payouts")
+}
+
+model WalletCacheRepairAudit {
+  id            String   @id @default(uuid())
+  driverId      String   @map("driver_id")
+  reference     String   @unique
+  note          String
+  actorId       String   @map("actor_id")
+  beforeBalance Float    @map("before_balance")
+  ledgerBalance Float    @map("ledger_balance")
+  repaired      Boolean
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  driver Driver @relation(fields: [driverId], references: [id], onDelete: Restrict)
+
+  @@index([driverId, createdAt])
+  @@map("wallet_cache_repair_audits")
 }
 
 model RazorpayWebhookEvent {
@@ -981,7 +1071,12 @@ model Booking {
   scheduledAdvancePaidAmount Int    @default(0) @map("scheduled_advance_paid_amount")
   scheduledRemainingAmount Int      @default(0) @map("scheduled_remaining_amount")
   scheduledFinalPaidAmount Int      @default(0) @map("scheduled_final_paid_amount")
+  scheduledFinalPaymentMethod PaymentMethod? @map("scheduled_final_payment_method")
+  scheduledFinalPaidAt DateTime?    @map("scheduled_final_paid_at")
   scheduledAdvanceDisposition ScheduledAdvanceDisposition @default(not_applicable) @map("scheduled_advance_disposition")
+  rideNowPaidAmount Int              @default(0) @map("ride_now_paid_amount")
+  rideNowPaymentMethod PaymentMethod? @map("ride_now_payment_method")
+  rideNowPaidAt DateTime?            @map("ride_now_paid_at")
   // WHAT THIS RIDE COSTS IF NOBODY EVER SHARES IT — the solo price off the same
   // signed quote the shared price came from, set only on sharing bookings and
   // null on every solo one.

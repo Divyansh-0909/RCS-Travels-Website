@@ -41,6 +41,7 @@ import { useStableDriverPhoto } from "../hooks/useStableDriverPhoto";
 import { openRazorpayCheckout } from "../services/razorpayCheckout";
 import { useWebsiteCopy } from "../hooks/useWebsiteCopy";
 import CustomerPaymentPanel from "../components/CustomerPaymentPanel";
+import RideSettlementPanel from "../components/RideSettlementPanel";
 import {
     PAYMENT_PHASE,
     paymentIsBusy,
@@ -217,6 +218,17 @@ const TrackingPage = () => {
             payments: [],
         };
     });
+    const [ridePayment, setRidePayment] = useState(() => {
+        if (devParams?.get("status") !== "completed") return null;
+        const paid = devParams?.get("payment") === "success";
+        return {
+            state: paid ? "paid" : "pending",
+            method: paid ? "upi" : null,
+            amount: devParams?.get("scheduled") ? 16100 : 20000,
+            paidAmount: paid ? (devParams?.get("scheduled") ? 16100 : 20000) : 0,
+            paidAt: paid ? new Date().toISOString() : null,
+        };
+    });
     const [bookingScheduledAt, setBookingScheduledAt] = useState(activeBooking?.scheduledAt ?? scheduledTime ?? null);
     const [mapApi, setMapApi] = useState(null);
 
@@ -260,6 +272,7 @@ const TrackingPage = () => {
                 setNavigationEtaMinutes(data.navigationEtaMinutes ?? null);
                 setNavigationPolyline(data.navigationPolyline ?? null);
                 setFinancials(data.financials ?? null);
+                setRidePayment(data.ridePayment ?? null);
                 setBookingScheduledAt(data.scheduledAt ?? null);
                 if (data.driverCancellation?.id) {
                     const seenKey = `${DRIVER_CANCELLATION_SEEN_PREFIX}${bookingId}:${data.driverCancellation.id}`;
@@ -609,24 +622,44 @@ const TrackingPage = () => {
     // duplicated in both branches. Confirming payment is the only action here;
     // the extra-fare notice below already carries the route to support, so a
     // second support button would compete with the primary one.
-    async function payScheduledFinal() {
-        if (!bookingId || paymentIsBusy(paymentPhase) || paymentIsSatisfied("final", financials)) return;
+    async function payCompletedUpi() {
+        if (!bookingId || paymentIsBusy(paymentPhase) || ridePayment?.state === "paid") return;
         try {
             setLoading(true); setError(null); setPaymentPhase(PAYMENT_PHASE.CREATING);
-            const checkout = await api.createScheduledFinalOrder(bookingId);
+            const checkout = bookingScheduledAt != null
+                ? await api.createScheduledFinalOrder(bookingId)
+                : await api.createRideNowFinalOrder(bookingId);
             if (checkout?.error) throw new Error(checkout.error);
             setPaymentPhase(PAYMENT_PHASE.OPENING);
-            const response = await openRazorpayCheckout(checkout, { get "description"() { return dc("Remaining scheduled ride fare"); } });
+            const response = await openRazorpayCheckout(checkout, {
+                get "description"() {
+                    return bookingScheduledAt != null ? dc("Remaining scheduled ride fare") : dc("Ride fare");
+                },
+            });
             setPaymentPhase(PAYMENT_PHASE.VERIFYING);
             const verified = await api.verifyPayment(checkout.paymentId, response);
             if (verified?.error) throw new Error(verified.error);
             const latest = await api.getBookingStatus(bookingId);
             if (latest?.error) throw new Error(latest.error);
             setFinancials(latest.financials ?? null);
+            setRidePayment(latest.ridePayment ?? null);
             setBookingReference(latest.reference ?? bookingReference);
-            // An authorized gateway response is not success. The status poll
-            // keeps this in "Confirming" until the backend records finalPaid.
-            if (!paymentIsSatisfied("final", latest.financials)) setPaymentPhase(PAYMENT_PHASE.VERIFYING);
+            if (latest.ridePayment?.state === "paid") setPaymentPhase(PAYMENT_PHASE.IDLE);
+        } catch (err) {
+            setPaymentPhase(paymentPhaseForError(err));
+        } finally { setLoading(false); }
+    }
+
+    async function payCompletedCash() {
+        if (!bookingId || paymentIsBusy(paymentPhase) || ridePayment?.state === "paid") return;
+        try {
+            setLoading(true); setError(null); setPaymentPhase(PAYMENT_PHASE.VERIFYING);
+            const result = bookingScheduledAt != null
+                ? await api.recordScheduledFinalCashPayment(bookingId)
+                : await api.recordRideNowCashPayment(bookingId);
+            if (result?.error) throw new Error(result.error);
+            setRidePayment(result.ridePayment ?? null);
+            setPaymentPhase(PAYMENT_PHASE.IDLE);
         } catch (err) {
             setPaymentPhase(paymentPhaseForError(err));
         } finally { setLoading(false); }
@@ -653,25 +686,13 @@ const TrackingPage = () => {
         } finally { setLoading(false); }
     }
 
-    const completedActions = bookingScheduledAt != null ? (
-        <CustomerPaymentPanel
-            compact
-            purpose="final"
-            financials={financials}
+    const completedActions = (
+        <RideSettlementPanel
+            ridePayment={ridePayment}
             phase={paymentPhase}
-            bookingReference={bookingReference}
-            bookingId={bookingId}
-            onPay={payScheduledFinal}
-            onViewBooking={() => setDetialsVisibility(true)}
+            onPayUpi={payCompletedUpi}
+            onPayCash={payCompletedCash}
         />
-    ) : (
-        <Button
-            onClick={() => navigate("/")}
-            className="w-full"
-            prop={{ variant: "", width: "100%", innerClassName: "flex gap-2 items-center justify-center text-base sm:text-lg" }}
-        >
-            {dc("Done")}
-        </Button>
     );
 
     // Compact variant for the completed receipt, where the driver sits inside the
@@ -767,7 +788,7 @@ const TrackingPage = () => {
     if (!bookingId && !status) {
         return (
             <div className={SHELL}>
-                <BackgroundPanel className={FULL_PANEL}>
+                <BackgroundPanel solid className={FULL_PANEL}>
                     {stateBackArrow}
                     <EmptyState
                         tone="dark"
@@ -786,7 +807,7 @@ const TrackingPage = () => {
     if (statusError) {
         return (
             <div className={SHELL}>
-                <BackgroundPanel className={FULL_PANEL}>
+                <BackgroundPanel solid className={FULL_PANEL}>
                     {stateBackArrow}
                     <FailureState
                         tone="dark"
@@ -809,7 +830,7 @@ const TrackingPage = () => {
     if (status === "no_driver") {
         return (
             <div className={SHELL}>
-                <BackgroundPanel className={FULL_PANEL}>
+                <BackgroundPanel solid className={FULL_PANEL}>
                     {stateBackArrow}
                     <div className={`flex min-w-0 flex-col items-center gap-2 ${COL}`}>
                         <ErrorMark className="-my-6" size={isMobile ? 120 : 140} />
@@ -842,6 +863,7 @@ const TrackingPage = () => {
                         className={`${driverCancellationOpen ? "opacity-100" : "opacity-0"} absolute inset-0 h-full w-full cursor-default bg-black/50 transition-opacity duration-300 motion-reduce:transition-none`}
                     />
                     <BackgroundPanel
+                        solid
                         show={driverCancellationOpen}
                         duration={420}
                         className="z-1 gap-2 py-6 text-center flex flex-col justify-center items-center"
@@ -892,6 +914,7 @@ const TrackingPage = () => {
                 the shell those per-field skeletons hang on. */}
             {bookingScheduledAt == null && status === "pending"
                     ? <BackgroundPanel
+                        solid
                         sheet={mapVisible}
                         duration={420}
                         contentKey={`reassigning-${bookingLoading}`}
@@ -929,6 +952,7 @@ const TrackingPage = () => {
                     // same reason: the card is skeleton-then-real, and a booking
                     // that loads without a driver loses it entirely.
                     ? <BackgroundPanel
+                        solid
                         sheet={mapVisible}
                         // Booking sheets always open content-fit; the half and
                         // collapsed stops remain available after a deliberate drag.
@@ -1033,7 +1057,7 @@ const TrackingPage = () => {
                     </BackgroundPanel>
                     : status === "completed"
                         ?
-                        <BackgroundPanel className={"max-sm:fixed max-sm:inset-0 h-[100dvh] max-sm:rounded-none max-sm:overflow-hidden py-6 flex justify-center items-center sm:px-[9%] md:px-[5%] xl:px-[13%]"}>
+                        <BackgroundPanel solid className={"max-sm:fixed max-sm:inset-0 h-[100dvh] max-sm:rounded-none max-sm:overflow-hidden py-6 flex justify-center items-center sm:px-[9%] md:px-[5%] xl:px-[13%]"}>
                             {/* Desktop: one wide card split down the middle —
                                outcome on the left, receipt and actions on the
                                right. Mobile drops the card and stacks the two
@@ -1118,6 +1142,7 @@ const TrackingPage = () => {
                         </BackgroundPanel>
 
                         : <BackgroundPanel
+                            solid
                             sheet={mapVisible}
                             duration={420}
                             // The OTP row appears at en_route and the headline
@@ -1258,7 +1283,7 @@ const TrackingPage = () => {
                         </BackgroundPanel>
             }
             {/* ride details */}
-            <BackgroundPanel show={detialsVisibility === true} className={`z-3 sm:z-2 py-6 sm:overflow-hidden text-left flex flex-col sm:flex-row justify-center items-center sm:justify-center lg:justify-between sm:px-[9%] md:px-[5%] xl:px-[13%]`}>
+            <BackgroundPanel solid show={detialsVisibility === true} className={`z-3 sm:z-2 py-6 sm:overflow-hidden text-left flex flex-col sm:flex-row justify-center items-center sm:justify-center lg:justify-between sm:px-[9%] md:px-[5%] xl:px-[13%]`}>
                 {!isMobile && detialsVisibility && pickupPoint && dropPoint && (
                     <GoogleMap appearance="dark" center={pickupPoint} zoom={12} onMapReady={setMapApi} className={`${MAP_CLASSES} max-lg:hidden`} />
                 )}
@@ -1271,6 +1296,7 @@ const TrackingPage = () => {
                         className={`absolute inset-0 z-40 bg-black/50 backdrop-blur-[2px] ${shareSheetClosing ? "animate-panel-fade-out" : "animate-backdrop"} motion-reduce:animate-none`}
                     />
                     <BackgroundPanel
+                        solid
                         sheet
                         dismissible
                         onDismiss={() => setShareSheetOpen(false)}

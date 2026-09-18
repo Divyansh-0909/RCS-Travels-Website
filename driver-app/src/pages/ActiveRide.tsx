@@ -11,6 +11,7 @@ import { useNavigate } from 'react-router-native';
 import AppText from '../components/AppText';
 import { OtpEntry } from '../components/OtpEntry';
 import { BottomSheet } from '../components/ui/BottomSheet';
+import { sheetSurfaceStyle } from '../components/ui/sheetSurfaceStyle';
 import MapSlot from '../components/ui/MapSlot';
 import { SlideAction } from '../components/ui/SlideAction';
 import { CustomerPaymentPanel, INK_TEXT, MUTED } from '../components/ui/rideUi';
@@ -316,7 +317,7 @@ const ActiveRide = ({ ride, onChanged }: { ride: UpcomingBooking; onChanged: () 
             // is hidden and how often the GPS reports. Finishing a ride has to move
             // both, or he is left on a stripped-down screen with no ride on it.
             await Promise.all([onChanged(), refreshDriver()]);
-        } catch (cause: unknown) {
+        } catch (cause) {
             setError(cause instanceof Error ? cause.message : dc("Could not update the ride. Please try again."));
         }
     };
@@ -432,7 +433,7 @@ const ActiveRide = ({ ride, onChanged }: { ride: UpcomingBooking; onChanged: () 
                         <AppText className="text-sm font-medium text-red-600">{error}</AppText>
                     ) : null}
 
-                    {(ride.collectionMode === 'online' || ride.scheduledAt != null) ? (
+                    {ride.scheduledAt != null ? (
                         <CustomerPaymentPanel {...payment} />
                     ) : null}
 
@@ -465,7 +466,7 @@ const ActiveRide = ({ ride, onChanged }: { ride: UpcomingBooking; onChanged: () 
                     style={{ position: 'absolute', inset: 0, zIndex: 94, backgroundColor: 'rgba(0,0,0,0.45)' }}
                     className="justify-end"
                 >
-                    <View className="rounded-t-3xl px-5 pt-5 pb-8 gap-3" style={{ backgroundColor: colors.surface }}>
+                    <View className="rounded-t-3xl px-5 pt-5 pb-8 gap-3" style={{ ...sheetSurfaceStyle, backgroundColor: colors.surface }}>
                         <AppText className={`text-xl font-bold ${INK_TEXT}`}>{t('driver.active.differentDrop')}</AppText>
                         <AppText className={`text-sm ${MUTED}`}>
                             {t('driver.active.outsideDrop')}

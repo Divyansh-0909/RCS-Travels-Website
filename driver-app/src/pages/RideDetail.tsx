@@ -18,17 +18,14 @@ import {
     HAIRLINE,
     INK_TEXT,
     MUTED,
-    PhoneMark,
     RouteLeg,
     WhatsappMark,
-    paymentWords,
 } from '../components/ui/rideUi';
 import { useApi } from '../hooks/useApi';
 import { useDriver } from '../hooks/useDriver';
 import { UpcomingBooking } from '../types/enums';
 import {
     fareBreakdown,
-    fareUnpaid,
     formatDateTime,
     formatDistance,
     formatDuration,
@@ -41,7 +38,6 @@ import {
 } from '../constants/booking';
 import { openSupportWhatsApp } from '../constants/support';
 import { useTheme } from '../theme/ThemeContext';
-import { callPhoneNumber } from '../lib/externalLinks';
 
 const asThemed = { className: { target: false, nativeStyleToProp: { color: true } } } as const;
 const Copy = cssInterop(CopyIcon, asThemed);
@@ -115,7 +111,7 @@ const RideDetail = () => {
             const data = await apiRef.current.getRide(id) as GetRideResponse;
             if ('error' in data) setError(data.error);
             else setBooking(data);
-        } catch (e: unknown) {
+        } catch (e) {
             setError(e instanceof Error ? e.message : dc("Something went wrong"));
         } finally {
             setLoading(false);
@@ -165,11 +161,8 @@ const RideDetail = () => {
     const when = booking.completedAt ?? booking.scheduledAt;
     const canCancel = booking.status === 'assigned' || booking.status === 'en_route';
     const payment = customerPaymentNotice(booking);
-    const onlineCollection = booking.collectionMode === 'online' || booking.scheduledAt != null;
     const paymentStillNeedsAttention = payment.tone === 'warning' || payment.tone === 'danger' || payment.tone === 'primary';
-    const shouldShowRider = !isFinished(booking)
-        || paymentStillNeedsAttention
-        || (!onlineCollection && booking.paymentState !== 'paid' && booking.paymentState !== 'retained');
+    const shouldShowRider = !isFinished(booking) || paymentStillNeedsAttention;
 
     const cancelRide = async () => {
         if (cancelling) return;
@@ -183,7 +176,7 @@ const RideDetail = () => {
             }
             await refreshDriver();
             navigate(-1);
-        } catch (e: unknown) {
+        } catch (e) {
             setError(e instanceof Error ? e.message : dc("Could not cancel this ride"));
         } finally {
             setCancelling(false);
@@ -214,7 +207,7 @@ const RideDetail = () => {
 
                     Red is spent here and nowhere else on the screen, which is what lets
                     it mean "still owed" rather than just "look here". */}
-                <Card banner={isFinished(booking) && !onlineCollection ? <DetailStatusBanner label={paymentWords(booking.paymentState)} tone={booking.paymentState === 'due' ? 'danger' : booking.paymentState === 'paid' || booking.paymentState === 'retained' ? 'success' : 'neutral'} /> : null}>
+                <Card banner={isFinished(booking) ? <DetailStatusBanner label={payment.label} tone={payment.tone} /> : null}>
                     <View className="gap-1">
                         {/* The title has the row to itself now that the payment words
                             head the card. It keeps numberOfLines: "Premium SUV Ride" is
@@ -373,14 +366,6 @@ const RideDetail = () => {
                             disabled={cancelling}
                             size="large"
                             onPress={cancelRide}
-                        />
-                    ) : fareUnpaid(booking) ? (
-                        <ActionButton
-                            label={dc("Call rider")}
-                            leading={<PhoneMark />}
-                            solid
-                            size="large"
-                            onPress={() => callPhoneNumber(booking.customerPhone)}
                         />
                     ) : null}
                     <ActionButton

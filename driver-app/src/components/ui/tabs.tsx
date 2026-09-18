@@ -1,5 +1,5 @@
 import { cssInterop } from 'nativewind';
-import { HouseIcon, PlusIcon, ReceiptIcon, StorefrontIcon, UserIcon } from 'phosphor-react-native';
+import { HouseIcon, ReceiptIcon, StorefrontIcon, UserIcon } from 'phosphor-react-native';
 
 /**
  * The app's destinations, and who is allowed to reach them.
@@ -16,7 +16,6 @@ const asThemed = { className: { target: false, nativeStyleToProp: { color: true 
 
 export const HomeIcon = cssInterop(HouseIcon, asThemed);
 export const RidesIcon = cssInterop(ReceiptIcon, asThemed);
-export const PostIcon = cssInterop(PlusIcon, asThemed);
 export const MarketIcon = cssInterop(StorefrontIcon, asThemed);
 export const ProfileIcon = cssInterop(UserIcon, asThemed);
 
@@ -25,12 +24,11 @@ export type Tab = { name: string; path: string; Icon: typeof HomeIcon };
 export const TABS: Tab[] = [
     { name: 'Home', path: '/', Icon: HomeIcon },
     { name: 'Market', path: '/available', Icon: MarketIcon },
-    { name: 'Post', path: '/post', Icon: PostIcon },
     { name: 'Rides', path: '/rides', Icon: RidesIcon },
     { name: 'Account', path: '/account', Icon: ProfileIcon },
 ];
 
-// The bar an unapproved captain gets. Market, Post and Rides all 403 at the
+// The bar an unapproved captain gets. Market and Rides both 403 at the
 // server until his documents are approved, so a tab that opens a screen with
 // nothing in it — or bounces him straight back — is worse than no tab. What is
 // left is the two screens that can move him forward: Home, which is his

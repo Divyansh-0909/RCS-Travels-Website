@@ -6,6 +6,7 @@ import crypto from 'crypto'
 import { ACTIVE_STATUSES } from './bookings.js'
 import PDFDocument from "pdfkit";
 import { labelOf } from '../constants/vehicles.js'
+import { COUPON_TIERS } from '../services/coupons.js'
 
 const usersRouter = Router()
 
@@ -26,6 +27,42 @@ usersRouter.get('/me', protect, async (req, res) => {
 
   const { id, phone, name, bookingCode, gender, dob, emergencyContact } = user
   return res.json({ id, phone, name, bookingCode, gender, dob, emergencyContact })
+})
+
+usersRouter.get('/me/offers', protect, async (req, res) => {
+  const user = await prisma.user.findUnique({ where: { clerkId: req.auth.userId } })
+  if (!user) return res.status(404).json({ error: 'User has not signed up' })
+
+  const monthStart = new Date()
+  monthStart.setUTCDate(1)
+  monthStart.setUTCHours(0, 0, 0, 0)
+  const nextMonth = new Date(Date.UTC(monthStart.getUTCFullYear(), monthStart.getUTCMonth() + 1, 1))
+
+  const [coupons, rides] = await Promise.all([
+    prisma.coupon.findMany({
+      where: { userId: user.id, redeemedAt: null },
+      select: { id: true, amount: true, earnedFor: true, issuedAt: true },
+      orderBy: { issuedAt: 'desc' },
+    }),
+    prisma.booking.aggregate({
+      where: { userId: user.id, status: 'completed', completedAt: { gte: monthStart, lt: nextMonth } },
+      _sum: { customerPayment: true },
+    }),
+  ])
+
+  const spend = rides._sum.customerPayment ?? 0
+  const next = COUPON_TIERS.slice().reverse().find((tier) => tier.spend > spend)
+
+  return res.json({
+    coupons,
+    progress: {
+      spend,
+      nextTarget: next?.spend ?? null,
+      remaining: next ? Math.max(0, next.spend - spend) : 0,
+      nextAmount: next?.amount ?? null,
+      earnedAmount: COUPON_TIERS.find((tier) => spend >= tier.spend)?.amount ?? 0,
+    },
+  })
 })
 
 usersRouter.get('/me/preferences', protect, async (req, res) => {

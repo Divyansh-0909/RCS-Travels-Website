@@ -61,10 +61,13 @@ describe('scheduled payment capture effects are guarded and idempotent', () => {
   })
   test('final capture records only one final payment amount', async () => {
     let query
-    await applyCapturedPaymentEffect({ booking: { updateMany: async (q) => { query = q } } },
+    await applyCapturedPaymentEffect({ booking: { updateMany: async (q) => { query = q; return { count: 1 } } } },
       { bookingId: 'b1', purpose: 'scheduled_ride_final', amount: 76500 })
-    assert.deepEqual(query.where, { id: 'b1', status: 'completed', scheduledFinalPaidAmount: 0 })
+    assert.deepEqual(query.where, {
+      id: 'b1', status: 'completed', scheduledFinalPaidAmount: 0, scheduledFinalPaymentMethod: null,
+    })
     assert.equal(query.data.scheduledFinalPaidAmount, 76500)
+    assert.equal(query.data.scheduledFinalPaymentMethod, 'upi')
   })
   test('refund completion changes only refund-pending advances', async () => {
     let query

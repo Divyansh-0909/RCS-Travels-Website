@@ -221,6 +221,7 @@ export const RideOptionsSheet = ({ options, open, onClose }) => {
             />
             <BackgroundPanel
                 sheet
+                solid
                 dismissible
                 onDismiss={onClose}
                 duration={420}
@@ -239,7 +240,7 @@ export const RideOptionsSheet = ({ options, open, onClose }) => {
                     type="button"
                     onClick={onClose}
                     aria-label={tr("Close ride options")}
-                    className="absolute z-20 -top-12 right-4 h-9 my-1 w-9 rounded-full border border-[var(--foreground)]/30 bg-[var(--background-muted)] shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)] flex items-center justify-center cursor-pointer transition-opacity duration-300 active:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]/70"
+                    className="absolute z-20 -top-12 right-4 h-9 my-1 w-9 rounded-full border border-[var(--foreground)]/30 bg-immersive shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)] flex items-center justify-center cursor-pointer transition-opacity duration-300 active:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]/70"
                 >
                     <Icon path={mdiClose} size={0.8} aria-hidden="true" />
                 </button>

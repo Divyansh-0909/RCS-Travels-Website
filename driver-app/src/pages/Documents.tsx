@@ -172,7 +172,13 @@ const CarPanel = ({
       {open ? (
         <View
           className="px-4"
-           style={{ backgroundColor: colors.surfaceMuted, borderTopWidth: 1, borderTopColor: HAIRLINE }}
+          style={{
+            backgroundColor: colors.canvas,
+            borderTopWidth: 1,
+            borderTopColor: HAIRLINE,
+            gap: 3,
+            paddingVertical: 3,
+          }}
         >
           {children}
         </View>
@@ -683,7 +689,7 @@ const Documents = () => {
           car's id is also what the upload asks the server for — see
           resolveUploadVehicle: a batch of his licence and his photograph involves
           no car and must not name one. */}
-      <View className="mx-4 rounded-2xl overflow-hidden" style={{ backgroundColor: colors.surfaceMuted }}>
+      <View className="mx-4 rounded-2xl overflow-hidden" style={{ backgroundColor: colors.surfaceMuted, gap: 3 }}>
         {personalTypes.map((info, i) => renderRow(info, i, personalTypes, base ?? undefined, null, undefined, true))}
       </View>
 
@@ -711,9 +717,9 @@ const Documents = () => {
                 }}
               >
                 {response
-                  ? carTypes.map((info, i) => renderRow(info, i, carTypes, response, vehicle.id))
+                  ? carTypes.map((info, i) => renderRow(info, i, carTypes, response, vehicle.id, undefined, true))
                   : (
-                    <DocumentRowsSkeleton rows={3} />
+                    <DocumentRowsSkeleton rows={3} panel />
                   )}
               </CarPanel>
             );

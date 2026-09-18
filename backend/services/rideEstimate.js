@@ -42,9 +42,9 @@ export async function getRideEstimate({
 }) {
   const pickupOnCampus = Boolean(pickupCoords && isNearCampus(pickupCoords))
   const dropOnCampus = Boolean(dropCoords && isNearCampus(dropCoords))
-  const campusAnchored = pickupOnCampus || dropOnCampus
+  const campusZoneTrip = pickupOnCampus !== dropOnCampus
 
-  const zoneCoords = !campusAnchored
+  const zoneCoords = !campusZoneTrip
     ? null
     : dropCoords && !isNearCampus(dropCoords)
       ? dropCoords
@@ -76,7 +76,7 @@ export async function getRideEstimate({
       }
     : { available: false, applied: false, fee: 0, waypoint: null }
 
-  const airport = !campusAnchored && isAirportPickup(pickupCoords)
+  const airport = !campusZoneTrip && isAirportPickup(pickupCoords)
     ? AIRPORT_PICKUP_SURCHARGE
     : 0
 
@@ -107,7 +107,7 @@ export async function getRideEstimate({
     }
   }
 
-  const sources = campusAnchored
+  const sources = campusZoneTrip
     ? ['zone', ...(metrics.distanceKm != null ? ['formula'] : [])]
     : metrics.distanceKm != null
       ? ['per_km']

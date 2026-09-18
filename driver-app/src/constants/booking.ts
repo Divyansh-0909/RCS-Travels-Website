@@ -298,11 +298,58 @@ export type CustomerPaymentNotice = {
 const scheduledRupees = (amount: number | undefined) =>
     amount == null ? null : amount / 100;
 
-// During a rolling deploy an older API may not send the derived mode yet. A
-// scheduled timestamp is still an authoritative safety signal: this ride must
-// never fall back to the captain's direct cash-collection path.
-const isOnlineCollection = (booking: UpcomingBooking) =>
-    booking.collectionMode === 'online' || booking.scheduledAt != null;
+const cancelledPaymentNotice = (booking: UpcomingBooking): CustomerPaymentNotice => {
+    const scheduled = booking.scheduledPayment;
+    if (scheduled?.advanceDisposition === 'forfeited_to_driver') {
+        const retained = scheduledRupees(scheduled.advancePaidAmount);
+        return {
+            label: retained != null ? dc("Advance retained · {{value0}}", { value0: rupees(retained) }) : dc("Advance retained"),
+            detail: dc("The customer advance was credited after cancellation."),
+            tone: 'success',
+        };
+    }
+    if (scheduled?.advanceDisposition === 'refund_pending') {
+        return { label: dc("Advance refund pending"), detail: dc("The customer refund is being processed."), tone: 'warning' };
+    }
+    if (scheduled?.advanceDisposition === 'refunded') {
+        return { label: dc("Advance refunded"), detail: dc("The customer advance was refunded."), tone: 'neutral' };
+    }
+    return booking.paymentState === 'void'
+        ? { label: dc("No charge"), detail: dc("No customer payment is required."), tone: 'neutral' }
+        : { label: dc("Cancellation charge"), detail: dc("Contact support to settle this cancellation charge."), tone: 'danger' };
+};
+
+const completedPaymentNotice = (booking: UpcomingBooking): CustomerPaymentNotice => {
+    const amount = scheduledRupees(booking.ridePayment.amount);
+    if (booking.ridePayment.state === 'paid') {
+        const method = booking.ridePayment.method === 'cash' ? dc("cash") : dc("UPI");
+        return {
+            label: dc("Paid by {{value0}}", { value0: method }),
+            detail: dc("The rider's payment is recorded. No confirmation is needed from you."),
+            tone: 'success',
+        };
+    }
+    return {
+        label: amount != null ? dc("Payment pending · {{value0}}", { value0: rupees(amount) }) : dc("Payment pending"),
+        detail: dc("The rider can pay by UPI or cash. No confirmation is needed from you."),
+        tone: 'warning',
+    };
+};
+
+const inProgressPaymentNotice = (booking: UpcomingBooking): CustomerPaymentNotice => {
+    const advance = scheduledRupees(booking.scheduledPayment?.advancePaidAmount);
+    return booking.scheduledPayment && advance && advance > 0
+        ? {
+            label: dc("Advance paid · {{value0}}", { value0: rupees(advance) }),
+            detail: dc("The rider can pay the remaining amount by UPI or cash after the ride."),
+            tone: 'success',
+        }
+        : {
+            label: dc("Payment after ride"),
+            detail: dc("The rider can pay by UPI or cash after the ride."),
+            tone: 'primary',
+        };
+};
 
 /**
  * Payment collection belongs to the customer booking, not this app. The API tells
@@ -311,96 +358,9 @@ const isOnlineCollection = (booking: UpcomingBooking) =>
  * a completed ride — it may still be pending on the customer side.
  */
 export const customerPaymentNotice = (booking: UpcomingBooking): CustomerPaymentNotice => {
-    const scheduled = booking.scheduledPayment;
-
-    if (isOnlineCollection(booking)) {
-        if (booking.status === 'cancelled') {
-            if (scheduled?.advanceDisposition === 'forfeited_to_driver') {
-                const retained = scheduledRupees(scheduled.advancePaidAmount);
-                return {
-                    label: retained != null
-                        ? dc("Advance retained · {{value0}}", { value0: rupees(retained) })
-                        : dc("Advance retained"),
-                    detail: dc("The customer advance was credited after cancellation. Do not collect again."),
-                    tone: 'success',
-                };
-            }
-            if (scheduled?.advanceDisposition === 'refund_pending') {
-                return {
-                    label: dc("Advance refund pending"),
-                    detail: dc("The customer refund is being processed. Do not collect."),
-                    tone: 'warning',
-                };
-            }
-            if (scheduled?.advanceDisposition === 'refunded') {
-                return {
-                    label: dc("Advance refunded"),
-                    detail: dc("The customer is not charged. Do not collect."),
-                    tone: 'neutral',
-                };
-            }
-            return {
-                label: dc("No customer collection"),
-                detail: dc("This cancelled scheduled ride has no payment to collect."),
-                tone: 'neutral',
-            };
-        }
-
-        const advance = scheduledRupees(scheduled?.advancePaidAmount);
-        const remaining = scheduledRupees(scheduled?.remainingAmount);
-        const finalPaid = scheduledRupees(scheduled?.finalPaidAmount);
-
-        if (booking.status !== 'completed') {
-            return advance && advance > 0
-                ? {
-                    label: dc("Advance paid · {{value0}}", { value0: rupees(advance) }),
-                    detail: dc("The customer completes the remaining payment after the ride."),
-                    tone: 'success',
-                }
-                : {
-                    label: dc("Customer payment"),
-                    detail: dc("Payment is handled in the customer booking. Do not collect in this app."),
-                    tone: 'primary',
-                };
-        }
-
-        if (remaining != null && finalPaid != null && finalPaid >= remaining) {
-            return {
-                label: dc("Payment complete"),
-                detail: dc("The customer’s remaining payment has been received."),
-                tone: 'success',
-            };
-        }
-
-        return {
-            label: remaining != null
-                ? dc("Remaining payment pending · {{value0}}", { value0: rupees(remaining) })
-                : dc("Remaining payment pending"),
-            detail: dc("The customer completes payment from their booking. Do not collect in this app."),
-            tone: 'warning',
-        };
-    }
-
-    if (booking.status === 'cancelled') {
-        return booking.paymentState === 'void'
-            ? { label: dc("No charge"), detail: dc("No customer payment is required."), tone: 'neutral' }
-            : { label: dc("Cancellation charge"), detail: dc("Contact support to settle this cancellation charge."), tone: 'danger' };
-    }
-
-    const amount = booking.customerPayment ?? booking.fare;
-    if (booking.paymentState === 'paid') {
-        return {
-            label: dc("Payment complete"),
-            detail: dc("Customer payment has been recorded."),
-            tone: 'success',
-        };
-    }
-
-    return {
-        label: dc("Collect {{value0}}", { value0: rupees(amount) }),
-        detail: dc("Collect directly from the customer after the ride."),
-        tone: 'danger',
-    };
+    if (booking.status === 'cancelled') return cancelledPaymentNotice(booking);
+    if (booking.status === 'completed') return completedPaymentNotice(booking);
+    return inProgressPaymentNotice(booking);
 };
 
 /**
@@ -411,32 +371,8 @@ export const customerPaymentNotice = (booking: UpcomingBooking): CustomerPayment
  */
 export const paymentChip = (booking: UpcomingBooking): PaymentChip => {
     const notice = customerPaymentNotice(booking);
-    if (isOnlineCollection(booking)) {
-        return {
-            get "label"() { return notice.label; },
-            tone: notice.tone === 'success' ? 'paid' : notice.tone === 'neutral' ? 'void' : 'due',
-        };
-    }
-    if (booking.paymentState === 'paid') return { get "label"() { return dc("Paid"); }, tone: 'paid' };
-    if (booking.paymentState === 'retained') return { get "label"() { return dc("Advance retained"); }, tone: 'paid' };
-    if (booking.paymentState === 'void') return { get "label"() { return dc("No charge"); }, tone: 'void' };
-
-    if (booking.status === 'cancelled') {
-        return { get "label"() { return dc("Charge {{value0}}", {value0: (rupees(booking.cancellationCharge ?? 0))}); }, tone: 'due' };
-    }
-
-    return { get "label"() { return dc("Collect {{value0}}", {value0: (rupees(booking.customerPayment ?? booking.fare))}); }, tone: 'due' };
+    return {
+        get "label"() { return notice.label; },
+        tone: notice.tone === 'success' ? 'paid' : notice.tone === 'neutral' ? 'void' : 'due',
+    };
 };
-
-/**
- * Is the FARE still to be collected — which is narrower than "does this ride owe
- * money". A cancelled ride can owe a cancellation charge and still answer false here:
- * that charge is the provider's to settle, and the ride it belongs to never happened
- * as far as the rider is concerned, so a captain phoning about it is starting an
- * argument rather than collecting a fare.
- *
- * The one caller is the Call rider button, and the distinction is exactly what decides
- * whether it is offered.
- */
-export const fareUnpaid = (booking: UpcomingBooking) =>
-    !isOnlineCollection(booking) && booking.paymentState === 'due' && booking.status !== 'cancelled';

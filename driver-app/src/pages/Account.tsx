@@ -34,7 +34,7 @@ import MonthEarningsCard from '../components/ui/MonthEarningsCard';
 import { TILE_GAP } from '../components/ui/tile';
 import JoinFleetCard from '../components/ui/JoinFleetCard';
 import WalletCard from '../components/ui/WalletCard';
-import { AccountIdentitySkeleton, AccountOverviewSkeleton } from '../components/ui/LoadingSkeletons';
+import { AccountIdentitySkeleton, AccountProfileSectionsSkeleton } from '../components/ui/LoadingSkeletons';
 import { useApi } from '../hooks/useApi';
 import { initials } from '../constants/booking';
 import { canJoinFleet, formatPhone, formatRating, groupLabel, isFleet, verificationLabel } from '../constants/driver';
@@ -435,9 +435,42 @@ const Account = () => {
             not remount under the captain's thumb when the first load lands. Only a
             first load earns this: a refresh over a profile already on screen leaves
             it alone. */}
-        {loading && !profile ? <AccountOverviewSkeleton /> : null}
+        {loading && !profile ? <AccountProfileSectionsSkeleton /> : null}
 
-        {profile && (
+        <>
+          <View
+            className="w-full rounded-2xl overflow-hidden"
+            style={{ backgroundColor: colors.canvas, gap: 3 }}
+          >
+            <AccountRow
+              label={t('driver.settings.notifications')}
+              detail={notificationDetail}
+              Icon={BellIcon}
+              onPress={permission === 'checking' || permission === 'unavailable' ? undefined : manageNotifications}
+              grouped
+            />
+            <AccountRow
+              label={t('driver.settings.language')}
+              value={languageName}
+              Icon={GlobeIcon}
+              onPress={() => toggleSettingMenu('language', languageTriggerRef)}
+              expanded={openSetting === 'language'}
+              grouped
+            />
+            <AccountRow
+              label={t('driver.settings.appearance')}
+              value={appearanceName}
+              Icon={AppearanceIcon}
+              onPress={() => toggleSettingMenu('appearance', appearanceTriggerRef)}
+              expanded={openSetting === 'appearance'}
+              grouped
+            />
+            <AccountRow label={dc("Help")} Icon={QuestionIcon} onPress={() => navigate('/account/help')} grouped />
+            <AccountRow label={dc("Legal")} Icon={InfoIcon} onPress={() => navigate('/account/legal')} grouped />
+          </View>
+        </>
+
+        {profile ? (
           <Animated.View entering={ASYNC_CONTENT_ENTER} style={{ width: '100%', gap: PANEL_GAP }}>
             {/* A rejection is the one thing on this page he cannot act on from a
                 chip alone, so the reason gets its own line rather than a tooltip
@@ -525,8 +558,8 @@ const Account = () => {
             >
               <AccountRow
                 label={dc("Linked UPI account")}
-                Icon={LinkIcon}
-                value={dc("Not linked")}
+                Icon={BankIcon}
+                value={dc("Manage payouts")}
                 onPress={() => navigate('/account/payout')}
                 grouped
               />
@@ -716,7 +749,7 @@ const Account = () => {
             <AppText className={`text-xs text-center ${MUTED}`}>{dc("RCS Captains v")}{version}
             </AppText>
           </Animated.View>
-        )}
+        ) : null}
       </Animated.ScrollView>
     </View>
   );

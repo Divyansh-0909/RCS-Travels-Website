@@ -21,6 +21,7 @@ import {
   type IconProps,
 } from 'phosphor-react-native';
 import AppText from '../AppText';
+import { sheetSurfaceStyle } from './sheetSurfaceStyle';
 import { useTheme } from '../../theme/ThemeContext';
 
 /**
@@ -110,6 +111,7 @@ const PermissionSheet = ({
       >
         <Pressable
           className="rounded-t-3xl bg-surface px-5 pt-5 pb-8 gap-5"
+          style={sheetSurfaceStyle}
           onPress={() => {}}
         >
           <View className="flex-row items-start gap-3">

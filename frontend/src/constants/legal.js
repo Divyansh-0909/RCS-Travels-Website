@@ -26,8 +26,8 @@ const riderTerms = [
     "We show the applicable fare or fare basis before confirmation where the product supports it. Tolls, parking, waiting, cleaning, damage or other charges must not be added unless the product and applicable law allow them and they are disclosed to you. [TO CONFIRM: final waiting, toll, parking, cleaning and damage-charge rules.]",
   ] },
   { heading: "How payment works", body: [
-    "Ride Now rides are paid to the driver at the end of the trip, using the payment method offered for that ride. They are not prepaid through our platform.",
-    "Scheduled rides currently require a 15% advance through Razorpay. The remaining fare is payable as shown for the booking. Payment-provider terms may also apply to the payment service itself.",
+    "Ride Now rides are paid after the trip. You can pay the final fare through Razorpay UPI or record a cash payment using the payment options shown for the booking.",
+    "Scheduled rides currently require a 15% advance through Razorpay. After the trip, the remaining fare can be paid through Razorpay UPI or cash using the payment options shown for the booking. Payment-provider terms may also apply to the payment service itself.",
   ] },
   { heading: "Cancellation", body: [
     "Ride Now has no prepaid cancellation charge. For scheduled rides, the cancellation quote returned by our server is authoritative. If it changes before submission, we show the new quote and ask you to confirm it.",
@@ -73,7 +73,7 @@ const riderPrivacy = [
   { heading: "Rider data we collect", list: [
     "Name, phone number, gender, date of birth, emergency-contact details and WhatsApp contact information where you choose to use it.",
     "Saved places and their coordinates, pickup and drop details, bookings, ride status, complaints and support records.",
-    "Scheduled-ride advance, payment status, payment references and refund records. Payment credentials are handled by the payment provider, not collected from you by a driver.",
+    "Ride-payment status, scheduled-ride advances, payment references and refund records. Payment credentials are handled by the payment provider, not collected from you by a driver.",
     "Device, browser, push-notification and technical log data needed to operate and secure the service.",
   ] },
   { heading: "Location and permissions", body: [
@@ -91,7 +91,7 @@ const riderPrivacy = [
   ], list: [
     "Authentication providers for account access and verification.",
     "Google Maps, Routes and Places for place search, route and trip functions.",
-    "Razorpay for scheduled-ride advances and related refunds.",
+    "Razorpay for scheduled-ride advances, final UPI ride payments and related refunds.",
     "WhatsApp/Meta for WhatsApp flows, Firebase for push notifications, and storage or database providers acting on our instructions.",
   ] },
   { heading: "Safety, legal requests and business changes", body: [
@@ -118,7 +118,7 @@ const riderPrivacy = [
 ];
 
 const riderRefunds = [
-  { heading: "Ride Now", body: ["Ride Now is paid at the end of the trip to the driver. There is no prepaid Ride Now cancellation amount to refund."] },
+  { heading: "Ride Now", body: ["Ride Now is paid after the trip through Razorpay UPI or cash. There is no prepaid Ride Now cancellation amount to refund."] },
   { heading: "Scheduled-ride advance", body: ["Scheduled rides currently collect a 15% Razorpay advance. The server calculates the cancellation quote and settlement; the app shows that result for your confirmation."] },
   { heading: "When the advance is not retained", body: ["Cancellation is free when no driver is assigned, the driver has no fresh platform location, the driver’s fresh location is farther than 500 metres from pickup, or the driver cancels. Any paid advance follows the booking’s refund flow."] },
   { heading: "When the advance is retained", body: ["The current product retains the paid advance once an assigned driver’s fresh location is within 500 metres of pickup, or the booking reaches the corresponding arrival status. The server’s location and status record decide the quote."] },
@@ -214,8 +214,8 @@ const driverPrivacy = [
 
 const driverPayments = [
   { heading: "What this page covers", body: ["This page describes payment-related rules currently supported in the driver app. It does not create a driver marketplace deposit, a 12% fee or a 10% fee; those are not live terms for driver-partners."] },
-  { heading: "Ride fares", body: ["Drivers must use the fare and payment status shown or authorised for the booking and must not impose an undisclosed off-platform surcharge. [TO CONFIRM: fare calculation, toll/parking/waiting handling, cash/online payment methods and any permitted adjustments.]"] },
-  { heading: "Scheduled rides", body: ["A customer currently pays a 15% Razorpay advance for a scheduled ride. The service records the advance and its final disposition against the booking. [TO CONFIRM: reconcile this behaviour with the reported UP passenger cancellation cap before launch.]"] },
+  { heading: "Ride fares", body: ["Drivers must use the fare and payment status shown or authorised for the booking and must not impose an undisclosed off-platform surcharge. The rider controls final settlement through the supported UPI or cash flow; the driver app shows the resulting payment status and does not require the driver to confirm the rider's payment method. [TO CONFIRM: fare calculation, toll/parking/waiting handling, cash/online payment methods and any permitted adjustments.]"] },
+  { heading: "Scheduled rides", body: ["A customer currently pays a 15% Razorpay advance for a scheduled ride. After completion, the remaining fare can be settled through Razorpay UPI or cash, and the service records the authoritative result against the booking. [TO CONFIRM: reconcile this behaviour with the reported UP passenger cancellation cap before launch.]"] },
   { heading: "Customer cancellation", body: ["The server determines a scheduled-rider cancellation quote. Drivers must not ask customers to make off-platform changes to that result."] },
   { heading: "Driver earnings and deductions", body: ["[TO CONFIRM: driver settlement timing, payment method, commission/service-fee terms, cancellation allocation, taxes/TDS/GST, adjustments and any UP fare-share compliance. Do not claim the reported 80%/60% minimum split unless verified.]"] },
   { heading: "Corrections and disputes", body: ["If a booking’s payment, cancellation, settlement or status looks wrong, contact support with the booking reference and relevant payment details. We should correct verified calculation or processing errors and provide a review route for disputed deductions."] },

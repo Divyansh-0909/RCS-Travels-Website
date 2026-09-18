@@ -2,8 +2,15 @@ import { useLanguage as useCopyLanguage } from "../i18n";
 import { driverCopy as dc } from "../lib/copy";
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, SectionList, TextInput, View } from 'react-native';
+import Animated, {
+    Easing,
+    useAnimatedStyle,
+    useReducedMotion,
+    useSharedValue,
+    withTiming,
+} from 'react-native-reanimated';
 import { cssInterop } from 'nativewind';
-import { MagnifyingGlassIcon, XIcon } from 'phosphor-react-native';
+import { MagnifyingGlassIcon, PlusIcon, XIcon } from 'phosphor-react-native';
 import { useLocation, useNavigate } from 'react-router-native';
 import AppText from '../components/AppText';
 import { useHideAppBarOnScroll } from '../components/AppBarVisibility';
@@ -15,6 +22,7 @@ import { useTheme } from '../theme/ThemeContext';
 
 const asThemed = { className: { target: false, nativeStyleToProp: { color: true } } } as const;
 const Search = cssInterop(MagnifyingGlassIcon, asThemed);
+const Plus = cssInterop(PlusIcon, asThemed);
 const Clear = cssInterop(XIcon, asThemed);
 
 type MarketplaceScope = 'open' | 'mine';
@@ -24,6 +32,11 @@ const INK_TEXT = 'text-ink';
 const MUTED = 'text-ink-muted';
 const BAR_CLEARANCE = 132;
 const TITLE_TRACKING = { letterSpacing: -0.72 };
+const MOTION_DURATION = 180;
+const SEARCH_SCALE = 0.98;
+const TAB_TRACK_PADDING = 4;
+const EASE_OUT = Easing.bezier(0.23, 1, 0.32, 1);
+const EASE_IN_OUT = Easing.bezier(0.77, 0, 0.175, 1);
 
 const TABS: { key: MarketplaceScope; label: string }[] = [
     { key: 'open', get "label"() { return dc("Open bookings"); } },
@@ -47,17 +60,59 @@ const Marketplace = () => {
     // switch the captain to Open bookings.
     const [scope, setScope] = useState<MarketplaceScope>(() => scopeFromSearch(location.search));
     const [searching, setSearching] = useState(false);
+    const [postSheetVisible, setPostSheetVisible] = useState(false);
     const [query, setQuery] = useState('');
     const [createdListings, setCreatedListings] = useState<MarketplaceListing[]>([]);
+    const reducedMotion = useReducedMotion();
+    const tabTrackWidth = useSharedValue(0);
+    const tabProgress = useSharedValue(scope === 'mine' ? 1 : 0);
+    const headerProgress = useSharedValue(1);
     const sampleListings = useMemo(marketplaceListings, []);
     const listings = useMemo(() => [...createdListings, ...sampleListings], [createdListings, sampleListings]);
-    const posting = new URLSearchParams(location.search).get('post') === 'new';
+    const posting = postSheetVisible;
 
     useEffect(() => {
         setScope(scopeFromSearch(location.search));
         setSearching(false);
         setQuery('');
     }, [location.key, location.search]);
+
+    useEffect(() => {
+        const target = scope === 'mine' ? 1 : 0;
+        if (reducedMotion) {
+            tabProgress.set(target);
+            return;
+        }
+
+        tabProgress.set(withTiming(target, { duration: MOTION_DURATION, easing: EASE_IN_OUT }));
+    }, [reducedMotion, scope, tabProgress]);
+
+    useEffect(() => {
+        if (reducedMotion) {
+            headerProgress.set(1);
+            return;
+        }
+
+        headerProgress.set(0);
+        headerProgress.set(withTiming(1, { duration: MOTION_DURATION, easing: EASE_OUT }));
+    }, [headerProgress, reducedMotion, searching]);
+
+    const tabIndicatorStyle = useAnimatedStyle(() => {
+        const tabWidth = Math.max((tabTrackWidth.get() - TAB_TRACK_PADDING * 2) / TABS.length, 0);
+        return {
+            width: tabWidth,
+            opacity: tabWidth > 0 ? 1 : 0,
+            transform: [{ translateX: tabProgress.get() * tabWidth }],
+        };
+    });
+
+    const headerAnimatedStyle = useAnimatedStyle(() => {
+        const progress = headerProgress.get();
+        return {
+            opacity: progress,
+            transform: [{ scale: reducedMotion ? 1 : SEARCH_SCALE + (1 - SEARCH_SCALE) * progress }],
+        };
+    });
 
     const sections = useMemo<MarketplaceSection[]>(() => {
         const needle = query.trim().toLocaleLowerCase();
@@ -86,7 +141,7 @@ const Marketplace = () => {
         setQuery('');
     };
 
-    const closePostSheet = () => navigate(pathForScope(scope), { replace: true });
+    const closePostSheet = () => setPostSheetVisible(false);
 
     const addListing = (listing: MarketplaceListing) => {
         setCreatedListings((current) => [listing, ...current]);
@@ -96,7 +151,7 @@ const Marketplace = () => {
 
     return (
         <View className="flex-1 w-[92%] gap-3">
-            <View className="flex-row items-center justify-between gap-3">
+            <Animated.View className="flex-row items-center justify-between gap-3" style={headerAnimatedStyle}>
                 {searching ? (
                     <View className="flex-1 flex-row items-center gap-2 rounded-full px-4 h-11" style={{ backgroundColor: colors.surfaceMuted }}>
                         <Search size={18} weight="bold" className={MUTED} />
@@ -122,7 +177,16 @@ const Marketplace = () => {
                     </View>
                 ) : (
                     <>
-                        <View className="w-11 h-11" />
+                        <Pressable
+                            role="button"
+                            aria-label={dc("Post a marketplace booking")}
+                            onPress={() => setPostSheetVisible(true)}
+                            style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+                        >
+                            <View className="w-11 h-11 rounded-full items-center justify-center bg-primary">
+                                <Plus size={22} weight="bold" className="text-white" />
+                            </View>
+                        </Pressable>
                         <AppText className={`text-xl font-semibold ${INK_TEXT}`} style={TITLE_TRACKING}>{dc("Marketplace")}</AppText>
                         <Pressable
                             role="button"
@@ -136,9 +200,27 @@ const Marketplace = () => {
                         </Pressable>
                     </>
                 )}
-            </View>
+            </Animated.View>
 
-            <View className="flex-row rounded-full p-1" style={{ backgroundColor: colors.surfaceMuted }}>
+            <View
+                className="flex-row rounded-full p-1"
+                style={{ backgroundColor: colors.surfaceMuted }}
+                onLayout={(event) => tabTrackWidth.set(event.nativeEvent.layout.width)}
+            >
+                <Animated.View
+                    pointerEvents="none"
+                    style={[
+                        {
+                            position: 'absolute',
+                            left: TAB_TRACK_PADDING,
+                            top: TAB_TRACK_PADDING,
+                            bottom: TAB_TRACK_PADDING,
+                            borderRadius: 999,
+                            backgroundColor: colors.strong,
+                        },
+                        tabIndicatorStyle,
+                    ]}
+                />
                 {TABS.map((tab) => {
                     const active = tab.key === scope;
                     return (
@@ -147,7 +229,7 @@ const Marketplace = () => {
                             role="tab"
                             aria-selected={active}
                             onPress={() => switchTo(tab.key)}
-                            className={`flex-1 items-center justify-center rounded-full py-2.5 px-2 ${active ? 'bg-strong' : 'bg-transparent'}`}
+                            className="relative z-10 flex-1 items-center justify-center rounded-full bg-transparent py-2.5 px-2"
                         >
                             <AppText className={`text-sm font-semibold ${active ? 'text-white' : MUTED}`}>
                                 {tab.label}
@@ -209,7 +291,7 @@ const Marketplace = () => {
                         {scope === 'mine' && !query ? (
                             <Pressable
                                 role="button"
-                                onPress={() => navigate('/available?tab=mine&post=new', { replace: true })}
+                                onPress={() => setPostSheetVisible(true)}
                                 className="mt-4 rounded-full bg-strong px-5 py-3"
                             >
                                 <AppText className="font-semibold text-white">{dc("Post a booking")}</AppText>
@@ -219,11 +301,13 @@ const Marketplace = () => {
                 }
             />
 
-            <MarketplacePostSheet
-                visible={posting}
-                onClose={closePostSheet}
-                onSubmit={addListing}
-            />
+            {posting ? (
+                <MarketplacePostSheet
+                    visible
+                    onClose={closePostSheet}
+                    onSubmit={addListing}
+                />
+            ) : null}
         </View>
     );
 };

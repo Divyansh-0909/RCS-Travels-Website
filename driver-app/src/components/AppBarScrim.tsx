@@ -68,7 +68,7 @@ const AppBarScrim = () => {
   // veiling content for nothing — the whole point of the bar sliding off is to hand
   // that strip of screen back, and a fade left behind would take half of it again.
   const fade = useAnimatedStyle(() => ({
-    opacity: withTiming((1 - hidden.value) * STRENGTH, HIDE),
+    opacity: withTiming((1 - hidden.get()) * STRENGTH, HIDE),
   }));
 
   // And it leaves entirely where the bar never appears. This is a page-coloured fade with a

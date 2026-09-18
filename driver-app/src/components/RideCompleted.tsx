@@ -36,6 +36,9 @@ export const RideCompleted = ({
 
     const fare = fareBreakdown(ride);
     const drop = splitAddress(ride.dropAddress);
+    const payment = ride.ridePayment;
+    const paid = payment.state === 'paid';
+    const paymentMethod = payment.method === 'cash' ? dc("cash") : dc("UPI");
 
     return (
         <View className="flex h-full justify-between w-[92%] pt-18 pb-10">
@@ -93,6 +96,21 @@ export const RideCompleted = ({
                         {rupees(fare.total)}
                     </AppText>
                 </View>
+            </Animated.View>
+
+            <Animated.View
+                entering={FadeInDown.duration(280).delay(220)}
+                className="w-full rounded-3xl p-5 mt-4 gap-1"
+                style={{ backgroundColor: colors.surface }}
+            >
+                <AppText className={`text-base font-semibold ${INK_TEXT}`}>
+                    {paid ? dc("Payment complete") : dc("Payment pending")}
+                </AppText>
+                <AppText className={`text-sm ${MUTED}`}>
+                    {paid
+                        ? dc("The rider paid by {{value0}}. No confirmation is needed from you.", { value0: paymentMethod })
+                        : dc("The rider can pay by UPI or cash. No confirmation is needed from you.")}
+                </AppText>
             </Animated.View>
 
             <Animated.View entering={FadeInDown.duration(280).delay(260)} className="mt-auto">

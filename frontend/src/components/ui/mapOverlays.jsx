@@ -184,22 +184,24 @@ export function setRouteProgress(coords) {
 // leaving VehicleSelect cannot disturb TrackingPage's live animated car.
 let nearbyVehicleMarkers = [];
 
-export function setNearbyVehiclePositions(map, positions, vehicleClass) {
+export function setNearbyVehiclePositions(map, positions) {
     clearNearbyVehicleMarkers();
     if (!positions?.length) return;
     const g = window.google.maps;
-    const nextClass = normaliseVehicleClass(vehicleClass);
-    const image = vehicleImageFor(nextClass);
-    nearbyVehicleMarkers = positions.map((position) => new g.Marker({
+    nearbyVehicleMarkers = positions.map((position) => {
+        const nextClass = normaliseVehicleClass(position.vehicleClass);
+        const image = vehicleImageFor(nextClass);
+        return new g.Marker({
         map,
         position,
         zIndex: 8,
-        get "title"() { return dc("Nearby {{value0}}", {value0: (labelOf(nextClass))}); },
+        title: dc("Nearby {{value0}}", {value0: (labelOf(nextClass))}),
         // Use the same top-view, class-aware artwork as the assigned-driver
         // marker. These anonymous preview points do not expose a bearing, so
         // they retain the source image's stable default orientation.
         icon: imageIcon(g, image.src, image.width, image.height),
-    }));
+    });
+    });
 }
 
 export function clearNearbyVehicleMarkers() {

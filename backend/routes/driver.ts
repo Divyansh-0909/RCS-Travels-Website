@@ -2,6 +2,7 @@ import { Router } from 'express'
 import type { Request, Response } from 'express'
 import type { BookingStatus, Driver, DriverDocumentType } from '@prisma/client'
 import { getAuth, clerkClient } from '@clerk/express'
+import { z } from 'zod'
 import { protect } from '../middleware/auth.js'
 import { prisma } from '../db/prisma.js'
 import { ACTIVE_STATUSES } from './bookings.js'
@@ -53,6 +54,9 @@ import { getNavigationRoute } from '../services/rideEstimate.js'
 import { classifyVehicle } from '../services/AI/classifyVehicle.ts'
 import { locationSchema, UploadUrlRequest, ConfirmDocumentsRequest, rideParamsSchema, driverOnlineSchema, driverAccountInformationSchema, addVehicleSchema, vehicleClassificationInputSchema, activeVehicleSchema, fcmTokenSchema, rideStatusSchema, driverRidesQuerySchema } from '../types.ts'
 import { recentBookingHistoryWhere } from '../lib/bookingHistory.js'
+import { createDriverDebtPayment, savePayoutUpi, walletStatement } from '../services/driverFinance.js'
+import { createOrderForPayment, PaymentError, verifyCheckoutPayment } from '../services/payments.js'
+import { driverCheckoutUrl } from '../services/driverCheckout.js'
 
 // The driver-facing API. Nothing calls it yet — the driver app is Phase 5, and until
 // it exists the assignment loop takes a driver's answer from sendFCM's return value
@@ -65,6 +69,24 @@ import { recentBookingHistoryWhere } from '../lib/bookingHistory.js'
 // re-assigned, and left the accepting driver at full capacity. decline shares the
 // same allowlist but still writes nothing — it only reports the booking's status back.
 const driverRouter = Router()
+
+const financePaymentIdSchema = z.uuid()
+const walletQuerySchema = z.object({
+    limit: z.coerce.number().int().min(1).max(100).default(30),
+    cursor: z.uuid().optional(),
+})
+const payoutAccountSchema = z.object({ upiId: z.string().min(3).max(320) }).strict()
+const driverPaymentVerificationSchema = z.object({
+    razorpay_order_id: z.string().min(1).max(100),
+    razorpay_payment_id: z.string().min(1).max(100),
+    razorpay_signature: z.string().min(1).max(200),
+}).strict()
+
+const answerFinanceError = (res: Response, error: unknown) => {
+    if (!(error instanceof PaymentError)) return false
+    res.status(error.status).json({ error: error.message, code: error.code })
+    return true
+}
 
 const EARTH_RADIUS_KM = 6371
 
@@ -1333,6 +1355,9 @@ driverRouter.get('/me', protect, async (req, res) => {
     // something to switch between — a picker with one entry is a control that
     // does nothing, on the screen a captain uses most.
     const vehicleCount = await prisma.vehicle.count({ where: { driverId: id } })
+    const completedRides = await prisma.booking.count({
+        where: { driverId: id, status: 'completed' },
+    })
 
     return res.json({
         id, verificationStatus, rejectionReason, isOnline,
@@ -1415,6 +1440,8 @@ driverRouter.get('/me', protect, async (req, res) => {
             since: monthStart,
         },
         expiringDocuments,
+        completedRides,
+        commissionFreeRidesRemaining: driver.commissionFreeRidesRemaining,
     })
 })
 
@@ -1549,6 +1576,62 @@ driverRouter.patch('/rides/:id/cancel', protect, async (req, res) => {
     return res.json({ bookingId: booking.id, status: cancelled.status, consequence: cancelled.consequence })
 })
 
+driverRouter.get('/me/wallet', protect, async (req, res) => {
+    const driver = await requireDriver(req, res)
+    if (!driver) return
+    const parsed = walletQuerySchema.safeParse(req.query)
+    if (!parsed.success) return res.status(400).json({ error: 'Invalid wallet query', issues: parsed.error.issues })
+    const statement = await walletStatement(driver.id, { limit: parsed.data.limit, cursor: parsed.data.cursor ?? null })
+    return res.json(statement)
+})
+
+driverRouter.put('/me/payout-account', protect, async (req, res) => {
+    const driver = await requireDriver(req, res)
+    if (!driver) return
+    const parsed = payoutAccountSchema.safeParse(req.body)
+    if (!parsed.success) return res.status(400).json({ error: 'Invalid payout account', issues: parsed.error.issues })
+    try {
+        return res.json(await savePayoutUpi(driver.id, parsed.data.upiId))
+    } catch (error) {
+        if (answerFinanceError(res, error)) return
+        throw error
+    }
+})
+
+driverRouter.post('/me/debt-payment/order', protect, async (req, res) => {
+    const driver = await requireDriver(req, res)
+    if (!driver) return
+    try {
+        const payment = await createDriverDebtPayment(driver.id)
+        const checkout = await createOrderForPayment({ paymentId: payment.id, userId: null, driverId: driver.id })
+        return res.json({ ...checkout, checkoutUrl: driverCheckoutUrl(req, checkout) })
+    } catch (error) {
+        if (answerFinanceError(res, error)) return
+        throw error
+    }
+})
+
+driverRouter.post('/me/debt-payment/:id/verify', protect, async (req, res) => {
+    const driver = await requireDriver(req, res)
+    if (!driver) return
+    const id = financePaymentIdSchema.safeParse(req.params.id)
+    const body = driverPaymentVerificationSchema.safeParse(req.body)
+    if (!id.success || !body.success) return res.status(400).json({ error: 'Invalid payment verification request' })
+    try {
+        return res.json(await verifyCheckoutPayment({
+            paymentId: id.data,
+            userId: null,
+            driverId: driver.id,
+            razorpayOrderId: body.data.razorpay_order_id,
+            razorpayPaymentId: body.data.razorpay_payment_id,
+            signature: body.data.razorpay_signature,
+        }))
+    } catch (error) {
+        if (answerFinanceError(res, error)) return
+        throw error
+    }
+})
+
 driverRouter.post('/fcm-token', protect, async (req, res) => {
     const driver = await requireDriverForAssignedWork(req, res)
     if (!driver) return
@@ -1598,6 +1681,11 @@ driverRouter.get('/upcoming-ride', protect, async (req, res) => {
             scheduledRemainingAmount: true,
             scheduledFinalPaidAmount: true,
             scheduledAdvanceDisposition: true,
+            scheduledFinalPaymentMethod: true,
+            scheduledFinalPaidAt: true,
+            rideNowPaidAmount: true,
+            rideNowPaymentMethod: true,
+            rideNowPaidAt: true,
             vehicleClass: true,
             sharing: true,
             isOutstation: true,
@@ -1673,6 +1761,11 @@ driverRouter.get('/rides', protect, async (req, res) => {
             scheduledRemainingAmount: true,
             scheduledFinalPaidAmount: true,
             scheduledAdvanceDisposition: true,
+            scheduledFinalPaymentMethod: true,
+            scheduledFinalPaidAt: true,
+            rideNowPaidAmount: true,
+            rideNowPaymentMethod: true,
+            rideNowPaidAt: true,
             startedAt: true,
             completedAt: true,
             createdAt: true,

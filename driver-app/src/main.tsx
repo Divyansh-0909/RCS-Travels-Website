@@ -1,3 +1,4 @@
+import 'react-native-gesture-handler';
 import '../global.css';
 
 // FOR THE SIDE EFFECT, and it has to be up here. The module registers the
@@ -11,6 +12,7 @@ import { ClerkProvider , useAuth } from '@clerk/clerk-expo';
 import { resourceCache } from '@clerk/clerk-expo/resource-cache';
 import { tokenCache } from '@clerk/clerk-expo/token-cache';
 import { useFonts } from 'expo-font';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { NativeRouter, Route, Routes, Navigate } from 'react-router-native';
 import App from './App';
 import AuthLayout from './AuthLayout';
@@ -29,6 +31,7 @@ import Help from './pages/Help';
 import Legal from './pages/Legal';
 import ManageAccount from './pages/ManageAccount';
 import PayoutAccount from './pages/PayoutAccount';
+import Wallet from './pages/Wallet';
 import Available from './pages/Available';
 import MarketplaceDetail from './pages/MarketplaceDetail';
 import Notifications from './pages/Notifications';
@@ -108,6 +111,7 @@ const AppRoutes = () => {
                         <Route path="account/documents" element={<Documents />} />
                         <Route path="account/vehicles" element={<Vehicles />} />
                         <Route path="account/payout" element={<PayoutAccount />} />
+                        <Route path="account/wallet" element={<Wallet />} />
                         <Route path="account/feedback" element={<Feedback />} />
                         <Route path="account/settings" element={<Navigate to="/account" replace />} />
                         <Route path="account/manage" element={<ManageAccount />} />
@@ -147,19 +151,21 @@ const Main = () => {
         // Below the font gate above, though, so the error screen has the faces it sets
         // type in — a fallback rendering in the system font would be the second thing
         // visibly wrong on a screen already reporting the first.
-        <ThemeProvider>
-            <LanguageProvider>
-            <ErrorBoundary>
-                <ClerkProvider
-                    publishableKey={publishableKey}
-                    tokenCache={tokenCache}
-                    __experimental_resourceCache={resourceCache}
-                >
-                    <AppRoutes />
-                </ClerkProvider>
-            </ErrorBoundary>
-            </LanguageProvider>
-        </ThemeProvider>
+        <GestureHandlerRootView style={{ flex: 1 }}>
+            <ThemeProvider>
+                <LanguageProvider>
+                <ErrorBoundary>
+                    <ClerkProvider
+                        publishableKey={publishableKey}
+                        tokenCache={tokenCache}
+                        __experimental_resourceCache={resourceCache}
+                    >
+                        <AppRoutes />
+                    </ClerkProvider>
+                </ErrorBoundary>
+                </LanguageProvider>
+            </ThemeProvider>
+        </GestureHandlerRootView>
     )
 }
 

@@ -124,6 +124,42 @@ describe('Checkout verification', () => {
     })
     assert.equal(result.status, 'refund_pending')
   })
+  test('a late Ride Now capture after cash settlement is refunded during checkout verification', async () => {
+    const db = paymentDb(basePayment({
+      purpose: 'ride_now_final', status: 'order_created', razorpayOrderId: 'order_1',
+    }))
+    db.booking = {
+      updateMany: async () => ({ count: 0 }),
+      findUnique: async () => ({
+        id: 'b1',
+        status: 'completed',
+        scheduledAt: null,
+        customerPayment: 123.45,
+        rideNowPaidAmount: 12345,
+        rideNowPaymentMethod: 'cash',
+        rideNowPaidAt: new Date(),
+      }),
+    }
+    let refundedPaymentId = null
+    const result = await verifyCheckoutPayment({
+      paymentId: db.row.id,
+      userId: 'u1',
+      razorpayOrderId: 'order_1',
+      razorpayPaymentId: 'pay_1',
+      signature: 'sig',
+      db,
+      gateway: {
+        verifyPaymentSignature: () => true,
+        fetchPayment: async () => ({ order_id: 'order_1', amount: 12345, currency: 'INR', status: 'captured' }),
+      },
+      refundPaymentFn: async ({ paymentId }) => {
+        refundedPaymentId = paymentId
+        return { status: 'refund_pending' }
+      },
+    })
+    assert.equal(refundedPaymentId, db.row.id)
+    assert.equal(result.status, 'refund_pending')
+  })
   test('delayed gateway messages cannot regress capture/refund states', () => {
     assert.equal(statusAfterGatewayPayment('captured', 'authorized'), 'captured')
     assert.equal(statusAfterGatewayPayment('refund_pending', 'captured'), 'refund_pending')
@@ -131,7 +167,7 @@ describe('Checkout verification', () => {
   })
 })
 
-const webhookDb = ({ duplicate = false, payment = null, capturedAfterCancellation = false } = {}) => {
+const webhookDb = ({ duplicate = false, payment = null, capturedAfterCancellation = false, booking = null } = {}) => {
   let eventStatus = null; let row = payment
   const tx = {
     razorpayWebhookEvent: {
@@ -145,6 +181,7 @@ const webhookDb = ({ duplicate = false, payment = null, capturedAfterCancellatio
     },
     booking: {
       updateMany: async ({ where }) => ({ count: capturedAfterCancellation && where.status === 'cancelled' ? 1 : 0 }),
+      findUnique: async () => booking,
     },
   }
   return { $transaction: (fn) => fn(tx), get eventStatus() { return eventStatus }, get payment() { return row } }
@@ -172,6 +209,35 @@ describe('Razorpay webhook idempotency and states', () => {
     let refundedPaymentId = null
     assert.deepEqual(await processRazorpayWebhook({
       rawBody: body, signature: 'sig', eventId: 'evt-cancelled-capture', gateway: webhookGateway, db,
+      refundPaymentFn: async ({ paymentId }) => { refundedPaymentId = paymentId },
+    }), { processed: true })
+    assert.equal(refundedPaymentId, db.payment.id)
+  })
+  test('a late scheduled-final capture after cash settlement is refunded through the webhook', async () => {
+    const db = webhookDb({
+      payment: basePayment({
+        purpose: 'scheduled_ride_final', status: 'order_created', razorpayOrderId: 'order_1',
+      }),
+      booking: {
+        id: 'b1',
+        status: 'completed',
+        scheduledAt: new Date('2026-09-20T08:00:00.000Z'),
+        scheduledRemainingAmount: 12345,
+        scheduledFinalPaidAmount: 12345,
+        scheduledFinalPaymentMethod: 'cash',
+        scheduledFinalPaidAt: new Date(),
+      },
+    })
+    const body = Buffer.from(JSON.stringify({ event: 'payment.captured', payload: {
+      payment: { entity: { id: 'pay_1', order_id: 'order_1', amount: 12345, currency: 'INR' } },
+    } }))
+    let refundedPaymentId = null
+    assert.deepEqual(await processRazorpayWebhook({
+      rawBody: body,
+      signature: 'sig',
+      eventId: 'evt-late-scheduled-final',
+      gateway: webhookGateway,
+      db,
       refundPaymentFn: async ({ paymentId }) => { refundedPaymentId = paymentId },
     }), { processed: true })
     assert.equal(refundedPaymentId, db.payment.id)

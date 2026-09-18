@@ -2,6 +2,7 @@ import 'dotenv/config'
 import { sweepScheduledRides } from '../services/assignScheduledRides.js'
 import { sweepDocumentScans } from '../services/documentScan.js'
 import { sweepDocumentExpiry } from '../services/driverDocuments.js'
+import { issuePreviousMonthCoupons } from '../services/coupons.js'
 
 // The three background sweeps, and the one decision about how they are TRIGGERED.
 //
@@ -57,6 +58,7 @@ const JOBS = {
   'dispatch': sweepScheduledRides,
   'document-scan': sweepDocumentScans,
   'document-expiry': sweepDocumentExpiry,
+  'customer-coupons': issuePreviousMonthCoupons,
 }
 
 export const JOB_NAMES = Object.keys(JOBS)

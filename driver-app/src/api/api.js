@@ -117,10 +117,15 @@ async function request(path, { method = "GET", body, getToken } = {}) {
 export const sendOtp           = (phone, intent)         => request("/api/auth/send-otp", { method: "POST", body: { phone, intent, audience: "driver" } });
 export const verifyOtp         = (phone, otp, intent)    => request("/api/auth/verify-otp", { method: "POST", body: { phone, otp, intent, audience: "driver" } });
 export const checkName         = (name)                  => request("/api/auth/check-name", { method: "POST", body: { name, audience: "driver" } });
+export const placesAutoComplete = (input)                => request(`/api/googleAPI/autocomplete?input=${encodeURIComponent(input)}`);
 
 export const getMe             = (getToken)              => request("/api/driver/me", { getToken });
 export const getFeedback       = (getToken)              => request("/api/driver/me/feedback", { getToken });
 export const deleteMe          = (getToken)              => request("/api/driver/me", { method: "DELETE", getToken });
+export const getWallet         = (cursor, getToken)      => request(`/api/driver/me/wallet${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`, { getToken });
+export const savePayoutAccount = (upiId, getToken)       => request("/api/driver/me/payout-account", { method: "PUT", body: { upiId }, getToken });
+export const createDebtPaymentOrder = (getToken)         => request("/api/driver/me/debt-payment/order", { method: "POST", getToken });
+export const verifyDebtPayment = (paymentId, response, getToken) => request(`/api/driver/me/debt-payment/${encodeURIComponent(paymentId)}/verify`, { method: "POST", body: response, getToken });
 // Creates the driver row. Needs a Clerk session, so it can only run after the
 // OTP has been verified — which is why the details it takes are collected on
 // their own screen after sign-in rather than alongside the phone number.

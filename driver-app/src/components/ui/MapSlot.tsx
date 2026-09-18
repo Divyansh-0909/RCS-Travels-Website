@@ -16,10 +16,13 @@ type Props = {
     driver?: Point | null;
     driverBearing?: number | null;
     carType?: string | null;
+    driverMarkerOpacity?: number;
     routePolyline?: string | null;
     followRouteProgress?: boolean;
     cameraMode?: 'follow-driver' | 'fit-route';
     bottomSheetHeight?: number;
+    showRecenterControl?: boolean;
+    onPress?: () => void;
 };
 
 const driverMarkerImages: Record<string, number> = {
@@ -115,10 +118,13 @@ const MapSlot = ({
     driver,
     driverBearing,
     carType,
+    driverMarkerOpacity = 1,
     routePolyline,
     followRouteProgress = false,
     cameraMode = 'follow-driver',
     bottomSheetHeight = 0,
+    showRecenterControl = true,
+    onPress,
 }: Props) => {
     useCopyLanguage();
     const { colors, scheme } = useTheme();
@@ -159,6 +165,7 @@ const MapSlot = ({
     );
     const driverKey = driverPoint ? `${driverPoint.latitude}:${driverPoint.longitude}` : null;
     const numericDriverBearing = Number(driverBearing);
+    const driverMarkerImage = driverMarkerImageFor(carType);
     // The shared source artwork faces west. Match the customer website's
     // bearing convention by rotating it +90 degrees onto compass north.
     const driverRotation = Number.isFinite(numericDriverBearing)
@@ -383,6 +390,7 @@ const MapSlot = ({
             // visible tiles have rendered. Keep this section's skeleton until
             // then so slow tiles never expose an empty map surface.
             onMapLoaded={() => setLoadedMapAppearance(mapAppearance)}
+            onPress={onPress}
         >
             {routePoints.length >= 2 ? <Polyline coordinates={routePoints} strokeColor={colors.mapRoute} strokeWidth={4} /> : null}
             {pickupPoint ? (
@@ -401,8 +409,9 @@ const MapSlot = ({
                 <Marker
                     coordinate={driverPoint}
                     anchor={{ x: 0.5, y: 0.5 }}
-                    image={driverMarkerImageFor(carType)}
+                    image={driverMarkerImage}
                     rotation={driverRotation}
+                    opacity={driverMarkerOpacity}
                     tracksViewChanges={false}
                     zIndex={10}
                 />
@@ -411,7 +420,7 @@ const MapSlot = ({
 
         {loadedMapAppearance !== mapAppearance ? <MapLoadingSkeleton dark={mapInterfaceStyle === 'dark'} /> : null}
 
-        {driverPoint ? (
+        {driverPoint && showRecenterControl ? (
             <Pressable
                 role="button"
                 aria-label={dc("Recenter map on your location")}

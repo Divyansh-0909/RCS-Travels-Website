@@ -1,6 +1,8 @@
 import { Router } from 'express'
+import type { Response } from 'express'
 import { getAuth } from '@clerk/express'
 import type { Prisma } from '@prisma/client'
+import { z } from 'zod'
 import { protect, protectAdmin } from '../middleware/auth.js'
 import { prisma } from '../db/prisma.js'
 import { getFareZones, saveFareZones } from '../services/fareZones.js'
@@ -27,6 +29,15 @@ import { promoteReplacement, recomputeAfterDocumentChange } from '../services/dr
 import { withdrawOffersForDriver } from '../services/scheduledOffers.js'
 import { cancellationWindowStart } from '../services/driverCancellations.js'
 import { COMPLAINT_REASON_LABELS } from '../constants/complaints.js'
+import {
+    postAdminAdjustment,
+    reconciliationReport,
+    repairWalletCache,
+    setPayoutUpiVerification,
+    walletStatement,
+} from '../services/driverFinance.js'
+import { PaymentError } from '../services/paymentErrors.js'
+import { createPayoutBatch, executePayoutBatch, listPayoutBatches, refreshPayout } from '../services/driverPayouts.js'
 
 // Three list endpoints, the fare-zone editor, document review, suspension, and
 // the move between the RCS fleet and the partner pool.
@@ -46,6 +57,28 @@ import { COMPLAINT_REASON_LABELS } from '../constants/complaints.js'
 //
 // Every route is behind protectAdmin (metadata.role === 'admin' on the Clerk session).
 const adminRouter = Router()
+
+const adminIdSchema = z.uuid()
+const adjustmentSchema = z.object({
+    amount: z.number().finite().refine((value) => value !== 0),
+    note: z.string().trim().min(3).max(500),
+    reference: z.string().trim().min(3).max(120),
+}).strict()
+const repairSchema = z.object({
+    note: z.string().trim().min(3).max(500),
+    reference: z.string().trim().min(3).max(120),
+}).strict()
+const payoutVerificationSchema = z.object({ verified: z.boolean() }).strict()
+const payoutBatchSchema = z.object({
+    reference: z.string().trim().min(3).max(120),
+    driverIds: z.array(z.uuid()).max(500).optional(),
+}).strict()
+
+const answerFinanceError = (res: Response, error: unknown) => {
+    if (!(error instanceof PaymentError)) return false
+    res.status(error.status).json({ error: error.message, code: error.code })
+    return true
+}
 
 adminRouter.get('/booking', protect, protectAdmin, async (req, res) => {
     const parsed = bookingListQuerySchema.safeParse(req.query)
@@ -796,6 +829,94 @@ adminRouter.patch('/drivers/:id/group', protect, protectAdmin, async (req, res) 
     // nothing here he has to DO — the one notification worth interrupting somebody
     // for is the one that changes what he can do, which is notifyDriverApproved.
     return res.json({ ...updated, changed: true })
+})
+
+adminRouter.get('/drivers/:id/finance', protect, protectAdmin, async (req, res) => {
+    const id = adminIdSchema.safeParse(req.params.id)
+    if (!id.success) return res.status(400).json({ error: 'Invalid driver id' })
+    const statement = await walletStatement(id.data, { limit: 100 })
+    if (!statement) return res.status(404).json({ error: 'Driver not found' })
+    return res.json(statement)
+})
+
+adminRouter.put('/drivers/:id/payout-account/verification', protect, protectAdmin, async (req, res) => {
+    const id = adminIdSchema.safeParse(req.params.id)
+    const body = payoutVerificationSchema.safeParse(req.body)
+    if (!id.success || !body.success) return res.status(400).json({ error: 'Invalid verification request' })
+    try {
+        return res.json(await setPayoutUpiVerification(id.data, body.data.verified))
+    } catch (error) {
+        if (answerFinanceError(res, error)) return
+        throw error
+    }
+})
+
+adminRouter.post('/drivers/:id/finance/adjustment', protect, protectAdmin, async (req, res) => {
+    const id = adminIdSchema.safeParse(req.params.id)
+    const body = adjustmentSchema.safeParse(req.body)
+    if (!id.success || !body.success) return res.status(400).json({ error: 'Invalid adjustment request', issues: body.success ? undefined : body.error.issues })
+    try {
+        return res.json(await postAdminAdjustment({ driverId: id.data, ...body.data }))
+    } catch (error) {
+        if (answerFinanceError(res, error)) return
+        throw error
+    }
+})
+
+adminRouter.get('/finance/reconciliation', protect, protectAdmin, async (_req, res) => {
+    return res.json({ drivers: await reconciliationReport() })
+})
+
+adminRouter.post('/drivers/:id/finance/repair', protect, protectAdmin, async (req, res) => {
+    const id = adminIdSchema.safeParse(req.params.id)
+    const body = repairSchema.safeParse(req.body)
+    const actorId = getAuth(req).userId
+    if (!id.success || !body.success || !actorId) return res.status(400).json({ error: 'Invalid repair request' })
+    try {
+        return res.json(await repairWalletCache({ driverId: id.data, actorId, ...body.data }))
+    } catch (error) {
+        if (answerFinanceError(res, error)) return
+        throw error
+    }
+})
+
+adminRouter.get('/finance/payout-batches', protect, protectAdmin, async (req, res) => {
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 30))
+    return res.json({ batches: await listPayoutBatches({ limit }) })
+})
+
+adminRouter.post('/finance/payout-batches', protect, protectAdmin, async (req, res) => {
+    const body = payoutBatchSchema.safeParse(req.body)
+    const actorId = getAuth(req).userId
+    if (!body.success || !actorId) return res.status(400).json({ error: 'Invalid payout batch request', issues: body.success ? undefined : body.error.issues })
+    try {
+        return res.status(201).json(await createPayoutBatch({ createdBy: actorId, reference: body.data.reference, driverIds: body.data.driverIds ?? null }))
+    } catch (error) {
+        if (answerFinanceError(res, error)) return
+        throw error
+    }
+})
+
+adminRouter.post('/finance/payout-batches/:id/execute', protect, protectAdmin, async (req, res) => {
+    const id = adminIdSchema.safeParse(req.params.id)
+    if (!id.success) return res.status(400).json({ error: 'Invalid payout batch id' })
+    try {
+        return res.json(await executePayoutBatch(id.data))
+    } catch (error) {
+        if (answerFinanceError(res, error)) return
+        throw error
+    }
+})
+
+adminRouter.post('/finance/payouts/:id/refresh', protect, protectAdmin, async (req, res) => {
+    const id = adminIdSchema.safeParse(req.params.id)
+    if (!id.success) return res.status(400).json({ error: 'Invalid payout id' })
+    try {
+        return res.json(await refreshPayout(id.data))
+    } catch (error) {
+        if (answerFinanceError(res, error)) return
+        throw error
+    }
 })
 
 export default adminRouter

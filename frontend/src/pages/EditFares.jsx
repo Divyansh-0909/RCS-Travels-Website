@@ -805,7 +805,7 @@ const EditFares = () => {
                     disabled={!undoCount || loading || saving}
                     className="absolute left-3 bottom-3 z-[800] min-h-10 rounded-xl border border-border/70 bg-surface/95 px-3 py-2 text-xs font-semibold text-ink shadow-[0_8px_24px_rgba(18,18,32,0.14)] backdrop-blur-sm transition-[background-color,transform,opacity] duration-150 ease-out hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 disabled:active:scale-100"
                 >
-                    {dc("Pichla badlaav wapas")}
+                    {dc("Pichla change wapas karein")}
                 </button>
 
                 {/* ---------- price checker ---------- */}

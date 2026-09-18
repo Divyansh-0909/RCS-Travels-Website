@@ -29,13 +29,17 @@ export const getMe             = (getToken)              => request("/api/users/
 export const createMe          = (name, getToken)        => request("/api/users/me", { method: "POST", body: { name }, getToken });
 export const getPreferences    = (getToken)              => request("/api/users/me/preferences", { getToken });
 export const updatePreferences = (body, getToken)        => request("/api/users/me/preferences", { method: "PUT", body, getToken });
-export const estimateFare      = (pickupAddress, dropAddress, vehicleClass, pickupCoords, dropCoords, preferSafeRoute, needsCarrier, getToken) => request("/api/fare/estimate", { method: "POST", body: { pickupAddress, dropAddress, vehicleClass, pickupCoords, dropCoords, preferSafeRoute, needsCarrier }, getToken });
+export const estimateFare      = (pickupAddress, dropAddress, vehicleClass, pickupCoords, dropCoords, preferSafeRoute, needsCarrier, getToken, couponId) => request("/api/fare/estimate", { method: "POST", body: { pickupAddress, dropAddress, vehicleClass, pickupCoords, dropCoords, preferSafeRoute, needsCarrier, couponId }, getToken });
+export const getOffers = (getToken) => request("/api/users/me/offers", { getToken });
 export const createBooking     = (data, getToken)        => request("/api/bookings", { method: "POST", body: data, getToken });
-export const getNearbyDrivers  = (pickupCoords, vehicleClass, getToken) => request(`/api/bookings/nearby-drivers?lat=${encodeURIComponent(pickupCoords.lat)}&lng=${encodeURIComponent(pickupCoords.lng)}&vehicleClass=${encodeURIComponent(vehicleClass)}`, { getToken });
+export const getNearbyDrivers  = (pickupCoords, vehicleClass, getToken) => request(`/api/bookings/nearby-drivers?lat=${encodeURIComponent(pickupCoords.lat)}&lng=${encodeURIComponent(pickupCoords.lng)}${vehicleClass ? `&vehicleClass=${encodeURIComponent(vehicleClass)}` : ''}`, { getToken });
 export const cancelBooking     = (bookingId, expectedCancellationCharge, getToken) => request("/api/bookings/cancel", { method: "POST", body: { bookingId, expectedCancellationCharge }, getToken});
 export const submitRideComplaint = (bookingId, reasons, getToken) => request(`/api/bookings/${encodeURIComponent(bookingId)}/complaint`, { method: "POST", body: { reasons }, getToken });
 export const createScheduledAdvanceOrder = (bookingId, getToken) => request(`/api/bookings/${bookingId}/scheduled-advance/order`, { method: "POST", getToken });
 export const createScheduledFinalOrder = (bookingId, getToken) => request(`/api/bookings/${bookingId}/scheduled-final/order`, { method: "POST", getToken });
+export const recordScheduledFinalCashPayment = (bookingId, getToken) => request(`/api/bookings/${bookingId}/scheduled-final/cash`, { method: "POST", getToken });
+export const createRideNowFinalOrder = (bookingId, getToken) => request(`/api/bookings/${bookingId}/ride-now-final/order`, { method: "POST", getToken });
+export const recordRideNowCashPayment = (bookingId, getToken) => request(`/api/bookings/${bookingId}/ride-now-final/cash`, { method: "POST", getToken });
 export const verifyPayment = (paymentId, response, getToken) => request(`/api/payments/${paymentId}/verify`, { method: "POST", body: response, getToken });
 export const getBookingStatus  = (id, getToken)          => request(`/api/bookings/${id}/status`, { getToken });
 export const shareBooking      = (id, getToken)          => request(`/api/bookings/${id}/share`, { method: "POST", getToken });
@@ -100,6 +104,25 @@ export const setDriverSuspension = (driverId, body, getToken) =>
 // it with a 409. See routes/admin.ts.
 export const setDriverGroup      = (driverId, body, getToken) =>
     request(`/api/admin/drivers/${driverId}/group`, { method: "PATCH", body, getToken });
+
+export const getDriverFinance = (driverId, getToken) =>
+    request(`/api/admin/drivers/${encodeURIComponent(driverId)}/finance`, { getToken });
+export const setPayoutVerification = (driverId, verified, getToken) =>
+    request(`/api/admin/drivers/${encodeURIComponent(driverId)}/payout-account/verification`, { method: "PUT", body: { verified }, getToken });
+export const postDriverFinanceAdjustment = (driverId, body, getToken) =>
+    request(`/api/admin/drivers/${encodeURIComponent(driverId)}/finance/adjustment`, { method: "POST", body, getToken });
+export const getFinanceReconciliation = (getToken) =>
+    request('/api/admin/finance/reconciliation', { getToken });
+export const repairDriverFinance = (driverId, body, getToken) =>
+    request(`/api/admin/drivers/${encodeURIComponent(driverId)}/finance/repair`, { method: "POST", body, getToken });
+export const getPayoutBatches = (getToken) =>
+    request('/api/admin/finance/payout-batches', { getToken });
+export const createPayoutBatch = (body, getToken) =>
+    request('/api/admin/finance/payout-batches', { method: "POST", body, getToken });
+export const executePayoutBatch = (batchId, getToken) =>
+    request(`/api/admin/finance/payout-batches/${encodeURIComponent(batchId)}/execute`, { method: "POST", getToken });
+export const refreshPayout = (payoutId, getToken) =>
+    request(`/api/admin/finance/payouts/${encodeURIComponent(payoutId)}/refresh`, { method: "POST", getToken });
 
 // Streams a PDF, so it can't use request() (which parses JSON); fetch a Blob.
 export const downloadMyData = async (getToken) => {

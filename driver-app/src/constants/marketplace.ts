@@ -15,6 +15,9 @@ export type MarketplaceListing = {
     /** Private fields, revealed only after a successful marketplace deposit hold. */
     riderName?: string;
     riderPhone?: string;
+    preferSafeRoute?: boolean;
+    sharing?: boolean;
+    needsCarrier?: boolean;
 };
 
 export const MARKETPLACE_POSTER_FEE_RATE = 0.10;

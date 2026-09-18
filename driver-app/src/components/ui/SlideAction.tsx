@@ -121,13 +121,13 @@ export const SlideAction = ({
     return (
         <View
             onLayout={(e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width)}
-            className={`w-full rounded-full overflow-hidden ${disabled ? 'opacity-50' : ''}`}
+            className="w-full rounded-full overflow-hidden"
             style={{ height: KNOB + PAD * 2, backgroundColor: colors.primary, justifyContent: 'center' }}
         >
             <Animated.View
                 pointerEvents="none"
-                className="absolute left-0 top-0 bottom-0 rounded-full bg-primary"
-                style={fillStyle}
+                className="absolute left-0 top-0 bottom-0 rounded-full"
+                style={[fillStyle, { backgroundColor: colors.primary }]}
             />
 
             <Animated.View pointerEvents="none" style={labelStyle} className="absolute w-full items-center">

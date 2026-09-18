@@ -177,11 +177,16 @@ function DateWheel({ days, selected, onSelect, locale, todayLabel, ariaLabel }) 
   )
 }
 
-function SelectionBand() {
+function SelectionBand({ invalid = false }) {
   return (
     <div
       aria-hidden="true"
-      className="pointer-events-none absolute inset-x-0 top-1/2 z-0 h-11 -translate-y-1/2 rounded-xl bg-[var(--background-muted)] shadow-inner shadow-black/10"
+      className={cn(
+        "pointer-events-none absolute inset-x-0 top-1/2 z-0 h-11 -translate-y-1/2 rounded-xl shadow-inner transition-colors duration-150",
+        invalid
+          ? "bg-status-danger/20 shadow-status-danger/30"
+          : "bg-[var(--background-muted)] shadow-black/10",
+      )}
     />
   )
 }
@@ -191,13 +196,13 @@ function WheelFade() {
     <>
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-0 z-20 h-10"
-        style={{ background: "linear-gradient(to bottom, var(--background-primary), transparent)" }}
+        className="pointer-events-none absolute inset-x-0 top-0 z-20 h-15"
+        style={{ background: "linear-gradient(to bottom, var(--immersive), transparent)" }}
       />
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 bottom-0 z-20 h-10"
-        style={{ background: "linear-gradient(to top, var(--background-primary), transparent)" }}
+        className="pointer-events-none absolute inset-x-0 bottom-0 z-20 h-15"
+        style={{ background: "linear-gradient(to top, var(--immersive), transparent)" }}
       >
       </div>
     </>
@@ -263,8 +268,8 @@ export function DateTimeSelector({ onClick, onChange, onConfirm, initial, page =
         </button>
       )}
 
-      <div className="relative isolate overflow-hidden rounded-2xl bg-[var(--background-primary)]">
-        <SelectionBand />
+      <div className="relative isolate overflow-hidden bg-[var(--immersive)]">
+        <SelectionBand invalid={isTooSoon} />
         <div className="grid grid-cols-[1.7fr_0.55fr_0.7fr_0.8fr] items-stretch gap-0.5">
           <DateWheel
             days={days}

@@ -21,16 +21,17 @@ const geographyOf = (lat, lng) =>
  * preview into a source of exact captain-location data. `nearest` is private
  * server context for the traffic-aware ETA and must be stripped by the route.
  */
-export async function nearbyDriverAvailability({ lat, lng, vehicleClass }, db = prisma) {
+export async function nearbyDriverAvailability({ lat, lng, vehicleClass = null }, db = prisma) {
   const origin = geographyOf(lat, lng)
-  const fullCapacity = seatsOf(vehicleClass)
+  const fullCapacity = vehicleClass ? seatsOf(vehicleClass) : 0
 
   const rows = await db.$queryRaw`
     SELECT dl."driver_id" AS "driverId",
            dl."latitude" AS "driverLat",
            dl."longitude" AS "driverLng",
            round(dl."latitude"::numeric, 4)::float8 AS "lat",
-           round(dl."longitude"::numeric, 4)::float8 AS "lng"
+           round(dl."longitude"::numeric, 4)::float8 AS "lng",
+           d."vehicle_class" AS "vehicleClass"
     FROM "driver_locations" dl
     JOIN "drivers" d ON d."id" = dl."driver_id"
     WHERE extensions.ST_DWithin(dl."geog", ${origin}, ${NEARBY_DRIVER_RADIUS_KM * 1000}::float8, false)
@@ -40,8 +41,8 @@ export async function nearbyDriverAvailability({ lat, lng, vehicleClass }, db = 
       AND d."active_vehicle_id" IS NOT NULL
       AND d."suspended_at" IS NULL
       AND d."verification_status" = 'approved'
-      AND d."vehicle_class" = ${vehicleClass}::"VehicleClass"
-      AND d."vehicle_capacity" >= ${fullCapacity}
+      AND (${vehicleClass}::text = '' OR d."vehicle_class" = ${vehicleClass}::"VehicleClass")
+      AND (${vehicleClass}::text = '' OR d."vehicle_capacity" >= ${fullCapacity})
       AND NOT EXISTS (
         SELECT 1
         FROM "bookings" b
@@ -55,9 +56,10 @@ export async function nearbyDriverAvailability({ lat, lng, vehicleClass }, db = 
     LIMIT ${NEARBY_DRIVER_LIMIT}
   `
 
-  const vehicles = rows.map(({ lat: rowLat, lng: rowLng }) => ({
+  const vehicles = rows.map(({ lat: rowLat, lng: rowLng, vehicleClass: rowVehicleClass }) => ({
     lat: Number(rowLat),
     lng: Number(rowLng),
+    ...(rowVehicleClass ? { vehicleClass: rowVehicleClass } : {}),
   }))
 
   // Kept server-side: the stable id lets the Routes ETA cache follow the same

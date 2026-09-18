@@ -211,6 +211,8 @@ const VehicleSelect = () => {
     const [estimateError, setEstimateError] = useState(null);
     const [scheduledCheckout, setScheduledCheckout] = useState(null);
     const [scheduledFinancials, setScheduledFinancials] = useState(null);
+    const [offers, setOffers] = useState(null);
+    const [selectedCouponId, setSelectedCouponId] = useState(null);
 
     // Dev-only: /dev/vehicle?step=|?panel=|?safe= force internal states for previews.
     const devParams = import.meta.env.DEV ? new URLSearchParams(window.location.search) : null;
@@ -272,6 +274,10 @@ const VehicleSelect = () => {
     const [nearbyVehicles, setNearbyVehicles] = useState([]);
     const [nearbyFramePoints, setNearbyFramePoints] = useState([]);
     const [nearbyEta, setNearbyEta] = useState(null);
+
+    useEffect(() => {
+        api.getOffers().then((data) => setOffers(data)).catch(() => setOffers(null));
+    }, []);
 
     // A scheduled payment survives the page that opened Checkout. Reconcile this
     // sheet from the backend on refresh/re-entry, and keep watching while a
@@ -343,7 +349,7 @@ const VehicleSelect = () => {
         // estimateFare can throw, and either leaving `pricing` stuck true would
         // strand the cards on skeletons forever.
         try {
-            const data = await api.estimateFare(pickupLocation, dropLocation, vehicleClass ?? "hatchback", pickupCoords, dropCoords, safeRoute, needsCarrier);
+            const data = await api.estimateFare(pickupLocation, dropLocation, vehicleClass ?? "hatchback", pickupCoords, dropCoords, safeRoute, needsCarrier, selectedCouponId);
             if (data?.error) {
                 // These prices are what the booking is created with, so a failed
                 // estimate has to surface — say so and leave the cards unpriced.
@@ -549,7 +555,7 @@ const VehicleSelect = () => {
         let timer = null;
         let needsInitialFrame = true;
 
-        if (scheduledTime || step !== "vehicleType" || !vehicleClass || !hasRoute) {
+        if (scheduledTime || step !== "vehicleType" || !vehicleClass) {
             setNearbyVehicles([]);
             setNearbyFramePoints([]);
             setNearbyEta(null);
@@ -570,8 +576,8 @@ const VehicleSelect = () => {
                     const points = data?.error ? [] : (data.vehicles ?? []);
                     setNearbyVehicles(points);
                     setNearbyEta(
-                        !data?.error && data.etaMinutes != null
-                            ? { vehicleClass, minutes: data.etaMinutes }
+                            !data?.error && data.etaMinutes != null
+                            ? { vehicleClass: null, minutes: data.etaMinutes }
                             : null
                     );
                     if (!data?.error && needsInitialFrame) {
@@ -660,10 +666,18 @@ const VehicleSelect = () => {
 
     async function handleConfirmLocation() {
         if (bookAfterConfirm) {
-            // fresh route metrics for the adjusted pin go straight into the
-            // booking payload — store updates can't reach this closure in time
+            // Only refresh pricing when the rider actually moved the pin. The
+            // normal Book ride path opens the confirmation pin without changing
+            // coordinates, so doing another estimate here added an avoidable
+            // network round trip before every booking.
             setLoading(true);
-            const fresh = await fetchEstimate();
+            const snap = preAdjustRef.current;
+            const currentCoords = confirmTarget === "pickup" ? pickupCoords : dropCoords;
+            const moved = snap?.coords && currentCoords
+                ? Math.abs(snap.coords.lat - currentCoords.lat) > 1e-4
+                    || Math.abs(snap.coords.lng - currentCoords.lng) > 1e-4
+                : false;
+            const fresh = moved ? await fetchEstimate() : null;
             await confirmBooking(fresh);
         } else {
             preAdjustRef.current = null; // confirmed — the drag stands
@@ -718,13 +732,13 @@ const VehicleSelect = () => {
     }, [mapApi, isMobile, step, confirmTarget, routePolyline, hasRoute, scheduledTime, nearbyFramePoints]);
 
     useEffect(() => {
-        if (!mapApi || scheduledTime || step !== "vehicleType" || !vehicleClass || !hasRoute) {
+        if (!mapApi || scheduledTime || step !== "vehicleType" || !vehicleClass) {
             clearNearbyVehicleMarkers();
             return undefined;
         }
-        setNearbyVehiclePositions(mapApi, nearbyVehicles, vehicleClass);
+        setNearbyVehiclePositions(mapApi, nearbyVehicles);
         return clearNearbyVehicleMarkers;
-    }, [mapApi, scheduledTime, step, vehicleClass, nearbyVehicles, hasRoute]);
+    }, [mapApi, scheduledTime, step, nearbyVehicles, vehicleClass]);
 
     useEffect(() => clearNearbyVehicleMarkers, []);
 
@@ -1170,6 +1184,25 @@ const VehicleSelect = () => {
                 </div>
             )}
 
+            {offers?.coupons?.length > 0 && (
+                <div className="rounded-xl border p-3 text-sm">
+                    <div className="font-medium">Offers</div>
+                    {offers.coupons.map((coupon) => (
+                        <button
+                            key={coupon.id}
+                            type="button"
+                            className="block w-full text-left py-1"
+                            onClick={() => {
+                                setSelectedCouponId(selectedCouponId === coupon.id ? null : coupon.id);
+                                setTimeout(() => fetchEstimate(), 0);
+                            }}
+                        >
+                            ₹{coupon.amount} coupon {selectedCouponId === coupon.id ? "✓" : ""}
+                        </button>
+                    ))}
+                </div>
+            )}
+
             <Button
                 prop={{
                     type: "submit",
@@ -1264,7 +1297,7 @@ const VehicleSelect = () => {
     // translateX(100%) — without it a viewport-wide panel parked to the right
     // would double the page width and let the whole screen scroll sideways.
     return (
-        <div className="relative overflow-hidden bg-transparent text-center flex flex-col justify-center items-center w-[100vw] h-[100dvh]">
+        <div className="relative overflow-hidden bg-immersive text-center flex flex-col justify-center items-center w-[100vw] h-[100dvh]">
             <>
                 <ErrorPanel prop={{ error: error, setError: setError }} />
 
@@ -1293,6 +1326,7 @@ const VehicleSelect = () => {
                     </GoogleMap>
                 )}
                 <BackgroundPanel
+                    solid
                     show={["payment", "confirmed"].includes(panelState) && Boolean(restoredScheduledTime)}
                     contentKey={`${panelState}-${paymentPhase}-${scheduledFinancials?.advancePaid ?? "loading"}`}
                     className="z-4 sm:z-3 bottom-0 gap-4 py-6 text-left flex flex-col justify-center items-center"
@@ -1309,7 +1343,7 @@ const VehicleSelect = () => {
                         />
                     </div>
                 </BackgroundPanel>
-                <BackgroundPanel show={panelState === "noDriver"} className={`z-4 sm:z-3 bottom-0 gap-1.5 sm:gap-2 py-6 text-center flex flex-col justify-center items-center`}>
+                <BackgroundPanel solid show={panelState === "noDriver"} className={`z-4 sm:z-3 bottom-0 gap-1.5 sm:gap-2 py-6 text-center flex flex-col justify-center items-center`}>
                     <ErrorMark className="-mt-2" size={isMobile ? 120 : 140} />
                     <div className="flex w-[min(86vw,520px)] min-w-0 flex-col items-center">
                         <h2 className={`w-full min-w-0 [overflow-wrap:anywhere] ${TITLE}`}>{dc("No drivers nearby")}</h2>
@@ -1335,7 +1369,7 @@ const VehicleSelect = () => {
                 </BackgroundPanel>
 
                 {/* Searching panel — illustrations */}
-                <BackgroundPanel show={searchingVisible && detialsVisibility === false} className={`z-3 sm:z-2 sm:overflow-hidden py-6 text-left sm:px-[9%] md:px-[5%] xl:px-[13%] flex flex-col sm:flex-row sm:justify-center lg:justify-between items-center`}>
+                <BackgroundPanel solid show={searchingVisible && detialsVisibility === false} className={`z-3 sm:z-2 sm:overflow-hidden py-6 text-left sm:px-[9%] md:px-[5%] xl:px-[13%] flex flex-col sm:flex-row sm:justify-center lg:justify-between items-center`}>
                     {/* Back to the zoomed-out full-route view while searching */}
                     {!isMobile && searchingVisible && detialsVisibility === false && (
                         <GoogleMap appearance="dark" center={pickupPoint} zoom={12} onMapReady={setMapApi} className={MAP_CLASSES} />
@@ -1396,7 +1430,7 @@ const VehicleSelect = () => {
                 </BackgroundPanel>
 
                 {/* Searching panel — ride details */}
-                <BackgroundPanel show={searchingVisible && detialsVisibility === true} className={`z-3 sm:z-2 py-6 sm:overflow-hidden text-left flex flex-col sm:flex-row justify-center items-center sm:justify-center lg:justify-between sm:px-[9%] md:px-[5%] xl:px-[13%]`}>
+                <BackgroundPanel solid show={searchingVisible && detialsVisibility === true} className={`z-3 sm:z-2 py-6 sm:overflow-hidden text-left flex flex-col sm:flex-row justify-center items-center sm:justify-center lg:justify-between sm:px-[9%] md:px-[5%] xl:px-[13%]`}>
                     {/* same split as every other desktop panel: content
                             left, the booked route on the right */}
                     {!isMobile && detialsVisibility && (
@@ -1410,7 +1444,7 @@ const VehicleSelect = () => {
                 {/* Confirm-location panel — zoomed into the target endpoint;
                         the map drags under a fixed pin, and each settle
                         reverse-geocodes the center into the address card. */}
-                <BackgroundPanel show={step === "confirmLocation"} className={`z-1 sm:z-0 sm:overflow-hidden py-6 text-left flex flex-col sm:flex-row sm:px-[9%] md:px-[5%] xl:px-[13%] sm:justify-center lg:justify-between items-center`}>
+                <BackgroundPanel solid show={step === "confirmLocation"} className={`z-1 sm:z-0 sm:overflow-hidden py-6 text-left flex flex-col sm:flex-row sm:px-[9%] md:px-[5%] xl:px-[13%] sm:justify-center lg:justify-between items-center`}>
                     {!isMobile && step === "confirmLocation" && (
                         <GoogleMap
                             appearance="dark"
@@ -1424,7 +1458,7 @@ const VehicleSelect = () => {
                         </GoogleMap>
                     )}
 
-                    <div onClick={cancelLocationAdjust} className="max-sm:-top-12 max-sm:left-4 max-sm:h-9 max-sm:my-1 max-sm:px-3 max-sm:rounded-full max-sm:border max-sm:border-[var(--foreground)]/30 max-sm:bg-[var(--background-muted)] max-sm:shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)] flex items-center justify-center cursor-pointer sm:opacity-[0.8] transition-opacity duration-300 hover:opacity-[1] absolute z-20 sm:left-5 sm:top-6 text-[var(--text)]">
+                    <div onClick={cancelLocationAdjust} className="max-sm:-top-12 max-sm:left-4 max-sm:h-9 max-sm:my-1 max-sm:px-3 max-sm:rounded-full max-sm:border max-sm:border-[var(--foreground)]/30 max-sm:bg-immersive max-sm:shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)] flex items-center justify-center cursor-pointer sm:opacity-[0.8] transition-opacity duration-300 hover:opacity-[1] absolute z-20 sm:left-5 sm:top-6 text-[var(--text)]">
                         <Icon path={mdiKeyboardBackspace} size={1.2} />
                     </div>
 
@@ -1511,6 +1545,7 @@ const VehicleSelect = () => {
                         scroller. */}
                 <BackgroundPanel
                     sheet
+                    solid
                     duration={420}
                     bottomInset={pinBookBar ? bookBarHeight : 0}
                     expandedTopGap={0}
@@ -1538,7 +1573,7 @@ const VehicleSelect = () => {
                     )}
 
                     {(!isMobile || sheetSnap !== "expanded") && (
-                        <div onClick={() => navigate('/')} className="max-sm:-top-12 max-sm:left-4 max-sm:h-9 max-sm:my-1 max-sm:px-3 max-sm:rounded-full max-sm:border max-sm:border-[var(--foreground)]/30 max-sm:bg-[var(--background-muted)] max-sm:shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)] flex items-center justify-center cursor-pointer sm:opacity-[0.8] transition-opacity duration-300 hover:opacity-[1] absolute z-20 sm:left-5 sm:top-6 text-[var(--text)]">
+                    <div onClick={() => navigate('/')} className="max-sm:-top-12 max-sm:left-4 max-sm:h-9 max-sm:my-1 max-sm:px-3 max-sm:rounded-full max-sm:border max-sm:border-[var(--foreground)]/30 max-sm:bg-immersive max-sm:shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)] flex items-center justify-center cursor-pointer sm:opacity-[0.8] transition-opacity duration-300 hover:opacity-[1] absolute z-20 sm:left-5 sm:top-6 text-[var(--text)]">
                             <Icon path={mdiKeyboardBackspace} size={1.2} />
                         </div>
                     )}
@@ -1767,7 +1802,7 @@ const VehicleSelect = () => {
                 {pinBookBar && (
                     <div
                         ref={bookBarRef}
-                        className="absolute inset-x-0 bottom-0 z-2 flex justify-center border-t border-[var(--foreground)]/10 bg-panel-gradient px-[7vw] pt-3 pb-[calc(1.25rem+env(safe-area-inset-bottom))]"
+                        className="absolute inset-x-0 bottom-0 z-2 flex justify-center border-t border-[var(--foreground)]/10 bg-immersive px-[7vw] pt-3 pb-[calc(1.25rem+env(safe-area-inset-bottom))]"
                     >
                         <div className={COL}>{bookAction}</div>
                     </div>

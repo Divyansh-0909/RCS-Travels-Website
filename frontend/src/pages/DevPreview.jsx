@@ -58,6 +58,7 @@ import AdminDashboard from "./AdminDashboard";
 import SettingsPage from "./SettingsPage";
 import SafetyPage from "./SafetyPage";
 import HelpPage from "./HelpPage";
+import Services from "./Services";
 import RideDetails from "../components/RideDetails";
 import BackgroundPanel from "../components/ui/BackgroundPanel";
 import GoogleMap, { MAP_LAND_COLOR } from "../components/ui/GoogleMap";
@@ -137,6 +138,7 @@ const PREVIEWS = [
     ["/dev/settings", "SettingsPage: language, notifications, saved places"],
     ["/dev/safety", "SafetyPage: emergency contact, live location, helpline"],
     ["/dev/help", "HelpPage: FAQ, contact, cancellation (also public at /help)"],
+    ["/dev/services", "Landing page: Services scroll scene"],
     ["/dev/admin", "AdminDashboard: bookings, drivers, users (empty / failure via API)"],
     ["/dev/crash", "ErrorBoundary: deliberate render throw"],
 ];
@@ -339,6 +341,13 @@ const DevPreview = () => {
     if (view === "settings") return <SettingsPage />;
     if (view === "safety") return <SafetyPage />;
     if (view === "help") return <HelpPage />;
+    if (view === "services") {
+        return (
+            <div id="services" data-bar-tone="light" className="pt-[136px] sm:pt-[150px]">
+                <Services />
+            </div>
+        );
+    }
     if (view === "admin") return <AdminDashboard key={search} />;
     if (view === "cancellation") {
         const charge = Number(new URLSearchParams(search).get("charge")) || 0;

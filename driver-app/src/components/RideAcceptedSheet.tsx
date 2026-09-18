@@ -135,7 +135,7 @@ const RideAcceptedSheet = () => {
                         className="w-full h-12 rounded-xl flex flex-row gap-2 items-center justify-center bg-primary"
                     >
                         <Phone size={22} weight="fill" className="text-on-strong" />
-                        <AppText className='font-semibold text-lg'>{dc("Call Rider")}</AppText>
+                        <AppText className='font-semibold text-lg text-on-strong'>{dc("Call Rider")}</AppText>
                     </Pressable>
                 </View>
                 

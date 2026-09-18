@@ -27,6 +27,10 @@ export const walletEvent = {
   fine: (driverId, threshold) => `fine:driver:${driverId}:threshold:${threshold}`,
   /** Money actually paid out, keyed by the payout batch that carried it. */
   payout: (payoutId) => `payout:${payoutId}`,
+  /** A Razorpay capture used only to clear an existing negative balance. */
+  debtPayment: (paymentId) => `debt_payment:${paymentId}`,
+  /** Put back a payout debit exactly once when the provider reverses it. */
+  payoutReversal: (payoutId) => `payout_reversal:${payoutId}`,
   /** Manual admin correction. The caller supplies the reference. */
   adjustment: (reference) => `adjustment:${reference}`,
   scheduledCancellationCompensation: (bookingId) => `scheduled_cancellation_compensation:booking:${bookingId}`,

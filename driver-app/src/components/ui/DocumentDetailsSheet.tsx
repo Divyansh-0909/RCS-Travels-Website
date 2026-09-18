@@ -9,6 +9,7 @@ import Input from './Input';
 import { numberFieldFor, type DriverDocumentType } from '../../constants/documents';
 import { useBottomSheetMotion } from '../../hooks/useBottomSheetMotion';
 import { useTheme } from '../../theme/ThemeContext';
+import { sheetSurfaceStyle } from './sheetSurfaceStyle';
 
 // What has to be typed in before a document can be registered: the number
 // printed on it, and the date it runs out.
@@ -152,7 +153,7 @@ const DocumentDetailsSheet = ({ visible, type, label, needsNumber, needsExpiry, 
           style={[StyleSheet.absoluteFillObject, { backgroundColor: SCRIM }, scrimStyle]}
         />
         <Animated.View style={sheetStyle}>
-          <View className="bg-surface rounded-t-3xl px-5 pt-5 pb-8 gap-4">
+          <View className="bg-surface rounded-t-3xl px-5 pt-5 pb-8 gap-4" style={sheetSurfaceStyle}>
           {/* The way out, level with the title — same as the source sheet, which is
               the step immediately before this one. A full-width Cancel beside
               Upload gave equal weight to finishing and abandoning, on a sheet the

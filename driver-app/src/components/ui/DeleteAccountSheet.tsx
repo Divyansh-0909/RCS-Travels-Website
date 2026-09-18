@@ -8,6 +8,7 @@ import { driverCopy as dc } from '../../lib/copy';
 import { useTheme } from '../../theme/ThemeContext';
 import AppText from '../AppText';
 import Button from './Button';
+import { sheetSurfaceStyle } from './sheetSurfaceStyle';
 
 const SCRIM = 'rgba(18,18,32,0.45)';
 const DANGER_WELL = 'rgba(185,28,28,0.08)';
@@ -52,6 +53,7 @@ const DeleteAccountSheet = ({ visible, busy, error, onCancel, onConfirm }: Props
         <Animated.View style={sheetStyle}>
           <Pressable
           className="rounded-t-3xl bg-surface px-5 pt-5 pb-8 gap-5"
+          style={sheetSurfaceStyle}
           onPress={() => {}}
           >
           <View className="flex-row items-start gap-3">

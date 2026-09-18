@@ -1,6 +1,7 @@
 import { useLanguage as useCopyLanguage } from "../../i18n";
 import { driverCopy as dc } from "../../lib/copy";
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
+import { useNavigate } from 'react-router-native';
 import { cssInterop } from 'nativewind';
 import { WalletIcon } from 'phosphor-react-native';
 import AppText from '../AppText';
@@ -36,10 +37,17 @@ type Props = {
  */
 const WalletCard = ({ balance }: Props) => {
     useCopyLanguage();
+  const navigate = useNavigate();
   const owing = balance < 0;
 
   return (
-    <View className={`${TILE} border border-[rgba(255,255,255,0.12)] bg-[var(--background-primary)]`}>
+    <Pressable
+      role="button"
+      aria-label={dc("Open wallet")}
+      onPress={() => navigate('/account/wallet')}
+      className={`${TILE} border border-[rgba(255,255,255,0.12)] bg-[var(--background-primary)]`}
+      style={({ pressed }) => ({ opacity: pressed ? 0.82 : 1 })}
+    >
       <View className="flex-row items-center gap-1.5">
         <Wallet size={13} weight="fill" className={LABEL} />
         <AppText className={`${TILE_LABEL} ${LABEL}`}>{dc("Wallet")}</AppText>
@@ -53,16 +61,14 @@ const WalletCard = ({ balance }: Props) => {
         {rupees(balance)}
       </AppText>
 
-      {/* Holds and releases are not exposed by the captain API yet, so this remains
-          a factual balance label rather than a dead route to a nonexistent ledger. */}
       {owing ? (
         <AppText numberOfLines={2} className={`text-xs ${OWED}`}>{dc("Negative balance blocks going online")}</AppText>
       ) : (
         <AppText numberOfLines={2} className="text-xs text-[rgba(255,255,255,0.7)]">
-          {dc("Available wallet balance")}
+          {dc("Available · tap for history")}
         </AppText>
       )}
-    </View>
+    </Pressable>
   );
 };
 

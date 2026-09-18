@@ -1,97 +1,128 @@
-import { useTranslation as useCopyLanguage } from "react-i18next";
-import { websiteCopy as dc } from "../i18nCopy";
-import { useRef, useState } from "react";
-import campus from "../assets/services/campus.webp";
-import airport from "../assets/services/airport.webp";
-import exams from "../assets/services/exams.webp";
-import night from "../assets/services/night.webp";
-import shared from "../assets/services/shared.webp";
-import "./Services.css";
+import { useLayoutEffect, useRef } from "react";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useWebsiteCopy } from "../hooks/useWebsiteCopy";
+import {
+    CabExitIllustration,
+    CampusCutout,
+    SunCutout,
+} from "../components/services/ServicesSceneIllustrations";
+import "./Services.css";
 
-const services = [
-    { id: "campus", get "title"() { return dc("Campus runs"); }, context: "Your everyday, sorted.", image: campus, get "description"() { return dc("Plan your college commute ahead, from the first lecture to the ride home."); } },
-    { id: "airport", get "title"() { return dc("Airport days"); }, context: "Doorstep to departures.", image: airport, get "description"() { return dc("Schedule your pickup or drop, with the fare shown before booking."); } },
-    { id: "exams", get "title"() { return dc("Big days"); }, context: "Exams. Interviews. New beginnings.", image: exams, get "description"() { return dc("Book ahead for the mornings that matter, from exams to interviews."); } },
-    { id: "night", get "title"() { return dc("After hours"); }, context: "One more stop. Then home.", image: night, get "description"() { return dc("Share your live trip link and choose a safer route when one is available."); } },
-    { id: "shared", get "title"() { return dc("Better together"); }, context: "Same direction? Share the journey.", image: shared, get "description"() { return dc("Choose a shared ride and pay the lower fare when a matching co-rider joins."); } },
+gsap.registerPlugin(ScrollTrigger);
+
+const rideCases = [
+    { id: "campus", title: "Campus runs", context: "Your everyday, sorted." },
+    { id: "airport", title: "Airport days", context: "Doorstep to departures." },
+    { id: "exams", title: "Big days", context: "Exams. Interviews. New beginnings." },
+    { id: "night", title: "After hours", context: "One more stop. Then home." },
+    { id: "shared", title: "Better together", context: "Same direction? Share the journey." },
 ];
 
 export default function Services() {
-    useCopyLanguage();
     const tr = useWebsiteCopy();
-    const [activeIndex, setActiveIndex] = useState(0);
-    const touchStart = useRef(null);
-    const service = services[activeIndex];
-    const move = (step) => setActiveIndex(index => (index + step + services.length) % services.length);
+    const storyRef = useRef(null);
+
+    useLayoutEffect(() => {
+        const story = storyRef.current;
+        if (!story) return undefined;
+
+        const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        const ctx = gsap.context(() => {
+            const rider = story.querySelector(".services-rider-figure");
+            const useCases = story.querySelector(".services-use-cases");
+            const useCaseRows = story.querySelectorAll(".services-use-case");
+            const headline = story.querySelector(".services-scene__headline");
+            const campus = story.querySelector(".services-campus");
+            const sun = story.querySelector(".services-sun");
+
+            if (reducedMotion) {
+                gsap.set([useCases, useCaseRows], { autoAlpha: 1, y: 0 });
+                gsap.set(rider, { x: 0, y: 0, scale: 0.92, rotation: 0 });
+                return;
+            }
+
+            const timeline = gsap.timeline({
+                defaults: { ease: "none" },
+                scrollTrigger: {
+                    trigger: story,
+                    start: "top top",
+                    end: "bottom bottom",
+                    scrub: 1.05,
+                    invalidateOnRefresh: true,
+                },
+            });
+
+            timeline
+                .fromTo(
+                    rider,
+                    { x: 0, y: 0, scale: 1, rotation: -1.5 },
+                    {
+                        x: () => window.innerWidth < 768 ? window.innerWidth * 0.88 : window.innerWidth * 0.54,
+                        y: () => window.innerWidth < 768 ? window.innerHeight * -0.2 : window.innerHeight * -0.31,
+                        scale: () => window.innerWidth < 768 ? 0.62 : 0.84,
+                        rotation: 1,
+                        duration: 1,
+                    },
+                    0,
+                )
+                .to(headline, { y: -18, scale: 0.96, duration: 0.72 }, 0)
+                .to(campus, { x: 42, y: 12, rotation: 1.2, duration: 1 }, 0)
+                .to(sun, { x: 26, y: -16, rotation: 13, duration: 1 }, 0)
+                .fromTo(
+                    useCases,
+                    { autoAlpha: 0, y: 54 },
+                    { autoAlpha: 1, y: 0, duration: 0.2, ease: "power2.out" },
+                    0.47,
+                )
+                .fromTo(
+                    useCaseRows,
+                    { autoAlpha: 0, y: 24 },
+                    { autoAlpha: 1, y: 0, stagger: 0.045, duration: 0.18, ease: "power2.out" },
+                    0.5,
+                );
+        }, story);
+
+        return () => ctx.revert();
+    }, []);
 
     return (
         <section className="services-hero" aria-labelledby="services-heading">
-            <header className="services-intro">
-                <div className="services-intro-visuals" aria-hidden="true">
-                    <span className="services-intro-grid-orb" />
+            <div className="services-story" ref={storyRef}>
+                <div className="services-scene">
+                    <div className="services-scene__grid" aria-hidden="true" />
+
+                    <p className="services-scene__eyebrow">{tr("A ride for every kind of day")}</p>
+                    <p className="services-scene__counter" aria-hidden="true">RCS / 05</p>
+
+                    <h1 id="services-heading" className="services-scene__headline">
+                        <span className="services-title-line services-title-line--primary">{tr("A ride for wherever")}</span>
+                        <span className="services-title-line services-title-line--accent">{tr("you're headed")}</span>
+                    </h1>
+
+                    <SunCutout className="services-sun" />
+                    <CampusCutout className="services-campus" />
+
+                    <div className="services-rider-figure" aria-hidden="true">
+                        <CabExitIllustration />
+                    </div>
+
+                    <div className="services-use-cases" aria-labelledby="services-use-cases-title">
+                        <p className="services-use-cases__kicker">{tr("Wherever the day takes you")}</p>
+                        <h2 id="services-use-cases-title">{tr("One ride. Every kind of day.")}</h2>
+                        <ol>
+                            {rideCases.map((item, index) => (
+                                <li className="services-use-case" key={item.id}>
+                                    <span className="services-use-case__number" aria-hidden="true">0{index + 1}</span>
+                                    <span className="services-use-case__copy">
+                                        <strong>{tr(item.title)}</strong>
+                                        <span>{tr(item.context)}</span>
+                                    </span>
+                                </li>
+                            ))}
+                        </ol>
+                    </div>
                 </div>
-                <h1 id="services-heading">
-                    <span className="services-title-line services-title-line--primary">{tr("A ride for wherever")}</span>
-                    <span className="services-title-line services-title-line--accent">{tr("you're headed")}</span>
-                </h1>
-            </header>
-            <div className="services-carousel" role="region" aria-roledescription="carousel"
-                aria-label={tr("Explore our rides")} tabIndex={0}
-                onKeyDown={event => {
-                    if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
-                        event.preventDefault();
-                        move(event.key === "ArrowRight" ? 1 : -1);
-                    }
-                }}
-                onTouchStart={event => {
-                    const touch = event.touches[0];
-                    touchStart.current = { x: touch.clientX, y: touch.clientY };
-                }}
-                onTouchEnd={event => {
-                    if (!touchStart.current) return;
-                    const touch = event.changedTouches[0];
-                    const dx = touch.clientX - touchStart.current.x;
-                    const dy = touch.clientY - touchStart.current.y;
-                    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) move(dx < 0 ? 1 : -1);
-                    touchStart.current = null;
-                }}
-                onTouchCancel={() => { touchStart.current = null; }}>
-                <div className="services-carousel-topline">
-                    <p>{tr("A ride for every kind of day")}</p>
-                    <span aria-hidden="true">0{activeIndex + 1} / 0{services.length}</span>
-                </div>
-                <div className="services-slide-stage">
-                    <button className="services-arrow services-arrow--previous" type="button"
-                        aria-label={tr("Previous ride")} onClick={() => move(-1)}>
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="m15 5-7 7 7 7" /></svg>
-                    </button>
-                    <article key={service.id} className="services-slide" role="group"
-                        aria-roledescription="slide" aria-label={dc("{{value0}} of {{value1}}: {{value2}}", {value0: (activeIndex + 1), value1: (services.length), value2: (service.title)})}>
-                        <h2>{tr(service.title)}</h2>
-                        <div className="services-slide-art">
-                            <img src={service.image} alt="" width="800" height="800" decoding="async" />
-                        </div>
-                        <p className="services-slide-context">{tr(service.context)}</p>
-                        <p className="services-slide-description">{tr(service.description)}</p>
-                    </article>
-                    <button className="services-arrow services-arrow--next" type="button"
-                        aria-label={tr("Next ride")} onClick={() => move(1)}>
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="m9 5 7 7-7 7" /></svg>
-                    </button>
-                </div>
-                <div className="services-pagination" aria-label={tr("Choose a ride")}>
-                    {services.map((item, index) => (
-                        <button key={item.id} type="button" aria-label={dc("Show {{value0}}", {value0: (item.title)})}
-                            aria-current={activeIndex === index ? "true" : undefined}
-                            onClick={() => setActiveIndex(index)}>
-                            <span />
-                        </button>
-                    ))}
-                </div>
-                <p className="services-sr-only" role="status" aria-live="polite" aria-atomic="true">
-                            {tr(service.title)}. {tr("Slide")} {activeIndex + 1} {tr("of")} {services.length}.
-                </p>
             </div>
         </section>
     );

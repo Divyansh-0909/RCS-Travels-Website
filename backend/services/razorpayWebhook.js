@@ -60,6 +60,24 @@ async function handlePaymentEvent(tx, { event, eventId, payment, paymentEntity }
 
 async function handleRefundProcessed(tx, { eventId, payment, refundEntity }) {
   if (
+    payment.purpose === 'driver_debt_settlement'
+    && payment.driverDebtRefundAmount
+    && typeof refundEntity?.id === 'string'
+    && refundEntity.amount === payment.driverDebtRefundAmount
+    && refundEntity?.currency === payment.currency
+  ) {
+    await tx.payment.update({
+      where: { id: payment.id },
+      data: {
+        razorpayRefundId: refundEntity.id,
+        refundedAt: new Date(),
+        ...(refundEntity.amount === payment.amount ? { status: 'refunded' } : {}),
+      },
+    })
+    await finishEvent(tx, eventId, 'processed', 'driver_debt_excess_refund.processed', payment.id)
+    return { processed: true }
+  }
+  if (
     payment.status !== 'refund_pending'
     || typeof refundEntity?.id !== 'string'
     || refundEntity.amount !== payment.amount
@@ -144,6 +162,7 @@ export async function processRazorpayWebhookEvent({
   db = prisma,
   notifyPayment = null,
   refundPaymentFn,
+  refundDebtExcessFn,
 }) {
   if (!gateway.verifyWebhookSignature(rawBody, signature)) {
     throw new PaymentError('INVALID_WEBHOOK_SIGNATURE', 'Invalid webhook signature', 400)
@@ -162,7 +181,7 @@ export async function processRazorpayWebhookEvent({
   const stableEventId = eventId || createHash('sha256').update(rawBody).digest('hex')
   const outcome = await db.$transaction((tx) => processEventTransaction(tx, { event, eventId: stableEventId }))
 
-  await followCapturedPaymentEffect(outcome.effect, { db, refundPaymentFn })
+  await followCapturedPaymentEffect(outcome.effect, { db, refundPaymentFn, refundDebtExcessFn })
   const notify = notifyPayment ?? (db === prisma ? notifyWhatsAppScheduledPaymentConfirmed : null)
   if (outcome.notificationBookingId && notify) await notify(outcome.notificationBookingId).catch(() => {})
 

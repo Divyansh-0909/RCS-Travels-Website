@@ -1,8 +1,8 @@
 import { useLanguage as useCopyLanguage } from "../i18n";
-import { driverCopy as dc } from "../lib/copy";
 import { themeColors } from "../theme/colors";
-    import { View, Pressable, FlatList, type LayoutChangeEvent } from "react-native"
-    import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
+    import { useEffect } from "react";
+    import { View, Pressable, type LayoutChangeEvent } from "react-native"
+    import Animated, { Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from "react-native-reanimated";
     import { useLocation, useNavigate } from "react-router-native";
     import AppText from "./AppText"
     import { HIDE, useAppBarVisibility, useShellHidden } from "./AppBarVisibility"
@@ -17,49 +17,69 @@ import { themeColors } from "../theme/colors";
     // clear the gap as well as the pill, and a worklet cannot read a class.
     const BOTTOM_GAP = 24;
 
-    // A py-1 row around a 48px FAB with my-1.5 on it. Two jobs:
-    //
-    // It stands in for the pill's height until the first onLayout reports the real
-    // one, and it is the floor the pill is held to. The FAB is the tallest thing in
-    // the bar by a distance — every other tab is a 22px icon over a label — so with
-    // Post filtered out the pill would close up to about 50 and the bar would change
-    // shape, not just width, the moment a captain was approved. A floor rather than a
-    // fixed height, so the five-tab bar is still measured rather than asserted.
+    // Stands in for the pill's height until the first onLayout reports the real one,
+    // keeping the hide animation stable on the first frame. The measured height still
+    // wins after layout, so this remains a floor rather than a fixed height.
     const BAR_HEIGHT = 68;
+    const TAB_MOTION_DURATION = 180;
+    const TAB_EASE_IN_OUT = Easing.bezier(0.77, 0, 0.175, 1);
 
     const AppBar = () => {
     useCopyLanguage();
         const navigate = useNavigate();
-        const { pathname, search } = useLocation();
+        const { pathname } = useLocation();
         const { hidden } = useAppBarVisibility();
         const { hidden: shellHidden } = useShellHidden();
         const { profile } = useDriver();
+        const reducedMotion = useReducedMotion();
 
         const height = useSharedValue(BAR_HEIGHT);
+        const tabTrackWidth = useSharedValue(0);
 
         // Absent a profile the bar assumes not-approved. It is the safer of the two
-        // guesses: a captain who is approved sees three tabs appear a moment later,
-        // where the other way round he taps Post on the strength of a bar drawn
-        // before the answer arrived.
+        // guesses: an approved captain can gain the gated destinations after profile
+        // data arrives, without briefly exposing routes he may not be allowed to use.
         const canDrive = profile?.onboarding?.canDrive ?? false;
         // Same safer guess as canDrive: absent a profile, assume he owes nothing.
         const owesRides = (profile?.onboarding?.assignedRides ?? 0) > 0;
 
         const tabs = tabsFor(canDrive, owesRides);
+        const tabCount = tabs.length;
+        const selectedIndex = Math.max(tabs.findIndex((tab) => tab.path === pathname), 0);
+        const tabProgress = useSharedValue(selectedIndex);
 
-        // The pill shrinks to its contents; the tabs inside it do not grow to fill it.
-        // Two 14vw tabs and a gap come to 28vw, and 38% leaves them the same ~5vw of
-        // shoulder either side that the five-tab bar has — so the short bar reads as
-        // the same object with fewer things in it, rather than as a different one.
-        // The third tab is one more 14vw on the same ~10vw of shoulder, hence 52.
-        const barWidth = canDrive ? "96%" : owesRides ? "64%" : "46%";
+        // Each destination is 20vw wide. With Post removed, the approved bar has four
+        // destinations (80vw total), so 85% leaves compact side padding instead of the
+        // empty space that the old five-item width reserved.
+        const barWidth = canDrive ? "85%" : owesRides ? "64%" : "46%";
+
+        useEffect(() => {
+            if (reducedMotion) {
+                tabProgress.set(selectedIndex);
+                return;
+            }
+
+            tabProgress.set(withTiming(selectedIndex, {
+                duration: TAB_MOTION_DURATION,
+                easing: TAB_EASE_IN_OUT,
+            }));
+        }, [reducedMotion, selectedIndex, tabProgress]);
+
+        const tabIndicatorStyle = useAnimatedStyle(() => {
+            const tabWidth = tabCount > 0 ? tabTrackWidth.get() / tabCount : 0;
+            return {
+                width: tabWidth,
+                opacity: tabWidth > 0 ? 1 : 0,
+                transform: [{ translateX: tabProgress.get() * tabWidth }],
+            };
+        });
 
         // Off the bottom edge rather than under a fade alone: the bar is opaque
         // and sits over the list, so anything short of leaving the screen would
         // still be a hole in the content it is meant to hand back.
         const slide = useAnimatedStyle(() => ({
-            transform: [{ translateY: withTiming(hidden.value * (height.value + BOTTOM_GAP), HIDE) }],
-            opacity: withTiming(1 - hidden.value, HIDE),
+            transform: [{ translateY: withTiming(hidden.get() * (height.get() + BOTTOM_GAP), HIDE) }],
+            opacity: withTiming(1 - hidden.get(), HIDE),
         }));
 
         // Below every hook on purpose, the way OnlineToggle does it: the shared value
@@ -75,7 +95,7 @@ import { themeColors } from "../theme/colors";
             <Animated.View
                 pointerEvents="box-none"
                 onLayout={(event: LayoutChangeEvent) => {
-                    height.value = event.nativeEvent.layout.height;
+                    height.set(event.nativeEvent.layout.height);
                 }}
                 style={[
                     { position: "absolute", zIndex: 50, bottom: BOTTOM_GAP, width: barWidth },
@@ -83,61 +103,49 @@ import { themeColors } from "../theme/colors";
                 ]}
             >
                 <View
-                    className="flex w-full py-2 px-2 justify-center items-center h-fit rounded-full bg-strong"
+                    className="flex w-full py-1 px-1 justify-center items-center h-fit rounded-full bg-strong"
                     style={{
                         minHeight: BAR_HEIGHT,
                         borderWidth: 1,
                         borderColor: themeColors.dark.surfaceMuted,
                     }}
                 >
-                    <FlatList
-                        horizontal
-                        scrollEnabled={false}
-                        showsHorizontalScrollIndicator={false}
-                        style={{ width: "100%" }}
-                        data={tabs}
-                        keyExtractor={(item) => item.name}
-                        extraData={`${pathname}:${canDrive}:${owesRides}`}
-                        contentContainerStyle={{
-                            alignItems: "center",
-                            justifyContent: "center",
-                            gap: 0,
-                            flexGrow: 1,
-                        }}
-                        renderItem={({ item }) => {
-                            const isPost = item.name === "Post";
-                            const isSelected = !isPost && pathname === item.path;
-                            const postPath = pathname === '/available' && new URLSearchParams(search).get('tab') === 'mine'
-                                ? '/available?tab=mine&post=new'
-                                : '/available?post=new';
+                    <View
+                        className="relative w-full flex-row items-center"
+                        onLayout={(event) => tabTrackWidth.set(event.nativeEvent.layout.width)}
+                    >
+                        <Animated.View
+                            pointerEvents="none"
+                            className="absolute left-0 top-0 bottom-0 rounded-full"
+                            style={[
+                                { backgroundColor: themeColors.dark.surface },
+                                tabIndicatorStyle,
+                            ]}
+                        />
+                        {tabs.map((item) => {
+                            const isSelected = pathname === item.path;
 
                             return (
                                 <Pressable
+                                    key={item.name}
                                     role="button"
-                                    aria-label={isPost ? dc("Post a marketplace booking") : item.name}
-                                    onPress={() => navigate(isPost ? postPath : item.path, { replace: true })}
-                                    className={`flex gap-1 items-center justify-center ${isPost ? "bg-surface w-12 h-12 my-1.5 rounded-full mx-1" : "w-[20vw] h-14 rounded-full"}`}
-                                    style={isSelected ? { backgroundColor: themeColors.dark.surface } : undefined}
+                                    aria-label={item.name}
+                                    onPress={() => navigate(item.path, { replace: true })}
+                                    className="relative z-10 flex-1 gap-0 items-center justify-center h-12 rounded-full"
                                 >
-                                    {isPost ? (
-                                        <item.Icon size={24} weight="bold" className="text-ink" />
-                                    ) : (
-                                        <View className="w-[22px] h-[22px] items-center justify-center">
-                                            <item.Icon size={20} weight="regular" className="text-ink-muted" />
-                                            <View className={`absolute transition-opacity duration-200 ${isSelected ? "opacity-100" : "opacity-0"}`}>
-                                                <item.Icon size={20} weight="fill" className="text-on-strong" />
-                                            </View>
+                                    <View className="w-[22px] h-[22px] items-center justify-center">
+                                        <item.Icon size={22} weight="regular" className="text-ink-muted" />
+                                        <View className={`absolute ${isSelected ? "opacity-100" : "opacity-0"}`}>
+                                            <item.Icon size={22} weight="fill" className="text-on-strong" />
                                         </View>
-                                    )}
-                                    {!isPost && (
-                                        <AppText className={`${isSelected ? "text-on-strong" : "text-ink-muted" } transition-colors duration-200 text-xs font-semibold`}>
-                                            {item.name}
-                                        </AppText>
-                                    )}
+                                    </View>
+                                    <AppText className={`${isSelected ? "text-on-strong" : "text-ink-muted" } text-xs font-semibold`}>
+                                        {item.name}
+                                    </AppText>
                                 </Pressable>
                             );
-                        }}
-                    />
+                        })}
+                    </View>
                 </View>
             </Animated.View>
         )

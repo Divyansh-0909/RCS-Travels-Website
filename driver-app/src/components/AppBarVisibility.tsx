@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, type ReactNode } from "react";
-import { Easing, useAnimatedScrollHandler, useSharedValue, type SharedValue } from "react-native-reanimated";
+import { Easing, ReduceMotion, useAnimatedScrollHandler, useSharedValue, type SharedValue } from "react-native-reanimated";
 import { useLocation } from "react-router-native";
 import { useDriver } from "../hooks/useDriver";
 
@@ -25,7 +25,11 @@ const TOP_ZONE = 24;
 // written out twice because the bar and the scrim behind it have to leave together:
 // two curves that differ by 40ms read as the fade lagging the bar it belongs to,
 // which is the kind of thing you see without being able to name.
-export const HIDE = { duration: 220, easing: Easing.out(Easing.cubic) } as const;
+export const HIDE = {
+    duration: 220,
+    easing: Easing.bezier(0.23, 1, 0.32, 1),
+    reduceMotion: ReduceMotion.System,
+} as const;
 
 // "/rides" is a board and keeps the bar. "/rides/<id>" is a drill-down: it has a back
 // arrow, it owns the whole screen, and a tab bar under it would offer to leave the

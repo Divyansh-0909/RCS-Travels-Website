@@ -9,6 +9,7 @@ import { useApi } from "../hooks/useApi";
 import { useExitAnim } from "../hooks/useExitAnim";
 import AdminDashboardSkeleton from "../components/AdminDashboardSkeleton";
 import DriverReview from "../components/DriverReview";
+import DriverFinancePanel from "../components/DriverFinancePanel";
 import { vehicleLabel, statusChip, splitAddress, displayPhone, formatDateTime, CopyBtn } from "../components/ui/bookingDisplay";
 import Button from "../components/ui/Button";
 import EmptyState from "../components/ui/EmptyState";
@@ -645,6 +646,13 @@ const AdminDashboard = () => {
                                 <p className="mt-4 rounded-xl bg-red-500/5 px-3 py-2 text-sm text-red-700">{activeDriver.suspensionReason}</p>
                             )}
                         </div>
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                        <DetailLabel>{dc("Wallet, payouts and reconciliation")}</DetailLabel>
+                        <DetailCard>
+                            <DriverFinancePanel driverId={activeDriver.id} />
+                        </DetailCard>
                     </div>
 
                     <div className="flex flex-col gap-2">
