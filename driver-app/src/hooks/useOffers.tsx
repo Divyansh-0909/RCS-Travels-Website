@@ -76,13 +76,15 @@ type OfferContextValue = {
 const OfferContext = createContext<OfferContextValue | null>(null);
 
 /**
- * The backstop, not the delivery mechanism. A push is what makes an offer
- * appear promptly; this is what makes it appear AT ALL when the push was never
- * delivered — a dead FCM token, a captain who declined notifications, a
- * Firebase outage. Thirty seconds is chosen against that job rather than
- * against how urgent an offer is.
+ * Push is still the fast path, but a ride-now offer only floats for 30 seconds.
+ * If FCM is delayed or missed, a 30-second fallback poll consumes essentially
+ * that whole decision window before the captain even sees the card. While he is
+ * online, keep the durable RideOffer list close enough to real time to leave the
+ * timer useful. Offline captains only need the slow backstop for scheduled
+ * offers that remain on their Notifications page.
  */
-const POLL_MS = 30_000;
+const ONLINE_POLL_MS = 2_000;
+const OFFLINE_POLL_MS = 30_000;
 
 /**
  * Which offers he has already waved off the panel.
@@ -120,6 +122,7 @@ export const OfferProvider = ({ children }: { children: ReactNode }) => {
     // GET /offers is behind requireApprovedDriver, so asking before he is cleared
     // is a guaranteed 403 on every poll of every unapproved captain's session.
     const canDrive = profile?.onboarding?.canDrive ?? false;
+    const isOnline = profile?.isOnline ?? false;
 
     // Read once, at startup. MERGED rather than assigned: a captain can swipe a
     // card away before a cold read comes back, and overwriting would resurrect
@@ -198,15 +201,16 @@ export const OfferProvider = ({ children }: { children: ReactNode }) => {
 
         let timer: ReturnType<typeof setTimeout>;
         let cancelled = false;
+        const pollMs = isOnline ? ONLINE_POLL_MS : OFFLINE_POLL_MS;
 
         const tick = async () => {
             await refresh();
-            if (!cancelled) timer = setTimeout(tick, POLL_MS);
+            if (!cancelled) timer = setTimeout(tick, pollMs);
         };
 
-        timer = setTimeout(tick, POLL_MS);
+        timer = setTimeout(tick, pollMs);
         return () => { cancelled = true; clearTimeout(timer); };
-    }, [canDrive, refresh]);
+    }, [canDrive, isOnline, refresh]);
 
     // The push is a NUDGE TO REFETCH, never the offer itself. Building a card
     // from the notification payload would put a second version of the ride on

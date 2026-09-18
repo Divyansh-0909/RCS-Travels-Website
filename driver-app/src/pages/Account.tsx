@@ -437,39 +437,6 @@ const Account = () => {
             it alone. */}
         {loading && !profile ? <AccountProfileSectionsSkeleton /> : null}
 
-        <>
-          <View
-            className="w-full rounded-2xl overflow-hidden"
-            style={{ backgroundColor: colors.canvas, gap: 3 }}
-          >
-            <AccountRow
-              label={t('driver.settings.notifications')}
-              detail={notificationDetail}
-              Icon={BellIcon}
-              onPress={permission === 'checking' || permission === 'unavailable' ? undefined : manageNotifications}
-              grouped
-            />
-            <AccountRow
-              label={t('driver.settings.language')}
-              value={languageName}
-              Icon={GlobeIcon}
-              onPress={() => toggleSettingMenu('language', languageTriggerRef)}
-              expanded={openSetting === 'language'}
-              grouped
-            />
-            <AccountRow
-              label={t('driver.settings.appearance')}
-              value={appearanceName}
-              Icon={AppearanceIcon}
-              onPress={() => toggleSettingMenu('appearance', appearanceTriggerRef)}
-              expanded={openSetting === 'appearance'}
-              grouped
-            />
-            <AccountRow label={dc("Help")} Icon={QuestionIcon} onPress={() => navigate('/account/help')} grouped />
-            <AccountRow label={dc("Legal")} Icon={InfoIcon} onPress={() => navigate('/account/legal')} grouped />
-          </View>
-        </>
-
         {profile ? (
           <Animated.View entering={ASYNC_CONTENT_ENTER} style={{ width: '100%', gap: PANEL_GAP }}>
             {/* A rejection is the one thing on this page he cannot act on from a
@@ -676,9 +643,6 @@ const Account = () => {
                   and the tab lead to the same subject, so a captain who tapped one
                   should recognise the other. */}
               <AccountRow label={dc("Manage account")} Icon={UserIcon} onPress={() => navigate('/account/manage')} grouped />
-
-              {/* One continuous menu. Carets distinguish the in-app Help and Legal
-                  pages from the system share sheet above them. */}
 
               {/* The system share sheet, NOT openSupportWhatsApp. This message is
                   addressed to a friend, and every other WhatsApp link in the app

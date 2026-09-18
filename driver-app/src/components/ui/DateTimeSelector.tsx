@@ -1,15 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { Pressable, View } from 'react-native';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, {
-  cancelAnimation,
-  ReduceMotion,
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-} from 'react-native-reanimated';
-import { scheduleOnRN } from 'react-native-worklets';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Pressable, ScrollView, View, type NativeSyntheticEvent, type NativeScrollEvent } from 'react-native';
 import { useLanguage } from '../../i18n';
 import { driverCopy as dc } from '../../lib/copy';
 import { useTheme } from '../../theme/ThemeContext';
@@ -21,28 +12,17 @@ export const MARKETPLACE_MAX_AHEAD_DAYS = 7;
 const WHEEL_ROW_HEIGHT = 44;
 const WHEEL_HEIGHT = WHEEL_ROW_HEIGHT * 4;
 const WHEEL_PADDING = (WHEEL_HEIGHT - WHEEL_ROW_HEIGHT) / 2;
-const FADE_HEIGHT = 52;
-const CYCLIC_COPY_COUNT = 5;
-const CYCLIC_MIDDLE_COPY = Math.floor(CYCLIC_COPY_COUNT / 2);
-const FLING_PROJECTION_MS = 100;
-const MAX_FLING_ROWS = 4;
+const FADE_HEIGHT = 60;
 
 const HOURS = Array.from({ length: 12 }, (_, index) => String(index + 1));
 const MINUTES = Array.from({ length: 60 }, (_, index) => String(index).padStart(2, '0'));
 const PERIODS = ['AM', 'PM'];
 
-const SNAP_SPRING = {
-  duration: 400,
-  dampingRatio: 1,
-  overshootClamping: true,
-  reduceMotion: ReduceMotion.System,
-} as const;
-
 const COLUMN_FLEX = {
   day: 1.7,
-  hour: 0.62,
-  minute: 0.72,
-  period: 0.86,
+  hour: 0.55,
+  minute: 0.7,
+  period: 0.8,
 } as const;
 
 export const getDefaultScheduledAt = (now = new Date()) => {
@@ -70,13 +50,13 @@ type WheelColumnProps = {
   onSelect: (index: number) => void;
   accessibilityLabel: string;
   flex: number;
-  cyclic?: boolean;
   align?: 'center' | 'flex-start';
 };
 
 type WheelItemProps = {
   item: string;
   selected: boolean;
+  opacity: number;
   align: 'center' | 'flex-start';
   onPress: () => void;
 };
@@ -84,6 +64,7 @@ type WheelItemProps = {
 const WheelItem = ({
   item,
   selected,
+  opacity,
   align,
   onPress,
 }: WheelItemProps) => {
@@ -94,6 +75,7 @@ const WheelItem = ({
         justifyContent: 'center',
         alignItems: align,
         paddingHorizontal: align === 'flex-start' ? 12 : 4,
+        opacity,
       }}
     >
       <Pressable
@@ -125,151 +107,157 @@ const WheelColumn = ({
   onSelect,
   accessibilityLabel,
   flex,
-  cyclic = false,
   align = 'center',
 }: WheelColumnProps) => {
-  const selectedIndexRef = useRef(selectedIndex);
-  const skipNextSelectedSync = useRef<number | null>(null);
-  const renderedItems = useMemo(
-    () => cyclic
-      ? Array.from({ length: items.length * CYCLIC_COPY_COUNT }, (_, index) => items[index % items.length])
-      : items,
-    [cyclic, items],
-  );
-  const middleCopyOffset = cyclic ? items.length * CYCLIC_MIDDLE_COPY : 0;
-  const selectedRenderedIndex = middleCopyOffset + selectedIndex;
-  const minTranslateY = WHEEL_PADDING - (renderedItems.length - 1) * WHEEL_ROW_HEIGHT;
-  const maxTranslateY = WHEEL_PADDING;
+  const scrollRef = useRef<ScrollView>(null);
+  const committedIndexRef = useRef(selectedIndex);
+  const displayedIndexRef = useRef(selectedIndex);
+  const latestOffsetRef = useRef(selectedIndex * WHEEL_ROW_HEIGHT);
+  const isInteractingRef = useRef(false);
+  const settleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hasPositionedRef = useRef(false);
+  const [displayedIndex, setDisplayedIndex] = useState(selectedIndex);
 
-  const translateY = useSharedValue(WHEEL_PADDING - selectedRenderedIndex * WHEEL_ROW_HEIGHT);
-  const dragStartY = useSharedValue(translateY.get());
-  selectedIndexRef.current = selectedIndex;
+  const scrollToIndex = useCallback((index: number, animated: boolean) => {
+    scrollRef.current?.scrollTo({
+      y: Math.max(0, Math.min(items.length - 1, index)) * WHEEL_ROW_HEIGHT,
+      animated,
+    });
+  }, [items.length]);
+
+  const clearSettleTimer = useCallback(() => {
+    if (settleTimerRef.current) {
+      clearTimeout(settleTimerRef.current);
+      settleTimerRef.current = null;
+    }
+  }, []);
 
   useEffect(() => {
-    if (skipNextSelectedSync.current === selectedIndex) {
-      skipNextSelectedSync.current = null;
-      return;
+    committedIndexRef.current = selectedIndex;
+    if (isInteractingRef.current || displayedIndexRef.current === selectedIndex) return;
+
+    displayedIndexRef.current = selectedIndex;
+    latestOffsetRef.current = selectedIndex * WHEEL_ROW_HEIGHT;
+    setDisplayedIndex(selectedIndex);
+    if (hasPositionedRef.current) scrollToIndex(selectedIndex, false);
+  }, [scrollToIndex, selectedIndex]);
+
+  useEffect(() => () => clearSettleTimer(), [clearSettleTimer]);
+
+  const indexFromOffset = useCallback((offsetY: number) => (
+    Math.max(
+      0,
+      Math.min(items.length - 1, Math.round(offsetY / WHEEL_ROW_HEIGHT)),
+    )
+  ), [items.length]);
+
+  const displayFromOffset = useCallback((offsetY: number) => {
+    latestOffsetRef.current = offsetY;
+    const nextIndex = indexFromOffset(offsetY);
+    if (nextIndex === displayedIndexRef.current) return;
+
+    displayedIndexRef.current = nextIndex;
+    setDisplayedIndex(nextIndex);
+  }, [indexFromOffset]);
+
+  const commitFromOffset = useCallback((offsetY: number) => {
+    const nextIndex = Math.max(
+      0,
+      Math.min(items.length - 1, Math.round(offsetY / WHEEL_ROW_HEIGHT)),
+    );
+    displayedIndexRef.current = nextIndex;
+    latestOffsetRef.current = nextIndex * WHEEL_ROW_HEIGHT;
+    setDisplayedIndex(nextIndex);
+
+    if (nextIndex !== committedIndexRef.current) {
+      committedIndexRef.current = nextIndex;
+      onSelect(nextIndex);
     }
+  }, [items.length, onSelect]);
 
-    cancelAnimation(translateY);
-    translateY.set(WHEEL_PADDING - selectedRenderedIndex * WHEEL_ROW_HEIGHT);
-  }, [selectedIndex, selectedRenderedIndex, translateY]);
+  const handleScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    displayFromOffset(event.nativeEvent.contentOffset.y);
+  }, [displayFromOffset]);
 
-  const commitRenderedIndex = useCallback((renderedIndex: number) => {
-    const nextIndex = cyclic ? renderedIndex % items.length : renderedIndex;
+  const scheduleDragSettle = useCallback(() => {
+    clearSettleTimer();
+    settleTimerRef.current = setTimeout(() => {
+      // Native snapToInterval already handles momentum settling. Only handle
+      // the case where the user releases without momentum. Triggering another
+      // animated scroll while native snapping is active makes the wheel fight
+      // itself and bounce between two rows.
+      if (isInteractingRef.current === false) return;
+      isInteractingRef.current = false;
+      const nextIndex = indexFromOffset(latestOffsetRef.current);
+      scrollToIndex(nextIndex, false);
+      commitFromOffset(nextIndex * WHEEL_ROW_HEIGHT);
+    }, 220);
+  }, [clearSettleTimer, commitFromOffset, indexFromOffset, scrollToIndex]);
 
-    if (nextIndex === selectedIndexRef.current) return;
-
-    selectedIndexRef.current = nextIndex;
-    skipNextSelectedSync.current = nextIndex;
-    onSelect(nextIndex);
-  }, [cyclic, items.length, onSelect]);
-
-  const animateToRenderedIndex = useCallback((renderedIndex: number) => {
-    const boundedRenderedIndex = Math.max(0, Math.min(renderedItems.length - 1, renderedIndex));
-    const logicalIndex = cyclic ? boundedRenderedIndex % items.length : boundedRenderedIndex;
-    const targetY = WHEEL_PADDING - boundedRenderedIndex * WHEEL_ROW_HEIGHT;
-    const recenteredY = WHEEL_PADDING - (middleCopyOffset + logicalIndex) * WHEEL_ROW_HEIGHT;
-
-    cancelAnimation(translateY);
-    commitRenderedIndex(boundedRenderedIndex);
-    translateY.set(withSpring(targetY, SNAP_SPRING, (finished) => {
-      if (finished && cyclic) {
-        translateY.set(recenteredY);
-      }
-    }));
-  }, [commitRenderedIndex, cyclic, items.length, middleCopyOffset, renderedItems.length, translateY]);
-
-  const panGesture = useMemo(() => Gesture.Pan()
-    .activeOffsetY([-4, 4])
-    .failOffsetX([-20, 20])
-    .onBegin(() => {
-      cancelAnimation(translateY);
-      dragStartY.set(translateY.get());
-    })
-    .onUpdate((event) => {
-      let nextY = dragStartY.get() + event.translationY;
-
-      if (nextY > maxTranslateY) {
-        nextY = maxTranslateY + Math.min((nextY - maxTranslateY) * 0.35, 24);
-      } else if (nextY < minTranslateY) {
-        nextY = minTranslateY - Math.min((minTranslateY - nextY) * 0.35, 24);
-      }
-
-      translateY.set(nextY);
-    })
-    .onEnd((event) => {
-      const currentIndex = (WHEEL_PADDING - translateY.get()) / WHEEL_ROW_HEIGHT;
-      const projectedRows = -(event.velocityY * (FLING_PROJECTION_MS / 1000)) / WHEEL_ROW_HEIGHT;
-      const limitedRows = Math.max(-MAX_FLING_ROWS, Math.min(MAX_FLING_ROWS, projectedRows));
-      const targetRenderedIndex = Math.max(
-        0,
-        Math.min(renderedItems.length - 1, Math.round(currentIndex + limitedRows)),
-      );
-      const logicalIndex = cyclic ? targetRenderedIndex % items.length : targetRenderedIndex;
-      const targetY = WHEEL_PADDING - targetRenderedIndex * WHEEL_ROW_HEIGHT;
-      const recenteredY = WHEEL_PADDING - (middleCopyOffset + logicalIndex) * WHEEL_ROW_HEIGHT;
-
-      scheduleOnRN(commitRenderedIndex, targetRenderedIndex);
-      translateY.set(withSpring(targetY, {
-        ...SNAP_SPRING,
-        velocity: event.velocityY,
-      }, (finished) => {
-        if (finished && cyclic) {
-          translateY.set(recenteredY);
-        }
-      }));
-    }), [
-    commitRenderedIndex,
-    cyclic,
-    dragStartY,
-    items.length,
-    maxTranslateY,
-    middleCopyOffset,
-    minTranslateY,
-    renderedItems.length,
-    translateY,
-  ]);
-
-  const trackStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: translateY.get() }],
-  }));
+  const handlePress = useCallback((index: number) => {
+    clearSettleTimer();
+    isInteractingRef.current = false;
+    displayedIndexRef.current = index;
+    latestOffsetRef.current = index * WHEEL_ROW_HEIGHT;
+    setDisplayedIndex(index);
+    if (index !== committedIndexRef.current) {
+      committedIndexRef.current = index;
+      onSelect(index);
+    }
+    scrollToIndex(index, true);
+  }, [clearSettleTimer, onSelect, scrollToIndex]);
 
   return (
     <View
       accessibilityLabel={accessibilityLabel}
       style={{ flex, height: WHEEL_HEIGHT, overflow: 'hidden' }}
     >
-      <GestureDetector gesture={panGesture}>
-        <Animated.View style={trackStyle}>
-          {renderedItems.map((item, renderedIndex) => {
-            const itemIndex = cyclic ? renderedIndex % items.length : renderedIndex;
-
-            return (
-              <WheelItem
-                key={`${item}-${renderedIndex}`}
-                item={item}
-                selected={itemIndex === selectedIndex}
-                align={align}
-                onPress={() => animateToRenderedIndex(renderedIndex)}
-              />
-            );
-          })}
-        </Animated.View>
-      </GestureDetector>
-    </View>
-  );
-};
-
-const PickerTag = ({ label, flex }: { label: string; flex: number }) => {
-  const { colors } = useTheme();
-  return (
-    <View style={{ flex, alignItems: 'center' }}>
-      <View className="rounded-full px-2 py-1" style={{ backgroundColor: colors.surfaceMuted }}>
-        <AppText className="text-[10px] font-semibold uppercase tracking-wide text-ink-muted">
-          {label}
-        </AppText>
-      </View>
+      <ScrollView
+        ref={scrollRef}
+        nestedScrollEnabled
+        directionalLockEnabled
+        bounces={false}
+        decelerationRate="fast"
+        snapToInterval={WHEEL_ROW_HEIGHT}
+        snapToAlignment="start"
+        showsVerticalScrollIndicator={false}
+        scrollEventThrottle={16}
+        onScrollBeginDrag={() => {
+          clearSettleTimer();
+          isInteractingRef.current = true;
+        }}
+        onScroll={handleScroll}
+        onScrollEndDrag={scheduleDragSettle}
+        onMomentumScrollBegin={() => {
+          clearSettleTimer();
+          isInteractingRef.current = true;
+        }}
+        onMomentumScrollEnd={(event) => {
+          clearSettleTimer();
+          isInteractingRef.current = false;
+          commitFromOffset(event.nativeEvent.contentOffset.y);
+        }}
+        onContentSizeChange={() => {
+          if (hasPositionedRef.current) return;
+          hasPositionedRef.current = true;
+          scrollToIndex(committedIndexRef.current, false);
+        }}
+        contentContainerStyle={{ paddingVertical: WHEEL_PADDING }}
+      >
+        {items.map((item, index) => {
+          const distance = Math.abs(index - displayedIndex);
+          return (
+            <WheelItem
+              key={`${item}-${index}`}
+              item={item}
+              selected={index === displayedIndex}
+              opacity={distance === 0 ? 1 : distance === 1 ? 0.42 : 0.16}
+              align={align}
+              onPress={() => handlePress(index)}
+            />
+          );
+        })}
+      </ScrollView>
     </View>
   );
 };
@@ -307,7 +295,7 @@ const DateTimeSelector = ({ value, onChange }: { value: Date; onChange: (value: 
 
   return (
     <View className="gap-3">
-      <View className="overflow-hidden rounded-2xl" style={{ backgroundColor: colors.surface }}>
+      <View className="overflow-hidden" style={{ backgroundColor: colors.surface }}>
         <View style={{ height: WHEEL_HEIGHT, position: 'relative', overflow: 'hidden' }}>
           <View
             pointerEvents="none"
@@ -338,7 +326,6 @@ const DateTimeSelector = ({ value, onChange }: { value: Date; onChange: (value: 
               onSelect={(index) => update(value, ((index + 1) % 12) + (period === 'PM' ? 12 : 0), minute)}
               accessibilityLabel={dc('Hour')}
               flex={COLUMN_FLEX.hour}
-              cyclic
             />
             <WheelColumn
               items={MINUTES}
@@ -346,7 +333,6 @@ const DateTimeSelector = ({ value, onChange }: { value: Date; onChange: (value: 
               onSelect={(index) => update(value, hour24, index)}
               accessibilityLabel={dc('Min')}
               flex={COLUMN_FLEX.minute}
-              cyclic
             />
             <WheelColumn
               items={PERIODS}
@@ -383,27 +369,15 @@ const DateTimeSelector = ({ value, onChange }: { value: Date; onChange: (value: 
           />
         </View>
 
-        <View className="relative z-30 flex-row gap-0.5 pt-2 pb-1.5">
-          <PickerTag label={dc('Day')} flex={COLUMN_FLEX.day} />
-          <PickerTag label={dc('Hour')} flex={COLUMN_FLEX.hour} />
-          <PickerTag label={dc('Min')} flex={COLUMN_FLEX.minute} />
-          <PickerTag label="AM/PM" flex={COLUMN_FLEX.period} />
-        </View>
       </View>
 
       <AppText
-        className="text-center text-xs tabular-nums text-ink-muted"
+        className="text-center text-sm tabular-nums text-ink-muted"
         style={tooSoon ? { color: '#B91C1C' } : undefined}
       >
         {tooSoon
           ? dc('Choose a pickup time at least 30 minutes from now.')
-          : new Intl.DateTimeFormat(locale, {
-            weekday: 'short',
-            day: 'numeric',
-            month: 'short',
-            hour: 'numeric',
-            minute: '2-digit',
-          }).format(value)}
+          : `${new Intl.DateTimeFormat(locale, { year: 'numeric', month: 'short', day: 'numeric' }).format(value)} · ${new Intl.DateTimeFormat(locale, { hour: 'numeric', minute: '2-digit', hour12: true }).format(value)}`}
       </AppText>
     </View>
   );

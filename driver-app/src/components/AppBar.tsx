@@ -20,7 +20,7 @@ import { themeColors } from "../theme/colors";
     // Stands in for the pill's height until the first onLayout reports the real one,
     // keeping the hide animation stable on the first frame. The measured height still
     // wins after layout, so this remains a floor rather than a fixed height.
-    const BAR_HEIGHT = 68;
+    const BAR_HEIGHT = 60;
     const TAB_MOTION_DURATION = 180;
     const TAB_EASE_IN_OUT = Easing.bezier(0.77, 0, 0.175, 1);
 
@@ -103,7 +103,7 @@ import { themeColors } from "../theme/colors";
                 ]}
             >
                 <View
-                    className="flex w-full py-1 px-1 justify-center items-center h-fit rounded-full bg-strong"
+                    className="flex w-full py-1.5 px-1.5 justify-center items-center h-fit rounded-full bg-strong"
                     style={{
                         minHeight: BAR_HEIGHT,
                         borderWidth: 1,
@@ -131,9 +131,9 @@ import { themeColors } from "../theme/colors";
                                     role="button"
                                     aria-label={item.name}
                                     onPress={() => navigate(item.path, { replace: true })}
-                                    className="relative z-10 flex-1 gap-0 items-center justify-center h-12 rounded-full"
+                                    className="relative z-10 flex-1 gap-0 items-center justify-center h-13 rounded-full"
                                 >
-                                    <View className="w-[22px] h-[22px] items-center justify-center">
+                                    <View className="w-[20px] h-[22px] items-center justify-center">
                                         <item.Icon size={22} weight="regular" className="text-ink-muted" />
                                         <View className={`absolute ${isSelected ? "opacity-100" : "opacity-0"}`}>
                                             <item.Icon size={22} weight="fill" className="text-on-strong" />
