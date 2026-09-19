@@ -17,7 +17,7 @@ const ErrorPanel = ({ prop }) => {
 
     return (
         <>
-            <BackgroundPanel show={!!prop.error} className={` z-4 sm:z-3 gap-2 sm:gap-3 py-6 text-center flex flex-col justify-center items-center`}>
+            <BackgroundPanel show={!!prop.error || prop.loading} className={` z-4 sm:z-3 gap-2 sm:gap-3 py-6 text-center flex flex-col justify-center items-center`}>
                 <ErrorMark className="-my-8" size={140} />
                 <div className="flex w-[min(86vw,100%)] min-w-0 flex-col items-center gap-1 sm:w-[377px]">
                     <h2 className="w-full min-w-0 [overflow-wrap:anywhere]"> {lastError} </h2>
@@ -25,6 +25,7 @@ const ErrorPanel = ({ prop }) => {
                 </div>
                 <Button
                     onClick={() => {
+                        if (prop.loading) return
                         if (prop.onOkay) {
                             prop.setError(null)
                             prop.onOkay()
@@ -34,13 +35,14 @@ const ErrorPanel = ({ prop }) => {
                     }}
                     prop={{
                         type: "submit",
+                        disabled: prop.loading,
                     }}
                     className="mt-4 scale-[1] sm:scale-[1.1] "
                 >
-                    {tr("Okay")}
+                    {prop.loading ? tr("Trying again...") : tr(prop.actionLabel || "Okay")}
                 </Button>
             </BackgroundPanel>
-            <div className={`${prop.error ? "block" : "hidden"} absolute z-2 sm:z-1 bottom-0 bg-black/40 w-[100vw] h-[100dvh]`} />
+            <div className={`${prop.error || prop.loading ? "block" : "hidden"} absolute z-2 sm:z-1 bottom-0 bg-black/40 w-[100vw] h-[100dvh]`} />
         </>
 
     )

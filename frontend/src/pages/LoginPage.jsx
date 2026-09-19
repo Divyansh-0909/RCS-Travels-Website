@@ -6,6 +6,7 @@ import { useViewNavigate } from "../hooks/useViewNavigate";
 import Input from "../components/ui/Input";
 import Button from "../components/ui/Button";
 import InlineError from "../components/ui/InlineError";
+import ErrorPanel from "../components/ui/ErrorPanel";
 import { useApi } from "../hooks/useApi";
 import Icon from '@mdi/react';
 import { mdiKeyboardBackspace } from '@mdi/js';
@@ -39,7 +40,9 @@ const LoginPage = () => {
   const [resending, setResending] = useState(false);
   const [resendIn, setResendIn] = useState(0);
   const [continueTo, setContinueTo] = useState(null);
+  const [profileRetry, setProfileRetry] = useState(false);
   const pickupLocation = useData(state => state.pickupLocation);
+  const isOtpCooldown = (data) => data.status === 429 && data.code !== "RATE_LIMITED";
 
   const api = useApi();
 
@@ -131,10 +134,10 @@ const LoginPage = () => {
 
   const sendOtp = async () => {
     const data = await api.sendOtp(phone, "login");
-    // 429 means an OTP went out less than 45s ago and is still valid (the backend
-    // rejects before generating a new one) — e.g. after a page refresh. Advance to
-    // the OTP step so that code can be used, instead of stranding the user here.
-    if (data.status === 429) {
+    // An unclassified 429 means an OTP went out less than 45s ago and is still
+    // valid (the backend rejects before generating a new one) — e.g. after a page
+    // refresh. A limiter 429 has code RATE_LIMITED and must remain an error.
+    if (isOtpCooldown(data)) {
       setVerdict(null);
       setContinueTo(null);
       setStep("otp");
@@ -173,7 +176,7 @@ const LoginPage = () => {
         // The client timer normally prevents a 429, but clocks can disagree
         // (rejoining a session from another tab) — restart it so the user isn't
         // shown a Resend button that keeps bouncing.
-        if (data.status === 429) setResendIn(RESEND_COOLDOWN);
+        if (isOtpCooldown(data)) setResendIn(RESEND_COOLDOWN);
         return;
       }
       setOtp("");
@@ -205,9 +208,38 @@ const LoginPage = () => {
       await setActive({ session: result.createdSessionId });
     }
 
-    const user = await api.getMe();
-    setContinueTo(user.error ? "/signup" : (pickupLocation ? "/book" : "/"));
+    await finishSignIn();
+  };
+
+  const finishSignIn = async () => {
+    let user;
+    try {
+      user = await api.getMe();
+    } catch {
+      setError(tr("We couldn't refresh your account right now. Please try again shortly."));
+      setProfileRetry(true);
+      return;
+    }
+    if (user?.status === 404) {
+      setContinueTo("/signup");
+    } else if (user?.error) {
+      setError(user.status === 429
+        ? tr("We couldn't refresh your account right now. Please try again shortly.")
+        : user.error);
+      setProfileRetry(true);
+      return;
+    } else {
+      setContinueTo(pickupLocation ? "/book" : "/");
+    }
+    setProfileRetry(false);
     setVerdict("pass");
+  };
+
+  const retryProfile = async () => {
+    setError(null);
+    setLoading(true);
+    await finishSignIn();
+    setLoading(false);
   };
 
   const isPhone = step === "phone";
@@ -268,6 +300,16 @@ const LoginPage = () => {
     if (verdict) setVerdict(null);
     if (continueTo) setContinueTo(null);
   };
+
+  if (profileRetry) {
+    return <ErrorPanel prop={{
+      error,
+      setError,
+      onOkay: retryProfile,
+      actionLabel: "Retry",
+      loading,
+    }} />;
+  }
 
   const focusBox = (i) => {
     otpRefs.current[i]?.focus();
@@ -354,7 +396,7 @@ const LoginPage = () => {
           <span className="font-semibold">RCS</span> travels
         </p>
       </div>
-      {isSignedIn && !loading && verdict !== "pass"
+      {isSignedIn && !loading && verdict === null
         ? <div className="flex flex-col justify-center items-center">
           <h2 className="font-bold text-[var(--text)]">
             {tr("You are already logged in.")}

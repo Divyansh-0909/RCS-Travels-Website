@@ -48,6 +48,7 @@ const SignUpPage = () => {
   const [otpIntent, setOtpIntent] = useState("signup");
   const [continueTo, setContinueTo] = useState(null);
   const pickupLocation = useData(state => state.pickupLocation);
+  const isOtpCooldown = (data) => data.status === 429 && data.code !== "RATE_LIMITED";
 
   const api = useApi();
 
@@ -186,10 +187,10 @@ const SignUpPage = () => {
   const sendOtp = async () => {
     setOtpIntent("signup");
     const data = await api.sendOtp(phone, "signup");
-    // 429 means an OTP went out less than 45s ago and is still valid (the backend
-    // rejects before generating a new one) — e.g. after a page refresh. Advance to
-    // the OTP step so that code can be used, instead of stranding the user here.
-    if (data.status === 429) {
+    // An unclassified 429 means an OTP went out less than 45s ago and is still
+    // valid (the backend rejects before generating a new one) — e.g. after a page
+    // refresh. A limiter 429 has code RATE_LIMITED and must remain an error.
+    if (isOtpCooldown(data)) {
       setVerdict(null);
       setContinueTo(null);
       setStep("otp");
@@ -219,7 +220,7 @@ const SignUpPage = () => {
       setLoading(true);
       setOtpIntent("login");
       const data = await api.sendOtp(phone, "login");
-      if (data.status === 429) {
+      if (isOtpCooldown(data)) {
         setOtp("");
         setVerdict(null);
         setContinueTo(null);
@@ -260,7 +261,7 @@ const SignUpPage = () => {
         // The client timer normally prevents a 429, but clocks can disagree
         // (rejoining a session from another tab) — restart it so the user isn't
         // shown a Resend button that keeps bouncing.
-        if (data.status === 429) setResendIn(RESEND_COOLDOWN);
+        if (isOtpCooldown(data)) setResendIn(RESEND_COOLDOWN);
         return;
       }
       setOtp("");
