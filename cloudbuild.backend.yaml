@@ -1,0 +1,43 @@
+# Build and deploy the backend with Google Cloud Buildpacks. The repository's
+# Dockerfile remains a fallback for local or source deployments, but this
+# pipeline does not invoke Dockerfile builds.
+steps:
+  - name: gcr.io/k8s-skaffold/pack
+    dir: backend
+    entrypoint: pack
+    args:
+      - build
+      - asia-south1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/rcs-api:$COMMIT_SHA
+      - --builder
+      - gcr.io/buildpacks/builder:google-24
+      - --network
+      - cloudbuild
+      - --publish
+      - --env
+      - GOOGLE_NODEJS_VERSION=24.x.x
+      - --env
+      - GOOGLE_NODE_RUN_SCRIPTS=db:generate
+      - --env
+      - DATABASE_URL=postgresql://placeholder:placeholder@localhost:5432/placeholder
+      - --env
+      - GOOGLE_ENTRYPOINT=node --import tsx index.js
+
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - rcs-api
+      - --image
+      - asia-south1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/rcs-api:$COMMIT_SHA
+      - --region
+      - asia-south1
+      - --update-labels
+      - commit-sha=$COMMIT_SHA
+      - --quiet
+
+images:
+  - asia-south1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/rcs-api:$COMMIT_SHA
+
+options:
+  logging: CLOUD_LOGGING_ONLY
