@@ -31,6 +31,22 @@ function apiApp(limits) {
   return app
 }
 
+function requireFixtureIdentity(req, res, next) {
+  if (!req.auth.userId) return res.status(401).json({ error: 'Sign in to continue', code: 'AUTH_REQUIRED' })
+  next()
+}
+
+function protectedApiApp(limits) {
+  const app = express()
+  app.set('trust proxy', 1)
+  app.use((req, _res, next) => { req.auth = { userId: req.get('x-user') || null }; next() })
+  app.use('/api', limits.read, limits.write, limits.location, requireFixtureIdentity)
+  app.get('/api/bookings', (_req, res) => res.json({ ok: true }))
+  app.post('/api/bookings', (_req, res) => res.json({ ok: true }))
+  app.post('/api/driver/location', (_req, res) => res.json({ ok: true }))
+  return app
+}
+
 async function request(url, path, { method = 'GET', user, ip, body } = {}) {
   const headers = {}
   if (user) headers['x-user'] = user
@@ -56,6 +72,21 @@ test('API limits return unified draft-7 429 responses and isolate Clerk identiti
       code: 'RATE_LIMITED', policy: 'api-read',
     })
     assert.equal((await request(url, '/api/bookings', { user: 'rider-b' })).status, 200)
+  })
+})
+
+test('anonymous protected API calls reach auth instead of consuming a shared proxy-IP budget', async () => {
+  const limits = createApiLimiters({ getUserId: req => req.auth.userId, readLimit: 1, writeLimit: 1 })
+  await withServer(protectedApiApp(limits), async url => {
+    for (const [path, method] of [['/api/bookings', 'GET'], ['/api/bookings', 'POST'], ['/api/driver/location', 'POST']]) {
+      const first = await request(url, path, { method, ip: '66.249.82.166' })
+      const second = await request(url, path, { method, ip: '66.249.82.166' })
+      assert.equal(first.status, 401)
+      assert.equal(second.status, 401)
+      assert.equal((await second.json()).code, 'AUTH_REQUIRED')
+    }
+    assert.equal((await request(url, '/api/bookings', { user: 'rider-a', ip: '66.249.82.166' })).status, 200)
+    assert.equal((await request(url, '/api/bookings', { user: 'rider-a', ip: '66.249.82.166' })).status, 429)
   })
 })
 
@@ -87,6 +118,21 @@ test('payment writes are limited without consuming the payment status-read budge
     const blocked = await request(url, '/api/payments/payment-id/order', { method: 'POST', user: 'rider' })
     assert.equal(blocked.status, 429)
     assert.equal((await blocked.json()).policy, 'payment-write')
+  })
+})
+
+test('anonymous payment writes reach auth instead of a shared proxy-IP budget', async () => {
+  const app = express()
+  app.set('trust proxy', 1)
+  app.use((req, _res, next) => { req.auth = { userId: req.get('x-user') || null }; next() })
+  const paymentWrites = createPaymentWriteLimiter({ getUserId: req => req.auth.userId, limit: 1 })
+  app.use('/api/payments', paymentWrites, requireFixtureIdentity)
+  app.post('/api/payments/payment-id/order', (_req, res) => res.json({ ok: true }))
+  await withServer(app, async url => {
+    assert.equal((await request(url, '/api/payments/payment-id/order', { method: 'POST', ip: '66.249.82.166' })).status, 401)
+    assert.equal((await request(url, '/api/payments/payment-id/order', { method: 'POST', ip: '66.249.82.166' })).status, 401)
+    assert.equal((await request(url, '/api/payments/payment-id/order', { method: 'POST', user: 'rider-a', ip: '66.249.82.166' })).status, 200)
+    assert.equal((await request(url, '/api/payments/payment-id/order', { method: 'POST', user: 'rider-a', ip: '66.249.82.166' })).status, 429)
   })
 })
 

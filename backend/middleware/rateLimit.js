@@ -58,6 +58,13 @@ export const shareLimiter = createLimiter({ ...publicOptions, policy: 'share', l
 export const authLimiter = createLimiter({ ...publicOptions, policy: 'auth-ip', windowMs: 60 * 60 * 1000, limit: 60 })
 
 export function createApiLimiters({ getUserId, readLimit = 1200, writeLimit = 120, locationLimit = 300 } = {}) {
+  // All routes mounted behind these limiters are protected further down the
+  // router. Do not turn a missing/expired Clerk session into an IP bucket: a
+  // carrier or Google proxy then makes unrelated people share the same budget,
+  // and a temporary auth transition can make the client look rate-limited.
+  // Let `protect` produce the intended 401 instead. Authenticated traffic is
+  // still rate-limited by its Clerk identity, never by its proxy address.
+  const hasIdentity = req => Boolean(getUserId ? getUserId(req) : getAuth(req).userId)
   const keyGenerator = req => identityKey(req, getUserId)
   const isRead = req => req.method === 'GET' || req.method === 'HEAD'
   const isDriverLocation = req => {
@@ -67,21 +74,26 @@ export function createApiLimiters({ getUserId, readLimit = 1200, writeLimit = 12
   const isWrite = req => !isRead(req)
 
   return {
-    read: createLimiter({ policy: 'api-read', windowMs: WINDOW_15_MINUTES, limit: readLimit, keyGenerator, skip: req => !isRead(req) }),
+    read: createLimiter({ policy: 'api-read', windowMs: WINDOW_15_MINUTES, limit: readLimit, keyGenerator,
+      skip: req => !isRead(req) || !hasIdentity(req) }),
     write: createLimiter({ policy: 'api-write', windowMs: WINDOW_15_MINUTES, limit: writeLimit, keyGenerator,
-      skip: req => !isWrite(req) || isDriverLocation(req) }),
+      skip: req => !isWrite(req) || isDriverLocation(req) || !hasIdentity(req) }),
     location: createLimiter({ policy: 'driver-location', windowMs: WINDOW_15_MINUTES, limit: locationLimit, keyGenerator,
-      skip: req => !isWrite(req) || !isDriverLocation(req) }),
+      skip: req => !isWrite(req) || !isDriverLocation(req) || !hasIdentity(req) }),
   }
 }
 
 export const apiLimiters = createApiLimiters()
 
 export function createPaymentWriteLimiter({ getUserId, limit = 30 } = {}) {
+  const hasIdentity = req => Boolean(getUserId ? getUserId(req) : getAuth(req).userId)
   return createLimiter({
     policy: 'payment-write', windowMs: WINDOW_15_MINUTES, limit,
     keyGenerator: req => identityKey(req, getUserId),
-    skip: req => req.method === 'GET' || req.method === 'HEAD',
+    // Payment routes call `protect` after this middleware. As with the generic
+    // protected API budget, let an absent/expired session receive its 401
+    // rather than spending a shared proxy-IP bucket.
+    skip: req => req.method === 'GET' || req.method === 'HEAD' || !hasIdentity(req),
   })
 }
 
