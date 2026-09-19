@@ -36,8 +36,5 @@ steps:
       - commit-sha=$COMMIT_SHA
       - --quiet
 
-images:
-  - asia-south1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/rcs-api:$COMMIT_SHA
-
 options:
   logging: CLOUD_LOGGING_ONLY
