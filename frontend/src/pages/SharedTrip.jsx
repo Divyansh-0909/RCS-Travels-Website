@@ -240,6 +240,7 @@ const SharedTrip = () => {
 
             <BackgroundPanel
                 sheet={mapVisible}
+                fillAvailable
                 duration={420}
                 contentKey={`${trip?.status}-${loading}`}
                 className={"py-6 max-sm:pb-0 sm:overflow-hidden justify-center items-center flex flex-col sm:flex-row sm:justify-center lg:justify-between text-left sm:px-[9%] md:px-[5%] xl:px-[13%]"}

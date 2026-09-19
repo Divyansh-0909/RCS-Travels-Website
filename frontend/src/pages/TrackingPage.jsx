@@ -916,6 +916,7 @@ const TrackingPage = () => {
                     ? <BackgroundPanel
                         solid
                         sheet={mapVisible}
+                        fillAvailable
                         duration={420}
                         contentKey={`reassigning-${bookingLoading}`}
                         className="py-6 max-sm:pb-0 sm:overflow-hidden justify-center items-center text-left sm:px-[9%] md:px-[5%] xl:px-[13%] flex flex-col sm:flex-row sm:justify-center lg:justify-between"
@@ -954,8 +955,9 @@ const TrackingPage = () => {
                     ? <BackgroundPanel
                         solid
                         sheet={mapVisible}
-                        // Booking sheets always open content-fit; the half and
-                        // collapsed stops remain available after a deliberate drag.
+                        fillAvailable
+                        // Primary booking sheets expand to the same full-height
+                        // stop; half/collapsed remain available after a drag.
                         duration={420}
                         contentKey={`${status}-${bookingLoading}`}
                         className={"py-6 max-sm:pb-0 sm:overflow-hidden justify-center items-center text-left sm:px-[9%] md:px-[5%] xl:px-[13%] flex flex-col sm:flex-row sm:justify-center lg:justify-between"}
@@ -1144,6 +1146,7 @@ const TrackingPage = () => {
                         : <BackgroundPanel
                             solid
                             sheet={mapVisible}
+                            fillAvailable
                             duration={420}
                             // The OTP row appears at en_route and the headline
                             // grows a line with it, so the sheet's own height moves

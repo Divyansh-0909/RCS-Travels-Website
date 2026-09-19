@@ -1107,7 +1107,7 @@ const OnBoarding = ({ bookingStage = false, timingStep = false, highlightRideNow
         isMobile={isMobile}
         bottomInset={pinPriceBar ? priceBarHeight : 0}
         contentKey={`${timingStep}-${timing}-${activeSuggestion ?? "none"}-${mapPickerTarget ?? "form"}`}
-        fillAvailable={!mapPickerTarget && !timingStep}
+        fillAvailable
         expandedTopGap={0}
         lockExpanded={timingStep}
         onSnapChange={setSheetSnap}
@@ -1507,21 +1507,18 @@ const OnBoarding = ({ bookingStage = false, timingStep = false, highlightRideNow
       )}
 
       {bookingStage ? <>
+        {/* One host owns the shared Google Maps singleton for this whole stage.
+            Switching between the form and the map picker only changes this
+            host's framing/overlays, so the already-rendered map stays mounted
+            and is the same map VehicleSelect adopts on the next booking step. */}
         <GoogleMap
           appearance="dark"
           center={mapPickerTarget ? mapPickerCoords : pickupCoords ?? { lat: 28.6315, lng: 77.2167 }}
           zoom={mapPickerTarget ? 17 : 12}
           onIdle={mapPickerTarget ? setMapPickerCoords : undefined}
-          className="absolute inset-0 z-0 sm:hidden"
-        >
-          {mapPickerTarget && <CenterPin target={mapPickerTarget} />}
-        </GoogleMap>
-        <GoogleMap
-          appearance="dark"
-          center={mapPickerTarget ? mapPickerCoords : pickupCoords ?? { lat: 28.6315, lng: 77.2167 }}
-          zoom={mapPickerTarget ? 17 : 12}
-          onIdle={mapPickerTarget ? setMapPickerCoords : undefined}
-          className="relative z-0 mr-[2vw] hidden h-[min(76vh,680px)] w-[min(46vw,720px)] overflow-hidden rounded-[24px] shadow-[0_12px_36px_rgba(0,0,0,0.25)] sm:block"
+          className={isMobile
+            ? "absolute inset-0 z-0"
+            : "relative z-0 mr-[2vw] h-[min(76vh,680px)] w-[min(46vw,720px)] overflow-hidden rounded-[24px] shadow-[0_12px_36px_rgba(0,0,0,0.25)]"}
         >
           {mapPickerTarget && <CenterPin target={mapPickerTarget} />}
         </GoogleMap>

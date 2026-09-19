@@ -38,10 +38,10 @@ const isSameDay = (first: Date, second: Date) => (
   && first.getDate() === second.getDate()
 );
 
-const transparent = (hex: string) => {
+const withAlpha = (hex: string, alpha: number) => {
   const match = /^#([\da-f]{2})([\da-f]{2})([\da-f]{2})$/i.exec(hex);
-  if (!match) return 'rgba(255,255,255,0)';
-  return `rgba(${Number.parseInt(match[1], 16)},${Number.parseInt(match[2], 16)},${Number.parseInt(match[3], 16)},0)`;
+  if (!match) return `rgba(255,255,255,${alpha})`;
+  return `rgba(${Number.parseInt(match[1], 16)},${Number.parseInt(match[2], 16)},${Number.parseInt(match[3], 16)},${alpha})`;
 };
 
 type WheelColumnProps = {
@@ -235,7 +235,13 @@ const WheelColumn = ({
         onMomentumScrollEnd={(event) => {
           clearSettleTimer();
           isInteractingRef.current = false;
-          commitFromOffset(event.nativeEvent.contentOffset.y);
+          const nextIndex = indexFromOffset(event.nativeEvent.contentOffset.y);
+          // Native snapping can finish a fraction of a pixel off the row boundary,
+          // which is most noticeable in the long minute column. Momentum is fully
+          // finished here, so correcting to the exact row is safe and keeps every
+          // selected value on the same vertical center line.
+          scrollToIndex(nextIndex, false);
+          commitFromOffset(nextIndex * WHEEL_ROW_HEIGHT);
         }}
         onContentSizeChange={() => {
           if (hasPositionedRef.current) return;
@@ -285,7 +291,10 @@ const DateTimeSelector = ({ value, onChange }: { value: Date; onChange: (value: 
   const hour12 = hour24 % 12 || 12;
   const minute = value.getMinutes();
   const tooSoon = value.getTime() < Date.now() + MARKETPLACE_MIN_LEAD_MS;
-  const fadedSurface = transparent(colors.surface);
+  const fadedSurface = withAlpha(colors.surface, 0);
+  const selectionBandColor = tooSoon
+    ? withAlpha(colors.negative, 0.2)
+    : colors.surfaceMuted;
 
   const dayLabels = days.map((day, index) => (
     index === 0
@@ -306,7 +315,7 @@ const DateTimeSelector = ({ value, onChange }: { value: Date; onChange: (value: 
               top: WHEEL_PADDING,
               height: WHEEL_ROW_HEIGHT,
               borderRadius: 12,
-              backgroundColor: colors.surfaceMuted,
+              backgroundColor: selectionBandColor,
               zIndex: 0,
             }}
           />
@@ -373,7 +382,7 @@ const DateTimeSelector = ({ value, onChange }: { value: Date; onChange: (value: 
 
       <AppText
         className="text-center text-sm tabular-nums text-ink-muted"
-        style={tooSoon ? { color: '#B91C1C' } : undefined}
+        style={tooSoon ? { color: colors.negative } : undefined}
       >
         {tooSoon
           ? dc('Choose a pickup time at least 30 minutes from now.')

@@ -38,7 +38,7 @@ internalRouter.get('/jobs', (_req, res) => {
  * Run one sweep now.
  *
  * A single parameterised route over an allowlist rather than three near-identical
- * handlers: the three jobs differ only in which function they call, and the list
+ * handlers: the four jobs differ only in which function they call, and the list
  * they are drawn from lives in lib/jobs.js beside the functions themselves. An
  * unknown name is a 404 rather than a silent 200, because the way this fails in
  * practice is a Cloud Scheduler job pointed at a name that no longer exists, and
