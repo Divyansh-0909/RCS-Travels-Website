@@ -248,7 +248,7 @@ they cannot be forgotten here.
 
 ## 5. Cloud Scheduler
 
-Three jobs — exactly the free-tier allowance. Their names must match the keys in
+Four jobs. Their names must match the keys in
 `lib/jobs.js`; a mismatch stops that sweep with nothing failing anywhere visible.
 
 ```powershell
@@ -279,6 +279,14 @@ gcloud scheduler jobs create http rcs-document-scan `
 gcloud scheduler jobs create http rcs-document-expiry `
   --location=$REGION --schedule="0 * * * *" `
   --uri="$URL/internal/jobs/document-expiry" --http-method=POST `
+  --oidc-service-account-email="rcs-scheduler@$PROJECT.iam.gserviceaccount.com" `
+  --oidc-token-audience="$URL" `
+  --attempt-deadline=300s
+
+# customer-coupons — idempotently issue the previous month's coupons. Daily.
+gcloud scheduler jobs create http rcs-customer-coupons `
+  --location=$REGION --schedule="15 0 * * *" `
+  --uri="$URL/internal/jobs/customer-coupons" --http-method=POST `
   --oidc-service-account-email="rcs-scheduler@$PROJECT.iam.gserviceaccount.com" `
   --oidc-token-audience="$URL" `
   --attempt-deadline=300s

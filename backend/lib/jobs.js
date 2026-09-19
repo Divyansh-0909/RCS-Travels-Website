@@ -4,7 +4,7 @@ import { sweepDocumentScans } from '../services/documentScan.js'
 import { sweepDocumentExpiry } from '../services/driverDocuments.js'
 import { issuePreviousMonthCoupons } from '../services/coupons.js'
 
-// The three background sweeps, and the one decision about how they are TRIGGERED.
+// The four background sweeps, and the one decision about how they are TRIGGERED.
 //
 // WHY THIS FILE EXISTS. Until now each sweep was a setInterval started at boot,
 // which is correct on Render — a container that is always running has a working

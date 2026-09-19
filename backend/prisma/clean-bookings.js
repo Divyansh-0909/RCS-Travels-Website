@@ -1,5 +1,25 @@
 import { prisma } from '../db/prisma.js'
 
+const WRITE = process.argv.includes('--write')
+const ALLOW_REMOTE = process.argv.includes('--allow-remote')
+
+function databaseHost() {
+  try {
+    return new URL(process.env.DATABASE_URL).hostname
+  } catch {
+    return null
+  }
+}
+
+function isLocalDatabase(host) {
+  return host === 'localhost'
+    || host === '127.0.0.1'
+    || host === '::1'
+    || host?.startsWith('192.168.')
+    || host?.startsWith('10.')
+    || /^172\.(1[6-9]|2\d|3[01])\./.test(host ?? '')
+}
+
 // Seeded booking ids (prisma/seed.js → pastBookings, and prisma/seed-captain-rides.js);
 // this script removes everything else so the DB matches the seed. Keep in sync with
 // both seeds' booking ids.
@@ -24,18 +44,40 @@ const SEED_BOOKING_IDS = [
 async function main() {
   const before = await prisma.booking.count()
 
+  const candidates = await prisma.booking.groupBy({
+    by: ['status'],
+    where: { id: { notIn: SEED_BOOKING_IDS } },
+    _count: { _all: true },
+    orderBy: { status: 'asc' },
+  })
+
+  const candidateCount = candidates.reduce((sum, row) => sum + row._count._all, 0)
+
+  console.log(`Bookings: ${before} total | ${candidateCount} non-seeded would be deleted`)
+  for (const row of candidates) console.log(`  ${row.status}: ${row._count._all}`)
+
+  if (!WRITE) {
+    console.log('\nReport only. Re-run with --write to delete these bookings.')
+    return
+  }
+
+  const host = databaseHost()
+  if (!host) {
+    throw new Error('Refusing to delete bookings: DATABASE_URL is missing or invalid.')
+  }
+  if (!isLocalDatabase(host) && !ALLOW_REMOTE) {
+    throw new Error(
+      `Refusing to delete bookings from remote database ${host}. `
+      + 'If this is intentional, re-run with --write --allow-remote.',
+    )
+  }
+
   const { count } = await prisma.booking.deleteMany({
     where: { id: { notIn: SEED_BOOKING_IDS } },
   })
 
-  const remaining = await prisma.booking.findMany({
-    select: { id: true, status: true },
-    orderBy: { createdAt: 'desc' },
-  })
-
-  console.log(`Before: ${before}  |  Deleted: ${count}  |  Remaining: ${remaining.length}`)
-  for (const b of remaining) console.log(`  ${b.id} (${b.status})`)
-  console.log('\nDone. DB bookings now match the seed.')
+  console.log(`\nDeleted: ${count} | Remaining: ${before - count}`)
+  console.log('Done. DB bookings now match the seed.')
 }
 
 main()

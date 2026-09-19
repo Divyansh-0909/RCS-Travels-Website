@@ -136,7 +136,7 @@ const server = app.listen(PORT, async () => {
   // quotes fares while the database is unreachable.
   await initFareZones()
 
-  // The three background sweeps, started here only when this process is the one
+  // The four background sweeps, started here only when this process is the one
   // holding the clock. On Cloud Run it is not: with min-instances=0 the CPU is
   // throttled between requests and a setInterval never fires, so the cadence
   // lives in Cloud Scheduler and arrives as POST /internal/jobs/:name instead.

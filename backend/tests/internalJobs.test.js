@@ -66,12 +66,12 @@ const post = (path, headers = {}) =>
   fetch(`${baseUrl}${path}`, { method: 'POST', headers })
 
 describe('the job registry', () => {
-  test('names exactly the three sweeps Cloud Scheduler is wired to', () => {
+  test('names exactly the four sweeps Cloud Scheduler is wired to', () => {
     // A wire contract, not an implementation detail: these strings appear in the
     // Cloud Scheduler job definitions, so renaming one here silently stops that
     // sweep until the scheduler is updated. The test exists to make the rename
     // fail loudly at the point somebody makes it.
-    assert.deepEqual([...JOB_NAMES].sort(), ['dispatch', 'document-expiry', 'document-scan'])
+    assert.deepEqual([...JOB_NAMES].sort(), ['customer-coupons', 'dispatch', 'document-expiry', 'document-scan'])
   })
 
   test('refuses a name that is not on the list', async () => {
@@ -114,7 +114,7 @@ describe('the gate on /internal', () => {
     // without running a sweep against the database.
     const response = await post('/internal/jobs/no-such-job', { authorization: `Bearer ${SECRET}` })
     assert.equal(response.status, 404)
-    assert.deepEqual((await response.json()).jobs.sort(), ['dispatch', 'document-expiry', 'document-scan'])
+    assert.deepEqual((await response.json()).jobs.sort(), ['customer-coupons', 'dispatch', 'document-expiry', 'document-scan'])
   })
 
   test('reports its mode and job list to an authenticated caller', async () => {
@@ -125,7 +125,7 @@ describe('the gate on /internal', () => {
 
     const body = await response.json()
     assert.equal(body.mode, 'interval')
-    assert.deepEqual(body.jobs.sort(), ['dispatch', 'document-expiry', 'document-scan'])
+    assert.deepEqual(body.jobs.sort(), ['customer-coupons', 'dispatch', 'document-expiry', 'document-scan'])
   })
 
   test('ignores the dev secret entirely when NODE_ENV is production', async () => {

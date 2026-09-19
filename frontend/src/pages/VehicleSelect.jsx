@@ -1546,15 +1546,14 @@ const VehicleSelect = () => {
                 <BackgroundPanel
                     sheet
                     solid
+                    fillAvailable
                     duration={420}
                     bottomInset={pinBookBar ? bookBarHeight : 0}
                     expandedTopGap={0}
-                    // The sheet is sized to its content, and this screen's
-                    // content arrives late: the estimate decides whether there
-                    // are notice pills above the list at all, and whether the
-                    // list is a list or one of the three states that replace
-                    // it. Measured once at mount, the sheet would be sized for
-                    // a screen that no longer exists.
+                    // Keep the contentKey because the fare body still changes
+                    // after mount and its scroll range has to be refreshed when
+                    // pricing/notices arrive, even though expanded now fills the
+                    // available viewport like the other primary booking sheets.
                     contentKey={`${showsBookForm}-${pricing}-${fareNotices.length}`}
                     // Fired on settle, not per frame — the Book bar below
                     // sheds its toggles and fine print at `collapsed`, and

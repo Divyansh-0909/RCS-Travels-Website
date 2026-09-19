@@ -1,12 +1,9 @@
 name: Deploy backend to Cloud Run
 
+# Kept as a manual fallback. Automatic main-branch deployments are owned by
+# the Google Cloud Build trigger configured for the rcs-api Cloud Run service.
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - "backend/**"
-      - ".github/workflows/deploy-cloud-run.yml"
+  workflow_dispatch:
 
 jobs:
   deploy:
