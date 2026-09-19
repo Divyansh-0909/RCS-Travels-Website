@@ -10,6 +10,7 @@ import { useSignIn, useAuth, useUser } from "@clerk/clerk-react";
 import { useData } from '../../hooks/useData';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { useExitAnim } from '../../hooks/useExitAnim';
+import { useRefreshNotice } from '../../hooks/useRefreshNotice';
 import { scrollToSection, scrollToTop } from '../../hooks/useSmoothScroll';
 import { useLocation } from 'react-router-dom';
 import pfpPlaceholder from "../../assets/pfp-placeholder.webp"
@@ -121,6 +122,9 @@ const NavBar = ({ invert = false, hideExpanded = false, hideDestinationInput = f
     const [user, setUser] = useState(null)
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState(null)
+    const profileRequestRef = useRef(0)
+    const notifyRefreshFailed = useRefreshNotice(state => state.notifyRefreshFailed)
+    const clearRefreshNotice = useRefreshNotice(state => state.clearRefreshNotice)
     const drawerRef = useRef(null)
     const navbarRef = useRef(null)
     const mobileTriggerRef = useRef(null)
@@ -149,28 +153,40 @@ const NavBar = ({ invert = false, hideExpanded = false, hideDestinationInput = f
         return () => window.removeEventListener("scroll", onScroll)
     }, [])
 
-    useEffect(() => {
-        if (isSignedIn) {
-            (async () => {
-                setLoading(true)
-                try {
-                    const userData = await api.getMe();
-                    if (userData?.error) {
-                        setError(userData.error)
-                        return
-                    }
-                    setUser(userData)
-                }
-                catch (err) {
-                    console.error(err);
-                    setError(dc("Something went wrong"))
-                }
-                finally {
-                    setLoading(false)
-                }
-            })()
+    const refreshProfile = async ({ isRetry = false } = {}) => {
+        const requestId = ++profileRequestRef.current
+        setLoading(true)
+        try {
+            const userData = await api.getMe()
+            if (requestId !== profileRequestRef.current) return
+            if (userData?.error) throw new Error(userData.error)
+            setUser(userData)
+            if (isRetry) clearRefreshNotice()
+        } catch (err) {
+            if (requestId !== profileRequestRef.current) return
+            console.error(err)
+            notifyRefreshFailed(
+                dc("Couldn't refresh your profile. Some account details may be unavailable."),
+                () => refreshProfile({ isRetry: true }),
+            )
+        } finally {
+            if (requestId === profileRequestRef.current) setLoading(false)
         }
-    }, [isSignedIn])
+    }
+
+    useEffect(() => {
+        if (isSignedIn) refreshProfile()
+        else {
+            profileRequestRef.current += 1
+            setUser(null)
+            setLoading(false)
+            clearRefreshNotice()
+        }
+
+        return () => {
+            profileRequestRef.current += 1
+        }
+    }, [isSignedIn]) // eslint-disable-line react-hooks/exhaustive-deps
 
     useEffect(() => {
         if (!isSignedIn) {
