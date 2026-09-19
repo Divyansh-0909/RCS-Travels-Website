@@ -17,7 +17,7 @@ const ErrorPanel = ({ prop }) => {
 
     return (
         <>
-            <BackgroundPanel show={!!prop.error || prop.loading} className={` z-4 sm:z-3 gap-2 sm:gap-3 py-6 text-center flex flex-col justify-center items-center`}>
+            <BackgroundPanel show={Boolean(prop.error || prop.loading)} className={` z-4 sm:z-3 gap-2 sm:gap-3 py-6 text-center flex flex-col justify-center items-center`}>
                 <ErrorMark className="-my-8" size={140} />
                 <div className="flex w-[min(86vw,100%)] min-w-0 flex-col items-center gap-1 sm:w-[377px]">
                     <h2 className="w-full min-w-0 [overflow-wrap:anywhere]"> {lastError} </h2>
