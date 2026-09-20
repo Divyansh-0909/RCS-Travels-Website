@@ -30,6 +30,7 @@ import {
 } from '../services/ridePayments.ts'
 
 const bookingsRouter = Router()
+const LIVE_NAVIGATION_BUDGET_MS = 2_500
 
 // Annotated so the .ts routes that import this get BookingStatus[] rather than the
 // string[] TS would otherwise infer from a .js file — without it every
@@ -393,7 +394,28 @@ bookingsRouter.get('/:id/status', protect, async (req, res) => {
 
   const ridePayment = ridePaymentView(booking)
 
-  if (!booking.driverId) return res.json({ bookingId: booking.id, reference: booking.reference, bookingCode: user.bookingCode, status, scheduledAt: booking.scheduledAt, cancellationCharge, financials: paymentSummary, ridePayment, driverCancellation, driver: null })
+  // A tracking URL must be self-contained. Riders can return from My rides,
+  // reload, or open the link in a new tab where the booking-form store is empty.
+  // Send the immutable booked route with every status response so the page can
+  // restore its map instead of depending on sessionStorage from booking time.
+  const trip = {
+    pickupAddress: booking.pickupAddress,
+    pickupLat: booking.pickupLat,
+    pickupLng: booking.pickupLng,
+    dropAddress: booking.dropAddress,
+    dropLat: booking.dropLat,
+    dropLng: booking.dropLng,
+    distanceKm: booking.distanceKm,
+    durationMin: booking.durationMin,
+    routePolyline: booking.routePolyline,
+    fareSource: booking.fareSource,
+    fare: booking.fare,
+    vehicleClass: booking.vehicleClass,
+    sharing: booking.sharing,
+    preferSafeRoute: booking.preferSafeRoute,
+  }
+
+  if (!booking.driverId) return res.json({ bookingId: booking.id, reference: booking.reference, bookingCode: user.bookingCode, status, scheduledAt: booking.scheduledAt, cancellationCharge, financials: paymentSummary, ridePayment, driverCancellation, ...trip, driver: null })
 
   const location = driverLocationVisibleToRider({ status, scheduledAt: booking.scheduledAt })
     ? booking.driver.location
@@ -406,18 +428,27 @@ bookingsRouter.get('/:id/status', protect, async (req, res) => {
   let navigationEtaMinutes = null
   let navigationPolyline = null
   if (location && etaTarget) {
+    let navigationBudgetTimer
     try {
-      const navigationRoute = await getNavigationRoute({
-        cacheKey: `${booking.id}:${etaTarget.leg}`,
-        origin: { lat: location.latitude, lng: location.longitude },
-        destination: etaTarget,
-      })
+      // Driver position and ride status are the critical live payload. A slow
+      // Routes request must not hold both hostage: let its shared cache continue
+      // warming and answer this poll without ETA/remaining polyline.
+      const navigationRoute = await Promise.race([
+        getNavigationRoute({
+          cacheKey: `${booking.id}:${etaTarget.leg}`,
+          origin: { lat: location.latitude, lng: location.longitude },
+          destination: etaTarget,
+        }),
+        new Promise(resolve => { navigationBudgetTimer = setTimeout(() => resolve(null), LIVE_NAVIGATION_BUDGET_MS) }),
+      ])
       navigationEtaMinutes = navigationRoute?.minutes ?? null
       navigationPolyline = navigationRoute?.polyline ?? null
     } catch (error) {
       // Location and status are still useful when Routes is unavailable or the
       // monthly guard is reached. Null tells the UI to show an honest dash.
       console.warn('Live navigation ETA unavailable:', error?.message)
+    } finally {
+      clearTimeout(navigationBudgetTimer)
     }
   }
 
@@ -436,6 +467,7 @@ bookingsRouter.get('/:id/status', protect, async (req, res) => {
     fare: booking.fare,
     coupon: booking.couponAmount,
     customerPayment: booking.customerPayment,
+    ...trip,
     driver: {
       name:          booking.driver.name,
       phone:         booking.driver.phone,
@@ -576,6 +608,30 @@ bookingsRouter.post('/cancel', protect, async (req, res) => {
     return res.json({ ok: true, cancellationCharge,
         advanceDisposition: shouldRefund ? 'refund_pending' : shouldForfeit ? 'forfeited_to_driver' : booking.scheduledAdvanceDisposition,
         refund })
+})
+
+// Small, unpaginated source for the persistent My rides menu. Active bookings
+// must not disappear merely because a rider has more history rows than one page.
+bookingsRouter.get('/my-rides-summary', protect, async (req, res) => {
+    const user = await prisma.user.findUnique({ where: { clerkId: req.auth.userId } })
+    if (!user) return res.status(401).json({ error: 'User not found' })
+
+    const bookings = await prisma.booking.findMany({
+        where: { userId: user.id, status: { in: ACTIVE_STATUSES } },
+        orderBy: { createdAt: 'desc' },
+        select: {
+            id: true,
+            reference: true,
+            status: true,
+            pickupAddress: true,
+            dropAddress: true,
+            fare: true,
+            vehicleClass: true,
+            scheduledAt: true,
+        },
+    })
+
+    return res.json({ bookings })
 })
 
 bookingsRouter.get('/my-bookings', protect, async (req, res) => {

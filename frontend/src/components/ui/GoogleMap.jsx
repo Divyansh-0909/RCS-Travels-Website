@@ -19,6 +19,9 @@ let loaderPromise = null;
 let mapDiv = null;
 let mapInstance = null;
 let activeMapAppearance = null;
+let mapOwners = [];
+let mapsAuthFailed = false;
+const mapFailureListeners = new Set();
 // The singleton keeps rendered tiles while its appearance stays the same. A
 // theme change creates a new map surface, so that appearance must earn its own
 // first tile paint before the loader leaves.
@@ -78,6 +81,12 @@ function loadMapsScript() {
     loaderPromise = new Promise((resolve, reject) => {
         if (window.google?.maps?.Map) return resolve();
         window.__onMapsJsReady = () => resolve();
+        const previousAuthFailure = window.gm_authFailure;
+        window.gm_authFailure = () => {
+            mapsAuthFailed = true;
+            mapFailureListeners.forEach(listener => listener());
+            previousAuthFailure?.();
+        };
         const script = document.createElement("script");
         script.src = `https://maps.googleapis.com/maps/api/js?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}&v=weekly&loading=async&libraries=geometry&callback=__onMapsJsReady`;
         // allow a retry on next mount instead of caching the failure
@@ -116,6 +125,15 @@ const GoogleMap = ({ center, zoom = 16, onMapReady, onIdle, className, children,
         let cancelled = false;
         let idleListener = null;
         let tilesListener = null;
+        let firstTilesTimer = null;
+        let resizeObserver = null;
+        let resizeFrame = null;
+        const owner = { host: null, onMapReady };
+        const reportMapFailure = () => {
+            setReady(true);
+            setLoadFailed(true);
+        };
+        mapFailureListeners.add(reportMapFailure);
 
         setLoadFailed(false);
         setReady(loadedMapAppearance === mapAppearance);
@@ -123,6 +141,7 @@ const GoogleMap = ({ center, zoom = 16, onMapReady, onIdle, className, children,
         (async () => {
             try {
                 await loadMapsScript();
+                if (mapsAuthFailed) throw new Error("Google Maps authentication failed");
             } catch (err) {
                 console.error(err);
                 // drop the shimmer so the container shows its land colour
@@ -176,23 +195,67 @@ const GoogleMap = ({ center, zoom = 16, onMapReady, onIdle, className, children,
                 backgroundColor: mapBackgroundColor,
             });
 
-            hostRef.current.appendChild(mapDiv);
+            owner.host = hostRef.current;
+            mapOwners = [...mapOwners.filter(candidate => candidate !== owner), owner];
+            owner.host.appendChild(mapDiv);
             idleListener = mapInstance.addListener("idle", () => {
                 onIdleRef.current?.(mapInstance.getCenter().toJSON());
             });
             if (loadedMapAppearance === mapAppearance) setReady(true);
             else tilesListener = mapInstance.addListener("tilesloaded", () => {
+                clearTimeout(firstTilesTimer);
                 loadedMapAppearance = mapAppearance;
+                setLoadFailed(false);
                 setReady(true);
             });
+            if (loadedMapAppearance !== mapAppearance) {
+                firstTilesTimer = setTimeout(() => {
+                    if (!cancelled && loadedMapAppearance !== mapAppearance) reportMapFailure();
+                }, 10_000);
+            }
             onMapReady?.(mapInstance);
+
+            // Maps can render a blank surface after a sheet transition, viewport
+            // resize, tab restore, or singleton hand-off unless the SDK is told
+            // that its host changed size. Keep the last tiles and ask it to paint
+            // again; the skeleton remains available while first tiles load.
+            const redraw = () => {
+                if (mapDiv?.parentNode !== owner.host || !mapInstance) return;
+                cancelAnimationFrame(resizeFrame);
+                resizeFrame = requestAnimationFrame(() => {
+                    window.google?.maps?.event?.trigger(mapInstance, "resize");
+                });
+            };
+            resizeObserver = new ResizeObserver(redraw);
+            resizeObserver.observe(owner.host);
+            window.addEventListener("pageshow", redraw);
+            document.addEventListener("visibilitychange", redraw);
+            owner.redraw = redraw;
         })();
 
         return () => {
             cancelled = true;
             idleListener?.remove();
             tilesListener?.remove();
-            if (mapDiv?.parentNode === hostRef.current) hostRef.current.removeChild(mapDiv);
+            clearTimeout(firstTilesTimer);
+            mapFailureListeners.delete(reportMapFailure);
+            resizeObserver?.disconnect();
+            cancelAnimationFrame(resizeFrame);
+            if (owner.redraw) {
+                window.removeEventListener("pageshow", owner.redraw);
+                document.removeEventListener("visibilitychange", owner.redraw);
+            }
+            mapOwners = mapOwners.filter(candidate => candidate !== owner);
+            if (mapDiv?.parentNode === hostRef.current) {
+                const previousOwner = mapOwners.at(-1);
+                if (previousOwner?.host?.isConnected) {
+                    previousOwner.host.appendChild(mapDiv);
+                    window.google?.maps?.event?.trigger(mapInstance, "resize");
+                    previousOwner.onMapReady?.(mapInstance);
+                } else {
+                    hostRef.current.removeChild(mapDiv);
+                }
+            }
         };
     }, [mapAppearance]);
 
@@ -266,13 +329,15 @@ const GoogleMap = ({ center, zoom = 16, onMapReady, onIdle, className, children,
                 trip itself is unaffected, and the copy says so — every screen
                 that shows a map states the same facts in text beside it. */}
             {loadFailed && (
-                <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-1.5 px-6 text-center pointer-events-none" style={{ background: mapBackgroundColor }}>
-                    <Icon path={mdiAlertCircleOutline} size={1} className="text-[var(--text-muted)]/70" />
-                    <h4 className="text-sm sm:text-base font-medium text-[var(--text)]/80">{tr("Map unavailable")}</h4>
+                <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-1.5 px-6 text-center pointer-events-none max-sm:justify-start max-sm:pt-4" style={{ background: mapBackgroundColor }}>
+                    <div className="flex flex-col items-center gap-1.5 max-sm:flex-row">
+                        <Icon path={mdiAlertCircleOutline} size={1} className={isDark ? "text-white/70" : "text-[var(--text-muted)]/70"} />
+                        <h4 className={`text-sm sm:text-base font-medium ${isDark ? "text-white/80" : "text-[var(--text)]/80"}`}>{tr("Map unavailable")}</h4>
+                    </div>
                     {/* No "below": this panel sits beside the content on
                         desktop and behind the sheet on phones, so the copy
                         can't name a direction. */}
-                    <p className="text-xs sm:text-sm leading-snug text-[var(--text-muted)] max-w-[28ch]">
+                    <p className={`text-xs sm:text-sm leading-snug max-w-[28ch] max-sm:hidden ${isDark ? "text-white/65" : "text-[var(--text-muted)]"}`}>
                         {tr("Your ride is unaffected. Your driver and route details are live.")}
                     </p>
                 </div>

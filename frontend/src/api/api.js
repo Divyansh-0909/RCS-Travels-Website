@@ -1,6 +1,6 @@
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
-async function request(path, { method = "GET", body, getToken } = {}) {
+async function request(path, { method = "GET", body, getToken, signal } = {}) {
     const headers = { "Content-Type": "application/json" };
 
     if (getToken) {
@@ -12,6 +12,7 @@ async function request(path, { method = "GET", body, getToken } = {}) {
         method,
         headers,
         body: body ? JSON.stringify(body) : undefined,
+        signal,
     });
 
     if (!res.ok) {
@@ -41,12 +42,13 @@ export const recordScheduledFinalCashPayment = (bookingId, getToken) => request(
 export const createRideNowFinalOrder = (bookingId, getToken) => request(`/api/bookings/${bookingId}/ride-now-final/order`, { method: "POST", getToken });
 export const recordRideNowCashPayment = (bookingId, getToken) => request(`/api/bookings/${bookingId}/ride-now-final/cash`, { method: "POST", getToken });
 export const verifyPayment = (paymentId, response, getToken) => request(`/api/payments/${paymentId}/verify`, { method: "POST", body: response, getToken });
-export const getBookingStatus  = (id, getToken)          => request(`/api/bookings/${id}/status`, { getToken });
+export const getBookingStatus  = (id, getToken, signal)  => request(`/api/bookings/${id}/status`, { getToken, signal });
 export const shareBooking      = (id, getToken)          => request(`/api/bookings/${id}/share`, { method: "POST", getToken });
 export const unshareBooking    = (id, getToken)          => request(`/api/bookings/${id}/share`, { method: "DELETE", getToken });
 // No getToken, and that is the feature: the person following a shared ride has no
 // account. The token in the path is the whole of the authorisation.
 export const getSharedTrip     = (token)                 => request(`/api/share/${encodeURIComponent(token)}`);
+export const getMyRideSummary  = (getToken)              => request("/api/bookings/my-rides-summary", { getToken });
 export const getMyBookings     = (filters, getToken)     => request(`/api/bookings/my-bookings${toQuery(filters)}`, { getToken });
 export const sendOtp           = (phone, intent)         => request("/api/auth/send-otp", { method: "POST", body: { phone, intent } });
 export const verifyOtp         = (phone, otp, intent)    => request("/api/auth/verify-otp", { method: "POST", body: { phone, otp, intent } });

@@ -6,7 +6,7 @@ import { MAP_CLASSES, showRouteView, clearRouteView, setDriverPosition, setRoute
 import { useIsMobile } from "../hooks/useIsMobile";
 import { useData } from "../hooks/useData";
 import { useApi } from "../hooks/useApi";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
 import { useLocation, useParams } from "react-router-dom";
 import ErrorMark from "../components/illustrations/ErrorMark";
 import SuccessCheck from "../components/illustrations/SuccessCheck";
@@ -94,17 +94,27 @@ const TrackingPage = () => {
     const scheduledTime = useData(state => state.scheduledTime)
     const activeBooking = useData(state => state.activeBooking)
     const dropLocation = useData(state => state.dropLocation)
+    const setDrop = useData(state => state.setDrop)
     const pickupLocation = useData(state => state.pickupLocation)
+    const setPickup = useData(state => state.setPickup)
     const pickupCoords = useData(state => state.pickupCoords)
+    const setPickupCoords = useData(state => state.setPickupCoords)
     const dropCoords = useData(state => state.dropCoords)
+    const setDropCoords = useData(state => state.setDropCoords)
     const routePolyline = useData(state => state.routePolyline)
+    const setRoutePolyline = useData(state => state.setRoutePolyline)
     // Booked-route metrics, persisted with the rest of the ride form.
     const distanceKm = useData(state => state.distanceKm)
+    const setDistanceKm = useData(state => state.setDistanceKm)
     const durationMin = useData(state => state.durationMin)
+    const setDurationMin = useData(state => state.setDurationMin)
     const setCancellationCharge = useData(state => state.setCancellationCharge)
     const fareSource = useData(state => state.fareSource)
+    const setFareSource = useData(state => state.setFareSource)
     const fare = useData(state => state.fare)
+    const setFare = useData(state => state.setFare)
     const safeRoute = useData(state => state.safeRoute)
+    const setSafeRoute = useData(state => state.setSafeRoute)
     const vehicleClass = useData(state => state.vehicleClass);
     const setVehicleClass = useData(state => state.setVehicleClass);
     const sharing = useData(state => state.sharing);
@@ -121,6 +131,7 @@ const TrackingPage = () => {
     const setBookingCode = useData(state => state.setBookingCode);
     const status = useData(state => state.status);
     const setStatus = useData(state => state.setStatus);
+    const setActiveBooking = useData(state => state.setActiveBooking);
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(false);
     // Only set when the FIRST status fetch fails with nothing already on screen —
@@ -135,6 +146,7 @@ const TrackingPage = () => {
     // Raise the stale notice once per outage, not once per 5s tick — otherwise
     // an offline rider gets a pill whose dismiss timer restarts forever.
     const staleNotifiedRef = useRef(false);
+    const pollNowRef = useRef(null);
     const [panelState] = useState("");
     const [detialsVisibility, setDetialsVisibility] = useState(false)
     const navigate = useViewNavigate();
@@ -151,6 +163,9 @@ const TrackingPage = () => {
     // freshness guarantee.
     const arrivedFresh = useRef(!!location.state?.freshStatus);
     const [bookingLoading, setBookingLoading] = useState(!!bookingId && !arrivedFresh.current);
+    const [bookingHydrated, setBookingHydrated] = useState(() => (
+        !routeBookingId || activeBooking?.id === routeBookingId || storeBookingId === routeBookingId
+    ));
 
     useEffect(() => {
         if (arrivedFresh.current) window.history.replaceState({}, "");
@@ -163,6 +178,22 @@ const TrackingPage = () => {
     useEffect(() => {
         if (routeBookingId && routeBookingId !== storeBookingId) setBookingId(routeBookingId);
     }, [routeBookingId, storeBookingId]);
+
+    // React Router keeps this component mounted when only :id changes. Clear
+    // local ride-specific state before paint so the previous ride cannot flash
+    // while the new status request is in flight.
+    useLayoutEffect(() => {
+        if (!routeBookingId || activeBooking?.id === routeBookingId) return;
+        setBookingHydrated(false);
+        setDriver(null);
+        setNavigationEtaMinutes(null);
+        setNavigationPolyline(null);
+        setBookingReference(null);
+        setFinancials(null);
+        setRidePayment(null);
+        setDriverCancellation(null);
+        setDriverCancellationOpen(false);
+    }, [routeBookingId, activeBooking?.id]);
     const isMobile = useIsMobile();
     // { name, phone, vehicleNumber, vehicleModel, photoUrl, latitude, longitude,
     // bearing } from the status endpoint — the whole driver card, plus the coords
@@ -237,25 +268,42 @@ const TrackingPage = () => {
     // transitions land. No bookingId (demo route) → keep the store status.
     useEffect(() => {
         if (!bookingId) return;
+        const trustedAtStart = !routeBookingId || activeBooking?.id === routeBookingId;
+        setBookingHydrated(trustedAtStart);
         let cancelled = false;
         let timer = null;
+        let controller = null;
 
         async function poll(isFirst) {
+            clearTimeout(timer);
+            controller?.abort();
+            const pollController = new AbortController();
+            controller = pollController;
             if (isFirst && !arrivedFresh.current) setBookingLoading(true);
             // request() only turns HTTP errors into { error } — a network failure
             // rejects, which used to escape this effect entirely.
             let data;
             try {
-                data = await api.getBookingStatus(bookingId);
-            } catch {
-                data = { error: "Couldn't reach the server" };
+                const timeout = setTimeout(() => pollController.abort(), 12_000);
+                try {
+                    data = await api.getBookingStatus(bookingId, pollController.signal);
+                } finally {
+                    clearTimeout(timeout);
+                }
+            } catch (err) {
+                data = { error: err?.name === "AbortError"
+                    ? "The live update took too long"
+                    : "Couldn't reach the server" };
             }
-            if (cancelled) return;
+            // A tab-focus or online event may have started a fresher request.
+            // Never let the aborted older response overwrite it or schedule a
+            // competing timer.
+            if (cancelled || controller !== pollController) return;
             if (data?.error) {
                 // Nothing on screen yet → the page can't render an honest status,
                 // so it hands over to FailureState. Otherwise the last known
                 // status stays put and is only marked stale.
-                if (isFirst && !status) {
+                if (isFirst && (!status || !trustedAtStart)) {
                     setStatusError(data.error);
                 } else if (!staleNotifiedRef.current) {
                     staleNotifiedRef.current = true;
@@ -266,9 +314,55 @@ const TrackingPage = () => {
                 setStatusError(null);
                 clearRefreshNotice();
                 if (data.status) setStatus(data.status);
+                setBookingHydrated(true);
                 if (data.bookingCode) setBookingCode(data.bookingCode);
                 if (data.reference) setBookingReference(data.reference);
-                setDriver(stabilizeDriverPhoto(data.driver ?? null));
+                if (data.pickupAddress) setPickup(data.pickupAddress);
+                if (data.dropAddress) setDrop(data.dropAddress);
+                if (data.pickupLat != null && data.pickupLng != null) {
+                    setPickupCoords({ lat: data.pickupLat, lng: data.pickupLng });
+                }
+                if (data.dropLat != null && data.dropLng != null) {
+                    setDropCoords({ lat: data.dropLat, lng: data.dropLng });
+                }
+                setRoutePolyline(data.routePolyline ?? null);
+                setDistanceKm(data.distanceKm ?? null);
+                setDurationMin(data.durationMin ?? null);
+                setFareSource(data.fareSource ?? null);
+                setFare(data.fare ?? null);
+                if (data.vehicleClass) setVehicleClass(data.vehicleClass);
+                if (typeof data.sharing === "boolean") setSharing(data.sharing);
+                setSafeRoute(data.preferSafeRoute === true);
+                setActiveBooking({
+                    id: data.bookingId ?? bookingId,
+                    reference: data.reference ?? null,
+                    code: data.bookingCode ?? null,
+                    status: data.status,
+                    pickupAddress: data.pickupAddress,
+                    dropAddress: data.dropAddress,
+                    pickupLat: data.pickupLat,
+                    pickupLng: data.pickupLng,
+                    dropLat: data.dropLat,
+                    dropLng: data.dropLng,
+                    distanceKm: data.distanceKm,
+                    durationMin: data.durationMin,
+                    fare: data.fare,
+                    vehicleClass: data.vehicleClass,
+                    scheduledAt: data.scheduledAt,
+                });
+                setDriver(previous => {
+                    const next = stabilizeDriverPhoto(data.driver ?? null);
+                    // A captain can remain assigned while one location read is
+                    // temporarily absent. Keep that captain's last known puck
+                    // instead of making the car vanish between good fixes.
+                    if (next && previous && next.phone === previous.phone
+                        && next.latitude == null && next.longitude == null
+                        && previous.latitude != null && previous.longitude != null) {
+                        return { ...next, latitude: previous.latitude, longitude: previous.longitude,
+                            bearing: previous.bearing, speedKmh: previous.speedKmh };
+                    }
+                    return next;
+                });
                 setNavigationEtaMinutes(data.navigationEtaMinutes ?? null);
                 setNavigationPolyline(data.navigationPolyline ?? null);
                 setFinancials(data.financials ?? null);
@@ -305,15 +399,34 @@ const TrackingPage = () => {
                 timer = setTimeout(() => poll(false), 5000);
             }
         }
+        pollNowRef.current = () => poll(false);
         poll(true);
+
+        const refreshWhenVisible = () => {
+            if (document.visibilityState === "visible") pollNowRef.current?.();
+        };
+        window.addEventListener("online", refreshWhenVisible);
+        window.addEventListener("pageshow", refreshWhenVisible);
+        document.addEventListener("visibilitychange", refreshWhenVisible);
 
         // clearRefreshNotice on the way out: the stale pill belongs to this
         // ride's poll, and shouldn't follow the rider to another page.
-        return () => { cancelled = true; clearTimeout(timer); clearRefreshNotice(); };
+        return () => {
+            cancelled = true;
+            pollNowRef.current = null;
+            controller?.abort();
+            clearTimeout(timer);
+            window.removeEventListener("online", refreshWhenVisible);
+            window.removeEventListener("pageshow", refreshWhenVisible);
+            document.removeEventListener("visibilitychange", refreshWhenVisible);
+            clearRefreshNotice();
+        };
     }, [bookingId, retryTick, stabilizeDriverPhoto]);
 
-    const pickupPoint = pickupCoords;
-    const dropPoint = dropCoords;
+    // Never flash coordinates left by another booking while a /booking/:id
+    // deep link is hydrating its own immutable route from the server.
+    const pickupPoint = bookingHydrated ? pickupCoords : null;
+    const dropPoint = bookingHydrated ? dropCoords : null;
     const driverPoint = driver?.latitude != null && driver?.longitude != null
         ? { lat: driver.latitude, lng: driver.longitude }
         : null;
@@ -796,6 +909,22 @@ const TrackingPage = () => {
                         message={dc("Once you book, this is where you'll watch your driver arrive and follow the trip.")}
                         action={{ get "label"() { return dc("Book a ride"); }, onClick: () => navigate('/') }}
                     />
+                </BackgroundPanel>
+            </div>
+        );
+    }
+
+    if (bookingId && !bookingHydrated && !statusError) {
+        return (
+            <div className={SHELL}>
+                <BackgroundPanel className={FULL_PANEL}>
+                    {stateBackArrow}
+                    <div className={`flex flex-col gap-4 ${COL}`} role="status" aria-label={dc("Loading ride") }>
+                        <Skeleton tone="dark" className="h-12 w-3/4" />
+                        <Skeleton tone="dark" className="h-6 w-full" />
+                        <Skeleton tone="dark" className="mt-4 h-28 w-full rounded-2xl" />
+                        <Skeleton tone="dark" className="h-12 w-full rounded-xl" />
+                    </div>
                 </BackgroundPanel>
             </div>
         );
