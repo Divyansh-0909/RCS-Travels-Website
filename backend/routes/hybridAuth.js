@@ -4,6 +4,7 @@ import { clerkClient } from '@clerk/express'
 import crypto from 'crypto'
 import { sendOtpWhatsApp } from '../services/notification.js'
 import { normalizedPhone, otpLimiters } from '../middleware/rateLimit.js'
+import { isOwnerClerkUser } from '../lib/ownerDriver.js'
 
 // Phone-OTP login without Clerk's hosted UI and without passwords. We own the OTP
 // (stored hashed, 5-minute expiry) and Clerk owns the session; the two are bridged
@@ -65,11 +66,20 @@ async function intentMismatch(phone, intent, audience) {
 
 async function linkAccountToClerk(phone, audience, clerkId) {
   const account = await accountFor(phone, audience)
-  if (!account || account.clerkId === clerkId) return
+  if (!account) return
 
   if (audience === 'driver') {
-    await prisma.driver.update({ where: { phone }, data: { clerkId } })
+    const ownerDriver = isOwnerClerkUser(clerkId)
+    if (account.clerkId === clerkId && !ownerDriver) return
+    await prisma.driver.update({
+      where: { phone },
+      data: {
+        clerkId,
+        ...(ownerDriver ? { group: 'admin' } : {}),
+      },
+    })
   } else {
+    if (account.clerkId === clerkId) return
     await prisma.user.update({ where: { phone }, data: { clerkId } })
   }
 }
