@@ -646,6 +646,14 @@ const ManageAccount = () => {
 
                         <DetailCard className="flex flex-col gap-3">
                             <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
+                                {activeRide.status === "completed" && (
+                                    <Button
+                                        onClick={() => navigate(`/booking/${activeRide.id}`)}
+                                        prop={{ width: "240px" }}
+                                    >
+                                        {tr("View receipt & payment")}
+                                    </Button>
+                                )}
                                 {activeRideUpcoming && customerCancellableStatuses.has(activeRide.status) && (
                                     <Button onClick={() => handleCancel(activeRide)} prop={{ variant: "negative", width: "200px" }}>
                                         {cancelConfirmation?.id === activeRide.id

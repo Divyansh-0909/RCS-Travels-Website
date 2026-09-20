@@ -33,52 +33,69 @@ const Avatar = ({ invert, themed = false, initial, box, text }) => (
     </div>
 )
 
-const FINISHED_RIDE_STATUSES = new Set(["completed", "cancelled", "no_driver"])
+const ACTIVE_RIDE_STATUSES = new Set(["pending", "payment_pending", "confirmed", "assigned", "en_route", "reached", "started"])
 
-const isUpcomingScheduledRide = (booking) => {
-    if (!booking?.scheduledAt || FINISHED_RIDE_STATUSES.has(booking.status)) return false
-    const scheduledAt = new Date(booking.scheduledAt).getTime()
-    return Number.isFinite(scheduledAt) && scheduledAt > Date.now()
-}
+const isCurrentRideNow = (booking) => (
+    booking?.scheduledAt === null && ACTIVE_RIDE_STATUSES.has(booking.status)
+)
 
-const ScheduledRideMenu = ({ booking, onOpenRideHistory, t }) => {
-    const [dropMain] = splitAddress(booking.dropAddress)
-    const [pickupMain] = splitAddress(booking.pickupAddress)
-    const statusLabel = statusLabels[booking.status] ?? booking.status?.replace(/_/g, " ")
+const isActiveScheduledRide = (booking) => (
+    booking?.scheduledAt != null && ACTIVE_RIDE_STATUSES.has(booking.status)
+)
+
+const earliestScheduledRide = (bookings) => (
+    bookings
+        .filter(isActiveScheduledRide)
+        .sort((a, b) => new Date(a.scheduledAt) - new Date(b.scheduledAt))[0] ?? null
+)
+
+const RideMenu = ({ currentRide, scheduledRide, onOpenRide, onOpenRideHistory, t }) => {
+    const ridePanels = [
+        currentRide && { booking: currentRide, label: `Ride ${t("nav.now")}` },
+        scheduledRide && { booking: scheduledRide, label: t("nav.scheduledRide") },
+    ].filter(Boolean)
 
     return (
         <div className="w-full">
-            <p className="px-1 pb-2 text-xs font-semibold uppercase tracking-[0.12em] text-ink-muted">
-                {t("nav.scheduledRide")}
-            </p>
-            <button
-                type="button"
-                onClick={onOpenRideHistory}
-                className="flex w-full items-center gap-3 rounded-xl bg-[var(--foreground)] p-3 text-left text-[var(--text-foreground)] outline-none transition-colors duration-200 hover:bg-surface-muted/60 active:bg-surface-muted/60 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
-            >
-                <span className="min-w-0 flex-1">
-                    <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                        <span className="text-sm font-semibold text-primary">{formatDateTime(booking.scheduledAt)}</span>
-                        {statusLabel && <span className="text-xs font-medium capitalize text-ink-muted">{statusLabel}</span>}
-                    </span>
-                    <span className="mt-2 block truncate text-base font-semibold text-ink">
-                        {dropMain || booking.dropAddress || t("nav.destination")}
-                    </span>
-                    {pickupMain && <span className="mt-0.5 block truncate text-sm text-ink-muted">{t("nav.from")} {pickupMain}</span>}
-                    <span className="mt-2 block text-sm text-ink-muted">
-                        {labelOf(booking.vehicleClass)}
-                        {booking.fare != null ? ` • ₹${booking.fare}` : ""}
-                    </span>
-                </span>
-                {booking.vehicleClass && (
-                    <img
-                        className="h-14 w-20 shrink-0 object-contain"
-                        src={angledVehicleImageOf(booking.vehicleClass)}
-                        alt=""
-                        aria-hidden="true"
-                    />
-                )}
-            </button>
+            {ridePanels.map(({ booking, label }) => {
+                const [dropMain] = splitAddress(booking.dropAddress)
+                const [pickupMain] = splitAddress(booking.pickupAddress)
+                const statusLabel = statusLabels[booking.status] ?? booking.status?.replace(/_/g, " ")
+
+                return (
+                    <div key={booking.id} className="mb-3 last:mb-0">
+                        <p className="px-1 pb-2 text-xs font-semibold uppercase tracking-[0.12em] text-ink-muted">{label}</p>
+                        <button
+                            type="button"
+                            onClick={() => onOpenRide(booking.id)}
+                            className="flex w-full items-center gap-3 rounded-xl bg-[var(--foreground)] p-3 text-left text-[var(--text-foreground)] outline-none transition-colors duration-200 hover:bg-surface-muted/60 active:bg-surface-muted/60 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
+                        >
+                            <span className="min-w-0 flex-1">
+                                <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                                    {booking.scheduledAt != null && <span className="text-sm font-semibold text-primary">{formatDateTime(booking.scheduledAt)}</span>}
+                                    {statusLabel && <span className="text-xs font-medium capitalize text-ink-muted">{statusLabel}</span>}
+                                </span>
+                                <span className="mt-2 block truncate text-base font-semibold text-ink">
+                                    {dropMain || booking.dropAddress || t("nav.destination")}
+                                </span>
+                                {pickupMain && <span className="mt-0.5 block truncate text-sm text-ink-muted">{t("nav.from")} {pickupMain}</span>}
+                                <span className="mt-2 block text-sm text-ink-muted">
+                                    {labelOf(booking.vehicleClass)}
+                                    {booking.fare != null ? ` • ₹${booking.fare}` : ""}
+                                </span>
+                            </span>
+                            {booking.vehicleClass && (
+                                <img
+                                    className="h-14 w-20 shrink-0 object-contain"
+                                    src={angledVehicleImageOf(booking.vehicleClass)}
+                                    alt=""
+                                    aria-hidden="true"
+                                />
+                            )}
+                        </button>
+                    </div>
+                )
+            })}
             <div className="mt-2 border-t border-border pt-2">
                 <button
                     type="button"
@@ -140,10 +157,20 @@ const NavBar = ({ invert = false, hideExpanded = false, hideDestinationInput = f
     const ridesMenuRef = useRef(null)
     const [ridesOpen, setRidesOpen] = useState(false)
     const [ridesMenuPosition, setRidesMenuPosition] = useState(null)
-    const [scheduledRide, setScheduledRide] = useState(() => isUpcomingScheduledRide(activeBooking) ? activeBooking : null)
+    const [recentBookings, setRecentBookings] = useState(null)
     const [collapsed, setCollapsed] = useState(false)
     const [mobileAccountOpen, setMobileAccountOpen] = useState(false)
     const destinationOnly = collapsed && !hideDestinationInput
+    const rideCandidates = recentBookings === null
+        ? activeBooking ? [activeBooking] : []
+        : [
+            ...recentBookings,
+            ...(activeBooking && !recentBookings.some(booking => booking.id === activeBooking.id)
+                ? [activeBooking]
+                : []),
+        ]
+    const currentRide = rideCandidates.find(isCurrentRideNow) ?? null
+    const scheduledRide = earliestScheduledRide(rideCandidates)
 
     // The rail becomes a compact destination pill after scrolling on all sizes.
     useEffect(() => {
@@ -190,37 +217,26 @@ const NavBar = ({ invert = false, hideExpanded = false, hideDestinationInput = f
 
     useEffect(() => {
         if (!isSignedIn) {
-            setScheduledRide(null)
+            setRecentBookings(null)
             setRidesOpen(false)
             return
         }
 
         let cancelled = false
-        const localRide = isUpcomingScheduledRide(activeBooking) ? activeBooking : null
-        setScheduledRide(localRide)
+        setRecentBookings(null)
 
         ;(async () => {
             try {
-                const today = new Date()
-                const startDate = [
-                    today.getFullYear(),
-                    String(today.getMonth() + 1).padStart(2, "0"),
-                    String(today.getDate()).padStart(2, "0"),
-                ].join("-")
-                const data = await api.getMyBookings({ startDate, sortOrder: "asc", page: 1, limit: 50 })
+                const data = await api.getMyRideSummary()
                 if (data?.error) throw new Error(data.error)
-                const nextRide = (data?.bookings ?? [])
-                    .filter(isUpcomingScheduledRide)
-                    .sort((a, b) => new Date(a.scheduledAt) - new Date(b.scheduledAt))[0] ?? null
-                if (!cancelled) setScheduledRide(nextRide)
+                if (!cancelled) setRecentBookings(data?.bookings ?? [])
             } catch (err) {
                 console.error(err)
-                if (!cancelled && !localRide) setScheduledRide(null)
             }
         })()
 
         return () => { cancelled = true }
-    }, [isSignedIn, activeBooking?.id, activeBooking?.scheduledAt, activeBooking?.status])
+    }, [isSignedIn]) // eslint-disable-line react-hooks/exhaustive-deps
 
     // One `expand` drives both surfaces — the avatar chip is hidden on mobile and
     // the hamburger on desktop, so only one of them can ever be the trigger.
@@ -325,10 +341,6 @@ const NavBar = ({ invert = false, hideExpanded = false, hideDestinationInput = f
     }, [expand, isMobile])
 
     useEffect(() => {
-        if (!scheduledRide) setRidesOpen(false)
-    }, [scheduledRide])
-
-    useEffect(() => {
         if (collapsed) setRidesOpen(false)
     }, [collapsed])
 
@@ -388,7 +400,7 @@ const NavBar = ({ invert = false, hideExpanded = false, hideDestinationInput = f
     }, [menuMounted, isMobile, collapsed])
 
     useLayoutEffect(() => {
-        if (!(ridesOpen && scheduledRide && !isMobile)) {
+        if (!(ridesOpen && !isMobile)) {
             setRidesMenuPosition(null)
             return
         }
@@ -409,7 +421,7 @@ const NavBar = ({ invert = false, hideExpanded = false, hideDestinationInput = f
             window.removeEventListener("resize", positionMenu)
             window.removeEventListener("scroll", positionMenu, true)
         }
-    }, [ridesOpen, scheduledRide, isMobile, collapsed])
+    }, [ridesOpen, isMobile, collapsed])
 
     useEffect(() => {
         if (!(ridesOpen && !isMobile)) return
@@ -498,13 +510,13 @@ const NavBar = ({ invert = false, hideExpanded = false, hideDestinationInput = f
         navigate('/manage-account', { state: { tab: "Ride History" } })
     }
 
-    const handleMyRidesClick = () => {
-        if (!scheduledRide) {
-            if (mobileMenuActive) go(openRideHistory)
-            else openRideHistory()
-            return
-        }
+    const openRide = (id) => {
+        setRidesOpen(false)
+        if (mobileMenuActive) go(() => navigate(`/booking/${id}`))
+        else navigate(`/booking/${id}`)
+    }
 
+    const handleMyRidesClick = () => {
         if (!isMobile) setExpand(false)
         setRidesOpen(open => !open)
     }
@@ -631,39 +643,37 @@ const NavBar = ({ invert = false, hideExpanded = false, hideDestinationInput = f
                         <li className='w-full'>
                             <button
                                 type="button"
-                                aria-haspopup={scheduledRide ? "dialog" : undefined}
-                                aria-expanded={scheduledRide ? ridesOpen : undefined}
+                                aria-haspopup="dialog"
+                                aria-expanded={ridesOpen}
                                 onClick={handleMyRidesClick}
                                 className={mobileDrawerLink + " gap-2"}
                             >
                                 <span className={mobileDrawerLabel}>{t("nav.myRides")}</span>
-                                {scheduledRide && (
-                                    <Icon
-                                        path={mdiChevronDown}
-                                        size={0.75}
-                                        className='transition-transform duration-200 motion-reduce:transition-none'
-                                        style={{ transform: ridesOpen ? "rotate(180deg)" : "rotate(0deg)" }}
-                                        aria-hidden="true"
-                                    />
-                                )}
+                                <Icon
+                                    path={mdiChevronDown}
+                                    size={0.75}
+                                    className='transition-transform duration-200 motion-reduce:transition-none'
+                                    style={{ transform: ridesOpen ? "rotate(180deg)" : "rotate(0deg)" }}
+                                    aria-hidden="true"
+                                />
                             </button>
-                            {scheduledRide && (
-                                <div
-                                    inert={ridesOpen ? undefined : ''}
-                                    aria-hidden={!ridesOpen}
-                                    className={"grid transition-[grid-template-rows,opacity] duration-200 ease-out motion-reduce:transition-none " + (ridesOpen ? 'grid-rows-[1fr] opacity-100' : 'pointer-events-none grid-rows-[0fr] opacity-0')}
-                                >
-                                    <div className='min-h-0 overflow-hidden pt-2'>
-                                        <div className='rounded-2xl border border-border bg-surface-raised p-3 shadow-[0_12px_28px_rgba(0,0,0,0.18)]'>
-                                            <ScheduledRideMenu
-                                                booking={scheduledRide}
-                                                onOpenRideHistory={() => go(openRideHistory)}
-                                                t={t}
-                                            />
-                                        </div>
+                            <div
+                                inert={ridesOpen ? undefined : ''}
+                                aria-hidden={!ridesOpen}
+                                className={"grid transition-[grid-template-rows,opacity] duration-200 ease-out motion-reduce:transition-none " + (ridesOpen ? 'grid-rows-[1fr] opacity-100' : 'pointer-events-none grid-rows-[0fr] opacity-0')}
+                            >
+                                <div className='min-h-0 overflow-hidden pt-2'>
+                                    <div className='rounded-2xl border border-border bg-surface-raised p-3 shadow-[0_12px_28px_rgba(0,0,0,0.18)]'>
+                                        <RideMenu
+                                            currentRide={currentRide}
+                                            scheduledRide={scheduledRide}
+                                            onOpenRide={openRide}
+                                            onOpenRideHistory={() => go(openRideHistory)}
+                                            t={t}
+                                        />
                                     </div>
                                 </div>
-                            )}
+                            </div>
                         </li>
                     )}
                     {accountNavLinks.map(([label, action], i) => (
@@ -729,21 +739,19 @@ const NavBar = ({ invert = false, hideExpanded = false, hideDestinationInput = f
                             <button
                                 ref={ridesTriggerRef}
                                 type="button"
-                                aria-haspopup={scheduledRide ? "dialog" : undefined}
-                                aria-expanded={scheduledRide ? ridesOpen : undefined}
+                                aria-haspopup="dialog"
+                                aria-expanded={ridesOpen}
                                 onClick={handleMyRidesClick}
                                 className={desktopSecondaryButton + " flex items-center gap-1.5"}
                             >
                                 <span>{t("nav.myRides")}</span>
-                                {scheduledRide && (
-                                    <Icon
-                                        path={mdiChevronDown}
-                                        size={0.7}
-                                        className='transition-transform duration-200 motion-reduce:transition-none'
-                                        style={{ transform: ridesOpen ? "rotate(180deg)" : "rotate(0deg)" }}
-                                        aria-hidden="true"
-                                    />
-                                )}
+                                <Icon
+                                    path={mdiChevronDown}
+                                    size={0.7}
+                                    className='transition-transform duration-200 motion-reduce:transition-none'
+                                    style={{ transform: ridesOpen ? "rotate(180deg)" : "rotate(0deg)" }}
+                                    aria-hidden="true"
+                                />
                             </button>
                             <ul className="flex gap-2">
                                 {accountNavLinks.map(([label, action], i) => (
@@ -839,7 +847,7 @@ const NavBar = ({ invert = false, hideExpanded = false, hideDestinationInput = f
                         </div>,
                         document.body
                     )}
-                    {ridesOpen && scheduledRide && !isMobile && ridesMenuPosition && createPortal(
+                    {ridesOpen && !isMobile && ridesMenuPosition && createPortal(
                         <div
                             ref={ridesMenuRef}
                             role="dialog"
@@ -847,8 +855,10 @@ const NavBar = ({ invert = false, hideExpanded = false, hideDestinationInput = f
                             className='fixed z-[1010] w-[360px] max-w-[calc(100vw-2rem)] rounded-2xl border border-border bg-surface-raised p-3 text-ink shadow-[0_12px_36px_rgba(0,0,0,0.32)] animate-dropdown motion-reduce:animate-none'
                             style={ridesMenuPosition}
                         >
-                            <ScheduledRideMenu
-                                booking={scheduledRide}
+                            <RideMenu
+                                currentRide={currentRide}
+                                scheduledRide={scheduledRide}
+                                onOpenRide={openRide}
                                 onOpenRideHistory={openRideHistory}
                                 t={t}
                             />
