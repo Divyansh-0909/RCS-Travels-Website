@@ -15,6 +15,7 @@ import { walletEvent } from '../services/walletKeys.js'
 import { scheduledDepositFor } from '../services/scheduledDeposit.js'
 import { driverPaymentView } from '../services/driverPaymentView.js'
 import { isStorageConfigured, signedUploadUrl, stat, remove } from '../lib/storage.js'
+import { initialDriverGroup } from '../lib/ownerDriver.js'
 import { sniffUpload, scanDocument, discardUpload, DRIVER_SCAN_MESSAGE } from '../services/documentScan.js'
 import { enqueueDocumentScan } from '../lib/tasks.js'
 import { signedDriverPhotoUrl } from '../services/driverPhoto.js'
@@ -349,6 +350,7 @@ driverRouter.post('/me', protect, async (req, res) => {
                 clerkId: userId,
                 name: normalizedName,
                 phone,
+                group: initialDriverGroup(userId),
             }
         })
     })
