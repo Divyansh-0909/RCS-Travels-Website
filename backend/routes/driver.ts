@@ -6,9 +6,10 @@ import { z } from 'zod'
 import { protect } from '../middleware/auth.js'
 import { prisma } from '../db/prisma.js'
 import { ACTIVE_STATUSES } from './bookings.js'
-import { ASSIGNABLE_STATUSES, claimBookingForDriver, joinPool, startAssignment } from '../services/driverAssignment.js'
+import { ASSIGNABLE_STATUSES, claimBookingForDriver, startAssignment } from '../services/driverAssignment.js'
+import { applyScheduledOfferAcceptance } from '../services/scheduledOfferAcceptance.js'
 import { evaluatePool, POOLABLE_HOST_STATUSES } from '../services/ridePooling.js'
-import { offerScheduledRide, withdrawOtherOffers } from '../services/scheduledOffers.js'
+import { offerScheduledRide } from '../services/scheduledOffers.js'
 import { seatsOf } from '../constants/vehicles.js'
 import { postWalletEntry } from '../services/wallet.js'
 import { walletEvent } from '../services/walletKeys.js'
@@ -47,17 +48,24 @@ import {
 import { addVehicle, removeVehicle, switchActiveVehicle } from '../services/driverVehicles.js'
 import { completionGeofence, locationProblem, PICKUP_RADIUS_KM } from '../services/rideGeofence.js'
 import { cancelDriverRide, DRIVER_CANCELLABLE_STATUSES } from '../services/driverRideCancellation.js'
-import { settleRideTransition } from '../services/rideSettlement.js'
+import { settleRideTransition, RIDE_TRANSITIONS } from '../services/rideSettlement.js'
 import { isDriverDispatchReady, restoreIdleDriverCapacity } from '../services/driverAvailability.ts'
 import { notifyWhatsAppDriverCancelled, notifyWhatsAppEmergencyLiveLocation, notifyWhatsAppRideStatus } from '../services/notification.js'
 import { ensureBookingShareLink } from '../lib/shareLink.js'
 import { getNavigationRoute } from '../services/rideEstimate.js'
+import { driverDelayEligibleAt, isDriverDelayed } from '../services/driverDelay.js'
 import { classifyVehicle } from '../services/AI/classifyVehicle.ts'
 import { locationSchema, UploadUrlRequest, ConfirmDocumentsRequest, rideParamsSchema, driverOnlineSchema, driverAccountInformationSchema, addVehicleSchema, vehicleClassificationInputSchema, activeVehicleSchema, fcmTokenSchema, rideStatusSchema, driverRidesQuerySchema } from '../types.ts'
+import { storeDriverLocation } from '../services/driverLocationUpdate.js'
 import { recentBookingHistoryWhere } from '../lib/bookingHistory.js'
 import { createDriverDebtPayment, savePayoutUpi, walletStatement } from '../services/driverFinance.js'
 import { createOrderForPayment, PaymentError, verifyCheckoutPayment } from '../services/payments.js'
 import { driverCheckoutUrl } from '../services/driverCheckout.js'
+import { submitDriverAppeal } from '../services/responsibilityAppealService.js'
+import { ResponsibilityLifecycleError } from '../services/responsibilityLifecycleErrors.js'
+import { newWorkEligibility, recheckDriverNewWorkEligibility } from '../services/driverNewWorkEligibility.js'
+import { getDriverReliabilitySummary } from '../services/driverReliability.js'
+import { getDriverResponsibilityNotices } from '../services/driverResponsibilityNotices.js'
 
 // The driver-facing API. Nothing calls it yet — the driver app is Phase 5, and until
 // it exists the assignment loop takes a driver's answer from sendFCM's return value
@@ -77,10 +85,41 @@ const walletQuerySchema = z.object({
     cursor: z.uuid().optional(),
 })
 const payoutAccountSchema = z.object({ upiId: z.string().min(3).max(320) }).strict()
+const DRIVER_CANCELLATION_REASONS = [
+    'rider_requested_cancel',
+    'rider_unreachable',
+    'rider_no_show_30m',
+    'road_or_vehicle_issue',
+    'rider_threatening',
+    'rider_abusive',
+    'carrier_not_requested',
+    'other',
+] as const
+const driverCancellationBodySchema = z.object({
+    reason: z.enum(DRIVER_CANCELLATION_REASONS),
+    otherReason: z.string().trim().min(3).max(300).optional(),
+}).strict().superRefine((value, ctx) => {
+    if (value.reason === 'other' && !value.otherReason) {
+        ctx.addIssue({ code: 'custom', path: ['otherReason'], message: 'Tell us why you are cancelling' })
+    }
+    if (value.reason !== 'other' && value.otherReason) {
+        ctx.addIssue({
+            code: 'custom',
+            path: ['otherReason'],
+            message: 'Other reason text is only allowed with the Other option',
+        })
+    }
+})
+const RIDER_NO_SHOW_WAIT_MS = 30 * 60 * 1000
 const driverPaymentVerificationSchema = z.object({
     razorpay_order_id: z.string().min(1).max(100),
     razorpay_payment_id: z.string().min(1).max(100),
     razorpay_signature: z.string().min(1).max(200),
+}).strict()
+const responsibilityCaseParamsSchema = z.object({ caseId: z.string().trim().min(1).max(200) }).strict()
+const responsibilityAppealBodySchema = z.object({
+    reason: z.string().trim().min(3).max(2000),
+    additionalEvidenceRefs: z.array(z.string().trim().min(1).max(200)).max(20).default([]),
 }).strict()
 
 const answerFinanceError = (res: Response, error: unknown) => {
@@ -103,13 +142,6 @@ const EARTH_RADIUS_KM = 6371
 // now". The rider's screen already draws them differently (statusLabels has
 // "Driver on the way", and TrackingPage reveals the OTP from en_route on, so the
 // code is in her hand before he arrives rather than while he waits at the kerb).
-const RIDE_TRANSITIONS = {
-    en_route: ['assigned'],
-    reached: ['assigned', 'en_route'],
-    started: ['reached'],
-    completed: ['started'],
-} as const satisfies Record<string, readonly BookingStatus[]>
-
 type RideTransition = keyof typeof RIDE_TRANSITIONS
 
 function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
@@ -123,28 +155,6 @@ function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: numbe
         Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2
 
     return 2 * EARTH_RADIUS_KM * Math.asin(Math.sqrt(a))
-}
-
-function getBearing(lat1: number, lon1: number, lat2: number, lon2: number): number {
-    const toRad = (deg: number): number => deg * Math.PI / 180;
-    const toDeg = (rad: number): number => rad * 180 / Math.PI;
-
-    const φ1 = toRad(lat1);
-    const φ2 = toRad(lat2);
-
-    const λ1 = toRad(lon1);
-    const λ2 = toRad(lon2);
-
-    const y = Math.sin(λ2 - λ1) * Math.cos(φ2);
-
-    const x =
-        Math.cos(φ1) * Math.sin(φ2) -
-        Math.sin(φ1) * Math.cos(φ2) *
-        Math.cos(λ2 - λ1);
-
-    const θ = Math.atan2(y, x);
-
-    return (toDeg(θ) + 360) % 360;
 }
 
 const HISTORY_STATUSES = ['completed', 'cancelled'] as const satisfies readonly BookingStatus[]
@@ -189,6 +199,37 @@ const formatPickupTime = (scheduledAt: Date | null): string =>
         ? new Date(scheduledAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'medium', timeStyle: 'short' })
         : 'IMMEDIATE PICKUP'
 
+async function refreshExpiredTemporarySuspension(driver: Driver): Promise<Driver> {
+    const now = new Date()
+    if (!driver.suspendedAt || !driver.suspensionExpiresAt || driver.suspensionExpiresAt > now) return driver
+
+    const cleared = await prisma.driver.updateMany({
+        where: {
+            id: driver.id,
+            suspendedAt: { not: null },
+            suspensionExpiresAt: { lte: now },
+        },
+        data: {
+            suspendedAt: null,
+            suspensionReason: null,
+            suspensionExpiresAt: null,
+        },
+    })
+    if (cleared.count) {
+        return { ...driver, suspendedAt: null, suspensionReason: null, suspensionExpiresAt: null }
+    }
+
+    // A seventh strike or an admin action may have changed the suspension after
+    // this request read the row. Re-read rather than clearing the newer state.
+    return await prisma.driver.findUnique({ where: { id: driver.id } }) ?? driver
+}
+
+const answerResponsibilityError = (res: Response, error: unknown) => {
+    if (!(error instanceof ResponsibilityLifecycleError)) return false
+    res.status(error.status).json({ error: error.message, code: error.code })
+    return true
+}
+
 // Signed in and has a Driver row — nothing more. Every screen a captain sees
 // BEFORE he is cleared runs through this: his documents, his cars, the status
 // page that explains why he cannot go online yet. Gating those on approval would
@@ -201,11 +242,12 @@ async function requireDriver(req: Request, res: Response): Promise<Driver | null
         return null
     }
 
-    const driver = await prisma.driver.findUnique({ where: { clerkId: userId } })
-    if (!driver) {
+    const storedDriver = await prisma.driver.findUnique({ where: { clerkId: userId } })
+    if (!storedDriver) {
         res.status(403).json({ error: 'Not a registered driver' })
         return null
     }
+    const driver = await refreshExpiredTemporarySuspension(storedDriver)
 
     return driver
 }
@@ -232,11 +274,12 @@ async function resolveDriver(req: Request, res: Response, allowSuspended: boolea
         return null
     }
 
-    const driver = await prisma.driver.findUnique({ where: { clerkId: userId } })
-    if (!driver) {
+    const storedDriver = await prisma.driver.findUnique({ where: { clerkId: userId } })
+    if (!storedDriver) {
         res.status(403).json({ error: 'Not a registered driver' })
         return null
     }
+    const driver = await refreshExpiredTemporarySuspension(storedDriver)
     if (!driver.isActive) {
         res.status(403).json({ error: 'Driver account is inactive' })
         return null
@@ -258,6 +301,7 @@ async function resolveDriver(req: Request, res: Response, allowSuspended: boolea
             error: 'Driver account is suspended',
             reason: driver.suspensionReason,
             suspendedAt: driver.suspendedAt,
+            suspensionExpiresAt: driver.suspensionExpiresAt,
         })
         return null
     }
@@ -268,6 +312,17 @@ async function resolveDriver(req: Request, res: Response, allowSuspended: boolea
 /** Everything that takes on NEW work. A suspended captain is refused, with the reason. */
 async function requireApprovedDriver(req: Request, res: Response): Promise<WorkReadyDriver | null> {
     return resolveDriver(req, res, false)
+}
+
+async function requireDriverForNewWork(req: Request, res: Response): Promise<WorkReadyDriver | null> {
+    const driver = await requireApprovedDriver(req, res)
+    if (!driver) return null
+    const eligibility = await newWorkEligibility(driver)
+    if (!eligibility.eligible) {
+        res.status(403).json({ error: 'Driver is not eligible for new work', code: eligibility.code })
+        return null
+    }
+    return driver
 }
 
 /**
@@ -610,8 +665,9 @@ driverRouter.post('/me/documents/upload-url', protect, async (req, res) => {
     const { userId } = getAuth(req)
     if (!userId) return res.status(401).json({ error: 'Not signed in' })
 
-    const driver = await prisma.driver.findUnique({ where: { clerkId: userId } })
-    if (!driver) return res.status(403).json({ error: 'Not a registered driver' })
+    const storedDriver = await prisma.driver.findUnique({ where: { clerkId: userId } })
+    if (!storedDriver) return res.status(403).json({ error: 'Not a registered driver' })
+    const driver = await refreshExpiredTemporarySuspension(storedDriver)
 
     const parsed = UploadUrlRequest.safeParse(req.body)
     if (!parsed.success) {
@@ -1396,6 +1452,7 @@ driverRouter.get('/me', protect, async (req, res) => {
                         : verificationStatus === 'approved' ? null
                             : verificationStatus,
             suspendedAt: driver.suspendedAt,
+            suspensionExpiresAt: driver.suspensionExpiresAt,
             suspensionReason: driver.suspensionReason,
             // RIDES HE STILL OWES, and the reason this is not folded into
             // canDrive. The two answer different questions: canDrive is "may he
@@ -1457,6 +1514,13 @@ driverRouter.patch('/online', protect, async (req, res) => {
     }
     const { isOnline } = parsed.data
 
+    if (isOnline) {
+        const eligibility = await newWorkEligibility(driver)
+        if (!eligibility.eligible) {
+            return res.status(403).json({ error: 'Driver is not eligible for new work', code: eligibility.code })
+        }
+    }
+
     if (!isOnline) {
         const active = await prisma.booking.count({
             where: { driverId: driver.id, status: { in: ACTIVE_STATUSES } },
@@ -1464,7 +1528,11 @@ driverRouter.patch('/online', protect, async (req, res) => {
         if (active > 0) return res.status(409).json({ error: 'Finish your active ride before going offline' })
     }
 
-    await prisma.$transaction(async (tx) => {
+    const transactionEligibility = await prisma.$transaction(async (tx) => {
+        if (isOnline) {
+            const eligibility = await recheckDriverNewWorkEligibility(driver.id, { db: tx })
+            if (!eligibility.eligible) return eligibility
+        }
         await tx.driver.update({
             where: { id: driver.id },
             data: { isOnline },
@@ -1477,7 +1545,12 @@ driverRouter.patch('/online', protect, async (req, res) => {
         // the whole active vehicle is free, and the guarded update does nothing
         // when somebody is actually in it.
         if (isOnline) await restoreIdleDriverCapacity(driver, tx)
+        return { eligible: true, code: null }
     })
+
+    if (!transactionEligibility.eligible) {
+        return res.status(403).json({ error: 'Driver is not eligible for new work', code: transactionEligibility.code })
+    }
 
     return res.json({ isOnline })
 })
@@ -1491,32 +1564,16 @@ driverRouter.post('/location', protect, async (req, res) => {
     if (!parsed.success) {
         return res.status(400).json({ error: 'Invalid request body', issues: parsed.error.issues })
     }
-    const { lat, lng } = parsed.data //From phone from expo helper fn
+    const saved = await storeDriverLocation(prisma, driver.id, parsed.data)
 
-    const previous = await prisma.driverLocation.findUnique({
-        where: { driverId: driver.id },
+    return res.json({
+        ok: true,
+        dispatchReady: true,
+        locationUpdatedAt: saved.updatedAt,
+        locationObservedAt: saved.observedAt,
+        locationReceivedAt: saved.receivedAt,
+        locationAccuracyMeters: saved.accuracyMeters,
     })
-
-    let speedKmh: number | null = null
-    let bearing: number | null = null
-
-    const now = new Date()
-
-    if (previous) {
-        const distance = haversineDistance(previous.latitude, previous.longitude, lat, lng)
-        const seconds = (now.getTime() - previous.updatedAt.getTime()) / 1000
-
-        if (seconds > 0) speedKmh = (distance / seconds) * 3600
-        bearing = getBearing(previous.latitude, previous.longitude, lat, lng)
-    }
-
-    const saved = await prisma.driverLocation.upsert({
-        where: { driverId: driver.id },
-        create: { driverId: driver.id, latitude: lat, longitude: lng, speedKmh, bearing },
-        update: { latitude: lat, longitude: lng, speedKmh, bearing },
-    })
-
-    return res.json({ ok: true, dispatchReady: true, locationUpdatedAt: saved.updatedAt })
 })
 
 /**
@@ -1548,6 +1605,10 @@ driverRouter.patch('/rides/:id/cancel', protect, async (req, res) => {
     if (!parsed.success) {
         return res.status(400).json({ error: 'Invalid booking id', issues: parsed.error.issues })
     }
+    const body = driverCancellationBodySchema.safeParse(req.body)
+    if (!body.success) {
+        return res.status(400).json({ error: 'Choose a valid cancellation reason', issues: body.error.issues })
+    }
 
     const booking = await prisma.booking.findUnique({ where: { id: parsed.data.id } })
     if (!booking) return res.status(404).json({ error: 'Booking not found' })
@@ -1555,14 +1616,31 @@ driverRouter.patch('/rides/:id/cancel', protect, async (req, res) => {
 
     if (!DRIVER_CANCELLABLE_STATUSES.includes(booking.status)) {
         return res.status(409).json({
-            error: booking.status === 'reached' || booking.status === 'started'
-                ? 'Call support to drop a ride you have already reached'
+            error: booking.status === 'started'
+                ? 'Call support to cancel a ride that has already started'
                 : `Cannot cancel a ${booking.status} ride`,
             status: booking.status,
         })
     }
 
-    const cancelled = await cancelDriverRide(booking, driver)
+    if (body.data.reason === 'rider_no_show_30m') {
+        if (!booking.reachedAt) {
+            return res.status(409).json({
+                error: 'Mark yourself arrived before using the rider no-show reason',
+                code: 'RIDER_NO_SHOW_NOT_REACHED',
+            })
+        }
+        const eligibleAt = new Date(booking.reachedAt.getTime() + RIDER_NO_SHOW_WAIT_MS)
+        if (eligibleAt.getTime() > Date.now()) {
+            return res.status(409).json({
+                error: 'Wait 30 minutes after arrival before using the rider no-show reason',
+                code: 'RIDER_NO_SHOW_WAIT',
+                eligibleAt,
+            })
+        }
+    }
+
+    const cancelled = await cancelDriverRide(booking, driver, body.data)
     if (!cancelled) return res.status(409).json({ error: 'Ride changed while cancellation was in flight' })
 
     // Put the rider back into the correct dispatch lane immediately. Ride Now
@@ -1575,7 +1653,11 @@ driverRouter.patch('/rides/:id/cancel', protect, async (req, res) => {
     try { await notifyWhatsAppDriverCancelled(booking.id) }
     catch (error) { console.error(`driver cancellation WhatsApp failed for ${booking.id}:`, (error as Error).message) }
 
-    return res.json({ bookingId: booking.id, status: cancelled.status, consequence: cancelled.consequence })
+    return res.json({
+        bookingId: booking.id,
+        status: cancelled.status,
+        responsibilityCaseId: cancelled.responsibilityCaseId,
+    })
 })
 
 driverRouter.get('/me/wallet', protect, async (req, res) => {
@@ -1676,6 +1758,7 @@ driverRouter.get('/upcoming-ride', protect, async (req, res) => {
             safeWaypointLat: true,
             safeWaypointLng: true,
             scheduledAt: true,
+            expectedPickupAt: true,
             fare: true,
             customerPayment: true,
             scheduledAdvanceAmount: true,
@@ -1734,6 +1817,7 @@ driverRouter.get('/rides', protect, async (req, res) => {
             safeWaypointLat: true,
             safeWaypointLng: true,
             scheduledAt: true,
+            expectedPickupAt: true,
             fare: true,
             customerPayment: true,
             vehicleClass: true,
@@ -1846,6 +1930,8 @@ driverRouter.get('/rides', protect, async (req, res) => {
             ...booking,
             completedAt,
             durationMin: drivenMinutes(startedAt, completedAt),
+            driverDelayed: isDriverDelayed(booking),
+            driverDelayEligibleAt: driverDelayEligibleAt(booking),
             ...driverPaymentView(booking),
             navigationLeg: navigationByBooking.get(booking.id)?.navigationLeg ?? null,
             navigationEtaMinutes: navigationByBooking.get(booking.id)?.navigationEtaMinutes ?? null,
@@ -1912,6 +1998,10 @@ driverRouter.get('/rides/:id', protect, async (req, res) => {
         walletReimbursement: booking.couponAmount,
         distanceKm: booking.distanceKm,
         scheduledAt: booking.scheduledAt,
+        expectedPickupAt: booking.expectedPickupAt,
+        driverDelayed: isDriverDelayed(booking),
+        driverDelayEligibleAt: driverDelayEligibleAt(booking),
+        reachedAt: booking.reachedAt,
         preferSafeRoute: booking.preferSafeRoute,
         safeWaypointLat: booking.safeWaypointLat,
         safeWaypointLng: booking.safeWaypointLng,
@@ -2186,7 +2276,7 @@ driverRouter.get('/offers', protect, async (req, res) => {
 // claimBookingForDriver — because with an offer broadcast to a whole group, two
 // drivers tapping accept at the same time is the normal case, not an edge one.
 driverRouter.patch('/offers/:id/accept', protect, async (req, res) => {
-    const driver = await requireApprovedDriver(req, res)
+    const driver = await requireDriverForNewWork(req, res)
     if (!driver) return
 
     const parsed = rideParamsSchema.safeParse(req.params)
@@ -2279,7 +2369,7 @@ driverRouter.patch('/offers/:id/accept', protect, async (req, res) => {
     // this driver had room for it at the moment he asked.
     const depositAmount = booking.scheduledAt ? scheduledDepositFor(booking.fare) : 0
     if (driver.walletBalance < depositAmount) {
-        return res.status(409).json({ error: 'Insufficient available wallet balance', code: 'INSUFFICIENT_WALLET', depositAmount })
+        return res.status(409).json({ error: 'A 10% scheduled-ride wallet hold is required to accept this offer; it is unrelated to payout UPI.', code: 'INSUFFICIENT_WALLET', depositAmount, walletHoldPercentage: 10 })
     }
 
     let claim
@@ -2289,24 +2379,16 @@ driverRouter.patch('/offers/:id/accept', protect, async (req, res) => {
         booking.confirmedAt ?? new Date(),
         // Both inside the claim's transaction: answering his own offer, and
         // taking the ride off everyone else's notification page.
-        async (tx) => {
-            const live = await tx.driver.findUniqueOrThrow({ where: { id: driver.id }, select: { walletBalance: true } })
-            if (live.walletBalance < depositAmount) throw new Error('INSUFFICIENT_WALLET')
-            if (depositAmount > 0) {
-                await postWalletEntry(tx, { driverId: driver.id, amount: -depositAmount, type: 'deposit_hold',
-                    eventKey: walletEvent.depositHold(booking.id), bookingId: booking.id,
-                    note: '15% scheduled ride acceptance deposit' })
-            }
-            if (poolJoin) await joinPool(tx, { host: poolJoin.host, joiner: booking, orders: poolJoin.orders })
-            await tx.rideOffer.update({
-                where: { id: offer.id },
-                data: { status: 'accepted', respondedAt: new Date() },
-            })
-            await withdrawOtherOffers(booking.id, driver.id, tx)
-        },
+        (tx) => applyScheduledOfferAcceptance(tx, { booking, driverId: driver.id, offerId: offer.id, poolJoin }),
     ) } catch (err) {
+        if ((err as Error).message === 'DEPOSIT_OWNER_CONFLICT') return res.status(409).json({
+            error: 'This ride needs an admin review before reassignment', code: 'DEPOSIT_OWNER_CONFLICT',
+        })
+        if ((err as Error).message === 'OFFER_UNAVAILABLE') return res.status(409).json({
+            error: 'This offer is no longer available', code: 'OFFER_UNAVAILABLE',
+        })
         if ((err as Error).message === 'INSUFFICIENT_WALLET') return res.status(409).json({
-            error: 'Insufficient available wallet balance', code: 'INSUFFICIENT_WALLET', depositAmount,
+            error: 'A 10% scheduled-ride wallet hold is required to accept this offer; it is unrelated to payout UPI.', code: 'INSUFFICIENT_WALLET', depositAmount, walletHoldPercentage: 10,
         })
         throw err
     }
@@ -2325,6 +2407,10 @@ driverRouter.patch('/offers/:id/accept', protect, async (req, res) => {
         // His own second accept beat this one to the seats. The offer stays
         // pending on purpose — finish a ride and it fits again.
         return res.status(409).json({ error: 'Vehicle has no room for this ride' })
+    }
+
+    if (claim === 'driver_ineligible') {
+        return res.status(403).json({ error: 'Driver is not eligible for new work', code: 'DRIVER_INELIGIBLE' })
     }
 
     if (claim === 'host_moved_on') {
@@ -2374,7 +2460,7 @@ driverRouter.patch('/offers/:id/reject', protect, async (req, res) => {
 })
 
 driverRouter.patch('/rides/:id/accept', protect, async (req, res) => {
-    const driver = await requireApprovedDriver(req, res)
+    const driver = await requireDriverForNewWork(req, res)
     if (!driver) return
 
     const parsed = rideParamsSchema.safeParse(req.params)
@@ -2407,6 +2493,9 @@ driverRouter.patch('/rides/:id/accept', protect, async (req, res) => {
     }
     if (claim === 'no_room') {
         return res.status(409).json({ error: 'Vehicle has no room for this ride' })
+    }
+    if (claim === 'driver_ineligible') {
+        return res.status(403).json({ error: 'Driver is not eligible for new work', code: 'DRIVER_INELIGIBLE' })
     }
 
     return res.json({
@@ -2457,6 +2546,46 @@ driverRouter.patch('/rides/:id/decline', protect, async (req, res) => {
         bookingId: booking.id,
         status: booking.status,
     })
+})
+
+driverRouter.get('/me/reliability', protect, async (req, res) => {
+    const driver = await requireDriver(req, res)
+    if (!driver) return
+    const reliability = await getDriverReliabilitySummary(driver.id)
+    return res.json(reliability)
+})
+
+driverRouter.get('/me/responsibility-notices', protect, async (req, res) => {
+    const driver = await requireDriver(req, res)
+    if (!driver) return
+    return res.json(await getDriverResponsibilityNotices(driver.id, { db: prisma }))
+})
+
+driverRouter.post('/responsibility-cases/:caseId/appeal', protect, async (req, res) => {
+    const driver = await requireDriver(req, res)
+    if (!driver) return
+
+    const params = responsibilityCaseParamsSchema.safeParse(req.params)
+    const body = responsibilityAppealBodySchema.safeParse(req.body)
+    if (!params.success || !body.success) {
+        return res.status(400).json({
+            error: 'Invalid appeal request',
+            issues: [...(params.success ? [] : params.error.issues), ...(body.success ? [] : body.error.issues)],
+        })
+    }
+
+    try {
+        const result = await submitDriverAppeal({
+            caseId: params.data.caseId,
+            driverId: driver.id,
+            reason: body.data.reason,
+            additionalEvidence: body.data.additionalEvidenceRefs,
+        })
+        return res.status(result.reused ? 200 : 201).json(result)
+    } catch (error) {
+        if (answerResponsibilityError(res, error)) return
+        throw error
+    }
 })
 
 

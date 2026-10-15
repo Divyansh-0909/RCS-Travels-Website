@@ -3,6 +3,7 @@ import { getRideEstimate } from '../services/rideEstimate.js'
 import { isVehicleClass } from '../constants/vehicles.js'
 import { getAuth } from '@clerk/express'
 import { prisma } from '../db/prisma.js'
+import { protectCoupon } from '../middleware/auth.js'
 
 const fareRouter = Router();
 
@@ -13,7 +14,7 @@ const cleanCoords = (c) =>
   Math.abs(c.lat) <= 90 && Math.abs(c.lng) <= 180
     ? { lat: c.lat, lng: c.lng } : null
 
-fareRouter.post('/estimate', async (req, res) => {
+fareRouter.post('/estimate', protectCoupon, async (req, res) => {
   const { pickupAddress, dropAddress, vehicleClass, pickupCoords, dropCoords, preferSafeRoute, needsCarrier, couponId } = req.body
 
   if (!pickupAddress || !dropAddress || !vehicleClass) {

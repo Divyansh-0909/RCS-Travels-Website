@@ -1,5 +1,8 @@
 import type { Booking, Payment, Prisma } from '@prisma/client'
 import { createPaymentIntent } from './paymentIntents.js'
+import { recoverFinalizedLiabilitiesFromEarning } from './responsibilityLiabilityRecovery.js'
+import { postWalletEntry } from './wallet.js'
+import { walletEvent } from './walletKeys.js'
 
 export type RideSettlementMethod = 'cash' | 'upi'
 export type RideSettlementState = 'pending' | 'paid'
@@ -7,6 +10,7 @@ export type RideSettlementState = 'pending' | 'paid'
 type SettlementBooking = Pick<Booking,
   | 'id'
   | 'userId'
+  | 'driverId'
   | 'status'
   | 'scheduledAt'
   | 'fare'
@@ -64,7 +68,7 @@ export function ridePaymentView(booking: SettlementBooking): RidePaymentView {
   const paidAmount = scheduled ? booking.scheduledFinalPaidAmount : booking.rideNowPaidAmount
   const method = settlementMethod(scheduled ? booking.scheduledFinalPaymentMethod : booking.rideNowPaymentMethod)
   const paidAt = scheduled ? booking.scheduledFinalPaidAt : booking.rideNowPaidAt
-  const state = method && paidAmount >= amount ? 'paid' : 'pending'
+  const state = amount === 0 || (method && paidAmount >= amount) ? 'paid' : 'pending'
   return { state, method, amount, paidAmount, paidAt }
 }
 
@@ -97,11 +101,34 @@ const cashRetryOrConflict = (view: RidePaymentView) => {
   throw new RidePaymentError('Payment state changed. Refresh and try again.', 409, 'PAYMENT_STATE_CHANGED')
 }
 
+// A customer-facing UPI final payment is only usable when the assigned captain
+// has a payout destination that an admin has verified. Cash settlement remains
+// available because it does not rely on that destination.
+export async function driverPayoutUpiAvailable(db: Pick<Prisma.TransactionClient, 'driver'>, driverId: string | null) {
+  if (!driverId) return false
+  const driver = await db.driver.findUnique({
+    where: { id: driverId },
+    select: { payoutUpiId: true, payoutUpiVerifiedAt: true },
+  })
+  return driverPayoutUpiIsVerified(driver)
+}
+
+export const driverPayoutUpiIsVerified = (
+  driver: { payoutUpiId: string | null; payoutUpiVerifiedAt: Date | null } | null,
+) => Boolean(driver?.payoutUpiId?.trim() && driver.payoutUpiVerifiedAt)
+
+export async function requireVerifiedDriverPayoutUpi(tx: Prisma.TransactionClient, booking: SettlementBooking) {
+  if (!await driverPayoutUpiAvailable(tx, booking.driverId)) {
+    throw new RidePaymentError('UPI final payment is unavailable because the assigned driver payout UPI is not admin-verified', 409, 'DRIVER_PAYOUT_UPI_UNAVAILABLE')
+  }
+}
+
 export async function createRideNowFinalIntent(tx: Prisma.TransactionClient, booking: SettlementBooking) {
   requireCompletedRideNow(booking)
   if (ridePaymentView(booking).state === 'paid') {
     throw new RidePaymentError('This ride has already been paid', 409, 'PAYMENT_ALREADY_SETTLED')
   }
+  await requireVerifiedDriverPayoutUpi(tx, booking)
   const amount = customerFareSubunits(booking)
   return createPaymentIntent(tx, {
     userId: booking.userId,
@@ -168,15 +195,53 @@ const lateCashRefundEffect = (
   ? { type: 'late_final_payment_refund', bookingId, paymentId }
   : null
 
+const unavailableUpiRefundEffect = (bookingId: string, paymentId: string): RidePaymentCaptureEffect => ({
+  type: 'late_final_payment_refund',
+  bookingId,
+  paymentId,
+})
+
+async function postCapturedRideCollection(
+  tx: Prisma.TransactionClient,
+  payment: CapturedRidePayment & { bookingId: string },
+  driverId: string,
+  note: string,
+) {
+  const earningEventKey = walletEvent.rideCollection(payment.bookingId, payment.purpose)
+  const walletPost = await postWalletEntry(tx, {
+    driverId,
+    amount: payment.amount / 100,
+    type: 'ride_collection',
+    method: 'upi',
+    eventKey: earningEventKey,
+    bookingId: payment.bookingId,
+    note,
+  })
+  if (walletPost.posted) await recoverFinalizedLiabilitiesFromEarning({
+    driverId, earningEventKey, db: tx,
+  })
+}
+
 async function applyRideNowCapture(
   tx: Prisma.TransactionClient,
   payment: CapturedRidePayment & { bookingId: string },
 ): Promise<RidePaymentCaptureEffect> {
+  const before = await tx.booking.findUnique({ where: { id: payment.bookingId } })
+  if (!before) return null
+  const current = ridePaymentView(before)
+  if (current.state === 'paid') return lateCashRefundEffect(payment.bookingId, payment.id, current)
+  if (!await driverPayoutUpiAvailable(tx, before.driverId)) {
+    return unavailableUpiRefundEffect(payment.bookingId, payment.id)
+  }
+
   const claimed = await tx.booking.updateMany({
     where: { id: payment.bookingId, status: 'completed', rideNowPaidAmount: 0, rideNowPaymentMethod: null },
     data: { rideNowPaidAmount: payment.amount, rideNowPaymentMethod: 'upi', rideNowPaidAt: new Date() },
   })
-  if (claimed.count) return { type: 'ride_now_final', bookingId: payment.bookingId }
+  if (claimed.count) {
+    await postCapturedRideCollection(tx, payment, before.driverId!, 'Ride Now fare collected through Razorpay')
+    return { type: 'ride_now_final', bookingId: payment.bookingId }
+  }
 
   const booking = await tx.booking.findUnique({ where: { id: payment.bookingId } })
   return booking ? lateCashRefundEffect(payment.bookingId, payment.id, ridePaymentView(booking)) : null
@@ -186,6 +251,14 @@ async function applyScheduledFinalCapture(
   tx: Prisma.TransactionClient,
   payment: CapturedRidePayment & { bookingId: string },
 ): Promise<RidePaymentCaptureEffect> {
+  const before = await tx.booking.findUnique({ where: { id: payment.bookingId } })
+  if (!before) return null
+  const current = ridePaymentView(before)
+  if (current.state === 'paid') return lateCashRefundEffect(payment.bookingId, payment.id, current)
+  if (!await driverPayoutUpiAvailable(tx, before.driverId)) {
+    return unavailableUpiRefundEffect(payment.bookingId, payment.id)
+  }
+
   const claimed = await tx.booking.updateMany({
     where: { id: payment.bookingId, status: 'completed', scheduledFinalPaidAmount: 0, scheduledFinalPaymentMethod: null },
     data: {
@@ -194,7 +267,10 @@ async function applyScheduledFinalCapture(
       scheduledFinalPaidAt: new Date(),
     },
   })
-  if (claimed.count) return { type: 'scheduled_ride_final', bookingId: payment.bookingId }
+  if (claimed.count) {
+    await postCapturedRideCollection(tx, payment, before.driverId!, 'Scheduled ride final fare collected through Razorpay')
+    return { type: 'scheduled_ride_final', bookingId: payment.bookingId }
+  }
 
   const booking = await tx.booking.findUnique({ where: { id: payment.bookingId } })
   return booking ? lateCashRefundEffect(payment.bookingId, payment.id, ridePaymentView(booking)) : null

@@ -38,12 +38,15 @@ test('scheduled completion stays due until the final payment settles', () => {
   assert.equal(paid.scheduledPayment.finalPaidAt, paidAt)
 })
 
-test('a retained scheduled advance is compensation, while other cancellations are void', () => {
+test('a cancellation fee is compensation even when the rest of the advance is refunded', () => {
   assert.equal(driverPaymentView(booking({
-    status: 'cancelled', scheduledAdvanceDisposition: 'forfeited_to_driver',
+    status: 'cancelled', scheduledAdvanceDisposition: 'partial_refund_pending', cancellationCharge: 100,
   })).paymentState, 'retained')
   assert.equal(driverPaymentView(booking({
-    status: 'cancelled', scheduledAdvanceDisposition: 'refunded',
+    status: 'cancelled', scheduledAdvanceDisposition: 'partially_refunded', cancellationCharge: 100,
+  })).paymentState, 'retained')
+  assert.equal(driverPaymentView(booking({
+    status: 'cancelled', scheduledAdvanceDisposition: 'refunded', cancellationCharge: 0,
   })).paymentState, 'void')
   assert.equal(driverPaymentView(booking({
     status: 'cancelled', scheduledAt: null, scheduledAdvanceDisposition: 'not_applicable',
@@ -67,4 +70,13 @@ test('Ride Now becomes paid from the customer-controlled cash or UPI settlement'
   }))
   assert.equal(cash.paymentState, 'paid')
   assert.equal(cash.ridePayment.method, 'cash')
+})
+
+test('a completed ride fully covered by compensation has no remaining payment due', () => {
+  const covered = driverPaymentView(booking({
+    scheduledAt: null, scheduledAdvanceDisposition: 'not_applicable', customerPayment: 0,
+  }))
+  assert.equal(covered.paymentState, 'paid')
+  assert.equal(covered.ridePayment.amount, 0)
+  assert.equal(covered.ridePayment.method, null)
 })

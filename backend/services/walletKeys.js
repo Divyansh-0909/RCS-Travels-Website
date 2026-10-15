@@ -11,13 +11,15 @@
  */
 
 export const walletEvent = {
-  /** The scheduled-ride acceptance deposit going on hold. One per booking. */
+  /** Legacy first reservation. Replacement offers qualify this stable prefix. */
   depositHold: (bookingId) => `deposit_hold:booking:${bookingId}`,
-  /** That same deposit coming back on completion. One per booking. */
+  /** Return of the first reservation; replacement returns use the same qualifier. */
   depositRefund: (bookingId) => `deposit_refund:booking:${bookingId}`,
   /** The platform reimbursing the driver for a coupon the rider spent. */
   couponReimbursement: (bookingId) => `coupon_reimbursement:booking:${bookingId}`,
-  /** The 5% cut, when it is settled from the wallet rather than in cash. */
+  /** Customer money collected by RCS on the captain's behalf. */
+  rideCollection: (bookingId, source) => `ride_collection:booking:${bookingId}:source:${source}`,
+  /** The platform cut, when it is settled from the wallet rather than in cash. */
   commission: (bookingId) => `commission:booking:${bookingId}`,
   /**
    * An upheld-complaint fine. Keyed by the THRESHOLD it was levied at, not by a
@@ -34,6 +36,12 @@ export const walletEvent = {
   /** Manual admin correction. The caller supplies the reference. */
   adjustment: (reference) => `adjustment:${reference}`,
   scheduledCancellationCompensation: (bookingId) => `scheduled_cancellation_compensation:booking:${bookingId}`,
+  /** A finalized responsibility liability recovered from one controlled earning. */
+  liabilityRecovery: (liabilityId, earningEventKey) =>
+    `liability_recovery:liability:${liabilityId}:earning:${earningEventKey}`,
+  /** Platform funding for one consumed responsibility compensation allocation. */
+  responsibilityCompensationFunding: (allocationId) =>
+    `responsibility_compensation_funding:allocation:${allocationId}`,
 }
 
 /**
@@ -51,15 +59,15 @@ export const walletEvent = {
  */
 export function balancesFrom(entries) {
   let available = 0
-  // Holds are matched off against their refunds by booking. A hold whose refund
+  // Holds match refunds by reservation key (booking fallback for legacy views).
   // has landed is not held any more, whichever order the two rows arrive in.
   const openHolds = new Map()
   const refunded = new Set()
 
   for (const e of entries) {
     available += e.amount
-    if (e.type === 'deposit_hold') openHolds.set(e.bookingId, Math.abs(e.amount))
-    else if (e.type === 'deposit_refund') refunded.add(e.bookingId)
+    if (e.type === 'deposit_hold') openHolds.set(e.eventKey ?? e.bookingId, Math.abs(e.amount))
+    else if (e.type === 'deposit_refund') refunded.add(e.eventKey?.replace('deposit_refund:', 'deposit_hold:') ?? e.bookingId)
   }
 
   let held = 0

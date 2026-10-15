@@ -4,6 +4,9 @@ import crypto from 'node:crypto'
 import { messagesFromWebhook, parseBookingMessage, parseIncoming, parseScheduleDate, parseScheduleTime } from '../services/whatsappBooking.js'
 import { validWhatsAppChallenge, validWhatsAppSignature } from '../routes/whatsapp.js'
 import { normalizePhone } from '../lib/phone.js'
+import { applyWhatsAppDeliveryStatus, whatsappStatusCallbacksFromWebhook } from '../services/notificationProvenance.js'
+import { syncAppealWindowForProviderMessage } from '../services/responsibilityNoticeService.js'
+import { responsibilityCaseState } from '../services/responsibilityCaseState.js'
 
 test('WhatsApp webhook extraction keeps message order across entries', () => {
   const first = { id: 'wamid.1', from: '919999999999', type: 'text' }
@@ -169,4 +172,110 @@ test('greetings and the existing short book command stay out of full-message par
 test('delivery receipts and malformed webhook branches contain no messages', () => {
   assert.deepEqual(messagesFromWebhook({ entry: [{ changes: [{ value: { statuses: [{ id: 'x' }] } }] }] }), [])
   assert.deepEqual(messagesFromWebhook({}), [])
+})
+
+test('WhatsApp status callbacks retain only supported provider lifecycle receipts', () => {
+  assert.deepEqual(whatsappStatusCallbacksFromWebhook({ entry: [{ changes: [{ value: { statuses: [
+    { id: 'wamid.sent', status: 'sent', timestamp: '100' },
+    { id: 'wamid.read', status: 'read', timestamp: '102' },
+    { id: 'wamid.ignored', status: 'deleted' },
+    { status: 'delivered' },
+  ], metadata: { phone_number_id: 'configured-phone' } } }] }] }, 'configured-phone'), [
+    { id: 'wamid.sent', status: 'sent', timestamp: '100' },
+    { id: 'wamid.read', status: 'read', timestamp: '102' },
+  ])
+})
+
+test('WhatsApp status callbacks only accept receipts for the configured phone number', () => {
+  const body = { entry: [{ changes: [
+    { value: { metadata: { phone_number_id: 'other-phone' }, statuses: [{ id: 'wamid.other', status: 'sent' }] } },
+    { value: { metadata: { phone_number_id: 'configured-phone' }, statuses: [{ id: 'wamid.ours', status: 'sent' }] } },
+  ] }] }
+
+  assert.deepEqual(whatsappStatusCallbacksFromWebhook(body, 'configured-phone'), [
+    { id: 'wamid.ours', status: 'sent' },
+  ])
+  assert.deepEqual(whatsappStatusCallbacksFromWebhook(body, ''), [])
+})
+
+test('WhatsApp delivery status is idempotent, non-regressing, and unknown-message safe', async () => {
+  const rows = new Map([['wamid.1', { provider: 'whatsapp', status: 'accepted' }]])
+  const db = { notificationDelivery: { updateMany: async ({ where, data }) => {
+    const row = rows.get(where.providerMessageId)
+    if (!row || row.provider !== where.provider || !where.status.in.includes(row.status)) return { count: 0 }
+    Object.assign(row, data)
+    return { count: 1 }
+  } } }
+
+  assert.equal(await applyWhatsAppDeliveryStatus({ id: 'missing', status: 'delivered' }, db), false)
+  assert.equal(await applyWhatsAppDeliveryStatus({ id: 'wamid.1', status: 'delivered', timestamp: '100' }, db), true)
+  assert.equal(rows.get('wamid.1').status, 'delivered')
+  assert.equal(rows.get('wamid.1').deliveredAt.toISOString(), '1970-01-01T00:01:40.000Z')
+  assert.equal(await applyWhatsAppDeliveryStatus({ id: 'wamid.1', status: 'sent', timestamp: '99' }, db), false)
+  assert.equal(await applyWhatsAppDeliveryStatus({ id: 'wamid.1', status: 'delivered', timestamp: '101' }, db), false)
+  assert.equal(await applyWhatsAppDeliveryStatus({ id: 'wamid.1', status: 'read', timestamp: '102' }, db), true)
+  assert.equal(await applyWhatsAppDeliveryStatus({ id: 'wamid.1', status: 'failed', timestamp: '103' }, db), false)
+  assert.equal(rows.get('wamid.1').status, 'read')
+})
+
+test('confirmed WhatsApp delivery starts the appeal window once through the provider-message bridge', async () => {
+  const responsibilityCase = { id: 'case-1', state: responsibilityCaseState.PROVISIONAL_AUTO_UPHELD }
+  const appealWindow = {
+    id: 'window-1',
+    caseId: responsibilityCase.id,
+    noticeRetryKey: 'responsibility-adverse:case-1:decision-1',
+    appealStartedAt: null,
+    appealDeadline: null,
+  }
+  const delivery = {
+    provider: 'whatsapp',
+    providerMessageId: 'wamid.appeal',
+    purpose: 'responsibility_adverse_notice',
+    retryKey: appealWindow.noticeRetryKey,
+    status: 'accepted',
+    deliveredAt: null,
+    readAt: null,
+  }
+  const db = {
+    notificationDelivery: {
+      findUnique: async ({ where }) => where.providerMessageId === delivery.providerMessageId ? delivery : null,
+      updateMany: async ({ where, data }) => {
+        if (where.providerMessageId !== delivery.providerMessageId ||
+            delivery.provider !== where.provider || !where.status.in.includes(delivery.status)) return { count: 0 }
+        Object.assign(delivery, data)
+        return { count: 1 }
+      },
+    },
+    responsibilityAppealWindow: {
+      findUnique: async ({ where }) => where.noticeRetryKey === appealWindow.noticeRetryKey ? appealWindow : null,
+    },
+  }
+  const repository = {
+    withLockedCase: async (caseId, operation) => operation(repository, caseId === responsibilityCase.id ? responsibilityCase : null),
+    findAppealWindow: async caseId => caseId === responsibilityCase.id ? appealWindow : null,
+    findNotificationDeliveries: async retryKey => retryKey === appealWindow.noticeRetryKey ? [delivery] : [],
+    startAppealWindow: async (_caseId, startedAt, deadline) => {
+      appealWindow.appealStartedAt = startedAt
+      appealWindow.appealDeadline = deadline
+    },
+    setCaseState: async (_caseId, state) => { responsibilityCase.state = state },
+  }
+
+  assert.equal(await syncAppealWindowForProviderMessage(delivery.providerMessageId, { db, repository }), appealWindow)
+  assert.equal(appealWindow.appealStartedAt, null)
+
+  assert.equal(await applyWhatsAppDeliveryStatus({ id: delivery.providerMessageId, status: 'sent', timestamp: '100' }, db), true)
+  assert.equal(await syncAppealWindowForProviderMessage(delivery.providerMessageId, { db, repository }), appealWindow)
+  assert.equal(appealWindow.appealStartedAt, null)
+
+  assert.equal(await applyWhatsAppDeliveryStatus({ id: delivery.providerMessageId, status: 'delivered', timestamp: '101' }, db), true)
+  await syncAppealWindowForProviderMessage(delivery.providerMessageId, { db, repository })
+  assert.equal(appealWindow.appealStartedAt.toISOString(), '1970-01-01T00:01:41.000Z')
+  assert.equal(appealWindow.appealDeadline.toISOString(), '1970-01-02T00:01:41.000Z')
+  assert.equal(responsibilityCase.state, responsibilityCaseState.APPEAL_WINDOW)
+
+  assert.equal(await applyWhatsAppDeliveryStatus({ id: delivery.providerMessageId, status: 'read', timestamp: '110' }, db), true)
+  await syncAppealWindowForProviderMessage(delivery.providerMessageId, { db, repository })
+  assert.equal(appealWindow.appealStartedAt.toISOString(), '1970-01-01T00:01:41.000Z')
+  assert.equal(appealWindow.appealDeadline.toISOString(), '1970-01-02T00:01:41.000Z')
 })

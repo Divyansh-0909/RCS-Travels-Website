@@ -4,6 +4,7 @@ import { PaymentError } from './paymentErrors.js'
 import { MIN_PAYMENT_SUBUNITS } from './paymentIntents.js'
 import { balancesFrom, walletEvent } from './walletKeys.js'
 import { postWalletEntry } from './wallet.js'
+import { outstandingFinalizedLiabilityPaise } from './responsibilityLiabilityRecovery.js'
 
 const UPI_RE = /^[a-zA-Z0-9._-]{2,256}@[a-zA-Z][a-zA-Z0-9.-]{1,63}$/
 
@@ -68,15 +69,21 @@ export async function walletStatement(driverId, { limit = 30, cursor = null, db 
 export async function savePayoutUpi(driverId, rawUpiId, { db = prisma } = {}) {
   const upiId = normalizeUpiId(rawUpiId)
   if (!isValidUpiId(upiId)) throw new PaymentError('INVALID_UPI_ID', 'Enter a valid UPI ID', 400)
-  const current = await db.driver.findUnique({ where: { id: driverId }, select: { payoutUpiId: true, payoutUpiVerifiedAt: true } })
-  if (!current) throw new PaymentError('DRIVER_NOT_FOUND', 'Driver not found', 404)
-  const changed = current.payoutUpiId !== upiId
-  const updated = await db.driver.update({
-    where: { id: driverId },
-    data: { payoutUpiId: upiId, ...(changed ? { payoutUpiVerifiedAt: null } : {}) },
-    select: { payoutUpiId: true, payoutUpiVerifiedAt: true },
-  })
-  return { upiId: updated.payoutUpiId, verified: Boolean(updated.payoutUpiVerifiedAt), verifiedAt: updated.payoutUpiVerifiedAt }
+  const work = async tx => {
+    const current = await tx.driver.findUnique({ where: { id: driverId }, select: { payoutUpiId: true, payoutUpiVerifiedAt: true } })
+    if (!current) throw new PaymentError('DRIVER_NOT_FOUND', 'Driver not found', 404)
+    const changed = current.payoutUpiId !== upiId
+    if (changed && await outstandingFinalizedLiabilityPaise(driverId, { db: tx }) > 0) {
+      throw new PaymentError('OUTSTANDING_FINALIZED_LIABILITY', 'Payout UPI cannot be changed while a finalized responsibility liability remains outstanding', 409)
+    }
+    const updated = await tx.driver.update({
+      where: { id: driverId },
+      data: { payoutUpiId: upiId, ...(changed ? { payoutUpiVerifiedAt: null } : {}) },
+      select: { payoutUpiId: true, payoutUpiVerifiedAt: true },
+    })
+    return { upiId: updated.payoutUpiId, verified: Boolean(updated.payoutUpiVerifiedAt), verifiedAt: updated.payoutUpiVerifiedAt }
+  }
+  return db.$transaction ? db.$transaction(work) : work(db)
 }
 
 export async function setPayoutUpiVerification(driverId, verified, { db = prisma } = {}) {

@@ -1,0 +1,27 @@
+export default {
+  testRunner: 'command',
+  coverageAnalysis: 'off',
+  commandRunner: {
+    command: 'node --import tsx --test tests/razorpayBoundary.test.js tests/payments.test.js tests/paymentMutationGaps.test.js tests/paymentRefunds.test.js tests/payoutWebhook.test.js tests/payoutWebhookDbIsolation.test.js tests/payoutBatchExecution.test.js tests/providerFakes.test.js tests/providerReconciliation.test.js tests/refundGateway.test.js tests/refundProviderState.test.js',
+  },
+  mutate: [
+    'config/razorpayX.js:18-22',
+    'routes/razorpayXWebhook.js',
+    'services/driverPayouts.js:36-44',
+    'services/driverPayouts.js:109-178',
+    'services/payments.js:37-119',
+    'services/payments.js:157-330',
+    'services/providerReconciliation.js',
+    'services/razorpay.js:36-39',
+    'services/razorpay.js:55-65',
+    'services/razorpayXPayoutWebhook.js',
+    'services/refundProviderState.js',
+  ],
+  ignorePatterns: ['.env', '.env.*', 'coverage', 'logs', 'node_modules', 'uploads'],
+  reporters: ['clear-text', 'json'],
+  jsonReporter: { fileName: 'coverage/phase2-5-mutation.json' },
+  concurrency: 4,
+  timeoutMS: 10_000,
+  timeoutFactor: 2,
+  cleanTempDir: true,
+}

@@ -1,7 +1,9 @@
 import { prisma } from '../db/prisma.js'
+import { systemClock } from '../lib/clock.js'
 import { sendPush } from './notification.js'
 import { seatsOf } from '../constants/vehicles.js'
 import { eligibleGroup } from '../constants/dispatch.js'
+import { newWorkEligibility } from './driverNewWorkEligibility.js'
 
 // Offers for SCHEDULED rides. Ride-now keeps the synchronous path in
 // driverAssignment.js — a rider watching a spinner needs an answer in seconds,
@@ -25,13 +27,16 @@ const OFFERABLE_STATUSES = ['confirmed']
  *
  * Suspension and approval ARE checked — a suspended driver receives nothing.
  */
-async function candidatesIn(booking, group) {
-  return prisma.driver.findMany({
+async function candidatesIn(booking, group, db, now) {
+  return db.driver.findMany({
     where: {
       group,
       isActive: true,
       verificationStatus: 'approved',
-      suspendedAt: null,
+      OR: [
+        { suspendedAt: null },
+        { suspensionExpiresAt: { lte: now } },
+      ],
       // Matched exactly, never widened — the rider was quoted for this car.
       vehicleClass: booking.vehicleClass,
       // Nobody who already holds an offer for this booking, whatever they did
@@ -41,6 +46,8 @@ async function candidatesIn(booking, group) {
     },
     select: {
       id: true,
+      suspendedAt: true,
+      suspensionExpiresAt: true,
       fcmToken: true,
       vehicleClass: true,
       vehicleCapacity: true,
@@ -67,27 +74,34 @@ function hasRoom(driver, booking) {
  *
  * @returns {Promise<number>} how many new offers went out
  */
-export async function offerScheduledRide(bookingId) {
-  const booking = await prisma.booking.findUnique({ where: { id: bookingId } })
+export async function offerScheduledRide(bookingId, { db = prisma, clock = systemClock, push = sendPush } = {}) {
+  const now = clock.now()
+  const booking = await db.booking.findUnique({ where: { id: bookingId } })
   if (!booking || !OFFERABLE_STATUSES.includes(booking.status) || booking.driverId) return 0
   if (!booking.scheduledAt) return 0
 
-  const offers = await prisma.rideOffer.groupBy({
+  const offers = await db.rideOffer.groupBy({
     by: ['status'],
     where: { bookingId, group: 'rcs' },
     _count: true,
   })
   const rcsOffered = offers.reduce((n, row) => n + row._count, 0)
-  // Withdrawn counts with rejected: both are offers that can never turn into an
+  // Accepted (after a cancellation/re-dispatch), withdrawn and rejected are
+  // terminal offers that can never turn into another acceptance.
   // acceptance, which is the only question the escalation test is asking. See
   // eligibleGroup — treating a suspended captain's withdrawn row as outstanding
   // pins the booking to `rcs` permanently.
   const rcsResolved = offers
-    .filter((row) => row.status === 'rejected' || row.status === 'withdrawn')
+    .filter((row) => row.status === 'rejected' || row.status === 'withdrawn' || row.status === 'accepted')
     .reduce((n, row) => n + row._count, 0)
 
-  let group = eligibleGroup(booking, { rcsOffered, rcsResolved })
-  let drivers = (await candidatesIn(booking, group)).filter((d) => hasRoom(d, booking))
+  let group = eligibleGroup(booking, { rcsOffered, rcsResolved }, now)
+  const eligibleDrivers = async (candidateGroup) => {
+    const candidates = await candidatesIn(booking, candidateGroup, db, now)
+    const eligibility = await Promise.all(candidates.map((driver) => newWorkEligibility(driver, { db, now })))
+    return candidates.filter((driver, index) => eligibility[index].eligible && hasRoom(driver, booking))
+  }
+  let drivers = await eligibleDrivers(group)
 
   // rcs -> partner WHEN THERE IS NOBODY IN rcs TO ASK, and this is a deadlock fix
   // rather than a policy change.
@@ -109,16 +123,18 @@ export async function offerScheduledRide(bookingId) {
   // so an owner with no driver row costs the booking a few minutes, not the ride
   // — falling through THAT would hand away every booking during the window Raju
   // is meant to have first refusal on.
-  if (drivers.length === 0 && group === 'rcs') {
+  // No NEW candidates is not proof that nobody in RCS can take the ride:
+  // existing pending offers are excluded by candidatesIn and must retain priority.
+  if (drivers.length === 0 && group === 'rcs' && rcsOffered === rcsResolved) {
     group = 'partner'
-    drivers = (await candidatesIn(booking, group)).filter((d) => hasRoom(d, booking))
+    drivers = await eligibleDrivers(group)
   }
 
   if (drivers.length === 0) return 0
 
   // createMany rather than a row at a time: the sweep is a background job and a
   // partial failure here would leave a booking half-offered.
-  const { count } = await prisma.rideOffer.createMany({
+  const { count } = await db.rideOffer.createMany({
     data: drivers.map((d) => ({ bookingId, driverId: d.id, group })),
     skipDuplicates: true,
   })
@@ -133,9 +149,9 @@ export async function offerScheduledRide(bookingId) {
   // path does: it offers the ride to everybody and lets them race for it. The
   // fairness key can record that; it cannot fix it. See the note in
   // constants/dispatch.js on why the race exists.
-  await prisma.driver.updateMany({
+  await db.driver.updateMany({
     where: { id: { in: drivers.map((d) => d.id) } },
-    data: { lastOfferedAt: new Date() },
+    data: { lastOfferedAt: now },
   })
 
   const pickupTimeLabel = new Date(booking.scheduledAt).toLocaleString('en-IN', {
@@ -157,7 +173,7 @@ export async function offerScheduledRide(bookingId) {
   // the install is gone. driverAssignment.js keeps sendFCM, because that path
   // still reads the answer out of the return value.
   for (const d of drivers) {
-    sendPush(d, {
+    push(d, {
       title: `New scheduled ride — ${pickupTimeLabel}`,
       body: `${booking.pickupAddress} → ${booking.dropAddress} · ₹${booking.fare}`,
       // ROUTING ONLY, not a copy of the booking. The app refetches GET /offers

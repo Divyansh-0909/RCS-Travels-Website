@@ -311,6 +311,7 @@ async function handleConversation(message, user, conversation) {
         vehicleClass: data.vehicleClass, sharing: data.sharing, scheduledAt: data.scheduledAt ?? null, source: 'whatsapp' })
       await prisma.whatsappSession.update({ where: { phone: conversation.phone }, data: { step: 'COMPLETED', data: { bookingId: result.bookingId } } })
       if (result.status === 'payment_pending') return sendWhatsAppText(to, `Scheduled ride created ✅\nBooking: ${result.reference}\nFare: ₹${result.fare}\n\nPay the ${result.financials.advancePercentage}% advance to confirm it:\n${APP_ORIGIN}/booking/${result.bookingId}`)
+      if (data.scheduledAt) return sendWhatsAppText(to, `Scheduled ride confirmed ✅\nBooking: ${result.reference}\n\nNo advance payment is due. We’ll assign a driver closer to pickup.\n${APP_ORIGIN}/booking/${result.bookingId}`)
       return sendWhatsAppText(to, `Looking for a driver...\nBooking: ${result.reference}\n\nWe’ll notify you when your driver is assigned.\n${APP_ORIGIN}/booking/${result.bookingId}`)
     } catch (error) {
       return sendWhatsAppText(to, error instanceof BookingCreationError ? error.message : 'We couldn’t create the booking. Please try again.')

@@ -2,6 +2,7 @@ import { Prisma } from '@prisma/client'
 import { prisma } from '../db/prisma.js'
 import { LOCATION_STALE_AFTER_MS } from '../constants/dispatch.js'
 import { seatsOf } from '../constants/vehicles.js'
+import { newWorkEligibility } from './driverNewWorkEligibility.js'
 
 // The customer-facing availability radius. Dispatch may widen further after a
 // request is created, but the pre-booking map and ETA only make the stronger
@@ -39,7 +40,7 @@ export async function nearbyDriverAvailability({ lat, lng, vehicleClass = null }
       AND d."is_online"
       AND d."is_active"
       AND d."active_vehicle_id" IS NOT NULL
-      AND d."suspended_at" IS NULL
+      AND (d."suspended_at" IS NULL OR d."suspension_expires_at" <= NOW())
       AND d."verification_status" = 'approved'
       AND (${vehicleClass}::text = '' OR d."vehicle_class" = ${vehicleClass}::"VehicleClass")
       AND (${vehicleClass}::text = '' OR d."vehicle_capacity" >= ${fullCapacity})
@@ -56,7 +57,17 @@ export async function nearbyDriverAvailability({ lat, lng, vehicleClass = null }
     LIMIT ${NEARBY_DRIVER_LIMIT}
   `
 
-  const vehicles = rows.map(({ lat: rowLat, lng: rowLng, vehicleClass: rowVehicleClass }) => ({
+  // The geographic query stays small; the shared policy removes reliability-
+  // blocked drivers before availability is exposed to a customer.
+  const drivers = await db.driver.findMany({
+    where: { id: { in: rows.map((row) => row.driverId) } },
+    select: { id: true, suspendedAt: true, suspensionExpiresAt: true },
+  })
+  const driverById = new Map(drivers.map((driver) => [driver.id, driver]))
+  const eligibility = await Promise.all(rows.map((row) => newWorkEligibility(driverById.get(row.driverId), { db })))
+  const eligibleRows = rows.filter((_, index) => eligibility[index].eligible)
+
+  const vehicles = eligibleRows.map(({ lat: rowLat, lng: rowLng, vehicleClass: rowVehicleClass }) => ({
     lat: Number(rowLat),
     lng: Number(rowLng),
     ...(rowVehicleClass ? { vehicleClass: rowVehicleClass } : {}),
@@ -65,7 +76,7 @@ export async function nearbyDriverAvailability({ lat, lng, vehicleClass = null }
   // Kept server-side: the stable id lets the Routes ETA cache follow the same
   // nearest driver, while the exact coordinates produce the route calculation.
   // Neither value is included in the customer response.
-  const first = rows[0]
+  const first = eligibleRows[0]
   const nearest = first ? {
     driverId: first.driverId,
     lat: Number(first.driverLat),

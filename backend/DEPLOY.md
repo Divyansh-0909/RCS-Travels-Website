@@ -249,7 +249,7 @@ they cannot be forgotten here.
 
 ## 5. Cloud Scheduler
 
-Four jobs. Their names must match the keys in
+Five jobs. Their names must match the keys in
 `lib/jobs.js`; a mismatch stops that sweep with nothing failing anywhere visible.
 
 ```powershell
@@ -291,13 +291,24 @@ gcloud scheduler jobs create http rcs-customer-coupons `
   --oidc-service-account-email="rcs-scheduler@$PROJECT.iam.gserviceaccount.com" `
   --oidc-token-audience="$URL" `
   --attempt-deadline=300s
+
+# responsibility-finalization — first process Phase 7 shadow adjudication work,
+# then finalize expired delivered adverse decisions, retry the durable Phase 6A
+# consequence-authorization handoff, and apply eligible Phase 6C/6D consequences.
+# Shadow processing never crosses those finalized consequence boundaries. Every minute.
+gcloud scheduler jobs create http rcs-responsibility-finalization `
+  --location=$REGION --schedule="* * * * *" `
+  --uri="$URL/internal/jobs/responsibility-finalization" --http-method=POST `
+  --oidc-service-account-email="rcs-scheduler@$PROJECT.iam.gserviceaccount.com" `
+  --oidc-token-audience="$URL" `
+  --attempt-deadline=300s
 ```
 
 Then set the two variables the endpoints check, and redeploy:
 
 ```powershell
 gcloud run services update $SERVICE --region $REGION `
-  --set-env-vars "CORS_ORIGINS=https://rcstravels.vercel.app,INTERNAL_JOBS_AUDIENCE=$URL,INTERNAL_JOBS_SERVICE_ACCOUNT=rcs-scheduler@$PROJECT.iam.gserviceaccount.com"
+  --set-env-vars "CORS_ORIGINS=https://rcstravels.vercel.app,INTERNAL_JOBS_AUDIENCE=$URL,INTERNAL_JOBS_SERVICE_ACCOUNT=rcs-scheduler@$PROJECT.iam.gserviceaccount.com,RESPONSIBILITY_ADJUDICATION_MODE=shadow"
 ```
 
 Until those are set, `/internal` answers 503 to everything — it fails closed by

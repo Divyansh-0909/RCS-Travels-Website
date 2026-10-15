@@ -642,10 +642,9 @@ adminRouter.patch('/documents/:id', protect, protectAdmin, async (req, res) => {
 /**
  * Stop a captain driving, or let him back on.
  *
- * The only mutation here that is a judgement rather than a derivation. Everything
- * else about a captain's eligibility falls out of his documents; this is somebody
- * deciding he asked a rider for extra cash, and it therefore has to be recorded
- * by hand, with a reason, and be reversible.
+ * This endpoint is reserved for independent safety/security or platform-integrity
+ * moderation. Responsibility adjudication must go through the responsibility-case
+ * lifecycle and the FINAL_UPHELD consequence boundary instead.
  *
  * WHAT SUSPENSION DOES, mechanically: `suspendedAt` is read by
  * requireApprovedDriver, which refuses every driver route with the reason
@@ -669,11 +668,18 @@ adminRouter.patch('/drivers/:id/suspension', protect, protectAdmin, async (req, 
     if (!parsedBody.success) {
         return res.status(400).json({ error: 'Invalid request body', issues: parsedBody.error.issues })
     }
-    const { suspended, reason } = parsedBody.data
+    const { suspended, reason, scope } = parsedBody.data
 
     const driver = await prisma.driver.findUnique({
         where: { id: parsedParams.data.id },
-        select: { id: true, isOnline: true, suspendedAt: true },
+        select: {
+            id: true,
+            isOnline: true,
+            suspendedAt: true,
+            suspensionExpiresAt: true,
+            suspensionReason: true,
+            suspensionScope: true,
+        },
     })
     if (!driver) return res.status(404).json({ error: 'Driver not found' })
 
@@ -685,7 +691,9 @@ adminRouter.patch('/drivers/:id/suspension', protect, protectAdmin, async (req, 
         return res.json({
             id: driver.id,
             suspendedAt: driver.suspendedAt,
-            suspensionReason: reason ?? null,
+            suspensionExpiresAt: driver.suspensionExpiresAt,
+            suspensionReason: driver.suspensionReason,
+            suspensionScope: driver.suspensionScope,
             changed: false,
         })
     }
@@ -709,14 +717,16 @@ adminRouter.patch('/drivers/:id/suspension', protect, protectAdmin, async (req, 
             where: { id: driver.id },
             data: {
                 suspendedAt: suspended ? new Date() : null,
+                suspensionExpiresAt: null,
                 // Cleared when the suspension is lifted, for the same reason a
                 // rejection reason is cleared on approval: a stale explanation under
                 // an active account is what a screen eventually renders beside a
                 // green tick.
                 suspensionReason: suspended ? reason ?? null : null,
+                suspensionScope: suspended ? scope ?? null : null,
                 ...(suspended && midRide === 0 ? { isOnline: false } : {}),
             },
-            select: { id: true, name: true, suspendedAt: true, suspensionReason: true, isOnline: true },
+            select: { id: true, name: true, suspendedAt: true, suspensionExpiresAt: true, suspensionReason: true, suspensionScope: true, isOnline: true },
         })
 
         // His spec: a suspended captain loses every pending scheduled offer, and

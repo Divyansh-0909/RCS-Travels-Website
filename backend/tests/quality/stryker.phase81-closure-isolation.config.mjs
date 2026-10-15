@@ -1,0 +1,71 @@
+export default {
+  "testRunner": "command",
+  "coverageAnalysis": "off",
+  "commandRunner": {
+    "command": "node --import tsx --test --experimental-test-isolation=none --test-concurrency=1 tests/responsibilityBenchmarkIsolation.test.js tests/responsibilityMutationClosure.test.js tests/responsibilityAuthorizedClosure.test.js tests/responsibilityEvidenceAwareSeverity.test.js"
+  },
+  "mutate": [
+    "benchmarks/responsibility/evidenceAwareSeverity.js:56-56",
+    "benchmarks/responsibility/pacedDevelopment.js:4-4",
+    "benchmarks/responsibility/pacedDevelopment.js:9-9",
+    "benchmarks/responsibility/pacedDevelopment.js:31-31",
+    "benchmarks/responsibility/pacedDevelopment.js:34-34",
+    "benchmarks/responsibility/contracts.js:51-51",
+    "benchmarks/responsibility/evaluation.js:21-21",
+    "benchmarks/responsibility/evaluation.js:34-34",
+    "benchmarks/responsibility/evaluation.js:42-42",
+    "benchmarks/responsibility/evaluation.js:71-71",
+    "benchmarks/responsibility/evaluation.js:87-87",
+    "benchmarks/responsibility/evaluation.js:102-102",
+    "benchmarks/responsibility/evaluation.js:111-111",
+    "benchmarks/responsibility/metrics.js:134-134",
+    "benchmarks/responsibility/run.js:38-38",
+    "benchmarks/responsibility/run.js:58-58",
+    "benchmarks/responsibility/run.js:63-63",
+    "benchmarks/responsibility/run.js:64-64",
+    "benchmarks/responsibility/run.js:73-73",
+    "benchmarks/responsibility/run.js:95-95",
+    "benchmarks/responsibility/run.js:140-140",
+    "benchmarks/responsibility/benchmark.js:38-38",
+    "benchmarks/responsibility/benchmark.js:39-39",
+    "benchmarks/responsibility/benchmark.js:89-89",
+    "benchmarks/responsibility/benchmark.js:137-137",
+    "benchmarks/responsibility/benchmark.js:147-147",
+    "benchmarks/responsibility/benchmark.js:154-154",
+    "benchmarks/responsibility/benchmark.js:160-160",
+    "benchmarks/responsibility/benchmark.js:164-164",
+    "benchmarks/responsibility/benchmark.js:170-170",
+    "benchmarks/responsibility/benchmark.js:171-171",
+    "benchmarks/responsibility/benchmark.js:241-241",
+    "benchmarks/responsibility/benchmark.js:244-244",
+    "benchmarks/responsibility/benchmark.js:277-277",
+    "benchmarks/responsibility/benchmark.js:298-298",
+    "benchmarks/responsibility/benchmark.js:351-351",
+    "benchmarks/responsibility/benchmark.js:354-354",
+    "benchmarks/responsibility/benchmark.js:363-363",
+    "benchmarks/responsibility/developmentBudget.js:2-2",
+    "benchmarks/common/cache.js:16-16",
+    "benchmarks/responsibility/phase81.js:29-29",
+    "benchmarks/responsibility/phase81.js:36-36",
+    "benchmarks/responsibility/phase81.js:51-51"
+  ],
+  "ignorePatterns": [
+    ".env",
+    ".env.*",
+    "coverage",
+    "logs",
+    "node_modules",
+    "uploads"
+  ],
+  "reporters": [
+    "progress-append-only",
+    "json"
+  ],
+  "jsonReporter": {
+    "fileName": "coverage/phase81-closure-isolation-mutation.json"
+  },
+  "concurrency": 4,
+  "timeoutMS": 15000,
+  "timeoutFactor": 2,
+  "cleanTempDir": true
+}

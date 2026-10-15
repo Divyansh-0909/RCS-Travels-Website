@@ -1,5 +1,6 @@
 import axios from 'axios'
-import { getRazorpayXConfig } from '../config/razorpayX.js'
+import { getRazorpayXConfig, getRazorpayXWebhookSecret } from '../config/razorpayX.js'
+import { verifyWebhookSignature } from './razorpay.js'
 
 function sanitizeGatewayError(error, fallback) {
   const safe = new Error(fallback)
@@ -49,5 +50,11 @@ export function createRazorpayXGateway({ config = getRazorpayXConfig(), client }
         throw sanitizeGatewayError(error, 'Could not fetch RazorpayX payout status')
       }
     },
+  }
+}
+
+export function createRazorpayXWebhookVerifier({ secret = getRazorpayXWebhookSecret() } = {}) {
+  return {
+    verifyWebhookSignature: (rawBody, signature) => verifyWebhookSignature({ rawBody, signature, secret }),
   }
 }

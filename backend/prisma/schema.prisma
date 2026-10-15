@@ -6,10 +6,9 @@ datasource db {
   provider = "postgresql"
 }
 
-
 enum BookingStatus {
   pending
-  payment_pending // scheduled fare locked; awaiting the customer's 15% advance
+  payment_pending // scheduled fare locked; awaiting the customer's 10% advance
   confirmed // scheduled ride accepted, driver assigned closer to pickup time
   assigned
   en_route
@@ -100,12 +99,15 @@ enum ScanStatus {
 
 enum WalletEntryType {
   // Taken when a driver accepts and is shown the rider's details; returned by
-  // `deposit_refund` on completion. It is 15% of the authoritative scheduled
+  // `deposit_refund` on completion. It is 10% of the authoritative scheduled
   // fare and does not apply to Ride Now — see ROADMAP block 10.
   deposit_hold
   deposit_refund
   // The ₹100 the platform owes the driver for a coupon the rider spent.
   coupon_reimbursement
+  // Customer fare collected by RCS through Razorpay on the captain's behalf.
+  // This becomes accounts payable to the captain until RazorpayX pays it out.
+  ride_collection
   // Upheld overcharge flags. AMOUNT STILL RAJU'S TO SET (ROADMAP block 11).
   fine
   // The 5% cut on rides ≥ ₹800, when it is settled from the wallet rather than
@@ -123,6 +125,11 @@ enum WalletEntryType {
   // indistinguishable from a bug.
   adjustment
   cancellation_compensation
+  // A finalized responsibility liability withheld from a platform-controlled
+  // earning. Cash collected directly by a captain is never recoverable here.
+  liability_recovery
+  // Platform funding used when a responsibility compensation is consumed.
+  responsibility_compensation_funding
 }
 
 enum PaymentMethod {
@@ -167,6 +174,14 @@ enum ExternalPaymentStatus {
   refunded
 }
 
+enum RefundOperationStatus {
+  requested
+  outcome_unknown
+  provider_identified
+  succeeded
+  failed
+}
+
 enum WebhookProcessingStatus {
   received
   processed
@@ -180,6 +195,8 @@ enum ScheduledAdvanceDisposition {
   paid
   refund_pending
   refunded
+  partial_refund_pending
+  partially_refunded
   forfeited_to_driver
 }
 
@@ -197,32 +214,32 @@ enum VehicleClass {
   suv_premium
 }
 
-
 model User {
-  id               String    @id @default(uuid())
-  clerkId          String    @unique @map("clerk_id")
-  phone            String    @unique
-  name             String?
-  gender           String?
-  dob              String?
-  emergencyContact String?
+  id                    String    @id @default(uuid())
+  clerkId               String    @unique @map("clerk_id")
+  phone                 String    @unique
+  name                  String?
+  gender                String?
+  dob                   String?
+  emergencyContact      String?
   // Stable 4-digit code generated once at signup.
-  bookingCode      String    @unique @map("booking_code")
-  whatsappNumber   String?   @map("whatsapp_number")
-  notifyWhatsapp   Boolean   @default(true) @map("notify_whatsapp")
-  notifyPush       Boolean   @default(true) @map("notify_push")
-  notifyPromotions Boolean   @default(false) @map("notify_promotions")
-  autoShareLiveLocation Boolean @default(false) @map("auto_share_live_location")
-  createdAt        DateTime  @default(now()) @map("created_at")
-  deletedAt        DateTime? @map("deleted_at")
+  bookingCode           String    @unique @map("booking_code")
+  whatsappNumber        String?   @map("whatsapp_number")
+  notifyWhatsapp        Boolean   @default(true) @map("notify_whatsapp")
+  notifyPush            Boolean   @default(true) @map("notify_push")
+  notifyPromotions      Boolean   @default(false) @map("notify_promotions")
+  autoShareLiveLocation Boolean   @default(false) @map("auto_share_live_location")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  deletedAt             DateTime? @map("deleted_at")
 
-  bookings        Booking[]
-  savedPlaces     SavedPlace[]
-  reviews         DriverReview[]
-  overchargeFlags OverchargeFlag[]
-  coupons         Coupon[]
-  payments        Payment[]
-  complaints      RideComplaint[]
+  bookings                    Booking[]
+  savedPlaces                 SavedPlace[]
+  reviews                     DriverReview[]
+  overchargeFlags             OverchargeFlag[]
+  coupons                     Coupon[]
+  payments                    Payment[]
+  complaints                  RideComplaint[]
+  responsibilityCompensations ResponsibilityCompensation[]
 
   // Admin user list sorts by createdAt desc; its filters (name/phone/gender)
   // are all `contains`, which no btree can serve anyway.
@@ -300,7 +317,7 @@ model Driver {
   verificationStatus VerificationStatus @default(notUploaded) @map("verification_status")
   rejectionReason    String?
   reviewedAt         DateTime?
-  group DriverGroup @default(partner)
+  group              DriverGroup        @default(partner)
 
   // Suspension is NOT isActive. isActive is "this driver is deactivated";
   // suspendedAt is "this driver was stopped, for a reason we can name and an
@@ -310,8 +327,16 @@ model Driver {
   // Nullable rather than a boolean so the row carries WHEN, which is what a
   // disputed suspension is defended with. A suspended driver cannot go online,
   // receives no offers, and loses the scheduled offers he already holds.
-  suspendedAt      DateTime? @map("suspended_at")
-  suspensionReason String?   @map("suspension_reason")
+  suspendedAt         DateTime? @map("suspended_at")
+  suspensionReason    String?   @map("suspension_reason")
+  // Direct admin suspension is only for independent safety/security or
+  // platform-integrity moderation. Responsibility consequences use the
+  // finalized responsibility-consequence boundary instead.
+  suspensionScope     String?   @map("suspension_scope")
+  // Non-null only for an automatically expiring conduct suspension. Manual
+  // suspensions and the 7-strike conduct block are indefinite until an admin
+  // lifts them, so their expiry stays null.
+  suspensionExpiresAt DateTime? @map("suspension_expires_at")
 
   // Denormalised cache of `sum(walletEntries.amount)`. The LEDGER IS THE SOURCE
   // OF TRUTH — this column exists because the go-online check reads the balance
@@ -321,8 +346,8 @@ model Driver {
   //
   // Goes NEGATIVE on purpose: an unpaid fine larger than the credit on hand is
   // the state that blocks going online until it clears.
-  walletBalance Float @default(0) @map("wallet_balance")
-  payoutUpiId String? @map("payout_upi_id")
+  walletBalance       Float     @default(0) @map("wallet_balance")
+  payoutUpiId         String?   @map("payout_upi_id")
   payoutUpiVerifiedAt DateTime? @map("payout_upi_verified_at")
 
   // Loyalty: rides on which the 5% PLATFORM COMMISSION is waived, granted
@@ -334,7 +359,7 @@ model Driver {
   //
   // Waives the 5% and nothing else: never a marketplace fee (block 7), never a
   // complaint fine, never the marketplace cancellation fee.
-  commissionFreeRidesRemaining Int @default(0) @map("commission_free_rides_remaining")
+  commissionFreeRidesRemaining       Int       @default(0) @map("commission_free_rides_remaining")
   cancellationBenefitRestrictedUntil DateTime? @map("cancellation_benefit_restricted_until")
 
   // WHOSE TURN IT IS. Dispatch used to rank candidates on distance alone, which
@@ -360,25 +385,28 @@ model Driver {
   lastOfferedAt  DateTime? @map("last_offered_at")
   lastAssignedAt DateTime? @map("last_assigned_at")
 
-  location        DriverLocation?
-  documents       DriverDocument[]
-  documentHistory DriverDocumentArchive[]
-  bookings        Booking[]
-  reviews         DriverReview[]
-  overchargeFlags OverchargeFlag[]
-  walletEntries   WalletEntry[]
-  payments        Payment[]
-  payouts         DriverPayout[]
-  walletRepairAudits WalletCacheRepairAudit[]
-  offers          RideOffer[]
-  cancellations   DriverCancellation[]
-  complaints      RideComplaint[]
-  vehicles        Vehicle[]              @relation("DriverVehicles")
+  location                  DriverLocation?
+  documents                 DriverDocument[]
+  documentHistory           DriverDocumentArchive[]
+  bookings                  Booking[]
+  reviews                   DriverReview[]
+  overchargeFlags           OverchargeFlag[]
+  walletEntries             WalletEntry[]
+  payments                  Payment[]
+  payouts                   DriverPayout[]
+  walletRepairAudits        WalletCacheRepairAudit[]
+  offers                    RideOffer[]
+  cancellations             DriverCancellation[]
+  complaints                RideComplaint[]
+  responsibilityLiabilities ResponsibilityLiability[]
+  reliabilityStrikes        ReliabilityStrike[]
+  reliabilityBlocks         ReliabilityBlock[]
+  vehicles                  Vehicle[]                 @relation("DriverVehicles")
   // SetNull rather than Cascade: deleting a car must not delete its owner. The
   // captain is left with no active car, which every route already treats as
   // "not dispatchable" — the same state he is in between signing up and adding
   // his first vehicle.
-  activeVehicle   Vehicle?               @relation("ActiveVehicle", fields: [activeVehicleId], references: [id], onDelete: SetNull)
+  activeVehicle             Vehicle?                  @relation("ActiveVehicle", fields: [activeVehicleId], references: [id], onDelete: SetNull)
 
   // Every assignment scan filters all five by equality, so group appends to the
   // existing four rather than forming an index of its own.
@@ -459,8 +487,8 @@ model DriverReview {
 // The rider pressing "Driver overcharged" on a completed ride.
 //
 // Unique on bookingId: one ride can produce one flag. Without it a single
-// annoyed rider could tap five times and suspend a driver from one trip, which
-// is the cheapest possible abuse of the whole system.
+// annoyed rider could tap repeatedly and inflate conduct counts from one trip,
+// which is the cheapest possible abuse of the whole system.
 //
 // `fareAtFlag` snapshots what the rider was quoted, because Booking.fare can
 // still move (a changed drop, an added stop) and the flag has to be reviewable
@@ -530,11 +558,11 @@ model WalletEntry {
 // One row per Meta message id. The unique primary key is the idempotency lock:
 // a retried confirmation cannot create a second booking or send a second reply.
 model WhatsAppInboundMessage {
-  id          String   @id
+  id          String    @id
   phone       String
-  status      String   @default("processing")
+  status      String    @default("processing")
   error       String?
-  receivedAt  DateTime @default(now()) @map("received_at")
+  receivedAt  DateTime  @default(now()) @map("received_at")
   processedAt DateTime? @map("processed_at")
 
   @@index([receivedAt])
@@ -542,11 +570,13 @@ model WhatsAppInboundMessage {
 }
 
 model DriverCancellation {
-  id         String   @id @default(uuid())
-  driverId   String   @map("driver_id")
-  bookingId  String   @map("booking_id")
-  fromStatus String   @map("from_status")
-  createdAt  DateTime @default(now()) @map("created_at")
+  id          String   @id @default(uuid())
+  driverId    String   @map("driver_id")
+  bookingId   String   @map("booking_id")
+  fromStatus  String   @map("from_status")
+  reason      String?
+  otherReason String?  @map("other_reason")
+  createdAt   DateTime @default(now()) @map("created_at")
 
   driver  Driver  @relation(fields: [driverId], references: [id], onDelete: Cascade)
   booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
@@ -573,75 +603,82 @@ model RideComplaint {
 
 // External gateway attempts only. Driver accounting remains in WalletEntry.
 model Payment {
-  id                 String                @id @default(uuid())
-  userId             String?               @map("user_id")
-  driverId           String?               @map("driver_id")
-  bookingId          String?               @map("booking_id")
-  purpose            PaymentPurpose
-  status             ExternalPaymentStatus @default(created)
-  amount             Int
-  currency           String                @default("INR")
-  idempotencyKey     String                @unique @map("idempotency_key")
-  razorpayOrderId    String?               @unique @map("razorpay_order_id")
-  razorpayPaymentId  String?               @unique @map("razorpay_payment_id")
-  razorpaySignature  String?               @map("razorpay_signature")
-  razorpayRefundId   String?               @unique @map("razorpay_refund_id")
-  failureCode        String?               @map("failure_code")
-  failureDescription String?               @map("failure_description")
-  originalFareAmount Int?                  @map("original_fare_amount")
-  couponAmount       Int?                  @map("coupon_amount")
-  finalFareAmount    Int?                  @map("final_fare_amount")
-  advancePercentage Int?                  @map("advance_percentage")
-  remainingAmount   Int?                  @map("remaining_amount")
+  id                       String                 @id @default(uuid())
+  userId                   String?                @map("user_id")
+  driverId                 String?                @map("driver_id")
+  bookingId                String?                @map("booking_id")
+  purpose                  PaymentPurpose
+  status                   ExternalPaymentStatus  @default(created)
+  amount                   Int
+  currency                 String                 @default("INR")
+  idempotencyKey           String                 @unique @map("idempotency_key")
+  razorpayOrderId          String?                @unique @map("razorpay_order_id")
+  razorpayPaymentId        String?                @unique @map("razorpay_payment_id")
+  razorpaySignature        String?                @map("razorpay_signature")
+  razorpayRefundId         String?                @unique @map("razorpay_refund_id")
+  orderCreationStartedAt   DateTime?              @map("order_creation_started_at")
+  refundOperationStatus    RefundOperationStatus? @map("refund_operation_status")
+  refundRequestKey         String?                @unique @map("refund_request_key")
+  refundRequestedAmount    Int?                   @map("refund_requested_amount")
+  refundLastAttemptAt      DateTime?              @map("refund_last_attempt_at")
+  failureCode              String?                @map("failure_code")
+  failureDescription       String?                @map("failure_description")
+  originalFareAmount       Int?                   @map("original_fare_amount")
+  couponAmount             Int?                   @map("coupon_amount")
+  finalFareAmount          Int?                   @map("final_fare_amount")
+  advancePercentage        Int?                   @map("advance_percentage")
+  remainingAmount          Int?                   @map("remaining_amount")
   // Only populated for driver_debt_settlement. Both values are in paise. The
   // applied value is capped against the live debt at capture time; any excess
   // is immediately queued for a partial refund and never enters the wallet.
-  driverDebtAppliedAmount Int?             @map("driver_debt_applied_amount")
-  driverDebtRefundAmount  Int?             @map("driver_debt_refund_amount")
-  createdAt          DateTime              @default(now()) @map("created_at")
-  updatedAt          DateTime              @updatedAt @map("updated_at")
-  capturedAt         DateTime?             @map("captured_at")
-  refundedAt         DateTime?             @map("refunded_at")
+  driverDebtAppliedAmount  Int?                   @map("driver_debt_applied_amount")
+  driverDebtRefundAmount   Int?                   @map("driver_debt_refund_amount")
+  cancellationRefundAmount Int?                   @map("cancellation_refund_amount")
+  createdAt                DateTime               @default(now()) @map("created_at")
+  updatedAt                DateTime               @updatedAt @map("updated_at")
+  capturedAt               DateTime?              @map("captured_at")
+  refundedAt               DateTime?              @map("refunded_at")
 
-  user          User?                    @relation(fields: [userId], references: [id], onDelete: Restrict)
-  driver        Driver?                  @relation(fields: [driverId], references: [id], onDelete: Restrict)
-  booking       Booking?                 @relation(fields: [bookingId], references: [id], onDelete: Restrict)
+  user          User?                  @relation(fields: [userId], references: [id], onDelete: Restrict)
+  driver        Driver?                @relation(fields: [driverId], references: [id], onDelete: Restrict)
+  booking       Booking?               @relation(fields: [bookingId], references: [id], onDelete: Restrict)
   webhookEvents RazorpayWebhookEvent[]
 
+  @@unique([bookingId, purpose])
   @@index([userId, createdAt])
   @@index([driverId, createdAt])
-  @@unique([bookingId, purpose])
   @@map("payments")
 }
 
 model DriverPayoutBatch {
-  id          String                  @id @default(uuid())
-  reference   String                  @unique
-  status      DriverPayoutBatchStatus @default(draft)
-  createdBy   String                  @map("created_by")
-  createdAt   DateTime                @default(now()) @map("created_at")
-  executedAt  DateTime?               @map("executed_at")
-  payouts     DriverPayout[]
+  id         String                  @id @default(uuid())
+  reference  String                  @unique
+  status     DriverPayoutBatchStatus @default(draft)
+  createdBy  String                  @map("created_by")
+  createdAt  DateTime                @default(now()) @map("created_at")
+  executedAt DateTime?               @map("executed_at")
+  payouts    DriverPayout[]
 
   @@index([createdAt])
   @@map("driver_payout_batches")
 }
 
 model DriverPayout {
-  id               String             @id @default(uuid())
-  batchId          String             @map("batch_id")
-  driverId         String             @map("driver_id")
+  id               String                 @id @default(uuid())
+  batchId          String                 @map("batch_id")
+  driverId         String                 @map("driver_id")
   amount           Int
-  currency         String             @default("INR")
-  status           DriverPayoutStatus @default(pending)
-  idempotencyKey   String             @unique @map("idempotency_key")
-  externalPayoutId String?            @unique @map("external_payout_id")
-  payoutUpiId      String             @map("payout_upi_id")
-  failureCode      String?            @map("failure_code")
-  failureReason    String?            @map("failure_reason")
-  createdAt        DateTime           @default(now()) @map("created_at")
-  updatedAt        DateTime           @updatedAt @map("updated_at")
-  paidAt           DateTime?          @map("paid_at")
+  currency         String                 @default("INR")
+  status           DriverPayoutStatus     @default(pending)
+  idempotencyKey   String                 @unique @map("idempotency_key")
+  externalPayoutId String?                @unique @map("external_payout_id")
+  payoutUpiId      String                 @map("payout_upi_id")
+  failureCode      String?                @map("failure_code")
+  failureReason    String?                @map("failure_reason")
+  createdAt        DateTime               @default(now()) @map("created_at")
+  updatedAt        DateTime               @updatedAt @map("updated_at")
+  paidAt           DateTime?              @map("paid_at")
+  webhookEvents    RazorpayWebhookEvent[]
 
   batch  DriverPayoutBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
   driver Driver            @relation(fields: [driverId], references: [id], onDelete: Restrict)
@@ -669,18 +706,21 @@ model WalletCacheRepairAudit {
 }
 
 model RazorpayWebhookEvent {
-  id          String                  @id @default(uuid())
-  eventId     String                  @unique @map("event_id")
-  eventType   String                  @map("event_type")
-  status      WebhookProcessingStatus @default(received)
-  paymentId   String?                 @map("payment_id")
-  result      String?
-  receivedAt  DateTime                @default(now()) @map("received_at")
-  processedAt DateTime?               @map("processed_at")
+  id             String                  @id @default(uuid())
+  eventId        String                  @unique @map("event_id")
+  eventType      String                  @map("event_type")
+  status         WebhookProcessingStatus @default(received)
+  paymentId      String?                 @map("payment_id")
+  driverPayoutId String?                 @map("driver_payout_id")
+  result         String?
+  receivedAt     DateTime                @default(now()) @map("received_at")
+  processedAt    DateTime?               @map("processed_at")
 
-  payment Payment? @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  payment      Payment?      @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  driverPayout DriverPayout? @relation(fields: [driverPayoutId], references: [id], onDelete: SetNull)
 
   @@index([paymentId, receivedAt])
+  @@index([driverPayoutId, receivedAt])
   @@map("razorpay_webhook_events")
 }
 
@@ -706,18 +746,18 @@ model RazorpayWebhookEvent {
 // QUESTION HOW LONG DOES EACH PRIORITY GET BEFORE MOVED TO THE NEXT GROUP?
 
 model RideOffer {
-  id          String      @id @default(uuid())
-  bookingId   String      @map("booking_id")
-  driverId    String      @map("driver_id")
+  id                String      @id @default(uuid())
+  bookingId         String      @map("booking_id")
+  driverId          String      @map("driver_id")
   // Set only when accepting would add this rider to an existing trip.
-  poolHostBookingId String? @map("pool_host_booking_id")
-  status      OfferStatus @default(pending)
+  poolHostBookingId String?     @map("pool_host_booking_id")
+  status            OfferStatus @default(pending)
   // Which group this offer went out to. Recorded rather than re-derived, because
   // Driver.group can change between the offer and the answer, and "who was this
   // offered to at the time" is what makes the escalation auditable.
-  group       DriverGroup
-  createdAt   DateTime    @default(now()) @map("created_at")
-  respondedAt DateTime?   @map("responded_at")
+  group             DriverGroup
+  createdAt         DateTime    @default(now()) @map("created_at")
+  respondedAt       DateTime?   @map("responded_at")
 
   booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   driver  Driver  @relation(fields: [driverId], references: [id], onDelete: Cascade)
@@ -836,17 +876,17 @@ model DriverDocument {
   // above — see the ScanStatus enum for why the two are not one column. Defaults
   // to `pending`, so a row written before the scan finishes, or by a process
   // that died before it ran, is one the admin screen refuses to open.
-  scanStatus      ScanStatus         @default(pending) @map("scan_status")
+  scanStatus    ScanStatus @default(pending) @map("scan_status")
   // The TECHNICAL reason, for an admin and for the logs: "input image exceeds
   // pixel limit", "object missing from storage", "sharp: unsupported image
   // format". Deliberately not what the driver is shown — routes/driver.ts maps
   // every failure to one sentence, because telling an uploader which check he
   // tripped is telling him which check to aim at next.
-  scanReason      String?            @map("scan_reason")
+  scanReason    String?    @map("scan_reason")
   // When a scanner claimed the row. Its only job is spotting a worker that died
   // mid-scan: a row `scanning` for longer than the stale window is reclaimable.
-  scanStartedAt   DateTime?          @map("scan_started_at")
-  scannedAt       DateTime?          @map("scanned_at")
+  scanStartedAt DateTime?  @map("scan_started_at")
+  scannedAt     DateTime?  @map("scanned_at")
 
   // THE SMALLEST REMINDER THRESHOLD ALREADY SENT for this document, in days —
   // 30, then 7, then 1. Not a boolean and not a timestamp, because neither can
@@ -861,10 +901,10 @@ model DriverDocument {
   //
   // Cleared on re-upload with the rest of the per-file state: a renewal has its
   // own expiry and has been warned about nothing.
-  expiryWarnedDays Int?              @map("expiry_warned_days")
+  expiryWarnedDays Int?      @map("expiry_warned_days")
   // When that last reminder went out. Nothing reads it — it is here for the
   // office, for the conversation that starts "nobody told me".
-  expiryWarnedAt   DateTime?         @map("expiry_warned_at")
+  expiryWarnedAt   DateTime? @map("expiry_warned_at")
 
   driver  Driver   @relation(fields: [driverId], references: [id], onDelete: Cascade)
   // Cascade: retiring a car takes its paperwork with it. The archive rows survive
@@ -948,12 +988,18 @@ model DriverDocumentArchive {
 // One row per driver — upserted every 4 seconds when driver is online
 // bearing + speedKmh enable dead reckoning on the client between polling intervals
 model DriverLocation {
-  driverId  String   @id @map("driver_id")
-  latitude  Float
-  longitude Float
-  bearing   Float? // degrees 0–360, null until second update available
-  speedKmh  Float? // km/h, null until second update available
-  updatedAt DateTime @updatedAt @map("updated_at")
+  driverId       String    @id @map("driver_id")
+  latitude       Float
+  longitude      Float
+  bearing        Float? // degrees 0–360, null until second update available
+  speedKmh       Float? // km/h, null until second update available
+  // Device-reported observation time. Null means the client did not provide a
+  // trustworthy value. It never controls write ordering; receivedAt does.
+  observedAt     DateTime? @map("observed_at")
+  // Independent server receipt time for the currently stored fix.
+  receivedAt     DateTime? @map("received_at")
+  accuracyMeters Float?    @map("accuracy_meters")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
 
   // The PostGIS point form of latitude/longitude, and the column the dispatch
   // scan actually searches. DERIVED, not written: it is GENERATED ALWAYS ...
@@ -985,8 +1031,565 @@ model DriverLocation {
   @@map("driver_locations")
 }
 
+// One row per outbound provider attempt. Provider acknowledgement and end-user
+// delivery are separate facts; WhatsApp callbacks advance this row, while FCM
+// normally stops at "accepted" because this integration has no device receipt.
+model NotificationDelivery {
+  id                       String    @id @default(uuid())
+  provider                 String
+  channel                  String
+  recipient                String
+  providerMessageId        String?   @unique @map("provider_message_id")
+  status                   String
+  bookingId                String?   @map("booking_id")
+  purpose                  String?
+  retryKey                 String?   @map("retry_key")
+  retryCount               Int       @default(0) @map("retry_count")
+  attemptedAt              DateTime  @map("attempted_at")
+  providerAcceptedAt       DateTime? @map("provider_accepted_at")
+  providerStatusAt         DateTime? @map("provider_status_at")
+  providerStatusReceivedAt DateTime? @map("provider_status_received_at")
+  sentAt                   DateTime? @map("sent_at")
+  deliveredAt              DateTime? @map("delivered_at")
+  readAt                   DateTime? @map("read_at")
+  failedAt                 DateTime? @map("failed_at")
+  providerFailureCode      String?   @map("provider_failure_code")
+  providerFailureMessage   String?   @map("provider_failure_message")
+  createdAt                DateTime  @default(now()) @map("created_at")
+  updatedAt                DateTime  @updatedAt @map("updated_at")
+
+  @@index([bookingId, purpose, attemptedAt])
+  @@index([provider, status, attemptedAt])
+  @@index([retryKey, attemptedAt])
+  @@map("notification_deliveries")
+}
+
+// Persisted only at decision-critical moments so future audits can reconstruct
+// the route/ETA fact the service actually had without turning the live cache into
+// an unbounded history log.
+model RouteObservation {
+  id                     String   @id @default(uuid())
+  bookingId              String   @map("booking_id")
+  event                  String
+  originLat              Float?   @map("origin_lat")
+  originLng              Float?   @map("origin_lng")
+  destinationLat         Float?   @map("destination_lat")
+  destinationLng         Float?   @map("destination_lng")
+  provider               String
+  trafficMode            String   @map("traffic_mode")
+  durationSeconds        Float?   @map("duration_seconds")
+  trafficDurationSeconds Float?   @map("traffic_duration_seconds")
+  distanceMeters         Float?   @map("distance_meters")
+  calculatedAt           DateTime @map("calculated_at")
+  receivedAt             DateTime @map("received_at")
+  cacheIdentity          String?  @map("cache_identity")
+  cacheHit               Boolean  @default(false) @map("cache_hit")
+  cacheAgeMs             Float?   @map("cache_age_ms")
+  providerRouteId        String?  @map("provider_route_id")
+  createdAt              DateTime @default(now()) @map("created_at")
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([bookingId, event, calculatedAt])
+  @@map("route_observations")
+}
+
+// Immutable snapshot of the live-location and booking-state facts used when a
+// rider cancellation fee is committed. The live DriverLocation row keeps moving;
+// this row preserves what the decision actually saw.
+model CancellationLocationEvidence {
+  id                 String    @id @default(uuid())
+  bookingId          String    @unique @map("booking_id")
+  driverId           String?   @map("driver_id")
+  bookingStatus      String    @map("booking_status")
+  decisionAt         DateTime  @map("decision_at")
+  pickupLat          Float?    @map("pickup_lat")
+  pickupLng          Float?    @map("pickup_lng")
+  locationLat        Float?    @map("location_lat")
+  locationLng        Float?    @map("location_lng")
+  locationObservedAt DateTime? @map("location_observed_at")
+  locationReceivedAt DateTime? @map("location_received_at")
+  locationUpdatedAt  DateTime? @map("location_updated_at")
+  accuracyMeters     Float?    @map("accuracy_meters")
+  distanceKm         Float?    @map("distance_km")
+  locationFresh      Boolean   @map("location_fresh")
+  pickupRadiusKm     Float     @map("pickup_radius_km")
+  driverAtPickup     Boolean   @map("driver_at_pickup")
+  createdAt          DateTime  @default(now()) @map("created_at")
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@map("cancellation_location_evidence")
+}
+
+// Phase 5 adjudication infrastructure only. These records preserve evidence,
+// advisory AI analysis, and provisional routing. They contain no money, strike,
+// suspension, compensation, payout, or final-responsibility fields.
+model ResponsibilityCase {
+  id               String    @id
+  sourceKey        String?   @unique @map("source_key")
+  bookingId        String    @map("booking_id")
+  caseType         String    @map("case_type")
+  state            String
+  evidenceVersion  String    @map("evidence_version")
+  evidenceHash     String    @map("evidence_hash")
+  evidenceSnapshot Json      @map("evidence_snapshot")
+  scheduledAt      DateTime? @map("scheduled_at")
+  occurredAt       DateTime? @map("occurred_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  finalDecision        ResponsibilityFinalDecision?
+  consequenceExecution ResponsibilityConsequenceExecution?
+  adminReview          ResponsibilityAdminReview?
+  appealWindow         ResponsibilityAppealWindow?
+  appeal               ResponsibilityAppeal?
+  appealReview         ResponsibilityAppealReview?
+  finalizationHandoff  ResponsibilityFinalizationHandoff?
+  liability            ResponsibilityLiability?
+  compensation         ResponsibilityCompensation?
+  reliabilityStrike    ReliabilityStrike?
+  evidenceVersions     ResponsibilityEvidenceVersion[]
+  adjudicationWork     ResponsibilityAdjudicationWork[]
+  shadowResults        ResponsibilityShadowResult[]
+
+  @@index([bookingId, caseType])
+  @@map("responsibility_cases")
+}
+
+// Immutable snapshots used by Phase 7 shadow adjudication. A later evidence
+// arrival creates another row; completed analysis never pretends it saw facts
+// that arrived after its snapshot was generated.
+model ResponsibilityEvidenceVersion {
+  id              String   @id @default(uuid())
+  caseId          String   @map("case_id")
+  evidenceVersion String   @map("evidence_version")
+  evidenceHash    String   @map("evidence_hash")
+  snapshot        Json
+  generatedAt     DateTime @map("generated_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  case          ResponsibilityCase             @relation(fields: [caseId], references: [id], onDelete: Restrict)
+  work          ResponsibilityAdjudicationWork[]
+  shadowResults ResponsibilityShadowResult[]
+
+  @@unique([caseId, evidenceHash])
+  @@index([caseId, createdAt])
+  @@map("responsibility_evidence_versions")
+}
+
+// Durable Phase 7 work. One logical unit is one case + evidence hash + analyst
+// contract/config + policy version. Claiming uses PostgreSQL SKIP LOCKED and a
+// lease so a crashed worker can be recovered without duplicate logical work.
+model ResponsibilityAdjudicationWork {
+  id                   String    @id @default(uuid())
+  caseId               String    @map("case_id")
+  evidenceVersionId    String    @map("evidence_version_id")
+  logicalKey           String    @unique @map("logical_key")
+  contractVersion      String    @map("contract_version")
+  analystConfigVersion String    @map("analyst_config_version")
+  policyVersion        String    @map("policy_version")
+  status               String
+  attemptCount         Int       @default(0) @map("attempt_count")
+  manualRetryCount     Int       @default(0) @map("manual_retry_count")
+  claimedAt            DateTime? @map("claimed_at")
+  leaseUntil           DateTime? @map("lease_until")
+  lastAttemptedAt      DateTime? @map("last_attempted_at")
+  nextRetryAt          DateTime? @map("next_retry_at")
+  lastErrorCategory    String?   @map("last_error_category")
+  lastErrorDetail      String?   @map("last_error_detail")
+  completedAt          DateTime? @map("completed_at")
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+
+  case            ResponsibilityCase            @relation(fields: [caseId], references: [id], onDelete: Restrict)
+  evidenceVersion ResponsibilityEvidenceVersion @relation(fields: [evidenceVersionId], references: [id], onDelete: Restrict)
+  shadowResult    ResponsibilityShadowResult?
+
+  @@index([status, nextRetryAt, createdAt])
+  @@index([caseId, createdAt])
+  @@map("responsibility_adjudication_work")
+}
+
+// Observational only. These rows are deliberately separate from Phase 5/6
+// provisional/final decision tables so no shadow route can be mistaken for an
+// operative adjudication decision.
+model ResponsibilityShadowResult {
+  id                      String   @id @default(uuid())
+  workId                  String   @unique @map("work_id")
+  caseId                  String   @map("case_id")
+  evidenceVersionId       String   @map("evidence_version_id")
+  mode                    String   @default("SHADOW")
+  evidenceVersion         String   @map("evidence_version")
+  evidenceHash            String   @map("evidence_hash")
+  analysisProviderId      String?  @map("analysis_provider_id")
+  analysisVersion         String   @map("analysis_version")
+  provider                String
+  model                   String
+  analystConfigVersion    String   @map("analyst_config_version")
+  policyVersion           String   @map("policy_version")
+  route                   String
+  suggestedClassification String  @map("suggested_classification")
+  confidence              Float
+  severity                String
+  factsSupporting         Json     @map("facts_supporting")
+  factsAgainst            Json     @map("facts_against")
+  inferences              Json
+  missingEvidence         Json     @map("missing_evidence")
+  contradictions          Json
+  analysisEnvelope        Json?    @map("analysis_envelope")
+  factualValidation       Json?    @map("factual_validation")
+  passedGates             Json     @map("passed_gates")
+  failedGates             Json     @map("failed_gates")
+  inputTokens             Int?     @map("input_tokens")
+  outputTokens            Int?     @map("output_tokens")
+  requestCount            Int      @default(1) @map("request_count")
+  processingLatencyMs     Int      @map("processing_latency_ms")
+  attemptCount            Int      @map("attempt_count")
+  createdAt               DateTime @default(now()) @map("created_at")
+
+  work               ResponsibilityAdjudicationWork @relation(fields: [workId], references: [id], onDelete: Restrict)
+  case               ResponsibilityCase             @relation(fields: [caseId], references: [id], onDelete: Restrict)
+  evidenceVersionRow ResponsibilityEvidenceVersion  @relation(fields: [evidenceVersionId], references: [id], onDelete: Restrict)
+
+  @@index([caseId, createdAt])
+  @@index([route, createdAt])
+  @@map("responsibility_shadow_results")
+}
+
+// Minimal Phase 6A finalization authorization record. The appeal/finalization
+// workflow that creates this row is intentionally deferred; consequence code
+// may only trust this persisted record together with ResponsibilityCase.state.
+model ResponsibilityFinalDecision {
+  id               String   @id @default(uuid())
+  caseId           String   @unique @map("case_id")
+  outcome          String
+  classification   String?  @map("classification")
+  consequenceLevel String   @map("consequence_level")
+  evidenceHash     String   @map("evidence_hash")
+  evidenceVersion  String?  @map("evidence_version")
+  policyVersion    String   @map("policy_version")
+  source           String   @default("PHASE6A_COMPAT")
+  reason           String   @default("Finalized before Phase 6B lifecycle")
+  actorId          String?  @map("actor_id")
+  appealId         String?  @map("appeal_id")
+  previousState    String?  @map("previous_state")
+  finalizedAt      DateTime @map("finalized_at")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  case              ResponsibilityCase                  @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  appeal            ResponsibilityAppeal?               @relation("ResponsibilityFinalDecisionAppeal", fields: [caseId, appealId], references: [caseId, id], onDelete: Restrict)
+  execution         ResponsibilityConsequenceExecution?
+  handoff           ResponsibilityFinalizationHandoff?
+  liability         ResponsibilityLiability?
+  reliabilityStrike ReliabilityStrike?
+
+  @@index([outcome, finalizedAt])
+  @@map("responsibility_final_decisions")
+}
+
+// Phase 6A records authorization to cross the consequence boundary. Actual
+// liability/strike/compensation handlers are implemented in later sub-phases.
+model ResponsibilityConsequenceExecution {
+  id                     String    @id @default(uuid())
+  caseId                 String    @unique @map("case_id")
+  finalDecisionId        String    @unique @map("final_decision_id")
+  policyVersion          String    @map("policy_version")
+  finalizedAt            DateTime  @map("finalized_at")
+  status                 String
+  attemptCount           Int       @default(1) @map("attempt_count")
+  authorizedAt           DateTime  @map("authorized_at")
+  appliedAt              DateTime? @map("applied_at")
+  financialAppliedAt     DateTime? @map("financial_applied_at")
+  financialAttemptedAt   DateTime? @map("financial_attempted_at")
+  financialLastError     String?   @map("financial_last_error")
+  reliabilityAppliedAt   DateTime? @map("reliability_applied_at")
+  reliabilityAttemptedAt DateTime? @map("reliability_attempted_at")
+  reliabilityLastError   String?   @map("reliability_last_error")
+  createdAt              DateTime  @default(now()) @map("created_at")
+  updatedAt              DateTime  @updatedAt @map("updated_at")
+
+  case              ResponsibilityCase          @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  finalDecision     ResponsibilityFinalDecision @relation(fields: [finalDecisionId], references: [id], onDelete: Cascade)
+  reliabilityStrike ReliabilityStrike?
+
+  @@index([status, authorizedAt])
+  @@map("responsibility_consequence_executions")
+}
+
+// One authoritative upheld Level-2 incident creates at most one immutable
+// reliability strike. Historical cancellation/complaint records never populate
+// this table; every row traces back to a FINAL_UPHELD responsibility decision.
+model ReliabilityStrike {
+  id                     String   @id @default(uuid())
+  driverId               String   @map("driver_id")
+  responsibilityCaseId   String   @unique @map("responsibility_case_id")
+  finalDecisionId        String   @unique @map("final_decision_id")
+  consequenceExecutionId String   @unique @map("consequence_execution_id")
+  consequenceLevel       String   @map("consequence_level")
+  incidentType           String   @map("incident_type")
+  policyVersion          String   @map("policy_version")
+  sourceKey              String   @unique @map("source_key")
+  status                 String   @default("UPHELD")
+  createdAt              DateTime @default(now()) @map("created_at")
+
+  driver               Driver                             @relation(fields: [driverId], references: [id], onDelete: Restrict)
+  responsibilityCase   ResponsibilityCase                 @relation(fields: [responsibilityCaseId], references: [id], onDelete: Restrict)
+  finalDecision        ResponsibilityFinalDecision        @relation(fields: [finalDecisionId], references: [id], onDelete: Restrict)
+  consequenceExecution ResponsibilityConsequenceExecution @relation(fields: [consequenceExecutionId], references: [id], onDelete: Restrict)
+  block                ReliabilityBlock?
+
+  @@index([driverId, createdAt])
+  @@map("reliability_strikes")
+}
+
+// Reliability blocks are separate from Driver.suspendedAt, which remains the
+// independent safety/security moderation mechanism. Removal closes this history
+// row; it never deletes the source strike.
+model ReliabilityBlock {
+  id             String    @id @default(uuid())
+  driverId       String    @map("driver_id")
+  type           String
+  sourceStrikeId String    @unique @map("source_strike_id")
+  threshold      Int
+  sourceKey      String    @unique @map("source_key")
+  blockedAt      DateTime  @map("blocked_at")
+  blockedUntil   DateTime? @map("blocked_until")
+  removedAt      DateTime? @map("removed_at")
+  removedBy      String?   @map("removed_by")
+  removalReason  String?   @map("removal_reason")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  driver       Driver            @relation(fields: [driverId], references: [id], onDelete: Restrict)
+  sourceStrike ReliabilityStrike @relation(fields: [sourceStrikeId], references: [id], onDelete: Restrict)
+
+  @@index([driverId, type, removedAt])
+  @@index([driverId, blockedUntil])
+  @@map("reliability_blocks")
+}
+
+// Immutable financial consequence records. Database constraints in the matching
+// migration keep the monetary and ledger invariants enforceable outside Prisma.
+model ResponsibilityLiability {
+  id                     String   @id @default(uuid())
+  caseId                 String   @unique @map("case_id")
+  finalDecisionId        String   @unique @map("final_decision_id")
+  driverId               String   @map("driver_id")
+  bookingId              String   @map("booking_id")
+  authoritativeFarePaise Int      @map("authoritative_fare_paise")
+  rateBps                Int      @map("rate_bps")
+  capPaise               Int      @map("cap_paise")
+  amountPaise            Int      @map("amount_paise")
+  policyVersion          String   @map("policy_version")
+  calculatedAt           DateTime @map("calculated_at")
+  createdAt              DateTime @default(now()) @map("created_at")
+
+  case          ResponsibilityCase             @relation(fields: [caseId], references: [id], onDelete: Restrict)
+  finalDecision ResponsibilityFinalDecision    @relation(fields: [finalDecisionId], references: [id], onDelete: Restrict)
+  driver        Driver                         @relation(fields: [driverId], references: [id], onDelete: Restrict)
+  booking       Booking                        @relation("ResponsibilityLiabilityBooking", fields: [bookingId], references: [id], onDelete: Restrict)
+  entries       ResponsibilityLiabilityEntry[]
+  compensation  ResponsibilityCompensation?
+
+  @@index([driverId, createdAt])
+  @@index([bookingId])
+  @@map("responsibility_liabilities")
+}
+
+// Append-only ledger of liability creation, recovery, and correction events.
+model ResponsibilityLiabilityEntry {
+  id               String   @id @default(uuid())
+  liabilityId      String   @map("liability_id")
+  kind             String
+  amountPaise      Int      @map("amount_paise")
+  sourceKey        String   @unique @map("source_key")
+  earningBookingId String?  @map("earning_booking_id")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  liability      ResponsibilityLiability @relation(fields: [liabilityId], references: [id], onDelete: Restrict)
+  earningBooking Booking?                @relation("ResponsibilityLiabilityEntryEarningBooking", fields: [earningBookingId], references: [id], onDelete: Restrict)
+
+  @@index([liabilityId, createdAt])
+  @@index([earningBookingId])
+  @@map("responsibility_liability_entries")
+}
+
+model ResponsibilityCompensation {
+  id          String   @id @default(uuid())
+  caseId      String   @unique @map("case_id")
+  liabilityId String   @unique @map("liability_id")
+  userId      String   @map("user_id")
+  amountPaise Int      @map("amount_paise")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  case        ResponsibilityCase                     @relation(fields: [caseId], references: [id], onDelete: Restrict)
+  liability   ResponsibilityLiability                @relation(fields: [liabilityId], references: [id], onDelete: Restrict)
+  user        User                                   @relation(fields: [userId], references: [id], onDelete: Restrict)
+  allocations ResponsibilityCompensationAllocation[]
+
+  @@index([userId, createdAt])
+  @@map("responsibility_compensations")
+}
+
+model ResponsibilityCompensationAllocation {
+  id             String    @id @default(uuid())
+  compensationId String    @map("compensation_id")
+  bookingId      String    @map("booking_id")
+  amountPaise    Int       @map("amount_paise")
+  status         String
+  sourceKey      String    @unique @map("source_key")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  consumedAt     DateTime? @map("consumed_at")
+  releasedAt     DateTime? @map("released_at")
+
+  compensation ResponsibilityCompensation @relation(fields: [compensationId], references: [id], onDelete: Restrict)
+  booking      Booking                    @relation("ResponsibilityCompensationAllocationBooking", fields: [bookingId], references: [id], onDelete: Restrict)
+
+  @@index([compensationId, status])
+  @@index([bookingId])
+  @@map("responsibility_compensation_allocations")
+}
+
+model ResponsibilityAnalysis {
+  id              String   @id
+  logicalKey      String   @unique @map("logical_key")
+  caseId          String   @map("case_id")
+  evidenceHash    String   @map("evidence_hash")
+  contractVersion String   @map("contract_version")
+  provider        String
+  model           String
+  envelope        Json
+  validation      Json
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@index([caseId, createdAt])
+  @@map("responsibility_analyses")
+}
+
+model ResponsibilityProvisionalDecision {
+  id                  String   @id @default(uuid())
+  caseId              String   @unique @map("case_id")
+  evidenceVersion     String   @map("evidence_version")
+  evidenceHash        String   @map("evidence_hash")
+  analysisId          String?  @map("analysis_id")
+  analysisVersion     String?  @map("analysis_version")
+  policyVersion       String   @map("policy_version")
+  route               String
+  reasons             Json
+  passedGates         Json     @map("passed_gates")
+  failedGates         Json     @map("failed_gates")
+  humanReviewRequired Boolean  @map("human_review_required")
+  evaluatedAt         DateTime @map("evaluated_at")
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  @@index([route, evaluatedAt])
+  @@map("responsibility_provisional_decisions")
+}
+
+model ResponsibilityAdminReview {
+  id               String   @id @default(uuid())
+  caseId           String   @unique @map("case_id")
+  adminActorId     String   @map("admin_actor_id")
+  decision         String
+  classification   String?
+  consequenceLevel String   @map("consequence_level")
+  reason           String
+  decidedAt        DateTime @map("decided_at")
+  evidenceVersion  String   @map("evidence_version")
+  evidenceHash     String   @map("evidence_hash")
+  policyVersion    String   @map("policy_version")
+  previousState    String   @map("previous_state")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  case ResponsibilityCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@index([decision, decidedAt])
+  @@map("responsibility_admin_reviews")
+}
+
+model ResponsibilityAppealWindow {
+  id                 String    @id @default(uuid())
+  caseId             String    @unique @map("case_id")
+  sourceDecisionId   String    @map("source_decision_id")
+  sourceDecisionType String    @map("source_decision_type")
+  noticeRetryKey     String    @unique @map("notice_retry_key")
+  appealStartedAt    DateTime? @map("appeal_started_at")
+  appealDeadline     DateTime? @map("appeal_deadline")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  case   ResponsibilityCase    @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  appeal ResponsibilityAppeal?
+
+  @@index([appealDeadline])
+  @@map("responsibility_appeal_windows")
+}
+
+model ResponsibilityAppeal {
+  id                 String   @id @default(uuid())
+  caseId             String   @unique @map("case_id")
+  appealWindowId     String   @unique @map("appeal_window_id")
+  driverId           String   @map("driver_id")
+  submittedAt        DateTime @map("submitted_at")
+  reason             String
+  status             String
+  additionalEvidence Json     @map("additional_evidence")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  case           ResponsibilityCase            @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  appealWindow   ResponsibilityAppealWindow    @relation(fields: [appealWindowId], references: [id], onDelete: Restrict)
+  review         ResponsibilityAppealReview?
+  finalDecisions ResponsibilityFinalDecision[] @relation("ResponsibilityFinalDecisionAppeal")
+
+  @@unique([caseId, id])
+  @@index([driverId, submittedAt])
+  @@map("responsibility_appeals")
+}
+
+model ResponsibilityAppealReview {
+  id               String   @id @default(uuid())
+  caseId           String   @unique @map("case_id")
+  appealId         String   @unique @map("appeal_id")
+  reviewerId       String   @map("reviewer_id")
+  outcome          String
+  classification   String?
+  consequenceLevel String   @map("consequence_level")
+  reason           String
+  reviewedAt       DateTime @map("reviewed_at")
+  evidenceVersion  String   @map("evidence_version")
+  evidenceHash     String   @map("evidence_hash")
+  policyVersion    String   @map("policy_version")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  case   ResponsibilityCase   @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  appeal ResponsibilityAppeal @relation(fields: [appealId], references: [id], onDelete: Restrict)
+
+  @@index([outcome, reviewedAt])
+  @@map("responsibility_appeal_reviews")
+}
+
+model ResponsibilityFinalizationHandoff {
+  id              String    @id @default(uuid())
+  caseId          String    @unique @map("case_id")
+  finalDecisionId String    @unique @map("final_decision_id")
+  status          String
+  attemptCount    Int       @default(0) @map("attempt_count")
+  lastAttemptAt   DateTime? @map("last_attempt_at")
+  completedAt     DateTime? @map("completed_at")
+  lastError       String?   @map("last_error")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  case          ResponsibilityCase          @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  finalDecision ResponsibilityFinalDecision @relation(fields: [finalDecisionId], references: [id], onDelete: Cascade)
+
+  @@index([status, createdAt])
+  @@map("responsibility_finalization_handoffs")
+}
+
 model Booking {
-  id                  String        @id @default(uuid())
+  id                          String                      @id @default(uuid())
   // The ride's human-readable name, "RCS4831902" — what a rider reads down a
   // phone line and what support searches on. `id` stays the key everything joins
   // on; this is never a foreign key, only ever a lookup and a display value.
@@ -999,17 +1602,17 @@ model Booking {
   // No @default — Prisma cannot express the generator, so lib/bookingReference.js
   // owns allocation and the collision retry, and createBooking() there is the only
   // supported way to insert a row here.
-  reference           String        @unique
-  userId              String        @map("user_id")
-  driverId            String?       @map("driver_id")
-  customerPhone       String        @map("customer_phone")
-  pickupAddress       String        @map("pickup_address")
-  pickupLat           Float         @map("pickup_lat")
-  pickupLng           Float         @map("pickup_lng")
-  dropAddress         String        @map("drop_address")
-  dropLat             Float         @map("drop_lat")
-  dropLng             Float         @map("drop_lng")
-  vehicleClass        VehicleClass  @map("vehicle_class")
+  reference                   String                      @unique
+  userId                      String                      @map("user_id")
+  driverId                    String?                     @map("driver_id")
+  customerPhone               String                      @map("customer_phone")
+  pickupAddress               String                      @map("pickup_address")
+  pickupLat                   Float                       @map("pickup_lat")
+  pickupLng                   Float                       @map("pickup_lng")
+  dropAddress                 String                      @map("drop_address")
+  dropLat                     Float                       @map("drop_lat")
+  dropLng                     Float                       @map("drop_lng")
+  vehicleClass                VehicleClass                @map("vehicle_class")
   // THE CAR THAT ACTUALLY CAME, snapshotted when a driver claims the ride.
   //
   // Not read through `driver` on demand, because a captain owns several cars and
@@ -1020,7 +1623,7 @@ model Booking {
   //
   // Nullable because a booking exists long before anybody is assigned to it, and
   // null forever on the rides that never found a driver.
-  vehicleNumber       String?       @map("vehicle_number")
+  vehicleNumber               String?                     @map("vehicle_number")
   // The name of that car, "Maruti Swift Dzire", snapshotted in the same write
   // for the same reason: a rider's receipt shows the plate and the model side by
   // side, and read live through the relation the model would drift onto whatever
@@ -1033,7 +1636,7 @@ model Booking {
   // null Driver.vehicleModel and so nothing to snapshot. Readers fall back to
   // the booked class rather than to the driver row; see the status endpoint in
   // routes/bookings.js for why the plate's fallback cannot be copied here.
-  vehicleModel        String?       @map("vehicle_model")
+  vehicleModel                String?                     @map("vehicle_model")
   // "Follow my ride" — an opaque handle that lets someone with the link watch
   // this trip WITHOUT an account. Minted only when the rider asks for it, so a
   // ride nobody shared has no live handle to leak, and cleared when he revokes.
@@ -1046,37 +1649,37 @@ model Booking {
   // Nothing else may be looked up by this column, and nothing it feeds may be
   // written: see routes/share.js for the exact payload, which is deliberately
   // narrower than the rider's own status endpoint.
-  shareToken          String?       @unique @map("share_token")
+  shareToken                  String?                     @unique @map("share_token")
   // Every share dies on a clock, because the alternative is a link a rider sent
   // to one person in one moment that still answers a year later, in a group chat
   // he has left. Set at mint; the public route treats a past date as no link at
   // all rather than as a link to nothing.
-  shareExpiresAt      DateTime?     @map("share_expires_at")
-  scheduledAt         DateTime?     @map("scheduled_at")
-  isOutstation        Boolean       @default(false) @map("is_outstation")
-  preferSafeRoute     Boolean       @default(false) @map("prefer_safe_route")
-  safeWaypointLat     Float?        @map("safe_waypoint_lat")
-  safeWaypointLng     Float?        @map("safe_waypoint_lng")
-  needsCarrier        Boolean       @default(false) @map("needs_carrier")
-  distanceKm          Float?        @map("distance_km")
-  fare                Float         @map("fare")
+  shareExpiresAt              DateTime?                   @map("share_expires_at")
+  scheduledAt                 DateTime?                   @map("scheduled_at")
+  isOutstation                Boolean                     @default(false) @map("is_outstation")
+  preferSafeRoute             Boolean                     @default(false) @map("prefer_safe_route")
+  safeWaypointLat             Float?                      @map("safe_waypoint_lat")
+  safeWaypointLng             Float?                      @map("safe_waypoint_lng")
+  needsCarrier                Boolean                     @default(false) @map("needs_carrier")
+  distanceKm                  Float?                      @map("distance_km")
+  fare                        Float                       @map("fare")
   // `fare` minus the pass-through charges (toll, parking, airport access, roof
   // carrier). Commission is a percentage of THIS, so storing it makes the cut
   // auditable from the row alone — and fare - rideFare recovers the add-ons.
-  rideFare            Float?        @map("ride_fare")
-  couponAmount        Float         @default(0) @map("coupon_amount")
-  customerPayment     Float         @default(0) @map("customer_payment")
-  scheduledAdvancePct Int           @default(0) @map("scheduled_advance_pct")
-  scheduledAdvanceAmount Int        @default(0) @map("scheduled_advance_amount")
-  scheduledAdvancePaidAmount Int    @default(0) @map("scheduled_advance_paid_amount")
-  scheduledRemainingAmount Int      @default(0) @map("scheduled_remaining_amount")
-  scheduledFinalPaidAmount Int      @default(0) @map("scheduled_final_paid_amount")
-  scheduledFinalPaymentMethod PaymentMethod? @map("scheduled_final_payment_method")
-  scheduledFinalPaidAt DateTime?    @map("scheduled_final_paid_at")
+  rideFare                    Float?                      @map("ride_fare")
+  couponAmount                Float                       @default(0) @map("coupon_amount")
+  customerPayment             Float                       @default(0) @map("customer_payment")
+  scheduledAdvancePct         Int                         @default(0) @map("scheduled_advance_pct")
+  scheduledAdvanceAmount      Int                         @default(0) @map("scheduled_advance_amount")
+  scheduledAdvancePaidAmount  Int                         @default(0) @map("scheduled_advance_paid_amount")
+  scheduledRemainingAmount    Int                         @default(0) @map("scheduled_remaining_amount")
+  scheduledFinalPaidAmount    Int                         @default(0) @map("scheduled_final_paid_amount")
+  scheduledFinalPaymentMethod PaymentMethod?              @map("scheduled_final_payment_method")
+  scheduledFinalPaidAt        DateTime?                   @map("scheduled_final_paid_at")
   scheduledAdvanceDisposition ScheduledAdvanceDisposition @default(not_applicable) @map("scheduled_advance_disposition")
-  rideNowPaidAmount Int              @default(0) @map("ride_now_paid_amount")
-  rideNowPaymentMethod PaymentMethod? @map("ride_now_payment_method")
-  rideNowPaidAt DateTime?            @map("ride_now_paid_at")
+  rideNowPaidAmount           Int                         @default(0) @map("ride_now_paid_amount")
+  rideNowPaymentMethod        PaymentMethod?              @map("ride_now_payment_method")
+  rideNowPaidAt               DateTime?                   @map("ride_now_paid_at")
   // WHAT THIS RIDE COSTS IF NOBODY EVER SHARES IT — the solo price off the same
   // signed quote the shared price came from, set only on sharing bookings and
   // null on every solo one.
@@ -1091,19 +1694,19 @@ model Booking {
   // Read once, at completion, by the transition that settles the ride: a shared
   // booking that reaches `completed` with no shareGroupId was never joined, and
   // is re-priced to this. See the fare-switch block in routes/driver.ts.
-  soloFare            Float?        @map("solo_fare")
-  commissionPct       Float         @default(0) @map("commission_pct")
-  commissionAmt       Float         @default(0) @map("commission_amt")
-  status              BookingStatus @default(pending)
+  soloFare                    Float?                      @map("solo_fare")
+  commissionPct               Float                       @default(0) @map("commission_pct")
+  commissionAmt               Float                       @default(0) @map("commission_amt")
+  status                      BookingStatus               @default(pending)
   // `status` is a current-state field: every transition overwrites the last, so once
   // a ride is cancelled or completed nothing records that it ever passed through
-  // `reached`. That state is part of the evidence for retaining the 15% scheduled advance
-  // (CHARGEABLE_STATUSES in routes/bookings.js), so the evidence for the charge is
+  // `reached`. That state is part of the evidence for deciding whether the scheduled
+  // cancellation fee can apply (CHARGEABLE_STATUSES in routes/bookings.js), so the evidence for the charge is
   // destroyed by the transition that acts on it. These stamps are what a disputed
   // charge is defended with, and they cannot be backfilled — a column added later is
   // null for every ride taken before it existed.
-  startedAt           DateTime?     @map("started_at")
-  reachedAt           DateTime?     @map("reached_at")
+  startedAt                   DateTime?                   @map("started_at")
+  reachedAt                   DateTime?                   @map("reached_at")
   // How far the driver actually was from the pickup / drop when he marked arrival and
   // completion, in km, measured server-side against the position his app reported.
   // "The driver says he arrived" and "the driver was there" are different claims, and
@@ -1113,22 +1716,29 @@ model Booking {
   // required column here would make every prisma.booking.create supply a distance for
   // a trip that has not happened. Null also covers a transition sent with no position,
   // which is the normal case when the OEM has killed the location service.
-  reachedDistanceKm   Float?        @map("reached_distance_km")
-  reachedAccuracyM    Float?        @map("reached_accuracy_m")
-  reachedLocationAt  DateTime?     @map("reached_location_at")
-  createdAt           DateTime      @default(now()) @map("created_at")
-  completedAt         DateTime?     @map("completed_at")
-  completedDistanceKm Float?        @map("completed_distance_km")
-  completedAccuracyM  Float?        @map("completed_accuracy_m")
-  completedLocationAt DateTime?     @map("completed_location_at")
-  completionOverrideReason String?  @map("completion_override_reason")
-  completionCustomerConfirmed Boolean @default(false) @map("completion_customer_confirmed")
-  confirmedAt         DateTime?     @map("confirmed_at")
-  cancelledBy         CancelledBy?  @map("cancelled_by")
-  cancellationCharge  Float?        @map("cancellation_charge")
-  source              BookingSource @default(website)
-  sharing             Boolean       @default(false)
-  shareGroupId        String?       @map("share_group_id")
+  reachedDistanceKm           Float?                      @map("reached_distance_km")
+  reachedAccuracyM            Float?                      @map("reached_accuracy_m")
+  reachedLocationAt           DateTime?                   @map("reached_location_at")
+  createdAt                   DateTime                    @default(now()) @map("created_at")
+  completedAt                 DateTime?                   @map("completed_at")
+  completedDistanceKm         Float?                      @map("completed_distance_km")
+  completedAccuracyM          Float?                      @map("completed_accuracy_m")
+  completedLocationAt         DateTime?                   @map("completed_location_at")
+  completionOverrideReason    String?                     @map("completion_override_reason")
+  completionCustomerConfirmed Boolean                     @default(false) @map("completion_customer_confirmed")
+  confirmedAt                 DateTime?                   @map("confirmed_at")
+  // Frozen when a driver accepts the assignment. Used for rider-facing late
+  // detection so live navigation ETA changes cannot move the deadline.
+  driverAssignedAt            DateTime?                   @map("driver_assigned_at")
+  // The arrival time promised when the captain accepts. The delayed-pickup
+  // grace period is measured from this frozen value, never from a moving live ETA.
+  expectedPickupAt            DateTime?                   @map("expected_pickup_at")
+  cancelledBy                 CancelledBy?                @map("cancelled_by")
+  cancellationCharge          Float?                      @map("cancellation_charge")
+  cancellationReason          String?                     @map("cancellation_reason")
+  source                      BookingSource               @default(website)
+  sharing                     Boolean                     @default(false)
+  shareGroupId                String?                     @map("share_group_id")
   // THE STOP SEQUENCE OF A POOLED TRIP, and they are two numbers rather than one
   // because the orders genuinely differ: nearest-drop-first means the rider
   // collected first is often the one dropped second. `pickupOrder` alone cannot
@@ -1138,22 +1748,22 @@ model Booking {
   // a lone rider has no sequence, only a trip. services/ridePooling.js is the
   // only thing that computes them, and driverAssignment writes them inside the
   // claim transaction so a half-ordered pool cannot exist.
-  pickupOrder         Int?          @map("pickup_order")
-  dropOrder           Int?          @map("drop_order")
+  pickupOrder                 Int?                        @map("pickup_order")
+  dropOrder                   Int?                        @map("drop_order")
   // How long Google said this trip would take when it was priced, in minutes.
   //
   // Already computed on every estimate (marketFare prices off it) and previously
   // thrown away, which left the tracking page estimating arrival in the browser
   // from a straight line. Null on bookings made before this column existed, and
   // on any whose quote predates it — treat a null as "unknown", never as zero.
-  durationMin         Int?          @map("duration_min")
+  durationMin                 Int?                        @map("duration_min")
   // The encoded road path Google returned for this trip, as the polyline.
   //
   // Read by the pooling matcher: "is this new pickup ON the road this driver is
   // already driving" is a question about the path, not about bearings, and
   // geo.js can answer it directly from these vertices. Also already computed and
   // discarded before this column.
-  routePolyline       String?       @map("route_polyline")
+  routePolyline               String?                     @map("route_polyline")
 
   user   User    @relation(fields: [userId], references: [id])
   driver Driver? @relation(fields: [driverId], references: [id])
@@ -1161,21 +1771,26 @@ model Booking {
   // Set once, the first time the T−1h "nobody has accepted" WhatsApp goes to
   // Raju. Without it the 5-minute sweep re-sends that message every 5 minutes
   // for the last hour — twelve identical messages, each one billed.
-  adminAlertedAt DateTime? @map("admin_alerted_at")
+  adminAlertedAt         DateTime? @map("admin_alerted_at")
   // Claimed immediately before the T-30m template is sent. A failed send clears
   // its own claim so the five-minute sweep retries; overlapping sweeps cannot
   // both claim the same recipient.
   customerReminderSentAt DateTime? @map("customer_reminder_sent_at")
   driverReminderSentAt   DateTime? @map("driver_reminder_sent_at")
 
-  review         DriverReview?
-  overchargeFlag OverchargeFlag?
-  walletEntries  WalletEntry[]
-  coupon         Coupon?
-  payments       Payment[]
-  offers         RideOffer[]
-  driverCancellations DriverCancellation[]
-  complaint      RideComplaint?
+  review                                DriverReview?
+  overchargeFlag                        OverchargeFlag?
+  walletEntries                         WalletEntry[]
+  coupon                                Coupon?
+  payments                              Payment[]
+  offers                                RideOffer[]
+  driverCancellations                   DriverCancellation[]
+  complaint                             RideComplaint?
+  routeObservations                     RouteObservation[]
+  cancellationLocationEvidence          CancellationLocationEvidence?
+  responsibilityLiabilities             ResponsibilityLiability[]              @relation("ResponsibilityLiabilityBooking")
+  responsibilityLiabilityEntries        ResponsibilityLiabilityEntry[]         @relation("ResponsibilityLiabilityEntryEarningBooking")
+  responsibilityCompensationAllocations ResponsibilityCompensationAllocation[] @relation("ResponsibilityCompensationAllocationBooking")
 
   // Postgres does not index foreign keys automatically, and every index below is
   // driven by a real call site rather than by guesswork.
@@ -1285,4 +1900,24 @@ model WhatsappSession {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("whatsapp_sessions")
+}
+
+// The vector type lives in extensions and is managed by reviewed SQL migrations.
+// Required Unsupported fields use parameterized raw writes in the RAG repository.
+model PolicyChunk {
+  id             BigInt   @id @default(autoincrement())
+  documentName   String   @map("document_name")
+  section        String
+  content        String
+  sourcePath     String   @map("source_path")
+  chunkKey       String   @map("chunk_key")
+  contentHash    String   @map("content_hash")
+  version        String
+  effectiveFrom  DateTime? @map("effective_from") @db.Date
+  metadata       Json     @default("{}")
+  embeddingModel String   @map("embedding_model")
+  embedding      Unsupported("vector(1536)")
+
+  @@unique([sourcePath, chunkKey])
+  @@map("policy_chunks")
 }

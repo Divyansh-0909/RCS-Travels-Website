@@ -12,6 +12,6 @@
     "skipLibCheck": true,
     "noEmit": true
   },
-  "include": ["**/*.ts"],
+  "include": ["**/*.ts", "rcs-rag/src/services/embedder.ts", "rcs-rag/src/scripts/loader.js"],
   "exclude": ["node_modules", "dist"]
 }

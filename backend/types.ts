@@ -148,6 +148,10 @@ const reviewDocumentSchema = z.object({
 // that can call the second without being able to express the first.
 const suspendDriverSchema = z.object({
   suspended: z.boolean(),
+  // Direct admin suspension is reserved for independent safety/security or
+  // platform-integrity moderation. Responsibility adjudication must use the
+  // responsibility lifecycle and FINAL_UPHELD consequence boundary instead.
+  scope: z.literal('independent_safety_or_integrity').optional(),
   // Required to suspend, for the same reason a rejection needs one: the captain
   // is SHOWN this. requireApprovedDriver hands it back on every refused request,
   // so it is the only explanation he ever gets for an app that has stopped
@@ -157,9 +161,21 @@ const suspendDriverSchema = z.object({
   // gets asked weeks later, by which time nobody remembers, and `isActive: false`
   // with no reason is indistinguishable from an admin misclick.
   reason: z.string().trim().min(3).max(500).optional(),
-}).refine((body) => !body.suspended || Boolean(body.reason), {
-  message: 'A suspension needs a reason — the captain is shown it, and it is the only record of why',
-  path: ['reason'],
+}).superRefine((body, ctx) => {
+  if (body.suspended && !body.reason) {
+    ctx.addIssue({
+      code: 'custom',
+      message: 'A suspension needs a reason — the captain is shown it, and it is the only record of why',
+      path: ['reason'],
+    })
+  }
+  if (body.suspended && body.scope !== 'independent_safety_or_integrity') {
+    ctx.addIssue({
+      code: 'custom',
+      message: 'Direct suspension is only for independent safety or platform-integrity moderation',
+      path: ['scope'],
+    })
+  }
 });
 
 // Which side of the fleet a captain drives on.
@@ -177,6 +193,10 @@ const driverGroupSchema = z.object({
 const locationSchema = z.object({
   lat: z.number().min(-90).max(90),
   lng: z.number().min(-180).max(180),
+  // Expo reports the device observation time in Unix milliseconds. Older
+  // clients do not send it, so provenance remains optional during rollout.
+  observedAt: z.number().finite().nonnegative().optional(),
+  accuracyMeters: z.number().finite().nonnegative().nullable().optional(),
 });
 
 const bookingListQuerySchema = z.object({

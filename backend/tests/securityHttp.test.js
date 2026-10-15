@@ -7,13 +7,14 @@ import express from 'express'
 import http from 'node:http'
 import https from 'node:https'
 import { fileURLToPath } from 'node:url'
-import { clerkMiddleware } from '@clerk/express'
+import { clerkMiddleware, clerkClient } from '@clerk/express'
 
 process.env.DOTENV_CONFIG_PATH = fileURLToPath(new URL('../../tools/dev/empty.env', import.meta.url))
 process.env.NODE_ENV = 'test'
 process.env.RAZORPAY_KEY_ID = 'rzp_test_local_fixture'
 process.env.RAZORPAY_KEY_SECRET = 'local-fixture-only'
 process.env.RAZORPAY_WEBHOOK_SECRET = 'local-webhook-fixture-only'
+process.env.OPENAI_API_KEY = 'local-fixture-only'
 delete process.env.DATABASE_URL
 delete process.env.DIRECT_URL
 delete process.env.CLERK_SECRET_KEY
@@ -26,12 +27,15 @@ process.env.CLERK_SECRET_KEY = 'sk_test_local_fixture_only'
 process.env.CLERK_PUBLISHABLE_KEY = publishableKey
 const paymentA = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
 const paymentB = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
+const responsibilityCaseId = 'case-other-driver'
 const rows = [
   { id: paymentA, userId: 'rider-a', amount: 10000, currency: 'INR', status: 'created' },
   { id: paymentB, userId: 'rider-b', amount: 20000, currency: 'INR', status: 'created' },
 ]
 let reads = 0
 globalThis.prisma = {
+  $transaction: async work => work(globalThis.prisma),
+  $queryRawUnsafe: async (_query, caseId) => caseId === responsibilityCaseId ? [{ id: caseId }] : [],
   user: { findUnique: async ({ where }) => {
     reads++
     return ['user_a', 'user_b'].includes(where.clerkId)
@@ -43,9 +47,20 @@ globalThis.prisma = {
       (where.userId === undefined || item.userId === where.userId))
     return row ? { ...row } : null
   } },
+  driver: { findUnique: async ({ where }) => where.clerkId === 'user_a'
+    ? { id: 'driver-a', clerkId: 'user_a', suspendedAt: null, suspensionExpiresAt: null }
+    : null },
+  responsibilityCase: { findUnique: async ({ where }) => where.id === responsibilityCaseId
+    ? { id: responsibilityCaseId, bookingId: 'booking-other-driver', state: 'APPEAL_WINDOW' }
+    : null },
+  booking: { findUnique: async ({ where }) => where.id === 'booking-other-driver'
+    ? { id: where.id, reference: 'RCS-OTHER', driverId: 'driver-b', driver: { id: 'driver-b', name: 'Other Driver', phone: '0000000002', fcmToken: null } }
+    : null },
 }
 const { default: paymentRoutes, razorpayWebhookHandler } = await import('../routes/payments.js')
 const { protect, protectAdmin } = await import('../middleware/auth.js')
+const { default: driverRoutes } = await import('../routes/driver.ts')
+const { default: responsibilityAdminRoutes } = await import('../routes/responsibilityAdmin.ts')
 
 function token(claims = {}) {
   const now = Math.floor(Date.now() / 1000)
@@ -56,6 +71,7 @@ function token(claims = {}) {
 }
 
 test('HTTP identity and payment abuse probes', async t => {
+  t.mock.method(clerkClient.sessions, 'getSession', async id => ({ id, userId: 'user_a', status: 'active' }))
   // Also block SDK/Axios transports, so a failed ownership check cannot turn
   // this negative test into an actual gateway request.
   t.mock.method(http, 'request', () => { throw new Error('Unexpected SDK HTTP request') })
@@ -65,6 +81,8 @@ test('HTTP identity and payment abuse probes', async t => {
   app.use(express.json())
   app.use(clerkMiddleware({ publishableKey, jwtKey: publicKey.export({ type: 'spki', format: 'pem' }) }))
   app.use('/api/payments', paymentRoutes)
+  app.use('/api/driver', driverRoutes)
+  app.use('/api/admin/responsibility', responsibilityAdminRoutes)
   app.get('/admin-guard-probe', protect, protectAdmin, (_req, res) => res.json({ ok: true }))
   app.use((_error, _req, res, _next) => res.status(500).json({ error: 'Local probe failed' }))
   const server = await new Promise(resolve => {
@@ -118,6 +136,47 @@ test('HTTP identity and payment abuse probes', async t => {
     await t.test('a genuine non-admin session cannot pass the admin guard', async () => {
       assert.equal((await request('/admin-guard-probe', { jwt: token() })).status, 403)
       assert.equal((await request('/admin-guard-probe', { jwt: token({ metadata: { role: 'admin' } }) })).status, 200)
+    })
+    await t.test('responsibility admin endpoints require authenticated admin identity', async () => {
+      const probes = [
+        { path: `/api/admin/responsibility/cases/${responsibilityCaseId}`, method: 'GET' },
+        { path: `/api/admin/responsibility/cases/${responsibilityCaseId}/review`, method: 'POST', body: { decision: 'UPHOLD', reason: 'Reviewed evidence' } },
+        { path: `/api/admin/responsibility/cases/${responsibilityCaseId}/appeal-review`, method: 'POST', body: { outcome: 'WAIVE', reason: 'Appeal evidence accepted' } },
+        { path: '/api/admin/responsibility/drivers/driver-a/reliability', method: 'GET' },
+        { path: '/api/admin/responsibility/drivers/driver-a/reliability-blocks/block-a/remove', method: 'POST', body: { reason: 'Reviewed reinstatement' } },
+      ]
+      for (const probe of probes) {
+        assert.equal((await request(probe.path, { method: probe.method, body: probe.body })).status, 401)
+        assert.equal((await request(probe.path, { jwt: token(), method: probe.method, body: probe.body })).status, 403)
+      }
+    })
+    await t.test('responsibility admin bodies cannot spoof the authenticated reviewer identity', async () => {
+      const admin = token({ metadata: { role: 'admin' } })
+      assert.equal((await request(`/api/admin/responsibility/cases/${responsibilityCaseId}/review`, {
+        jwt: admin,
+        method: 'POST',
+        body: { decision: 'UPHOLD', reason: 'Reviewed evidence', adminActorId: 'spoofed-admin' },
+      })).status, 400)
+      assert.equal((await request(`/api/admin/responsibility/cases/${responsibilityCaseId}/appeal-review`, {
+        jwt: admin,
+        method: 'POST',
+        body: { outcome: 'UPHOLD', reason: 'Reviewed appeal', reviewerId: 'spoofed-reviewer' },
+      })).status, 400)
+      assert.equal((await request('/api/admin/responsibility/drivers/driver-a/reliability-blocks/block-a/remove', {
+        jwt: admin,
+        method: 'POST',
+        body: { reason: 'Reviewed reinstatement', adminActorId: 'spoofed-admin' },
+      })).status, 400)
+    })
+    await t.test('driver appeal derives driver identity from authentication and enforces case ownership', async () => {
+      const path = `/api/driver/responsibility-cases/${responsibilityCaseId}/appeal`
+      assert.equal((await request(path, { method: 'POST', body: { reason: 'Please review this case' } })).status, 401)
+      assert.equal((await request(path, {
+        jwt: token(), method: 'POST', body: { reason: 'Please review this case', driverId: 'driver-b' },
+      })).status, 400)
+      const forbidden = await request(path, { jwt: token(), method: 'POST', body: { reason: 'Please review this case' } })
+      assert.equal(forbidden.status, 403)
+      assert.equal((await forbidden.json()).code, 'APPEAL_FORBIDDEN')
     })
     await t.test('expired tokens cannot access payments', async () => {
       const now = Math.floor(Date.now() / 1000)

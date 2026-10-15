@@ -1,0 +1,25 @@
+export default {
+  testRunner: 'command',
+  coverageAnalysis: 'off',
+  tsconfigFile: 'tests/quality/phase6b-no-tsconfig.json',
+  commandRunner: {
+    command: 'node --import tsx --test tests/phase6cBookingCreation.test.js tests/responsibilityFinancialMath.test.js tests/responsibilityCompensation.test.js tests/responsibilityLiabilityRecovery.test.js tests/responsibilityFinancialConsequences.test.js tests/responsibilityFinancialSweep.test.js tests/criticalRideTransactions.test.js tests/scheduledCustomerPayments.test.js',
+  },
+  mutate: [
+    'services/bookingCreation.js',
+    'services/responsibilityFinancialMath.js',
+    'services/responsibilityFinancialPolicy.js',
+    'services/responsibilityCompensation.js',
+    'services/responsibilityLiabilityRecovery.js',
+    'services/responsibilityFinancialConsequences.js',
+    'services/scheduledPayments.js',
+    'services/rideSettlement.js',
+  ],
+  ignorePatterns: ['.env', '.env.*', 'coverage', 'logs', 'node_modules', 'uploads'],
+  reporters: ['clear-text', 'json'],
+  jsonReporter: { fileName: 'coverage/phase6c-signoff-mutation.json' },
+  concurrency: 4,
+  timeoutMS: 10_000,
+  timeoutFactor: 2,
+  cleanTempDir: true,
+}

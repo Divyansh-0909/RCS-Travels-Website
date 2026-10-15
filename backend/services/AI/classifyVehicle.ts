@@ -1,4 +1,5 @@
 import { VehicleClass } from "@prisma/client";
+import { choice, TypeSafeClient } from "@typesafe-ai/sdk";
 import { zodTextFormat } from "openai/helpers/zod";
 import { z } from "zod";
 
@@ -7,6 +8,8 @@ import { openai } from "../../lib/openai.js";
 export const PREMIUM_PRICE = 1_700_000;
 export const PREMIUM_MIN_SEATS = 7;
 const MIN_CONFIDENCE = 0.75;
+export const JEV_MIN_CONFIDENCE = 0.85;
+const JEV_TIMEOUT_MS = 900;
 const NORMAL_CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const PRICE_SENSITIVE_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const MAX_CACHE_ENTRIES = 1_000;
@@ -44,6 +47,7 @@ export interface VehicleClassification extends VehicleDetails {
     category: VehicleClass | null;
     needsLookup: boolean;
     webLookupUsed: boolean;
+    jevUsed: boolean;
     cacheHit: boolean;
 }
 
@@ -54,6 +58,108 @@ type CacheEntry = {
 
 const vehicleClassificationCache = new Map<string, CacheEntry>();
 const inFlightClassifications = new Map<string, Promise<VehicleClassification>>();
+
+const jevQuestions = {
+    bodyStyle: choice(
+        "Which broad body-style bucket best matches this Indian passenger vehicle model? Choose unknown when the model name is not specific enough to identify reliably.",
+        {
+            hatchback: "A conventional hatchback, including premium hatchbacks. Not a sedan, SUV, crossover, MPV, or MUV.",
+            sedan: "A sedan or compact sedan with a separate boot/trunk. Not a hatchback, SUV, crossover, MPV, or MUV.",
+            suv_like: "An SUV, crossover, MPV, or MUV. Exact seating capacity and price are deliberately not decided here.",
+            unknown: "The model is unclear, unsupported, ambiguous, or does not fit the other buckets confidently.",
+        },
+    ),
+    seatBand: choice(
+        "For this vehicle model, which advertised TOTAL seating-capacity band applies, INCLUDING the driver? Choose unknown if the exact model or seating capacity is uncertain.",
+        {
+            under_7: "The vehicle is advertised with fewer than 7 total seats including the driver.",
+            seven_or_more: "The vehicle is advertised with 7 or more total seats including the driver.",
+            unknown: "The seating capacity cannot be identified confidently from the model name.",
+        },
+    ),
+} as const;
+
+let typeSafeClient: TypeSafeClient | null = null;
+
+const getTypeSafeClient = () => {
+    if (!process.env.TYPESAFE_API_KEY?.trim()) return null;
+    typeSafeClient ??= new TypeSafeClient();
+    return typeSafeClient;
+};
+
+type JevRoute =
+    | { kind: "fast"; vehicleClass: VehicleClass; bodyType: "hatchback" | "sedan" | "suv"; confidence: number }
+    | { kind: "verify" }
+    | { kind: "fallback" };
+
+export function routeJevVehicleDecision({
+    bodyStyle,
+    bodyConfidence,
+    seatBand,
+    seatConfidence,
+}: {
+    bodyStyle: "hatchback" | "sedan" | "suv_like" | "unknown";
+    bodyConfidence: number;
+    seatBand: "under_7" | "seven_or_more" | "unknown";
+    seatConfidence: number;
+}): JevRoute {
+    if (bodyConfidence < JEV_MIN_CONFIDENCE || bodyStyle === "unknown") {
+        return { kind: "fallback" };
+    }
+
+    if (bodyStyle === "hatchback") {
+        return { kind: "fast", vehicleClass: VehicleClass.hatchback, bodyType: "hatchback", confidence: bodyConfidence };
+    }
+
+    if (bodyStyle === "sedan") {
+        return { kind: "fast", vehicleClass: VehicleClass.sedan, bodyType: "sedan", confidence: bodyConfidence };
+    }
+
+    if (seatConfidence < JEV_MIN_CONFIDENCE || seatBand === "unknown") {
+        return { kind: "fallback" };
+    }
+
+    if (seatBand === "under_7") {
+        return {
+            kind: "fast",
+            vehicleClass: VehicleClass.suv,
+            bodyType: "suv",
+            confidence: Math.min(bodyConfidence, seatConfidence),
+        };
+    }
+
+    return { kind: "verify" };
+}
+
+async function tryJevRoute(messages: string): Promise<JevRoute | null> {
+    const client = getTypeSafeClient();
+    if (!client) return null;
+
+    try {
+        const response = await client.systemOne({
+            model: "jev-latest",
+            state: {
+                market: "India",
+                vehicleModel: messages.trim(),
+            },
+            questions: jevQuestions,
+        }, {
+            timeout: JEV_TIMEOUT_MS,
+            retry: { maxRetries: 0 },
+        });
+
+        return routeJevVehicleDecision({
+            bodyStyle: response.answers.bodyStyle.choice,
+            bodyConfidence: response.answers.bodyStyle.confidence,
+            seatBand: response.answers.seatBand.choice,
+            seatConfidence: response.answers.seatBand.confidence,
+        });
+    } catch {
+        // JEV is an acceleration layer. Any timeout, outage, or API error should
+        // fall through to the existing OpenAI path instead of failing the request.
+        return null;
+    }
+}
 
 const isSuvIsh = (bodyType: InitialVehicleDetails["bodyType"]) =>
     bodyType === "suv" || bodyType === "mpv" || bodyType === "crossover";
@@ -236,6 +342,39 @@ const writeCache = (key: string, result: VehicleClassification) => {
 };
 
 async function classifyVehicleUncached(messages: string): Promise<VehicleClassification> {
+    const jevRoute = await tryJevRoute(messages);
+
+    if (jevRoute?.kind === "fast") {
+        return {
+            normalizedModel: null,
+            bodyType: jevRoute.bodyType,
+            seats: null,
+            basePrice: null,
+            confidence: jevRoute.confidence,
+            vehicleClass: jevRoute.vehicleClass,
+            category: jevRoute.vehicleClass,
+            needsLookup: false,
+            webLookupUsed: false,
+            jevUsed: true,
+            cacheHit: false,
+        };
+    }
+
+    if (jevRoute?.kind === "verify") {
+        const vehicle = await parseVerifiedVehicleDetails(messages);
+        const vehicleClass = classifyVehicleDetails(vehicle);
+
+        return {
+            ...vehicle,
+            vehicleClass,
+            category: vehicleClass,
+            needsLookup: hasUnresolvedClassificationFacts(vehicle) || vehicleClass === null,
+            webLookupUsed: true,
+            jevUsed: true,
+            cacheHit: false,
+        };
+    }
+
     const initialVehicle = await parseInitialVehicleDetails(messages);
     const webLookupUsed = shouldUseWebLookup(initialVehicle);
     const vehicle: VehicleDetails = webLookupUsed
@@ -249,6 +388,7 @@ async function classifyVehicleUncached(messages: string): Promise<VehicleClassif
         category: vehicleClass,
         needsLookup: hasUnresolvedClassificationFacts(vehicle) || vehicleClass === null,
         webLookupUsed,
+        jevUsed: jevRoute !== null,
         cacheHit: false,
     };
 }

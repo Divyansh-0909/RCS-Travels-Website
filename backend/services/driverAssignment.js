@@ -1,4 +1,5 @@
 import { prisma } from '../db/prisma.js'
+import { systemClock } from '../lib/clock.js'
 import { randomUUID } from 'node:crypto'
 import { notifyWhatsAppNoDriver, notifyWhatsAppRideStatus, notifyWhatsAppPoolJoined } from './notification.js'
 
@@ -14,14 +15,17 @@ import { notifyWhatsAppNoDriver, notifyWhatsAppRideStatus, notifyWhatsAppPoolJoi
 export const OFFERED = 'offered'
 import { seatsOf } from '../constants/vehicles.js'
 import {
-  evaluatePool, hostBookingOf, POOLABLE_HOST_STATUSES, POOL_RADIUS_KM,
+  POOLABLE_HOST_STATUSES,
 } from './ridePooling.js'
 import {
   candidatesWithin,
-  markOffered,
-  offerRideNow,
   rankCandidates,
 } from './driverDispatchCandidates.js'
+import { offerPoolCandidates, offerIdleCandidates } from './driverDispatchOffers.js'
+import { pickupPromiseForAssignment } from './driverDelay.js'
+import { persistRouteObservation, ROUTE_OBSERVATION_EVENT } from './routeProvenance.js'
+import { releaseReservedResponsibilityCompensation } from './responsibilityCompensation.js'
+import { recheckDriverNewWorkEligibility } from './driverNewWorkEligibility.js'
 export { FAIRNESS_TIER_KM } from './driverDispatchCandidates.js'
 
 /** @type {import('@prisma/client').BookingStatus[]} */
@@ -39,20 +43,26 @@ class ClaimFailure extends Error {
  * @param {{ id: string, vehicleClass: string, vehicleNumber?: string, vehicleModel?: string | null }} driver
  * @param {Date} confirmedAt
  * @param {(tx: import('@prisma/client').Prisma.TransactionClient) => Promise<void>} [onClaimed]
- * @returns {Promise<'claimed' | 'booking_taken' | 'no_room' | 'host_moved_on'>}
+ * @returns {Promise<'claimed' | 'booking_taken' | 'no_room' | 'host_moved_on' | 'driver_ineligible'>}
  *
  * `host_moved_on` can only come back when `onClaimed` is the pooling hook — it
  * is that hook's ClaimFailure surfacing through the same catch as the other two.
  * Callers that pass no hook, or a hook that never throws, will never see it.
  */
-export async function claimBookingForDriver(booking, driver, confirmedAt, onClaimed) {
+export async function claimBookingForDriver(booking, driver, confirmedAt, onClaimed, {
+  db = prisma, clock = systemClock, pickupPromise = pickupPromiseForAssignment,
+  notifyAssigned = notifyWhatsAppRideStatus, notifyPool = notifyWhatsAppPoolJoined,
+} = {}) {
   const seats = seatsOf(driver.vehicleClass)
   if (!booking.sharing && seats === null) return 'no_room'
 
-  const now = new Date()
+  const now = clock.now()
+  const { expectedPickupAt, route } = await pickupPromise(booking, driver.id, now)
 
   try {
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await db.$transaction(async (tx) => {
+      const eligibility = await recheckDriverNewWorkEligibility(driver.id, { db: tx, now })
+      if (!eligibility.eligible) throw new ClaimFailure('driver_ineligible')
       const claimed = await tx.booking.updateMany({
         where: { id: booking.id, status: { in: ASSIGNABLE_STATUSES } },
         // THE CAR IS SNAPSHOTTED HERE, in the same statement that assigns the
@@ -71,6 +81,8 @@ export async function claimBookingForDriver(booking, driver, confirmedAt, onClai
           vehicleNumber: driver.vehicleNumber ?? null,
           vehicleModel: driver.vehicleModel ?? null,
           confirmedAt,
+          driverAssignedAt: now,
+          expectedPickupAt,
         },
       })
       if (claimed.count === 0) throw new ClaimFailure('booking_taken')
@@ -102,6 +114,14 @@ export async function claimBookingForDriver(booking, driver, confirmedAt, onClai
       })
       if (seated.count === 0) throw new ClaimFailure('no_room')
 
+      if (route?.provenance) {
+        await persistRouteObservation(tx, {
+          bookingId: booking.id,
+          event: ROUTE_OBSERVATION_EVENT.ASSIGNMENT_ACCEPTED,
+          route,
+        })
+      }
+
       if (onClaimed) await onClaimed(tx)
 
       return 'claimed'
@@ -110,8 +130,8 @@ export async function claimBookingForDriver(booking, driver, confirmedAt, onClai
       // The guarded assignment above is the idempotency boundary. Notifications
       // happen only for the caller that actually moved the row to assigned.
       try {
-        await notifyWhatsAppRideStatus(booking.id, 'assigned')
-        if (booking.sharing) await notifyWhatsAppPoolJoined(booking.id)
+        await notifyAssigned(booking.id, 'assigned')
+        if (booking.sharing) await notifyPool(booking.id)
       } catch (err) {
         console.error(`WhatsApp assignment notification failed for ${booking.id}:`, err.message)
       }
@@ -186,11 +206,9 @@ export async function joinPool(tx, { host, joiner, orders }) {
   })
 }
 
-export async function getDriver(bookingId) {
-  let assignedDriver = null
-
-  const row = await prisma.booking.findFirst({ where: { id: bookingId } })
-  if (!row) return null
+export async function getDriver(bookingId, { db = prisma, clock = systemClock, push } = {}) {
+  const row = await db.booking.findFirst({ where: { id: bookingId } })
+  if (!row || !ASSIGNABLE_STATUSES.includes(row.status)) return null
 
   const triedDriverIds = new Set()
   // How many captains have been sent this ride in the ring being walked. Non-zero
@@ -202,22 +220,17 @@ export async function getDriver(bookingId) {
     // A ring of FCM sends can take a while; re-check before starting the next
     // one so an expired or cancelled booking stops pinging drivers.
     if (i > 0) {
-      const current = await prisma.booking.findUnique({
+      const current = await db.booking.findUnique({
         where: { id: bookingId },
         select: { status: true },
       })
       if (!current || !ASSIGNABLE_STATUSES.includes(current.status)) return null
     }
 
-    const candidates = await candidatesWithin(row, 20 + i, triedDriverIds)
+    const candidates = await candidatesWithin(row, 20 + i, triedDriverIds, { db, clock })
 
     const sorted = rankCandidates(candidates)
     
-    const pickupTimeLabel = row.scheduledAt
-      ? new Date(row.scheduledAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'medium', timeStyle: 'short' })
-      : 'IMMEDIATE PICKUP'
-    
-
     // PASS 1 — join a trip somebody is already on.
     //
     // The two passes iterate DISJOINT sets: a driver either holds a poolable
@@ -231,46 +244,7 @@ export async function getDriver(bookingId) {
     // DriverLocation does not have, so it read `undefined === true` on every row
     // and matched nobody. Every sharing rider fell through to pass 2 and started
     // a fresh shared trip, which is why no two riders have ever pooled.
-    const hosts = row.sharing
-      ? sorted
-          .filter((x) => x.distanceKm <= POOL_RADIUS_KM)
-          .map((x) => ({ x, host: hostBookingOf(x.driver) }))
-          .filter((c) => c.host)
-      : []
-
-    for (const { x, host } of hosts) {
-      // Deliberately NOT marked as tried here. Pass 2 iterates the complement of
-      // this set, so it cannot reach him anyway, and a candidate rejected by the
-      // geometry below was never offered anything — spending his turn on an
-      // offer that was never sent would push him down the queue for nothing.
-      if (x.driver.vehicleCapacity <= 0) continue
-
-      // The expensive half: baseline plus one routing call per legal stop order,
-      // constraints applied before any optimisation. Sharing-Design.md §4.
-      let match
-      try {
-        match = await evaluatePool({
-          driverPos: { lat: x.latitude, lng: x.longitude },
-          host,
-          joiner: row,
-        })
-      } catch (err) {
-        // Routing is a network call to somebody else's service. A pool that
-        // cannot be evaluated is simply not offered; the rider still gets a car
-        // from pass 2.
-        console.error(`pool evaluation failed for driver ${x.driverId}:`, err.message)
-        continue
-      }
-      if (!match.ok) continue
-
-      triedDriverIds.add(x.driverId)
-
-        // His turn is spent here, before the push rather than after the answer.
-        await markOffered(x.driverId)
-
-        await offerRideNow(row, x, host.id)
-        offered += 1
-      }
+    offered += await offerPoolCandidates(row, sorted, triedDriverIds, { db, clock, push })
 
     // Prefer filling an existing car. Do not also offer the same rider to idle
     // captains while the compatible host is deciding.
@@ -291,43 +265,7 @@ export async function getDriver(bookingId) {
     //
     // This is also what makes the two passes disjoint, so no driver is pushed
     // the same booking twice.
-    for (const x of sorted.filter((c) => (c.driver.bookings ?? []).length === 0)) {
-      triedDriverIds.add(x.driverId)
-
-      // Solo rides need a fully-free vehicle; a sharing ride falling through here
-      // starts a fresh shared trip and needs just one free seat. "Fully free" is
-      // measured against the vehicle's own seat count, which now comes from its
-      // class rather than from the column that used to hold both.
-      //
-      // Same early-out as pass 1: worth skipping a 30s offer over, not trusted to
-      // still be true by the time he answers. claimBookingForDriver decides.
-      if (row.sharing ? x.driver.vehicleCapacity <= 0 : x.driver.vehicleCapacity < seatsOf(x.driver.vehicleClass)) continue
-
-      // Same as pass 1: the turn is spent when the offer goes out, not when it
-      // is answered. See markOffered.
-      await markOffered(x.driverId)
-
-      // AN OFFER HE ANSWERS, not an answer invented for him.
-      //
-      // This used to call sendFCM and assign the ride on its return value.
-      // sendFCM is a stub that waits 30 seconds and returns a coin flip — with
-      // FCM_ALWAYS_ACCEPT it does not even wait — so a ride-now booking landed on
-      // a captain fully assigned, with no notification and nothing to accept or
-      // decline. He found out he had a ride by noticing one.
-      //
-      // A row and a push instead. Everything that answers it already exists and
-      // is the same machinery the scheduled path uses: GET /driver/offers reads
-      // these rows, the card and the notification page render them, and PATCH
-      // /driver/offers/:id/accept settles the race through claimBookingForDriver.
-      //
-      // WHY THE WHOLE RING RATHER THAN ONE DRIVER AT A TIME. The old loop offered
-      // to one captain and waited 30 seconds before trying the next, which a
-      // rider watching a spinner pays for. Broadcasting hands the ride to whoever
-      // answers first — the same trade scheduledOffers already makes, for the
-      // same reason, and claimBookingForDriver is what makes the race safe.
-      await offerRideNow(row, x)
-      offered += 1
-    }
+    offered += await offerIdleCandidates(row, sorted, triedDriverIds, { db, clock, push })
 
     // Somebody has been asked. Stop widening — a wider ring would offer the same
     // ride to drivers further away while the near ones are still deciding.
@@ -344,12 +282,16 @@ export const ASSIGNMENT_DEADLINE_MS = 5 * 60 * 1000
 
 // Guarded on `pending` so a booking that already moved on — driver found, user
 // cancelled, or the lazy expiry got here first — is never overwritten.
-export async function markNoDriver(bookingId) {
-  const { count } = await prisma.booking.updateMany({
-    where: { id: bookingId, status: 'pending' },
-    data: { status: 'no_driver' },
+export async function markNoDriver(bookingId, { db = prisma, notify = notifyWhatsAppNoDriver } = {}) {
+  const count = await db.$transaction(async tx => {
+    const moved = await tx.booking.updateMany({
+      where: { id: bookingId, status: 'pending' },
+      data: { status: 'no_driver' },
+    })
+    if (moved.count) await releaseReservedResponsibilityCompensation(tx, bookingId)
+    return moved.count
   })
-  if (count > 0) await notifyWhatsAppNoDriver(bookingId).catch(() => {})
+  if (count > 0) await notify(bookingId).catch(() => {})
   return count > 0
 }
 

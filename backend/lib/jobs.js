@@ -3,6 +3,20 @@ import { sweepScheduledRides } from '../services/assignScheduledRides.js'
 import { sweepDocumentScans } from '../services/documentScan.js'
 import { sweepDocumentExpiry } from '../services/driverDocuments.js'
 import { issuePreviousMonthCoupons } from '../services/coupons.js'
+import { sweepResponsibilityFinalization } from '../services/responsibilityFinalizationSweep.js'
+import { sweepResponsibilityFinancialConsequences } from '../services/responsibilityFinancialConsequences.js'
+import { sweepResponsibilityReliabilityConsequences } from '../services/responsibilityReliabilityConsequences.js'
+import { sweepResponsibilityShadowAdjudication } from '../services/responsibilityShadowAdjudication.js'
+
+async function sweepResponsibilityOutcomes() {
+  const shadow = await sweepResponsibilityShadowAdjudication()
+  if (shadow.status === 'CONFIG_ERROR') {
+    console.error(`responsibility shadow adjudication disabled by configuration: ${shadow.code}`)
+  }
+  await sweepResponsibilityFinalization()
+  await sweepResponsibilityReliabilityConsequences()
+  await sweepResponsibilityFinancialConsequences()
+}
 
 // The four background sweeps, and the one decision about how they are TRIGGERED.
 //
@@ -59,6 +73,7 @@ const JOBS = {
   'document-scan': sweepDocumentScans,
   'document-expiry': sweepDocumentExpiry,
   'customer-coupons': issuePreviousMonthCoupons,
+  'responsibility-finalization': sweepResponsibilityOutcomes,
 }
 
 export const JOB_NAMES = Object.keys(JOBS)

@@ -1,0 +1,28 @@
+export default {
+  testRunner: 'command',
+  coverageAnalysis: 'off',
+  commandRunner: {
+    command: 'node --import tsx --test tests/paymentMutationGaps.test.js tests/payments.test.js tests/paymentRefunds.test.js tests/providerFakes.test.js',
+  },
+  mutate: [
+    'services/payments.js:69-70',
+    'services/payments.js:116-116',
+    'services/payments.js:169-170',
+    'services/payments.js:178-178',
+    'services/payments.js:184-184',
+    'services/payments.js:201-201',
+    'services/payments.js:206-206',
+    'services/payments.js:218-219',
+    'services/payments.js:250-251',
+    'services/payments.js:271-271',
+    'services/payments.js:304-304',
+    'services/payments.js:319-320',
+  ],
+  ignorePatterns: ['.env', '.env.*', 'coverage', 'logs', 'node_modules', 'uploads'],
+  reporters: ['clear-text', 'json'],
+  jsonReporter: { fileName: 'coverage/phase2-payments-gaps-mutation.json' },
+  concurrency: 4,
+  timeoutMS: 10_000,
+  timeoutFactor: 2,
+  cleanTempDir: true,
+}

@@ -187,14 +187,14 @@ const rides = [
   },
   {
     id: '00000000-0000-4000-8000-000000000017',
-    label: 'history — cancelled within 500 m of pickup, so the 15% advance is retained',
+    label: 'history — cancelled within 500 m of pickup, so a capped cancellation fee applies',
     status: 'cancelled',
     scheduledIn: -2880,
     baseFare: 625, distanceKm: 38.1,
     cancelledBy: 'user',
-    // The scheduled advance retained once the driver is within the pickup
-    // geofence (routes/bookings.js). Computed at run, off the fare.
-    cancellationPct: 15,
+    // The cancellation fee can apply once the driver is within the pickup
+    // geofence (routes/bookings.js). Computed at run and capped at Rs 100 below.
+    cancellationPct: 10,
     pickupAddress: 'Pari Chowk, Greater Noida',
     pickupLat: 28.4650, pickupLng: 77.5030,
     dropAddress: 'Kashmere Gate ISBT, Delhi',
@@ -287,7 +287,7 @@ async function main() {
       startedAt:   startedOffset   === undefined ? null : minutes(startedOffset),
       completedAt: completedOffset === undefined ? null : minutes(completedOffset),
       cancelledBy: cancelledBy ?? null,
-      cancellationCharge: cancellationPct ? Math.round((fare * cancellationPct) / 100) : null,
+      cancellationCharge: cancellationPct ? Math.min(100, Math.round((fare * cancellationPct) / 100)) : null,
     }
 
     await prisma.booking.upsert({ where: { id }, update: data, create: data })

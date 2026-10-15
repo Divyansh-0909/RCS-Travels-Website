@@ -18,6 +18,7 @@ type DriverPaymentBooking = {
     scheduledFinalPaymentMethod: PaymentMethod | null
     scheduledFinalPaidAt: Date | null
     scheduledAdvanceDisposition: ScheduledAdvanceDisposition
+    cancellationCharge?: number | null
     rideNowPaidAmount: number
     rideNowPaymentMethod: PaymentMethod | null
     rideNowPaidAt: Date | null
@@ -33,7 +34,7 @@ const paymentView = (booking: DriverPaymentBooking) => {
     const method = settlementMethod(scheduled ? booking.scheduledFinalPaymentMethod : booking.rideNowPaymentMethod)
     const paidAt = scheduled ? booking.scheduledFinalPaidAt : booking.rideNowPaidAt
     return {
-        state: method && paidAmount >= amount ? 'paid' as const : 'pending' as const,
+        state: amount === 0 || (method && paidAmount >= amount) ? 'paid' as const : 'pending' as const,
         method,
         amount,
         paidAmount,
@@ -63,7 +64,9 @@ export function driverPaymentView(booking: DriverPaymentBooking) {
 
     let paymentState: DriverPaymentState
     if (booking.status === 'cancelled') {
-        paymentState = booking.scheduledAdvanceDisposition === 'forfeited_to_driver' ? 'retained' : 'void'
+        paymentState = (booking.cancellationCharge ?? 0) > 0 || booking.scheduledAdvanceDisposition === 'forfeited_to_driver'
+            ? 'retained'
+            : 'void'
     } else if (booking.scheduledAt) {
         paymentState = booking.status === 'completed' && ridePayment.state === 'paid' ? 'paid' : 'due'
     } else {

@@ -26,6 +26,7 @@ export {
 export {
   getNavigationEtaMinutes,
   getNavigationRoute,
+  getCachedNavigationRoute,
   navigationRouteNeedsRefresh,
   routeSequence,
 } from './googleRoutes.js'

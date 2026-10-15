@@ -14,3 +14,9 @@ export const safeRazorpayXConfig = (config) => ({
   keyId: config.keyId,
   accountNumber: config.accountNumber,
 })
+
+export function getRazorpayXWebhookSecret(env = process.env) {
+  const secret = env.RAZORPAYX_WEBHOOK_SECRET?.trim()
+  if (!secret) throw new Error('RazorpayX webhook configuration missing: RAZORPAYX_WEBHOOK_SECRET')
+  return secret
+}

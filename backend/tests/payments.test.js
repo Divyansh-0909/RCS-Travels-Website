@@ -1,70 +1,16 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
-import { createHmac } from 'node:crypto'
 import { readFile } from 'node:fs/promises'
-import { getRazorpayConfig, getRazorpayWebhookSecret, safeRazorpayConfig } from '../config/razorpay.js'
-import { createRazorpayWebhookVerifier, verifyPaymentSignature, verifyWebhookSignature } from '../services/razorpay.js'
-import { createOrderForPayment, verifyCheckoutPayment, processRazorpayWebhook, refundPayment, statusAfterGatewayPayment } from '../services/payments.js'
+import { createOrderForPayment, verifyCheckoutPayment, processRazorpayWebhook, statusAfterGatewayPayment } from '../services/payments.js'
 
-const basePayment = (overrides = {}) => ({ id: '11111111-1111-4111-8111-111111111111', userId: 'u1', bookingId: 'b1',
-  purpose: 'other_customer_payment', status: 'created', amount: 12345, currency: 'INR',
-  razorpayOrderId: null, razorpayPaymentId: null, razorpayRefundId: null, ...overrides })
-
-const paymentDb = (initial = basePayment()) => {
-  let row = { ...initial }
-  return { get row() { return row }, payment: {
-    findFirst: async ({ where }) => row && row.id === where.id && (!where.userId || row.userId === where.userId) ? { ...row } : null,
-    findUnique: async () => row && { ...row },
-    updateMany: async ({ where, data }) => {
-      if (!row || (where.status && row.status !== where.status) || (where.razorpayOrderId === null && row.razorpayOrderId !== null)) return { count: 0 }
-      row = { ...row, ...data }; return { count: 1 }
-    },
-    update: async ({ data }) => { row = { ...row, ...data }; return { ...row } },
-  } }
-}
-
-describe('Razorpay configuration', () => {
-  test('missing Checkout credentials fail clearly', () => assert.throws(() => getRazorpayConfig({}), /RAZORPAY_KEY_ID.*RAZORPAY_KEY_SECRET/))
-  test('Checkout does not require an unrelated webhook secret', () => assert.deepEqual(
-    getRazorpayConfig({ RAZORPAY_KEY_ID: 'public', RAZORPAY_KEY_SECRET: 'secret' }),
-    { keyId: 'public', keySecret: 'secret' },
-  ))
-  test('the webhook secret is required only by webhook verification', () => {
-    assert.throws(() => getRazorpayWebhookSecret({}), /RAZORPAY_WEBHOOK_SECRET/)
-    assert.equal(getRazorpayWebhookSecret({ RAZORPAY_WEBHOOK_SECRET: 'hook' }), 'hook')
-  })
-  test('only the public key is safe for Checkout', () => assert.deepEqual(safeRazorpayConfig({ keyId: 'public', keySecret: 'secret' }), { keyId: 'public' }))
-})
-
-describe('Razorpay signatures', () => {
-  const secret = 'top-secret'
-  test('accepts a valid Checkout signature', () => {
-    const signature = createHmac('sha256', secret).update('order_1|pay_1').digest('hex')
-    assert.equal(verifyPaymentSignature({ orderId: 'order_1', paymentId: 'pay_1', signature, secret }), true)
-  })
-  test('rejects invalid and malformed Checkout signatures', () => {
-    assert.equal(verifyPaymentSignature({ orderId: 'order_1', paymentId: 'pay_1', signature: '0'.repeat(64), secret }), false)
-    assert.equal(verifyPaymentSignature({ orderId: 'order_1', paymentId: 'pay_1', signature: 'bad', secret }), false)
-  })
-  test('verifies the raw webhook bytes', () => {
-    const rawBody = Buffer.from('{"event":"payment.captured"}')
-    const signature = createHmac('sha256', secret).update(rawBody).digest('hex')
-    assert.equal(verifyWebhookSignature({ rawBody, signature, secret }), true)
-    assert.equal(verifyWebhookSignature({ rawBody: Buffer.from('{}'), signature, secret }), false)
-  })
-  test('webhook verification does not require Checkout API credentials', () => {
-    const rawBody = Buffer.from('{"event":"payment.captured"}')
-    const signature = createHmac('sha256', secret).update(rawBody).digest('hex')
-    const verifier = createRazorpayWebhookVerifier({ secret })
-    assert.equal(verifier.verifyWebhookSignature(rawBody, signature), true)
-  })
-})
+import { basePayment, paymentDb } from './helpers/paymentDb.js'
 
 describe('server-authoritative order creation', () => {
   test('rejects stored amounts below Razorpay minimum before calling the gateway', async () => {
     const db = paymentDb(basePayment({ amount: 99 })); let calls = 0
     await assert.rejects(createOrderForPayment({ paymentId: db.row.id, userId: 'u1',
-      gateway: { createOrder: async () => { calls++ } }, db }), /at least 100 subunits/)
+      gateway: { createOrder: async () => { calls++ } }, db }),
+    error => error.code === 'INVALID_AMOUNT' && error.message === 'Payment amount must be at least 100 subunits')
     assert.equal(calls, 0)
   })
   test('uses the stored amount/currency and never a client amount', async () => {
@@ -75,6 +21,70 @@ describe('server-authoritative order creation', () => {
     assert.equal(result.orderId, 'order_1'); assert.equal(result.keyId, 'rzp_public')
     assert.equal(db.row.status, 'order_created')
     assert.equal('keySecret' in result, false)
+    assert.deepEqual(db.calls.updateMany[0].where, {
+      id: db.row.id, razorpayOrderId: null, status: 'created',
+    })
+    assert.deepEqual(db.calls.updateMany[1].where, { id: db.row.id, razorpayOrderId: null })
+  })
+  test('order ownership is enforced for both customer and driver payments', async () => {
+    const userOwned = paymentDb()
+    await assert.rejects(createOrderForPayment({
+      paymentId: userOwned.row.id, userId: 'wrong', gateway: {}, db: userOwned,
+    }), error => error.code === 'PAYMENT_NOT_FOUND' && error.message === 'Payment not found')
+
+    const driverOwned = paymentDb(basePayment({ userId: null, driverId: 'driver-1' }))
+    const gateway = { keyId: 'public', createOrder: async input => ({ id: 'order_driver', ...input }) }
+    assert.equal((await createOrderForPayment({
+      paymentId: driverOwned.row.id, driverId: 'driver-1', gateway, db: driverOwned,
+    })).orderId, 'order_driver')
+    await assert.rejects(createOrderForPayment({
+      paymentId: basePayment().id, driverId: 'wrong', gateway: {}, db: paymentDb(basePayment({
+        userId: null, driverId: 'driver-1',
+      })),
+    }), error => error.code === 'PAYMENT_NOT_FOUND')
+  })
+  test('rejects missing payments and mismatched provider orders without persisting them', async () => {
+    const missing = paymentDb()
+    await assert.rejects(createOrderForPayment({ paymentId: 'missing', userId: 'u1', gateway: {}, db: missing }),
+      error => error.code === 'PAYMENT_NOT_FOUND' && error.message === 'Payment not found')
+    const mismatched = paymentDb()
+    await assert.rejects(createOrderForPayment({
+      paymentId: mismatched.row.id,
+      userId: 'u1',
+      gateway: { createOrder: async input => ({ id: 'order_bad', ...input, amount: input.amount + 1 }) },
+      db: mismatched,
+    }), error => error.code === 'GATEWAY_ORDER_MISMATCH' && error.message === 'Gateway returned mismatched order values')
+    assert.equal(mismatched.row.status, 'created')
+    assert.equal(mismatched.row.razorpayOrderId, null)
+
+    for (const providerOrder of [null, { id: 'order_bad', amount: 12345, currency: 'USD' }]) {
+      const db = paymentDb()
+      await assert.rejects(createOrderForPayment({
+        paymentId: db.row.id, userId: 'u1', gateway: { createOrder: async () => providerOrder }, db,
+      }), error => error.code === 'GATEWAY_ORDER_MISMATCH')
+    }
+  })
+  test('fails closed if an order cannot be attached after provider creation', async () => {
+    const db = paymentDb()
+    const updateMany = db.payment.updateMany
+    let calls = 0
+    db.payment.updateMany = async input => {
+      calls++
+      if (calls === 2) return { count: 0 }
+      return updateMany(input)
+    }
+    await assert.rejects(createOrderForPayment({
+      paymentId: db.row.id, userId: 'u1',
+      gateway: { createOrder: async input => ({ id: 'order_unattached', ...input }) }, db,
+    }), error => error.code === 'PAYMENT_BUSY' && error.message === 'Payment order is already being created')
+
+    const missingAfterSave = paymentDb()
+    missingAfterSave.payment.findUnique = async () => null
+    await assert.rejects(createOrderForPayment({
+      paymentId: missingAfterSave.row.id, userId: 'u1',
+      gateway: { createOrder: async input => ({ id: 'order_missing', ...input }) },
+      db: missingAfterSave,
+    }), error => error.code === 'PAYMENT_BUSY')
   })
   test('order creation is not payment capture and retries reuse the order', async () => {
     const db = paymentDb(); let calls = 0
@@ -88,6 +98,9 @@ describe('server-authoritative order creation', () => {
     await assert.rejects(createOrderForPayment({ paymentId: db.row.id, userId: 'u1',
       gateway: { createOrder: async () => { throw { statusCode: 401, error: { description: 'sensitive' } } } }, db }),
     (error) => error.status === 401 && error.code === 'RAZORPAY_AUTH_FAILED' && !error.message.includes('sensitive'))
+    assert.equal(db.calls.updateMany.at(-1).where.id, db.row.id)
+    assert.equal(db.calls.updateMany.at(-1).where.status, 'order_creating')
+    assert.equal(db.calls.updateMany.at(-1).where.orderCreationStartedAt instanceof Date, true)
   })
   test('maps other Razorpay order errors to a safe 500', async () => {
     const db = paymentDb()
@@ -95,14 +108,119 @@ describe('server-authoritative order creation', () => {
       gateway: { createOrder: async () => { throw new Error('provider detail') } }, db }),
     (error) => error.status === 500 && error.code === 'RAZORPAY_ORDER_FAILED' && !error.message.includes('provider detail'))
   })
+  test('rejects order creation from a payment state that cannot create an order', async () => {
+    const db = paymentDb(basePayment({ status: 'captured' }))
+    await assert.rejects(createOrderForPayment({ paymentId: db.row.id, userId: 'u1', gateway: {}, db }),
+      error => error.code === 'ORDER_NOT_ALLOWED' && error.message === 'Payment is not eligible for order creation')
+  })
+  test('fresh order lease stays busy while an expired lease can be reclaimed', async () => {
+    const now = new Date('2026-09-24T10:00:00Z')
+    const fresh = paymentDb(basePayment({ status: 'order_creating', orderCreationStartedAt: now }))
+    const clock = { now: () => new Date(now) }
+    await assert.rejects(createOrderForPayment({
+      paymentId: fresh.row.id, userId: 'u1', gateway: {}, db: fresh, clock,
+    }), error => error.code === 'PAYMENT_BUSY' && error.message === 'Payment order is already being created')
+
+    const stale = paymentDb(basePayment({
+      status: 'order_creating', orderCreationStartedAt: new Date(now.getTime() - 31_000),
+    }))
+    const gateway = { keyId: 'public', createOrder: async input => ({ id: 'order_reclaimed', ...input }) }
+    const result = await createOrderForPayment({ paymentId: stale.row.id, userId: 'u1', gateway, db: stale, clock })
+    assert.equal(result.orderId, 'order_reclaimed')
+    assert.deepEqual(stale.calls.updateMany[0].where, {
+      id: stale.row.id,
+      razorpayOrderId: null,
+      status: 'order_creating',
+      orderCreationStartedAt: new Date(now.getTime() - 31_000),
+    })
+
+    const exactBoundary = paymentDb(basePayment({
+      status: 'order_creating', orderCreationStartedAt: new Date(now.getTime() - 30_000),
+    }))
+    assert.equal((await createOrderForPayment({
+      paymentId: exactBoundary.row.id, userId: 'u1', gateway, db: exactBoundary, clock,
+    })).orderId, 'order_reclaimed')
+
+    const missingTimestamp = paymentDb(basePayment({ status: 'order_creating', orderCreationStartedAt: null }))
+    assert.equal((await createOrderForPayment({
+      paymentId: missingTimestamp.row.id, userId: 'u1', gateway, db: missingTimestamp, clock,
+    })).orderId, 'order_reclaimed')
+  })
+  test('the minimum valid amount and reconciliation failures have deterministic outcomes', async () => {
+    const minimum = paymentDb(basePayment({ amount: 100 }))
+    const gateway = { keyId: 'public', createOrder: async input => ({ id: 'order_minimum', ...input }) }
+    assert.equal((await createOrderForPayment({
+      paymentId: minimum.row.id, userId: 'u1', gateway, db: minimum,
+    })).amount, 100)
+
+    const uncertain = paymentDb(basePayment({
+      status: 'order_creating', orderCreationStartedAt: new Date(0),
+    }))
+    await assert.rejects(createOrderForPayment({
+      paymentId: uncertain.row.id, userId: 'u1',
+      gateway: { findOrdersByReceipt: async () => { throw new Error('provider unavailable') } },
+      db: uncertain,
+    }), error => error.code === 'ORDER_OUTCOME_UNKNOWN' && error.status === 503
+      && error.message === 'Payment order is awaiting provider reconciliation')
+  })
+  test('an unresolved provider outcome cannot create a replacement order', async () => {
+    const db = paymentDb(basePayment({
+      status: 'order_creating',
+      orderCreationStartedAt: new Date('2026-09-24T09:00:00Z'),
+      failureCode: 'ORDER_OUTCOME_UNKNOWN',
+    }))
+    let creates = 0
+    await assert.rejects(createOrderForPayment({
+      paymentId: db.row.id,
+      userId: 'u1',
+      gateway: { findOrdersByReceipt: async () => [], createOrder: async () => { creates++ } },
+      db,
+    }), error => error.code === 'ORDER_OUTCOME_UNKNOWN'
+      && error.message === 'Payment order is awaiting provider reconciliation')
+    assert.equal(creates, 0)
+  })
 })
 
 describe('Checkout verification', () => {
   test('valid signature plus fetched captured payment advances state', async () => {
     const db = paymentDb(basePayment({ status: 'order_created', razorpayOrderId: 'order_1' }))
+    db.$transaction = work => work(db)
     const gateway = { verifyPaymentSignature: () => true, fetchPayment: async () => ({ order_id: 'order_1', amount: 12345, currency: 'INR', status: 'captured' }) }
-    const result = await verifyCheckoutPayment({ paymentId: db.row.id, userId: 'u1', razorpayOrderId: 'order_1', razorpayPaymentId: 'pay_1', signature: 'sig', gateway, db })
+    let notifications = 0
+    const result = await verifyCheckoutPayment({ paymentId: db.row.id, userId: 'u1', razorpayOrderId: 'order_1', razorpayPaymentId: 'pay_1', signature: 'sig', gateway, db,
+      notifyPayment: async () => { notifications++ } })
     assert.equal(result.status, 'captured'); assert.equal(db.row.razorpayPaymentId, 'pay_1')
+    assert.equal(db.row.capturedAt instanceof Date, true)
+    assert.equal(notifications, 0)
+    assert.deepEqual(db.calls.update[0].where, { id: db.row.id })
+  })
+  test('checkout handles missing payments and authorized provider state without capture effects', async () => {
+    const gateway = { verifyPaymentSignature: () => true, fetchPayment: async () => ({
+      order_id: 'order_1', amount: 12345, currency: 'INR', status: 'authorized',
+    }) }
+    await assert.rejects(verifyCheckoutPayment({
+      paymentId: 'missing', userId: 'u1', razorpayOrderId: 'order_1', razorpayPaymentId: 'pay_1',
+      signature: 'sig', gateway, db: paymentDb(),
+    }), error => error.code === 'PAYMENT_NOT_FOUND')
+
+    const db = paymentDb(basePayment({ status: 'order_created', razorpayOrderId: 'order_1' }))
+    const result = await verifyCheckoutPayment({
+      paymentId: db.row.id, userId: 'u1', razorpayOrderId: 'order_1', razorpayPaymentId: 'pay_1',
+      signature: 'sig', gateway, db,
+    })
+    assert.equal(result.status, 'authorized')
+    assert.equal(Object.hasOwn(db.row, 'capturedAt'), false)
+
+    const scheduled = paymentDb(basePayment({
+      purpose: 'scheduled_ride_advance', status: 'order_created', razorpayOrderId: 'order_1',
+    }))
+    let bookingWrites = 0
+    scheduled.booking.updateMany = async () => { bookingWrites++; return { count: 1 } }
+    await verifyCheckoutPayment({
+      paymentId: scheduled.row.id, userId: 'u1', razorpayOrderId: 'order_1',
+      razorpayPaymentId: 'pay_1', signature: 'sig', gateway, db: scheduled,
+    })
+    assert.equal(bookingWrites, 0)
   })
   test('invalid signature cannot change state', async () => {
     const db = paymentDb(basePayment({ status: 'order_created', razorpayOrderId: 'order_1' }))
@@ -110,19 +228,60 @@ describe('Checkout verification', () => {
       gateway: { verifyPaymentSignature: () => false }, db }), /Invalid payment signature/)
     assert.equal(db.row.status, 'order_created')
   })
+  test('checkout rejects order, provider-value, and provider-status mismatches', async () => {
+    const internal = basePayment({ status: 'order_created', razorpayOrderId: 'order_1' })
+    const call = (db, gateway, overrides = {}) => verifyCheckoutPayment({
+      paymentId: db.row.id, userId: 'u1', razorpayOrderId: 'order_1',
+      razorpayPaymentId: 'pay_1', signature: 'sig', gateway, db, ...overrides,
+    })
+    await assert.rejects(call(paymentDb(internal), {}, { razorpayOrderId: 'order_wrong' }),
+      error => error.code === 'ORDER_MISMATCH')
+    const gateway = external => ({ verifyPaymentSignature: () => true, fetchPayment: async () => external })
+    await assert.rejects(call(paymentDb(internal), gateway({
+      order_id: 'order_wrong', amount: 12345, currency: 'INR', status: 'captured',
+    })), error => error.code === 'PAYMENT_MISMATCH')
+    await assert.rejects(call(paymentDb(internal), gateway({
+      order_id: 'order_1', amount: 1, currency: 'INR', status: 'captured',
+    })), error => error.code === 'PAYMENT_MISMATCH')
+    await assert.rejects(call(paymentDb(internal), gateway({
+      order_id: 'order_1', amount: 12345, currency: 'USD', status: 'captured',
+    })), error => error.code === 'PAYMENT_MISMATCH')
+    await assert.rejects(call(paymentDb(internal), gateway({
+      order_id: 'order_1', amount: 12345, currency: 'INR', status: 'failed',
+    })), error => error.code === 'PAYMENT_NOT_VERIFIED')
+  })
   test('a captured advance cancelled during checkout reports its refund-pending state', async () => {
     const db = paymentDb(basePayment({
       purpose: 'scheduled_ride_advance', status: 'order_created', razorpayOrderId: 'order_1',
     }))
     db.booking = { updateMany: async ({ where }) => ({ count: where.status === 'cancelled' ? 1 : 0 }) }
+    let notifiedBooking = null
     const result = await verifyCheckoutPayment({
       paymentId: db.row.id, userId: 'u1', razorpayOrderId: 'order_1', razorpayPaymentId: 'pay_1', signature: 'sig', db,
       gateway: { verifyPaymentSignature: () => true, fetchPayment: async () => ({
         order_id: 'order_1', amount: 12345, currency: 'INR', status: 'captured',
       }) },
       refundPaymentFn: async () => ({ status: 'refund_pending' }),
+      notifyPayment: async bookingId => { notifiedBooking = bookingId },
     })
     assert.equal(result.status, 'refund_pending')
+    assert.equal(notifiedBooking, null)
+  })
+  test('a confirmed scheduled advance sends its injected confirmation notification', async () => {
+    const db = paymentDb(basePayment({
+      purpose: 'scheduled_ride_advance', status: 'order_created', razorpayOrderId: 'order_1',
+    }))
+    let notifiedBooking = null
+    const result = await verifyCheckoutPayment({
+      paymentId: db.row.id, userId: 'u1', razorpayOrderId: 'order_1',
+      razorpayPaymentId: 'pay_1', signature: 'sig', db,
+      gateway: { verifyPaymentSignature: () => true, fetchPayment: async () => ({
+        order_id: 'order_1', amount: 12345, currency: 'INR', status: 'captured',
+      }) },
+      notifyPayment: async bookingId => { notifiedBooking = bookingId },
+    })
+    assert.equal(result.status, 'captured')
+    assert.equal(notifiedBooking, 'b1')
   })
   test('a late Ride Now capture after cash settlement is refunded during checkout verification', async () => {
     const db = paymentDb(basePayment({
@@ -167,26 +326,80 @@ describe('Checkout verification', () => {
   })
 })
 
-const webhookDb = ({ duplicate = false, payment = null, capturedAfterCancellation = false, booking = null } = {}) => {
+const webhookDb = ({ duplicate = false, payment = null, capturedAfterCancellation = false, confirmedAdvance = false, booking = null } = {}) => {
   let eventStatus = null; let row = payment
   const tx = {
+    $queryRaw: async () => [],
     razorpayWebhookEvent: {
       createMany: async () => ({ count: duplicate ? 0 : 1 }),
       update: async ({ data }) => { eventStatus = data.status; return data },
     },
     payment: {
       findFirst: async () => row,
+      findUniqueOrThrow: async () => row,
       update: async ({ data }) => { row = { ...row, ...data }; return row },
       updateMany: async ({ data }) => { row = { ...row, ...data }; return { count: 1 } },
     },
     booking: {
-      updateMany: async ({ where }) => ({ count: capturedAfterCancellation && where.status === 'cancelled' ? 1 : 0 }),
+      updateMany: async ({ where }) => ({ count: (capturedAfterCancellation && where.status === 'cancelled')
+        || (confirmedAdvance && where.status === 'payment_pending') ? 1 : 0 }),
       findUnique: async () => booking,
     },
   }
   return { $transaction: (fn) => fn(tx), get eventStatus() { return eventStatus }, get payment() { return row } }
 }
 const webhookGateway = { verifyWebhookSignature: () => true }
+
+test('webhook malformed input, amount/currency mismatch, authorization and duplicate branches preserve money', async () => {
+  for (const text of ['null', '{}', '{"event":4}', '{broken']) {
+    await assert.rejects(processRazorpayWebhook({ rawBody: Buffer.from(text), signature: 'sig',
+      gateway: webhookGateway, db: {} }), { code: 'MALFORMED_WEBHOOK' })
+  }
+  for (const entity of [{ amount: 1, currency: 'INR' }, { amount: 12345, currency: 'USD' }]) {
+    const db = webhookDb({ payment: basePayment() })
+    assert.deepEqual(await processRazorpayWebhook({ rawBody: Buffer.from(JSON.stringify({ event: 'payment.captured',
+      payload: { payment: { entity } } })), signature: 'sig', gateway: webhookGateway, db }), { ignored: true })
+    assert.equal(db.payment.status, 'created'); assert.equal(db.eventStatus, 'failed')
+  }
+  const duplicate = webhookDb({ duplicate: true })
+  assert.deepEqual(await processRazorpayWebhook({ rawBody: Buffer.from('{"event":"refund.processed"}'), signature: 'sig',
+    gateway: webhookGateway, db: duplicate }), { duplicate: true })
+  const db = webhookDb({ payment: basePayment({ status: 'order_created' }) })
+  const rawBody = Buffer.from(JSON.stringify({ event: 'payment.authorized', payload: { payment: { entity: {
+    id: 'pay_authorized', order_id: 'order_1', amount: 12345, currency: 'INR',
+  } } } }))
+  assert.deepEqual(await processRazorpayWebhook({ rawBody, signature: 'sig', gateway: webhookGateway, db }), { processed: true })
+  assert.equal(db.payment.status, 'authorized')
+  assert.equal(statusAfterGatewayPayment('created', 'authorized'), 'created')
+  assert.equal(statusAfterGatewayPayment('order_created', 'failed'), 'order_created')
+})
+
+test('late payment failure cannot erase an in-progress refund or authoritative capture', async () => {
+  for (const status of ['captured', 'refund_pending', 'refunded', 'authorized']) {
+    const db = webhookDb({ payment: basePayment({ status, razorpayPaymentId: 'pay_failed' }) })
+    const rawBody = Buffer.from(JSON.stringify({ event: 'payment.failed', payload: { payment: { entity: {
+      id: 'pay_failed', amount: 12345, currency: 'INR', error_code: 'LATE_FAILURE',
+    } } } }))
+    assert.deepEqual(await processRazorpayWebhook({ rawBody, signature: 'sig', eventId: 'failure-late', gateway: webhookGateway, db }), { processed: true })
+    assert.equal(db.payment.status, status === 'authorized' ? 'failed' : status)
+  }
+  const db = webhookDb({ payment: basePayment({ status: 'authorized' }) })
+  await processRazorpayWebhook({ rawBody: Buffer.from('{"event":"payment.failed","payload":{"payment":{"entity":{"id":"pay_no_details"}}}}'),
+    signature: 'sig', gateway: webhookGateway, db })
+  assert.equal(db.payment.failureCode, null); assert.equal(db.payment.failureDescription, null)
+})
+
+test('signed capture confirmation survives notification failure without rolling back payment', async () => {
+  const db = webhookDb({ confirmedAdvance: true, payment: basePayment({ purpose: 'scheduled_ride_advance' }) })
+  const rawBody = Buffer.from(JSON.stringify({ event: 'payment.captured', payload: { payment: { entity: {
+    id: 'pay_confirmed', order_id: 'order_1', amount: 12345, currency: 'INR',
+  } } } }))
+  let calls = 0
+  assert.deepEqual(await processRazorpayWebhook({ rawBody, signature: 'sig', gateway: webhookGateway, db,
+    notifyPayment: async id => { assert.equal(id, 'b1'); calls++; throw new Error('Synthetic notification unavailable') },
+  }), { processed: true })
+  assert.equal(calls, 1); assert.equal(db.payment.status, 'captured')
+})
 
 describe('Razorpay webhook idempotency and states', () => {
   test('duplicate event is processed zero additional times', async () => {
@@ -298,26 +511,6 @@ describe('Razorpay webhook idempotency and states', () => {
     await assert.rejects(processRazorpayWebhook({ rawBody: Buffer.from('{}'), signature: 'bad', gateway: { verifyWebhookSignature: () => false },
       db: { $transaction: () => { touched = true } } }), /Invalid webhook signature/)
     assert.equal(touched, false)
-  })
-})
-
-describe('refund foundation', () => {
-  test('only captured payments can be refunded', async () => {
-    const db = paymentDb(basePayment({ status: 'authorized', razorpayPaymentId: 'pay_1' }))
-    await assert.rejects(refundPayment({ paymentId: db.row.id, gateway: {}, db }), /Only a captured payment/)
-  })
-  test('refund creation is idempotent', async () => {
-    const db = paymentDb(basePayment({ status: 'captured', razorpayPaymentId: 'pay_1' })); let calls = 0; let options
-    const gateway = { createRefund: async (_paymentId, input) => { calls++; options = input; return { id: 'rfnd_1' } } }
-    await refundPayment({ paymentId: db.row.id, gateway, db })
-    await refundPayment({ paymentId: db.row.id, gateway, db })
-    assert.equal(calls, 1); assert.equal(db.row.razorpayRefundId, 'rfnd_1')
-    assert.equal(options.idempotencyKey, db.row.id)
-  })
-  test('an in-progress refund never calls the gateway again', async () => {
-    const db = paymentDb(basePayment({ status: 'refund_pending', razorpayPaymentId: 'pay_1' })); let calls = 0
-    const result = await refundPayment({ paymentId: db.row.id, gateway: { createRefund: async () => { calls++ } }, db })
-    assert.equal(calls, 0); assert.equal(result.alreadyApplied, true)
   })
 })
 

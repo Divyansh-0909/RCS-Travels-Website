@@ -3,6 +3,15 @@ import assert from 'node:assert/strict'
 import crypto from 'node:crypto'
 import { clerkClient } from '@clerk/express'
 
+// Clerk's lazy client caches API objects by key. A stable synthetic key keeps
+// method mocks on the same objects even when no developer credentials exist.
+const previousClerkKey = process.env.CLERK_SECRET_KEY
+process.env.CLERK_SECRET_KEY = 'sk_test_local_auth_fixture'
+test.after(() => {
+  if (previousClerkKey === undefined) delete process.env.CLERK_SECRET_KEY
+  else process.env.CLERK_SECRET_KEY = previousClerkKey
+})
+
 // Install a closed fake before importing the route: this suite must never query
 // the database configured in a developer's environment.
 const unexpected = async () => { throw new Error('Unexpected database call in auth test') }
@@ -82,7 +91,10 @@ test('an unspecified environment sends OTPs without logging credentials', async 
   t.mock.method(prisma.otpVerification, 'findUnique', async () => null)
   t.mock.method(prisma.otpVerification, 'upsert', async () => ({}))
   const log = t.mock.method(console, 'log', () => {})
-  const network = t.mock.method(globalThis, 'fetch', async () => ({ ok: true }))
+  const network = t.mock.method(globalThis, 'fetch', async () => ({
+    ok: true,
+    json: async () => ({ messages: [{ id: 'wamid.test-otp' }] }),
+  }))
   const res = response()
   await send({ body: { phone, intent: 'login' } }, res)
   assert.equal(res.statusCode, 200)

@@ -1,3 +1,5 @@
+import { parseScheduleTime as validateScheduleTime } from '../lib/scheduling.js'
+
 export function parseIncoming(message) {
   if (message.type === 'location') return { type: 'location', lat: Number(message.location?.latitude), lng: Number(message.location?.longitude) }
   if (message.type === 'interactive') return { type: 'choice', value: (message.interactive.button_reply ?? message.interactive.list_reply)?.id }
@@ -33,12 +35,7 @@ export function parseScheduleDate(value, now = new Date()) {
 }
 
 export function parseScheduleTime(date, value, now = new Date()) {
-  const match = /^(\d{1,2}):(\d{2})$/.exec(value)
-  if (!match || +match[1] > 23 || +match[2] > 59) return null
-  const scheduled = new Date(`${date}T${match[1].padStart(2, '0')}:${match[2]}:00+05:30`)
-  if (scheduled.getTime() <= now.getTime() + 30 * 60000) return { error: 'too_soon' }
-  if (scheduled.getTime() > now.getTime() + 7 * 86400000) return { error: 'too_far' }
-  return { value: scheduled.toISOString(), label: scheduled.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'medium', timeStyle: 'short' }) }
+  return validateScheduleTime(date, value, now)
 }
 
 const labelledValue = (text, labels) => {

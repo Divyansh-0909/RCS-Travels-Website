@@ -2,7 +2,7 @@ import 'dotenv/config'
 import express from 'express'
 import cors from 'cors'
 import { prisma } from './db/prisma.js'
-import { clerkAuth } from './middleware/auth.js'
+import { clerkAuth, protect } from './middleware/auth.js'
 import { errorHandler } from './middleware/errorHandler.js'
 import { googleApiLimiter, fareLimiter, authLimiter, shareLimiter, apiLimiters, paymentWriteLimiter } from './middleware/rateLimit.js'
 import fareRouter from './routes/fare.js'
@@ -16,13 +16,15 @@ import { initFareZones } from './services/fareZones.js'
 import usersRouter from './routes/users.js'
 import hybridAuthRouter from './routes/hybridAuth.js'
 import adminRouter from './routes/admin.js'
+import responsibilityAdminRouter from './routes/responsibilityAdmin.ts'
 import googleRouter from './routes/googleAPI.js'
 import internalRouter from './routes/internal.js'
 import shareRouter from './routes/share.js'
-import { JOBS_MODE } from './lib/jobs.js'
+import { JOBS_MODE, runJob } from './lib/jobs.js'
 import paymentsRouter, { razorpayWebhookHandler } from './routes/payments.js'
 import whatsappRouter from './routes/whatsapp.js'
 import driverCheckoutRouter from './routes/driverCheckout.js'
+import { razorpayXWebhookHandler } from './routes/razorpayXWebhook.js'
 
 const app = express()
 const PORT = process.env.PORT || 5000
@@ -59,11 +61,13 @@ app.use(cors({
     return callback(null, false)
   },
   credentials: true,
+  exposedHeaders: ['Retry-After', 'RateLimit', 'RateLimit-Policy'],
 }))
 // Razorpay signs the exact bytes. This endpoint must run before express.json(),
 // which would replace those bytes with a parsed object and make verification
 // impossible (or tempt code to re-stringify a subtly different payload).
 app.post('/api/payments/razorpay/webhook', express.raw({ type: 'application/json', limit: '1mb' }), razorpayWebhookHandler)
+app.post('/api/payouts/razorpayx/webhook', express.raw({ type: 'application/json', limit: '1mb' }), razorpayXWebhookHandler)
 // Meta signs the exact request bytes, so this must also be mounted before the
 // JSON parser. GET is the one-time webhook verification challenge.
 app.use('/webhooks/whatsapp', express.raw({ type: 'application/json', limit: '1mb' }), whatsappRouter)
@@ -88,6 +92,9 @@ app.use(clerkAuth)
 // keep their deliberately sized, IP-based policies below instead.
 const protectedApiPrefixes = ['/api/bookings', '/api/driver', '/api/users', '/api/admin', '/api/payments']
 app.use(protectedApiPrefixes, apiLimiters.read, apiLimiters.write, apiLimiters.location)
+// Guard whole human API namespaces, including newly registered endpoints.
+// Signed hooks and OIDC jobs above retain independent authentication.
+app.use(protectedApiPrefixes, protect)
 
 // Both of these proxy billed Google APIs and cannot require auth — a rider sees
 // fares and types addresses before logging in.
@@ -104,6 +111,7 @@ app.use('/api/driver', driverRouter)
 app.use('/api/users', usersRouter)
 app.use('/api/auth', authLimiter, hybridAuthRouter)
 app.use('/api/admin', adminRouter)
+app.use('/api/admin/responsibility', responsibilityAdminRouter)
 app.use('/api/payments', paymentWriteLimiter, paymentsRouter)
 app.use('/api/googleAPI', googleApiLimiter, googleRouter)
 
@@ -136,7 +144,7 @@ const server = app.listen(PORT, async () => {
   // quotes fares while the database is unreachable.
   await initFareZones()
 
-  // The four background sweeps, started here only when this process is the one
+  // The background sweeps, started here only when this process is the one
   // holding the clock. On Cloud Run it is not: with min-instances=0 the CPU is
   // throttled between requests and a setInterval never fires, so the cadence
   // lives in Cloud Scheduler and arrives as POST /internal/jobs/:name instead.
@@ -156,6 +164,11 @@ const server = app.listen(PORT, async () => {
     // runs at 02:00. Recomputes his verification, which is what takes him offline.
     startDocumentExpiryJob()
     setInterval(() => issuePreviousMonthCoupons().catch((err) => console.error('customer coupons:', err)), 24 * 60 * 60 * 1000)
+    runJob('responsibility-finalization').catch((err) => console.error('responsibility finalization:', err))
+    setInterval(
+      () => runJob('responsibility-finalization').catch((err) => console.error('responsibility finalization:', err)),
+      60 * 1000,
+    )
   }
 
   // Logged at boot, loudly, on both paths. A service in `scheduler` mode with
@@ -163,7 +176,7 @@ const server = app.listen(PORT, async () => {
   // outside — this line is the only place that distinction is visible.
   console.log(
     JOBS_MODE === 'interval'
-      ? 'jobs: dispatch, document-scan and document-expiry running on in-process timers'
+      ? 'jobs: dispatch, document-scan, document-expiry and responsibility shadow/finalization/consequences running on in-process timers'
       : 'jobs: timers OFF — expecting Cloud Scheduler to POST /internal/jobs/:name',
   )
   console.log(`Server running on port ${PORT}`)

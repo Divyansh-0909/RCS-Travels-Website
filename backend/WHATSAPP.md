@@ -45,7 +45,7 @@ still clears an in-progress booking.
 
 Pickup and destination accept either a WhatsApp location pin or a typed place.
 Ride Now enters the existing assignment/pooling service immediately. Scheduled
-rides create the existing 15% advance obligation and remain `payment_pending`;
+rides create the existing 10% advance obligation and remain `payment_pending`;
 the rider follows the authenticated tracking-page link to complete the existing
 Razorpay Checkout. Capturing it changes the ride to `confirmed`, after which the
 existing scheduled-offer sweep handles it. No second payment or dispatch system

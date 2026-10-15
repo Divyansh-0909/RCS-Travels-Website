@@ -56,15 +56,19 @@ paymentsRouter.get('/:id', protect, async (req, res) => {
   return res.json(payment)
 })
 
-export async function razorpayWebhookHandler(req, res, next) {
-  try {
-    const result = await processRazorpayWebhook({ rawBody: req.body,
-      signature: req.get('x-razorpay-signature'), eventId: req.get('x-razorpay-event-id') })
-    return res.json({ ok: true, ...result })
-  } catch (error) {
-    if (answerError(res, error)) return
-    next(error)
+export function createRazorpayWebhookHandler({ processWebhook = processRazorpayWebhook } = {}) {
+  return async function razorpayWebhookHandler(req, res, next) {
+    try {
+      const result = await processWebhook({ rawBody: req.body,
+        signature: req.get('x-razorpay-signature'), eventId: req.get('x-razorpay-event-id') })
+      return res.json({ ok: true, ...result })
+    } catch (error) {
+      if (answerError(res, error)) return
+      next(error)
+    }
   }
 }
+
+export const razorpayWebhookHandler = createRazorpayWebhookHandler()
 
 export default paymentsRouter

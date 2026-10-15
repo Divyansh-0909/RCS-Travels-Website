@@ -5,6 +5,7 @@ import { nearbyDriverAvailability, nearbyDriverEta, NEARBY_DRIVER_LIMIT, NEARBY_
 describe('the customer nearby-vehicle query', () => {
   test('uses dispatch eligibility and keeps public map points anonymous', async () => {
     let query
+    let driverQuery
     const db = {
       async $queryRaw(strings, ...values) {
         query = { text: strings.join('?'), values }
@@ -16,6 +17,13 @@ describe('the customer nearby-vehicle query', () => {
           lng: 77.2167,
         }]
       },
+      driver: {
+        async findMany(input) {
+          driverQuery = input
+          return [{ id: 'private-driver-id', suspendedAt: null, suspensionExpiresAt: null }]
+        },
+      },
+      reliabilityBlock: { async findFirst() { return null } },
     }
 
     const availability = await nearbyDriverAvailability({
@@ -36,20 +44,63 @@ describe('the customer nearby-vehicle query', () => {
     assert.match(query.text, /d\."is_active"/)
     assert.match(query.text, /d\."verification_status" = 'approved'/)
     assert.match(query.text, /d\."suspended_at" IS NULL/)
+    assert.match(query.text, /d\."suspension_expires_at" <= NOW\(\)/)
     assert.match(query.text, /d\."vehicle_class"/)
     assert.match(query.text, /NOT EXISTS/)
     assert.match(query.text, /b\."status" IN/)
     assert.ok(query.values.includes(NEARBY_DRIVER_RADIUS_KM * 1000))
     assert.ok(query.values.includes(NEARBY_DRIVER_LIMIT))
     assert.equal(NEARBY_DRIVER_RADIUS_KM, 5)
+    assert.deepEqual(driverQuery, {
+      where: { id: { in: ['private-driver-id'] } },
+      select: { id: true, suspendedAt: true, suspensionExpiresAt: true },
+    })
   })
 
   test('returns no nearest driver when the five-kilometre search is empty', async () => {
-    const db = { async $queryRaw() { return [] } }
+    const db = {
+      async $queryRaw() { return [] },
+      driver: { async findMany() { return [] } },
+      reliabilityBlock: { async findFirst() { return null } },
+    }
     const availability = await nearbyDriverAvailability({
       lat: 28.63,
       lng: 77.22,
       vehicleClass: 'sedan',
+    }, db)
+
+    assert.deepEqual(availability, { vehicles: [], nearest: null })
+  })
+
+  test('excludes a reliability-blocked captain from public availability', async () => {
+    const db = {
+      async $queryRaw() {
+        return [{
+          driverId: 'blocked-driver',
+          driverLat: 28.631543,
+          driverLng: 77.216743,
+          lat: 28.6315,
+          lng: 77.2167,
+        }]
+      },
+      driver: {
+        async findMany() {
+          return [{ id: 'blocked-driver', suspendedAt: null, suspensionExpiresAt: null }]
+        },
+      },
+      reliabilityBlock: {
+        async findFirst({ where }) {
+          return where.type === 'INDEFINITE'
+            ? { id: 'block-1', driverId: 'blocked-driver', type: 'INDEFINITE', removedAt: null }
+            : null
+        },
+      },
+    }
+
+    const availability = await nearbyDriverAvailability({
+      lat: 28.63,
+      lng: 77.22,
+      vehicleClass: 'hatchback',
     }, db)
 
     assert.deepEqual(availability, { vehicles: [], nearest: null })

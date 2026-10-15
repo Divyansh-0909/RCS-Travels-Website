@@ -33,6 +33,10 @@ export function createRazorpayGateway({ config = getRazorpayConfig(), client } =
   return {
     keyId: config.keyId,
     createOrder: (options) => sdk.orders.create(options),
+    findOrdersByReceipt: async (receipt) => {
+      const result = await sdk.orders.all({ receipt, count: 100 })
+      return result.items ?? []
+    },
     fetchPayment: (paymentId) => sdk.payments.fetch(paymentId),
     createRefund: async (paymentId, { idempotencyKey, ...options }) => {
       try {
@@ -45,6 +49,18 @@ export function createRazorpayGateway({ config = getRazorpayConfig(), client } =
         // that object reach the route logger or persisted failure description.
         const error = new Error('Payment refund request failed; retry with the same idempotency key')
         error.code = 'REFUND_GATEWAY_ERROR'
+        throw error
+      }
+    },
+    findRefundsByPayment: async (paymentId) => {
+      try {
+        const response = await refundClient.get(`/payments/${encodeURIComponent(paymentId)}/refunds`, {
+          params: { count: 100 },
+        })
+        return response.data.items ?? []
+      } catch {
+        const error = new Error('Payment refunds could not be reconciled')
+        error.code = 'REFUND_RECONCILIATION_FAILED'
         throw error
       }
     },

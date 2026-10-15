@@ -33,7 +33,7 @@ function providerState(status) {
   }
 }
 
-async function recomputeBatchStatus(batchId, db = prisma) {
+export async function recomputePayoutBatchStatus(batchId, db = prisma) {
   const payouts = await db.driverPayout.findMany({ where: { batchId }, select: { status: true } })
   const hasOpen = payouts.some((row) => ACTIVE_PAYOUT_STATUSES.includes(row.status))
   const allPaid = payouts.length > 0 && payouts.every((row) => row.status === 'paid')
@@ -106,14 +106,19 @@ export async function createPayoutBatch({ createdBy, reference, driverIds = null
   return db.$transaction(work, { isolationLevel: 'Serializable' })
 }
 
-async function applyProviderState(payoutId, provider, { db = prisma } = {}) {
+export async function applyPayoutProviderState(payoutId, provider, { db = prisma } = {}) {
   const state = providerState(provider.status)
-  return db.$transaction(async (tx) => {
+  const work = async (tx) => {
     const payout = await tx.driverPayout.findUnique({
       where: { id: payoutId },
       include: { driver: { select: { walletBalance: true } } },
     })
     if (!payout) throw new PaymentError('PAYOUT_NOT_FOUND', 'Payout not found', 404)
+    if (payout.externalPayoutId && provider.id && payout.externalPayoutId !== provider.id) {
+      throw new PaymentError('PAYOUT_PROVIDER_MISMATCH', 'Provider payout does not match the local payout', 409)
+    }
+    if (payout.status === 'reversed' || payout.status === 'failed') return payout
+    if (payout.status === 'paid' && state !== 'reversed') return payout
 
     if (state === 'paid') {
       await postWalletEntry(tx, {
@@ -169,14 +174,15 @@ async function applyProviderState(payoutId, provider, { db = prisma } = {}) {
       where: { id: payout.id },
       data: { status: 'processing', externalPayoutId: provider.id ?? payout.externalPayoutId },
     })
-  })
+  }
+  return db.$transaction ? db.$transaction(work, { isolationLevel: 'Serializable' }) : work(db)
 }
 
 async function executePayout(payout, { gateway, db }) {
   if (!ACTIVE_PAYOUT_STATUSES.includes(payout.status)) return payout
   if (payout.status === 'processing' && payout.externalPayoutId) {
     const provider = await gateway.fetchPayout(payout.externalPayoutId)
-    return applyProviderState(payout.id, provider, { db })
+    return applyPayoutProviderState(payout.id, provider, { db })
   }
 
   const driver = await db.driver.findUnique({
@@ -205,7 +211,7 @@ async function executePayout(payout, { gateway, db }) {
       reference: payout.id,
       idempotencyKey: payout.idempotencyKey,
     })
-    return applyProviderState(payout.id, provider, { db })
+    return applyPayoutProviderState(payout.id, provider, { db })
   } catch (error) {
     await db.driverPayout.update({
       where: { id: payout.id },
@@ -235,7 +241,7 @@ export async function executePayoutBatch(batchId, { gateway = createRazorpayXGat
       results.push({ id: payout.id, status: 'pending', error: error.code ?? 'PAYOUT_GATEWAY_ERROR' })
     }
   }
-  const updatedBatch = await recomputeBatchStatus(batch.id, db)
+  const updatedBatch = await recomputePayoutBatchStatus(batch.id, db)
   return { batch: publicBatch(updatedBatch), payouts: results }
 }
 
@@ -244,8 +250,8 @@ export async function refreshPayout(payoutId, { gateway = createRazorpayXGateway
   if (!payout) throw new PaymentError('PAYOUT_NOT_FOUND', 'Payout not found', 404)
   if (!payout.externalPayoutId) return payout
   const provider = await gateway.fetchPayout(payout.externalPayoutId)
-  const updated = await applyProviderState(payout.id, provider, { db })
-  await recomputeBatchStatus(payout.batchId, db)
+  const updated = await applyPayoutProviderState(payout.id, provider, { db })
+  await recomputePayoutBatchStatus(payout.batchId, db)
   return updated
 }
 

@@ -1,0 +1,7 @@
+# Project-wide Proofloop audit
+
+Start with [executive-summary.md](executive-summary.md). Detailed [classification](proofloop-applicability-report.md), [interaction map](interaction-dependency-map.md), [unverified requirements](unverified-requirements.md), [roadmap](adoption-roadmap.md) and [methodology](methodology.md) describe the actual scope and limits.
+
+Machine artifacts are under [repository-inventory.json](../../../output/proofloop-project-wide-audit-2026-10-11/repository-inventory.json), [complete-feature-matrix.csv](../../../output/proofloop-project-wide-audit-2026-10-11/complete-feature-matrix.csv), [policy-registry.csv](../../../output/proofloop-project-wide-audit-2026-10-11/policy-registry.csv), [entrypoint-coverage.json](../../../output/proofloop-project-wide-audit-2026-10-11/entrypoint-coverage.json), [unmapped.json](../../../output/proofloop-project-wide-audit-2026-10-11/unmapped.json), [evidence-verification.json](../../../output/proofloop-project-wide-audit-2026-10-11/evidence-verification.json) and [audit-evidence-manifest.json](../../../output/proofloop-project-wide-audit-2026-10-11/audit-evidence-manifest.json).
+
+Audit: PARTIAL; static API/job/router reconciliation complete. Implementation: NOT STARTED. Independent Phase 9C continues. No production/model/provider/DB execution or application/policy/schema/test/flag changes are authorized or performed by this audit.

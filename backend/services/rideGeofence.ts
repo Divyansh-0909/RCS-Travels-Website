@@ -23,20 +23,34 @@ export function haversineDistanceKm(lat1: number, lng1: number, lat2: number, ln
 }
 
 export function freshLocationWithinPickup(
-  location: { latitude: number; longitude: number; updatedAt: Date } | null | undefined,
+  location: { latitude: number; longitude: number; observedAt?: Date | null;
+    accuracyMeters?: number | null; updatedAt: Date } | null | undefined,
   pickup: { lat: number; lng: number },
   nowMs = Date.now(),
 ): boolean {
-  if (!location || nowMs - new Date(location.updatedAt).getTime() > MAX_LOCATION_AGE_MS) return false
+  if (!location || !location.observedAt || !Number.isFinite(location.accuracyMeters)) return false
+  const observedMs = new Date(location.observedAt).getTime()
+  if (!Number.isFinite(observedMs) || locationProblem({ lat: location.latitude, lng: location.longitude,
+    accuracy: location.accuracyMeters!, capturedAt: observedMs }, nowMs)) return false
   return haversineDistanceKm(location.latitude, location.longitude, pickup.lat, pickup.lng) <= PICKUP_RADIUS_KM
 }
 
+type LocationFix = { lat?: number; lng?: number; accuracy?: number; capturedAt?: number; mocked?: boolean }
+
+function invalidLocationFix(fix: LocationFix): boolean {
+  return !Number.isFinite(fix.lat) || Math.abs(fix.lat!) > 90
+    || !Number.isFinite(fix.lng) || Math.abs(fix.lng!) > 180
+    || !Number.isFinite(fix.accuracy) || fix.accuracy! < 0
+    || !Number.isFinite(fix.capturedAt)
+}
+
 export function locationProblem(
-  fix: { lat?: number; lng?: number; accuracy?: number; capturedAt?: number; mocked?: boolean },
+  fix: LocationFix,
   nowMs = Date.now(),
 ): string | null {
   if (fix.lat === undefined || fix.lng === undefined || fix.accuracy === undefined || fix.capturedAt === undefined)
     return 'A current GPS location is required for this action.'
+  if (invalidLocationFix(fix)) return 'A valid GPS location is required for this action.'
   if (fix.mocked)
     return 'Mock location detected. Turn off the mock-location provider and try again.'
   if (fix.accuracy > MAX_LOCATION_ACCURACY_M)

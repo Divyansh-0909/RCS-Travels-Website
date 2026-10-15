@@ -1,4 +1,6 @@
-export const COMMISSION_PCT = 5
+// Owner-approved Phase 9 continuation, 9 October 2026. The existing floor and
+// coupon/pass-through treatment are unchanged.
+export const COMMISSION_PCT = 10
 export const COMMISSION_MIN_FARE = 800
 
 /**

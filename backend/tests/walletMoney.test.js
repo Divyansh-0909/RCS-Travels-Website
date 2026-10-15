@@ -6,7 +6,6 @@ import { walletEvent, balancesFrom, isBlockedByBalance } from '../services/walle
 import { scheduledDepositFor } from '../services/scheduledDeposit.js'
 import { couponAmountForSpend, customerPaymentFor } from '../services/coupons.js'
 import { loyaltyRewardsEarned, commissionWithReward } from '../services/loyalty.js'
-import { COMPLAINT_FINE_AMOUNT, COMPLAINT_FINE_THRESHOLD, COMPLAINT_SUSPEND_THRESHOLD } from '../services/complaints.js'
 
 // The money rules, with no database: every one of these is a pure function, and
 // each is here because getting it wrong is silent. A commission charged on the
@@ -14,9 +13,9 @@ import { COMPLAINT_FINE_AMOUNT, COMPLAINT_FINE_THRESHOLD, COMPLAINT_SUSPEND_THRE
 // errors; a wallet hold subtracted twice shows a captain money he cannot find.
 
 describe('commission — the ₹800 floor is tested AFTER the coupon', () => {
-  test('₹799 payable earns nothing, ₹800 payable earns 5%', () => {
+  test('₹799 payable earns nothing, ₹800 payable earns 10%', () => {
     assert.deepEqual(commissionOn({ rideFare: 799 }), { pct: 0, amt: 0, payableRideFare: 799 })
-    assert.deepEqual(commissionOn({ rideFare: 800 }), { pct: 5, amt: 40, payableRideFare: 800 })
+    assert.deepEqual(commissionOn({ rideFare: 800 }), { pct: 10, amt: 80, payableRideFare: 800 })
   })
 
   test('a coupon that drops the fare under the floor removes the commission', () => {
@@ -27,17 +26,17 @@ describe('commission — the ₹800 floor is tested AFTER the coupon', () => {
     assert.equal(withCoupon.pct, 0)
     // ...and the same ride without one is comfortably over it, so the coupon is
     // doing the work here rather than the fare being low to begin with.
-    assert.equal(commissionOn({ rideFare: 1200 }).amt, 60)
+    assert.equal(commissionOn({ rideFare: 1200 }).amt, 120)
   })
 
   test('a coupon that leaves the fare over the floor still charges, on the reduced figure', () => {
     const r = commissionOn({ rideFare: 1000, couponAmount: 100 })
     assert.equal(r.payableRideFare, 900)
-    assert.equal(r.amt, 45) // 5% of 900, not of 1000
+    assert.equal(r.amt, 90) // 10% of 900, not of 1000
   })
 
-  test('an ordinary ₹1,000 ride earns ₹50', () => {
-    assert.equal(commissionOn({ rideFare: 1000 }).amt, 50)
+  test('an ordinary ₹1,000 ride earns ₹100', () => {
+    assert.equal(commissionOn({ rideFare: 1000 }).amt, 100)
   })
 
   test('a bare number is REFUSED — the old signature must not silently survive', () => {
@@ -126,7 +125,7 @@ describe('available / held / total', () => {
 })
 
 describe('scheduled acceptance deposit', () => {
-  test('is exactly 15% of authoritative fare', () => assert.equal(scheduledDepositFor(1000), 150))
+  test('is exactly 10% of authoritative fare', () => assert.equal(scheduledDepositFor(1000), 100))
   test('stable keys prevent duplicate hold and release events', () => {
     assert.equal(walletEvent.depositHold('ride'), walletEvent.depositHold('ride'))
     assert.equal(walletEvent.depositRefund('ride'), walletEvent.depositRefund('ride'))
@@ -145,15 +144,6 @@ describe('coupon tiers and settlement', () => {
     assert.equal(payment, 700)
     assert.equal(payment + 500, 1200)
     assert.equal(commissionOn({ rideFare: 1200, couponAmount: 500 }).amt, 0)
-  })
-})
-
-describe('complaint thresholds', () => {
-  test('fine once at 3 and suspend at 5', () => {
-    assert.equal(COMPLAINT_FINE_THRESHOLD, 3)
-    assert.equal(COMPLAINT_FINE_AMOUNT, 200)
-    assert.equal(COMPLAINT_SUSPEND_THRESHOLD, 5)
-    assert.equal(walletEvent.fine('d', 3), walletEvent.fine('d', 3))
   })
 })
 

@@ -3,9 +3,10 @@ import { prisma } from '../db/prisma.js'
 import { notifyWhatsAppScheduledPaymentConfirmed } from './notification.js'
 import { followCapturedPaymentEffect } from './paymentEffects.js'
 import { PaymentError } from './paymentErrors.js'
-import { statusAfterGatewayPayment } from './paymentStatus.js'
+import { statusAfterGatewayPayment, canApplyGatewayFailure } from './paymentStatus.js'
 import { createRazorpayWebhookVerifier } from './razorpay.js'
-import { applyCapturedPaymentEffect, applyRefundedPaymentEffect } from './scheduledPayments.js'
+import { applyCapturedPaymentEffect } from './scheduledPayments.js'
+import { applyRefundProviderState } from './refundProviderState.js'
 
 const matchingPaymentFor = (tx, { orderId, externalPaymentId }) => tx.payment.findFirst({
   where: {
@@ -58,42 +59,10 @@ async function handlePaymentEvent(tx, { event, eventId, payment, paymentEntity }
   }
 }
 
-async function handleRefundProcessed(tx, { eventId, payment, refundEntity }) {
-  if (
-    payment.purpose === 'driver_debt_settlement'
-    && payment.driverDebtRefundAmount
-    && typeof refundEntity?.id === 'string'
-    && refundEntity.amount === payment.driverDebtRefundAmount
-    && refundEntity?.currency === payment.currency
-  ) {
-    await tx.payment.update({
-      where: { id: payment.id },
-      data: {
-        razorpayRefundId: refundEntity.id,
-        refundedAt: new Date(),
-        ...(refundEntity.amount === payment.amount ? { status: 'refunded' } : {}),
-      },
-    })
-    await finishEvent(tx, eventId, 'processed', 'driver_debt_excess_refund.processed', payment.id)
-    return { processed: true }
-  }
-  if (
-    payment.status !== 'refund_pending'
-    || typeof refundEntity?.id !== 'string'
-    || refundEntity.amount !== payment.amount
-    || refundEntity?.currency !== payment.currency
-  ) {
-    await finishEvent(tx, eventId, 'ignored', 'unexpected_or_partial_refund', payment.id)
-    return { ignored: true }
-  }
-
-  const refundedPayment = await tx.payment.update({
-    where: { id: payment.id },
-    data: { status: 'refunded', razorpayRefundId: refundEntity.id, refundedAt: new Date() },
-  })
-  await applyRefundedPaymentEffect(tx, refundedPayment)
-  await finishEvent(tx, eventId, 'processed', 'refund.processed', payment.id)
-  return { processed: true }
+async function handleRefundEvent(tx, { eventId, payment, refundEntity, status }) {
+  const outcome = await applyRefundProviderState(tx, payment, { ...refundEntity, status })
+  await finishEvent(tx, eventId, outcome.ignored ? 'ignored' : 'processed', outcome.result, payment.id)
+  return outcome.ignored ? { ignored: true } : { processed: true }
 }
 
 async function processEventTransaction(tx, { event, eventId }) {
@@ -120,7 +89,7 @@ async function processEventTransaction(tx, { event, eventId }) {
     return handlePaymentEvent(tx, { event, eventId, payment, paymentEntity })
   }
   if (event.event === 'payment.failed') {
-    if (payment.status !== 'captured' && payment.status !== 'refunded') {
+    if (canApplyGatewayFailure(payment.status)) {
       await tx.payment.update({
         where: { id: payment.id },
         data: {
@@ -134,20 +103,12 @@ async function processEventTransaction(tx, { event, eventId }) {
     await finishEvent(tx, eventId, 'processed', event.event, payment.id)
     return { processed: true }
   }
-  if (event.event === 'refund.processed') {
-    return handleRefundProcessed(tx, { eventId, payment, refundEntity })
-  }
-  if (event.event === 'refund.failed') {
-    await tx.payment.updateMany({
-      where: { id: payment.id, status: 'refund_pending' },
-      data: {
-        status: 'captured',
-        failureCode: 'REFUND_FAILED',
-        failureDescription: refundEntity.error_description ?? null,
-      },
-    })
-    await finishEvent(tx, eventId, 'processed', event.event, payment.id)
-    return { processed: true }
+  const refundStatus = {
+    'refund.processed': 'processed',
+    'refund.failed': 'failed',
+  }[event.event]
+  if (refundStatus) {
+    return handleRefundEvent(tx, { eventId, payment, refundEntity, status: refundStatus })
   }
 
   await finishEvent(tx, eventId, 'ignored', 'unsupported_event', payment.id)
@@ -185,6 +146,8 @@ export async function processRazorpayWebhookEvent({
   const notify = notifyPayment ?? (db === prisma ? notifyWhatsAppScheduledPaymentConfirmed : null)
   if (outcome.notificationBookingId && notify) await notify(outcome.notificationBookingId).catch(() => {})
 
-  const { notificationBookingId: _notificationBookingId, effect: _effect, ...result } = outcome
+  const result = { ...outcome }
+  delete result.notificationBookingId
+  delete result.effect
   return result
 }

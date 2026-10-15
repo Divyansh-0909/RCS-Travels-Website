@@ -1,21 +1,32 @@
 import { createPaymentIntent, toSubunits } from './paymentIntents.js'
 import { postWalletEntry } from './wallet.js'
 import { walletEvent } from './walletKeys.js'
-import { applyRidePaymentCaptureEffect } from './ridePayments.ts'
+import { applyRidePaymentCaptureEffect, requireVerifiedDriverPayoutUpi } from './ridePayments.ts'
+import {
+  customerObligationPaise,
+  scheduledAdvancePaiseForObligation,
+  SCHEDULED_ADVANCE_PERCENT,
+} from './responsibilityFinancialMath.js'
 
-export const SCHEDULED_CUSTOMER_ADVANCE_PCT = 15
+export const SCHEDULED_CUSTOMER_ADVANCE_PCT = SCHEDULED_ADVANCE_PERCENT
 
-export function scheduledPaymentAmounts({ fare, couponAmount = 0 }) {
+export function scheduledPaymentAmounts({ fare, couponAmount = 0, compensationAmount = 0 }) {
   const originalFare = toSubunits(fare)
-  const coupon = Math.min(originalFare, Math.max(0, Math.round(couponAmount * 100)))
-  const finalFare = originalFare - coupon
-  // Both scheduled instalments must be payable as whole rupees. Round the 15%
+  const {
+    appliedCouponPaise: coupon,
+    appliedCompensationPaise: compensation,
+    obligationPaise: finalFare,
+  } = customerObligationPaise({
+    farePaise: originalFare,
+    couponPaise: Math.max(0, Math.round(couponAmount * 100)),
+    compensationPaise: Math.max(0, Math.round(compensationAmount * 100)),
+  })
+  // Both scheduled instalments must be payable as whole rupees. Round the 10%
   // advance once, at the source of truth, then derive the balance so the two
-  // orders still add up to the exact post-coupon fare.
-  const advance = Math.min(finalFare,
-    Math.max(0, Math.round((finalFare * SCHEDULED_CUSTOMER_ADVANCE_PCT) / 10_000) * 100))
-  return { originalFare, coupon, finalFare, advancePercentage: SCHEDULED_CUSTOMER_ADVANCE_PCT,
-    advance, remaining: finalFare - advance }
+  // orders still add up to the exact customer obligation.
+  const { advancePaise: advance, remainingPaise: remaining } = scheduledAdvancePaiseForObligation(finalFare)
+  return { originalFare, coupon, compensation, obligation: finalFare, finalFare, advancePercentage: SCHEDULED_CUSTOMER_ADVANCE_PCT,
+    advance, remaining }
 }
 
 const snapshotOf = (a) => ({ originalFareAmount: a.originalFare, couponAmount: a.coupon,
@@ -27,8 +38,9 @@ export function createScheduledAdvanceIntent(tx, booking, amounts = scheduledPay
     idempotencyKey: `scheduled-advance:${booking.id}`, snapshot: snapshotOf(amounts) })
 }
 
-export function createScheduledFinalIntent(tx, booking) {
+export async function createScheduledFinalIntent(tx, booking) {
   if (!booking.scheduledAt) throw new Error('Scheduled final payment requires a scheduled booking')
+  await requireVerifiedDriverPayoutUpi(tx, booking)
   return createPaymentIntent(tx, { userId: booking.userId, bookingId: booking.id,
     purpose: 'scheduled_ride_final', amount: booking.scheduledRemainingAmount,
     idempotencyKey: `scheduled-final:${booking.id}`, snapshot: {

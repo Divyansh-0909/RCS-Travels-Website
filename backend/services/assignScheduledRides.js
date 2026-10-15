@@ -1,4 +1,5 @@
 import { prisma } from '../db/prisma.js'
+import { systemClock } from '../lib/clock.js'
 import { notifyWhatsAppAdminUnassigned, sendScheduledRideReminders } from './notification.js'
 import { offerScheduledRide } from './scheduledOffers.js'
 import { ASSIGNMENT_HORIZON_H, SWEEP_INTERVAL_MS, ADMIN_ALERT_LEAD_MS } from '../constants/dispatch.js'
@@ -29,13 +30,15 @@ import { ASSIGNMENT_HORIZON_H, SWEEP_INTERVAL_MS, ADMIN_ALERT_LEAD_MS } from '..
  * retry — which is correct here, because the next scheduled run is five minutes
  * away and a retry would just repeat the same failing queries sooner.
  */
-export async function sweepScheduledRides() {
+export async function sweepScheduledRides({ db = prisma, clock = systemClock,
+  offer = offerScheduledRide, reminders = sendScheduledRideReminders, alert = notifyWhatsAppAdminUnassigned,
+} = {}) {
   try {
-    const now = Date.now()
-    await sendScheduledRideReminders(new Date(now))
+    const now = clock.now().getTime()
+    await reminders(new Date(now))
     const horizon = new Date(now + ASSIGNMENT_HORIZON_H * 60 * 60 * 1000)
 
-    const unfilled = await prisma.booking.findMany({
+    const unfilled = await db.booking.findMany({
       where: {
         status: 'confirmed',
         driverId: null,
@@ -48,7 +51,7 @@ export async function sweepScheduledRides() {
 
     for (const booking of unfilled) {
       try {
-        await offerScheduledRide(booking.id)
+        await offer(booking.id, { db, clock })
       } catch (err) {
         // One booking failing must not abandon the rest of the sweep.
         console.error(`offer sweep failed for booking ${booking.id}:`, err)
@@ -61,13 +64,13 @@ export async function sweepScheduledRides() {
       // failing WhatsApp call cannot produce twelve identical billed messages
       // across the last hour. Losing one alert to a failed send is the better
       // failure — the sweep keeps running either way.
-      const { count } = await prisma.booking.updateMany({
+      const { count } = await db.booking.updateMany({
         where: { id: booking.id, adminAlertedAt: null },
-        data: { adminAlertedAt: new Date() },
+        data: { adminAlertedAt: clock.now() },
       })
       if (count === 0) continue
 
-      await notifyWhatsAppAdminUnassigned(booking)
+      await alert(booking)
     }
   } catch (err) {
     console.error('Assignment job failed:', err)

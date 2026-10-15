@@ -1,6 +1,9 @@
 import { Router } from 'express'
 import crypto from 'node:crypto'
 import { messagesFromWebhook, processWhatsAppMessage } from '../services/whatsappBooking.js'
+import { applyWhatsAppDeliveryStatus, whatsappStatusCallbacksFromWebhook } from '../services/notificationProvenance.js'
+import { prisma } from '../db/prisma.js'
+import { syncAppealWindowForProviderMessage } from '../services/responsibilityNoticeService.js'
 
 const whatsappRouter = Router()
 
@@ -28,6 +31,7 @@ whatsappRouter.post('/', async (req, res) => {
   let body
   try { body = JSON.parse(req.body.toString('utf8')) } catch { return res.sendStatus(400) }
   const messages = messagesFromWebhook(body)
+  const deliveryStatuses = whatsappStatusCallbacksFromWebhook(body, process.env.WHATSAPP_PHONE_NUMBER_ID)
   // Wait before acknowledging: Cloud Run may suspend CPU as soon as the response
   // leaves, which would otherwise strand a half-written conversation.
   // A single webhook can contain consecutive messages from one conversation;
@@ -35,6 +39,14 @@ whatsappRouter.post('/', async (req, res) => {
   const results = []
   for (const message of messages) {
     try { await processWhatsAppMessage(message); results.push({ status: 'fulfilled' }) }
+    catch (reason) { results.push({ status: 'rejected', reason }) }
+  }
+  for (const status of deliveryStatuses) {
+    try {
+      await applyWhatsAppDeliveryStatus(status)
+      await syncAppealWindowForProviderMessage(status.id, { db: prisma })
+      results.push({ status: 'fulfilled' })
+    }
     catch (reason) { results.push({ status: 'rejected', reason }) }
   }
   for (const result of results) if (result.status === 'rejected') console.error('WhatsApp message failed:', result.reason)

@@ -286,7 +286,7 @@ export function ordersFrom(order) {
  *                     orders: ReturnType<typeof ordersFrom> }
  *                 | { ok: false, reason: string }>}
  */
-export async function evaluatePool({ driverPos, host, joiner }) {
+export async function evaluatePool({ driverPos, host, joiner }, { route = routeSequence } = {}) {
   const geometry = poolGeometry({ driverPos, host, joiner })
   if (!geometry.eligible) return { ok: false, reason: geometry.reason }
 
@@ -298,8 +298,8 @@ export async function evaluatePool({ driverPos, host, joiner }) {
   // is why the trip's own stored durationMin cannot stand in for it: that
   // describes P1 → D1 from an origin the car left some time ago.
   const baseline = host.status === 'started'
-    ? await routeSequence([driverPos, D1])
-    : await routeSequence([driverPos, P1, D1])
+    ? await route([driverPos, D1])
+    : await route([driverPos, P1, D1])
 
   // He is seconds from setting a rider down. Adding a stop here lands in the
   // middle of the drop-off itself.
@@ -309,7 +309,7 @@ export async function evaluatePool({ driverPos, host, joiner }) {
   for (const candidate of sequencesFor({ host, joiner })) {
     let routed
     try {
-      routed = await routeSequence([driverPos, ...candidate.stops])
+      routed = await route([driverPos, ...candidate.stops])
     } catch (err) {
       // One unroutable ordering is not a verdict on the others.
       console.error('pool sequence could not be routed:', err.message)

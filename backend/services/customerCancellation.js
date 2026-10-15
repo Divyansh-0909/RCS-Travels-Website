@@ -2,6 +2,8 @@ import { prisma } from '../db/prisma.js'
 import { postWalletEntry } from './wallet.js'
 import { walletEvent } from './walletKeys.js'
 import { releaseDriverCapacity } from './driverCapacity.js'
+import { releaseReservedResponsibilityCompensation } from './responsibilityCompensation.js'
+import { releaseScheduledDeposits } from './scheduledDepositLifecycle.js'
 
 /**
  * Apply the irreversible part of a customer cancellation in one transaction.
@@ -10,20 +12,23 @@ import { releaseDriverCapacity } from './driverCapacity.js'
 export async function applyCustomerCancellationInTransaction(tx, {
   booking,
   cancellationCharge,
-  shouldRefund,
-  shouldForfeit,
+  cancellationReason = null,
+  advanceDisposition = null,
 }) {
+  if (!['pending', 'payment_pending', 'confirmed', 'assigned', 'en_route', 'reached'].includes(booking.status)) return false
   const moved = await tx.booking.updateMany({
-    where: { id: booking.id, status: booking.status },
+    where: { id: booking.id, status: booking.status, driverId: booking.driverId },
     data: {
       status: 'cancelled',
       cancelledBy: 'user',
       cancellationCharge,
-      ...(shouldRefund ? { scheduledAdvanceDisposition: 'refund_pending' } : {}),
-      ...(shouldForfeit ? { scheduledAdvanceDisposition: 'forfeited_to_driver' } : {}),
+      cancellationReason,
+      ...(advanceDisposition ? { scheduledAdvanceDisposition: advanceDisposition } : {}),
     },
   })
   if (!moved.count) return false
+
+  await releaseReservedResponsibilityCompensation(tx, booking.id)
 
   await tx.rideOffer.updateMany({
     where: { bookingId: booking.id, status: 'pending' },
@@ -38,30 +43,16 @@ export async function applyCustomerCancellationInTransaction(tx, {
     })
   }
 
-  if (booking.driverId && booking.scheduledAt) {
-    const hold = await tx.walletEntry.findUnique({
-      where: { eventKey: walletEvent.depositHold(booking.id) },
-    })
-    if (hold) {
-      await postWalletEntry(tx, {
-        driverId: booking.driverId,
-        amount: Math.abs(hold.amount),
-        type: 'deposit_refund',
-        eventKey: walletEvent.depositRefund(booking.id),
-        bookingId: booking.id,
-        note: 'Scheduled ride acceptance deposit released after customer cancellation',
-      })
-    }
-  }
+  if (booking.scheduledAt) await releaseScheduledDeposits(tx, booking.id)
 
-  if (shouldForfeit && booking.driverId) {
+  if (cancellationCharge > 0 && booking.driverId) {
     await postWalletEntry(tx, {
       driverId: booking.driverId,
-      amount: booking.scheduledAdvancePaidAmount / 100,
+      amount: cancellationCharge,
       type: 'cancellation_compensation',
       eventKey: walletEvent.scheduledCancellationCompensation(booking.id),
       bookingId: booking.id,
-      note: 'Scheduled customer advance forfeited after late cancellation',
+      note: 'Scheduled customer cancellation compensation',
     })
   }
 

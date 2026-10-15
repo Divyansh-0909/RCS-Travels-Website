@@ -1,5 +1,6 @@
 import { prisma } from '../db/prisma.js'
 import { messaging, isPushConfigured } from '../lib/firebase.js'
+import { beginNotificationAttempt, recordNotificationAcceptance, recordNotificationFailure } from './notificationProvenance.js'
 
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms))
 
@@ -11,19 +12,26 @@ async function sendFCM(driverFcmToken, payload) {
     return Math.round(Math.random()) === 1
 }
 
-async function sendPush(driver, { title, body, data = {} }) {
+async function sendPush(driver, { title, body, data = {} }, getMessaging = messaging, provenance = {}) {
     if (!driver?.fcmToken) return false
-    const fcm = messaging()
+    const fcm = getMessaging()
     if (!fcm) {
         console.log(`push -> ${driver.id}: ${title} - ${body} (push not configured)`)
         return false
     }
+    const attempt = await beginNotificationAttempt({
+        provider: 'fcm', channel: 'push', recipient: driver.fcmToken, ...provenance,
+    }).catch(error => { console.error(`push -> ${driver.id}: attempt provenance failed:`, error.message); return null })
     try {
-        await fcm.send({ token: driver.fcmToken, notification: { title, body },
+        const providerMessageId = await fcm.send({ token: driver.fcmToken, notification: { title, body },
             data: Object.fromEntries(Object.entries(data).map(([key, value]) => [key, String(value)])),
             android: { priority: 'high', notification: { channelId: 'default' } } })
+        await recordNotificationAcceptance({ attemptId: attempt?.id, providerMessageId })
+            .catch(error => console.error(`push -> ${driver.id}: provenance failed:`, error.message))
         return true
     } catch (err) {
+        await recordNotificationFailure({ attemptId: attempt?.id, code: err?.code, message: err?.message })
+            .catch(error => console.error(`push -> ${driver.id}: failure provenance failed:`, error.message))
         const dead = err.code === 'messaging/registration-token-not-registered'
             || err.code === 'messaging/invalid-registration-token'
             || err.errorInfo?.code === 'messaging/registration-token-not-registered'
@@ -43,23 +51,37 @@ const recipient = phone => {
     return digits.length === 10 ? `91${digits}` : digits
 }
 const graphVersion = () => process.env.WHATSAPP_API_VERSION || 'v26.0'
+const whatsappProviderMessageId = payload => {
+    const id = payload?.messages?.[0]?.id
+    return typeof id === 'string' && id ? id : null
+}
 
-async function sendWhatsApp(phone, message) {
+async function sendWhatsApp(phone, message, request = fetch, provenance = {}) {
     if (!phone || !process.env.WHATSAPP_PHONE_NUMBER_ID || !process.env.WHATSAPP_ACCESS_TOKEN) {
         console.log(`Message to ${phone}: ${message} (WhatsApp not configured)`)
         return false
     }
     const to = recipient(phone)
+    const attempt = await beginNotificationAttempt({
+        provider: 'whatsapp', channel: 'whatsapp', recipient: to, ...provenance,
+    }).catch(error => { console.error(`WhatsApp -> ${to}: attempt provenance failed:`, error.message); return null })
     try {
-        const response = await fetch(`https://graph.facebook.com/${graphVersion()}/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`, {
+        const response = await request(`https://graph.facebook.com/${graphVersion()}/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`, {
             method: 'POST', headers: { Authorization: `Bearer ${process.env.WHATSAPP_ACCESS_TOKEN}`,
                 'Content-Type': 'application/json' },
             body: JSON.stringify({ messaging_product: 'whatsapp', to, type: 'text',
                 text: { preview_url: true, body: message } }),
         })
         if (!response.ok) throw new Error(`${response.status} ${await response.text()}`)
+        const payload = await response.json().catch(() => null)
+        const providerMessageId = whatsappProviderMessageId(payload)
+        if (!providerMessageId) throw new Error('WhatsApp provider response did not include a message ID')
+        await recordNotificationAcceptance({ attemptId: attempt?.id, providerMessageId }).catch(error =>
+            console.error(`WhatsApp -> ${to}: provenance failed:`, error.message))
         return true
     } catch (err) {
+        await recordNotificationFailure({ attemptId: attempt?.id, message: err?.message })
+            .catch(error => console.error(`WhatsApp -> ${to}: failure provenance failed:`, error.message))
         console.error(`WhatsApp -> ${to} failed:`, err.message)
         return false
     }
@@ -74,14 +96,17 @@ export function whatsappTemplateComponents({ body = [], buttons = [] } = {}) {
     return components
 }
 
-export async function sendWhatsAppTemplate(phone, name, parameters = {}) {
+export async function sendWhatsAppTemplate(phone, name, parameters = {}, request = fetch, provenance = {}) {
     if (!phone || !name || !process.env.WHATSAPP_PHONE_NUMBER_ID || !process.env.WHATSAPP_ACCESS_TOKEN) {
         console.log(`WhatsApp template ${name || '(missing)'} to ${phone || '(missing)'} (not configured)`)
         return false
     }
     const to = recipient(phone)
+    const attempt = await beginNotificationAttempt({
+        provider: 'whatsapp', channel: 'whatsapp', recipient: to, ...provenance,
+    }).catch(error => { console.error(`WhatsApp template ${name} -> ${to}: attempt provenance failed:`, error.message); return null })
     try {
-        const response = await fetch(`https://graph.facebook.com/${graphVersion()}/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`, {
+        const response = await request(`https://graph.facebook.com/${graphVersion()}/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`, {
             method: 'POST', headers: { Authorization: `Bearer ${process.env.WHATSAPP_ACCESS_TOKEN}`,
                 'Content-Type': 'application/json' },
             body: JSON.stringify({ messaging_product: 'whatsapp', to, type: 'template', template: {
@@ -90,8 +115,15 @@ export async function sendWhatsAppTemplate(phone, name, parameters = {}) {
             } }),
         })
         if (!response.ok) throw new Error(`${response.status} ${await response.text()}`)
+        const payload = await response.json().catch(() => null)
+        const providerMessageId = whatsappProviderMessageId(payload)
+        if (!providerMessageId) throw new Error('WhatsApp provider response did not include a message ID')
+        await recordNotificationAcceptance({ attemptId: attempt?.id, providerMessageId }).catch(error =>
+            console.error(`WhatsApp template ${name} -> ${to}: provenance failed:`, error.message))
         return true
     } catch (err) {
+        await recordNotificationFailure({ attemptId: attempt?.id, message: err?.message })
+            .catch(error => console.error(`WhatsApp template ${name} -> ${to}: failure provenance failed:`, error.message))
         console.error(`WhatsApp template ${name} -> ${to} failed:`, err.message)
         return false
     }
@@ -125,12 +157,12 @@ export async function notifyWhatsAppRideStatus(bookingId, event) {
                 booking.vehicleModel ?? driver?.vehicleModel ?? booking.vehicleClass,
                 booking.vehicleNumber ?? driver?.vehicleNumber ?? 'Not available'],
             buttons: [bookingButton(booking.id)],
-        })
+        }, fetch, { bookingId: booking.id, purpose: 'ride_driver_assigned' })
     }
     if (event === 'completed') return sendWhatsAppTemplate(booking.customerPhone,
         process.env.WHATSAPP_TEMPLATE_RIDE_COMPLETED, {
             body: [booking.reference, booking.fare], buttons: [bookingButton(booking.id)],
-        })
+        }, fetch, { bookingId: booking.id, purpose: 'ride_completed' })
     return false
 }
 
@@ -142,7 +174,8 @@ export async function notifyWhatsAppPoolJoined(bookingId) {
     select: { id: true, reference: true, customerPhone: true } })
     await Promise.all(others.map(row => sendWhatsAppTemplate(row.customerPhone,
         process.env.WHATSAPP_TEMPLATE_POOL_JOINED,
-        { body: [row.reference], buttons: [bookingButton(row.id)] })))
+        { body: [row.reference], buttons: [bookingButton(row.id)] }, fetch,
+        { bookingId: row.id, purpose: 'pool_joined' })))
     return others.length > 0
 }
 
@@ -151,15 +184,16 @@ export async function notifyWhatsAppDriverCancelled(bookingId) {
         select: { id: true, reference: true, source: true, customerPhone: true } })
     if (!isWhatsAppBooking(booking)) return false
     return sendWhatsAppTemplate(booking.customerPhone, process.env.WHATSAPP_TEMPLATE_DRIVER_CANCELLED_RIDE,
-        { body: [booking.reference], buttons: [bookingButton(booking.id)] })
+        { body: [booking.reference], buttons: [bookingButton(booking.id)] }, fetch,
+        { bookingId: booking.id, purpose: 'driver_cancelled' })
 }
 
 export async function notifyWhatsAppNoDriver(bookingId) {
     const booking = await prisma.booking.findUnique({ where: { id: bookingId },
-        select: { reference: true, source: true, customerPhone: true } })
+        select: { id: true, reference: true, source: true, customerPhone: true } })
     if (!isWhatsAppBooking(booking)) return false
     return sendWhatsAppTemplate(booking.customerPhone, process.env.WHATSAPP_TEMPLATE_NO_DRIVER_FOUND,
-        { body: [booking.reference] })
+        { body: [booking.reference] }, fetch, { bookingId: booking.id, purpose: 'no_driver_found' })
 }
 
 export async function notifyWhatsAppScheduledPaymentConfirmed(bookingId) {
@@ -172,7 +206,7 @@ export async function notifyWhatsAppScheduledPaymentConfirmed(bookingId) {
             body: [booking.reference, formatPickup(booking.scheduledAt),
                 (booking.scheduledAdvancePaidAmount / 100).toFixed(2), booking.customerPhone],
             buttons: [bookingButton(booking.id)],
-        })
+        }, fetch, { bookingId: booking.id, purpose: 'scheduled_payment_confirmed' })
 }
 
 export async function notifyWhatsAppAdminUnassigned(booking) {
@@ -180,7 +214,8 @@ export async function notifyWhatsAppAdminUnassigned(booking) {
     return sendWhatsAppTemplate(process.env.ADMIN_PHONE,
         process.env.WHATSAPP_TEMPLATE_ADMIN_UNASSIGNED_RIDE, { body: [booking.reference,
             formatPickup(booking.scheduledAt), booking.user?.name ?? 'Customer', booking.customerPhone,
-            booking.pickupAddress, booking.dropAddress] })
+            booking.pickupAddress, booking.dropAddress] }, fetch,
+        { bookingId: booking.id, purpose: 'scheduled_admin_unassigned' })
 }
 
 async function claimReminder(bookingId, field, send) {
@@ -210,7 +245,8 @@ export async function sendScheduledRideReminders(now = new Date()) {
                             booking.dropAddress, booking.driver?.name ?? 'Your driver',
                             booking.driver?.phone ?? 'Not available'],
                         buttons: [bookingButton(booking.id)],
-                    }))
+                    }, fetch, { bookingId: booking.id, purpose: 'scheduled_customer_reminder',
+                        retryKey: `scheduled_customer_reminder:${booking.id}` }))
             if (sent) customer++
         }
         if (!booking.driverReminderSentAt && booking.driver) {
@@ -221,7 +257,8 @@ export async function sendScheduledRideReminders(now = new Date()) {
                             booking.user?.name ?? 'Customer', booking.customerPhone,
                             booking.pickupAddress, booking.dropAddress],
                         buttons: [bookingButton(booking.id)],
-                    }))
+                    }, fetch, { bookingId: booking.id, purpose: 'scheduled_driver_reminder',
+                        retryKey: `scheduled_driver_reminder:${booking.id}` }))
             if (sent) driver++
         }
     }
@@ -229,16 +266,32 @@ export async function sendScheduledRideReminders(now = new Date()) {
 }
 
 async function sendOtpWhatsApp(phone, code) {
-    const response = await fetch(`https://graph.facebook.com/${graphVersion()}/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`, {
-        method: 'POST', headers: { Authorization: `Bearer ${process.env.WHATSAPP_ACCESS_TOKEN}`,
-            'Content-Type': 'application/json' },
-        body: JSON.stringify({ messaging_product: 'whatsapp', to: recipient(phone), type: 'template',
-            template: { name: 'verification_otp', language: { code: 'en_US' }, components: [
-                { type: 'body', parameters: [{ type: 'text', text: code }] },
-                { type: 'button', sub_type: 'url', index: '0', parameters: [{ type: 'text', text: code }] },
-            ] } }),
-    })
-    if (!response.ok) throw new Error(`WhatsApp send failed: ${response.status} ${await response.text()}`)
+    const to = recipient(phone)
+    const attempt = await beginNotificationAttempt({
+        provider: 'whatsapp', channel: 'whatsapp', recipient: to, purpose: 'otp',
+    }).catch(error => { console.error(`WhatsApp OTP -> ${to}: attempt provenance failed:`, error.message); return null })
+    try {
+        const response = await fetch(`https://graph.facebook.com/${graphVersion()}/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`, {
+            method: 'POST', headers: { Authorization: `Bearer ${process.env.WHATSAPP_ACCESS_TOKEN}`,
+                'Content-Type': 'application/json' },
+            body: JSON.stringify({ messaging_product: 'whatsapp', to, type: 'template',
+                template: { name: 'verification_otp', language: { code: 'en_US' }, components: [
+                    { type: 'body', parameters: [{ type: 'text', text: code }] },
+                    { type: 'button', sub_type: 'url', index: '0', parameters: [{ type: 'text', text: code }] },
+                ] } }),
+        })
+        if (!response.ok) throw new Error(`WhatsApp send failed: ${response.status} ${await response.text()}`)
+        const payload = await response.json().catch(() => null)
+        const providerMessageId = whatsappProviderMessageId(payload)
+        if (!providerMessageId) throw new Error('WhatsApp provider response did not include a message ID')
+        await recordNotificationAcceptance({ attemptId: attempt?.id, providerMessageId }).catch(error =>
+            console.error(`WhatsApp OTP -> ${to}: provenance failed:`, error.message))
+    } catch (error) {
+        await recordNotificationFailure({ attemptId: attempt?.id, message: error?.message })
+            .catch(provenanceError =>
+                console.error(`WhatsApp OTP -> ${to}: failure provenance failed:`, provenanceError.message))
+        throw error
+    }
 }
 
 export { sendFCM, sendPush, sendWhatsApp, sendOtpWhatsApp, isPushConfigured }

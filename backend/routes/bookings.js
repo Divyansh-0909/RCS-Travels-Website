@@ -1,6 +1,9 @@
 import { Router } from 'express'
 import { protect } from '../middleware/auth.js'
 import { markNoDriver, ASSIGNMENT_DEADLINE_MS } from '../services/driverAssignment.js'
+import { startAssignment } from '../services/driverAssignment.js'
+import { driverDelayEligibleAt, isDriverDelayed } from '../services/driverDelay.js'
+import { cancelCustomerWithEvidenceInTransaction, requestLateDriverRecoveryInTransaction } from '../services/customerLifecycleIncidents.js'
 import { sendPush } from '../services/notification.js'
 import { prisma } from '../db/prisma.js'
 import { verifyQuote } from '../services/fareQuote.js'
@@ -9,12 +12,15 @@ import { VEHICLE_CLASS_NAMES, isVehicleClass } from '../constants/vehicles.js'
 import { normalizeReference } from '../lib/bookingReference.js'
 import { signedRiderPhotoUrl } from '../services/driverPhoto.js'
 import { ensureBookingShareLink } from '../lib/shareLink.js'
-import { getNavigationEtaMinutes, getNavigationRoute } from '../services/rideEstimate.js'
-import { applyComplaintConsequences } from '../services/complaints.js'
-import { createOrderForPayment, refundPayment, PaymentError } from '../services/payments.js'
+import { getNavigationEtaMinutes, getNavigationRoute, getCachedNavigationRoute } from '../services/rideEstimate.js'
+import {
+    routeObservationData,
+    ROUTE_OBSERVATION_EVENT,
+} from '../services/routeProvenance.js'
+import { summarizeComplaintIncident } from '../services/complaints.js'
+import { createOrderForPayment, refundPayment, refundScheduledCancellationAdvance, PaymentError } from '../services/payments.js'
 import { createScheduledFinalIntent } from '../services/scheduledPayments.js'
-import { freshLocationWithinPickup } from '../services/rideGeofence.js'
-import { applyCustomerCancellation } from '../services/customerCancellation.js'
+import { cancellationLocationDecision } from '../services/cancellationLocationEvidence.js'
 import { createBookingFromQuote, BookingCreationError } from '../services/bookingCreation.js'
 import { nearbyDriverAvailability, nearbyDriverEta } from '../services/nearbyDrivers.js'
 import { driverLocationVisibleToRider } from '../services/riderDriverLocation.js'
@@ -22,9 +28,16 @@ import { assignmentWindowStartedAt } from '../services/driverCancellations.js'
 import { paymentWriteLimiter } from '../middleware/rateLimit.js'
 import { recentBookingHistoryWhere } from '../lib/bookingHistory.js'
 import {
+  CANCELLATION_CHARGE_PCT,
+  customerCancellationChargePaise,
+  isValidCustomerCancellationReason,
+} from '../services/cancellationPolicy.js'
+import {
   createRideNowFinalIntent,
+  driverPayoutUpiIsVerified,
   recordRideNowCashPayment,
   recordScheduledFinalCashPayment,
+  requireVerifiedDriverPayoutUpi,
   RidePaymentError,
   ridePaymentView,
 } from '../services/ridePayments.ts'
@@ -38,16 +51,10 @@ const LIVE_NAVIGATION_BUDGET_MS = 2_500
 /** @type {import('@prisma/client').BookingStatus[]} */
 export const ACTIVE_STATUSES = ['pending', 'payment_pending', 'confirmed', 'assigned', 'en_route', 'reached', 'started']
 
-// Cancelling when the driver is physically within 500 m of pickup costs the paid
-// 15% advance. The driver need not tap `reached`: a fresh live position proves
-// the trip to pickup was made. A stale position never creates a charge.
+// A scheduled cancellation can become chargeable only once the driver is physically
+// within 500 m of pickup. The driver need not tap `reached`: a fresh live position
+// proves the trip to pickup was made. A stale position never creates a charge.
 // A ride already underway can't be self-cancelled; that's a support conversation.
-//
-// 15 FROM 35, 14 Aug 2026, Raju's number. The old figure was never his — it came
-// in with the cancellation rule itself and nobody had priced it since. Kept in
-// step with the copy in frontend/src/constants/fares.js, which is what warns the
-// rider before she taps: the two disagreeing means quoting one number and taking
-// another.
 // A ride worth following: one that is going to happen, or is happening. `pending`
 // is out because the search may still end in no_driver, and a link that never
 // resolves into anything is worse than no link. The terminal statuses are out
@@ -57,21 +64,40 @@ const SHAREABLE_STATUSES = ['confirmed', 'assigned', 'en_route', 'reached', 'sta
 
 const CANCELLABLE_STATUSES = ['pending', 'payment_pending', 'confirmed', 'assigned', 'en_route', 'reached']
 const CHARGEABLE_STATUSES = ['reached']
-export const CANCELLATION_CHARGE_PCT = 15
+export { CANCELLATION_CHARGE_PCT }
+
+bookingsRouter.post('/:id/request-reassignment', protect, async (req, res) => {
+  const user = await prisma.user.findUnique({ where: { clerkId: req.auth.userId } })
+  if (!user) return res.status(401).json({ error: 'User not found' })
+
+  const booking = await prisma.booking.findUnique({
+    where: { id: req.params.id },
+    include: { driver: true },
+  })
+  if (!booking || booking.userId !== user.id) return res.status(404).json({ error: 'Booking not found' })
+
+  if (!isDriverDelayed(booking) || !booking.driverId || !booking.driver) {
+    return res.status(400).json({ error: 'Reassignment is not available yet' })
+  }
+
+  const returnedStatus = booking.scheduledAt ? 'confirmed' : 'pending'
+  const reassigned = await prisma.$transaction(tx => requestLateDriverRecoveryInTransaction(tx, booking))
+
+  if (!reassigned) return res.status(409).json({ error: 'The ride assignment changed. Please refresh.' })
+
+  startAssignment(booking.id).catch((err) => console.error('Reassignment failed:', err.message))
+  return res.json({ status: returnedStatus })
+})
 
 export const driverIsAtPickup = (booking, now = Date.now()) => {
   if (CHARGEABLE_STATUSES.includes(booking.status)) return true
-  return freshLocationWithinPickup(booking.driver?.location,
-    { lat: booking.pickupLat, lng: booking.pickupLng }, now)
+  return cancellationLocationDecision(booking, now).driverAtPickup
 }
 
 // What cancelling would cost right now. Exported so the status endpoint can warn
 // the rider with the same number the cancel endpoint will actually charge.
-export const cancellationChargeFor = (booking) =>
-  booking.scheduledAt && booking.driverId && booking.scheduledAdvancePaidAmount > 0 &&
-    driverIsAtPickup(booking)
-    ? booking.scheduledAdvancePaidAmount / 100
-    : 0
+export const cancellationChargeFor = (booking, reason = null) =>
+  customerCancellationChargePaise({ booking, driverAtPickup: driverIsAtPickup(booking), reason }) / 100
 
 const normAddress = (s) => s?.trim().toLowerCase()
 
@@ -257,9 +283,17 @@ bookingsRouter.post('/:id/scheduled-final/order', protect, paymentWriteLimiter, 
     return res.status(409).json({ error: 'Final payment is available only after a scheduled ride completes' })
   if (owned.booking.scheduledAdvancePaidAmount !== owned.booking.scheduledAdvanceAmount)
     return res.status(409).json({ error: 'Scheduled advance has not been paid' })
-  const payment = await prisma.$transaction((tx) => createScheduledFinalIntent(tx, owned.booking))
-  try { return res.json(await createOrderForPayment({ paymentId: payment.id, userId: owned.user.id })) }
-  catch (err) { if (err instanceof PaymentError) return res.status(err.status).json({ error: err.message, code: err.code }); throw err }
+  try {
+    const payment = await prisma.$transaction(async (tx) => {
+      await requireVerifiedDriverPayoutUpi(tx, owned.booking)
+      return createScheduledFinalIntent(tx, owned.booking)
+    })
+    return res.json(await createOrderForPayment({ paymentId: payment.id, userId: owned.user.id }))
+  } catch (error) {
+    if (answerRidePaymentError(res, error)) return
+    if (error instanceof PaymentError) return res.status(error.status).json({ error: error.message, code: error.code })
+    throw error
+  }
 })
 
 bookingsRouter.post('/:id/scheduled-final/cash', protect, paymentWriteLimiter, async (req, res) => {
@@ -383,7 +417,12 @@ bookingsRouter.get('/:id/status', protect, async (req, res) => {
 
   const cancellationCharge = cancellationChargeFor({ ...booking, status })
 
+  const delayBooking = { ...booking, status }
+  const driverDelayed = isDriverDelayed(delayBooking)
+  const delayEligibleAt = driverDelayEligibleAt(delayBooking)
+
   const paymentSummary = booking.scheduledAt ? {
+    advancePercentage: booking.scheduledAdvancePct,
     fare: Math.round(booking.fare * 100), coupon: Math.round(booking.couponAmount * 100),
     finalFare: Math.round(booking.customerPayment * 100), advance: booking.scheduledAdvanceAmount,
     advancePaid: booking.scheduledAdvancePaidAmount, remaining: booking.scheduledRemainingAmount,
@@ -392,7 +431,10 @@ bookingsRouter.get('/:id/status', protect, async (req, res) => {
     payments: booking.payments,
   } : null
 
-  const ridePayment = ridePaymentView(booking)
+  const ridePayment = {
+    ...ridePaymentView(booking),
+    upiAvailable: driverPayoutUpiIsVerified(booking.driver),
+  }
 
   // A tracking URL must be self-contained. Riders can return from My rides,
   // reload, or open the link in a new tab where the booking-form store is empty.
@@ -415,7 +457,7 @@ bookingsRouter.get('/:id/status', protect, async (req, res) => {
     preferSafeRoute: booking.preferSafeRoute,
   }
 
-  if (!booking.driverId) return res.json({ bookingId: booking.id, reference: booking.reference, bookingCode: user.bookingCode, status, scheduledAt: booking.scheduledAt, cancellationCharge, financials: paymentSummary, ridePayment, driverCancellation, ...trip, driver: null })
+  if (!booking.driverId) return res.json({ bookingId: booking.id, reference: booking.reference, bookingCode: user.bookingCode, status, scheduledAt: booking.scheduledAt, cancellationCharge, financials: paymentSummary, ridePayment, driverCancellation, driverDelayed: false, canRequestAnotherDriver: false, expectedPickupAt: null, driverDelayEligibleAt: null, ...trip, driver: null })
 
   const location = driverLocationVisibleToRider({ status, scheduledAt: booking.scheduledAt })
     ? booking.driver.location
@@ -462,6 +504,10 @@ bookingsRouter.get('/:id/status', protect, async (req, res) => {
     financials: paymentSummary,
     ridePayment,
     driverCancellation,
+    driverDelayed,
+    canRequestAnotherDriver: driverDelayed,
+    expectedPickupAt: booking.expectedPickupAt,
+    driverDelayEligibleAt: delayEligibleAt,
     navigationEtaMinutes,
     navigationPolyline,
     fare: booking.fare,
@@ -516,8 +562,8 @@ bookingsRouter.get('/:id/status', protect, async (req, res) => {
   })
 })
 
-// One complaint per completed booking. The flag, threshold fine and suspension
-// are committed together; deterministic wallet keys make retries harmless.
+// One complaint per completed booking. The complaint is factual history only;
+// responsibility consequences require a later FINAL_UPHELD adjudication.
 bookingsRouter.post('/:id/complaint', protect, async (req, res) => {
   const parsed = rideComplaintSchema.safeParse(req.body)
   if (!parsed.success) return res.status(400).json({ error: 'Choose at least one valid complaint reason', issues: parsed.error.issues })
@@ -533,14 +579,17 @@ bookingsRouter.post('/:id/complaint', protect, async (req, res) => {
     const inserted = await tx.rideComplaint.createMany({ data: [{ bookingId: booking.id, driverId: booking.driverId,
       userId: user.id, reasons: parsed.data.reasons }], skipDuplicates: true })
     if (!inserted.count) await tx.rideComplaint.update({ where: { bookingId: booking.id }, data: { reasons: parsed.data.reasons } })
-    return applyComplaintConsequences(tx, booking.driverId, { newComplaint: inserted.count === 1 })
+    return summarizeComplaintIncident(tx, booking.driverId)
   })
   return res.json({ bookingId: booking.id, ...result })
 })
 
 bookingsRouter.post('/cancel', protect, async (req, res) => {
-    const { bookingId, expectedCancellationCharge } = req.body
+    const { bookingId, expectedCancellationCharge, cancellationReason = null } = req.body
     if (!bookingId) return res.status(400).json({ error: 'bookingId is required' })
+    if (cancellationReason !== null && !isValidCustomerCancellationReason(cancellationReason)) {
+        return res.status(400).json({ error: 'Unknown cancellation reason', code: 'INVALID_CANCELLATION_REASON' })
+    }
 
     const user = await prisma.user.findUnique({ where: { clerkId: req.auth.userId } })
     if (!user) return res.status(401).json({ error: 'User not found' })
@@ -555,8 +604,18 @@ bookingsRouter.post('/cancel', protect, async (req, res) => {
         if (booking.scheduledAdvanceDisposition === 'refund_pending' && advancePayment) {
             try { refund = await refundPayment({ paymentId: advancePayment.id }) }
             catch (err) { if (!(err instanceof PaymentError)) throw err }
+        } else if (booking.scheduledAdvanceDisposition === 'partial_refund_pending' && advancePayment) {
+            const partialAmount = advancePayment.cancellationRefundAmount ?? Math.max(
+                0,
+                booking.scheduledAdvancePaidAmount - Math.round((booking.cancellationCharge ?? 0) * 100),
+            )
+            if (partialAmount > 0 && partialAmount < advancePayment.amount) {
+                try { refund = await refundScheduledCancellationAdvance({ paymentId: advancePayment.id, amount: partialAmount }) }
+                catch (err) { if (!(err instanceof PaymentError)) throw err }
+            }
         }
         return res.json({ ok: true, alreadyApplied: true, cancellationCharge: booking.cancellationCharge ?? 0,
+            cancellationReason: booking.cancellationReason ?? null,
             advanceDisposition: booking.scheduledAdvanceDisposition, refund })
     }
     if (!CANCELLABLE_STATUSES.includes(booking.status))
@@ -565,9 +624,19 @@ bookingsRouter.post('/cancel', protect, async (req, res) => {
         return res.status(400).json({ error: 'Confirm the current cancellation amount before cancelling', code: 'CANCELLATION_CONFIRMATION_REQUIRED' })
 
     const advancePaid = advancePayment?.status === 'captured' && booking.scheduledAdvancePaidAmount > 0
-    const shouldForfeit = advancePaid && Boolean(booking.driverId) && driverIsAtPickup(booking)
-    const shouldRefund = advancePaid && !shouldForfeit
-    const cancellationCharge = shouldForfeit ? booking.scheduledAdvancePaidAmount / 100 : 0
+    const cancellationLocation = cancellationLocationDecision(booking)
+    const cancellationChargePaise = advancePaid
+        ? customerCancellationChargePaise({ booking, driverAtPickup: cancellationLocation.driverAtPickup, reason: cancellationReason })
+        : 0
+    const cancellationCharge = cancellationChargePaise / 100
+    const partialRefundAmount = advancePaid ? Math.max(0, booking.scheduledAdvancePaidAmount - cancellationChargePaise) : 0
+    const advanceDisposition = !advancePaid
+        ? null
+        : cancellationChargePaise === 0
+            ? 'refund_pending'
+            : partialRefundAmount > 0
+                ? 'partial_refund_pending'
+                : 'forfeited_to_driver'
 
     // The driver can cross the 500 m boundary between rendering and tapping.
     // Refuse a different amount instead of silently taking money the confirmation did
@@ -580,17 +649,39 @@ bookingsRouter.post('/cancel', protect, async (req, res) => {
         })
     }
 
-    const cancelled = await applyCustomerCancellation({
-        booking,
-        cancellationCharge,
-        shouldRefund,
-        shouldForfeit,
+    // Do not request a route as part of cancellation. A cache hit is evidence of
+    // the route already available to this service at this instant; an absent or
+    // stale cache remains absent rather than becoming a post-hoc reconstruction.
+    const cancellationRoute = booking.status === 'en_route' && booking.driver?.location
+        ? getCachedNavigationRoute({
+            cacheKey: `${booking.id}:pickup`,
+            origin: { lat: booking.driver.location.latitude, lng: booking.driver.location.longitude },
+        })
+        : null
+    const cancellationRouteObservation = routeObservationData({
+        bookingId: booking.id,
+        event: ROUTE_OBSERVATION_EVENT.RIDER_CANCELLED,
+        route: cancellationRoute,
     })
+
+    // The cached route was observed before this transaction; persist that exact
+    // fact with the cancellation or persist neither. Do not reconstruct a route
+    // after cancellation when the cache is absent.
+    const cancelled = await prisma.$transaction(tx => cancelCustomerWithEvidenceInTransaction(tx, {
+            booking,
+            cancellationCharge,
+            cancellationReason,
+            advanceDisposition,
+        }, { location: cancellationLocation, route: cancellationRouteObservation }))
 
     if (!cancelled) return res.status(409).json({ error: 'Booking changed while cancellation was in flight' })
 
     let refund = null
-    if (shouldRefund && advancePayment) refund = await refundPayment({ paymentId: advancePayment.id })
+    if (advancePayment && advanceDisposition === 'refund_pending') {
+        refund = await refundPayment({ paymentId: advancePayment.id })
+    } else if (advancePayment && advanceDisposition === 'partial_refund_pending') {
+        refund = await refundScheduledCancellationAdvance({ paymentId: advancePayment.id, amount: partialRefundAmount })
+    }
 
     if (booking.driver) {
         // The ride's reference, not the rider's bookingCode. This line is trying to
@@ -605,8 +696,8 @@ bookingsRouter.post('/cancel', protect, async (req, res) => {
         })
     }
 
-    return res.json({ ok: true, cancellationCharge,
-        advanceDisposition: shouldRefund ? 'refund_pending' : shouldForfeit ? 'forfeited_to_driver' : booking.scheduledAdvanceDisposition,
+    return res.json({ ok: true, cancellationCharge, cancellationReason,
+        advanceDisposition: advanceDisposition ?? booking.scheduledAdvanceDisposition,
         refund })
 })
 
