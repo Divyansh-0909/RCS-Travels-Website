@@ -1,0 +1,15 @@
+import {readFile,writeFile} from 'node:fs/promises';
+import {spawn} from 'node:child_process';
+import {join,resolve} from 'node:path';
+import {tmpdir} from 'node:os';
+import {hash} from './baseline.mjs';
+import assert from 'node:assert/strict';
+const out=resolve('output/phase9d-audit-custody-2026-10-14'),scope=['protocol','session','delivery','service'].map(n=>'tools/phase9d/custody-'+n+'.mjs');
+const round=process.argv[2];assert.ok(round===undefined||/^[2-9]$/.test(round));const suffix=round?'-round'+round:'';
+const config='tools/phase9d/custody'+(round?'-round'+round:'')+'-stryker.config.mjs';
+const sources=Object.fromEntries(await Promise.all([...scope,'backend/tests/phase9dCustody.test.js',config].map(async f=>[f,hash(await readFile(f))])));
+const cli=join(tmpdir(),'rcs-phase1-quality-tools/node_modules/@stryker-mutator/core/bin/stryker.js');
+const started=new Date().toISOString(),child=spawn(process.execPath,[cli,'run',config],{cwd:resolve('.'),windowsHide:true,stdio:['ignore','pipe','pipe']});let log='';
+child.stdout.on('data',b=>{log+=b;});child.stderr.on('data',b=>{log+=b;});
+const code=await new Promise((ok,fail)=>{child.once('close',ok);child.once('error',fail);});await writeFile(join(out,'mutation'+suffix+'-run.log'),log,{flag:'wx'});
+await writeFile(join(out,'mutation'+suffix+'-execution.json'),JSON.stringify({started,finished:new Date().toISOString(),code,sources,logSha256:hash(log)},null,2),{flag:'wx'});process.exitCode=code;console.log(JSON.stringify({code}));

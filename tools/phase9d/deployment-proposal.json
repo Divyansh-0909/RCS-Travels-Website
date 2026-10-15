@@ -1,0 +1,123 @@
+{
+  "schema": "phase9d-unapplied-deployment-proposal-v1",
+  "executable": false,
+  "activationAuthorized": false,
+  "shadowEnabled": false,
+  "topology": {
+    "capture": {
+      "identity": "dedicated-capture",
+      "allowed": [
+        "Read only approved incident export from existing collectors",
+        "Minimize and sign provenance",
+        "Execute shadow9d.enqueue"
+      ],
+      "denied": [
+        "Model providers",
+        "Finality and consequences",
+        "Shadow result updates"
+      ],
+      "secrets": [
+        "Capture-only pseudonym key",
+        "Dedicated capture DB login"
+      ]
+    },
+    "worker": {
+      "identity": "dedicated-shadow-worker",
+      "allowed": [
+        "Execute shadow9d.claim/permit/complete/fail",
+        "Offline analyst during this phase"
+      ],
+      "denied": [
+        "Application DATABASE_URL/DIRECT_URL",
+        "Clerk secrets",
+        "Payment/payout keys",
+        "Scheduler invoker/token-creator permissions",
+        "Policy/admin writes",
+        "App .env/filesystem mounts",
+        "Audit update/delete"
+      ],
+      "secrets": [
+        "Dedicated worker DB login only"
+      ]
+    },
+    "broker": {
+      "identity": "dedicated-analyst-broker",
+      "status": "NOT_IMPLEMENTED",
+      "futureAllowed": [
+        "Approved provider only under an atomic request budget and stop epoch"
+      ],
+      "denied": [
+        "Business DB",
+        "Financial credentials",
+        "Admin internal endpoint"
+      ],
+      "secrets": [
+        "Provider key after separate owner authorization"
+      ],
+      "callsNow": "OFF"
+    },
+    "operations": {
+      "identity": "dedicated-operations",
+      "allowed": [
+        "Stop/resume epoch",
+        "Approved deletion request"
+      ],
+      "denied": [
+        "Model requests",
+        "Financial consequences",
+        "Audit overwrite"
+      ],
+      "secrets": [
+        "Dedicated operations DB login"
+      ]
+    },
+    "inspector": {
+      "identity": "role-and-object-authorized-human-admin",
+      "allowed": [
+        "Redacted case and audit reads"
+      ],
+      "secrets": [
+        "Existing Clerk verification in API; dedicated DB inspector credential in broker API only"
+      ]
+    },
+    "audit": {
+      "identity": "independent-audit-custodian",
+      "status": "DESIGNED_NOT_VERIFIED",
+      "allowed": [
+        "Append from independently authenticated capture/broker/ops/security supervisors",
+        "Replicate minimal events to an independent immutable destination"
+      ],
+      "denied": [
+        "Worker updates/deletes",
+        "Worker audit destination administration"
+      ]
+    },
+    "humanFinality": {
+      "identity": "existing-authorized-review-and-consequence-services",
+      "separateFromWorker": true,
+      "changesAuthorized": false
+    }
+  },
+  "requiredDeploymentControls": [
+    "Whitelist worker image sources; do not ship or mount app .env or cloud/payment credentials",
+    "Dedicated service account without run.invoker on the operative API and without service-account token creation",
+    "Private ingress and default-deny egress except approved DB and future independent broker",
+    "Dedicated DB login with no owner/superuser/bypassrls/role membership",
+    "Do not apply rehearsal SQL to production: it revokes disposable public defaults and uses a controlled test clock",
+    "Replace controlled SQL now_at with reviewed server-clock mechanism and reverify concurrency",
+    "Apply deployment-specific PUBLIC/default grants and inspect all security-definer routines/extensions",
+    "Independent failed-SQL/server audit delivery before worker activation",
+    "Provider request budget, cost ceilings and timeout enforced outside worker",
+    "Prove secret access denial under actual deployed IAM and filesystem",
+    "Owner/legal privacy, notice/provider disclosure and retention review",
+    "Separate explicit owner approval for any deployment or activation"
+  ],
+  "rollback": [
+    "Commit database stop epoch first",
+    "Disable broker/new scheduling; retain incident observations in the existing operational journal",
+    "Deny new worker logins and independently terminate worker-only connections if needed",
+    "Wait or reconcile already admitted broker requests; discard late responses",
+    "Reconcile leased work before controlled resume; retain prior results and audit",
+    "Never describe kill switch as rollback of prior committed work"
+  ]
+}
