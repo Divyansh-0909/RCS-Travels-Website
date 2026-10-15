@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "should_notify",
+    "severity",
+    "message",
+    "should_continue",
+    "continuation_reason"
+  ],
+  "properties": {
+    "should_notify": { "type": "boolean" },
+    "severity": {
+      "type": "string",
+      "enum": ["info", "warning", "critical"]
+    },
+    "message": { "type": "string", "maxLength": 700 },
+    "should_continue": { "type": "boolean" },
+    "continuation_reason": { "type": "string", "maxLength": 700 }
+  }
+}

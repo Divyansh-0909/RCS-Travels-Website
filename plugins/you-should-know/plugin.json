@@ -1,0 +1,23 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "you-should-know",
+  "version": "0.1.0",
+  "description": "Reviews completed Codex turns and surfaces important caveats, failures, skipped work, and hidden limitations.",
+  "author": {
+    "name": "RCS Travels"
+  },
+  "extensions": {
+    "com.openai": {
+      "hooks": "./hooks/hooks.json",
+      "interface": {
+        "displayName": "You Should Know",
+        "shortDescription": "Catch details Codex missed",
+        "longDescription": "Reviews Codex tool results and final answers, then surfaces important failures, skipped checks, assumptions, and limitations as a concise warning.",
+        "developerName": "RCS Travels",
+        "category": "Developer Tools",
+        "capabilities": ["Interactive"],
+        "defaultPrompt": "Review my Codex work and surface anything important I might miss."
+      }
+    }
+  }
+}

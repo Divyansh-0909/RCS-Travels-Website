@@ -1,0 +1,30 @@
+{
+  "description": "Collect noteworthy tool outcomes and review each completed Codex turn.",
+  "hooks": {
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${PLUGIN_ROOT}/hooks/post-tool-use.mjs\"",
+            "commandWindows": "powershell.exe -NoProfile -Command \"node (Join-Path $env:PLUGIN_ROOT 'hooks/post-tool-use.mjs')\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${PLUGIN_ROOT}/hooks/stop.mjs\"",
+            "commandWindows": "powershell.exe -NoProfile -Command \"node (Join-Path $env:PLUGIN_ROOT 'hooks/stop.mjs')\"",
+            "timeout": 35,
+            "statusMessage": "Checking what you should know"
+          }
+        ]
+      }
+    ]
+  }
+}
