@@ -29,6 +29,8 @@ pnpm-debug.log*
 # Environment Variables
 # =========================
 .env
+/dns-backup.json
+/.dns-email-state/
 .env.*
 !.env.example
 
@@ -49,6 +51,9 @@ prisma/*.db-journal
 # ...but Prisma migrations ARE source. Without them `prisma migrate deploy`
 # has nothing to apply and a deployed DB silently never gets schema changes.
 !backend/prisma/migrations/**/*.sql
+!backend/rcs-rag/sql/enable-pgvector.sql
+# Reviewed Phase 9D schema modules are source, not database dumps.
+!tools/phase9d/*.sql
 
 # =========================
 # Sessions / Temp Files
@@ -84,6 +89,10 @@ Thumbs.db
 # =========================
 # Runtime Files
 # =========================
+# Local execution evidence may contain credentials or private observations.
+/output/
+/backend/tests/quality/phase45-measure-pre.err
+/backend/tests/quality/phase45-measure-post.err
 pids
 *.pid
 *.seed

@@ -1,20 +1,253 @@
+# Latest Phase 9D-1 audit custody checkpoint ? 14 October 2026
+Bounded committed broker-event custody VERIFIED_IN_ISOLATION: separate PostgreSQL server, signed receipts, selected denials and recovery witnesses.
+Active checkpoint: docs/benchmarks/phase9d-1-audit-custody-checkpoint-2026-10-14.md
+Current evidence: output/phase9d-audit-custody-2026-10-14/manifest.json
+Overall Phase 9D-1 and independent audit custody remain PARTIAL; production OFF. Earlier checkpoints and their source epochs remain preserved below.
+
 RCS TRAVELS — PROJECT ROADMAP
+Latest recovery closure: requested bounded offline accounting/operations/recovery scope VERIFIED_IN_ISOLATION. Current evidence: output/phase9d-broker-recovery-2026-10-14/manifest.json. Overall Phase 9D-1 remains PARTIAL; production OFF.
 ===============================
 
 IMPORTANT:
+- [PHASE 9D-1 ISOLATED CONTAINMENT CONTINUATION — 13 Oct 2026]
+  docs/benchmarks/phase9d-broker-recovery-checkpoint-2026-10-14.md is active.
+  Recovery evidence: output/phase9d-broker-recovery-2026-10-14/manifest.json.
+  Signed offline usage, CAS operations/cleanup and actual DB restart verified.
+  Backend 1829/1829; recovery units 5/5 and DB/process 28/28; closure 27/27;
+  exact observation admission 1/1; independent saved replay PASS.
+  Three critical modules 100% coverage; 192 mutations: 191 killed/one equivalent.
+  Requested bounded race/backlog/terminal matrix and independent review pass;
+  restricted broker/guard/reconciler containers pass; production OFF.
+  Supported offline broker: actual separate broker/guard processes and roles,
+  durable request/attempt/token/currency reservations, UNKNOWN usage retention,
+  pinned configuration, SQL generation/lease dispatch and independent result
+  fencing. Evidence: output/phase9d-broker-2026-10-13/manifest.json.
+  Accepted preceding broker epoch: backend 1824/1824; units 9/9; DB/process 19/19; independent
+  saved-input replay PASS. Six critical modules 100% coverage; 358 framework
+  identities, 354 killed/four executable equivalents, no meaningful survivors.
+  Whole-SQL certification, broader orchestration quality and production readiness remain
+  open; supported offline broker VERIFIED_IN_ISOLATION / Phase 9D-1 PARTIAL, production OFF.
+  The following transport/outbox figures retain their earlier checkpoint scope.
+  New isolated HTTP transport: distinct sender/receiver processes and databases,
+  signed durable receipts, uncertainty reconciliation, source/generation/lease
+  acknowledgement checks, real crash/restart and restricted-container witnesses.
+  Evidence: output/phase9d-transport-2026-10-13/manifest.json.
+  At-least-once attempts with durable receiver deduplication; no cross-database
+  atomicity/global stop claim. Standalone broker and durable token/currency/
+  unknown-usage reservations remain NOT_IMPLEMENTED. Next: isolated broker.
+  Current transport epoch: backend 1815/1815; transport DB 15/15; units 11/11
+  PASS; seven runtime modules 100% coverage; 514 framework identities,
+  508 killed and six executable reviewed equivalents; saved-input replay PASS.
+  The original outbox/SQL figures below retain their historical acceptance scope.
+  The earlier SQL-certification checkpoint remains preserved.
+  Shared Clerk request-admission revocation is the accepted baseline, unchanged.
+  Dedicated SQL principals, corrected worker admission/calendar validation and
+  restricted Docker execution have VERIFIED_IN_ISOLATION evidence and repeats.
+  Retired fixture loopback trust is reproduced; current TCP HBA uses SCRAM and
+  random, separate credentials. No production role/permission change was made.
+  Native critical PL/pgSQL: 102/102 statements and 47/47 branches; 26/26 selected
+  SQL/DDL mutants killed. Isolated default privileges and duplicate binding fixed.
+  Current-policy historical downstream regressions run; broader DB 58/58 PASS.
+  Original failures/sources retained. Original outbox epoch backend 1804/1804 PASS.
+  Bounded inactive outbox: committed journal lineage, durable leases/retries,
+  duplicate/stop/cleanup fencing, actual process restart, frozen offline guarded
+  result and restricted SQL inspection are VERIFIED_IN_ISOLATION.
+  Outbox DB 21/21; six runtime modules 100% coverage; 236 mutation identities,
+  235 killed and one reviewed equivalent. One bounded saved-input replay matches.
+  Phase 9D-1 PARTIAL; whole-SQL quality,
+  production outbox/broker/external audit, capacity/monitoring, privacy/calibration
+  approvals, in-flight authorization and deployed grants/IAM remain gates.
+  PRODUCTION_READY NO; Phase 9D-2 NOT STARTED; deployment NOT AUTHORIZED.
+  Shadow, auto-adjudication, consequences and Search rollout OFF.
+  Frozen V5/22 identities unchanged; no held-out/live model or real-incident calls.
+  Evidence: output/phase9d-outbox-broker-2026-10-13/manifest.json.
+  Original accepted delivery adapter shares the receiver database; distributed transport
+  and production clock/startup remain open. Standalone broker NOT_IMPLEMENTED.
+  Next authorized isolated implementation: narrow offline broker protocol,
+  durable request/token/currency/concurrency budgets, independent deadline and
+  atomic stop/dispatch/result fencing. External custody/capacity remain later gates.
+- [PHASE 9C ADVERSARIAL ACCEPTANCE CLOSURE — 12 Oct 2026]
+  docs/benchmarks/phase9c-adversarial-checkpoint-2026-10-12.md preserves the historical checkpoint.
+  The following findings predate the uniform session-revocation remediation.
+  Phase 9C COMPLETE for approved supported isolated customer/captain/admin scope.
+  Final 26-row matrix traces R9-02–04 to actual races, session/quote safety,
+  native permission/restart recovery, original-driver appeal and admin processing.
+  Automatic captured failure launches controlled backend reproduction and matching
+  native recipe; exact saved-input OS/UI replay remains unimplemented.
+  Live Clerk revocation verified: SDK/navigation loses session; cached JWT remains
+  valid until actual 60-second expiry. Hardware/background GPS and external navigation
+  remain external device boundaries. No new production authentication policy added.
+  Backend 1755/1755; critical scope 100%; 382 mutations, 378 killed/four equivalents.
+  Phone awake restored 2 → 0, test app stopped, permissions denied, zero reverses.
+  Phase 9D NOT STARTED; production shadow/adjudication/consequences/Search rollout OFF.
+  Project-wide implementation/public generalization NOT STARTED. Phase 8.2 retired.
+- [PHASE 9C CROSS-APPLICATION CONTINUATION — 11 Oct 2026]
+  docs/benchmarks/phase9c-cross-application-checkpoint-2026-10-11.md preserves the historical checkpoint.
+  Actual customer form/capture, native original/replacement captains, customer refund
+  and admin human review pass in two fresh processes. Separate physical synthetic
+  GPS/OTP/completion and mobile cash journeys pass twice with saved financial audits.
+  Mobile submission/payment-order-failure/retry/late capture/foreign-access evidence
+  passes, including an independent repeat and safe unknown-outcome fallback.
+  Native rejection/escalation also passes twice with one accepting owner hold/return.
+  Phone stay-awake restored to 0, test permissions denied, zero USB reverses.
+  Phase 9C remains PARTIAL.
+  Backend 1733/1733; 13 complete helpers at 100% coverage; 847 unique mutations,
+  834 killed/13 executable equivalents, zero unresolved timeouts. Frozen V5 unchanged.
+  SDK-only test Maps approved and rendered; positions synthetic. Broader native
+  cases and exact saved-input UI replay remain open. Phase 9D NOT STARTED.
+  Production shadow, auto-adjudication, consequences and Search rollout OFF.
+- [PHASE 9C PHYSICAL ANDROID CAPTAIN SLICE — 10 Oct 2026]
+  docs/benchmarks/phase9c-android-device-checkpoint-2026-10-10.md preserves the historical checkpoint.
+  Native setup COMPLETE; actual captain failure/expiry/Notifications retry/cancellation
+  PASS in two selected fresh processes, exit 0 each. One owner/₹100 reservation,
+  retained hold, immutable incident and guarded admin-review route verified.
+  Backend 1693/1693; native safety units 22/22; nine modules 100% scoped coverage.
+  Mutation: 644 identities, 629 killed, 15 reviewed equivalents; zero meaningful
+  survivors/timeouts/ignored/errors. Source-bound artifacts select actual runs.
+  USB awake 0 → 2 → 0 restored. Maps/GPS/OTP/onboarding, broader native/cross-role
+  journeys and exact saved-input UI replay remain. Phase 9C PARTIAL; 9D NOT STARTED.
+  Responsibility 1–7 VERIFIED; Phase 8 COMPLETE; 8.2 RETIRED — NO RECOVERED SCOPE.
+  Frozen V5 unchanged; held-out/Luna/Search/Hinglish evaluations not resumed.
+  Production shadow/auto-adjudication/consequences/Search rollout OFF; project-wide
+  Proofloop/public generalization NOT STARTED. No production activation permission.
+
+- [PHASE 9C AUTHENTICATED BROWSER SLICE — 10 Oct 2026]
+  docs/benchmarks/phase9c-authenticated-ui-checkpoint-2026-10-10.md preserves the historical
+  browser checkpoint; the following findings describe the state before Android setup.
+  Responsibility 1–7 VERIFIED; Phase 8 COMPLETE; 8.2 RETIRED — NO RECOVERED SCOPE.
+  Phase 9A/9B COMPLETE for the accepted scope; Phase 9C PARTIAL; Phase 9D NOT STARTED.
+  Customer payment/cancellation/refund and admin inspection execute through real UI,
+  protected APIs/services and disposable DB. Primary and fresh-process repeat each
+  pass 11 check groups, binding 463 source/config/static-asset identities.
+  Captain operations have protected HTTP evidence only; native UI NOT RUN because
+  Android SDK/emulator/adb are unavailable. Customer booking creation is a service
+  fixture. Form creation, replacement/completion, human review/appeal UI and the
+  remaining adversarial/device journeys remain incomplete.
+  Backend 1671/1671; frontend 46/46; captain units 5/5; real DB 50/50;
+  paired backend replay 37/37; independent saved backend replay 36/36 PASS.
+  Seven complete critical JS modules: 100% coverage; 178 scoped mutants killed,
+  zero survivors/timeouts/ignored/errors. Typecheck/scoped lint/build/whitespace PASS.
+  Browser repeat checks action/final financial equivalence, not exact saved UI events.
+  V5 hash and 22 sources unchanged. No held-out/Luna/Search/Hinglish evaluation calls.
+  Production shadow, auto-adjudication, consequences and Search rollout OFF;
+  project-wide Proofloop/public generalization NOT STARTED. No Phase 9D activation.
+  Exact executable evidence: output/phase9-ui-2026-10-10/execution-manifest.json.
+  Earlier checkpoints below preserve their historical counts and status.
+- [PHASE 9B SUPPORTED BACKEND CLOSURE — 10 Oct 2026]
+  docs/benchmarks/phase9-final-integration-checkpoint-2026-10-10.md is the accepted historical checkpoint.
+  Responsibility 1–7 VERIFIED; Phase 8 COMPLETE; 8.2 RETIRED — NO RECOVERED SCOPE.
+  Phase 9A COMPLETE; Phase 9B COMPLETE for the approved supported isolated backend scope.
+  Backend 1666/1666; real DB 50/50; paired replay 37/37; independent saved replay 36/36 PASS.
+  Critical coverage 100% across 25 modules; current mutations 1475 unique: 1462 killed,
+  13 reviewed equivalent, zero meaningful survivors/timeouts/ignored/errors.
+  Frozen V5 and 22 source identities unchanged; 36 receipts bind 205 replay identities.
+  Rider cancellation/committed late recovery and actual GPS/routing/notification observations
+  are integrated. Unsupported incident families and UNASSESSED schedule feasibility /
+  UNKNOWN connectivity remain explicit observation/manual boundaries, with no new penalties.
+  Actual worker termination/new-process recovery and disabled-shadow backlog preservation PASS.
+  Next: Phase 9C isolated authenticated customer/captain/admin journeys and device boundaries.
+  Phase 9C/9D NOT STARTED. Production shadow, auto-adjudication, consequences and Search
+  rollout OFF; project-wide Proofloop/public generalization NOT STARTED.
+  Prior checkpoints and audit findings below retain their historical status.
+- [OWNER ROADMAP DECISION / PHASE 9 START — 9 Oct 2026]
+  PHASE 8.2: RETIRED — NO RECOVERED SCOPE. R82-01 is removed as an active blocker.
+  docs/audits/phase82-owner-retirement-2026-10-09.md records the owner disposition.
+  Responsibility 1–7 VERIFIED; Phase 8 COMPLETE for its defined verified scope.
+  Phase 9A infrastructure inventory COMPLETE; Phase 9B INCOMPLETE, supported replacement/
+  refund/terminal slice PASS. docs/benchmarks/phase9-financial-lifecycle-checkpoint-2026-10-09.md.
+  Real PostGIS lifecycle 35/35 PASS; full backend 1598/1598 PASS; typecheck/lint PASS.
+  Eleven complete critical modules have 100% coverage; mutation raw reports and
+  separately reviewed equivalents are bound to the current checkpoint evidence.
+  Owner approved 0%/10% commission and per-owner holds retained until booking ends.
+  Other incident detectors, route/GPS/connectivity/delivery integration, full event
+  replay and authenticated UI/E2E remain. Original regressions are retained.
+  Reuse real services, disposable PostGIS, provider fakes, frozen V5-compatible
+  offline analysis and independent financial invariants. Production shadow,
+  auto-adjudication, consequences and Search rollout OFF. Phase 9C/9D NOT STARTED.
+  Prior checkpoints and original audit findings remain historical evidence.
+- [LATEST RESPONSIBILITY FINAL FREEZE / TEMPORAL V2 / SEARCH PLACES - 9 Oct 2026]
+  docs/benchmarks/responsibility-v5-hinglish-search-checkpoint-2026-10-09.md:
+  Owner-approved API-comparison amendment recorded. V5 frozen; Phase 8.1 and 8 COMPLETE.
+  Held-out ran once: 59/59, classification 55/59, guarded unsafe zero, review 42/42.
+  Ready for zero-consequence Phase 9 YES; Phase 9 NOT STARTED. No automatic consequences.
+  Responsibility API 43/113 +70 pending retained as optional incomplete comparator;
+  do not resume that queue automatically. Native 110/113 remains separate and blocked.
+  Search 172/222 provider stages complete; all 48 pending Places cases completed.
+  API Search preflight 429; 50 Luna pending, S6 verifier blocked; next recorded retry
+  11 Oct 2026 03:17:09.558 IST. Search execution unfrozen and held-out NOT RUN.
+  Hindi temporal V2.1: schema-valid 67/80 (before 37), binding failures 1 (before 29).
+  20 English controls evaluated; normalization UNDECIDED; A/B plan prepared, not deployed.
+  New 18-case unseen construction challenge frozen before calls, NOT RUN.
+  Backend 1559 PASS, critical coverage 100%, meaningful mutation survivors zero.
+  Search/Hinglish incomplete; rollout, real dual-shadow and auto-adjudication OFF.
+  Project-wide Proofloop and public generalization NOT STARTED.
+- [HISTORICAL GUARD CLOSURE / HINDI-HINGLISH BASELINE - 8 Oct 2026]
+  docs/benchmarks/responsibility-guard-closure-checkpoint-2026-10-08.md:
+  Six real provisional waiver bypasses fixed at the shared independent evidence/policy boundary.
+  All cached V5 113 / API 43 / native 110 replay with zero guarded unsafe; safe routes retained.
+  API 43/113 with 70 frozen pending; retry 8 Oct 23:34:50.884 IST. Native remains BLOCKED.
+  Hindi/Hinglish Jev-only 80/80 evaluated; temporal source-binding deficit observed;
+  normalization UNDECIDED; Luna/Places zero; robustness and Search S5/S6 incomplete.
+  Exact test/coverage/mutation signoff: latest checkpoint and guard-closure.json.
+  Original API gate open; candidate NONE; no freeze/held-out/Phase 9/rollout.
+- [LATEST NATIVE 110-CASE STOP — 8 Oct 2026] docs/benchmarks/native-luna-110-case-checkpoint-2026-10-08.md:
+  Native 110/113, classification 102/110; 80 new successes and one frozen 120-second timeout.
+  CODEX_LUNA BLOCKED; three native cases remain. Six unsafe guarded waivers; consistency
+  incomplete (18 first observations, zero fresh repeats). Original model/guard/schema unchanged.
+  API remains 43/113; 70 frozen pending; retry 8 Oct 23:34:50.884 IST; zero API calls this run.
+  Backend 1519/1519 PASS. Original API gate retained; no candidate selection/freeze/held-out.
+  State: output/native-luna-completion-2026-10-08/native-pending-state.json. Phase 9 not started.
+- [LATEST VERIFIED NATIVE / API STOP — 8 Oct 2026] docs/benchmarks/codex-luna-verified-api-stop-checkpoint-2026-10-08.md:
+  Native Codex Luna PASS; 10-case pilot PASS; native development 30/113, API 43/113.
+  API stopped immediately on HTTP 429; 70 cases retain original order. Earliest retry
+  8 Oct 23:34:50.884 IST. Latest queue: output/codex-luna-native-resume-2026-10-08/responsibility-pending-state.json.
+  Backend 1519/1519 PASS; same-source coverage/mutation sign-offs retained. Original
+  API comparison/consistency gate incomplete; no selection, freeze, held-out or Phase 9.
+- [CODEX DEVELOPMENT — 8 Oct 2026] docs/benchmarks/codex-luna-development-checkpoint-2026-10-08.md:
+  Separate Codex Luna adapter implemented and fixture-validated; native preflight remains
+  unverified after a startup-warning monitor abort, so 0/113 Codex cases scored.
+  Backend 1519/1519 PASS; new adapter meaningful mutation survivors 0. API remains 42/113,
+  Search remains 124/222. Original API comparison gate still required; no freeze or held-out.
+- [LATEST — 8 Oct 2026] docs/benchmarks/responsibility-resume-checkpoint-2026-10-08.md:
+  Luna preflight PASS, then rate limit after six new successes; 42/113 complete,
+  71 pending in original order. New retry 8 Oct 16:47:34.301 IST; no Search Luna/S6.
+  Before Search rollout-readiness, also evaluate the separately frozen 80-case
+  Hindi/Hinglish robustness suite. Search V1 unchanged; no normalization added.
+- [CURRENT EVALUATION CHECKPOINT — 7 Oct 2026] Responsibility Phase 8.1 and Search
+  S5/S6: docs/benchmarks/s5-phase81-current-development-checkpoint.md. Development
+  remains incomplete; held-out, rollout, dual-shadow and auto-adjudication are off.
+- [OFFLINE CONTINUATION — 7 Oct 2026] Per-case diagnostics and frozen resume queues:
+  docs/benchmarks/provider-light-checkpoint-2026-10-07.md. Intended later sequence:
+  Phase 8 complete -> Phase 9 -> apply verification across important RCS systems
+  -> dogfood/refine common contracts -> generalize and publish for public use.
+  Phase 9, project-wide application and public generalization have not started.
+- [PROVIDER-STAGE CONTINUATION — 7 Oct 2026] Latest checkpoint:
+  docs/benchmarks/provider-resume-checkpoint-2026-10-07.md. Search Jev now attempted
+  all 222 development records; 124 complete, 50 Luna-pending, 48 Places-pending.
+  Responsibility remains independent: Luna earliest retry 8 Oct 08:40:08.833 IST.
+  Phase 9 is real-world/zero-consequence validation, including production-like
+  and UI/E2E verification, and starts only after Responsibility Phase 8 completes.
 - [DONE — 20 Aug 2026] CANCELLATION / GEOFENCE / CONDUCT HARDENING LANDED.
   Customer cancellation of a scheduled ride is free until the assigned driver's
-  fresh platform location is within 500 m of pickup; inside that radius the paid
-  15% advance is retained for the driver, whether or not `reached` was tapped.
+  fresh platform location is within 500 m of pickup; inside that radius a fee of
+  10% of fare capped at ₹100 is retained for the driver. Disclosed valid reasons
+  waive the fee and the remaining advance is refunded. New scheduled advances
+  and driver acceptance deposits are 10% (updated 20 Sep 2026).
   Quote-vs-submit proximity races force a new confirmation instead of silently
   changing the amount. Ride Now remains free because no customer advance is held.
   Pickup arrival and OTP start use the same 500 m server geofence; completion is
   normal through 500 m, needs a structured reason plus customer OTP through 2 km,
   and requires support beyond 2 km. GPS must be <=100 m accuracy and <=30 s old;
   known mock fixes fail closed. Driver self-cancel exists only in assigned/en_route,
-  re-dispatches immediately, counts over a rolling 30 days, restricts benefits at
-  3 and suspends at 5. Customer complaints are structured pills (no text), one row
-  per booking, editable without double-counting; 3 complaints fine and 5 suspend.
+  re-dispatches immediately, counts over a rolling 30 days, and restricts benefits
+  at 3. Customer complaints are structured pills (no text), one row per booking,
+  editable without double-counting; 3 complaints create the configured fine.
+  The implemented shared conduct engine currently uses 3 total
+  complaint/cancellation strikes => a 3-day temporary block and 7 => an
+  indefinite admin-removable block. This does NOT match the selected launch
+  policy: 5 upheld strikes => a 7-day temporary block; 7 upheld strikes => an
+  indefinite admin-removable block. Align the implementation before launch and
+  add moderation so only upheld reports/reasons become strikes.
   Admin review shows categories and conduct state. Migrations:
   20260820170000_ride_geofence_enforcement and
   20260820190000_driver_cancellation_and_complaints.
@@ -125,7 +358,7 @@ IMPORTANT:
   ~~Options: add nullable pendingFileUrl/pendingExpiresAt to the row, or relax the unique to a plain
   index and read "latest approved by uploadedAt". The schema comment argues against history rows,
   but history also gives you the audit trail for a disputed suspension — I'd relax the unique.~~
-- [DONE 18 Sep 2026] Customer payment settlement is authoritative. Ride Now can be paid after completion by Razorpay UPI or cash; scheduled rides keep the 15% Razorpay advance and allow the remaining fare after completion by Razorpay UPI or cash. The driver sees payment status but does not confirm the rider's payment method or block ride completion on that confirmation.
+- [DONE 18 Sep 2026; UPDATED 20 Sep 2026] Customer payment settlement is authoritative. Ride Now can be paid after completion by cash, with Razorpay UPI offered only when the assigned driver's payout UPI exists and is admin-verified. Scheduled rides still take a 10% Razorpay advance; the remaining fare follows the same verified-driver-UPI-or-cash rule. The driver sees payment status but does not confirm the rider's payment method or block ride completion on that confirmation. Driver ride acceptance itself never depends on payout UPI approval.
 - check all thing like race conditions and all.
 - add gst billing
 - Add big panel for upcoming scheduled ride if no active ride on the home screen app
@@ -268,18 +501,27 @@ IMPORTANT:
        zone; the misleading file notes were corrected.
     7. [DECIDED 4 Sep 2026] Kashmiri Gate's removal from the live 44-zone card
        was intentional. The repository fallback now matches that live zone set.
-- !! GET THE LEGAL DOCS REVIEWED BY A LAWYER. Terms, Privacy, Refunds and Grievance
-  in frontend/src/constants/legal.js are a DRAFT written from what the code does,
-  not legal advice. Before they can count as published:
+ - !! GET THE LEGAL DOCS REVIEWED BY A LAWYER. Terms, Privacy, Refunds and Grievance
+   in frontend/src/constants/legal.js are a DRAFT written from what the code does,
+   not legal advice. Before they can count as published:
     1. Replace every `[TO CONFIRM: …]` marker — registered business name and type,
        address, effective date, and the rest. `grep "TO CONFIRM"` finds them all.
        They render on the page in red on purpose, so nothing ships half-filled.
     2. Lawyer reviews the copy, THEN set DRAFT = false in legal.js to drop the
        banner. Do not flip it early — the banner is the only thing telling a
        reader these terms aren't final.
-  The grievance officer entry needs a real name, email and phone: an intermediary
-  under the IT Rules has to publish one, and payment gateways ask for these pages
-  during onboarding.
+   The grievance officer entry needs a real name, email and phone: an intermediary
+   under the IT Rules has to publish one, and payment gateways ask for these pages
+   during onboarding.
+   [RESEARCH RECONCILIATION — 20 Sep 2026] The supplied UP/central cancellation
+   research has been folded into the draft without pretending unresolved points
+   are settled. Scheduled customer advance and applicable rider cancellation fee
+   are 10%; the rider fee is capped at ₹100 and valid disclosed reasons waive it.
+   Still blocking publication/launch: UP aggregator licence + proprietorship/entity
+   eligibility; the separate >10-minute failed-pickup ₹100 driver penalty + ₹100
+   next-booking rider concession is not implemented; the exact ordinary-driver-
+   cancellation penalty remains TO CONFIRM because draft and available final-rule
+   reporting differ; other red TO CONFIRM markers remain intentionally visible.
 - Women get a safer road route for rides.
   WHY: uni is in a remote area; the shortest route passes through shady areas that
   girls avoid. A slightly longer highway route is safer. Goal: female users (or anyone
@@ -1014,7 +1256,7 @@ Goal: Live tracking, ride history, and multi-language support.
   - /booking/:id → show live driver location on Google Maps
     (polling is already in place — just add the map component)
   - /my-bookings → ride history + two-step cancellation with the server's current
-    15% scheduled-advance quote when the driver is within 500 m
+    10% scheduled-advance quote when the driver is within 500 m
     if driver has already reached pickup
   - Multi-language → wrap all strings with i18next, add Hindi translation file
   - Homepage → hero, vehicle pricing, trust indicators; language control only in Settings
@@ -1322,7 +1564,7 @@ each numbered block unblocks the ones after it. Outstation is PARKED (see bottom
    [DONE 18 Sep 2026] The reusable payment foundation and customer settlement
    flow are implemented: server-owned amounts, idempotent Orders, Checkout,
    server signature/API verification, raw-body signed webhooks, refunds, Ride
-   Now final payment by UPI or cash, the 15% scheduled advance, and scheduled
+   Now final payment by UPI or cash, the 10% scheduled advance, and scheduled
    post-completion remaining payment by UPI or cash. The customer controls the
    authoritative final settlement; the driver only sees the resulting status.
    [LIVE AUDIT 4 Sep 2026] Production has no RAZORPAY_KEY_ID,
@@ -1472,7 +1714,7 @@ each numbered block unblocks the ones after it. Outstation is PARKED (see bottom
    A CANCELS AFTER B HAS CLAIMED:
      B receives the FULL held deposit back, no fee. A receives nothing.
    !! THE MARKETPLACE DEPOSIT IS NOT THE SCHEDULED-RIDE ACCEPTANCE DEPOSIT
-   (block 10, 15% of fare, always returned). Two deposits now exist in the
+   (block 10, 10% of fare, always returned). Two deposits now exist in the
    driver app with different amounts, different lifecycles and different
    owners. They must never share a name, a screen or a WalletEntryType.
    !! THE 10% POSTER FEE IS NOT THE 5% PLATFORM COMMISSION EITHER, and the driver loyalty
@@ -1661,11 +1903,11 @@ each numbered block unblocks the ones after it. Outstation is PARKED (see bottom
 10. DRIVER WALLET + RIDE ACCEPTANCE DEPOSIT
    PARTLY BUILT AND MIGRATED. The append-only writer updates the ledger and
    cached balance atomically with deterministic event keys. Scheduled accept
-   writes the 15% hold, completion/cancellation releases or compensates it,
+   writes the 10% hold, completion/cancellation releases or compensates it,
    completion writes coupon reimbursement and commission, and complaints write
    their fine. Balance checks run both before and inside scheduled acceptance.
    [LIVE AUDIT 4 Sep 2026] There are no wallet entries; the only captain has a
-   ₹0 balance. Because acceptance requires balance >= the 15% hold, that captain
+   ₹0 balance. Because acceptance requires balance >= the 10% hold, that captain
    cannot accept a scheduled ride. Before launch, add a controlled platform-funded
    opening-credit/admin-adjustment path and credit the captain appropriately.
    Still missing: captain transaction/held-balance UI, admin ledger/adjustments,
@@ -1678,7 +1920,7 @@ each numbered block unblocks the ones after it. Outstation is PARKED (see bottom
    as a CACHE of sum(entries). Write the cache in the SAME TRANSACTION as the
    entry or the two drift, and the drift is money. Balance goes negative on
    purpose — that is the state that blocks going online.
-   The scheduled-ride acceptance deposit is 15% of the authoritative fare.
+   The scheduled-ride acceptance deposit is 10% of the authoritative fare.
    Before a scheduled driver is shown the rider's details, the available wallet
    balance is checked and the deposit is held. On completion it is returned to his
    DRIVER WALLET. This is Raju's/the user's decision, taken after the
@@ -1775,13 +2017,18 @@ each numbered block unblocks the ones after it. Outstation is PARKED (see bottom
    asked to cancel, dangerous driving, wrong car, driver/profile mismatch, rude
    or inappropriate behaviour, and drop-off problems.
    POST /api/bookings/:id/complaint validates the shared allowlist. Admin driver
-   review shows labels, total complaints, rolling 30-day driver cancellations,
-   benefit restriction and suspension. Three complaints create one idempotent
-   ₹200 wallet fine; five automatically suspend, and only an admin can reinstate.
+    review shows labels, total complaints, rolling 30-day driver cancellations,
+    benefit restriction and suspension. Three complaints create one idempotent
+    ₹200 wallet fine.
    Complaint counts currently have no decay or upheld/rejected moderation state;
    those are the remaining abuse controls if false reporting becomes material.
-   Driver cancellation counts are separate: rolling 30 days, benefits restricted
-   at 3, suspension at 5.
+     Driver cancellation counts are separate for the 30-day loyalty restriction,
+     but every recorded cancellation also contributes to the cumulative conduct count.
+     [IMPLEMENTED — 21 Sep 2026] Shared backend threshold mechanics now use
+     3 total conduct strikes = a 3-day temporary block; 7 strikes = an indefinite
+     block that an admin can remove. The remaining launch-policy gap is deciding
+     which cancellation reasons/reports become upheld strikes; the current shared
+     count uses every recorded RideComplaint and DriverCancellation.
 
    SUSPENDED DRIVERS (his spec, block 9's source file): cannot go online,
    cannot receive ride-now, cannot receive scheduled offers, and LOSE ALL
@@ -1938,7 +2185,8 @@ OPEN QUESTIONS LOG (updated 5 Sep 2026)
    (d) outstation, whenever it comes back: Wagon R rate, the >250 km/day rate,
    calendar day vs 24h, and the plain/hills split;
    (f) ANSWERED 20 Aug — complaint fine is ₹200 at the third
-   unique booking complaint; five complaints suspend (block 11);
+   unique booking complaint. Automatic conduct blocks now use the shared 3/7
+   strike policy in block 11;
    For us: (h) NEW 8 Aug — is lifting a driver's suspension Raju-only, or any
    of the three admins? protectAdmin cannot tell them apart today (block 9).
    ANSWERED 8 Aug: (g) scheduled-ride admin hold is 15 min / 45 min, superseding
@@ -1947,9 +2195,11 @@ OPEN QUESTIONS LOG (updated 5 Sep 2026)
    rcs-vs-partner split and needs no separate boolean.
    ANSWERED 8 Aug: driver wallet — YES, the platform has one now (block 10,
    supersedes the blanket "no driver wallet" line in block 7). Ride acceptance
-   deposit refunds to that wallet on completion. Overcharge flag thresholds:
-   3 complaints fine, 5 suspend, admin-only reinstate. Driver cancellations use
-   their own rolling 30-day 3/5 benefit-restriction/suspension thresholds.
+   deposit refunds to that wallet on completion. Complaint fine threshold:
+   3 complaints => ₹200. Shared conduct blocks: 3 total complaint/cancellation
+   strikes => 3 days; 7 => indefinite until an admin removes it. Driver
+   cancellations still use a rolling 30-day threshold of 3 for loyalty-benefit
+   restriction.
    ANSWERED 30 Jul: driver documents — his list, police verification dropped
    (block 6). Marketplace: yes, the posting driver is paid (block 7).
    ANSWERED 14 Aug: payment gateway is RAZORPAY (block 5), closing the
@@ -1958,7 +2208,7 @@ OPEN QUESTIONS LOG (updated 5 Sep 2026)
    per-ride payment-authorisation alternative refused with it — the ride
    acceptance deposit is a LEDGER DEBIT (block 10).
    ANSWERED 4 Sep: Premium SUV is always hatchback ×2.75 with no zone override;
-   the scheduled-acceptance deposit is 15% of authoritative fare; Kashmiri Gate
+   the scheduled-acceptance deposit is 10% of authoritative fare; Kashmiri Gate
    stays removed; Botanical Garden remains under Noida central (Sector 18).
    ANSWERED 5 Sep: the configured ₹200 is the combined toll-and-parking charge
    for every vehicle; inter-terminal fixed fares already include both.
