@@ -109,7 +109,7 @@ export const RideCompleted = ({
                 <AppText className={`text-sm ${MUTED}`}>
                     {paid
                         ? dc("The rider paid by {{value0}}. No confirmation is needed from you.", { value0: paymentMethod })
-                        : dc("The rider can pay by UPI or cash. No confirmation is needed from you.")}
+                        : dc("The rider will complete payment after the ride. No confirmation is needed from you.")}
                 </AppText>
             </Animated.View>
 

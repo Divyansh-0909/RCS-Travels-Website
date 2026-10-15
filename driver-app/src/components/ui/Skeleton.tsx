@@ -31,7 +31,7 @@ export const LIGHT_MAP_LAND_COLOR = '#b9b9bf';
 type SectionProps = {
   children: ReactNode;
   className?: string;
-  surface?: 'primary' | 'surface' | 'surfaceMuted';
+  surface?: 'canvas' | 'primary' | 'surface' | 'surfaceMuted';
   style?: StyleProp<ViewStyle>;
 };
 

@@ -22,6 +22,7 @@ import type { UpcomingBooking } from '../types/enums';
 import { getRememberedDriverLocation, rememberDriverLocation } from '../lib/driverLocationCache';
 import { useLanguage } from '../i18n';
 import { useTheme } from '../theme/ThemeContext';
+import { activeRideAddress } from '../lib/activeRideAddress';
 import { callPhoneNumber } from '../lib/externalLinks';
 
 const asThemed = { className: { target: false, nativeStyleToProp: { color: true } } } as const;
@@ -255,7 +256,7 @@ const ActiveRide = ({ ride, onChanged }: { ride: UpcomingBooking; onChanged: () 
             .catch(() => setError(t('driver.active.maps')));
     };
 
-    const place = ride ? splitAddress(ride.pickupAddress) : null;
+    const place = ride ? splitAddress(activeRideAddress(ride, leg.endpoint)) : null;
 
     const advance = async (otp?: string, overrideReason?: string) => {
         if (!step) return;

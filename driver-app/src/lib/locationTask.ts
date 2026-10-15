@@ -33,7 +33,22 @@ import { rememberDriverLocation } from './driverLocationCache';
 export const LOCATION_TASK = 'rcs-driver-location';
 
 /** A position on its way to the server. Exported with reportFix, which takes it. */
-export type Fix = { lat: number; lng: number };
+export type Fix = {
+  lat: number;
+  lng: number;
+  observedAt: number;
+  accuracyMeters: number | null;
+};
+
+/** Preserve the device-provided provenance for every location upload. */
+export function fixFromLocation(location: Location.LocationObject): Fix {
+  return {
+    lat: location.coords.latitude,
+    lng: location.coords.longitude,
+    observedAt: location.timestamp,
+    accuracyMeters: location.coords.accuracy ?? null,
+  };
+}
 
 /**
  * The send gate, and the reason it lives here rather than in the hook.
@@ -260,7 +275,7 @@ TaskManager.defineTask(LOCATION_TASK, async ({ data, error }) => {
     console.info('[driver-location] background task received a GPS fix');
   }
 
-  const fix = { lat: newest.coords.latitude, lng: newest.coords.longitude };
+  const fix = fixFromLocation(newest);
 
   // The gate, the retry policy and the refusal counting all live in reportFix,
   // which the foreground fallback shares. All this path owns is the credential:

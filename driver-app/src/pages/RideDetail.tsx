@@ -7,6 +7,9 @@ import { cssInterop } from 'nativewind';
 import { CheckIcon, CopyIcon } from 'phosphor-react-native';
 import { useNavigate, useParams } from 'react-router-native';
 import { RideDetailSectionsSkeleton } from '../components/ui/LoadingSkeletons';
+import RideCancellationSheet, {
+    type DriverCancellationReason,
+} from '../components/ui/RideCancellationSheet';
 import AppText from '../components/AppText';
 import {
     ActionButton,
@@ -18,11 +21,14 @@ import {
     HAIRLINE,
     INK_TEXT,
     MUTED,
+    PhoneMark,
     RouteLeg,
     WhatsappMark,
 } from '../components/ui/rideUi';
 import { useApi } from '../hooks/useApi';
 import { useDriver } from '../hooks/useDriver';
+import { refreshOfferAcknowledgement } from '../lib/offerAcknowledgement';
+import { canCancelDriverRide } from '../lib/driverCancellationView';
 import { UpcomingBooking } from '../types/enums';
 import {
     fareBreakdown,
@@ -38,6 +44,7 @@ import {
 } from '../constants/booking';
 import { openSupportWhatsApp } from '../constants/support';
 import { useTheme } from '../theme/ThemeContext';
+import { callPhoneNumber } from '../lib/externalLinks';
 
 const asThemed = { className: { target: false, nativeStyleToProp: { color: true } } } as const;
 const Copy = cssInterop(CopyIcon, asThemed);
@@ -58,6 +65,49 @@ const FARE_LINE = `text-sm font-semibold ${CONTENT}`;
 
 type ApiError = { error: string; status: number; code?: string };
 type GetRideResponse = UpcomingBooking | ApiError;
+
+const DELAYED_RIDE_PREVIEW = {
+    id: 'delayed-preview',
+    reference: 'RCS4831902',
+    status: 'en_route',
+    pickupAddress: 'Connaught Place, New Delhi',
+    dropAddress: 'Noida Sector 18, Atta Market',
+    pickupLat: 28.6315,
+    pickupLng: 77.2167,
+    dropLat: 28.5706,
+    dropLng: 77.326,
+    routePolyline: null,
+    navigationLeg: 'pickup',
+    navigationPolyline: null,
+    navigationEtaMinutes: 8,
+    preferSafeRoute: false,
+    safeWaypointLat: null,
+    safeWaypointLng: null,
+    scheduledAt: null,
+    expectedPickupAt: new Date(Date.now() - 11 * 60_000).toISOString(),
+    driverDelayed: true,
+    driverDelayEligibleAt: new Date(Date.now() - 60_000).toISOString(),
+    reachedAt: null,
+    fare: 540,
+    vehicleClass: 'sedan',
+    sharing: false,
+    isOutstation: false,
+    customerPhone: '+919876543210',
+    user: { name: 'Aarav Sharma' },
+    needsCarrier: false,
+    distanceKm: 16.8,
+    rideFare: 540,
+    commissionPct: 5,
+    commissionAmt: 27,
+    cancelledBy: null,
+    cancellationCharge: null,
+    completedAt: null,
+    createdAt: new Date().toISOString(),
+    durationMin: null,
+    paymentState: 'due',
+    scheduledPayment: null,
+    ridePayment: { state: 'pending', method: null, amount: 54000, paidAmount: 0, paidAt: null },
+} satisfies UpcomingBooking;
 
 // gap-4 is the card's own rhythm: the top card stacks whole blocks — a heading, a
 // route, a rider — and they need the air to stay separate. The summary card stacks
@@ -90,12 +140,14 @@ const RideDetail = () => {
     const api = useApi();
     const { refresh: refreshDriver } = useDriver();
     const { colors } = useTheme();
+    const previewBooking = __DEV__ && id === DELAYED_RIDE_PREVIEW.id ? DELAYED_RIDE_PREVIEW : null;
 
-    const [booking, setBooking] = useState<UpcomingBooking | null>(null);
+    const [booking, setBooking] = useState<UpcomingBooking | null>(previewBooking);
     const [error, setError] = useState<string | null>(null);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(!previewBooking);
     const [copied, setCopied] = useState(false);
     const [cancelling, setCancelling] = useState(false);
+    const [cancelSheetOpen, setCancelSheetOpen] = useState(false);
 
     // Same reason as the Rides board: useApi memoises on Clerk's getToken, which is not
     // promised to keep its identity, and a refresh that re-ran on every render would
@@ -103,10 +155,13 @@ const RideDetail = () => {
     const apiRef = useRef(api);
     apiRef.current = api;
 
-    const load = useCallback(async () => {
+    const load = useCallback(async (background = false) => {
+        if (previewBooking) return;
         if (!id) return;
-        setLoading(true);
-        setError(null);
+        if (!background) {
+            setLoading(true);
+            setError(null);
+        }
         try {
             const data = await apiRef.current.getRide(id) as GetRideResponse;
             if ('error' in data) setError(data.error);
@@ -116,9 +171,17 @@ const RideDetail = () => {
         } finally {
             setLoading(false);
         }
-    }, [id]);
+    }, [id, previewBooking]);
 
-    useEffect(() => { load(); }, [load]);
+    useEffect(() => {
+        if (booking && !canCancelDriverRide(booking.status)) setCancelSheetOpen(false);
+    }, [booking]);
+
+    useEffect(() => {
+        load();
+        const timer = setInterval(() => load(true), 30_000);
+        return () => clearInterval(timer);
+    }, [load]);
 
     const copyId = async () => {
         if (!booking) return;
@@ -143,7 +206,7 @@ const RideDetail = () => {
                     <View className="flex-1 items-center justify-center px-5 pb-24 gap-3">
                         <>
                             <AppText className="text-sm text-center text-red-600">{error}</AppText>
-                            <Pressable role="button" onPress={load} hitSlop={8}>
+                            <Pressable role="button" onPress={() => load()} hitSlop={8}>
                                 <AppText className="text-sm font-semibold text-primary">{dc("Try again")}</AppText>
                             </Pressable>
                         </>
@@ -159,22 +222,29 @@ const RideDetail = () => {
     const { minutes, estimated } = rideDuration(booking);
     const rider = booking.user?.name ?? dc("Rider");
     const when = booking.completedAt ?? booking.scheduledAt;
-    const canCancel = booking.status === 'assigned' || booking.status === 'en_route';
+    const canCancel = canCancelDriverRide(booking.status);
     const payment = customerPaymentNotice(booking);
+    const onlineCollection = booking.ridePayment?.state === 'paid' && booking.ridePayment.method === 'upi';
     const paymentStillNeedsAttention = payment.tone === 'warning' || payment.tone === 'danger' || payment.tone === 'primary';
     const shouldShowRider = !isFinished(booking) || paymentStillNeedsAttention;
 
-    const cancelRide = async () => {
+    const cancelRide = async (
+        reason: DriverCancellationReason,
+        otherReason?: string,
+    ) => {
         if (cancelling) return;
         setCancelling(true);
         setError(null);
         try {
-            const result = await apiRef.current.cancelRide(booking.id);
+            const result = await refreshOfferAcknowledgement(
+                () => apiRef.current.cancelRide(booking.id, { reason, otherReason }),
+                () => load(true), refreshDriver,
+            );
             if (result?.error) {
                 setError(result.error);
                 return;
             }
-            await refreshDriver();
+            setCancelSheetOpen(false);
             navigate(-1);
         } catch (e) {
             setError(e instanceof Error ? e.message : dc("Could not cancel this ride"));
@@ -199,6 +269,29 @@ const RideDetail = () => {
                 }}
                 showsVerticalScrollIndicator={false}
             >
+                {booking.driverDelayed && (booking.status === 'assigned' || booking.status === 'en_route') ? (
+                    <View
+                        className="w-full gap-4 rounded-2xl p-5"
+                        style={{ backgroundColor: colors.surface, borderColor: colors.borderUi, borderWidth: 1 }}
+                    >
+                        <View className="gap-1">
+                            <AppText className={`text-lg font-semibold ${INK_TEXT}`}>{dc("Pickup delayed")}</AppText>
+                            <AppText className={`text-sm leading-5 ${MUTED}`}>
+                                {dc("You are more than 10 minutes late. The rider may call you or request another driver.")}
+                            </AppText>
+                        </View>
+                        <View className="w-full flex-row">
+                            <ActionButton
+                                label={dc("Call rider")}
+                                leading={<PhoneMark />}
+                                solid
+                                size="large"
+                                onPress={() => callPhoneNumber(booking.customerPhone)}
+                            />
+                        </View>
+                    </View>
+                ) : null}
+
                 {/* The banner only on a ride that has actually happened — see
                     isFinished. "Payment due" on a job the captain is on his way to is
                     stating the obvious as a problem, and saying it on every ride is what
@@ -353,19 +446,22 @@ const RideDetail = () => {
 
             {/* This footer owns real layout space and an opaque surface. The details
                 viewport therefore ends above it instead of scrolling behind the actions. */}
-            <View className="w-full gap-2 px-5 pt-3 pb-6" style={{ backgroundColor: colors.surfaceMuted }}>
-                {error ? (
+            <View className="w-full gap-2 px-5 pt-3 pb-24" style={{ backgroundColor: colors.surfaceMuted }}>
+                {error && !cancelSheetOpen ? (
                     <AppText className="text-sm font-medium text-red-600">{error}</AppText>
                 ) : null}
                 <View className="w-full flex-row gap-2">
                     {canCancel ? (
                         <ActionButton
-                            label={cancelling ? dc("Cancelling…") : dc("Cancel ride")}
+                            label={dc("Cancel ride")}
                             leading={null}
                             tone="danger"
                             disabled={cancelling}
                             size="large"
-                            onPress={cancelRide}
+                            onPress={() => {
+                                setError(null);
+                                setCancelSheetOpen(true);
+                            }}
                         />
                     ) : null}
                     <ActionButton
@@ -376,6 +472,18 @@ const RideDetail = () => {
                     />
                 </View>
             </View>
+
+            <RideCancellationSheet
+                visible={cancelSheetOpen}
+                busy={cancelling}
+                error={cancelSheetOpen ? error : null}
+                reachedAt={booking.reachedAt}
+                onClose={() => {
+                    setCancelSheetOpen(false);
+                    setError(null);
+                }}
+                onConfirm={cancelRide}
+            />
         </View>
     );
 };

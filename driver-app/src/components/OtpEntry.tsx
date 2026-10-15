@@ -194,6 +194,7 @@ export const OtpEntry = ({
                             return (
                                 <TextInput
                                     key={i}
+                                    accessibilityLabel={dc("Enter OTP") + " " + String(i + 1)}
                                     ref={(ref) => {
                                         otpRefs.current[i] = ref;
                                     }}

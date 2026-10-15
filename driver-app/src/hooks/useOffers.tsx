@@ -5,6 +5,7 @@ import * as Location from 'expo-location';
 import * as Notifications from 'expo-notifications';
 import { useApi } from './useApi';
 import { useDriver } from './useDriver';
+import { refreshOfferAcknowledgement } from '../lib/offerAcknowledgement';
 
 /**
  * Every ride currently offered to this captain, in one place.
@@ -251,8 +252,7 @@ export const OfferProvider = ({ children }: { children: ReactNode }) => {
             // Not routed through `answer`, because unlike a rejection the SUCCESS
             // body matters here: it is the only place the rider's phone number is
             // ever sent, and the sheet that offers to call her is built from it.
-            const result = await api.acceptOffer(offerId);
-            await refresh();
+            const result = await refreshOfferAcknowledgement(() => api.acceptOffer(offerId), refresh, refreshDriver);
 
             if (result?.error) return result;
 
@@ -260,7 +260,6 @@ export const OfferProvider = ({ children }: { children: ReactNode }) => {
             // decide between the 20-second idle rate and the 4-second ride rate,
             // and it only re-reads when the profile does. Without this the whole
             // drive to pickup reports at idle rate while a rider watches the map.
-            await refreshDriver().catch(() => {});
 
             setAccepted({
                 bookingId: result.bookingId,

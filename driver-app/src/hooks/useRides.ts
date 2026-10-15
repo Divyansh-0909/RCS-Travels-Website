@@ -5,6 +5,8 @@ import { useDriver } from './useDriver';
 import { ACTIVE_RIDE_STATUSES } from '../constants/booking';
 import type { UpcomingBooking } from '../types/enums';
 
+const POLL_INTERVAL_MS = 5000;
+
 /**
  * The captain's open rides, and the two the screens actually ask about.
  *
@@ -34,36 +36,49 @@ export function useRides(): Result {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    // A slow request must not overwrite a newer one. Same guard Home had.
-    const latest = useRef(0);
+    const activeRideIdRef = useRef(profile?.activeRide?.id);
+    activeRideIdRef.current = profile?.activeRide?.id;
+    const inFlightRefresh = useRef<Promise<void> | null>(null);
+    const cooldownUntil = useRef(0);
 
-    const refresh = useCallback(async () => {
-        const request = ++latest.current;
-        setError(null);
+    const refresh = useCallback(() => {
+        if (inFlightRefresh.current) return inFlightRefresh.current;
+        if (Date.now() < cooldownUntil.current) return Promise.resolve();
 
-        const data = await api.getRides();
-        if (request !== latest.current) return;
+        const run = async () => {
+            setError(null);
 
-        if (data?.error) {
-            setError(data.error);
-        } else {
-            const bookings: UpcomingBooking[] = data.bookings ?? [];
-            setRides(bookings);
+            const data = await api.getRides();
 
-            // /me is what HomeGate routes from. If the rider cancels while this
-            // app stays open, its activeRide snapshot otherwise keeps pointing
-            // at a booking the fresh list has just proved is gone. Reconcile it
-            // now so the active screen and shell both return online together.
-            const profileRideId = profile?.activeRide?.id;
-            if (profileRideId && !bookings.some((booking) => booking.id === profileRideId)) {
-                await refreshProfile();
+            if (data?.error) {
+                setError(data.error);
+                if (data.status === 429) {
+                    cooldownUntil.current = Date.now() + (data.retryAfterMs ?? POLL_INTERVAL_MS);
+                }
+            } else {
+                const bookings: UpcomingBooking[] = data.bookings ?? [];
+                setRides(bookings);
+
+                // /me is what HomeGate routes from. If the rider cancels while this
+                // app stays open, its activeRide snapshot otherwise keeps pointing
+                // at a booking the fresh list has just proved is gone. Reconcile it
+                // now so the active screen and shell both return online together.
+                const profileRideId = activeRideIdRef.current;
+                if (profileRideId && !bookings.some((booking) => booking.id === profileRideId)) {
+                    await refreshProfile();
+                }
             }
-        }
 
-        setLoading(false);
-    }, [api, profile?.activeRide?.id, refreshProfile]);
+            setLoading(false);
+        };
 
-    useEffect(() => { refresh(); }, [refresh]);
+        let refreshPromise: Promise<void>;
+        refreshPromise = run().finally(() => {
+            if (inFlightRefresh.current === refreshPromise) inFlightRefresh.current = null;
+        });
+        inFlightRefresh.current = refreshPromise;
+        return refreshPromise;
+    }, [api, refreshProfile]);
 
     /**
      * Re-read whenever the SERVER's count of his rides changes.
@@ -82,11 +97,8 @@ export function useRides(): Result {
      */
     const assignedRides = profile?.onboarding?.assignedRides ?? 0;
     const activeRideId = profile?.activeRide?.id ?? null;
-    const first = useRef(true);
     useEffect(() => {
-        // The mount fetch above already covers the first pass.
-        if (first.current) { first.current = false; return; }
-        refresh();
+        void refresh();
     }, [assignedRides, activeRideId, refresh]);
 
     // The statuses move while he is out of the app — a ride he completed, a ride
@@ -111,10 +123,13 @@ export function useRides(): Result {
 
         const tick = async () => {
             await refresh();
-            if (!stopped) timer = setTimeout(tick, 5000);
+            if (!stopped) {
+                const cooldownRemaining = cooldownUntil.current - Date.now();
+                timer = setTimeout(tick, Math.max(POLL_INTERVAL_MS, cooldownRemaining));
+            }
         };
 
-        timer = setTimeout(tick, 5000);
+        timer = setTimeout(tick, POLL_INTERVAL_MS);
         return () => {
             stopped = true;
             if (timer) clearTimeout(timer);

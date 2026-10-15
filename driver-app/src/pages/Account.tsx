@@ -547,6 +547,7 @@ const Account = () => {
                   invited the captain to check whether the two agreed. What is left
                   here is what this row can actually open: what riders wrote. */}
               <AccountRow label={dc("Feedback")} Icon={StarIcon} onPress={() => navigate('/account/feedback')} grouped />
+              <AccountRow label={dc("Responsibility notices")} Icon={InfoIcon} onPress={() => navigate('/account/responsibility')} grouped />
               <AccountRow
                 label={t('driver.settings.notifications')}
                 detail={notificationDetail}

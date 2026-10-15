@@ -5,6 +5,7 @@ import { Image, Pressable, View } from "react-native";
 import { useNavigate } from "react-router-native";
 import AppText from "../components/AppText";
 import { useLanguage } from '../i18n';
+import { signOutCurrentSession } from '../../../shared/auth/signOutCurrentSession.mjs';
 
 const backgroundIllustration = require("../../assets/app-mobile.webp");
 
@@ -16,11 +17,11 @@ const OnBoarding = () => {
 
     const navigate = useNavigate();
     const { t } = useLanguage();
-    const { isSignedIn, signOut } = useAuth();
+    const { isSignedIn, signOut, sessionId } = useAuth();
 
     const openLogin = async () => {
         if (isSignedIn) {
-            await signOut();
+            await signOutCurrentSession(signOut, sessionId);
         }
         navigate("/login", { replace: true });
     };

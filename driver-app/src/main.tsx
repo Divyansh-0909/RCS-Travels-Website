@@ -12,12 +12,16 @@ import { ClerkProvider , useAuth } from '@clerk/clerk-expo';
 import { resourceCache } from '@clerk/clerk-expo/resource-cache';
 import { tokenCache } from '@clerk/clerk-expo/token-cache';
 import { useFonts } from 'expo-font';
+import * as SplashScreen from 'expo-splash-screen';
+import { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { Platform } from 'react-native';
 import { NativeRouter, Route, Routes, Navigate } from 'react-router-native';
 import App from './App';
 import AuthLayout from './AuthLayout';
 import ErrorBoundary from './components/ErrorBoundary';
 import DeepLinkNavigator from './components/DeepLinkNavigator';
+import StartupSplash from './components/StartupSplash';
 import { PermissionPromptProvider } from './components/ui/PermissionPrompt';
 import HomeGate from './components/HomeGate';
 import VerifiedRoute, { AssignedWorkRoute } from './components/VerifiedRoute';
@@ -35,6 +39,7 @@ import Wallet from './pages/Wallet';
 import Available from './pages/Available';
 import MarketplaceDetail from './pages/MarketplaceDetail';
 import Notifications from './pages/Notifications';
+import ResponsibilityNotices from './pages/ResponsibilityNotices';
 import Post from './pages/Post';
 import Rides from './pages/Rides';
 import RideDetail from './pages/RideDetail';
@@ -47,6 +52,10 @@ import { LanguageProvider, useLanguage } from './i18n';
 
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY;
 
+if (Platform.OS !== 'web') {
+    SplashScreen.preventAutoHideAsync().catch(() => undefined);
+}
+
 if (!publishableKey) {
     throw new Error('Missing Clerk Publishable Key');
 }
@@ -55,13 +64,13 @@ const AppRoutes = () => {
     const { isLoaded, isSignedIn } = useAuth();
     const { ready } = useLanguage();
     const { ready: themeReady } = useTheme();
-
-    if (!isLoaded || !ready || !themeReady) {
-        return null;
-    }
+    const appReady = isLoaded && ready && themeReady;
 
     return (
+        <>
+        {appReady ? (
         <NativeRouter
+            initialEntries={Platform.OS === 'web' ? [window.location.pathname] : undefined}
             future={{
                 v7_startTransition: true,
                 v7_relativeSplatPath: true,
@@ -76,6 +85,11 @@ const AppRoutes = () => {
                 context to already exist above it. */}
             <OfferProvider>
             <Routes>
+                {__DEV__ ? (
+                    <Route element={<App />}>
+                        <Route path="dev/rides/:id" element={<RideDetail />} />
+                    </Route>
+                ) : null}
                 {isSignedIn ? (
                     <>
                     <Route element={<AuthLayout />}>
@@ -108,6 +122,7 @@ const AppRoutes = () => {
                             so the old address keeps working. */}
                         <Route path="onboarding/status" element={<Navigate to="/" replace />} />
                         <Route path="account" element={<Account />} />
+                        <Route path="account/responsibility" element={<ResponsibilityNotices />} />
                         <Route path="account/documents" element={<Documents />} />
                         <Route path="account/vehicles" element={<Vehicles />} />
                         <Route path="account/payout" element={<PayoutAccount />} />
@@ -133,11 +148,20 @@ const AppRoutes = () => {
             </DriverProvider>
             </PermissionPromptProvider>
         </NativeRouter>
+        ) : null}
+        <StartupSplash appReady={appReady} themeReady={themeReady} />
+        </>
     )
 }
 
 const Main = () => {
     const [fontsLoaded, fontError] = useFonts(fontAssets);
+
+    useEffect(() => {
+        if (Platform.OS !== 'web' && (fontsLoaded || fontError)) {
+            SplashScreen.hideAsync().catch(() => undefined);
+        }
+    }, [fontError, fontsLoaded]);
 
     if (!fontsLoaded && !fontError) {
         return null;

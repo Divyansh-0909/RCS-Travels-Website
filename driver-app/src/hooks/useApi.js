@@ -1,6 +1,7 @@
 import { useAuth, useClerk } from "@clerk/clerk-expo";
 import { useCallback, useMemo, useRef } from "react";
 import * as api from "../api/api";
+import { signOutCurrentSession } from '../../../shared/auth/signOutCurrentSession.mjs';
 
 // Memoised so the object identity survives re-renders: callers put it in effect
 // dependency arrays, and a fresh literal every render would loop them.
@@ -25,16 +26,16 @@ import * as api from "../api/api";
 // A ref read through a stable callback keeps the latest function without letting
 // its identity leak into the dependency array.
 export function useApi() {
-  const { getToken } = useAuth();
+  const { getToken, sessionId } = useAuth();
   const { signOut } = useClerk();
 
   const tokenRef = useRef(getToken);
   tokenRef.current = getToken;
   const stableGetToken = useCallback((options) => tokenRef.current(options), []);
 
-  const signOutRef = useRef(signOut);
-  signOutRef.current = signOut;
-  const stableSignOut = useCallback((...args) => signOutRef.current(...args), []);
+  const signOutRef = useRef({ signOut, sessionId });
+  signOutRef.current = { signOut, sessionId };
+  const stableSignOut = useCallback(() => signOutCurrentSession(signOutRef.current.signOut, signOutRef.current.sessionId), []);
 
   return useMemo(() => ({
     getMe:         ()                   => api.getMe(stableGetToken),
@@ -72,6 +73,8 @@ export function useApi() {
     confirmDocuments:      (documents, vehicleId)  => api.confirmDocuments(documents, vehicleId, stableGetToken),
 
     getOffers:     ()                   => api.getOffers(stableGetToken),
+    getResponsibilityNotices: ()        => api.getResponsibilityNotices(stableGetToken),
+    submitResponsibilityAppeal: (caseId, body) => api.submitResponsibilityAppeal(caseId, body, stableGetToken),
     acceptOffer:   (id)                 => api.acceptOffer(id, stableGetToken),
     rejectOffer:   (id)                 => api.rejectOffer(id, stableGetToken),
 
@@ -81,7 +84,7 @@ export function useApi() {
     // `extra` carries the otp when moving to `started`, and the captain's current
     // lat/lng whenever there is one to send.
     setRideStatus: (id, to, extra)      => api.setRideStatus(id, to, extra, stableGetToken),
-    cancelRide:    (id)                 => api.cancelRide(id, stableGetToken),
+    cancelRide:    (id, payload)        => api.cancelRide(id, payload, stableGetToken),
     acceptRide:    (id)                 => api.acceptRide(id, stableGetToken),
     declineRide:   (id)                 => api.declineRide(id, stableGetToken),
   }), [stableGetToken, stableSignOut]);

@@ -98,6 +98,11 @@ export function usePushRegistration(enabled: boolean) {
   // latter has no response listener running yet, so Expo retains it as the last
   // response for us to read after the JS tree has mounted.
   useEffect(() => {
+    // expo-notifications exposes notification responses on Android and iOS.
+    // Its web shim throws for these methods, so web preview must leave routing
+    // to the browser instead of taking down the whole app during startup.
+    if (Platform.OS === 'web') return;
+
     const redirect = (notification: Notifications.Notification) => {
       const screen = notification.request.content.data?.screen;
       if (screen === 'documents') navigate('/account/documents');

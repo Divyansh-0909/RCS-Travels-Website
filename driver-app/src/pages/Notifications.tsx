@@ -46,7 +46,7 @@ const Notifications = () => {
             showsVerticalScrollIndicator={false}
         >
             <View className="relative">
-                <View className="flex-row h-full items-baseline justify-center pt-1 gap-2 mb-1">
+                <View className="flex-row items-baseline justify-center pt-1 gap-2 mb-1">
                     <AppText className={`text-xl font-semibold ${INK_TEXT}`} style={TITLE_TRACKING}>{dc("Notifications")}</AppText>
                     {offers.length > 0 ? (
                         <AppText className={`text-sm font-semibold ${MUTED}`}>
@@ -82,7 +82,7 @@ const Notifications = () => {
             {loading && offers.length === 0 ? (
                 <OfferListSkeleton />
             ) : offers.length === 0 ? (
-                <View className="items-center justify-center h-full py-16 pt-20 gap-1">
+                <View className="items-center justify-center py-16 pt-20 gap-1">
                     <AppText className={`text-base font-semibold ${INK_TEXT}`}>{dc("No notifications")}</AppText>
                     <AppText className={`text-sm text-center ${MUTED}`}>{dc("Rides you are offered") + " "}{"\n"}{" " + dc("will wait here until you answer them.")}</AppText>
                 </View>

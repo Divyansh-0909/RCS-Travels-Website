@@ -1,4 +1,5 @@
 import Constants from 'expo-constants';
+import { getRetryAfterMs } from './rateLimit';
 
 const TIMEOUT_MS = 15000;
 
@@ -108,7 +109,14 @@ async function request(path, { method = "GET", body, getToken } = {}) {
     }
 
     if (!res.ok) {
-        return { ...data, error: data?.error || `Server error (${res.status})`, status: res.status, code: data?.code, details: data?.details };
+        return {
+            ...data,
+            error: data?.error || `Server error (${res.status})`,
+            status: res.status,
+            code: data?.code,
+            details: data?.details,
+            ...(res.status === 429 ? { retryAfterMs: getRetryAfterMs(res.headers.get('Retry-After'), data) } : {}),
+        };
     }
 
     return data;
@@ -191,6 +199,8 @@ const toQuery = (filters = {}) => {
 // pushes, so they wait for him — the app shows "Go online to accept" rather than
 // hiding a ride he is still entitled to take.
 export const getOffers         = (getToken)              => request("/api/driver/offers", { getToken });
+export const getResponsibilityNotices = (getToken) => request('/api/driver/me/responsibility-notices', { getToken });
+export const submitResponsibilityAppeal = (caseId, body, getToken) => request(`/api/driver/responsibility-cases/${encodeURIComponent(caseId)}/appeal`, { method: 'POST', body, getToken });
 export const acceptOffer       = (id, getToken)          => request(`/api/driver/offers/${encodeURIComponent(id)}/accept`, { method: "PATCH", getToken });
 export const rejectOffer       = (id, getToken)          => request(`/api/driver/offers/${encodeURIComponent(id)}/reject`, { method: "PATCH", getToken });
 
@@ -215,7 +225,7 @@ export const setRideStatus     = (id, to, extra, getToken)  => request(`/api/dri
 // puts scheduled work back to `confirmed` and Ride Now back to `pending`, then
 // immediately restarts the matching dispatcher. It refuses
 // once he has marked himself arrived, when a rider is already waiting on him.
-export const cancelRide        = (id, getToken)          => request(`/api/driver/rides/${encodeURIComponent(id)}/cancel`, { method: "PATCH", getToken });
+export const cancelRide        = (id, payload, getToken) => request(`/api/driver/rides/${encodeURIComponent(id)}/cancel`, { method: "PATCH", body: payload, getToken });
 
 export const acceptRide        = (id, getToken)          => request(`/api/driver/rides/${encodeURIComponent(id)}/accept`, { method: "PATCH", getToken });
 export const declineRide       = (id, getToken)          => request(`/api/driver/rides/${encodeURIComponent(id)}/decline`, { method: "PATCH", getToken });

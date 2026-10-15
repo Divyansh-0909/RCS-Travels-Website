@@ -331,7 +331,7 @@ const completedPaymentNotice = (booking: UpcomingBooking): CustomerPaymentNotice
     }
     return {
         label: amount != null ? dc("Payment pending · {{value0}}", { value0: rupees(amount) }) : dc("Payment pending"),
-        detail: dc("The rider can pay by UPI or cash. No confirmation is needed from you."),
+        detail: dc("The rider will complete payment after the ride. No confirmation is needed from you."),
         tone: 'warning',
     };
 };
@@ -341,12 +341,12 @@ const inProgressPaymentNotice = (booking: UpcomingBooking): CustomerPaymentNotic
     return booking.scheduledPayment && advance && advance > 0
         ? {
             label: dc("Advance paid · {{value0}}", { value0: rupees(advance) }),
-            detail: dc("The rider can pay the remaining amount by UPI or cash after the ride."),
+            detail: dc("The rider will pay the remaining amount after the ride."),
             tone: 'success',
         }
         : {
             label: dc("Payment after ride"),
-            detail: dc("The rider can pay by UPI or cash after the ride."),
+            detail: dc("The rider will complete payment after the ride."),
             tone: 'primary',
         };
 };

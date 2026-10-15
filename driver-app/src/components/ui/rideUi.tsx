@@ -22,7 +22,7 @@ export const HAIRLINE = 'rgba(18,18,32,0.1)';
 
 export const INK_TEXT = 'text-ink';
 export const MUTED = 'text-ink-muted';
-export const CONTENT = 'text-black';
+export const CONTENT = 'text-ink';
 
 // The primary line of a section: the thing a captain actually reads, as opposed to the
 // label naming it or the small print qualifying it. A place name and a fare line are the
@@ -281,7 +281,7 @@ export const ActionButton = ({
 
 /** The two marks the action buttons are fronted by, so both call sites agree on size. */
 export const PhoneMark = () => (
-    <Phone size={18} weight="fill" className="text-on-strong" />
+    <Phone size={18} weight="fill" color="#FFFFFF" />
 );
 
 export const WhatsappMark = () => (

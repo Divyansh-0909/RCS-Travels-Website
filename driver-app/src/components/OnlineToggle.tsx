@@ -178,6 +178,7 @@ const OnlineToggle = () => {
 
                     <Pressable
                         role="switch"
+                        aria-label={online ? dc("Offline") : dc("Go online")}
                         aria-checked={online}
                         disabled={busy}
                         onPress={() => toggleOnline()}

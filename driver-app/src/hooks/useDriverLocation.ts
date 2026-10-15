@@ -4,7 +4,7 @@ import { AppState, Linking } from 'react-native';
 import * as Location from 'expo-location';
 import { showPermissionPrompt } from '../components/ui/PermissionPrompt';
 import { rememberDriverLocation } from '../lib/driverLocationCache';
-import { LOCATION_TASK, onLocationAccepted, reportFix } from '../lib/locationTask';
+import { fixFromLocation, LOCATION_TASK, onLocationAccepted, reportFix, type Fix } from '../lib/locationTask';
 import { useApi } from './useApi';
 import { useDriver } from './useDriver';
 
@@ -218,7 +218,7 @@ export function useDriverLocation(enabled: boolean, onRide: boolean) {
     // A successful response is the transition from Connecting to Online. A
     // failed response deliberately leaves the intent alone: the foreground
     // service and every later OS fix keep retrying until one is accepted.
-    const postFix = (fix: { lat: number; lng: number }) => api.sendLocation(fix);
+    const postFix = (fix: Fix) => api.sendLocation(fix);
 
     // The task normally reports the first OS-delivered fix. That can take up to
     // the idle interval, though, leaving a newly-online driver invisible to
@@ -245,7 +245,7 @@ export function useDriverLocation(enabled: boolean, onRide: boolean) {
           rememberDriverLocation(location);
 
           const accepted = await reportFix(
-            { lat: location.coords.latitude, lng: location.coords.longitude },
+            fixFromLocation(location),
             postFix,
             true,
           );
@@ -282,7 +282,7 @@ export function useDriverLocation(enabled: boolean, onRide: boolean) {
         (loc) => {
           rememberDriverLocation(loc);
           void reportFix(
-            { lat: loc.coords.latitude, lng: loc.coords.longitude },
+            fixFromLocation(loc),
             postFix,
           ).catch(() => {});
         },
