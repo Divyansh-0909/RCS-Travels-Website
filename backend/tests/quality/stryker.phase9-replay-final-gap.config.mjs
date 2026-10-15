@@ -1,0 +1,2 @@
+import base from './stryker.phase9-replay-retest.config.mjs'
+export default { ...base, mutate: ["tests/helpers/phase9ControlledTime.js:23-23","tests/helpers/phase9ReplayCanonical.js:58-58","tests/helpers/phase9ReplayCanonical.js:69-69","tests/helpers/phase9ReplayCanonical.js:71-71","tests/helpers/phase9ReplaySources.js:21-21","tests/helpers/phase9ReplaySources.js:23-23","tests/helpers/phase9ReplaySources.js:28-28"], jsonReporter: { fileName: 'coverage/phase9-replay-final-gap.json' } }
