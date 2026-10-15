@@ -14,6 +14,7 @@ import { vehicleLabel, statusChip, splitAddress, displayPhone, formatDateTime, C
 import Button from "../components/ui/Button";
 import EmptyState from "../components/ui/EmptyState";
 import FailureState from "../components/ui/FailureState";
+import { Link } from "react-router-dom";
 import Chips, { filterLabel, filterField } from "../components/ui/Chips";
 import { VerificationStatus, BookingStatus, CancelledBy, BookingSource, VehicleClass, DriverGroup } from "../types/enums";
 import { VEHICLE_CLASS_NAMES } from "../constants/vehicles";
@@ -508,7 +509,7 @@ const AdminDashboard = () => {
             selected={selected}
             onSelect={(i : number) => { setSelected(i); setPage(1); setFilterSection(0); setDetail(null); setExpanded(false) }}
             title={dc("Admin Dashboard")}
-            headerActions={headerActions}
+            headerActions={<div className="flex flex-wrap items-center gap-3"><Link to="/dashboard/responsibility" className="rounded-xl border border-border px-4 py-3 text-primary focus-visible:outline-2">Responsibility review</Link>{headerActions}</div>}
             panelOpen={expanded || detail !== null}
             onPanelClose={() => { setExpanded(false); setDetail(null) }}
         >

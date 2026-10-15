@@ -99,7 +99,7 @@ const RideCancelledToast = ({ outcome: outcomeOverride, dismissAfterMs = DISMISS
                         </p>
                         <p className="mt-0.5 text-2xl font-bold">₹{charge}</p>
                         {charge > 0 && (
-                            <p className="mt-1 text-xs text-[var(--text-muted)]">{dc("Retained from your paid advance as driver compensation—not charged again.")}</p>
+                            <p className="mt-1 text-xs text-[var(--text-muted)]">{dc("The cancellation fee is capped at 10% of the fare or ₹100. The remaining advance is refunded.")}</p>
                         )}
                     </div>
 

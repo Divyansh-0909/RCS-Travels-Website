@@ -26,7 +26,7 @@ const colors = {
   'white-muted': '#AEAEAE',
   primary: '#243AFB',
   'primary-dark': '#1212B4',
-  'primary-light': '#7A94FF',
+  'primary-light': '#3067FD',
   negative: '#B91C1C',
   'negative-dark': '#7A0F0F',
   'negative-light': '#E86A6A',

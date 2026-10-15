@@ -527,7 +527,6 @@ const TimingChoiceSheet = ({ anim, timing, onSelect, onClose, isMobile }) => {
       {isMobile ? (
         <BackgroundPanel
           sheet
-          solid
           dismissible
           onDismiss={onClose}
           show={!anim.closing}
@@ -565,7 +564,6 @@ const RoutePanel = ({ sheet, isMobile, className, children, bottomInset = 0, con
     return (
       <BackgroundPanel
         sheet
-        solid
         fillAvailable={fillAvailable}
         duration={420}
         bottomInset={bottomInset}
@@ -1084,7 +1082,7 @@ const OnBoarding = ({ bookingStage = false, timingStep = false, highlightRideNow
         }}
         className={`scale-[1] sm:scale-[1.3] sm:origin-left ${formWidth}`}
       >
-        {loading ? tr("Loading...") : timing === "Schedule" ? tr("Set date & time") : tr("See prices")}
+        {loading ? tr("Loading...") : timingStep ? tr("See prices") : timing === "Schedule" ? tr("Set date & time") : tr("See prices")}
       </Button>
 
       {!priceBarCollapsed && (

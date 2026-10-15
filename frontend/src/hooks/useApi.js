@@ -1,12 +1,22 @@
 import { useAuth, useClerk } from "@clerk/clerk-react";
+import { useCallback, useMemo, useRef } from "react";
 import * as api from "../api/api";
+import { signOutCurrentSession } from '../../../shared/auth/signOutCurrentSession.mjs';
 
 export function useApi() {
-  const { getToken } = useAuth();
-  const { signOut } = useClerk();
-  
-  return {
+  const { getToken: clerkGetToken, sessionId } = useAuth();
+  const { signOut: clerkSignOut } = useClerk();
+  const auth = useRef({ clerkGetToken, clerkSignOut, sessionId });
+  auth.current = { clerkGetToken, clerkSignOut, sessionId };
+  // SDK callback changes must not restart effects that depend on the API object.
+  // Read the current callbacks so stable methods never capture an old session.
+  const getToken = useCallback((...args) => auth.current.clerkGetToken(...args), []);
+  const signOut = useCallback(() => signOutCurrentSession(auth.current.clerkSignOut, auth.current.sessionId), []);
+
+  return useMemo(() => ({
+    reviewResponsibility: (caseId, action, body) => api.reviewResponsibility(caseId, action, body, getToken),
     getMe:            ()              => api.getMe(getToken),
+    getResponsibilityCase: (caseId, signal) => api.getResponsibilityCase(caseId, getToken, signal),
     createMe:         (name)          => api.createMe(name, getToken),
     getPreferences:   ()              => api.getPreferences(getToken),
     updatePreferences:(body)          => api.updatePreferences(body, getToken),
@@ -14,7 +24,7 @@ export function useApi() {
     getOffers:        () => api.getOffers(getToken),
     createBooking:    (data)          => api.createBooking(data, getToken),
     getNearbyDrivers: (pickupCoords, vehicleClass) => api.getNearbyDrivers(pickupCoords, vehicleClass, getToken),
-    cancelBooking:    (bookingId, expectedCancellationCharge) => api.cancelBooking(bookingId, expectedCancellationCharge, getToken),
+    cancelBooking:    (bookingId, expectedCancellationCharge, cancellationReason = null) => api.cancelBooking(bookingId, expectedCancellationCharge, cancellationReason, getToken),
     submitRideComplaint: (bookingId, reasons) => api.submitRideComplaint(bookingId, reasons, getToken),
     createScheduledAdvanceOrder: (bookingId) => api.createScheduledAdvanceOrder(bookingId, getToken),
     createScheduledFinalOrder: (bookingId) => api.createScheduledFinalOrder(bookingId, getToken),
@@ -23,6 +33,7 @@ export function useApi() {
     recordRideNowCashPayment: (bookingId) => api.recordRideNowCashPayment(bookingId, getToken),
     verifyPayment: (paymentId, response) => api.verifyPayment(paymentId, response, getToken),
     getBookingStatus: (id, signal)    => api.getBookingStatus(id, getToken, signal),
+    requestReassignment: (id)         => api.requestReassignment(id, getToken),
     shareBooking:     (id)            => api.shareBooking(id, getToken),
     unshareBooking:   (id)            => api.unshareBooking(id, getToken),
     getMyRideSummary: ()              => api.getMyRideSummary(getToken),
@@ -57,5 +68,5 @@ export function useApi() {
     getSavedPlaces:   ()              => api.getSavedPlaces(getToken),
     saveSavedPlace:   (place)         => api.saveSavedPlace(place, getToken),
     deleteSavedPlace: (id)            => api.deleteSavedPlace(id, getToken),
-  };
+  }), [getToken, signOut]);
 }

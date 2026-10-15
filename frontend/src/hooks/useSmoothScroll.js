@@ -13,21 +13,51 @@ export function useSmoothScroll() {
     useLayoutEffect(() => {
         if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
-        // gsap.context so StrictMode's double-mount reverts cleanly instead of
-        // leaving two smoothers fighting over the same content.
-        const ctx = gsap.context(() => {
-            ScrollSmoother.create({
-                wrapper: "#smooth-wrapper",
-                content: "#smooth-content",
-                smooth: 1.2,        // seconds the content takes to catch up to the real scroll position
-                smoothTouch: false, // phones keep native scroll
-                effects: true,      // opts in data-speed / data-lag parallax on children
-                // No normalizeScroll: it hands touch/wheel to JS, which would stop
-                // the nested scrollers (OnBoarding's suggestion panel, the nav
-                // drawer) from scrolling under the pointer.
+        let ctx = null;
+        let observer = null;
+        let disposed = false;
+
+        const createSmoother = () => {
+            if (disposed || ctx) return Boolean(ctx);
+
+            const wrapper = document.getElementById("smooth-wrapper");
+            const content = document.getElementById("smooth-content");
+            if (!wrapper || !content) return false;
+
+            // App's landing sections are lazy. While Suspense is showing its
+            // fallback these nodes do not exist yet, so passing selectors to
+            // ScrollSmoother would warn and leave the route without smoothing.
+            // Explicit elements also prevent a route transition from resolving
+            // selectors against the page that is being removed.
+            ctx = gsap.context(() => {
+                ScrollSmoother.create({
+                    wrapper,
+                    content,
+                    smooth: 1.2,        // seconds the content takes to catch up to the real scroll position
+                    smoothTouch: false, // phones keep native scroll
+                    effects: true,      // opts in data-speed / data-lag parallax on children
+                    // No normalizeScroll: it hands touch/wheel to JS, which would stop
+                    // the nested scrollers (OnBoarding's suggestion panel, the nav
+                    // drawer) from scrolling under the pointer.
+                });
+            }, wrapper);
+            return true;
+        };
+
+        if (!createSmoother()) {
+            observer = new MutationObserver(() => {
+                if (!createSmoother()) return;
+                observer?.disconnect();
+                observer = null;
             });
-        });
-        return () => ctx.revert();
+            observer.observe(document.body, { childList: true, subtree: true });
+        }
+
+        return () => {
+            disposed = true;
+            observer?.disconnect();
+            ctx?.revert();
+        };
     }, []);
 }
 

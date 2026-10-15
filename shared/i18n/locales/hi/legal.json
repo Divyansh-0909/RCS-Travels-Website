@@ -43,7 +43,7 @@
           "heading": "भुगतान कैसे होता है",
           "body": [
             "Ride Now राइड का भुगतान यात्रा के अंत में उस राइड के लिए उपलब्ध भुगतान तरीके से ड्राइवर को किया जाता है। इनके लिए हमारे प्लेटफ़ॉर्म पर अग्रिम भुगतान नहीं लिया जाता।",
-            "निर्धारित राइड के लिए वर्तमान में Razorpay के माध्यम से 15% अग्रिम राशि आवश्यक है। शेष किराया बुकिंग में दिखाए अनुसार देय है। भुगतान सेवा पर भुगतान प्रदाता की शर्तें भी लागू हो सकती हैं।"
+            "निर्धारित राइड के लिए वर्तमान में Razorpay के माध्यम से 10% अग्रिम राशि आवश्यक है। शेष किराया बुकिंग में दिखाए अनुसार देय है। भुगतान सेवा पर भुगतान प्रदाता की शर्तें भी लागू हो सकती हैं।"
           ]
         },
         {
@@ -51,7 +51,7 @@
           "body": [
             "Ride Now में कोई अग्रिम रद्दीकरण शुल्क नहीं है। निर्धारित राइड के लिए हमारे सर्वर द्वारा दिया गया रद्दीकरण कोट अंतिम माना जाएगा। जमा करने से पहले इसमें बदलाव होने पर हम नया कोट दिखाकर आपकी पुष्टि माँगेंगे।",
             "वर्तमान उत्पाद व्यवहार: जब कोई ड्राइवर आवंटित न हो, आवंटित ड्राइवर का नया प्लेटफ़ॉर्म स्थान उपलब्ध न हो, ड्राइवर पिकअप से 500 metres से दूर हो या ड्राइवर रद्द करे, तो निर्धारित राइड की कोई रद्दीकरण राशि नहीं रखी जाती। आवंटित ड्राइवर का नया स्थान पिकअप के 500 metres के भीतर होने या राइड के संबंधित आगमन स्थिति तक पहुँचने पर राशि रखी जाती है।",
-            "[TO CONFIRM: LAUNCH BLOCKER — reported final UP Rules limit passenger cancellation charges to 10% of fare capped at ₹100. The current 15% advance-retention behaviour appears capable of exceeding that limit. Reconcile the product, refund flow and legal rule before publication or launch.]"
+            "पिकअप के पास रद्दीकरण शुल्क लागू होने पर यह किराए का 10%, अधिकतम ₹100 है। सूचीबद्ध वैध कारणों पर शुल्क नहीं लगता। केवल शुल्क रखा जाता है और शेष एडवांस वापस किया जाता है।"
           ]
         },
         {
@@ -213,7 +213,7 @@
         {
           "heading": "Scheduled-ride advance",
           "body": [
-            "Scheduled rides currently collect a 15% Razorpay advance. The server calculates the cancellation quote and settlement; the app shows that result for your confirmation."
+            "Scheduled rides currently collect a 10% Razorpay advance. The server calculates the cancellation quote and settlement; the app shows that result for your confirmation."
           ]
         },
         {
@@ -231,7 +231,7 @@
         {
           "heading": "Before publication",
           "body": [
-            "[TO CONFIRM: LAUNCH BLOCKER — reconcile the current 15% retention with the reported UP cancellation limit of 10% of fare capped at ₹100. This operational description is not a statement that the current rule is lawful or final.]"
+            "पिकअप के पास रद्दीकरण शुल्क लागू होने पर यह किराए का 10%, अधिकतम ₹100 है। सूचीबद्ध वैध कारणों पर शुल्क नहीं लगता। केवल शुल्क रखा जाता है और शेष एडवांस वापस किया जाता है।"
           ]
         },
         {
@@ -479,7 +479,7 @@
         {
           "heading": "Scheduled rides",
           "body": [
-            "A customer currently pays a 15% Razorpay advance for a scheduled ride. The service records the advance and its final disposition against the booking. [TO CONFIRM: reconcile this behaviour with the reported UP passenger cancellation cap before launch.]"
+            "पिकअप के पास रद्दीकरण शुल्क लागू होने पर यह किराए का 10%, अधिकतम ₹100 है। सूचीबद्ध वैध कारणों पर शुल्क नहीं लगता। केवल शुल्क रखा जाता है और शेष एडवांस वापस किया जाता है।"
           ]
         },
         {

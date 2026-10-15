@@ -221,7 +221,6 @@ export const RideOptionsSheet = ({ options, open, onClose }) => {
             />
             <BackgroundPanel
                 sheet
-                solid
                 dismissible
                 onDismiss={onClose}
                 duration={420}

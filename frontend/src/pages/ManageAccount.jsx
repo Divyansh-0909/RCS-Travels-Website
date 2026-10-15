@@ -23,6 +23,7 @@ import { VEHICLE_CLASS_NAMES } from "../constants/vehicles";
 import { angledVehicleImageOf } from "../constants/vehicleImages";
 import Chips, { filterLabel, filterField } from "../components/ui/Chips";
 import { COMPLAINT_OPTIONS } from "../constants/complaints";
+import { CUSTOMER_CANCELLATION_REASONS, OTHER_CANCELLATION_REASON, cancellationChargeForChoice, cancellationReasonForApi } from "../constants/cancellation";
 import { useWebsiteCopy } from "../hooks/useWebsiteCopy";
 
 const genderOptions = ["Male", "Female", "Others", "Rather not say"]
@@ -324,19 +325,27 @@ const ManageAccount = () => {
 
         const quotedCharge = quotedCancellationCharge(booking)
         if (cancelConfirmation?.id !== id || cancelConfirmation.charge !== quotedCharge) {
-            setCancelConfirmation({ id, charge: quotedCharge })
+            setCancelConfirmation({ id, charge: quotedCharge, reasonChoice: "" })
             setRideError(null)
             return
         }
 
+        if (!cancelConfirmation.reasonChoice) {
+            setRideError(tr("Choose a cancellation reason"))
+            return
+        }
+
+        const expectedCharge = cancellationChargeForChoice(quotedCharge, cancelConfirmation.reasonChoice)
+        const cancellationReason = cancellationReasonForApi(cancelConfirmation.reasonChoice)
+
         try {
             setRideError(null);
 
-            const data = await cancelBooking(id, quotedCharge);
+            const data = await cancelBooking(id, expectedCharge, cancellationReason);
 
             if (data?.error) {
                 if (data.code === "CANCELLATION_AMOUNT_CHANGED") {
-                    setCancelConfirmation({ id, charge: data.cancellationCharge ?? 0 })
+                    setCancelConfirmation(current => ({ id, charge: data.cancellationCharge ?? 0, reasonChoice: current?.id === id ? current.reasonChoice : "" }))
                     setRideError(data.error)
                     return
                 }
@@ -655,11 +664,20 @@ const ManageAccount = () => {
                                     </Button>
                                 )}
                                 {activeRideUpcoming && customerCancellableStatuses.has(activeRide.status) && (
-                                    <Button onClick={() => handleCancel(activeRide)} prop={{ variant: "negative", width: "200px" }}>
+                                    <Button
+                                        onClick={() => handleCancel(activeRide)}
+                                        prop={{
+                                            variant: "negative",
+                                            width: "200px",
+                                            disabled: cancelConfirmation?.id === activeRide.id && !cancelConfirmation.reasonChoice,
+                                        }}
+                                    >
                                         {cancelConfirmation?.id === activeRide.id
-                                            ? cancelConfirmation.charge > 0
-                                                ? dc("Yes, cancel and pay ₹{{amount}}", { amount: cancelConfirmation.charge })
-                                                : tr("Yes, cancel this ride")
+                                            ? cancelConfirmation.reasonChoice
+                                                ? cancellationChargeForChoice(cancelConfirmation.charge, cancelConfirmation.reasonChoice) > 0
+                                                    ? dc("Yes, cancel and pay ₹{{amount}}", { amount: cancellationChargeForChoice(cancelConfirmation.charge, cancelConfirmation.reasonChoice) })
+                                                    : tr("Yes, cancel this ride")
+                                                : tr("Choose a cancellation reason")
                                             : tr("Cancel ride")}
                                     </Button>
                                 )}
@@ -674,6 +692,51 @@ const ManageAccount = () => {
                                 )}
                                 <p className="text-sm text-ink-muted">{tr("Need help?") + " "}<u className="cursor-pointer text-ink transition-colors duration-300 hover:text-ink-muted">{tr("Talk to us")}</u></p>
                             </div>
+
+                            {activeRideUpcoming && cancelConfirmation?.id === activeRide.id && (
+                                <div className="rounded-2xl border border-border/50 bg-surface-muted p-4">
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div>
+                                            <h4 className="font-semibold text-ink">{tr("Why are you cancelling?")}</h4>
+                                            <p className="mt-0.5 text-sm text-ink-muted">{tr("Listed valid reasons waive the cancellation fee. Choose Other / none of these if none applies.")}</p>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => { setCancelConfirmation(null); setRideError(null); }}
+                                            className="rounded-full p-1 text-ink-muted transition-colors hover:bg-surface hover:text-ink"
+                                            aria-label={tr("Keep ride")}
+                                        >
+                                            <Icon path={mdiClose} size={0.9} />
+                                        </button>
+                                    </div>
+                                    <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                                        {CUSTOMER_CANCELLATION_REASONS.map((reason) => (
+                                            <button
+                                                key={reason.value}
+                                                type="button"
+                                                onClick={() => setCancelConfirmation(current => ({ ...current, reasonChoice: reason.value }))}
+                                                className={`rounded-xl border px-3 py-2.5 text-left text-sm font-medium transition-colors ${cancelConfirmation.reasonChoice === reason.value ? "border-ink bg-ink text-surface" : "border-border bg-surface text-ink hover:border-ink/40"}`}
+                                            >
+                                                {tr(reason.label)}
+                                            </button>
+                                        ))}
+                                        <button
+                                            type="button"
+                                            onClick={() => setCancelConfirmation(current => ({ ...current, reasonChoice: OTHER_CANCELLATION_REASON }))}
+                                            className={`rounded-xl border px-3 py-2.5 text-left text-sm font-medium transition-colors ${cancelConfirmation.reasonChoice === OTHER_CANCELLATION_REASON ? "border-ink bg-ink text-surface" : "border-border bg-surface text-ink hover:border-ink/40"}`}
+                                        >
+                                            {tr("Other / none of these")}
+                                        </button>
+                                    </div>
+                                    <p className="mt-3 text-sm text-ink-muted">
+                                        {cancelConfirmation.reasonChoice && cancelConfirmation.reasonChoice !== OTHER_CANCELLATION_REASON
+                                            ? tr("Cancellation charge: ₹0. Any paid scheduled advance will be refunded.")
+                                            : cancelConfirmation.reasonChoice === OTHER_CANCELLATION_REASON
+                                                ? dc("Cancellation charge: ₹{{amount}}. If charged, only this amount is retained from the advance; the balance is refunded.", { amount: cancellationChargeForChoice(cancelConfirmation.charge, cancelConfirmation.reasonChoice) })
+                                                : tr("Select the reason that best matches what happened.")}
+                                    </p>
+                                </div>
+                            )}
 
                             {complaintRide === activeRide.id && (
                                 <div className="rounded-2xl border border-border/50 bg-surface-muted p-4">

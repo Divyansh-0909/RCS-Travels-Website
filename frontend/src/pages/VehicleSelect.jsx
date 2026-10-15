@@ -8,6 +8,8 @@ import { INITIAL_SHEET_SNAP } from "../hooks/useBottomSheet";
 import { useData } from "../hooks/useData";
 import { useApi } from "../hooks/useApi";
 import { useState, useEffect, useRef } from "react";
+import { createRequestSequence } from "../lib/requestSequence";
+import { scheduledBookingNeedsTime } from "../lib/bookingTiming";
 import { useLocation } from "react-router-dom";
 import ErrorMark from "../components/illustrations/ErrorMark";
 import { useViewNavigate } from "../hooks/useViewNavigate";
@@ -22,7 +24,7 @@ import NoticePill from "../components/ui/NoticePill";
 import { openSupportWhatsApp } from "../constants/support";
 import RideDetails from "../components/RideDetails";
 import { RideOptionsTrigger, RideOptionsPopover, RideOptionsSheet } from "../components/RideOptions";
-import { CARRIER_CHARGE, CANCELLATION_CHARGE_PCT, SAFE_ROUTE_SURCHARGE, isDistancePriced } from "../constants/fares";
+import { CARRIER_CHARGE, SAFE_ROUTE_SURCHARGE, isDistancePriced } from "../constants/fares";
 import Skeleton from "../components/ui/Skeleton";
 import EmptyState from "../components/ui/EmptyState";
 import FailureState from "../components/ui/FailureState";
@@ -132,6 +134,7 @@ const VehicleSelect = () => {
     const tr = useWebsiteCopy();
     const phone = useData(state => state.phone)
     const scheduledTime = useData(state => state.scheduledTime)
+    const timing = useData(state => state.timing);
     const dropLocation = useData(state => state.dropLocation)
     const setDrop = useData(state => state.setDrop)
     const pickupLocation = useData(state => state.pickupLocation)
@@ -198,6 +201,8 @@ const VehicleSelect = () => {
     // everywhere — a card shown from one estimate and booked against another
     // would be rejected as a stale price.
     const [fareQuote, setFareQuote] = useState(() => initialEstimateRef.current?.quote ?? null);
+    const fareRequests = useRef(createRequestSequence());
+    useEffect(() => () => fareRequests.current.invalidate(), []);
     // serverFares === null covers three different situations — estimate in
     // flight, estimate failed, and route not priceable — and only the first
     // should show skeletons. Seeded from the same guard fetchEstimate uses, so
@@ -216,6 +221,7 @@ const VehicleSelect = () => {
 
     // Dev-only: /dev/vehicle?step=|?panel=|?safe= force internal states for previews.
     const devParams = import.meta.env.DEV ? new URLSearchParams(window.location.search) : null;
+    const isDevPreview = import.meta.env.DEV && window.location.pathname.startsWith('/dev/');
     const [bookingReference, setBookingReference] = useState(activeBooking?.reference ?? null);
     const [paymentPhase, setPaymentPhase] = useState(() => {
         const preview = devParams?.get("payment");
@@ -237,6 +243,7 @@ const VehicleSelect = () => {
         devSafeRoute ?? initialEstimateRef.current?.safeRoute ?? null
     );
     const restoredScheduledTime = scheduledTime ?? activeBooking?.scheduledAt ?? null;
+    const needsScheduledTime = scheduledBookingNeedsTime(timing, scheduledTime, Boolean(activeBooking?.id));
     const [panelState, setPanelState] = useState(
         devParams?.get("panel") ?? (bookingId && restoredScheduledTime
             ? status === "confirmed" ? "confirmed" : status === "payment_pending" ? "payment" : ""
@@ -266,6 +273,9 @@ const VehicleSelect = () => {
     const [msgIndex, setMsgIndex] = useState(0);
     const [illusIndex, setIllusIndex] = useState(0);
     const navigate = useViewNavigate();
+    useEffect(() => {
+        if (!isDevPreview && needsScheduledTime) navigate('/book', { replace: true, state: { stage: 'timing' } });
+    }, [isDevPreview, needsScheduledTime, navigate]);
     const api = useApi();
     const isMobile = useIsMobile();
     // The raw Map instance of the mobile page-background map, for reframing on
@@ -341,15 +351,17 @@ const VehicleSelect = () => {
     // preferring pin-adjusted coords over the typed addresses. Vehicle type
     // only affects the fare, so any valid type works. Returns the fresh data
     // so callers that can't wait for a re-render (confirmBooking) can use it.
-    async function fetchEstimate() {
+    async function fetchEstimate(couponId = selectedCouponId) {
         if (!pickupLocation?.trim() || !dropLocation?.trim()) return null;
+        const current = fareRequests.current.begin();
         setPricing(true);
         setEstimateError(null);
         // finally, not a clear on each exit: the error path returns early and
         // estimateFare can throw, and either leaving `pricing` stuck true would
         // strand the cards on skeletons forever.
         try {
-            const data = await api.estimateFare(pickupLocation, dropLocation, vehicleClass ?? "hatchback", pickupCoords, dropCoords, safeRoute, needsCarrier, selectedCouponId);
+            const data = await api.estimateFare(pickupLocation, dropLocation, vehicleClass ?? "hatchback", pickupCoords, dropCoords, safeRoute, needsCarrier, couponId);
+            if (!current()) return null;
             if (data?.error) {
                 // These prices are what the booking is created with, so a failed
                 // estimate has to surface — say so and leave the cards unpriced.
@@ -385,6 +397,7 @@ const VehicleSelect = () => {
             setFareSource(devParams?.get("fare") ?? data.fareSource ?? null);
             return data;
         } catch (err) {
+            if (!current()) return null;
             // request() only converts HTTP errors into { error } — a network
             // failure rejects, and both call sites used to let it escape
             // unhandled, leaving the cards on "₹—" with nothing said.
@@ -395,7 +408,7 @@ const VehicleSelect = () => {
             setEstimateError(dc("Couldn't reach the server to price this route."));
             return null;
         } finally {
-            setPricing(false);
+            if (current()) setPricing(false);
         }
     }
 
@@ -795,6 +808,10 @@ const VehicleSelect = () => {
     const routeUnpriced = hasRoute && !pricing && !estimateError && anyFare == null;
 
     async function confirmBooking(freshMetrics) {
+        if (!isDevPreview && needsScheduledTime) {
+            navigate('/book', { replace: true, state: { stage: 'timing' } });
+            return;
+        }
         // freshMetrics carries the estimate that was just re-fetched for the
         // adjusted pin — its fares are newer than serverFares, which can't have
         // re-rendered yet. Falling back to state covers the unchanged-pin path.
@@ -927,7 +944,7 @@ const VehicleSelect = () => {
             if (checkout?.error) throw new Error(checkout.error);
             setScheduledCheckout(checkout);
             setPaymentPhase(PAYMENT_PHASE.OPENING);
-            const response = await openRazorpayCheckout(checkout, { get "description"() { return dc("15% scheduled ride advance"); } });
+            const response = await openRazorpayCheckout(checkout, { get "description"() { return dc("10% scheduled ride advance"); } });
             setPaymentPhase(PAYMENT_PHASE.VERIFYING);
             const verified = await api.verifyPayment(checkout.paymentId, response);
             if (verified?.error) throw new Error(verified.error);
@@ -1193,8 +1210,9 @@ const VehicleSelect = () => {
                             type="button"
                             className="block w-full text-left py-1"
                             onClick={() => {
-                                setSelectedCouponId(selectedCouponId === coupon.id ? null : coupon.id);
-                                setTimeout(() => fetchEstimate(), 0);
+                                const nextCouponId = selectedCouponId === coupon.id ? null : coupon.id;
+                                setSelectedCouponId(nextCouponId);
+                                fetchEstimate(nextCouponId);
                             }}
                         >
                             ₹{coupon.amount} coupon {selectedCouponId === coupon.id ? "✓" : ""}
@@ -1223,7 +1241,7 @@ const VehicleSelect = () => {
             {!barCollapsed && (
                 <p className="text-xs sm:text-sm leading-snug text-center sm:text-left text-[var(--text-muted)]">
                     {scheduledTime
-                        ? tr("Cancel free while your driver is far from pickup. If near, the paid 15% advance is deducted.")
+                        ? tr("Scheduled rides take a 10% advance. If a cancellation fee applies near pickup, it is 10% of fare up to ₹100; listed valid reasons are free and the remaining advance is refunded.")
                         : tr("Ride Now cancellation is free before the trip starts.")}
                 </p>
             )}
@@ -1326,7 +1344,6 @@ const VehicleSelect = () => {
                     </GoogleMap>
                 )}
                 <BackgroundPanel
-                    solid
                     show={["payment", "confirmed"].includes(panelState) && Boolean(restoredScheduledTime)}
                     contentKey={`${panelState}-${paymentPhase}-${scheduledFinancials?.advancePaid ?? "loading"}`}
                     className="z-4 sm:z-3 bottom-0 gap-4 py-6 text-left flex flex-col justify-center items-center"
@@ -1343,7 +1360,7 @@ const VehicleSelect = () => {
                         />
                     </div>
                 </BackgroundPanel>
-                <BackgroundPanel solid show={panelState === "noDriver"} className={`z-4 sm:z-3 bottom-0 gap-1.5 sm:gap-2 py-6 text-center flex flex-col justify-center items-center`}>
+                <BackgroundPanel show={panelState === "noDriver"} className={`z-4 sm:z-3 bottom-0 gap-1.5 sm:gap-2 py-6 text-center flex flex-col justify-center items-center`}>
                     <ErrorMark className="-mt-2" size={isMobile ? 120 : 140} />
                     <div className="flex w-[min(86vw,520px)] min-w-0 flex-col items-center">
                         <h2 className={`w-full min-w-0 [overflow-wrap:anywhere] ${TITLE}`}>{dc("No drivers nearby")}</h2>
@@ -1369,7 +1386,7 @@ const VehicleSelect = () => {
                 </BackgroundPanel>
 
                 {/* Searching panel — illustrations */}
-                <BackgroundPanel solid show={searchingVisible && detialsVisibility === false} className={`z-3 sm:z-2 sm:overflow-hidden py-6 text-left sm:px-[9%] md:px-[5%] xl:px-[13%] flex flex-col sm:flex-row sm:justify-center lg:justify-between items-center`}>
+                <BackgroundPanel show={searchingVisible && detialsVisibility === false} className={`z-3 sm:z-2 sm:overflow-hidden py-6 text-left sm:px-[9%] md:px-[5%] xl:px-[13%] flex flex-col sm:flex-row sm:justify-center lg:justify-between items-center`}>
                     {/* Back to the zoomed-out full-route view while searching */}
                     {!isMobile && searchingVisible && detialsVisibility === false && (
                         <GoogleMap appearance="dark" center={pickupPoint} zoom={12} onMapReady={setMapApi} className={MAP_CLASSES} />
@@ -1430,7 +1447,7 @@ const VehicleSelect = () => {
                 </BackgroundPanel>
 
                 {/* Searching panel — ride details */}
-                <BackgroundPanel solid show={searchingVisible && detialsVisibility === true} className={`z-3 sm:z-2 py-6 sm:overflow-hidden text-left flex flex-col sm:flex-row justify-center items-center sm:justify-center lg:justify-between sm:px-[9%] md:px-[5%] xl:px-[13%]`}>
+                <BackgroundPanel show={searchingVisible && detialsVisibility === true} className={`z-3 sm:z-2 py-6 sm:overflow-hidden text-left flex flex-col sm:flex-row justify-center items-center sm:justify-center lg:justify-between sm:px-[9%] md:px-[5%] xl:px-[13%]`}>
                     {/* same split as every other desktop panel: content
                             left, the booked route on the right */}
                     {!isMobile && detialsVisibility && (
@@ -1444,7 +1461,7 @@ const VehicleSelect = () => {
                 {/* Confirm-location panel — zoomed into the target endpoint;
                         the map drags under a fixed pin, and each settle
                         reverse-geocodes the center into the address card. */}
-                <BackgroundPanel solid show={step === "confirmLocation"} className={`z-1 sm:z-0 sm:overflow-hidden py-6 text-left flex flex-col sm:flex-row sm:px-[9%] md:px-[5%] xl:px-[13%] sm:justify-center lg:justify-between items-center`}>
+                <BackgroundPanel show={step === "confirmLocation"} className={`z-1 sm:z-0 sm:overflow-hidden py-6 text-left flex flex-col sm:flex-row sm:px-[9%] md:px-[5%] xl:px-[13%] sm:justify-center lg:justify-between items-center`}>
                     {!isMobile && step === "confirmLocation" && (
                         <GoogleMap
                             appearance="dark"
@@ -1514,7 +1531,7 @@ const VehicleSelect = () => {
                                     must not state softer terms than the one before. */}
                             <p className="text-xs sm:text-sm leading-snug text-[var(--text-muted)]">
                                 {scheduledTime
-                                    ? tr("Cancel free while your driver is far from pickup. If near, the paid 15% advance is deducted.")
+                                    ? tr("Scheduled rides take a 10% advance. If a cancellation fee applies near pickup, it is 10% of fare up to ₹100; listed valid reasons are free and the remaining advance is refunded.")
                                     : tr("Ride Now cancellation is free before the trip starts.")}
                             </p>
                         </div>
@@ -1545,7 +1562,6 @@ const VehicleSelect = () => {
                         scroller. */}
                 <BackgroundPanel
                     sheet
-                    solid
                     fillAvailable
                     duration={420}
                     bottomInset={pinBookBar ? bookBarHeight : 0}

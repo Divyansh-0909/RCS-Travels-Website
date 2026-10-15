@@ -206,7 +206,9 @@ const DriverReview = ({ driverId, onVerificationChange, onGroupChange }: {
         setSuspendBusy(true)
         const result = await setDriverSuspension(
             driverId,
-            suspended ? { suspended: true, reason: suspendReason.trim() } : { suspended: false },
+            suspended
+                ? { suspended: true, reason: suspendReason.trim(), scope: "independent_safety_or_integrity" }
+                : { suspended: false },
             getToken,
         )
         setSuspendBusy(false)

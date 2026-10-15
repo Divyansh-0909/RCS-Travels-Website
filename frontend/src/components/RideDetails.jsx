@@ -10,6 +10,7 @@ import waLogo from '../assets/whatsapp-logo.webp';
 import { openSupportWhatsApp } from "../constants/support";
 import RoutePanel from "./ui/RoutePanel";
 import { SAFE_ROUTE_SURCHARGE } from "../constants/fares";
+import { CUSTOMER_CANCELLATION_REASONS, OTHER_CANCELLATION_REASON, cancellationChargeForChoice, cancellationReasonForApi } from "../constants/cancellation";
 import { useWebsiteCopy } from "../hooks/useWebsiteCopy";
 
 // Keep the customer site's dark palette while following the captain app's
@@ -33,6 +34,7 @@ const RideDetails = ({ prop }) => {
     const status = useData(state => state.status);
     const cancellationCharge = useData(state => state.cancellationCharge);
     const [confirmCancel, setConfirmCancel] = useState(false);
+    const [cancellationReasonChoice, setCancellationReasonChoice] = useState("");
     const surcharge = safeRoute ? SAFE_ROUTE_SURCHARGE : 0;
     // Both are the amounts the estimate actually charged, saved at booking time:
     // the carrier is waived on the pricier routes, so its sticker price would be
@@ -61,7 +63,12 @@ const RideDetails = ({ prop }) => {
                 return;
             }
 
-            const data = await api.cancelBooking(cancelId, cancellationCharge);
+            if (!cancellationReasonChoice) {
+                prop.setError(dc("Choose a cancellation reason"));
+                return;
+            }
+            const expectedCharge = cancellationChargeForChoice(cancellationCharge, cancellationReasonChoice);
+            const data = await api.cancelBooking(cancelId, expectedCharge, cancellationReasonForApi(cancellationReasonChoice));
 
             if (data?.error) {
                 if (data.code === "CANCELLATION_AMOUNT_CHANGED") {
@@ -97,6 +104,8 @@ const RideDetails = ({ prop }) => {
     }
 
     if (confirmCancel && canCancel) {
+        const confirmedCharge = cancellationChargeForChoice(cancellationCharge, cancellationReasonChoice);
+        const hasValidReason = cancellationReasonChoice && cancellationReasonChoice !== OTHER_CANCELLATION_REASON;
         return (
             <div
                 role="dialog"
@@ -119,24 +128,55 @@ const RideDetails = ({ prop }) => {
                 </div>
 
                 <div className={`${CARD} flex flex-col gap-3 ${COL}`}>
+                    <div>
+                        <p className="text-sm font-semibold sm:text-base">{tr("Why are you cancelling?")}</p>
+                        <p className="mt-1 text-xs leading-snug text-[var(--text-muted)] sm:text-sm">{tr("The listed valid reasons waive the cancellation fee. Choose Other / none of these if none applies.")}</p>
+                    </div>
+                    <div className="flex max-h-[34dvh] flex-col gap-2 overflow-y-auto pr-1">
+                        {CUSTOMER_CANCELLATION_REASONS.map((reason) => {
+                            const selected = cancellationReasonChoice === reason.value;
+                            return (
+                                <button
+                                    key={reason.value}
+                                    type="button"
+                                    onClick={() => setCancellationReasonChoice(reason.value)}
+                                    className={`rounded-xl border px-3 py-2.5 text-left text-sm transition-colors ${selected ? "border-[var(--foreground)] bg-[var(--foreground)] text-[var(--background-primary)]" : "border-[var(--foreground)]/15 bg-[var(--background-primary)] text-[var(--text)] hover:border-[var(--foreground)]/35"}`}
+                                >
+                                    {tr(reason.label)}
+                                </button>
+                            );
+                        })}
+                        <button
+                            type="button"
+                            onClick={() => setCancellationReasonChoice(OTHER_CANCELLATION_REASON)}
+                            className={`rounded-xl border px-3 py-2.5 text-left text-sm transition-colors ${cancellationReasonChoice === OTHER_CANCELLATION_REASON ? "border-[var(--foreground)] bg-[var(--foreground)] text-[var(--background-primary)]" : "border-[var(--foreground)]/15 bg-[var(--background-primary)] text-[var(--text)] hover:border-[var(--foreground)]/35"}`}
+                        >
+                            {tr("Other / none of these")}
+                        </button>
+                    </div>
+                </div>
+
+                <div className={`${CARD} flex flex-col gap-3 ${COL}`}>
                     <div className="flex items-center justify-between gap-3">
                         <span className={FARE_LINE}>{tr("Cancellation charge")}</span>
-                        <span className="text-xl font-semibold">₹{cancellationCharge}</span>
+                        <span className="text-xl font-semibold">₹{confirmedCharge}</span>
                     </div>
                     <div className="h-px w-full bg-[var(--foreground)]/10" />
                     <p className="text-sm leading-snug text-[var(--text-muted)] sm:text-base">
-                        {cancellationCharge > 0
-                            ? dc("This comes from the advance you already paid and goes to your driver for reaching pickup. It is not a second charge.")
-                            : dc("No cancellation charge will be added. If you paid an advance, its refund will be started after cancellation.")}
+                        {hasValidReason
+                            ? dc("This listed reason qualifies for fee-free cancellation. If you paid an advance, its refund will be started after cancellation.")
+                            : confirmedCharge > 0
+                                ? dc("The fee is 10% of the fare, capped at ₹100. Only this amount is retained from your paid advance; the remaining advance is refunded.")
+                                : dc("No cancellation charge will be added. If you paid an advance, its refund will be started after cancellation.")}
                     </p>
                 </div>
 
                 <div className={`flex flex-col items-stretch gap-2 ${COL}`}>
-                    <Button onClick={handleCancel} prop={{ variant: "negative", width: "100%" }}>
+                    <Button onClick={handleCancel} prop={{ variant: "negative", width: "100%", disabled: !cancellationReasonChoice }}>
                         <span className="text-base sm:text-lg">{tr("Yes, cancel ride")}</span>
                     </Button>
                     <Button
-                        onClick={() => setConfirmCancel(false)}
+                        onClick={() => { setConfirmCancel(false); setCancellationReasonChoice(""); }}
                         prop={{ variant: "input", width: "100%", bg: "var(--background-muted)", border: false }}
                     >
                         <span className="text-base sm:text-lg">{tr("Keep ride")}</span>

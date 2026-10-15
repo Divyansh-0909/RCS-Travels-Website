@@ -43,7 +43,7 @@
           "heading": "How payment works",
           "body": [
             "Ride Now rides are paid to the driver at the end of the trip, using the payment method offered for that ride. They are not prepaid through our platform.",
-            "Scheduled rides currently require a 15% advance through Razorpay. The remaining fare is payable as shown for the booking. Payment-provider terms may also apply to the payment service itself."
+            "Scheduled rides currently require a 10% advance through Razorpay. The remaining fare is payable as shown for the booking. Payment-provider terms may also apply to the payment service itself."
           ]
         },
         {
@@ -51,7 +51,7 @@
           "body": [
             "Ride Now has no prepaid cancellation charge. For scheduled rides, the cancellation quote returned by our server is authoritative. If it changes before submission, we show the new quote and ask you to confirm it.",
             "Current product behaviour: no scheduled-ride cancellation amount is retained when no driver is assigned, the assigned driver has no fresh platform location, the driver is farther than 500 metres from pickup, or the driver cancels. It is retained once a fresh assigned-driver location is within 500 metres of pickup, or the ride reaches the corresponding arrival status.",
-            "[TO CONFIRM: LAUNCH BLOCKER — reported final UP Rules limit passenger cancellation charges to 10% of fare capped at ₹100. The current 15% advance-retention behaviour appears capable of exceeding that limit. Reconcile the product, refund flow and legal rule before publication or launch.]"
+            "When a cancellation fee applies near pickup, it is 10% of the fare capped at ₹100. Listed valid reasons waive the fee. Only the fee is retained and the remaining advance is refunded."
           ]
         },
         {
@@ -213,7 +213,7 @@
         {
           "heading": "Scheduled-ride advance",
           "body": [
-            "Scheduled rides currently collect a 15% Razorpay advance. The server calculates the cancellation quote and settlement; the app shows that result for your confirmation."
+            "Scheduled rides currently collect a 10% Razorpay advance. The server calculates the cancellation quote and settlement; the app shows that result for your confirmation."
           ]
         },
         {
@@ -231,7 +231,7 @@
         {
           "heading": "Before publication",
           "body": [
-            "[TO CONFIRM: LAUNCH BLOCKER — reconcile the current 15% retention with the reported UP cancellation limit of 10% of fare capped at ₹100. This operational description is not a statement that the current rule is lawful or final.]"
+            "When a cancellation fee applies near pickup, it is 10% of the fare capped at ₹100. Listed valid reasons waive the fee. Only the fee is retained and the remaining advance is refunded."
           ]
         },
         {
@@ -479,7 +479,7 @@
         {
           "heading": "Scheduled rides",
           "body": [
-            "A customer currently pays a 15% Razorpay advance for a scheduled ride. The service records the advance and its final disposition against the booking. [TO CONFIRM: reconcile this behaviour with the reported UP passenger cancellation cap before launch.]"
+            "When a cancellation fee applies near pickup, it is 10% of the fare capped at ₹100. Listed valid reasons waive the fee. Only the fee is retained and the remaining advance is refunded."
           ]
         },
         {

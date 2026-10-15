@@ -110,7 +110,7 @@ const RideMenu = ({ currentRide, scheduledRide, onOpenRide, onOpenRideHistory, t
     )
 }
 
-const NavBar = ({ invert = false, hideExpanded = false, hideDestinationInput = false, className = "" }) => {
+const NavBar = ({ invert = false, hideExpanded = false, hideDestinationInput = false, className = "", hero = false }) => {
     useCopyLanguage();
     const { t } = useTranslation("website");
     const { user: clerkUser } = useUser();
@@ -545,7 +545,7 @@ const NavBar = ({ invert = false, hideExpanded = false, hideDestinationInput = f
     // Keep the destination rail independent of the shell's animated width/padding.
     const destinationWidth = "w-[calc(89vw-2px)] sm:w-[min(620px,calc(100vw-42px))]"
 
-    const desktopSecondaryButton = `cursor-pointer rounded-xl px-3 py-2 text-base font-medium outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${invert
+    const desktopSecondaryButton = `${hero ? "hero-nav-secondary" : ""} cursor-pointer rounded-xl px-3 py-2 text-base font-medium outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${invert
         ? "bg-[var(--foreground)]/10 text-[var(--text)] hover:bg-[var(--foreground)]/15 active:bg-[var(--foreground)]/20"
         : "bg-[var(--background)]/10 text-[var(--text-foreground)] hover:bg-[var(--background)]/20 active:bg-[var(--background)]/15"
         }`
@@ -690,7 +690,7 @@ const NavBar = ({ invert = false, hideExpanded = false, hideDestinationInput = f
                         <div className='flex flex-col gap-2'>
                             <button type="button"
                                 onClick={() => go(() => navigate('/login'))}
-                                className='cursor-pointer rounded-xl border border-border py-3 text-center text-base font-medium transition-colors duration-300 hover:bg-[var(--foreground)] active:bg-surface-raised'
+                                className='cursor-pointer rounded-xl py-3 text-center text-base font-medium transition-colors duration-300 hover:bg-[var(--foreground)] active:bg-surface-raised'
                             >
                                 {t("nav.login")}
                             </button>
@@ -719,7 +719,7 @@ const NavBar = ({ invert = false, hideExpanded = false, hideDestinationInput = f
                 flexDirection: 'column', justifyContent: 'flex-start', overflow: 'hidden',
                 backgroundColor: invert ? 'var(--background)' : 'var(--foreground-muted)',
             } : undefined}
-            className={`${className} flex justify-center items-center ${destinationOnly ? `mt-4 ${destinationWidth} rounded-full shadow-[0_8px_28px_rgba(0,0,0,0.18)]` : `border ${invert ? "bg-[var(--background)] border-[var(--foreground)]/20" : "bg-[var(--foreground-muted)] border-[var(--background)]/20"} ${hideDestinationInput ? "w-full px-[5.5vw] py-3 sm:px-5 sm:py-4 lg:px-[11vw]" : "w-full flex-col gap-3 px-[5.5vw] py-4 pb-6 sm:px-5 sm:pb-7 lg:px-[11vw]"}`} ${suppressNavbarTransitions ? "transition-none" : "transition-[width,padding,margin,border-radius,box-shadow,background-color]"} duration-300 motion-reduce:transition-none`}>
+            className={`${className} ${hero ? "hero-nav" : ""} flex justify-center items-center ${destinationOnly ? `mt-4 ${destinationWidth} rounded-full` : `border ${invert ? "bg-[var(--background)] border-[var(--foreground)]/20" : "bg-[var(--foreground-muted)] border-[var(--background)]/20"} ${hideDestinationInput ? "w-full px-[5.5vw] py-3 sm:px-5 sm:py-6 lg:px-[11vw]" : "w-full flex-col gap-3 px-[5.5vw] py-4 pb-6 sm:px-5 sm:pb-7 lg:px-[11vw]"}`} ${suppressNavbarTransitions ? "transition-none" : "transition-[width,padding,margin,border-radius,box-shadow,background-color]"} duration-300 motion-reduce:transition-none`}>
             <div className={`${destinationOnly && !mobileMenuActive ? "hidden" : "flex w-full justify-between px-1 sm:grid sm:grid-cols-[1fr_auto_1fr] sm:gap-6"} shrink-0 items-center ${invert ? "text-[var(--text)]" : "text-[var(--text-foreground)]"} transition-colors duration-300 motion-reduce:transition-none [&>*]:select-none`}>
                 <h3 onClick={() => mobileMenuActive ? go(goHome) : goHome()} className='shrink-0 cursor-pointer pl-1 opacity-[1] transition-opacity duration-300 hover:opacity-[1] sm:order-2 sm:justify-self-center sm:text-2xl sm:opacity-[0.85]'><span className='font-semibold'>RCS</span> travels</h3>
 
@@ -783,7 +783,7 @@ const NavBar = ({ invert = false, hideExpanded = false, hideDestinationInput = f
                         :
                         <div className='flex items-center justify-center gap-2'>
                             <button type="button" onClick={() => navigate('/login')} className={desktopSecondaryButton}>{t("nav.login")}</button>
-                            <button type="button" onClick={() => navigate('/signup')} className={desktopPrimaryButton}>{t("nav.signup")}</button>
+                            <button type="button" onClick={() => navigate('/signup')} className={desktopPrimaryButton + (hero ? " hero-nav-primary" : "")}>{t("nav.signup")}</button>
                         </div>
                     }
                     {menuMounted && !isMobile && desktopMenuPosition && createPortal(
@@ -886,10 +886,10 @@ const NavBar = ({ invert = false, hideExpanded = false, hideDestinationInput = f
                     glowRadius={24}
                     glowIntensity={0.72}
                     coneSpread={15}
-                    className="w-full transition-transform duration-[160ms] ease-out motion-reduce:transition-none sm:hover:-translate-x-0.5 sm:hover:translate-y-1"
+                    className="w-full"
                 >
                     <div
-                        className={`flex w-full shadow-[-3.5px_7px_0_rgba(0,0,0,0.3)] sm:shadow-[-4.5px_8px_0_rgba(0,0,0,0.3)] hover:sm:shadow-[0_0_0_rgba(0,0,0,0)] transition-all duration-300 items-stretch rounded-full border-2 p-1.5 pl-3 ${invert ? "border-[var(--foreground)]/40 bg-[var(--background-muted)] text-ink" : "border-[var(--background)]/40 bg-[var(--foreground)] text-ink"}`}
+                        className={`flex w-full items-stretch rounded-full border-2 p-1.5 pl-3 ${invert ? "border-[var(--foreground)]/40 bg-[var(--background-muted)] text-ink" : "border-[var(--background)]/40 bg-[var(--foreground)] text-ink"}`}
                     >
                         <button
                             type="button"

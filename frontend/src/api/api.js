@@ -1,32 +1,14 @@
+import { createRequest } from "./request";
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
-async function request(path, { method = "GET", body, getToken, signal } = {}) {
-    const headers = { "Content-Type": "application/json" };
-
-    if (getToken) {
-        const token = await getToken();
-        headers["Authorization"] = `Bearer ${token}`;
-    }
-
-    const res = await fetch(`${BASE_URL}${path}`, {
-        method,
-        headers,
-        body: body ? JSON.stringify(body) : undefined,
-        signal,
-    });
-
-    if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        // status lets callers react to specific codes (429 = OTP cooldown); code
-        // is the server's own machine-readable tag where it sets one (FARE_QUOTE),
-        // for the cases where reacting means more than showing the message.
-        return { ...data, error: data.error || `Server error (${res.status})`, status: res.status, code: data.code };
-    }
-
-    return res.json();
-}
+const request = createRequest(BASE_URL);
 
 export const getMe             = (getToken)              => request("/api/users/me", { getToken });
+export const getResponsibilityCase = (caseId, getToken, signal) => request(`/api/admin/responsibility/cases/${encodeURIComponent(caseId)}`, { getToken, signal });
+export const reviewResponsibility = (caseId, action, body, getToken) => {
+    if (!['review', 'appeal-review'].includes(action)) throw new Error('Unknown review action');
+    return request(`/api/admin/responsibility/cases/${encodeURIComponent(caseId)}/${action}`, { method: 'POST', body, getToken });
+};
 export const createMe          = (name, getToken)        => request("/api/users/me", { method: "POST", body: { name }, getToken });
 export const getPreferences    = (getToken)              => request("/api/users/me/preferences", { getToken });
 export const updatePreferences = (body, getToken)        => request("/api/users/me/preferences", { method: "PUT", body, getToken });
@@ -34,7 +16,7 @@ export const estimateFare      = (pickupAddress, dropAddress, vehicleClass, pick
 export const getOffers = (getToken) => request("/api/users/me/offers", { getToken });
 export const createBooking     = (data, getToken)        => request("/api/bookings", { method: "POST", body: data, getToken });
 export const getNearbyDrivers  = (pickupCoords, vehicleClass, getToken) => request(`/api/bookings/nearby-drivers?lat=${encodeURIComponent(pickupCoords.lat)}&lng=${encodeURIComponent(pickupCoords.lng)}${vehicleClass ? `&vehicleClass=${encodeURIComponent(vehicleClass)}` : ''}`, { getToken });
-export const cancelBooking     = (bookingId, expectedCancellationCharge, getToken) => request("/api/bookings/cancel", { method: "POST", body: { bookingId, expectedCancellationCharge }, getToken});
+export const cancelBooking     = (bookingId, expectedCancellationCharge, cancellationReason, getToken) => request("/api/bookings/cancel", { method: "POST", body: { bookingId, expectedCancellationCharge, cancellationReason }, getToken});
 export const submitRideComplaint = (bookingId, reasons, getToken) => request(`/api/bookings/${encodeURIComponent(bookingId)}/complaint`, { method: "POST", body: { reasons }, getToken });
 export const createScheduledAdvanceOrder = (bookingId, getToken) => request(`/api/bookings/${bookingId}/scheduled-advance/order`, { method: "POST", getToken });
 export const createScheduledFinalOrder = (bookingId, getToken) => request(`/api/bookings/${bookingId}/scheduled-final/order`, { method: "POST", getToken });
@@ -43,6 +25,7 @@ export const createRideNowFinalOrder = (bookingId, getToken) => request(`/api/bo
 export const recordRideNowCashPayment = (bookingId, getToken) => request(`/api/bookings/${bookingId}/ride-now-final/cash`, { method: "POST", getToken });
 export const verifyPayment = (paymentId, response, getToken) => request(`/api/payments/${paymentId}/verify`, { method: "POST", body: response, getToken });
 export const getBookingStatus  = (id, getToken, signal)  => request(`/api/bookings/${id}/status`, { getToken, signal });
+export const requestReassignment = (id, getToken)        => request(`/api/bookings/${encodeURIComponent(id)}/request-reassignment`, { method: "POST", getToken });
 export const shareBooking      = (id, getToken)          => request(`/api/bookings/${id}/share`, { method: "POST", getToken });
 export const unshareBooking    = (id, getToken)          => request(`/api/bookings/${id}/share`, { method: "DELETE", getToken });
 // No getToken, and that is the feature: the person following a shared ride has no

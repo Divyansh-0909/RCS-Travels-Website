@@ -778,13 +778,6 @@ html[lang="hi"] body {
                 var(--color-negative-dark) 100%);
     }
 
-    .bg-panel-gradient {
-        background: radial-gradient(circle at top,
-                var(--background-panel) 0%,
-                var(--background-primary) 40%,
-                var(--background) 100%);
-    }
-
     .bg-gradient {
         background: radial-gradient(circle at top,
                 var(--background-primary) 20%,

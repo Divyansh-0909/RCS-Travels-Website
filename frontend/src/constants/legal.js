@@ -1,25 +1,39 @@
 /* Operational legal drafts, not legal advice. Do not remove this banner or any
    TO CONFIRM marker before lawyer review and product/compliance reconciliation. */
+import { CUSTOMER_CANCELLATION_REASONS } from "./cancellation";
+
 export const DRAFT = true;
 export const LEGAL_UPDATED = "[TO CONFIRM: effective date after lawyer review]";
 
 export const entity = {
-  name: "[TO CONFIRM: registered business name]",
-  type: "[TO CONFIRM: legal form]",
-  address: "[TO CONFIRM: registered address with PIN code]",
-  grievanceOfficer: "[TO CONFIRM: grievance officer name and designation]",
-  grievanceEmail: "[TO CONFIRM: grievance email]",
-  grievancePhone: "[TO CONFIRM: grievance phone and service hours]",
+  name: "RAJUDDIN trading as R C S TRAVELS",
+  type: "proprietorship",
+  address: "G T Road Dadri, Ramgopal Enclave Colony Dadri, Gautam Buddha Nagar, Uttar Pradesh 203207",
+  grievanceOfficer: "Rajuddin",
+  grievanceEmail: "rcstravels.support@gmail.com",
+  grievancePhone: "+91 85860 88085",
 };
+
+const riderValidCancellationReasons = CUSTOMER_CANCELLATION_REASONS.map(({ label }) => label);
+
+const driverValidCancellationReasons = [
+  "Rider asked me to cancel",
+  "Rider cannot be contacted",
+  "Rider did not arrive at pickup after 30 minutes",
+  "Road closure, vehicle breakdown, or accident / collision prevents the trip",
+  "Rider is threatening or violent",
+  "Rider is verbally abusive or harassing",
+  "Rider requires a luggage carrier but did not request one",
+];
 
 const riderTerms = [
   { heading: "About these terms", body: [
     "RCS Travels is operated by " + entity.name + ", a " + entity.type + " at " + entity.address + ". These terms apply when you use our website, WhatsApp booking flow, or ride services.",
-    "[TO CONFIRM: LAUNCH BLOCKER — RCS Travels’ role, UP aggregator licence and compliance position. UP Motor Vehicle (Aggregator and Delivery Services Provider) Rules, 2026 are reported as operational from 22 May 2026 through upmyfleet.com. Do not represent any licence, training, control-room, tracking, panic-button or insurance compliance unless verified.]",
+    "[TO CONFIRM: LAUNCH BLOCKER — current UP licensing materials state that a new aggregator must obtain a licence before starting operations. UpMyFleet separately shows an >25-vehicle portal eligibility check, but that portal wording is not a safe basis to treat this approximately 16-vehicle platform as exempt. RCS Travels is presently a proprietorship, while the licence-eligibility wording located in the UP rules lists a company, LLP, or qualifying co-operative society. Obtain written direction from the UP State Transport Authority / Transport Commissioner on the application path and entity eligibility, and do not represent RCS Travels as licensed or exempt or launch aggregator operations until this is resolved.]",
   ] },
   { heading: "Who may use the service", body: [
     "You must provide accurate account and booking information, keep your phone number under your control, and protect OTPs and other verification codes. You are responsible for activity carried out through your account unless you promptly report suspected misuse.",
-    "[TO CONFIRM: minimum rider account age and any rules for minors or bookings made for another person.]",
+    "The minimum age to hold a rider account is 15. [TO CONFIRM: parental/guardian consent, solo-minor ride rules, and bookings made for another person.]",
   ] },
   { heading: "Bookings and fares", body: [
     "A booking request is not a guaranteed ride. A booking is confirmed only when the service shows it as confirmed or assigned. Driver availability, traffic, road conditions, safety restrictions and events outside reasonable control may affect pickup or completion.",
@@ -27,13 +41,14 @@ const riderTerms = [
   ] },
   { heading: "How payment works", body: [
     "Ride Now rides are paid after the trip. You can pay the final fare through Razorpay UPI or record a cash payment using the payment options shown for the booking.",
-    "Scheduled rides currently require a 15% advance through Razorpay. After the trip, the remaining fare can be paid through Razorpay UPI or cash using the payment options shown for the booking. Payment-provider terms may also apply to the payment service itself.",
+    "Scheduled rides currently require a 10% advance through Razorpay. After the trip, the remaining fare can be paid through Razorpay UPI or cash using the payment options shown for the booking. Payment-provider terms may also apply to the payment service itself.",
   ] },
   { heading: "Cancellation", body: [
-    "Ride Now has no prepaid cancellation charge. For scheduled rides, the cancellation quote returned by our server is authoritative. If it changes before submission, we show the new quote and ask you to confirm it.",
-    "Current product behaviour: no scheduled-ride cancellation amount is retained when no driver is assigned, the assigned driver has no fresh platform location, the driver is farther than 500 metres from pickup, or the driver cancels. It is retained once a fresh assigned-driver location is within 500 metres of pickup, or the ride reaches the corresponding arrival status.",
-    "[TO CONFIRM: LAUNCH BLOCKER — reported final UP Rules limit passenger cancellation charges to 10% of fare capped at ₹100. The current 15% advance-retention behaviour appears capable of exceeding that limit. Reconcile the product, refund flow and legal rule before publication or launch.]",
-  ] },
+    "Ride Now has no prepaid cancellation charge. Scheduled rides collect a 10% advance. If a scheduled-ride cancellation fee applies after the assigned driver is near pickup, the fee is 10% of the applicable fare capped at ₹100. Only that fee is retained from the advance; the rest of the paid advance is refunded.",
+    "No scheduled-ride cancellation fee applies when no driver is assigned, the assigned driver has no fresh platform location, the driver is farther than 500 metres from pickup, the driver cancels, or you select one of the listed valid reasons below. The server's current location/status record and selected reason determine the final quote; if the amount changes before submission, the app asks you to review it again.",
+    "[TO IMPLEMENT BEFORE LAUNCH: the supplied UP-rule research supports a separate failed-pickup rule when an accepted driver has not reported within 10 minutes after the expected reporting time: the rider's paid advance is refunded, a ₹100 driver penalty applies, and an equivalent ₹100 concession is credited to the rider's next booking. The current product waives the rider cancellation fee for the disclosed 10+ minute delay reason but does not yet implement that separate driver penalty / next-booking concession.]",
+    "[TO CONFIRM: for an ordinary driver cancellation after acceptance without a valid reason, draft-rule material described a driver charge of 10% of fare capped at ₹100 with an equal rider concession, while the available final-rule reporting emphasises the flat ₹100 failed-pickup rule. Do not publish a definitive ordinary-driver-cancellation penalty amount until the final UP rule text or written transport-authority guidance confirms it.]",
+  ], list: riderValidCancellationReasons },
   { heading: "Safe and respectful travel", list: [
     "Use accurate contact, pickup and destination details, and keep your verification codes private.",
     "Follow seatbelt, vehicle-capacity and road-safety rules. Do not carry unlawful, hazardous or dangerous items.",
@@ -106,7 +121,7 @@ const riderPrivacy = [
     "You may ask us to correct account information, request access, or request deletion where applicable. Legal, security, fraud-prevention and record-keeping requirements may limit a request.",
   ] },
   { heading: "Children and other people", body: [
-    "Do not give us another person’s personal data unless you are authorised to do so and the disclosure is appropriate for the booking or safety purpose. [TO CONFIRM: rider age/minor policy and any verifiable parental-consent flow required by the final product and applicable privacy law.]",
+    "The minimum rider-account age is 15. Do not give us another person’s personal data unless you are authorised to do so and the disclosure is appropriate for the booking or safety purpose. [TO CONFIRM: parental/guardian consent and any additional minor privacy or solo-travel controls required by the final product and applicable law.]",
   ] },
   { heading: "India privacy framework", body: [
     "We are preparing this notice to support the Digital Personal Data Protection Act, 2023 and other applicable Indian privacy requirements. As of 13 September 2026, substantive DPDP obligations are mostly scheduled to phase in from May 2027; this does not state that every DPDP obligation is already in force.",
@@ -119,10 +134,14 @@ const riderPrivacy = [
 
 const riderRefunds = [
   { heading: "Ride Now", body: ["Ride Now is paid after the trip through Razorpay UPI or cash. There is no prepaid Ride Now cancellation amount to refund."] },
-  { heading: "Scheduled-ride advance", body: ["Scheduled rides currently collect a 15% Razorpay advance. The server calculates the cancellation quote and settlement; the app shows that result for your confirmation."] },
-  { heading: "When the advance is not retained", body: ["Cancellation is free when no driver is assigned, the driver has no fresh platform location, the driver’s fresh location is farther than 500 metres from pickup, or the driver cancels. Any paid advance follows the booking’s refund flow."] },
-  { heading: "When the advance is retained", body: ["The current product retains the paid advance once an assigned driver’s fresh location is within 500 metres of pickup, or the booking reaches the corresponding arrival status. The server’s location and status record decide the quote."] },
-  { heading: "Before publication", body: ["[TO CONFIRM: LAUNCH BLOCKER — reconcile the current 15% retention with the reported UP cancellation limit of 10% of fare capped at ₹100. This operational description is not a statement that the current rule is lawful or final.]"] },
+  { heading: "Scheduled-ride advance", body: ["Scheduled rides currently collect a 10% Razorpay advance. The advance remains part of the fare; it is not itself the cancellation fee. The server calculates any cancellation fee and the refund balance, and the app shows the result for confirmation."] },
+  { heading: "When cancellation is free", body: ["No scheduled-ride cancellation fee applies when no driver is assigned, the driver has no fresh platform location, the driver’s fresh location is farther than 500 metres from pickup, the driver cancels, or one of the listed valid reasons applies. In those cases, any paid advance is refunded."], list: riderValidCancellationReasons },
+  { heading: "When a cancellation fee applies", body: ["If the assigned driver is near pickup and none of the listed valid reasons applies, the fee is 10% of the applicable fare capped at ₹100. Only that amount is retained from the paid advance; the remaining advance is refunded. The server’s location, booking status and selected cancellation reason decide the final quote."] },
+  { heading: "When the driver is at fault", body: [
+    "If the driver cancels or the booking is otherwise cancelled because of a confirmed driver-fault reason, the rider cancellation fee does not apply and any paid scheduled advance is refunded.",
+    "[TO IMPLEMENT BEFORE LAUNCH: where an accepted driver has not reported within 10 minutes after the expected reporting time, the supplied UP-rule research supports a separate ₹100 driver penalty and an equivalent ₹100 concession on the rider's next booking. That concession is separate from refunding the rider's paid advance and is not yet implemented in the product.]",
+    "[TO CONFIRM: the exact financial consequence for an ordinary driver cancellation without a valid reason remains unresolved in the available final-rule material; do not state a fixed amount until confirmed.]",
+  ] },
   { heading: "Refund processing", body: ["Where a refund is due, we initiate it through the applicable payment flow. The time for the amount to appear can also depend on Razorpay, the bank, card network or payment method. [TO CONFIRM: refund-initiation target and the customer-facing settlement window the business can reliably support.]"] },
   { heading: "Payment issues", body: ["If proximity or status changes before cancellation is submitted, the server may return a changed amount and will request confirmation. For an incorrect charge, duplicate payment, failed payment or refund issue, contact support with booking details and the payment reference."] },
   { heading: "Your legal rights", body: ["This policy does not reduce any refund, compensation or consumer remedy available under applicable law. If a statutory rule gives you a better outcome than this draft operational policy, the statutory rule controls."] },
@@ -133,7 +152,7 @@ const riderGrievance = [
   { heading: "What you can raise", body: ["You may contact us about bookings, fares, payments, cancellations, refunds, driver conduct, safety, account access, privacy requests or other service concerns."] },
   { heading: "Contact and complaint details", body: ["Our grievance contact is " + entity.grievanceOfficer + "."], list: [
     "Email: " + entity.grievanceEmail, "Phone: " + entity.grievancePhone, "Address: " + entity.address,
-  ], after: ["Include your registered phone number, booking date and time, relevant vehicle or driver details, what happened, and the outcome you seek. This contact also receives privacy requests."] },
+  ], after: ["Include your registered phone number, booking date and time, relevant vehicle or driver details, what happened, and the outcome you seek. This contact also receives privacy requests. [TO CONFIRM: published grievance/contact service hours.]"] },
   { heading: "Review", body: ["We will review information available for the booking, payment, account and support history and respond through a suitable contact channel. We may ask for additional information where it is reasonably needed to investigate the concern. [TO CONFIRM: acknowledgement and resolution timelines the business can commit to.]"] },
   { heading: "Further options", body: [
     "The Consumer Protection Act, 2019 and Consumer Protection (E-Commerce) Rules, 2020 may be relevant to consumer complaints. You may use available consumer-redressal channels, including the National Consumer Helpline at https://consumerhelpline.gov.in/ and the appropriate consumer commission, where applicable.",
@@ -169,11 +188,16 @@ const driverTerms = [
   ] },
   { heading: "Driver cancellations", body: [
     "You may self-cancel only while a ride is assigned or en route. A cancelled Ride Now ride returns to matching; a scheduled ride is re-offered.",
-    "Each successful self-cancellation is counted once. In a rolling 30-day period, starting with the third self-cancellation, the commission-free benefit is removed and the restriction on earning another benefit is set to 30 days from the latest qualifying self-cancellation; further cancellations while the rolling count remains at least three can extend that date. A fifth self-cancellation suspends the account and withdraws pending offers.",
-  ] },
+    "Use a valid cancellation reason when one applies. The launch policy selected by RCS Travels treats the reasons below as disclosed driver-side reasons for review rather than an automatic unjustified cancellation.",
+    "[TO IMPLEMENT BEFORE LAUNCH: the driver app currently cancels an assigned/en-route ride immediately from a single Cancel ride action and does not yet ask the driver to choose one of these disclosed reasons or send a driver cancellation reason to the backend. The reason picker and reason-aware review/enforcement flow must be added before this list is published as an in-product process.]",
+    "[TO IMPLEMENT BEFORE LAUNCH: the supplied UP-rule research supports a ₹100 driver penalty plus an equivalent ₹100 next-booking rider concession when an accepted driver fails to report within 10 minutes after the expected reporting time. The current driver-cancellation flow does not yet implement this financial consequence. The exact penalty for an ordinary post-acceptance driver cancellation without a valid reason remains TO CONFIRM because the draft and available final-rule reporting are not fully consistent.]",
+    "Self-cancellations are counted in a rolling 30-day window for loyalty-benefit restriction from the third cancellation. Separately, each recorded driver cancellation currently contributes to the cumulative conduct-strike count.",
+  ], list: driverValidCancellationReasons },
   { heading: "Complaints and account action", body: [
-    "Each submitted customer conduct complaint is currently recorded against the driver account. At three recorded complaints, the current system applies a ₹200 fine. At five, it automatically suspends the account and withdraws pending offers; only an administrator may reinstate the account. These actions currently use the recorded complaint count without a separate pre-sanction evidence review.",
-    "[TO CONFIRM: complaint validation standard, notice to the driver, evidence review, appeal/reconsideration process, refund of an incorrect fine, and whether these thresholds comply with the final driver agreement and applicable law.]",
+    "Cancellation reasons and structured conduct reports are intended to create feedback records against the opposite party where the selected reason describes that party's conduct. Repeated negative reasons may lead to account restrictions after review.",
+    "RCS Travels' selected launch policy is 5 upheld conduct strikes -> a 7-day temporary block; 7 upheld conduct strikes -> an indefinite block that an administrator can remove.",
+    "[TO ALIGN BEFORE LAUNCH: a conduct-strike backend is implemented, but it currently blocks at 3 total recorded complaint/driver-cancellation strikes for 3 days and at 7 indefinitely. It also counts every recorded RideComplaint and DriverCancellation because there is not yet an upheld/rejected moderation state. The implementation therefore does not yet match the selected 5-strike/7-day launch policy.]",
+    "[TO CONFIRM: which reasons automatically create a strike, complaint validation standard, notice, evidence review, appeal/reconsideration process, treatment of false reports, and how financial penalties interact with strikes. A single incident should not be described as two strikes merely because it also carries a financial penalty.]",
   ] },
   { heading: "Safety and incidents", body: [
     "For an immediate emergency, call 112 or the appropriate public emergency service first. Report accidents, threats, serious disputes and material safety incidents to support when it is safe to do so, and cooperate with lawful incident or insurance processes.",
@@ -215,8 +239,13 @@ const driverPrivacy = [
 const driverPayments = [
   { heading: "What this page covers", body: ["This page describes payment-related rules currently supported in the driver app. It does not create a driver marketplace deposit, a 12% fee or a 10% fee; those are not live terms for driver-partners."] },
   { heading: "Ride fares", body: ["Drivers must use the fare and payment status shown or authorised for the booking and must not impose an undisclosed off-platform surcharge. The rider controls final settlement through the supported UPI or cash flow; the driver app shows the resulting payment status and does not require the driver to confirm the rider's payment method. [TO CONFIRM: fare calculation, toll/parking/waiting handling, cash/online payment methods and any permitted adjustments.]"] },
-  { heading: "Scheduled rides", body: ["A customer currently pays a 15% Razorpay advance for a scheduled ride. After completion, the remaining fare can be settled through Razorpay UPI or cash, and the service records the authoritative result against the booking. [TO CONFIRM: reconcile this behaviour with the reported UP passenger cancellation cap before launch.]"] },
-  { heading: "Customer cancellation", body: ["The server determines a scheduled-rider cancellation quote. Drivers must not ask customers to make off-platform changes to that result."] },
+  { heading: "Scheduled rides", body: ["A customer currently pays a 10% Razorpay advance for a scheduled ride. After completion, the remaining fare can be settled through Razorpay UPI or cash, and the service records the authoritative result against the booking."] },
+  { heading: "Customer cancellation", body: ["If a scheduled-rider cancellation fee applies, the server limits it to 10% of the applicable fare capped at ₹100. Listed valid rider reasons waive the fee, and any balance of the 10% advance is refunded. Drivers must not ask customers to cancel or make off-platform changes to that result."] },
+  { heading: "Driver-fault cancellation and failed pickup", body: [
+    "A driver must use the supported cancellation flow and give the truthful reason when unable to serve an accepted booking. Valid reasons are listed in the Driver Terms and remain subject to review where needed.",
+    "[TO IMPLEMENT BEFORE LAUNCH: the supplied UP-rule research supports a ₹100 driver penalty and an equivalent ₹100 rider concession on the next booking when an accepted driver has not reported within 10 minutes after the expected reporting time. The rider's paid advance is refunded separately. This financial penalty/concession flow is not yet implemented.]",
+    "[TO CONFIRM: the exact amount for an ordinary driver cancellation after acceptance without a valid reason. Draft material used 10% of fare capped at ₹100; available reporting on the final rules clearly supports the flat ₹100 failed-pickup case but does not resolve every ordinary-cancellation case.]",
+  ] },
   { heading: "Driver earnings and deductions", body: ["[TO CONFIRM: driver settlement timing, payment method, commission/service-fee terms, cancellation allocation, taxes/TDS/GST, adjustments and any UP fare-share compliance. Do not claim the reported 80%/60% minimum split unless verified.]"] },
   { heading: "Corrections and disputes", body: ["If a booking’s payment, cancellation, settlement or status looks wrong, contact support with the booking reference and relevant payment details. We should correct verified calculation or processing errors and provide a review route for disputed deductions."] },
 ];

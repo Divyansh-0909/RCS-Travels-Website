@@ -36,6 +36,10 @@ const CustomerPaymentPanel = ({
     const tr = useWebsiteCopy();
     const amount = paymentAmount(purpose, financials);
     const paid = paymentIsSatisfied(purpose, financials);
+    const storedAdvancePercentage = Number(financials?.advancePercentage);
+    const advancePercentage = Number.isFinite(storedAdvancePercentage) && storedAdvancePercentage > 0
+        ? storedAdvancePercentage
+        : 10;
     const busy = paymentIsBusy(phase);
     const cancelled = phase === PAYMENT_PHASE.CANCELLED;
     const failed = phase === PAYMENT_PHASE.FAILED;
@@ -116,7 +120,7 @@ const CustomerPaymentPanel = ({
                     </h2>
                     <p className="mt-1 text-base leading-snug text-[var(--text-muted)] sm:text-lg">
                         {purpose === "advance"
-                            ? tr("The 15% advance is part of your fare, not an extra charge.")
+                            ? tr("The advance is part of your fare, not an extra charge.")
                             : tr("Pay the balance securely to close your scheduled ride.")}
                     </p>
                 </div>
@@ -129,7 +133,7 @@ const CustomerPaymentPanel = ({
                         {purpose === "advance" ? (
                             <>
                                 {financials.coupon > 0 && <AmountRow label={tr("Coupon applied")} value={-financials.coupon} />}
-                                <AmountRow label={tr("Pay now (15%)")} value={financials.advance} strong />
+                                <AmountRow label={tr("Pay now ({{percentage}}%)", { percentage: advancePercentage })} value={financials.advance} strong />
                                 <AmountRow label={tr("Pay after ride")} value={financials.remaining} />
                             </>
                         ) : (

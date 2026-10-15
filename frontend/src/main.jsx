@@ -17,6 +17,7 @@ const ManageAccount = lazy(() => import('./pages/ManageAccount'))
 const SettingsPage = lazy(() => import('./pages/SettingsPage'))
 const SafetyPage = lazy(() => import('./pages/SafetyPage'))
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'))
+const ResponsibilityCase = lazy(() => import('./pages/ResponsibilityCase'))
 const HelpPage = lazy(() => import('./pages/HelpPage'))
 const Outstation = lazy(() => import('./pages/Outstation'))
 import RideCancelledToast from './components/ui/RideCancelledToast';
@@ -145,6 +146,10 @@ const router = createBrowserRouter([{
   {
     path: "/dashboard",
     element: <ProtectedRoute requireAdmin><AdminDashboard/></ProtectedRoute>
+  },
+  {
+    path: "/dashboard/responsibility",
+    element: <ProtectedRoute requireAdmin><ResponsibilityCase /></ProtectedRoute>
   },
   // Dev-only preview routes for auth-gated UI (see DevPreview.jsx); /dev lists them all.
   ...(import.meta.env.DEV

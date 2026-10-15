@@ -15,12 +15,10 @@ export const SAFE_ROUTE_SURCHARGE = 150;
 // `carrier` amount is the truth for a given ride; this is the sticker price.
 export const CARRIER_CHARGE = 200;
 
-// What cancelling costs once the driver has REACHED the pickup — free at every
-// earlier status, including en_route. Mirrors CANCELLATION_CHARGE_PCT in
-// backend/routes/bookings.js, which is what actually charges it; this copy exists
-// so the booking screen can warn with the real number rather than a rounded one.
-// If the server's figure moves, move this with it.
-export const CANCELLATION_CHARGE_PCT = 15;
+// Maximum percentage used by the server when a scheduled-ride cancellation fee
+// applies. The server also caps the fee at ₹100 and waives it for disclosed valid
+// cancellation reasons.
+export const CANCELLATION_CHARGE_PCT = 10;
 
 // How /api/fare/estimate priced a ride. 'zone' is the provider's own all-in
 // quote; the two distance sources pay for the drive alone and leave tolls with

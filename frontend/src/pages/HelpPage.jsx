@@ -40,7 +40,7 @@ const faqs = [
     },
     {
         q: "Can I cancel a booking?",
-        a: "Yes, from your ride's tracking page or by calling us. Cancellation is free while your driver is more than 500 metres from pickup. For a scheduled ride, the paid 15% advance is retained once the driver is within 500 metres. See the Cancellation tab for the full policy.",
+        a: "Yes, from your ride's tracking page or by calling us. Scheduled rides take a 10% advance. If a cancellation fee applies near pickup, it is 10% of the fare capped at ₹100, and listed valid cancellation reasons waive that fee. Any remaining advance is refunded.",
     },
 ]
 
@@ -52,7 +52,8 @@ const contacts = [
 
 const cancellationPolicy = [
     ["Before your driver is nearby", "Cancellation is free while no driver is assigned or your driver is more than 500 metres from pickup."],
-    ["When your driver is nearby", "Once your driver's current location is within 500 metres of pickup, cancelling a scheduled ride retains the paid 15% advance for the driver's time and fuel."],
+    ["When your driver is nearby", "If the cancellation fee applies, it is 10% of the fare capped at ₹100. Only that fee is retained from the 10% advance; the remaining advance is refunded."],
+    ["Valid reasons", "No cancellation fee applies if the driver asked you to cancel, is taking 10+ minutes too long, is not moving toward pickup, went to the wrong pickup, demands extra money, the wrong vehicle arrived, the driver is threatening / abusive / harassing, or a requested and confirmed luggage carrier is unavailable."],
     ["How to cancel", "Use the cancel option on your ride's tracking page, or call us and we'll do it for you."],
 ]
 

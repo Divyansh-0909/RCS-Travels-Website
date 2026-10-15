@@ -1,11 +1,14 @@
 import { useTranslation as useCopyLanguage } from "react-i18next";
 import { websiteCopy as dc } from "../i18nCopy";
 import Button from "../components/ui/Button";
+import CancelledBookingPanel from "../components/CancelledBookingPanel";
 import GoogleMap, { MAP_LAND_COLOR } from "../components/ui/GoogleMap";
 import { MAP_CLASSES, showRouteView, clearRouteView, setDriverPosition, setRouteProgress, clearDriverMarker } from "../components/ui/mapOverlays";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { useData } from "../hooks/useData";
 import { useApi } from "../hooks/useApi";
+import { useAuth } from "@clerk/clerk-react";
+import { bookingReadIsDenied, isVerifiedBookingRead } from "../lib/bookingReadSafety";
 import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
 import { useLocation, useParams } from "react-router-dom";
 import ErrorMark from "../components/illustrations/ErrorMark";
@@ -36,6 +39,7 @@ import OtpDisplay from "../components/ui/OtpDisplay";
 import { SAFE_ROUTE_SURCHARGE, isDistancePriced } from "../constants/fares";
 import { labelOf } from "../constants/vehicles";
 import { LIVE_STATUSES, minsLabel, formatPlate } from "../lib/trip";
+import { nextTrackingPoll } from "../lib/trackingPoll";
 import { useExitAnim } from "../hooks/useExitAnim";
 import { useStableDriverPhoto } from "../hooks/useStableDriverPhoto";
 import { openRazorpayCheckout } from "../services/razorpayCheckout";
@@ -46,12 +50,12 @@ import {
     PAYMENT_PHASE,
     paymentIsBusy,
     paymentIsSatisfied,
-    paymentNeedsRefresh,
     paymentPhaseForError,
 } from "../lib/paymentUi";
 
 const DRIVER_CANCELLATION_SEEN_PREFIX = "driverCancellationSeen:";
 const DRIVER_CANCELLATION_DISMISS_MS = 10_000;
+const DRIVER_DELAY_SEEN_PREFIX = "driverDelaySeen:";
 
 // ---- Shared layout + type scale -------------------------------------------
 // The desktop content column is 377px — OnBoarding's effective control width
@@ -151,6 +155,7 @@ const TrackingPage = () => {
     const [detialsVisibility, setDetialsVisibility] = useState(false)
     const navigate = useViewNavigate();
     const api = useApi();
+    const { userId } = useAuth();
     const location = useLocation();
     // Start on the skeleton whenever a status fetch is coming — the fetch effect
     // runs after first paint, so starting false flashes a stale panel.
@@ -163,9 +168,10 @@ const TrackingPage = () => {
     // freshness guarantee.
     const arrivedFresh = useRef(!!location.state?.freshStatus);
     const [bookingLoading, setBookingLoading] = useState(!!bookingId && !arrivedFresh.current);
-    const [bookingHydrated, setBookingHydrated] = useState(() => (
-        !routeBookingId || activeBooking?.id === routeBookingId || storeBookingId === routeBookingId
-    ));
+    // Persisted form data supplies no authority to expose a ride to a new session.
+    const [verifiedRead, setVerifiedRead] = useState(null);
+    const verifiedReadRef = useRef(null);
+    const bookingHydrated = !bookingId || isVerifiedBookingRead(verifiedRead, bookingId, userId);
 
     useEffect(() => {
         if (arrivedFresh.current) window.history.replaceState({}, "");
@@ -184,7 +190,8 @@ const TrackingPage = () => {
     // while the new status request is in flight.
     useLayoutEffect(() => {
         if (!routeBookingId || activeBooking?.id === routeBookingId) return;
-        setBookingHydrated(false);
+        verifiedReadRef.current = null;
+        setVerifiedRead(null);
         setDriver(null);
         setNavigationEtaMinutes(null);
         setNavigationPolyline(null);
@@ -218,6 +225,16 @@ const TrackingPage = () => {
     const [driverCancellationOpen, setDriverCancellationOpen] = useState(
         Boolean(devDriverCancellation && ["pending", "confirmed"].includes(devParams?.get("status"))),
     );
+    const devDriverDelayed = devParams?.get("delayed") === "1";
+    const [driverDelayed, setDriverDelayed] = useState(devDriverDelayed);
+    const [driverDelayEligibleAt, setDriverDelayEligibleAt] = useState(
+        devDriverDelayed ? new Date().toISOString() : null,
+    );
+    const [driverDelayOpen, setDriverDelayOpen] = useState(devDriverDelayed);
+    const [reassignmentConfirmOpen, setReassignmentConfirmOpen] = useState(false);
+    const [reassignmentBusy, setReassignmentBusy] = useState(false);
+    const [reassignmentSearching, setReassignmentSearching] = useState(false);
+    const [reassignmentStartedAt, setReassignmentStartedAt] = useState(null);
     const [driver, setDriver] = useState(() => {
         const devStatus = devParams?.get("status");
         if (!devParams?.get("driver") && !["assigned", "en_route", "reached", "started", "completed"].includes(devStatus)) return null;
@@ -268,8 +285,7 @@ const TrackingPage = () => {
     // transitions land. No bookingId (demo route) → keep the store status.
     useEffect(() => {
         if (!bookingId) return;
-        const trustedAtStart = !routeBookingId || activeBooking?.id === routeBookingId;
-        setBookingHydrated(trustedAtStart);
+        setStatusError(null);
         let cancelled = false;
         let timer = null;
         let controller = null;
@@ -303,7 +319,10 @@ const TrackingPage = () => {
                 // Nothing on screen yet → the page can't render an honest status,
                 // so it hands over to FailureState. Otherwise the last known
                 // status stays put and is only marked stale.
-                if (isFirst && (!status || !trustedAtStart)) {
+                if (bookingReadIsDenied(data) || !isVerifiedBookingRead(verifiedReadRef.current, bookingId, userId)) {
+                    verifiedReadRef.current = null;
+                    setVerifiedRead(null);
+                    clearRefreshNotice();
                     setStatusError(data.error);
                 } else if (!staleNotifiedRef.current) {
                     staleNotifiedRef.current = true;
@@ -314,7 +333,8 @@ const TrackingPage = () => {
                 setStatusError(null);
                 clearRefreshNotice();
                 if (data.status) setStatus(data.status);
-                setBookingHydrated(true);
+                verifiedReadRef.current = { bookingId, userId };
+                setVerifiedRead(verifiedReadRef.current);
                 if (data.bookingCode) setBookingCode(data.bookingCode);
                 if (data.reference) setBookingReference(data.reference);
                 if (data.pickupAddress) setPickup(data.pickupAddress);
@@ -368,6 +388,18 @@ const TrackingPage = () => {
                 setFinancials(data.financials ?? null);
                 setRidePayment(data.ridePayment ?? null);
                 setBookingScheduledAt(data.scheduledAt ?? null);
+                setDriverDelayed(data.driverDelayed === true);
+                setDriverDelayEligibleAt(data.driverDelayEligibleAt ?? null);
+                if (data.driver) setReassignmentSearching(false);
+                if (data.driverDelayed && data.driver) {
+                    const delayKey = `${DRIVER_DELAY_SEEN_PREFIX}${bookingId}:${data.driverDelayEligibleAt ?? "eligible"}`;
+                    let seen = false;
+                    try { seen = sessionStorage.getItem(delayKey) === "1"; } catch { /* storage can be unavailable */ }
+                    if (!seen && !reassignmentConfirmOpen) setDriverDelayOpen(true);
+                } else {
+                    setDriverDelayOpen(false);
+                    setReassignmentConfirmOpen(false);
+                }
                 if (data.driverCancellation?.id) {
                     const seenKey = `${DRIVER_CANCELLATION_SEEN_PREFIX}${bookingId}:${data.driverCancellation.id}`;
                     let seen = false;
@@ -390,13 +422,9 @@ const TrackingPage = () => {
             arrivedFresh.current = false;
             // schedule the next tick from the response, not an interval, so a
             // slow request can never stack up overlapping polls
-            if (!cancelled && (
-                !data?.status
-                || LIVE_STATUSES.includes(data.status)
-                || ["payment_pending", "pending", "confirmed"].includes(data.status)
-                || paymentNeedsRefresh(data)
-            )) {
-                timer = setTimeout(() => poll(false), 5000);
+            const nextPoll = nextTrackingPoll(data);
+            if (!cancelled && nextPoll !== null) {
+                timer = setTimeout(() => poll(false), nextPoll);
             }
         }
         pollNowRef.current = () => poll(false);
@@ -421,7 +449,7 @@ const TrackingPage = () => {
             document.removeEventListener("visibilitychange", refreshWhenVisible);
             clearRefreshNotice();
         };
-    }, [bookingId, retryTick, stabilizeDriverPhoto]);
+    }, [bookingId, userId, retryTick, stabilizeDriverPhoto]);
 
     // Never flash coordinates left by another booking while a /booking/:id
     // deep link is hydrating its own immutable route from the server.
@@ -460,6 +488,57 @@ const TrackingPage = () => {
         }
         setDriverCancellationOpen(false);
     }, [bookingId, driverCancellation?.id]);
+
+    const dismissDriverDelay = useCallback(() => {
+        if (bookingId) {
+            try {
+                sessionStorage.setItem(
+                    `${DRIVER_DELAY_SEEN_PREFIX}${bookingId}:${driverDelayEligibleAt ?? "eligible"}`,
+                    "1",
+                );
+            } catch { /* the sheet can still be dismissed without storage */ }
+        }
+        setDriverDelayOpen(false);
+    }, [bookingId, driverDelayEligibleAt]);
+
+    const openReassignmentConfirmation = () => {
+        dismissDriverDelay();
+        setReassignmentConfirmOpen(true);
+    };
+
+    const requestAnotherDriver = async () => {
+        if (reassignmentBusy) return;
+        if (!bookingId && devDriverDelayed) {
+            setReassignmentConfirmOpen(false);
+            setDriverDelayed(false);
+            setDriver(null);
+            setStatus("pending");
+            setReassignmentStartedAt(new Date().toISOString());
+            setReassignmentSearching(true);
+            return;
+        }
+        if (!bookingId) return;
+        setReassignmentBusy(true);
+        setError(null);
+        try {
+            const result = await api.requestReassignment(bookingId);
+            if (result?.error) {
+                setError(result.error);
+                return;
+            }
+            setReassignmentConfirmOpen(false);
+            setDriverDelayed(false);
+            setDriver(null);
+            setStatus(result.status ?? "pending");
+            setReassignmentStartedAt(new Date().toISOString());
+            setReassignmentSearching(true);
+            pollNowRef.current?.();
+        } catch (err) {
+            setError(err?.message ?? dc("Couldn't request another driver"));
+        } finally {
+            setReassignmentBusy(false);
+        }
+    };
 
     // This is an interruption, not a decision screen. Leave it long enough to
     // read, then clear it without putting a countdown or progress treatment in
@@ -785,7 +864,7 @@ const TrackingPage = () => {
             const checkout = await api.createScheduledAdvanceOrder(bookingId);
             if (checkout?.error) throw new Error(checkout.error);
             setPaymentPhase(PAYMENT_PHASE.OPENING);
-            const response = await openRazorpayCheckout(checkout, { get "description"() { return dc("15% scheduled ride advance"); } });
+            const response = await openRazorpayCheckout(checkout, { get "description"() { return dc("10% scheduled ride advance"); } });
             setPaymentPhase(PAYMENT_PHASE.VERIFYING);
             const verified = await api.verifyPayment(checkout.paymentId, response);
             if (verified?.error) throw new Error(verified.error);
@@ -901,7 +980,7 @@ const TrackingPage = () => {
     if (!bookingId && !status) {
         return (
             <div className={SHELL}>
-                <BackgroundPanel solid className={FULL_PANEL}>
+                <BackgroundPanel className={FULL_PANEL}>
                     {stateBackArrow}
                     <EmptyState
                         tone="dark"
@@ -936,7 +1015,7 @@ const TrackingPage = () => {
     if (statusError) {
         return (
             <div className={SHELL}>
-                <BackgroundPanel solid className={FULL_PANEL}>
+                <BackgroundPanel className={FULL_PANEL}>
                     {stateBackArrow}
                     <FailureState
                         tone="dark"
@@ -956,10 +1035,18 @@ const TrackingPage = () => {
         );
     }
 
+    if (status === 'cancelled') {
+        return <div className={SHELL}><BackgroundPanel className={FULL_PANEL}>
+            {stateBackArrow}
+            <CancelledBookingPanel financials={financials} reference={bookingReference}
+                onRefresh={() => setRetryTick(t => t + 1)} loading={bookingLoading} onHome={() => navigate('/')} />
+        </BackgroundPanel></div>;
+    }
+
     if (status === "no_driver") {
         return (
             <div className={SHELL}>
-                <BackgroundPanel solid className={FULL_PANEL}>
+                <BackgroundPanel className={FULL_PANEL}>
                     {stateBackArrow}
                     <div className={`flex min-w-0 flex-col items-center gap-2 ${COL}`}>
                         <ErrorMark className="-my-6" size={isMobile ? 120 : 140} />
@@ -992,7 +1079,6 @@ const TrackingPage = () => {
                         className={`${driverCancellationOpen ? "opacity-100" : "opacity-0"} absolute inset-0 h-full w-full cursor-default bg-black/50 transition-opacity duration-300 motion-reduce:transition-none`}
                     />
                     <BackgroundPanel
-                        solid
                         show={driverCancellationOpen}
                         duration={420}
                         className="z-1 gap-2 py-6 text-center flex flex-col justify-center items-center"
@@ -1027,6 +1113,75 @@ const TrackingPage = () => {
                 </div>
             )}
 
+            {driverDelayed && (
+                <div className={`fixed inset-0 z-[125] ${driverDelayOpen ? "pointer-events-auto" : "pointer-events-none"}`}>
+                    <button
+                        type="button"
+                        aria-label={dc("Keep waiting")}
+                        onClick={dismissDriverDelay}
+                        className={`${driverDelayOpen ? "opacity-100" : "opacity-0"} absolute inset-0 h-full w-full cursor-default bg-black/50 transition-opacity duration-300 motion-reduce:transition-none`}
+                    />
+                    <BackgroundPanel
+                        sheet
+                        dismissible
+                        onDismiss={dismissDriverDelay}
+                        show={driverDelayOpen}
+                        duration={420}
+                        className="z-1 flex flex-col gap-5 px-[7vw] pt-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] text-left sm:!bottom-8 sm:!left-1/2 sm:!-ml-[260px] sm:!h-auto sm:!w-[520px] sm:!rounded-3xl sm:px-8 sm:pb-8"
+                    >
+                        <div role="dialog" aria-modal="true" aria-labelledby="driver-delayed-title" className="mx-auto flex w-full max-w-md flex-col gap-5">
+                            <div className="flex flex-col gap-1.5">
+                                <h2 id="driver-delayed-title" className="text-2xl font-semibold leading-tight text-[var(--text)]">{tr("Your driver is delayed.")}</h2>
+                                <p className="text-base leading-snug text-[var(--text-muted)]">{tr("Call your driver to check the situation, or ask us to find another one.")}</p>
+                            </div>
+                            <div className="flex flex-col gap-2">
+                                <Button onClick={callDriver} prop={{ width: "100%", disabled: !driver?.phone, innerClassName: "flex gap-2 items-center justify-center text-base sm:text-lg" }}>
+                                    <Icon path={mdiPhone} size={0.8} aria-hidden="true" />{dc("Call driver")}
+                                </Button>
+                                <Button onClick={openReassignmentConfirmation} className="my-0!" prop={{ variant: "input", width: "100%", bg: "var(--background-muted)", border: false }}>
+                                    <span className="text-base sm:text-lg">{tr("Find another driver")}</span>
+                                </Button>
+                                <Button onClick={dismissDriverDelay} className="my-0!" prop={{ variant: "input", width: "100%", bg: "transparent", border: false }}>
+                                    <span className="text-base sm:text-lg">{tr("Keep waiting")}</span>
+                                </Button>
+                            </div>
+                        </div>
+                    </BackgroundPanel>
+                </div>
+            )}
+
+            <div className={`fixed inset-0 z-[130] ${reassignmentConfirmOpen ? "pointer-events-auto" : "pointer-events-none"}`}>
+                <button
+                    type="button"
+                    aria-label={dc("Go back")}
+                    onClick={() => !reassignmentBusy && setReassignmentConfirmOpen(false)}
+                    className={`${reassignmentConfirmOpen ? "opacity-100" : "opacity-0"} absolute inset-0 h-full w-full cursor-default bg-black/50 transition-opacity duration-300 motion-reduce:transition-none`}
+                />
+                <BackgroundPanel
+                    sheet
+                    dismissible={!reassignmentBusy}
+                    onDismiss={() => !reassignmentBusy && setReassignmentConfirmOpen(false)}
+                    show={reassignmentConfirmOpen}
+                    duration={420}
+                    className="z-1 flex flex-col gap-5 px-[7vw] pt-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] text-left sm:!bottom-8 sm:!left-1/2 sm:!-ml-[260px] sm:!h-auto sm:!w-[520px] sm:!rounded-3xl sm:px-8 sm:pb-8"
+                >
+                    <div role="dialog" aria-modal="true" aria-labelledby="reassignment-title" className="mx-auto flex w-full max-w-md flex-col gap-5">
+                        <div className="flex flex-col gap-1.5">
+                            <h2 id="reassignment-title" className="text-2xl font-semibold leading-tight text-[var(--text)]">{tr("Find another driver?")}</h2>
+                            <p className="text-base leading-snug text-[var(--text-muted)]">{tr("We'll release this driver and start searching again. This can take a few minutes.")}</p>
+                        </div>
+                        <div className="flex flex-col gap-2">
+                            <Button onClick={requestAnotherDriver} prop={{ width: "100%", disabled: reassignmentBusy }}>
+                                <span className="text-base sm:text-lg">{reassignmentBusy ? tr("Finding another driver…") : tr("Find another driver")}</span>
+                            </Button>
+                            <Button onClick={() => setReassignmentConfirmOpen(false)} className="my-0!" prop={{ variant: "input", width: "100%", bg: "transparent", border: false, disabled: reassignmentBusy }}>
+                                <span className="text-base sm:text-lg">{tr("Go back")}</span>
+                            </Button>
+                        </div>
+                    </div>
+                </BackgroundPanel>
+            </div>
+
             {/* Mobile: land-coloured backdrop + persistent page-background map,
                 with the opaque bottom-sheet panels riding over it. */}
             {isMobile && mapVisible && (
@@ -1041,9 +1196,8 @@ const TrackingPage = () => {
                 fields still waiting on the status fetch shimmer in place. With
                 no status at all this falls through to the live panel, which is
                 the shell those per-field skeletons hang on. */}
-            {bookingScheduledAt == null && status === "pending"
+            {reassignmentSearching || (bookingScheduledAt == null && status === "pending")
                     ? <BackgroundPanel
-                        solid
                         sheet={mapVisible}
                         fillAvailable
                         duration={420}
@@ -1061,7 +1215,7 @@ const TrackingPage = () => {
                                     <p className="text-left text-base sm:text-xl leading-snug text-[var(--text-muted)]">{tr("Your ride is back in the driver search.")}</p>
                                 </div>
                                 <div className={`flex flex-col items-start gap-4 ${COL}`}>
-                                    <SearchingProgressBar startedAt={driverCancellation?.createdAt} />
+                                    <SearchingProgressBar startedAt={reassignmentStartedAt ?? driverCancellation?.createdAt} />
                                     {dropSummary}
                                     <Button
                                         onClick={() => openSupportWhatsApp("Hi, I need help while RCS finds a new driver for my ride.")}
@@ -1082,7 +1236,6 @@ const TrackingPage = () => {
                     // same reason: the card is skeleton-then-real, and a booking
                     // that loads without a driver loses it entirely.
                     ? <BackgroundPanel
-                        solid
                         sheet={mapVisible}
                         fillAvailable
                         // Primary booking sheets expand to the same full-height
@@ -1106,7 +1259,7 @@ const TrackingPage = () => {
                         <div className={`relative z-10 sm:order-1 flex flex-col justify-end sm:justify-center items-center sm:items-start w-full sm:w-auto flex-1 min-h-0 sm:flex-initial sm:h-full ${STACK}`}>
                             <div className={`flex flex-col justify-center items-start ${PAIR} ${COL}`}>
                                 <h2 className={`text-left w-full min-w-0 [overflow-wrap:anywhere] ${TITLE}`}>{status === "payment_pending" ? dc("Pay advance") : status === "assigned" ? dc("Driver assigned") : dc("Not assigned yet")}</h2>
-                                <h3 className={`text-left w-full min-w-0 ${status === "confirmed" ? "text-base sm:text-xl font-normal leading-snug text-[var(--text-muted)]" : SUBTITLE}`}>{status === "payment_pending" ? dc("The 15% advance is part of your fare.") : status === "assigned" ? dc("Give the driver a call to confirm") : dc("Assigned closer to your pickup time")}</h3>
+                                <h3 className={`text-left w-full min-w-0 ${status === "confirmed" ? "text-base sm:text-xl font-normal leading-snug text-[var(--text-muted)]" : SUBTITLE}`}>{status === "payment_pending" ? dc("The 10% advance is part of your fare.") : status === "assigned" ? dc("Give the driver a call to confirm") : dc("Assigned closer to your pickup time")}</h3>
                             </div>
 
                             {/* The scroll region, phones only: everything below the
@@ -1188,7 +1341,7 @@ const TrackingPage = () => {
                     </BackgroundPanel>
                     : status === "completed"
                         ?
-                        <BackgroundPanel solid className={"max-sm:fixed max-sm:inset-0 h-[100dvh] max-sm:rounded-none max-sm:overflow-hidden py-6 flex justify-center items-center sm:px-[9%] md:px-[5%] xl:px-[13%]"}>
+                        <BackgroundPanel className={"max-sm:fixed max-sm:inset-0 h-[100dvh] max-sm:rounded-none max-sm:overflow-hidden py-6 flex justify-center items-center sm:px-[9%] md:px-[5%] xl:px-[13%]"}>
                             {/* Desktop: one wide card split down the middle —
                                outcome on the left, receipt and actions on the
                                right. Mobile drops the card and stacks the two
@@ -1273,7 +1426,6 @@ const TrackingPage = () => {
                         </BackgroundPanel>
 
                         : <BackgroundPanel
-                            solid
                             sheet={mapVisible}
                             fillAvailable
                             duration={420}
@@ -1415,7 +1567,7 @@ const TrackingPage = () => {
                         </BackgroundPanel>
             }
             {/* ride details */}
-            <BackgroundPanel solid show={detialsVisibility === true} className={`z-3 sm:z-2 py-6 sm:overflow-hidden text-left flex flex-col sm:flex-row justify-center items-center sm:justify-center lg:justify-between sm:px-[9%] md:px-[5%] xl:px-[13%]`}>
+            <BackgroundPanel show={detialsVisibility === true} className={`z-3 sm:z-2 py-6 sm:overflow-hidden text-left flex flex-col sm:flex-row justify-center items-center sm:justify-center lg:justify-between sm:px-[9%] md:px-[5%] xl:px-[13%]`}>
                 {!isMobile && detialsVisibility && pickupPoint && dropPoint && (
                     <GoogleMap appearance="dark" center={pickupPoint} zoom={12} onMapReady={setMapApi} className={`${MAP_CLASSES} max-lg:hidden`} />
                 )}
@@ -1428,7 +1580,6 @@ const TrackingPage = () => {
                         className={`absolute inset-0 z-40 bg-black/50 backdrop-blur-[2px] ${shareSheetClosing ? "animate-panel-fade-out" : "animate-backdrop"} motion-reduce:animate-none`}
                     />
                     <BackgroundPanel
-                        solid
                         sheet
                         dismissible
                         onDismiss={() => setShareSheetOpen(false)}
