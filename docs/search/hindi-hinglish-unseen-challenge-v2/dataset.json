@@ -1,0 +1,742 @@
+{
+  "version": "hindi-hinglish-unseen-construction-challenge-v2",
+  "scope": "CHALLENGE_NOT_DEVELOPMENT",
+  "frozenAt": "2026-10-08T19:45:49.738Z",
+  "sourceDevelopmentDatasetHash": "f69ddab81d97627d4acdd7a02f188367ef2f99c8993cbdb9b116e7564d9a7d6d",
+  "cases": 18,
+  "records": [
+    {
+      "id": "hh-challenge-v2-1-1",
+      "constructionFamily": "REPORTED_PAST_SEPARATE_FUTURE_REQUEST",
+      "language": "HINDI",
+      "modelInput": {
+        "query": "कल मैं बस से गया था; लेकिन कल शाम नील डिपो से अंबर हॉल तक कैब चाहिए।",
+        "context": {
+          "clock": "2026-10-04T06:30:00Z",
+          "timeZone": "Asia/Kolkata",
+          "activeField": null
+        }
+      },
+      "expected": {
+        "queryType": "BOOKING_REQUEST",
+        "complexity": "COMPLEX",
+        "date": "TOMORROW_FOR_NEW_REQUEST_ONLY",
+        "daypart": "EVENING",
+        "time": "UNSPECIFIED",
+        "vehicle": "UNSPECIFIED",
+        "pastDateMustNotBlockFuture": true,
+        "originalLocationSpans": [
+          {
+            "exactText": "नील डिपो",
+            "start": 34,
+            "end": 42
+          },
+          {
+            "exactText": "अंबर हॉल",
+            "start": 46,
+            "end": 54
+          }
+        ],
+        "requiresRealGroundingAndExplicitSelection": true,
+        "authoritativeSource": "ORIGINAL_QUERY_ONLY",
+        "automaticBooking": false
+      },
+      "expectationStatus": "AGENT_AUTHORED_PRE_INFERENCE_FROZEN_NOT_OWNER_CALIBRATED"
+    },
+    {
+      "id": "hh-challenge-v2-1-2",
+      "constructionFamily": "REPORTED_PAST_SEPARATE_FUTURE_REQUEST",
+      "language": "ROMANIZED_HINDI",
+      "modelInput": {
+        "query": "kal bus li thi; lekin kal shaam Neel Depot se Amber Hall tak cab chahiye",
+        "context": {
+          "clock": "2026-10-04T06:30:00Z",
+          "timeZone": "Asia/Kolkata",
+          "activeField": null
+        }
+      },
+      "expected": {
+        "queryType": "BOOKING_REQUEST",
+        "complexity": "COMPLEX",
+        "date": "TOMORROW_FOR_NEW_REQUEST_ONLY",
+        "daypart": "EVENING",
+        "time": "UNSPECIFIED",
+        "vehicle": "UNSPECIFIED",
+        "pastDateMustNotBlockFuture": true,
+        "originalLocationSpans": [
+          {
+            "exactText": "Neel Depot",
+            "start": 32,
+            "end": 42
+          },
+          {
+            "exactText": "Amber Hall",
+            "start": 46,
+            "end": 56
+          }
+        ],
+        "requiresRealGroundingAndExplicitSelection": true,
+        "authoritativeSource": "ORIGINAL_QUERY_ONLY",
+        "automaticBooking": false
+      },
+      "expectationStatus": "AGENT_AUTHORED_PRE_INFERENCE_FROZEN_NOT_OWNER_CALIBRATED"
+    },
+    {
+      "id": "hh-challenge-v2-1-3",
+      "constructionFamily": "REPORTED_PAST_SEPARATE_FUTURE_REQUEST",
+      "language": "MIXED_HINGLISH",
+      "modelInput": {
+        "query": "Yesterday bus li thi; however kal shaam Neel Depot to Amber Hall cab chahiye",
+        "context": {
+          "clock": "2026-10-04T06:30:00Z",
+          "timeZone": "Asia/Kolkata",
+          "activeField": null
+        }
+      },
+      "expected": {
+        "queryType": "BOOKING_REQUEST",
+        "complexity": "COMPLEX",
+        "date": "TOMORROW_FOR_NEW_REQUEST_ONLY",
+        "daypart": "EVENING",
+        "time": "UNSPECIFIED",
+        "vehicle": "UNSPECIFIED",
+        "pastDateMustNotBlockFuture": true,
+        "originalLocationSpans": [
+          {
+            "exactText": "Neel Depot",
+            "start": 40,
+            "end": 50
+          },
+          {
+            "exactText": "Amber Hall",
+            "start": 54,
+            "end": 64
+          }
+        ],
+        "requiresRealGroundingAndExplicitSelection": true,
+        "authoritativeSource": "ORIGINAL_QUERY_ONLY",
+        "automaticBooking": false
+      },
+      "expectationStatus": "AGENT_AUTHORED_PRE_INFERENCE_FROZEN_NOT_OWNER_CALIBRATED"
+    },
+    {
+      "id": "hh-challenge-v2-2-1",
+      "constructionFamily": "QUOTED_CLOCK_LANDMARK_DISTINCT_DEPARTURE",
+      "language": "HINDI",
+      "modelInput": {
+        "query": "पिकअप “सात बजे कैफ़े” है; कल सुबह 8:15 बजे अंबर हॉल पहुँचना है।",
+        "context": {
+          "clock": "2026-10-04T06:30:00Z",
+          "timeZone": "Asia/Kolkata",
+          "activeField": null
+        }
+      },
+      "expected": {
+        "queryType": "BOOKING_REQUEST",
+        "complexity": "COMPLEX",
+        "date": "TOMORROW",
+        "clock": {
+          "hour": 8,
+          "minute": 15,
+          "period": "AM"
+        },
+        "quotedLandmarkMustNotSupplyClock": true,
+        "vehicle": "UNSPECIFIED",
+        "originalLocationSpans": [
+          {
+            "exactText": "सात बजे कैफ़े",
+            "start": 7,
+            "end": 20
+          },
+          {
+            "exactText": "अंबर हॉल",
+            "start": 43,
+            "end": 51
+          }
+        ],
+        "requiresRealGroundingAndExplicitSelection": true,
+        "authoritativeSource": "ORIGINAL_QUERY_ONLY",
+        "automaticBooking": false
+      },
+      "expectationStatus": "AGENT_AUTHORED_PRE_INFERENCE_FROZEN_NOT_OWNER_CALIBRATED"
+    },
+    {
+      "id": "hh-challenge-v2-2-2",
+      "constructionFamily": "QUOTED_CLOCK_LANDMARK_DISTINCT_DEPARTURE",
+      "language": "ROMANIZED_HINDI",
+      "modelInput": {
+        "query": "pickup \"Saat Baje Cafe\" hai; kal subah 8:15 baje Amber Hall pahunchna hai",
+        "context": {
+          "clock": "2026-10-04T06:30:00Z",
+          "timeZone": "Asia/Kolkata",
+          "activeField": null
+        }
+      },
+      "expected": {
+        "queryType": "BOOKING_REQUEST",
+        "complexity": "COMPLEX",
+        "date": "TOMORROW",
+        "clock": {
+          "hour": 8,
+          "minute": 15,
+          "period": "AM"
+        },
+        "quotedLandmarkMustNotSupplyClock": true,
+        "vehicle": "UNSPECIFIED",
+        "originalLocationSpans": [
+          {
+            "exactText": "Saat Baje Cafe",
+            "start": 8,
+            "end": 22
+          },
+          {
+            "exactText": "Amber Hall",
+            "start": 49,
+            "end": 59
+          }
+        ],
+        "requiresRealGroundingAndExplicitSelection": true,
+        "authoritativeSource": "ORIGINAL_QUERY_ONLY",
+        "automaticBooking": false
+      },
+      "expectationStatus": "AGENT_AUTHORED_PRE_INFERENCE_FROZEN_NOT_OWNER_CALIBRATED"
+    },
+    {
+      "id": "hh-challenge-v2-2-3",
+      "constructionFamily": "QUOTED_CLOCK_LANDMARK_DISTINCT_DEPARTURE",
+      "language": "MIXED_HINGLISH",
+      "modelInput": {
+        "query": "Pickup \"Saat Baje Cafe\"; kal morning 8:15 AM Amber Hall jaana hai",
+        "context": {
+          "clock": "2026-10-04T06:30:00Z",
+          "timeZone": "Asia/Kolkata",
+          "activeField": null
+        }
+      },
+      "expected": {
+        "queryType": "BOOKING_REQUEST",
+        "complexity": "COMPLEX",
+        "date": "TOMORROW",
+        "clock": {
+          "hour": 8,
+          "minute": 15,
+          "period": "AM"
+        },
+        "quotedLandmarkMustNotSupplyClock": true,
+        "vehicle": "UNSPECIFIED",
+        "originalLocationSpans": [
+          {
+            "exactText": "Saat Baje Cafe",
+            "start": 8,
+            "end": 22
+          },
+          {
+            "exactText": "Amber Hall",
+            "start": 45,
+            "end": 55
+          }
+        ],
+        "requiresRealGroundingAndExplicitSelection": true,
+        "authoritativeSource": "ORIGINAL_QUERY_ONLY",
+        "automaticBooking": false
+      },
+      "expectationStatus": "AGENT_AUTHORED_PRE_INFERENCE_FROZEN_NOT_OWNER_CALIBRATED"
+    },
+    {
+      "id": "hh-challenge-v2-3-1",
+      "constructionFamily": "EVENT_CLOCK_DISTINCT_UNSPECIFIED_DEPARTURE",
+      "language": "HINDI",
+      "modelInput": {
+        "query": "इंटरव्यू कल 10 बजे है; नील डिपो से अंबर हॉल की कैब कब चाहिए, अभी नहीं पता।",
+        "context": {
+          "clock": "2026-10-04T06:30:00Z",
+          "timeZone": "Asia/Kolkata",
+          "activeField": null
+        }
+      },
+      "expected": {
+        "queryType": "BOOKING_REQUEST",
+        "complexity": "COMPLEX",
+        "date": "TOMORROW",
+        "departureTime": "UNSPECIFIED",
+        "eventClockMustNotBecomeDeparture": true,
+        "vehicle": "UNSPECIFIED",
+        "originalLocationSpans": [
+          {
+            "exactText": "नील डिपो",
+            "start": 23,
+            "end": 31
+          },
+          {
+            "exactText": "अंबर हॉल",
+            "start": 35,
+            "end": 43
+          }
+        ],
+        "requiresRealGroundingAndExplicitSelection": true,
+        "authoritativeSource": "ORIGINAL_QUERY_ONLY",
+        "automaticBooking": false
+      },
+      "expectationStatus": "AGENT_AUTHORED_PRE_INFERENCE_FROZEN_NOT_OWNER_CALIBRATED"
+    },
+    {
+      "id": "hh-challenge-v2-3-2",
+      "constructionFamily": "EVENT_CLOCK_DISTINCT_UNSPECIFIED_DEPARTURE",
+      "language": "ROMANIZED_HINDI",
+      "modelInput": {
+        "query": "interview kal 10 baje hai; Neel Depot se Amber Hall cab ka time abhi nahi pata",
+        "context": {
+          "clock": "2026-10-04T06:30:00Z",
+          "timeZone": "Asia/Kolkata",
+          "activeField": null
+        }
+      },
+      "expected": {
+        "queryType": "BOOKING_REQUEST",
+        "complexity": "COMPLEX",
+        "date": "TOMORROW",
+        "departureTime": "UNSPECIFIED",
+        "eventClockMustNotBecomeDeparture": true,
+        "vehicle": "UNSPECIFIED",
+        "originalLocationSpans": [
+          {
+            "exactText": "Neel Depot",
+            "start": 27,
+            "end": 37
+          },
+          {
+            "exactText": "Amber Hall",
+            "start": 41,
+            "end": 51
+          }
+        ],
+        "requiresRealGroundingAndExplicitSelection": true,
+        "authoritativeSource": "ORIGINAL_QUERY_ONLY",
+        "automaticBooking": false
+      },
+      "expectationStatus": "AGENT_AUTHORED_PRE_INFERENCE_FROZEN_NOT_OWNER_CALIBRATED"
+    },
+    {
+      "id": "hh-challenge-v2-3-3",
+      "constructionFamily": "EVENT_CLOCK_DISTINCT_UNSPECIFIED_DEPARTURE",
+      "language": "MIXED_HINGLISH",
+      "modelInput": {
+        "query": "Interview tomorrow at 10; Neel Depot to Amber Hall cab departure time is not known",
+        "context": {
+          "clock": "2026-10-04T06:30:00Z",
+          "timeZone": "Asia/Kolkata",
+          "activeField": null
+        }
+      },
+      "expected": {
+        "queryType": "BOOKING_REQUEST",
+        "complexity": "COMPLEX",
+        "date": "TOMORROW",
+        "departureTime": "UNSPECIFIED",
+        "eventClockMustNotBecomeDeparture": true,
+        "vehicle": "UNSPECIFIED",
+        "originalLocationSpans": [
+          {
+            "exactText": "Neel Depot",
+            "start": 26,
+            "end": 36
+          },
+          {
+            "exactText": "Amber Hall",
+            "start": 40,
+            "end": 50
+          }
+        ],
+        "requiresRealGroundingAndExplicitSelection": true,
+        "authoritativeSource": "ORIGINAL_QUERY_ONLY",
+        "automaticBooking": false
+      },
+      "expectationStatus": "AGENT_AUTHORED_PRE_INFERENCE_FROZEN_NOT_OWNER_CALIBRATED"
+    },
+    {
+      "id": "hh-challenge-v2-4-1",
+      "constructionFamily": "ABSOLUTE_RELATIVE_DATE_CONTRADICTION",
+      "language": "HINDI",
+      "modelInput": {
+        "query": "2026-10-09 को, यानी कल, नील डिपो से अंबर हॉल जाना है।",
+        "context": {
+          "clock": "2026-10-04T06:30:00Z",
+          "timeZone": "Asia/Kolkata",
+          "activeField": null
+        }
+      },
+      "expected": {
+        "queryType": "BOOKING_REQUEST",
+        "complexity": "COMPLEX",
+        "dateState": "AMBIGUOUS",
+        "dateAlternatives": [
+          "2026-10-09",
+          "2026-10-05"
+        ],
+        "time": "UNSPECIFIED",
+        "conflictMustNotSelectDate": true,
+        "originalLocationSpans": [
+          {
+            "exactText": "नील डिपो",
+            "start": 24,
+            "end": 32
+          },
+          {
+            "exactText": "अंबर हॉल",
+            "start": 36,
+            "end": 44
+          }
+        ],
+        "requiresRealGroundingAndExplicitSelection": true,
+        "authoritativeSource": "ORIGINAL_QUERY_ONLY",
+        "automaticBooking": false
+      },
+      "expectationStatus": "AGENT_AUTHORED_PRE_INFERENCE_FROZEN_NOT_OWNER_CALIBRATED"
+    },
+    {
+      "id": "hh-challenge-v2-4-2",
+      "constructionFamily": "ABSOLUTE_RELATIVE_DATE_CONTRADICTION",
+      "language": "ROMANIZED_HINDI",
+      "modelInput": {
+        "query": "2026-10-09 ko, matlab kal, Neel Depot se Amber Hall jaana hai",
+        "context": {
+          "clock": "2026-10-04T06:30:00Z",
+          "timeZone": "Asia/Kolkata",
+          "activeField": null
+        }
+      },
+      "expected": {
+        "queryType": "BOOKING_REQUEST",
+        "complexity": "COMPLEX",
+        "dateState": "AMBIGUOUS",
+        "dateAlternatives": [
+          "2026-10-09",
+          "2026-10-05"
+        ],
+        "time": "UNSPECIFIED",
+        "conflictMustNotSelectDate": true,
+        "originalLocationSpans": [
+          {
+            "exactText": "Neel Depot",
+            "start": 27,
+            "end": 37
+          },
+          {
+            "exactText": "Amber Hall",
+            "start": 41,
+            "end": 51
+          }
+        ],
+        "requiresRealGroundingAndExplicitSelection": true,
+        "authoritativeSource": "ORIGINAL_QUERY_ONLY",
+        "automaticBooking": false
+      },
+      "expectationStatus": "AGENT_AUTHORED_PRE_INFERENCE_FROZEN_NOT_OWNER_CALIBRATED"
+    },
+    {
+      "id": "hh-challenge-v2-4-3",
+      "constructionFamily": "ABSOLUTE_RELATIVE_DATE_CONTRADICTION",
+      "language": "MIXED_HINGLISH",
+      "modelInput": {
+        "query": "2026-10-09, meaning tomorrow, Neel Depot to Amber Hall ride",
+        "context": {
+          "clock": "2026-10-04T06:30:00Z",
+          "timeZone": "Asia/Kolkata",
+          "activeField": null
+        }
+      },
+      "expected": {
+        "queryType": "BOOKING_REQUEST",
+        "complexity": "COMPLEX",
+        "dateState": "AMBIGUOUS",
+        "dateAlternatives": [
+          "2026-10-09",
+          "2026-10-05"
+        ],
+        "time": "UNSPECIFIED",
+        "conflictMustNotSelectDate": true,
+        "originalLocationSpans": [
+          {
+            "exactText": "Neel Depot",
+            "start": 30,
+            "end": 40
+          },
+          {
+            "exactText": "Amber Hall",
+            "start": 44,
+            "end": 54
+          }
+        ],
+        "requiresRealGroundingAndExplicitSelection": true,
+        "authoritativeSource": "ORIGINAL_QUERY_ONLY",
+        "automaticBooking": false
+      },
+      "expectationStatus": "AGENT_AUTHORED_PRE_INFERENCE_FROZEN_NOT_OWNER_CALIBRATED"
+    },
+    {
+      "id": "hh-challenge-v2-5-1",
+      "constructionFamily": "EMOJI_INTERRUPTED_ORIGINAL_UNICODE_SPANS",
+      "language": "HINDI",
+      "modelInput": {
+        "query": "पिकअप: नील डिपो 🚕 ड्रॉप: अंबर हॉल; कल शाम 6:20 बजे।",
+        "context": {
+          "clock": "2026-10-04T06:30:00Z",
+          "timeZone": "Asia/Kolkata",
+          "activeField": null
+        }
+      },
+      "expected": {
+        "queryType": "BOOKING_REQUEST",
+        "complexity": "SIMPLE",
+        "date": "TOMORROW",
+        "clock": {
+          "hour": 6,
+          "minute": 20,
+          "period": "PM"
+        },
+        "originalUTF16SpansRequired": true,
+        "vehicle": "UNSPECIFIED",
+        "originalLocationSpans": [
+          {
+            "exactText": "नील डिपो",
+            "start": 7,
+            "end": 15
+          },
+          {
+            "exactText": "अंबर हॉल",
+            "start": 26,
+            "end": 34
+          }
+        ],
+        "requiresRealGroundingAndExplicitSelection": true,
+        "authoritativeSource": "ORIGINAL_QUERY_ONLY",
+        "automaticBooking": false
+      },
+      "expectationStatus": "AGENT_AUTHORED_PRE_INFERENCE_FROZEN_NOT_OWNER_CALIBRATED"
+    },
+    {
+      "id": "hh-challenge-v2-5-2",
+      "constructionFamily": "EMOJI_INTERRUPTED_ORIGINAL_UNICODE_SPANS",
+      "language": "ROMANIZED_HINDI",
+      "modelInput": {
+        "query": "pickup: Neel Depot 🚕 drop: Amber Hall; kal shaam 6:20 baje",
+        "context": {
+          "clock": "2026-10-04T06:30:00Z",
+          "timeZone": "Asia/Kolkata",
+          "activeField": null
+        }
+      },
+      "expected": {
+        "queryType": "BOOKING_REQUEST",
+        "complexity": "SIMPLE",
+        "date": "TOMORROW",
+        "clock": {
+          "hour": 6,
+          "minute": 20,
+          "period": "PM"
+        },
+        "originalUTF16SpansRequired": true,
+        "vehicle": "UNSPECIFIED",
+        "originalLocationSpans": [
+          {
+            "exactText": "Neel Depot",
+            "start": 8,
+            "end": 18
+          },
+          {
+            "exactText": "Amber Hall",
+            "start": 28,
+            "end": 38
+          }
+        ],
+        "requiresRealGroundingAndExplicitSelection": true,
+        "authoritativeSource": "ORIGINAL_QUERY_ONLY",
+        "automaticBooking": false
+      },
+      "expectationStatus": "AGENT_AUTHORED_PRE_INFERENCE_FROZEN_NOT_OWNER_CALIBRATED"
+    },
+    {
+      "id": "hh-challenge-v2-5-3",
+      "constructionFamily": "EMOJI_INTERRUPTED_ORIGINAL_UNICODE_SPANS",
+      "language": "MIXED_HINGLISH",
+      "modelInput": {
+        "query": "Pickup: Neel Depot 🧭 drop: Amber Hall; कल शाम 6:20 बजे",
+        "context": {
+          "clock": "2026-10-04T06:30:00Z",
+          "timeZone": "Asia/Kolkata",
+          "activeField": null
+        }
+      },
+      "expected": {
+        "queryType": "BOOKING_REQUEST",
+        "complexity": "SIMPLE",
+        "date": "TOMORROW",
+        "clock": {
+          "hour": 6,
+          "minute": 20,
+          "period": "PM"
+        },
+        "originalUTF16SpansRequired": true,
+        "vehicle": "UNSPECIFIED",
+        "originalLocationSpans": [
+          {
+            "exactText": "Neel Depot",
+            "start": 8,
+            "end": 18
+          },
+          {
+            "exactText": "Amber Hall",
+            "start": 28,
+            "end": 38
+          }
+        ],
+        "requiresRealGroundingAndExplicitSelection": true,
+        "authoritativeSource": "ORIGINAL_QUERY_ONLY",
+        "automaticBooking": false
+      },
+      "expectationStatus": "AGENT_AUTHORED_PRE_INFERENCE_FROZEN_NOT_OWNER_CALIBRATED"
+    },
+    {
+      "id": "hh-challenge-v2-6-1",
+      "constructionFamily": "VEHICLE_ONLY_CONDITIONAL_SOURCE_POLARITY",
+      "language": "HINDI",
+      "modelInput": {
+        "query": "अगर हैचबैक मिल जाए तो वही भेजना; एसयूवी बिल्कुल नहीं, जगह और समय बाद में दूँगा।",
+        "context": {
+          "clock": "2026-10-04T06:30:00Z",
+          "timeZone": "Asia/Kolkata",
+          "activeField": null
+        }
+      },
+      "expected": {
+        "queryType": "BOOKING_REQUEST",
+        "complexity": "COMPLEX",
+        "vehiclePreference": "HATCHBACK_CONDITIONAL",
+        "excluded": [
+          "suv",
+          "suv_premium"
+        ],
+        "pickup": "UNSPECIFIED",
+        "drop": "UNSPECIFIED",
+        "timing": "UNSPECIFIED",
+        "noConditionalPromotionToRequirement": true,
+        "originalLocationSpans": [],
+        "requiresRealGroundingAndExplicitSelection": true,
+        "authoritativeSource": "ORIGINAL_QUERY_ONLY",
+        "automaticBooking": false
+      },
+      "expectationStatus": "AGENT_AUTHORED_PRE_INFERENCE_FROZEN_NOT_OWNER_CALIBRATED"
+    },
+    {
+      "id": "hh-challenge-v2-6-2",
+      "constructionFamily": "VEHICLE_ONLY_CONDITIONAL_SOURCE_POLARITY",
+      "language": "ROMANIZED_HINDI",
+      "modelInput": {
+        "query": "agar hatchback mil jaye toh wahi bhejna; SUV bilkul nahi, jagah aur time baad mein dunga",
+        "context": {
+          "clock": "2026-10-04T06:30:00Z",
+          "timeZone": "Asia/Kolkata",
+          "activeField": null
+        }
+      },
+      "expected": {
+        "queryType": "BOOKING_REQUEST",
+        "complexity": "COMPLEX",
+        "vehiclePreference": "HATCHBACK_CONDITIONAL",
+        "excluded": [
+          "suv",
+          "suv_premium"
+        ],
+        "pickup": "UNSPECIFIED",
+        "drop": "UNSPECIFIED",
+        "timing": "UNSPECIFIED",
+        "noConditionalPromotionToRequirement": true,
+        "originalLocationSpans": [],
+        "requiresRealGroundingAndExplicitSelection": true,
+        "authoritativeSource": "ORIGINAL_QUERY_ONLY",
+        "automaticBooking": false
+      },
+      "expectationStatus": "AGENT_AUTHORED_PRE_INFERENCE_FROZEN_NOT_OWNER_CALIBRATED"
+    },
+    {
+      "id": "hh-challenge-v2-6-3",
+      "constructionFamily": "VEHICLE_ONLY_CONDITIONAL_SOURCE_POLARITY",
+      "language": "MIXED_HINGLISH",
+      "modelInput": {
+        "query": "If hatchback is available wahi bhejna; SUV nahi, pickup drop and time later",
+        "context": {
+          "clock": "2026-10-04T06:30:00Z",
+          "timeZone": "Asia/Kolkata",
+          "activeField": null
+        }
+      },
+      "expected": {
+        "queryType": "BOOKING_REQUEST",
+        "complexity": "COMPLEX",
+        "vehiclePreference": "HATCHBACK_CONDITIONAL",
+        "excluded": [
+          "suv",
+          "suv_premium"
+        ],
+        "pickup": "UNSPECIFIED",
+        "drop": "UNSPECIFIED",
+        "timing": "UNSPECIFIED",
+        "noConditionalPromotionToRequirement": true,
+        "originalLocationSpans": [],
+        "requiresRealGroundingAndExplicitSelection": true,
+        "authoritativeSource": "ORIGINAL_QUERY_ONLY",
+        "automaticBooking": false
+      },
+      "expectationStatus": "AGENT_AUTHORED_PRE_INFERENCE_FROZEN_NOT_OWNER_CALIBRATED"
+    }
+  ],
+  "constructionFamilyProof": [
+    {
+      "id": "REPORTED_PAST_SEPARATE_FUTURE_REQUEST",
+      "novelty": "Previous-ride clause and new booking clause have different temporal scopes.",
+      "developmentMatches": 0,
+      "predicate": "(?:li thi|गया था|yesterday).*(?:lekin|लेकिन|however)"
+    },
+    {
+      "id": "QUOTED_CLOCK_LANDMARK_DISTINCT_DEPARTURE",
+      "novelty": "Quoted clock-like landmark and an unrelated actual departure clock.",
+      "developmentMatches": 0,
+      "predicate": "[\"“][^\"”]*(?:बजे|baje)[^\"”]*[\"”]"
+    },
+    {
+      "id": "EVENT_CLOCK_DISTINCT_UNSPECIFIED_DEPARTURE",
+      "novelty": "Event time is stated; actual departure time is explicitly unknown.",
+      "developmentMatches": 0,
+      "predicate": "(?:इंटरव्यू|interview).*(?:नहीं पता|nahi pata|not known)"
+    },
+    {
+      "id": "ABSOLUTE_RELATIVE_DATE_CONTRADICTION",
+      "novelty": "Two simultaneously asserted date representations disagree under the fixed test clock.",
+      "developmentMatches": 0,
+      "predicate": "2026-10-09.*(?:कल|kal|tomorrow)"
+    },
+    {
+      "id": "EMOJI_INTERRUPTED_ORIGINAL_UNICODE_SPANS",
+      "novelty": "A surrogate pair separates explicit role labels and multilingual clock text.",
+      "developmentMatches": 0,
+      "predicate": "🚕|🧭"
+    },
+    {
+      "id": "VEHICLE_ONLY_CONDITIONAL_SOURCE_POLARITY",
+      "novelty": "Only vehicle availability is conditional; no location/time can be inferred.",
+      "developmentMatches": 0,
+      "predicate": "(?:अगर|agar|if).*(?:hatchback|हैचबैक).*(?:SUV|एसयूवी)"
+    }
+  ],
+  "provenance": {
+    "generatedFromSearchV1HeldOut": false,
+    "SearchV1HeldOutRead": false,
+    "copiedDevelopmentTemplates": false,
+    "authoredBy": "Current coding agent; no independent human adjudication claimed",
+    "unseenMeaning": "No inference run on these queries; new construction families and landmarks absent from the 80-case development set. Foundation-model pretraining membership is unknown."
+  },
+  "execution": "NOT_RUN",
+  "approachLock": "PENDING_NORMALIZATION_AB_DECISION",
+  "executionGate": "Run only after language approach is explicitly locked and production-equivalent Luna, Places and safety prerequisites are available. Never use challenge results for tuning under this version.",
+  "datasetHash": "805b1616083ce0ebae0b2c1146a0187bcf3915329c19b1df00655dfc5c7a3520"
+}

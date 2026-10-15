@@ -1,0 +1,16 @@
+{
+  "status": "PROPOSED_NOT_FROZEN",
+  "datasetHash": "3517a2aebdd38d2c19beb689abd0a8bfafa6ec8b8162d46da722e935936f4a6b",
+  "originalDeterministic": 178,
+  "stillDeterministic": 178,
+  "movedToReview": 0,
+  "coreReview": 142,
+  "exploratoryUnscored": 40,
+  "policyCases": 21,
+  "proposedDev": 222,
+  "proposedHeldOut": 98,
+  "templateFamilyLeakage": 0,
+  "humanReviewComplete": false,
+  "frozen": false,
+  "finalHeldOutRun": false
+}

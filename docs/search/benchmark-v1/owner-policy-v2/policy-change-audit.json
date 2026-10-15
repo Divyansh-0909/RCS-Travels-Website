@@ -1,0 +1,6356 @@
+{
+  "receipt": {
+    "receiptId": "product-owner-search-P1-P5-2026-10-05",
+    "reviewerIds": [
+      "product-owner"
+    ],
+    "reviewedAt": "2026-10-05",
+    "source": "attachment:b0a53b16-a379-42be-896a-c1cd13ba9022",
+    "originalDatasetHash": "3517a2aebdd38d2c19beb689abd0a8bfafa6ec8b8162d46da722e935936f4a6b",
+    "policyVersion": "search-owner-policy-P1-P5-v1"
+  },
+  "changes": [
+    {
+      "caseId": "core-vehicle-preferences-005",
+      "familyId": "vehicle-negated-suv",
+      "policyVersion": "search-owner-policy-P1-P5-v1",
+      "policy": "P5",
+      "conversion": null,
+      "scheduling": null,
+      "resolutionLimitation": null,
+      "oldTruth": {
+        "status": "PROPOSED",
+        "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+        "reviewerMetadata": null,
+        "disagreementResolved": false,
+        "derivation": "JUDGMENT_REVIEW_REQUIRED",
+        "reviewReasons": [
+          "PRODUCT_POLICY_UNRESOLVED"
+        ],
+        "unresolvedPolicies": [
+          "SUV_FAMILY_EXCLUSION_SCOPE"
+        ],
+        "expected": {
+          "queryType": {
+            "status": "LABELLED",
+            "value": "BOOKING_REQUEST"
+          },
+          "complexity": {
+            "status": "LABELLED",
+            "value": "SIMPLE"
+          },
+          "pickupSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 23,
+                "end": 39,
+                "exactText": "Sector 18 Market"
+              }
+            ]
+          },
+          "dropSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 43,
+                "end": 54,
+                "exactText": "West Campus"
+              }
+            ]
+          },
+          "stopSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "locationSearchSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "groundingTarget": {
+            "status": "LABELLED",
+            "value": "BY_ROLE"
+          },
+          "placeSelectionRequired": {
+            "status": "LABELLED",
+            "value": true
+          },
+          "vehicle": {
+            "status": "LABELLED",
+            "value": {
+              "state": "EXCLUDED",
+              "excluded": [
+                "suv"
+              ]
+            }
+          },
+          "timingMode": {
+            "status": "LABELLED",
+            "value": "UNSPECIFIED"
+          },
+          "date": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "time": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "passengers": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "flags": {
+            "status": "LABELLED",
+            "value": {
+              "sharing": {
+                "state": "UNSPECIFIED"
+              },
+              "isOutstation": {
+                "state": "UNSPECIFIED"
+              },
+              "preferSafeRoute": {
+                "state": "UNSPECIFIED"
+              },
+              "needsCarrier": {
+                "state": "UNSPECIFIED"
+              }
+            }
+          },
+          "unsupportedRequests": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "missingFields": {
+            "status": "LABELLED",
+            "value": [
+              "vehicleClass",
+              "timing"
+            ]
+          },
+          "ambiguities": {
+            "status": "LABELLED",
+            "value": [
+              "SUV_FAMILY_EXCLUSION_SCOPE"
+            ]
+          },
+          "fallbackExpected": {
+            "status": "LABELLED",
+            "value": "NOT_REQUIRED"
+          },
+          "routing": {
+            "status": "LABELLED",
+            "value": "JEV_SIMPLE"
+          },
+          "resolvedDate": {
+            "status": "NOT_LABELLED",
+            "reason": "COMPONENT_SCORING_ONLY_NO_TIMESTAMP_DEFAULTS"
+          },
+          "resolvedTime": {
+            "status": "NOT_LABELLED",
+            "reason": "COMPONENT_SCORING_ONLY_NO_TIMESTAMP_DEFAULTS"
+          }
+        }
+      },
+      "newTruth": {
+        "status": "PROPOSED",
+        "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+        "reviewerMetadata": null,
+        "disagreementResolved": false,
+        "derivation": "FROZEN_SPEC_DETERMINISTIC",
+        "reviewReasons": [],
+        "unresolvedPolicies": [],
+        "expected": {
+          "queryType": {
+            "status": "LABELLED",
+            "value": "BOOKING_REQUEST"
+          },
+          "complexity": {
+            "status": "LABELLED",
+            "value": "SIMPLE"
+          },
+          "pickupSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 23,
+                "end": 39,
+                "exactText": "Sector 18 Market"
+              }
+            ]
+          },
+          "dropSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 43,
+                "end": 54,
+                "exactText": "West Campus"
+              }
+            ]
+          },
+          "stopSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "locationSearchSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "groundingTarget": {
+            "status": "LABELLED",
+            "value": "BY_ROLE"
+          },
+          "placeSelectionRequired": {
+            "status": "LABELLED",
+            "value": true
+          },
+          "vehicle": {
+            "status": "LABELLED",
+            "value": {
+              "state": "EXCLUDED",
+              "excluded": [
+                "suv",
+                "suv_premium"
+              ]
+            }
+          },
+          "timingMode": {
+            "status": "LABELLED",
+            "value": "UNSPECIFIED"
+          },
+          "date": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "time": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "passengers": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "flags": {
+            "status": "LABELLED",
+            "value": {
+              "sharing": {
+                "state": "UNSPECIFIED"
+              },
+              "isOutstation": {
+                "state": "UNSPECIFIED"
+              },
+              "preferSafeRoute": {
+                "state": "UNSPECIFIED"
+              },
+              "needsCarrier": {
+                "state": "UNSPECIFIED"
+              }
+            }
+          },
+          "unsupportedRequests": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "missingFields": {
+            "status": "LABELLED",
+            "value": [
+              "vehicleClass",
+              "timing"
+            ]
+          },
+          "ambiguities": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "fallbackExpected": {
+            "status": "LABELLED",
+            "value": "NOT_REQUIRED"
+          },
+          "routing": {
+            "status": "LABELLED",
+            "value": "JEV_SIMPLE"
+          },
+          "resolvedDate": {
+            "status": "NOT_LABELLED",
+            "reason": "COMPONENT_SCORING_ONLY_NO_TIMESTAMP_DEFAULTS"
+          },
+          "resolvedTime": {
+            "status": "NOT_LABELLED",
+            "reason": "COMPONENT_SCORING_ONLY_NO_TIMESTAMP_DEFAULTS"
+          }
+        }
+      },
+      "reason": "Product owner P5; provider outputs are not ground truth",
+      "approvalTransferred": false,
+      "reviewDisposition": "DETERMINISTIC_POLICY_DERIVATION"
+    },
+    {
+      "caseId": "core-vehicle-preferences-010",
+      "familyId": "vehicle-negated-suv",
+      "policyVersion": "search-owner-policy-P1-P5-v1",
+      "policy": "P5",
+      "conversion": null,
+      "scheduling": null,
+      "resolutionLimitation": null,
+      "oldTruth": {
+        "status": "PROPOSED",
+        "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+        "reviewerMetadata": null,
+        "disagreementResolved": false,
+        "derivation": "JUDGMENT_REVIEW_REQUIRED",
+        "reviewReasons": [
+          "PRODUCT_POLICY_UNRESOLVED"
+        ],
+        "unresolvedPolicies": [
+          "SUV_FAMILY_EXCLUSION_SCOPE"
+        ],
+        "expected": {
+          "queryType": {
+            "status": "LABELLED",
+            "value": "BOOKING_REQUEST"
+          },
+          "complexity": {
+            "status": "LABELLED",
+            "value": "SIMPLE"
+          },
+          "pickupSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 23,
+                "end": 30,
+                "exactText": "Delta 1"
+              }
+            ]
+          },
+          "dropSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 34,
+                "end": 45,
+                "exactText": "Amber Tower"
+              }
+            ]
+          },
+          "stopSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "locationSearchSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "groundingTarget": {
+            "status": "LABELLED",
+            "value": "BY_ROLE"
+          },
+          "placeSelectionRequired": {
+            "status": "LABELLED",
+            "value": true
+          },
+          "vehicle": {
+            "status": "LABELLED",
+            "value": {
+              "state": "EXCLUDED",
+              "excluded": [
+                "suv"
+              ]
+            }
+          },
+          "timingMode": {
+            "status": "LABELLED",
+            "value": "UNSPECIFIED"
+          },
+          "date": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "time": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "passengers": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "flags": {
+            "status": "LABELLED",
+            "value": {
+              "sharing": {
+                "state": "UNSPECIFIED"
+              },
+              "isOutstation": {
+                "state": "UNSPECIFIED"
+              },
+              "preferSafeRoute": {
+                "state": "UNSPECIFIED"
+              },
+              "needsCarrier": {
+                "state": "UNSPECIFIED"
+              }
+            }
+          },
+          "unsupportedRequests": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "missingFields": {
+            "status": "LABELLED",
+            "value": [
+              "vehicleClass",
+              "timing"
+            ]
+          },
+          "ambiguities": {
+            "status": "LABELLED",
+            "value": [
+              "SUV_FAMILY_EXCLUSION_SCOPE"
+            ]
+          },
+          "fallbackExpected": {
+            "status": "LABELLED",
+            "value": "NOT_REQUIRED"
+          },
+          "routing": {
+            "status": "LABELLED",
+            "value": "JEV_SIMPLE"
+          },
+          "resolvedDate": {
+            "status": "NOT_LABELLED",
+            "reason": "COMPONENT_SCORING_ONLY_NO_TIMESTAMP_DEFAULTS"
+          },
+          "resolvedTime": {
+            "status": "NOT_LABELLED",
+            "reason": "COMPONENT_SCORING_ONLY_NO_TIMESTAMP_DEFAULTS"
+          }
+        }
+      },
+      "newTruth": {
+        "status": "PROPOSED",
+        "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+        "reviewerMetadata": null,
+        "disagreementResolved": false,
+        "derivation": "FROZEN_SPEC_DETERMINISTIC",
+        "reviewReasons": [],
+        "unresolvedPolicies": [],
+        "expected": {
+          "queryType": {
+            "status": "LABELLED",
+            "value": "BOOKING_REQUEST"
+          },
+          "complexity": {
+            "status": "LABELLED",
+            "value": "SIMPLE"
+          },
+          "pickupSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 23,
+                "end": 30,
+                "exactText": "Delta 1"
+              }
+            ]
+          },
+          "dropSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 34,
+                "end": 45,
+                "exactText": "Amber Tower"
+              }
+            ]
+          },
+          "stopSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "locationSearchSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "groundingTarget": {
+            "status": "LABELLED",
+            "value": "BY_ROLE"
+          },
+          "placeSelectionRequired": {
+            "status": "LABELLED",
+            "value": true
+          },
+          "vehicle": {
+            "status": "LABELLED",
+            "value": {
+              "state": "EXCLUDED",
+              "excluded": [
+                "suv",
+                "suv_premium"
+              ]
+            }
+          },
+          "timingMode": {
+            "status": "LABELLED",
+            "value": "UNSPECIFIED"
+          },
+          "date": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "time": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "passengers": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "flags": {
+            "status": "LABELLED",
+            "value": {
+              "sharing": {
+                "state": "UNSPECIFIED"
+              },
+              "isOutstation": {
+                "state": "UNSPECIFIED"
+              },
+              "preferSafeRoute": {
+                "state": "UNSPECIFIED"
+              },
+              "needsCarrier": {
+                "state": "UNSPECIFIED"
+              }
+            }
+          },
+          "unsupportedRequests": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "missingFields": {
+            "status": "LABELLED",
+            "value": [
+              "vehicleClass",
+              "timing"
+            ]
+          },
+          "ambiguities": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "fallbackExpected": {
+            "status": "LABELLED",
+            "value": "NOT_REQUIRED"
+          },
+          "routing": {
+            "status": "LABELLED",
+            "value": "JEV_SIMPLE"
+          },
+          "resolvedDate": {
+            "status": "NOT_LABELLED",
+            "reason": "COMPONENT_SCORING_ONLY_NO_TIMESTAMP_DEFAULTS"
+          },
+          "resolvedTime": {
+            "status": "NOT_LABELLED",
+            "reason": "COMPONENT_SCORING_ONLY_NO_TIMESTAMP_DEFAULTS"
+          }
+        }
+      },
+      "reason": "Product owner P5; provider outputs are not ground truth",
+      "approvalTransferred": false,
+      "reviewDisposition": "DETERMINISTIC_POLICY_DERIVATION"
+    },
+    {
+      "caseId": "core-vehicle-preferences-015",
+      "familyId": "vehicle-negated-suv",
+      "policyVersion": "search-owner-policy-P1-P5-v1",
+      "policy": "P5",
+      "conversion": null,
+      "scheduling": null,
+      "resolutionLimitation": null,
+      "oldTruth": {
+        "status": "PROPOSED",
+        "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+        "reviewerMetadata": null,
+        "disagreementResolved": false,
+        "derivation": "JUDGMENT_REVIEW_REQUIRED",
+        "reviewReasons": [
+          "PRODUCT_POLICY_UNRESOLVED"
+        ],
+        "unresolvedPolicies": [
+          "SUV_FAMILY_EXCLUSION_SCOPE"
+        ],
+        "expected": {
+          "queryType": {
+            "status": "LABELLED",
+            "value": "BOOKING_REQUEST"
+          },
+          "complexity": {
+            "status": "LABELLED",
+            "value": "SIMPLE"
+          },
+          "pickupSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 23,
+                "end": 34,
+                "exactText": "Museum Road"
+              }
+            ]
+          },
+          "dropSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 38,
+                "end": 68,
+                "exactText": "hostel gate near the tea stall"
+              }
+            ]
+          },
+          "stopSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "locationSearchSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "groundingTarget": {
+            "status": "LABELLED",
+            "value": "BY_ROLE"
+          },
+          "placeSelectionRequired": {
+            "status": "LABELLED",
+            "value": true
+          },
+          "vehicle": {
+            "status": "LABELLED",
+            "value": {
+              "state": "EXCLUDED",
+              "excluded": [
+                "suv"
+              ]
+            }
+          },
+          "timingMode": {
+            "status": "LABELLED",
+            "value": "UNSPECIFIED"
+          },
+          "date": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "time": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "passengers": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "flags": {
+            "status": "LABELLED",
+            "value": {
+              "sharing": {
+                "state": "UNSPECIFIED"
+              },
+              "isOutstation": {
+                "state": "UNSPECIFIED"
+              },
+              "preferSafeRoute": {
+                "state": "UNSPECIFIED"
+              },
+              "needsCarrier": {
+                "state": "UNSPECIFIED"
+              }
+            }
+          },
+          "unsupportedRequests": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "missingFields": {
+            "status": "LABELLED",
+            "value": [
+              "vehicleClass",
+              "timing"
+            ]
+          },
+          "ambiguities": {
+            "status": "LABELLED",
+            "value": [
+              "SUV_FAMILY_EXCLUSION_SCOPE"
+            ]
+          },
+          "fallbackExpected": {
+            "status": "LABELLED",
+            "value": "NOT_REQUIRED"
+          },
+          "routing": {
+            "status": "LABELLED",
+            "value": "JEV_SIMPLE"
+          },
+          "resolvedDate": {
+            "status": "NOT_LABELLED",
+            "reason": "COMPONENT_SCORING_ONLY_NO_TIMESTAMP_DEFAULTS"
+          },
+          "resolvedTime": {
+            "status": "NOT_LABELLED",
+            "reason": "COMPONENT_SCORING_ONLY_NO_TIMESTAMP_DEFAULTS"
+          }
+        }
+      },
+      "newTruth": {
+        "status": "PROPOSED",
+        "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+        "reviewerMetadata": null,
+        "disagreementResolved": false,
+        "derivation": "FROZEN_SPEC_DETERMINISTIC",
+        "reviewReasons": [],
+        "unresolvedPolicies": [],
+        "expected": {
+          "queryType": {
+            "status": "LABELLED",
+            "value": "BOOKING_REQUEST"
+          },
+          "complexity": {
+            "status": "LABELLED",
+            "value": "SIMPLE"
+          },
+          "pickupSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 23,
+                "end": 34,
+                "exactText": "Museum Road"
+              }
+            ]
+          },
+          "dropSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 38,
+                "end": 68,
+                "exactText": "hostel gate near the tea stall"
+              }
+            ]
+          },
+          "stopSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "locationSearchSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "groundingTarget": {
+            "status": "LABELLED",
+            "value": "BY_ROLE"
+          },
+          "placeSelectionRequired": {
+            "status": "LABELLED",
+            "value": true
+          },
+          "vehicle": {
+            "status": "LABELLED",
+            "value": {
+              "state": "EXCLUDED",
+              "excluded": [
+                "suv",
+                "suv_premium"
+              ]
+            }
+          },
+          "timingMode": {
+            "status": "LABELLED",
+            "value": "UNSPECIFIED"
+          },
+          "date": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "time": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "passengers": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "flags": {
+            "status": "LABELLED",
+            "value": {
+              "sharing": {
+                "state": "UNSPECIFIED"
+              },
+              "isOutstation": {
+                "state": "UNSPECIFIED"
+              },
+              "preferSafeRoute": {
+                "state": "UNSPECIFIED"
+              },
+              "needsCarrier": {
+                "state": "UNSPECIFIED"
+              }
+            }
+          },
+          "unsupportedRequests": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "missingFields": {
+            "status": "LABELLED",
+            "value": [
+              "vehicleClass",
+              "timing"
+            ]
+          },
+          "ambiguities": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "fallbackExpected": {
+            "status": "LABELLED",
+            "value": "NOT_REQUIRED"
+          },
+          "routing": {
+            "status": "LABELLED",
+            "value": "JEV_SIMPLE"
+          },
+          "resolvedDate": {
+            "status": "NOT_LABELLED",
+            "reason": "COMPONENT_SCORING_ONLY_NO_TIMESTAMP_DEFAULTS"
+          },
+          "resolvedTime": {
+            "status": "NOT_LABELLED",
+            "reason": "COMPONENT_SCORING_ONLY_NO_TIMESTAMP_DEFAULTS"
+          }
+        }
+      },
+      "reason": "Product owner P5; provider outputs are not ground truth",
+      "approvalTransferred": false,
+      "reviewDisposition": "DETERMINISTIC_POLICY_DERIVATION"
+    },
+    {
+      "caseId": "core-vehicle-preferences-020",
+      "familyId": "vehicle-negated-suv",
+      "policyVersion": "search-owner-policy-P1-P5-v1",
+      "policy": "P5",
+      "conversion": null,
+      "scheduling": null,
+      "resolutionLimitation": null,
+      "oldTruth": {
+        "status": "PROPOSED",
+        "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+        "reviewerMetadata": null,
+        "disagreementResolved": false,
+        "derivation": "JUDGMENT_REVIEW_REQUIRED",
+        "reviewReasons": [
+          "PRODUCT_POLICY_UNRESOLVED"
+        ],
+        "unresolvedPolicies": [
+          "SUV_FAMILY_EXCLUSION_SCOPE"
+        ],
+        "expected": {
+          "queryType": {
+            "status": "LABELLED",
+            "value": "BOOKING_REQUEST"
+          },
+          "complexity": {
+            "status": "LABELLED",
+            "value": "SIMPLE"
+          },
+          "pickupSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 23,
+                "end": 30,
+                "exactText": "college"
+              }
+            ]
+          },
+          "dropSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 34,
+                "end": 47,
+                "exactText": "Greater Noida"
+              }
+            ]
+          },
+          "stopSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "locationSearchSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "groundingTarget": {
+            "status": "LABELLED",
+            "value": "BY_ROLE"
+          },
+          "placeSelectionRequired": {
+            "status": "LABELLED",
+            "value": true
+          },
+          "vehicle": {
+            "status": "LABELLED",
+            "value": {
+              "state": "EXCLUDED",
+              "excluded": [
+                "suv"
+              ]
+            }
+          },
+          "timingMode": {
+            "status": "LABELLED",
+            "value": "UNSPECIFIED"
+          },
+          "date": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "time": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "passengers": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "flags": {
+            "status": "LABELLED",
+            "value": {
+              "sharing": {
+                "state": "UNSPECIFIED"
+              },
+              "isOutstation": {
+                "state": "UNSPECIFIED"
+              },
+              "preferSafeRoute": {
+                "state": "UNSPECIFIED"
+              },
+              "needsCarrier": {
+                "state": "UNSPECIFIED"
+              }
+            }
+          },
+          "unsupportedRequests": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "missingFields": {
+            "status": "LABELLED",
+            "value": [
+              "vehicleClass",
+              "timing"
+            ]
+          },
+          "ambiguities": {
+            "status": "LABELLED",
+            "value": [
+              "SUV_FAMILY_EXCLUSION_SCOPE"
+            ]
+          },
+          "fallbackExpected": {
+            "status": "LABELLED",
+            "value": "NOT_REQUIRED"
+          },
+          "routing": {
+            "status": "LABELLED",
+            "value": "JEV_SIMPLE"
+          },
+          "resolvedDate": {
+            "status": "NOT_LABELLED",
+            "reason": "COMPONENT_SCORING_ONLY_NO_TIMESTAMP_DEFAULTS"
+          },
+          "resolvedTime": {
+            "status": "NOT_LABELLED",
+            "reason": "COMPONENT_SCORING_ONLY_NO_TIMESTAMP_DEFAULTS"
+          }
+        }
+      },
+      "newTruth": {
+        "status": "PROPOSED",
+        "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+        "reviewerMetadata": null,
+        "disagreementResolved": false,
+        "derivation": "FROZEN_SPEC_DETERMINISTIC",
+        "reviewReasons": [],
+        "unresolvedPolicies": [],
+        "expected": {
+          "queryType": {
+            "status": "LABELLED",
+            "value": "BOOKING_REQUEST"
+          },
+          "complexity": {
+            "status": "LABELLED",
+            "value": "SIMPLE"
+          },
+          "pickupSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 23,
+                "end": 30,
+                "exactText": "college"
+              }
+            ]
+          },
+          "dropSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 34,
+                "end": 47,
+                "exactText": "Greater Noida"
+              }
+            ]
+          },
+          "stopSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "locationSearchSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "groundingTarget": {
+            "status": "LABELLED",
+            "value": "BY_ROLE"
+          },
+          "placeSelectionRequired": {
+            "status": "LABELLED",
+            "value": true
+          },
+          "vehicle": {
+            "status": "LABELLED",
+            "value": {
+              "state": "EXCLUDED",
+              "excluded": [
+                "suv",
+                "suv_premium"
+              ]
+            }
+          },
+          "timingMode": {
+            "status": "LABELLED",
+            "value": "UNSPECIFIED"
+          },
+          "date": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "time": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "passengers": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "flags": {
+            "status": "LABELLED",
+            "value": {
+              "sharing": {
+                "state": "UNSPECIFIED"
+              },
+              "isOutstation": {
+                "state": "UNSPECIFIED"
+              },
+              "preferSafeRoute": {
+                "state": "UNSPECIFIED"
+              },
+              "needsCarrier": {
+                "state": "UNSPECIFIED"
+              }
+            }
+          },
+          "unsupportedRequests": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "missingFields": {
+            "status": "LABELLED",
+            "value": [
+              "vehicleClass",
+              "timing"
+            ]
+          },
+          "ambiguities": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "fallbackExpected": {
+            "status": "LABELLED",
+            "value": "NOT_REQUIRED"
+          },
+          "routing": {
+            "status": "LABELLED",
+            "value": "JEV_SIMPLE"
+          },
+          "resolvedDate": {
+            "status": "NOT_LABELLED",
+            "reason": "COMPONENT_SCORING_ONLY_NO_TIMESTAMP_DEFAULTS"
+          },
+          "resolvedTime": {
+            "status": "NOT_LABELLED",
+            "reason": "COMPONENT_SCORING_ONLY_NO_TIMESTAMP_DEFAULTS"
+          }
+        }
+      },
+      "reason": "Product owner P5; provider outputs are not ground truth",
+      "approvalTransferred": false,
+      "reviewDisposition": "DETERMINISTIC_POLICY_DERIVATION"
+    },
+    {
+      "caseId": "core-vehicle-preferences-025",
+      "familyId": "vehicle-negated-suv",
+      "policyVersion": "search-owner-policy-P1-P5-v1",
+      "policy": "P5",
+      "conversion": null,
+      "scheduling": null,
+      "resolutionLimitation": null,
+      "oldTruth": {
+        "status": "PROPOSED",
+        "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+        "reviewerMetadata": null,
+        "disagreementResolved": false,
+        "derivation": "JUDGMENT_REVIEW_REQUIRED",
+        "reviewReasons": [
+          "PRODUCT_POLICY_UNRESOLVED"
+        ],
+        "unresolvedPolicies": [
+          "SUV_FAMILY_EXCLUSION_SCOPE"
+        ],
+        "expected": {
+          "queryType": {
+            "status": "LABELLED",
+            "value": "BOOKING_REQUEST"
+          },
+          "complexity": {
+            "status": "LABELLED",
+            "value": "SIMPLE"
+          },
+          "pickupSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 23,
+                "end": 29,
+                "exactText": "campus"
+              }
+            ]
+          },
+          "dropSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 33,
+                "end": 49,
+                "exactText": "Jaypee main gate"
+              }
+            ]
+          },
+          "stopSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "locationSearchSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "groundingTarget": {
+            "status": "LABELLED",
+            "value": "BY_ROLE"
+          },
+          "placeSelectionRequired": {
+            "status": "LABELLED",
+            "value": true
+          },
+          "vehicle": {
+            "status": "LABELLED",
+            "value": {
+              "state": "EXCLUDED",
+              "excluded": [
+                "suv"
+              ]
+            }
+          },
+          "timingMode": {
+            "status": "LABELLED",
+            "value": "UNSPECIFIED"
+          },
+          "date": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "time": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "passengers": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "flags": {
+            "status": "LABELLED",
+            "value": {
+              "sharing": {
+                "state": "UNSPECIFIED"
+              },
+              "isOutstation": {
+                "state": "UNSPECIFIED"
+              },
+              "preferSafeRoute": {
+                "state": "UNSPECIFIED"
+              },
+              "needsCarrier": {
+                "state": "UNSPECIFIED"
+              }
+            }
+          },
+          "unsupportedRequests": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "missingFields": {
+            "status": "LABELLED",
+            "value": [
+              "vehicleClass",
+              "timing"
+            ]
+          },
+          "ambiguities": {
+            "status": "LABELLED",
+            "value": [
+              "SUV_FAMILY_EXCLUSION_SCOPE"
+            ]
+          },
+          "fallbackExpected": {
+            "status": "LABELLED",
+            "value": "NOT_REQUIRED"
+          },
+          "routing": {
+            "status": "LABELLED",
+            "value": "JEV_SIMPLE"
+          },
+          "resolvedDate": {
+            "status": "NOT_LABELLED",
+            "reason": "COMPONENT_SCORING_ONLY_NO_TIMESTAMP_DEFAULTS"
+          },
+          "resolvedTime": {
+            "status": "NOT_LABELLED",
+            "reason": "COMPONENT_SCORING_ONLY_NO_TIMESTAMP_DEFAULTS"
+          }
+        }
+      },
+      "newTruth": {
+        "status": "PROPOSED",
+        "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+        "reviewerMetadata": null,
+        "disagreementResolved": false,
+        "derivation": "FROZEN_SPEC_DETERMINISTIC",
+        "reviewReasons": [],
+        "unresolvedPolicies": [],
+        "expected": {
+          "queryType": {
+            "status": "LABELLED",
+            "value": "BOOKING_REQUEST"
+          },
+          "complexity": {
+            "status": "LABELLED",
+            "value": "SIMPLE"
+          },
+          "pickupSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 23,
+                "end": 29,
+                "exactText": "campus"
+              }
+            ]
+          },
+          "dropSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 33,
+                "end": 49,
+                "exactText": "Jaypee main gate"
+              }
+            ]
+          },
+          "stopSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "locationSearchSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "groundingTarget": {
+            "status": "LABELLED",
+            "value": "BY_ROLE"
+          },
+          "placeSelectionRequired": {
+            "status": "LABELLED",
+            "value": true
+          },
+          "vehicle": {
+            "status": "LABELLED",
+            "value": {
+              "state": "EXCLUDED",
+              "excluded": [
+                "suv",
+                "suv_premium"
+              ]
+            }
+          },
+          "timingMode": {
+            "status": "LABELLED",
+            "value": "UNSPECIFIED"
+          },
+          "date": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "time": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "passengers": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "flags": {
+            "status": "LABELLED",
+            "value": {
+              "sharing": {
+                "state": "UNSPECIFIED"
+              },
+              "isOutstation": {
+                "state": "UNSPECIFIED"
+              },
+              "preferSafeRoute": {
+                "state": "UNSPECIFIED"
+              },
+              "needsCarrier": {
+                "state": "UNSPECIFIED"
+              }
+            }
+          },
+          "unsupportedRequests": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "missingFields": {
+            "status": "LABELLED",
+            "value": [
+              "vehicleClass",
+              "timing"
+            ]
+          },
+          "ambiguities": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "fallbackExpected": {
+            "status": "LABELLED",
+            "value": "NOT_REQUIRED"
+          },
+          "routing": {
+            "status": "LABELLED",
+            "value": "JEV_SIMPLE"
+          },
+          "resolvedDate": {
+            "status": "NOT_LABELLED",
+            "reason": "COMPONENT_SCORING_ONLY_NO_TIMESTAMP_DEFAULTS"
+          },
+          "resolvedTime": {
+            "status": "NOT_LABELLED",
+            "reason": "COMPONENT_SCORING_ONLY_NO_TIMESTAMP_DEFAULTS"
+          }
+        }
+      },
+      "reason": "Product owner P5; provider outputs are not ground truth",
+      "approvalTransferred": false,
+      "reviewDisposition": "DETERMINISTIC_POLICY_DERIVATION"
+    },
+    {
+      "caseId": "core-vehicle-preferences-030",
+      "familyId": "vehicle-negated-suv",
+      "policyVersion": "search-owner-policy-P1-P5-v1",
+      "policy": "P5",
+      "conversion": null,
+      "scheduling": null,
+      "resolutionLimitation": null,
+      "oldTruth": {
+        "status": "PROPOSED",
+        "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+        "reviewerMetadata": null,
+        "disagreementResolved": false,
+        "derivation": "JUDGMENT_REVIEW_REQUIRED",
+        "reviewReasons": [
+          "PRODUCT_POLICY_UNRESOLVED"
+        ],
+        "unresolvedPolicies": [
+          "SUV_FAMILY_EXCLUSION_SCOPE"
+        ],
+        "expected": {
+          "queryType": {
+            "status": "LABELLED",
+            "value": "BOOKING_REQUEST"
+          },
+          "complexity": {
+            "status": "LABELLED",
+            "value": "SIMPLE"
+          },
+          "pickupSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 23,
+                "end": 34,
+                "exactText": "City Centre"
+              }
+            ]
+          },
+          "dropSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 38,
+                "end": 53,
+                "exactText": "Lakeview Hostel"
+              }
+            ]
+          },
+          "stopSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "locationSearchSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "groundingTarget": {
+            "status": "LABELLED",
+            "value": "BY_ROLE"
+          },
+          "placeSelectionRequired": {
+            "status": "LABELLED",
+            "value": true
+          },
+          "vehicle": {
+            "status": "LABELLED",
+            "value": {
+              "state": "EXCLUDED",
+              "excluded": [
+                "suv"
+              ]
+            }
+          },
+          "timingMode": {
+            "status": "LABELLED",
+            "value": "UNSPECIFIED"
+          },
+          "date": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "time": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "passengers": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "flags": {
+            "status": "LABELLED",
+            "value": {
+              "sharing": {
+                "state": "UNSPECIFIED"
+              },
+              "isOutstation": {
+                "state": "UNSPECIFIED"
+              },
+              "preferSafeRoute": {
+                "state": "UNSPECIFIED"
+              },
+              "needsCarrier": {
+                "state": "UNSPECIFIED"
+              }
+            }
+          },
+          "unsupportedRequests": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "missingFields": {
+            "status": "LABELLED",
+            "value": [
+              "vehicleClass",
+              "timing"
+            ]
+          },
+          "ambiguities": {
+            "status": "LABELLED",
+            "value": [
+              "SUV_FAMILY_EXCLUSION_SCOPE"
+            ]
+          },
+          "fallbackExpected": {
+            "status": "LABELLED",
+            "value": "NOT_REQUIRED"
+          },
+          "routing": {
+            "status": "LABELLED",
+            "value": "JEV_SIMPLE"
+          },
+          "resolvedDate": {
+            "status": "NOT_LABELLED",
+            "reason": "COMPONENT_SCORING_ONLY_NO_TIMESTAMP_DEFAULTS"
+          },
+          "resolvedTime": {
+            "status": "NOT_LABELLED",
+            "reason": "COMPONENT_SCORING_ONLY_NO_TIMESTAMP_DEFAULTS"
+          }
+        }
+      },
+      "newTruth": {
+        "status": "PROPOSED",
+        "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+        "reviewerMetadata": null,
+        "disagreementResolved": false,
+        "derivation": "FROZEN_SPEC_DETERMINISTIC",
+        "reviewReasons": [],
+        "unresolvedPolicies": [],
+        "expected": {
+          "queryType": {
+            "status": "LABELLED",
+            "value": "BOOKING_REQUEST"
+          },
+          "complexity": {
+            "status": "LABELLED",
+            "value": "SIMPLE"
+          },
+          "pickupSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 23,
+                "end": 34,
+                "exactText": "City Centre"
+              }
+            ]
+          },
+          "dropSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 38,
+                "end": 53,
+                "exactText": "Lakeview Hostel"
+              }
+            ]
+          },
+          "stopSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "locationSearchSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "groundingTarget": {
+            "status": "LABELLED",
+            "value": "BY_ROLE"
+          },
+          "placeSelectionRequired": {
+            "status": "LABELLED",
+            "value": true
+          },
+          "vehicle": {
+            "status": "LABELLED",
+            "value": {
+              "state": "EXCLUDED",
+              "excluded": [
+                "suv",
+                "suv_premium"
+              ]
+            }
+          },
+          "timingMode": {
+            "status": "LABELLED",
+            "value": "UNSPECIFIED"
+          },
+          "date": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "time": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "passengers": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "flags": {
+            "status": "LABELLED",
+            "value": {
+              "sharing": {
+                "state": "UNSPECIFIED"
+              },
+              "isOutstation": {
+                "state": "UNSPECIFIED"
+              },
+              "preferSafeRoute": {
+                "state": "UNSPECIFIED"
+              },
+              "needsCarrier": {
+                "state": "UNSPECIFIED"
+              }
+            }
+          },
+          "unsupportedRequests": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "missingFields": {
+            "status": "LABELLED",
+            "value": [
+              "vehicleClass",
+              "timing"
+            ]
+          },
+          "ambiguities": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "fallbackExpected": {
+            "status": "LABELLED",
+            "value": "NOT_REQUIRED"
+          },
+          "routing": {
+            "status": "LABELLED",
+            "value": "JEV_SIMPLE"
+          },
+          "resolvedDate": {
+            "status": "NOT_LABELLED",
+            "reason": "COMPONENT_SCORING_ONLY_NO_TIMESTAMP_DEFAULTS"
+          },
+          "resolvedTime": {
+            "status": "NOT_LABELLED",
+            "reason": "COMPONENT_SCORING_ONLY_NO_TIMESTAMP_DEFAULTS"
+          }
+        }
+      },
+      "reason": "Product owner P5; provider outputs are not ground truth",
+      "approvalTransferred": false,
+      "reviewDisposition": "DETERMINISTIC_POLICY_DERIVATION"
+    },
+    {
+      "caseId": "core-ambiguity-conflict-002",
+      "familyId": "weekday-next",
+      "policyVersion": "search-owner-policy-P1-P5-v1",
+      "policy": "P3",
+      "conversion": null,
+      "scheduling": null,
+      "resolutionLimitation": "CALENDAR_WEEK_ANCHOR_NOT_ESTABLISHED_BY_APPLICATION",
+      "oldTruth": {
+        "status": "PROPOSED",
+        "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+        "reviewerMetadata": null,
+        "disagreementResolved": false,
+        "derivation": "JUDGMENT_REVIEW_REQUIRED",
+        "reviewReasons": [
+          "PRODUCT_POLICY_UNRESOLVED"
+        ],
+        "unresolvedPolicies": [
+          "WEEKDAY_SEMANTICS"
+        ],
+        "expected": {
+          "queryType": {
+            "status": "LABELLED",
+            "value": "BOOKING_REQUEST"
+          },
+          "complexity": {
+            "status": "LABELLED",
+            "value": "SIMPLE"
+          },
+          "pickupSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 5,
+                "end": 21,
+                "exactText": "Jaypee main gate"
+              }
+            ]
+          },
+          "dropSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 25,
+                "end": 36,
+                "exactText": "Pine Avenue"
+              }
+            ]
+          },
+          "stopSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "locationSearchSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "groundingTarget": {
+            "status": "LABELLED",
+            "value": "BY_ROLE"
+          },
+          "placeSelectionRequired": {
+            "status": "LABELLED",
+            "value": true
+          },
+          "vehicle": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "timingMode": {
+            "status": "LABELLED",
+            "value": "SCHEDULED"
+          },
+          "date": {
+            "status": "LABELLED",
+            "value": {
+              "state": "RESOLVED",
+              "value": {
+                "kind": "WEEKDAY",
+                "weekday": "FRIDAY",
+                "qualifier": "NEXT"
+              }
+            }
+          },
+          "time": {
+            "status": "LABELLED",
+            "value": {
+              "state": "RESOLVED",
+              "value": {
+                "kind": "CLOCK",
+                "hour": 6,
+                "minute": 0,
+                "notation": "H12",
+                "period": "PM",
+                "precision": "EXACT"
+              }
+            }
+          },
+          "passengers": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "flags": {
+            "status": "LABELLED",
+            "value": {
+              "sharing": {
+                "state": "UNSPECIFIED"
+              },
+              "isOutstation": {
+                "state": "UNSPECIFIED"
+              },
+              "preferSafeRoute": {
+                "state": "UNSPECIFIED"
+              },
+              "needsCarrier": {
+                "state": "UNSPECIFIED"
+              }
+            }
+          },
+          "unsupportedRequests": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "missingFields": {
+            "status": "LABELLED",
+            "value": [
+              "vehicleClass"
+            ]
+          },
+          "ambiguities": {
+            "status": "LABELLED",
+            "value": [
+              "WEEKDAY_SEMANTICS"
+            ]
+          },
+          "fallbackExpected": {
+            "status": "LABELLED",
+            "value": "NOT_REQUIRED"
+          },
+          "routing": {
+            "status": "LABELLED",
+            "value": "JEV_SIMPLE"
+          },
+          "resolvedDate": {
+            "status": "NOT_LABELLED",
+            "reason": "UNRESOLVED_POLICY_OR_JUDGMENT"
+          },
+          "resolvedTime": {
+            "status": "NOT_LABELLED",
+            "reason": "COMPONENT_SCORING_ONLY_NO_TIMESTAMP_DEFAULTS"
+          }
+        }
+      },
+      "newTruth": {
+        "status": "PROPOSED",
+        "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+        "reviewerMetadata": null,
+        "disagreementResolved": false,
+        "derivation": "FROZEN_SPEC_DETERMINISTIC",
+        "reviewReasons": [],
+        "unresolvedPolicies": [],
+        "expected": {
+          "queryType": {
+            "status": "LABELLED",
+            "value": "BOOKING_REQUEST"
+          },
+          "complexity": {
+            "status": "LABELLED",
+            "value": "SIMPLE"
+          },
+          "pickupSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 5,
+                "end": 21,
+                "exactText": "Jaypee main gate"
+              }
+            ]
+          },
+          "dropSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 25,
+                "end": 36,
+                "exactText": "Pine Avenue"
+              }
+            ]
+          },
+          "stopSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "locationSearchSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "groundingTarget": {
+            "status": "LABELLED",
+            "value": "BY_ROLE"
+          },
+          "placeSelectionRequired": {
+            "status": "LABELLED",
+            "value": true
+          },
+          "vehicle": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "timingMode": {
+            "status": "LABELLED",
+            "value": "SCHEDULED"
+          },
+          "date": {
+            "status": "LABELLED",
+            "value": {
+              "state": "RESOLVED",
+              "value": {
+                "kind": "WEEKDAY",
+                "weekday": "FRIDAY",
+                "qualifier": "NEXT"
+              }
+            }
+          },
+          "time": {
+            "status": "LABELLED",
+            "value": {
+              "state": "RESOLVED",
+              "value": {
+                "kind": "CLOCK",
+                "hour": 6,
+                "minute": 0,
+                "notation": "H12",
+                "period": "PM",
+                "precision": "EXACT"
+              }
+            }
+          },
+          "passengers": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "flags": {
+            "status": "LABELLED",
+            "value": {
+              "sharing": {
+                "state": "UNSPECIFIED"
+              },
+              "isOutstation": {
+                "state": "UNSPECIFIED"
+              },
+              "preferSafeRoute": {
+                "state": "UNSPECIFIED"
+              },
+              "needsCarrier": {
+                "state": "UNSPECIFIED"
+              }
+            }
+          },
+          "unsupportedRequests": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "missingFields": {
+            "status": "LABELLED",
+            "value": [
+              "vehicleClass"
+            ]
+          },
+          "ambiguities": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "fallbackExpected": {
+            "status": "LABELLED",
+            "value": "NOT_REQUIRED"
+          },
+          "routing": {
+            "status": "LABELLED",
+            "value": "JEV_SIMPLE"
+          },
+          "resolvedDate": {
+            "status": "NOT_LABELLED",
+            "reason": "CALENDAR_WEEK_ANCHOR_NOT_ESTABLISHED_BY_APPLICATION"
+          },
+          "resolvedTime": {
+            "status": "NOT_LABELLED",
+            "reason": "COMPONENT_SCORING_ONLY_NO_TIMESTAMP_DEFAULTS"
+          }
+        }
+      },
+      "reason": "Product owner P3; provider outputs are not ground truth",
+      "approvalTransferred": false,
+      "reviewDisposition": "DETERMINISTIC_POLICY_DERIVATION"
+    },
+    {
+      "caseId": "core-ambiguity-conflict-003",
+      "familyId": "omitted-year",
+      "policyVersion": "search-owner-policy-P1-P5-v1",
+      "policy": "P2",
+      "conversion": null,
+      "scheduling": {
+        "error": "too_far"
+      },
+      "resolutionLimitation": null,
+      "oldTruth": {
+        "status": "PROPOSED",
+        "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+        "reviewerMetadata": null,
+        "disagreementResolved": false,
+        "derivation": "JUDGMENT_REVIEW_REQUIRED",
+        "reviewReasons": [
+          "PRODUCT_POLICY_UNRESOLVED"
+        ],
+        "unresolvedPolicies": [
+          "OMITTED_YEAR_SEMANTICS"
+        ],
+        "expected": {
+          "queryType": {
+            "status": "LABELLED",
+            "value": "BOOKING_REQUEST"
+          },
+          "complexity": {
+            "status": "LABELLED",
+            "value": "SIMPLE"
+          },
+          "pickupSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 5,
+                "end": 12,
+                "exactText": "Delta 2"
+              }
+            ]
+          },
+          "dropSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 16,
+                "end": 23,
+                "exactText": "Delta 1"
+              }
+            ]
+          },
+          "stopSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "locationSearchSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "groundingTarget": {
+            "status": "LABELLED",
+            "value": "BY_ROLE"
+          },
+          "placeSelectionRequired": {
+            "status": "LABELLED",
+            "value": true
+          },
+          "vehicle": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "timingMode": {
+            "status": "LABELLED",
+            "value": "SCHEDULED"
+          },
+          "date": {
+            "status": "LABELLED",
+            "value": {
+              "state": "RESOLVED",
+              "value": {
+                "kind": "ABSOLUTE",
+                "day": 5,
+                "month": 12,
+                "year": null
+              }
+            }
+          },
+          "time": {
+            "status": "LABELLED",
+            "value": {
+              "state": "RESOLVED",
+              "value": {
+                "kind": "CLOCK",
+                "hour": 7,
+                "minute": 0,
+                "notation": "H12",
+                "period": "PM",
+                "precision": "EXACT"
+              }
+            }
+          },
+          "passengers": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "flags": {
+            "status": "LABELLED",
+            "value": {
+              "sharing": {
+                "state": "UNSPECIFIED"
+              },
+              "isOutstation": {
+                "state": "UNSPECIFIED"
+              },
+              "preferSafeRoute": {
+                "state": "UNSPECIFIED"
+              },
+              "needsCarrier": {
+                "state": "UNSPECIFIED"
+              }
+            }
+          },
+          "unsupportedRequests": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "missingFields": {
+            "status": "LABELLED",
+            "value": [
+              "vehicleClass"
+            ]
+          },
+          "ambiguities": {
+            "status": "LABELLED",
+            "value": [
+              "OMITTED_YEAR_SEMANTICS"
+            ]
+          },
+          "fallbackExpected": {
+            "status": "LABELLED",
+            "value": "NOT_REQUIRED"
+          },
+          "routing": {
+            "status": "LABELLED",
+            "value": "JEV_SIMPLE"
+          },
+          "resolvedDate": {
+            "status": "NOT_LABELLED",
+            "reason": "UNRESOLVED_POLICY_OR_JUDGMENT"
+          },
+          "resolvedTime": {
+            "status": "NOT_LABELLED",
+            "reason": "COMPONENT_SCORING_ONLY_NO_TIMESTAMP_DEFAULTS"
+          }
+        }
+      },
+      "newTruth": {
+        "status": "PROPOSED",
+        "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+        "reviewerMetadata": null,
+        "disagreementResolved": false,
+        "derivation": "FROZEN_SPEC_DETERMINISTIC",
+        "reviewReasons": [],
+        "unresolvedPolicies": [],
+        "expected": {
+          "queryType": {
+            "status": "LABELLED",
+            "value": "BOOKING_REQUEST"
+          },
+          "complexity": {
+            "status": "LABELLED",
+            "value": "SIMPLE"
+          },
+          "pickupSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 5,
+                "end": 12,
+                "exactText": "Delta 2"
+              }
+            ]
+          },
+          "dropSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 16,
+                "end": 23,
+                "exactText": "Delta 1"
+              }
+            ]
+          },
+          "stopSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "locationSearchSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "groundingTarget": {
+            "status": "LABELLED",
+            "value": "BY_ROLE"
+          },
+          "placeSelectionRequired": {
+            "status": "LABELLED",
+            "value": true
+          },
+          "vehicle": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "timingMode": {
+            "status": "LABELLED",
+            "value": "SCHEDULED"
+          },
+          "date": {
+            "status": "LABELLED",
+            "value": {
+              "state": "RESOLVED",
+              "value": {
+                "kind": "ABSOLUTE",
+                "day": 5,
+                "month": 12,
+                "year": null
+              }
+            }
+          },
+          "time": {
+            "status": "LABELLED",
+            "value": {
+              "state": "RESOLVED",
+              "value": {
+                "kind": "CLOCK",
+                "hour": 7,
+                "minute": 0,
+                "notation": "H12",
+                "period": "PM",
+                "precision": "EXACT"
+              }
+            }
+          },
+          "passengers": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "flags": {
+            "status": "LABELLED",
+            "value": {
+              "sharing": {
+                "state": "UNSPECIFIED"
+              },
+              "isOutstation": {
+                "state": "UNSPECIFIED"
+              },
+              "preferSafeRoute": {
+                "state": "UNSPECIFIED"
+              },
+              "needsCarrier": {
+                "state": "UNSPECIFIED"
+              }
+            }
+          },
+          "unsupportedRequests": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "missingFields": {
+            "status": "LABELLED",
+            "value": [
+              "vehicleClass"
+            ]
+          },
+          "ambiguities": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "fallbackExpected": {
+            "status": "LABELLED",
+            "value": "NOT_REQUIRED"
+          },
+          "routing": {
+            "status": "LABELLED",
+            "value": "JEV_SIMPLE"
+          },
+          "resolvedDate": {
+            "status": "LABELLED",
+            "value": "2026-12-05"
+          },
+          "resolvedTime": {
+            "status": "LABELLED",
+            "value": "19:00"
+          }
+        }
+      },
+      "reason": "Product owner P2; provider outputs are not ground truth",
+      "approvalTransferred": false,
+      "reviewDisposition": "DETERMINISTIC_POLICY_DERIVATION"
+    },
+    {
+      "caseId": "core-ambiguity-conflict-004",
+      "familyId": "non-ist",
+      "policyVersion": "search-owner-policy-P1-P5-v1",
+      "policy": "P4",
+      "conversion": {
+        "date": "2026-10-06",
+        "time": "00:30",
+        "sourceDate": "2026-10-05",
+        "sourceTime": "20:00",
+        "sourceTimeZone": "Europe/London",
+        "source": "Intl/ICU 78.2"
+      },
+      "scheduling": {
+        "value": "2026-10-05T19:00:00.000Z",
+        "label": "6 Oct 2026, 12:30 am"
+      },
+      "resolutionLimitation": null,
+      "oldTruth": {
+        "status": "PROPOSED",
+        "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+        "reviewerMetadata": null,
+        "disagreementResolved": false,
+        "derivation": "JUDGMENT_REVIEW_REQUIRED",
+        "reviewReasons": [
+          "PRODUCT_POLICY_UNRESOLVED"
+        ],
+        "unresolvedPolicies": [
+          "NON_IST_TIMEZONE"
+        ],
+        "expected": {
+          "queryType": {
+            "status": "LABELLED",
+            "value": "BOOKING_REQUEST"
+          },
+          "complexity": {
+            "status": "LABELLED",
+            "value": "SIMPLE"
+          },
+          "pickupSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 5,
+                "end": 21,
+                "exactText": "Botanical Garden"
+              }
+            ]
+          },
+          "dropSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 25,
+                "end": 38,
+                "exactText": "Garden Gate 3"
+              }
+            ]
+          },
+          "stopSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "locationSearchSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "groundingTarget": {
+            "status": "LABELLED",
+            "value": "BY_ROLE"
+          },
+          "placeSelectionRequired": {
+            "status": "LABELLED",
+            "value": true
+          },
+          "vehicle": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "timingMode": {
+            "status": "LABELLED",
+            "value": "SCHEDULED"
+          },
+          "date": {
+            "status": "LABELLED",
+            "value": {
+              "state": "RESOLVED",
+              "value": {
+                "kind": "RELATIVE",
+                "anchor": "TOMORROW"
+              }
+            }
+          },
+          "time": {
+            "status": "LABELLED",
+            "value": {
+              "state": "RESOLVED",
+              "value": {
+                "kind": "CLOCK",
+                "hour": 8,
+                "minute": 0,
+                "notation": "H12",
+                "period": "PM",
+                "precision": "EXACT"
+              }
+            }
+          },
+          "passengers": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "flags": {
+            "status": "LABELLED",
+            "value": {
+              "sharing": {
+                "state": "UNSPECIFIED"
+              },
+              "isOutstation": {
+                "state": "UNSPECIFIED"
+              },
+              "preferSafeRoute": {
+                "state": "UNSPECIFIED"
+              },
+              "needsCarrier": {
+                "state": "UNSPECIFIED"
+              }
+            }
+          },
+          "unsupportedRequests": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "missingFields": {
+            "status": "LABELLED",
+            "value": [
+              "vehicleClass"
+            ]
+          },
+          "ambiguities": {
+            "status": "LABELLED",
+            "value": [
+              "NON_IST_TIMEZONE"
+            ]
+          },
+          "fallbackExpected": {
+            "status": "LABELLED",
+            "value": "NOT_REQUIRED"
+          },
+          "routing": {
+            "status": "LABELLED",
+            "value": "JEV_SIMPLE"
+          },
+          "resolvedDate": {
+            "status": "NOT_LABELLED",
+            "reason": "UNRESOLVED_POLICY_OR_JUDGMENT"
+          },
+          "resolvedTime": {
+            "status": "NOT_LABELLED",
+            "reason": "UNRESOLVED_POLICY_OR_JUDGMENT"
+          }
+        }
+      },
+      "newTruth": {
+        "status": "PROPOSED",
+        "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+        "reviewerMetadata": null,
+        "disagreementResolved": false,
+        "derivation": "FROZEN_SPEC_DETERMINISTIC",
+        "reviewReasons": [],
+        "unresolvedPolicies": [],
+        "expected": {
+          "queryType": {
+            "status": "LABELLED",
+            "value": "BOOKING_REQUEST"
+          },
+          "complexity": {
+            "status": "LABELLED",
+            "value": "SIMPLE"
+          },
+          "pickupSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 5,
+                "end": 21,
+                "exactText": "Botanical Garden"
+              }
+            ]
+          },
+          "dropSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 25,
+                "end": 38,
+                "exactText": "Garden Gate 3"
+              }
+            ]
+          },
+          "stopSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "locationSearchSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "groundingTarget": {
+            "status": "LABELLED",
+            "value": "BY_ROLE"
+          },
+          "placeSelectionRequired": {
+            "status": "LABELLED",
+            "value": true
+          },
+          "vehicle": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "timingMode": {
+            "status": "LABELLED",
+            "value": "SCHEDULED"
+          },
+          "date": {
+            "status": "LABELLED",
+            "value": {
+              "state": "RESOLVED",
+              "value": {
+                "kind": "RELATIVE",
+                "anchor": "TOMORROW"
+              }
+            }
+          },
+          "time": {
+            "status": "LABELLED",
+            "value": {
+              "state": "RESOLVED",
+              "value": {
+                "kind": "CLOCK",
+                "hour": 8,
+                "minute": 0,
+                "notation": "H12",
+                "period": "PM",
+                "precision": "EXACT"
+              }
+            }
+          },
+          "passengers": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "flags": {
+            "status": "LABELLED",
+            "value": {
+              "sharing": {
+                "state": "UNSPECIFIED"
+              },
+              "isOutstation": {
+                "state": "UNSPECIFIED"
+              },
+              "preferSafeRoute": {
+                "state": "UNSPECIFIED"
+              },
+              "needsCarrier": {
+                "state": "UNSPECIFIED"
+              }
+            }
+          },
+          "unsupportedRequests": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "missingFields": {
+            "status": "LABELLED",
+            "value": [
+              "vehicleClass"
+            ]
+          },
+          "ambiguities": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "fallbackExpected": {
+            "status": "LABELLED",
+            "value": "NOT_REQUIRED"
+          },
+          "routing": {
+            "status": "LABELLED",
+            "value": "JEV_SIMPLE"
+          },
+          "resolvedDate": {
+            "status": "LABELLED",
+            "value": "2026-10-06"
+          },
+          "resolvedTime": {
+            "status": "LABELLED",
+            "value": "00:30"
+          }
+        }
+      },
+      "reason": "Product owner P4; provider outputs are not ground truth",
+      "approvalTransferred": false,
+      "reviewDisposition": "DETERMINISTIC_POLICY_DERIVATION"
+    },
+    {
+      "caseId": "core-ambiguity-conflict-007",
+      "familyId": "weekday-next",
+      "policyVersion": "search-owner-policy-P1-P5-v1",
+      "policy": "P3",
+      "conversion": null,
+      "scheduling": null,
+      "resolutionLimitation": "CALENDAR_WEEK_ANCHOR_NOT_ESTABLISHED_BY_APPLICATION",
+      "oldTruth": {
+        "status": "PROPOSED",
+        "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+        "reviewerMetadata": null,
+        "disagreementResolved": false,
+        "derivation": "JUDGMENT_REVIEW_REQUIRED",
+        "reviewReasons": [
+          "PRODUCT_POLICY_UNRESOLVED"
+        ],
+        "unresolvedPolicies": [
+          "WEEKDAY_SEMANTICS"
+        ],
+        "expected": {
+          "queryType": {
+            "status": "LABELLED",
+            "value": "BOOKING_REQUEST"
+          },
+          "complexity": {
+            "status": "LABELLED",
+            "value": "SIMPLE"
+          },
+          "pickupSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 5,
+                "end": 20,
+                "exactText": "Lakeview Hostel"
+              }
+            ]
+          },
+          "dropSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 24,
+                "end": 36,
+                "exactText": "Lotus Circle"
+              }
+            ]
+          },
+          "stopSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "locationSearchSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "groundingTarget": {
+            "status": "LABELLED",
+            "value": "BY_ROLE"
+          },
+          "placeSelectionRequired": {
+            "status": "LABELLED",
+            "value": true
+          },
+          "vehicle": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "timingMode": {
+            "status": "LABELLED",
+            "value": "SCHEDULED"
+          },
+          "date": {
+            "status": "LABELLED",
+            "value": {
+              "state": "RESOLVED",
+              "value": {
+                "kind": "WEEKDAY",
+                "weekday": "FRIDAY",
+                "qualifier": "NEXT"
+              }
+            }
+          },
+          "time": {
+            "status": "LABELLED",
+            "value": {
+              "state": "RESOLVED",
+              "value": {
+                "kind": "CLOCK",
+                "hour": 11,
+                "minute": 0,
+                "notation": "H12",
+                "period": "PM",
+                "precision": "EXACT"
+              }
+            }
+          },
+          "passengers": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "flags": {
+            "status": "LABELLED",
+            "value": {
+              "sharing": {
+                "state": "UNSPECIFIED"
+              },
+              "isOutstation": {
+                "state": "UNSPECIFIED"
+              },
+              "preferSafeRoute": {
+                "state": "UNSPECIFIED"
+              },
+              "needsCarrier": {
+                "state": "UNSPECIFIED"
+              }
+            }
+          },
+          "unsupportedRequests": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "missingFields": {
+            "status": "LABELLED",
+            "value": [
+              "vehicleClass"
+            ]
+          },
+          "ambiguities": {
+            "status": "LABELLED",
+            "value": [
+              "WEEKDAY_SEMANTICS"
+            ]
+          },
+          "fallbackExpected": {
+            "status": "LABELLED",
+            "value": "NOT_REQUIRED"
+          },
+          "routing": {
+            "status": "LABELLED",
+            "value": "JEV_SIMPLE"
+          },
+          "resolvedDate": {
+            "status": "NOT_LABELLED",
+            "reason": "UNRESOLVED_POLICY_OR_JUDGMENT"
+          },
+          "resolvedTime": {
+            "status": "NOT_LABELLED",
+            "reason": "COMPONENT_SCORING_ONLY_NO_TIMESTAMP_DEFAULTS"
+          }
+        }
+      },
+      "newTruth": {
+        "status": "PROPOSED",
+        "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+        "reviewerMetadata": null,
+        "disagreementResolved": false,
+        "derivation": "FROZEN_SPEC_DETERMINISTIC",
+        "reviewReasons": [],
+        "unresolvedPolicies": [],
+        "expected": {
+          "queryType": {
+            "status": "LABELLED",
+            "value": "BOOKING_REQUEST"
+          },
+          "complexity": {
+            "status": "LABELLED",
+            "value": "SIMPLE"
+          },
+          "pickupSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 5,
+                "end": 20,
+                "exactText": "Lakeview Hostel"
+              }
+            ]
+          },
+          "dropSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 24,
+                "end": 36,
+                "exactText": "Lotus Circle"
+              }
+            ]
+          },
+          "stopSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "locationSearchSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "groundingTarget": {
+            "status": "LABELLED",
+            "value": "BY_ROLE"
+          },
+          "placeSelectionRequired": {
+            "status": "LABELLED",
+            "value": true
+          },
+          "vehicle": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "timingMode": {
+            "status": "LABELLED",
+            "value": "SCHEDULED"
+          },
+          "date": {
+            "status": "LABELLED",
+            "value": {
+              "state": "RESOLVED",
+              "value": {
+                "kind": "WEEKDAY",
+                "weekday": "FRIDAY",
+                "qualifier": "NEXT"
+              }
+            }
+          },
+          "time": {
+            "status": "LABELLED",
+            "value": {
+              "state": "RESOLVED",
+              "value": {
+                "kind": "CLOCK",
+                "hour": 11,
+                "minute": 0,
+                "notation": "H12",
+                "period": "PM",
+                "precision": "EXACT"
+              }
+            }
+          },
+          "passengers": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "flags": {
+            "status": "LABELLED",
+            "value": {
+              "sharing": {
+                "state": "UNSPECIFIED"
+              },
+              "isOutstation": {
+                "state": "UNSPECIFIED"
+              },
+              "preferSafeRoute": {
+                "state": "UNSPECIFIED"
+              },
+              "needsCarrier": {
+                "state": "UNSPECIFIED"
+              }
+            }
+          },
+          "unsupportedRequests": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "missingFields": {
+            "status": "LABELLED",
+            "value": [
+              "vehicleClass"
+            ]
+          },
+          "ambiguities": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "fallbackExpected": {
+            "status": "LABELLED",
+            "value": "NOT_REQUIRED"
+          },
+          "routing": {
+            "status": "LABELLED",
+            "value": "JEV_SIMPLE"
+          },
+          "resolvedDate": {
+            "status": "NOT_LABELLED",
+            "reason": "CALENDAR_WEEK_ANCHOR_NOT_ESTABLISHED_BY_APPLICATION"
+          },
+          "resolvedTime": {
+            "status": "NOT_LABELLED",
+            "reason": "COMPONENT_SCORING_ONLY_NO_TIMESTAMP_DEFAULTS"
+          }
+        }
+      },
+      "reason": "Product owner P3; provider outputs are not ground truth",
+      "approvalTransferred": false,
+      "reviewDisposition": "DETERMINISTIC_POLICY_DERIVATION"
+    },
+    {
+      "caseId": "core-ambiguity-conflict-008",
+      "familyId": "omitted-year",
+      "policyVersion": "search-owner-policy-P1-P5-v1",
+      "policy": "P2",
+      "conversion": null,
+      "scheduling": {
+        "error": "too_far"
+      },
+      "resolutionLimitation": null,
+      "oldTruth": {
+        "status": "PROPOSED",
+        "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+        "reviewerMetadata": null,
+        "disagreementResolved": false,
+        "derivation": "JUDGMENT_REVIEW_REQUIRED",
+        "reviewReasons": [
+          "PRODUCT_POLICY_UNRESOLVED"
+        ],
+        "unresolvedPolicies": [
+          "OMITTED_YEAR_SEMANTICS"
+        ],
+        "expected": {
+          "queryType": {
+            "status": "LABELLED",
+            "value": "BOOKING_REQUEST"
+          },
+          "complexity": {
+            "status": "LABELLED",
+            "value": "SIMPLE"
+          },
+          "pickupSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 5,
+                "end": 18,
+                "exactText": "Sunrise Metro"
+              }
+            ]
+          },
+          "dropSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 22,
+                "end": 33,
+                "exactText": "Museum Road"
+              }
+            ]
+          },
+          "stopSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "locationSearchSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "groundingTarget": {
+            "status": "LABELLED",
+            "value": "BY_ROLE"
+          },
+          "placeSelectionRequired": {
+            "status": "LABELLED",
+            "value": true
+          },
+          "vehicle": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "timingMode": {
+            "status": "LABELLED",
+            "value": "SCHEDULED"
+          },
+          "date": {
+            "status": "LABELLED",
+            "value": {
+              "state": "RESOLVED",
+              "value": {
+                "kind": "ABSOLUTE",
+                "day": 5,
+                "month": 12,
+                "year": null
+              }
+            }
+          },
+          "time": {
+            "status": "LABELLED",
+            "value": {
+              "state": "RESOLVED",
+              "value": {
+                "kind": "CLOCK",
+                "hour": 5,
+                "minute": 0,
+                "notation": "H12",
+                "period": "PM",
+                "precision": "EXACT"
+              }
+            }
+          },
+          "passengers": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "flags": {
+            "status": "LABELLED",
+            "value": {
+              "sharing": {
+                "state": "UNSPECIFIED"
+              },
+              "isOutstation": {
+                "state": "UNSPECIFIED"
+              },
+              "preferSafeRoute": {
+                "state": "UNSPECIFIED"
+              },
+              "needsCarrier": {
+                "state": "UNSPECIFIED"
+              }
+            }
+          },
+          "unsupportedRequests": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "missingFields": {
+            "status": "LABELLED",
+            "value": [
+              "vehicleClass"
+            ]
+          },
+          "ambiguities": {
+            "status": "LABELLED",
+            "value": [
+              "OMITTED_YEAR_SEMANTICS"
+            ]
+          },
+          "fallbackExpected": {
+            "status": "LABELLED",
+            "value": "NOT_REQUIRED"
+          },
+          "routing": {
+            "status": "LABELLED",
+            "value": "JEV_SIMPLE"
+          },
+          "resolvedDate": {
+            "status": "NOT_LABELLED",
+            "reason": "UNRESOLVED_POLICY_OR_JUDGMENT"
+          },
+          "resolvedTime": {
+            "status": "NOT_LABELLED",
+            "reason": "COMPONENT_SCORING_ONLY_NO_TIMESTAMP_DEFAULTS"
+          }
+        }
+      },
+      "newTruth": {
+        "status": "PROPOSED",
+        "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+        "reviewerMetadata": null,
+        "disagreementResolved": false,
+        "derivation": "FROZEN_SPEC_DETERMINISTIC",
+        "reviewReasons": [],
+        "unresolvedPolicies": [],
+        "expected": {
+          "queryType": {
+            "status": "LABELLED",
+            "value": "BOOKING_REQUEST"
+          },
+          "complexity": {
+            "status": "LABELLED",
+            "value": "SIMPLE"
+          },
+          "pickupSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 5,
+                "end": 18,
+                "exactText": "Sunrise Metro"
+              }
+            ]
+          },
+          "dropSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 22,
+                "end": 33,
+                "exactText": "Museum Road"
+              }
+            ]
+          },
+          "stopSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "locationSearchSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "groundingTarget": {
+            "status": "LABELLED",
+            "value": "BY_ROLE"
+          },
+          "placeSelectionRequired": {
+            "status": "LABELLED",
+            "value": true
+          },
+          "vehicle": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "timingMode": {
+            "status": "LABELLED",
+            "value": "SCHEDULED"
+          },
+          "date": {
+            "status": "LABELLED",
+            "value": {
+              "state": "RESOLVED",
+              "value": {
+                "kind": "ABSOLUTE",
+                "day": 5,
+                "month": 12,
+                "year": null
+              }
+            }
+          },
+          "time": {
+            "status": "LABELLED",
+            "value": {
+              "state": "RESOLVED",
+              "value": {
+                "kind": "CLOCK",
+                "hour": 5,
+                "minute": 0,
+                "notation": "H12",
+                "period": "PM",
+                "precision": "EXACT"
+              }
+            }
+          },
+          "passengers": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "flags": {
+            "status": "LABELLED",
+            "value": {
+              "sharing": {
+                "state": "UNSPECIFIED"
+              },
+              "isOutstation": {
+                "state": "UNSPECIFIED"
+              },
+              "preferSafeRoute": {
+                "state": "UNSPECIFIED"
+              },
+              "needsCarrier": {
+                "state": "UNSPECIFIED"
+              }
+            }
+          },
+          "unsupportedRequests": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "missingFields": {
+            "status": "LABELLED",
+            "value": [
+              "vehicleClass"
+            ]
+          },
+          "ambiguities": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "fallbackExpected": {
+            "status": "LABELLED",
+            "value": "NOT_REQUIRED"
+          },
+          "routing": {
+            "status": "LABELLED",
+            "value": "JEV_SIMPLE"
+          },
+          "resolvedDate": {
+            "status": "LABELLED",
+            "value": "2026-12-05"
+          },
+          "resolvedTime": {
+            "status": "LABELLED",
+            "value": "17:00"
+          }
+        }
+      },
+      "reason": "Product owner P2; provider outputs are not ground truth",
+      "approvalTransferred": false,
+      "reviewDisposition": "DETERMINISTIC_POLICY_DERIVATION"
+    },
+    {
+      "caseId": "core-ambiguity-conflict-009",
+      "familyId": "non-ist",
+      "policyVersion": "search-owner-policy-P1-P5-v1",
+      "policy": "P4",
+      "conversion": {
+        "date": "2026-10-05",
+        "time": "22:30",
+        "sourceDate": "2026-10-05",
+        "sourceTime": "18:00",
+        "sourceTimeZone": "Europe/London",
+        "source": "Intl/ICU 78.2"
+      },
+      "scheduling": {
+        "value": "2026-10-05T17:00:00.000Z",
+        "label": "5 Oct 2026, 10:30 pm"
+      },
+      "resolutionLimitation": null,
+      "oldTruth": {
+        "status": "PROPOSED",
+        "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+        "reviewerMetadata": null,
+        "disagreementResolved": false,
+        "derivation": "JUDGMENT_REVIEW_REQUIRED",
+        "reviewReasons": [
+          "PRODUCT_POLICY_UNRESOLVED"
+        ],
+        "unresolvedPolicies": [
+          "NON_IST_TIMEZONE"
+        ],
+        "expected": {
+          "queryType": {
+            "status": "LABELLED",
+            "value": "BOOKING_REQUEST"
+          },
+          "complexity": {
+            "status": "LABELLED",
+            "value": "SIMPLE"
+          },
+          "pickupSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 5,
+                "end": 16,
+                "exactText": "Pine Avenue"
+              }
+            ]
+          },
+          "dropSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 20,
+                "end": 35,
+                "exactText": "Central Station"
+              }
+            ]
+          },
+          "stopSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "locationSearchSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "groundingTarget": {
+            "status": "LABELLED",
+            "value": "BY_ROLE"
+          },
+          "placeSelectionRequired": {
+            "status": "LABELLED",
+            "value": true
+          },
+          "vehicle": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "timingMode": {
+            "status": "LABELLED",
+            "value": "SCHEDULED"
+          },
+          "date": {
+            "status": "LABELLED",
+            "value": {
+              "state": "RESOLVED",
+              "value": {
+                "kind": "RELATIVE",
+                "anchor": "TOMORROW"
+              }
+            }
+          },
+          "time": {
+            "status": "LABELLED",
+            "value": {
+              "state": "RESOLVED",
+              "value": {
+                "kind": "CLOCK",
+                "hour": 6,
+                "minute": 0,
+                "notation": "H12",
+                "period": "PM",
+                "precision": "EXACT"
+              }
+            }
+          },
+          "passengers": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "flags": {
+            "status": "LABELLED",
+            "value": {
+              "sharing": {
+                "state": "UNSPECIFIED"
+              },
+              "isOutstation": {
+                "state": "UNSPECIFIED"
+              },
+              "preferSafeRoute": {
+                "state": "UNSPECIFIED"
+              },
+              "needsCarrier": {
+                "state": "UNSPECIFIED"
+              }
+            }
+          },
+          "unsupportedRequests": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "missingFields": {
+            "status": "LABELLED",
+            "value": [
+              "vehicleClass"
+            ]
+          },
+          "ambiguities": {
+            "status": "LABELLED",
+            "value": [
+              "NON_IST_TIMEZONE"
+            ]
+          },
+          "fallbackExpected": {
+            "status": "LABELLED",
+            "value": "NOT_REQUIRED"
+          },
+          "routing": {
+            "status": "LABELLED",
+            "value": "JEV_SIMPLE"
+          },
+          "resolvedDate": {
+            "status": "NOT_LABELLED",
+            "reason": "UNRESOLVED_POLICY_OR_JUDGMENT"
+          },
+          "resolvedTime": {
+            "status": "NOT_LABELLED",
+            "reason": "UNRESOLVED_POLICY_OR_JUDGMENT"
+          }
+        }
+      },
+      "newTruth": {
+        "status": "PROPOSED",
+        "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+        "reviewerMetadata": null,
+        "disagreementResolved": false,
+        "derivation": "FROZEN_SPEC_DETERMINISTIC",
+        "reviewReasons": [],
+        "unresolvedPolicies": [],
+        "expected": {
+          "queryType": {
+            "status": "LABELLED",
+            "value": "BOOKING_REQUEST"
+          },
+          "complexity": {
+            "status": "LABELLED",
+            "value": "SIMPLE"
+          },
+          "pickupSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 5,
+                "end": 16,
+                "exactText": "Pine Avenue"
+              }
+            ]
+          },
+          "dropSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 20,
+                "end": 35,
+                "exactText": "Central Station"
+              }
+            ]
+          },
+          "stopSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "locationSearchSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "groundingTarget": {
+            "status": "LABELLED",
+            "value": "BY_ROLE"
+          },
+          "placeSelectionRequired": {
+            "status": "LABELLED",
+            "value": true
+          },
+          "vehicle": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "timingMode": {
+            "status": "LABELLED",
+            "value": "SCHEDULED"
+          },
+          "date": {
+            "status": "LABELLED",
+            "value": {
+              "state": "RESOLVED",
+              "value": {
+                "kind": "RELATIVE",
+                "anchor": "TOMORROW"
+              }
+            }
+          },
+          "time": {
+            "status": "LABELLED",
+            "value": {
+              "state": "RESOLVED",
+              "value": {
+                "kind": "CLOCK",
+                "hour": 6,
+                "minute": 0,
+                "notation": "H12",
+                "period": "PM",
+                "precision": "EXACT"
+              }
+            }
+          },
+          "passengers": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "flags": {
+            "status": "LABELLED",
+            "value": {
+              "sharing": {
+                "state": "UNSPECIFIED"
+              },
+              "isOutstation": {
+                "state": "UNSPECIFIED"
+              },
+              "preferSafeRoute": {
+                "state": "UNSPECIFIED"
+              },
+              "needsCarrier": {
+                "state": "UNSPECIFIED"
+              }
+            }
+          },
+          "unsupportedRequests": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "missingFields": {
+            "status": "LABELLED",
+            "value": [
+              "vehicleClass"
+            ]
+          },
+          "ambiguities": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "fallbackExpected": {
+            "status": "LABELLED",
+            "value": "NOT_REQUIRED"
+          },
+          "routing": {
+            "status": "LABELLED",
+            "value": "JEV_SIMPLE"
+          },
+          "resolvedDate": {
+            "status": "LABELLED",
+            "value": "2026-10-05"
+          },
+          "resolvedTime": {
+            "status": "LABELLED",
+            "value": "22:30"
+          }
+        }
+      },
+      "reason": "Product owner P4; provider outputs are not ground truth",
+      "approvalTransferred": false,
+      "reviewDisposition": "DETERMINISTIC_POLICY_DERIVATION"
+    },
+    {
+      "caseId": "core-ambiguity-conflict-012",
+      "familyId": "weekday-next",
+      "policyVersion": "search-owner-policy-P1-P5-v1",
+      "policy": "P3",
+      "conversion": null,
+      "scheduling": null,
+      "resolutionLimitation": "CALENDAR_WEEK_ANCHOR_NOT_ESTABLISHED_BY_APPLICATION",
+      "oldTruth": {
+        "status": "PROPOSED",
+        "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+        "reviewerMetadata": null,
+        "disagreementResolved": false,
+        "derivation": "JUDGMENT_REVIEW_REQUIRED",
+        "reviewReasons": [
+          "PRODUCT_POLICY_UNRESOLVED"
+        ],
+        "unresolvedPolicies": [
+          "WEEKDAY_SEMANTICS"
+        ],
+        "expected": {
+          "queryType": {
+            "status": "LABELLED",
+            "value": "BOOKING_REQUEST"
+          },
+          "complexity": {
+            "status": "LABELLED",
+            "value": "SIMPLE"
+          },
+          "pickupSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 5,
+                "end": 16,
+                "exactText": "West Campus"
+              }
+            ]
+          },
+          "dropSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 20,
+                "end": 32,
+                "exactText": "Civic Centre"
+              }
+            ]
+          },
+          "stopSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "locationSearchSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "groundingTarget": {
+            "status": "LABELLED",
+            "value": "BY_ROLE"
+          },
+          "placeSelectionRequired": {
+            "status": "LABELLED",
+            "value": true
+          },
+          "vehicle": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "timingMode": {
+            "status": "LABELLED",
+            "value": "SCHEDULED"
+          },
+          "date": {
+            "status": "LABELLED",
+            "value": {
+              "state": "RESOLVED",
+              "value": {
+                "kind": "WEEKDAY",
+                "weekday": "FRIDAY",
+                "qualifier": "NEXT"
+              }
+            }
+          },
+          "time": {
+            "status": "LABELLED",
+            "value": {
+              "state": "RESOLVED",
+              "value": {
+                "kind": "CLOCK",
+                "hour": 9,
+                "minute": 0,
+                "notation": "H12",
+                "period": "PM",
+                "precision": "EXACT"
+              }
+            }
+          },
+          "passengers": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "flags": {
+            "status": "LABELLED",
+            "value": {
+              "sharing": {
+                "state": "UNSPECIFIED"
+              },
+              "isOutstation": {
+                "state": "UNSPECIFIED"
+              },
+              "preferSafeRoute": {
+                "state": "UNSPECIFIED"
+              },
+              "needsCarrier": {
+                "state": "UNSPECIFIED"
+              }
+            }
+          },
+          "unsupportedRequests": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "missingFields": {
+            "status": "LABELLED",
+            "value": [
+              "vehicleClass"
+            ]
+          },
+          "ambiguities": {
+            "status": "LABELLED",
+            "value": [
+              "WEEKDAY_SEMANTICS"
+            ]
+          },
+          "fallbackExpected": {
+            "status": "LABELLED",
+            "value": "NOT_REQUIRED"
+          },
+          "routing": {
+            "status": "LABELLED",
+            "value": "JEV_SIMPLE"
+          },
+          "resolvedDate": {
+            "status": "NOT_LABELLED",
+            "reason": "UNRESOLVED_POLICY_OR_JUDGMENT"
+          },
+          "resolvedTime": {
+            "status": "NOT_LABELLED",
+            "reason": "COMPONENT_SCORING_ONLY_NO_TIMESTAMP_DEFAULTS"
+          }
+        }
+      },
+      "newTruth": {
+        "status": "PROPOSED",
+        "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+        "reviewerMetadata": null,
+        "disagreementResolved": false,
+        "derivation": "FROZEN_SPEC_DETERMINISTIC",
+        "reviewReasons": [],
+        "unresolvedPolicies": [],
+        "expected": {
+          "queryType": {
+            "status": "LABELLED",
+            "value": "BOOKING_REQUEST"
+          },
+          "complexity": {
+            "status": "LABELLED",
+            "value": "SIMPLE"
+          },
+          "pickupSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 5,
+                "end": 16,
+                "exactText": "West Campus"
+              }
+            ]
+          },
+          "dropSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 20,
+                "end": 32,
+                "exactText": "Civic Centre"
+              }
+            ]
+          },
+          "stopSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "locationSearchSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "groundingTarget": {
+            "status": "LABELLED",
+            "value": "BY_ROLE"
+          },
+          "placeSelectionRequired": {
+            "status": "LABELLED",
+            "value": true
+          },
+          "vehicle": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "timingMode": {
+            "status": "LABELLED",
+            "value": "SCHEDULED"
+          },
+          "date": {
+            "status": "LABELLED",
+            "value": {
+              "state": "RESOLVED",
+              "value": {
+                "kind": "WEEKDAY",
+                "weekday": "FRIDAY",
+                "qualifier": "NEXT"
+              }
+            }
+          },
+          "time": {
+            "status": "LABELLED",
+            "value": {
+              "state": "RESOLVED",
+              "value": {
+                "kind": "CLOCK",
+                "hour": 9,
+                "minute": 0,
+                "notation": "H12",
+                "period": "PM",
+                "precision": "EXACT"
+              }
+            }
+          },
+          "passengers": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "flags": {
+            "status": "LABELLED",
+            "value": {
+              "sharing": {
+                "state": "UNSPECIFIED"
+              },
+              "isOutstation": {
+                "state": "UNSPECIFIED"
+              },
+              "preferSafeRoute": {
+                "state": "UNSPECIFIED"
+              },
+              "needsCarrier": {
+                "state": "UNSPECIFIED"
+              }
+            }
+          },
+          "unsupportedRequests": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "missingFields": {
+            "status": "LABELLED",
+            "value": [
+              "vehicleClass"
+            ]
+          },
+          "ambiguities": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "fallbackExpected": {
+            "status": "LABELLED",
+            "value": "NOT_REQUIRED"
+          },
+          "routing": {
+            "status": "LABELLED",
+            "value": "JEV_SIMPLE"
+          },
+          "resolvedDate": {
+            "status": "NOT_LABELLED",
+            "reason": "CALENDAR_WEEK_ANCHOR_NOT_ESTABLISHED_BY_APPLICATION"
+          },
+          "resolvedTime": {
+            "status": "NOT_LABELLED",
+            "reason": "COMPONENT_SCORING_ONLY_NO_TIMESTAMP_DEFAULTS"
+          }
+        }
+      },
+      "reason": "Product owner P3; provider outputs are not ground truth",
+      "approvalTransferred": false,
+      "reviewDisposition": "DETERMINISTIC_POLICY_DERIVATION"
+    },
+    {
+      "caseId": "core-ambiguity-conflict-013",
+      "familyId": "omitted-year",
+      "policyVersion": "search-owner-policy-P1-P5-v1",
+      "policy": "P2",
+      "conversion": null,
+      "scheduling": {
+        "error": "too_far"
+      },
+      "resolutionLimitation": null,
+      "oldTruth": {
+        "status": "PROPOSED",
+        "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+        "reviewerMetadata": null,
+        "disagreementResolved": false,
+        "derivation": "JUDGMENT_REVIEW_REQUIRED",
+        "reviewReasons": [
+          "PRODUCT_POLICY_UNRESOLVED"
+        ],
+        "unresolvedPolicies": [
+          "OMITTED_YEAR_SEMANTICS"
+        ],
+        "expected": {
+          "queryType": {
+            "status": "LABELLED",
+            "value": "BOOKING_REQUEST"
+          },
+          "complexity": {
+            "status": "LABELLED",
+            "value": "SIMPLE"
+          },
+          "pickupSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 5,
+                "end": 18,
+                "exactText": "Old Bus Stand"
+              }
+            ]
+          },
+          "dropSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 22,
+                "end": 29,
+                "exactText": "college"
+              }
+            ]
+          },
+          "stopSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "locationSearchSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "groundingTarget": {
+            "status": "LABELLED",
+            "value": "BY_ROLE"
+          },
+          "placeSelectionRequired": {
+            "status": "LABELLED",
+            "value": true
+          },
+          "vehicle": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "timingMode": {
+            "status": "LABELLED",
+            "value": "SCHEDULED"
+          },
+          "date": {
+            "status": "LABELLED",
+            "value": {
+              "state": "RESOLVED",
+              "value": {
+                "kind": "ABSOLUTE",
+                "day": 5,
+                "month": 12,
+                "year": null
+              }
+            }
+          },
+          "time": {
+            "status": "LABELLED",
+            "value": {
+              "state": "RESOLVED",
+              "value": {
+                "kind": "CLOCK",
+                "hour": 10,
+                "minute": 0,
+                "notation": "H12",
+                "period": "PM",
+                "precision": "EXACT"
+              }
+            }
+          },
+          "passengers": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "flags": {
+            "status": "LABELLED",
+            "value": {
+              "sharing": {
+                "state": "UNSPECIFIED"
+              },
+              "isOutstation": {
+                "state": "UNSPECIFIED"
+              },
+              "preferSafeRoute": {
+                "state": "UNSPECIFIED"
+              },
+              "needsCarrier": {
+                "state": "UNSPECIFIED"
+              }
+            }
+          },
+          "unsupportedRequests": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "missingFields": {
+            "status": "LABELLED",
+            "value": [
+              "vehicleClass"
+            ]
+          },
+          "ambiguities": {
+            "status": "LABELLED",
+            "value": [
+              "OMITTED_YEAR_SEMANTICS"
+            ]
+          },
+          "fallbackExpected": {
+            "status": "LABELLED",
+            "value": "NOT_REQUIRED"
+          },
+          "routing": {
+            "status": "LABELLED",
+            "value": "JEV_SIMPLE"
+          },
+          "resolvedDate": {
+            "status": "NOT_LABELLED",
+            "reason": "UNRESOLVED_POLICY_OR_JUDGMENT"
+          },
+          "resolvedTime": {
+            "status": "NOT_LABELLED",
+            "reason": "COMPONENT_SCORING_ONLY_NO_TIMESTAMP_DEFAULTS"
+          }
+        }
+      },
+      "newTruth": {
+        "status": "PROPOSED",
+        "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+        "reviewerMetadata": null,
+        "disagreementResolved": false,
+        "derivation": "FROZEN_SPEC_DETERMINISTIC",
+        "reviewReasons": [],
+        "unresolvedPolicies": [],
+        "expected": {
+          "queryType": {
+            "status": "LABELLED",
+            "value": "BOOKING_REQUEST"
+          },
+          "complexity": {
+            "status": "LABELLED",
+            "value": "SIMPLE"
+          },
+          "pickupSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 5,
+                "end": 18,
+                "exactText": "Old Bus Stand"
+              }
+            ]
+          },
+          "dropSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 22,
+                "end": 29,
+                "exactText": "college"
+              }
+            ]
+          },
+          "stopSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "locationSearchSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "groundingTarget": {
+            "status": "LABELLED",
+            "value": "BY_ROLE"
+          },
+          "placeSelectionRequired": {
+            "status": "LABELLED",
+            "value": true
+          },
+          "vehicle": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "timingMode": {
+            "status": "LABELLED",
+            "value": "SCHEDULED"
+          },
+          "date": {
+            "status": "LABELLED",
+            "value": {
+              "state": "RESOLVED",
+              "value": {
+                "kind": "ABSOLUTE",
+                "day": 5,
+                "month": 12,
+                "year": null
+              }
+            }
+          },
+          "time": {
+            "status": "LABELLED",
+            "value": {
+              "state": "RESOLVED",
+              "value": {
+                "kind": "CLOCK",
+                "hour": 10,
+                "minute": 0,
+                "notation": "H12",
+                "period": "PM",
+                "precision": "EXACT"
+              }
+            }
+          },
+          "passengers": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "flags": {
+            "status": "LABELLED",
+            "value": {
+              "sharing": {
+                "state": "UNSPECIFIED"
+              },
+              "isOutstation": {
+                "state": "UNSPECIFIED"
+              },
+              "preferSafeRoute": {
+                "state": "UNSPECIFIED"
+              },
+              "needsCarrier": {
+                "state": "UNSPECIFIED"
+              }
+            }
+          },
+          "unsupportedRequests": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "missingFields": {
+            "status": "LABELLED",
+            "value": [
+              "vehicleClass"
+            ]
+          },
+          "ambiguities": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "fallbackExpected": {
+            "status": "LABELLED",
+            "value": "NOT_REQUIRED"
+          },
+          "routing": {
+            "status": "LABELLED",
+            "value": "JEV_SIMPLE"
+          },
+          "resolvedDate": {
+            "status": "LABELLED",
+            "value": "2026-12-05"
+          },
+          "resolvedTime": {
+            "status": "LABELLED",
+            "value": "22:00"
+          }
+        }
+      },
+      "reason": "Product owner P2; provider outputs are not ground truth",
+      "approvalTransferred": false,
+      "reviewDisposition": "DETERMINISTIC_POLICY_DERIVATION"
+    },
+    {
+      "caseId": "core-ambiguity-conflict-014",
+      "familyId": "non-ist",
+      "policyVersion": "search-owner-policy-P1-P5-v1",
+      "policy": "P4",
+      "conversion": {
+        "date": "2026-10-06",
+        "time": "03:30",
+        "sourceDate": "2026-10-05",
+        "sourceTime": "23:00",
+        "sourceTimeZone": "Europe/London",
+        "source": "Intl/ICU 78.2"
+      },
+      "scheduling": {
+        "value": "2026-10-05T22:00:00.000Z",
+        "label": "6 Oct 2026, 3:30 am"
+      },
+      "resolutionLimitation": null,
+      "oldTruth": {
+        "status": "PROPOSED",
+        "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+        "reviewerMetadata": null,
+        "disagreementResolved": false,
+        "derivation": "JUDGMENT_REVIEW_REQUIRED",
+        "reviewReasons": [
+          "PRODUCT_POLICY_UNRESOLVED"
+        ],
+        "unresolvedPolicies": [
+          "NON_IST_TIMEZONE"
+        ],
+        "expected": {
+          "queryType": {
+            "status": "LABELLED",
+            "value": "BOOKING_REQUEST"
+          },
+          "complexity": {
+            "status": "LABELLED",
+            "value": "SIMPLE"
+          },
+          "pickupSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 5,
+                "end": 17,
+                "exactText": "Lotus Circle"
+              }
+            ]
+          },
+          "dropSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 21,
+                "end": 28,
+                "exactText": "airport"
+              }
+            ]
+          },
+          "stopSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "locationSearchSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "groundingTarget": {
+            "status": "LABELLED",
+            "value": "BY_ROLE"
+          },
+          "placeSelectionRequired": {
+            "status": "LABELLED",
+            "value": true
+          },
+          "vehicle": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "timingMode": {
+            "status": "LABELLED",
+            "value": "SCHEDULED"
+          },
+          "date": {
+            "status": "LABELLED",
+            "value": {
+              "state": "RESOLVED",
+              "value": {
+                "kind": "RELATIVE",
+                "anchor": "TOMORROW"
+              }
+            }
+          },
+          "time": {
+            "status": "LABELLED",
+            "value": {
+              "state": "RESOLVED",
+              "value": {
+                "kind": "CLOCK",
+                "hour": 11,
+                "minute": 0,
+                "notation": "H12",
+                "period": "PM",
+                "precision": "EXACT"
+              }
+            }
+          },
+          "passengers": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "flags": {
+            "status": "LABELLED",
+            "value": {
+              "sharing": {
+                "state": "UNSPECIFIED"
+              },
+              "isOutstation": {
+                "state": "UNSPECIFIED"
+              },
+              "preferSafeRoute": {
+                "state": "UNSPECIFIED"
+              },
+              "needsCarrier": {
+                "state": "UNSPECIFIED"
+              }
+            }
+          },
+          "unsupportedRequests": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "missingFields": {
+            "status": "LABELLED",
+            "value": [
+              "vehicleClass"
+            ]
+          },
+          "ambiguities": {
+            "status": "LABELLED",
+            "value": [
+              "NON_IST_TIMEZONE"
+            ]
+          },
+          "fallbackExpected": {
+            "status": "LABELLED",
+            "value": "NOT_REQUIRED"
+          },
+          "routing": {
+            "status": "LABELLED",
+            "value": "JEV_SIMPLE"
+          },
+          "resolvedDate": {
+            "status": "NOT_LABELLED",
+            "reason": "UNRESOLVED_POLICY_OR_JUDGMENT"
+          },
+          "resolvedTime": {
+            "status": "NOT_LABELLED",
+            "reason": "UNRESOLVED_POLICY_OR_JUDGMENT"
+          }
+        }
+      },
+      "newTruth": {
+        "status": "PROPOSED",
+        "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+        "reviewerMetadata": null,
+        "disagreementResolved": false,
+        "derivation": "FROZEN_SPEC_DETERMINISTIC",
+        "reviewReasons": [],
+        "unresolvedPolicies": [],
+        "expected": {
+          "queryType": {
+            "status": "LABELLED",
+            "value": "BOOKING_REQUEST"
+          },
+          "complexity": {
+            "status": "LABELLED",
+            "value": "SIMPLE"
+          },
+          "pickupSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 5,
+                "end": 17,
+                "exactText": "Lotus Circle"
+              }
+            ]
+          },
+          "dropSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 21,
+                "end": 28,
+                "exactText": "airport"
+              }
+            ]
+          },
+          "stopSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "locationSearchSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "groundingTarget": {
+            "status": "LABELLED",
+            "value": "BY_ROLE"
+          },
+          "placeSelectionRequired": {
+            "status": "LABELLED",
+            "value": true
+          },
+          "vehicle": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "timingMode": {
+            "status": "LABELLED",
+            "value": "SCHEDULED"
+          },
+          "date": {
+            "status": "LABELLED",
+            "value": {
+              "state": "RESOLVED",
+              "value": {
+                "kind": "RELATIVE",
+                "anchor": "TOMORROW"
+              }
+            }
+          },
+          "time": {
+            "status": "LABELLED",
+            "value": {
+              "state": "RESOLVED",
+              "value": {
+                "kind": "CLOCK",
+                "hour": 11,
+                "minute": 0,
+                "notation": "H12",
+                "period": "PM",
+                "precision": "EXACT"
+              }
+            }
+          },
+          "passengers": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "flags": {
+            "status": "LABELLED",
+            "value": {
+              "sharing": {
+                "state": "UNSPECIFIED"
+              },
+              "isOutstation": {
+                "state": "UNSPECIFIED"
+              },
+              "preferSafeRoute": {
+                "state": "UNSPECIFIED"
+              },
+              "needsCarrier": {
+                "state": "UNSPECIFIED"
+              }
+            }
+          },
+          "unsupportedRequests": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "missingFields": {
+            "status": "LABELLED",
+            "value": [
+              "vehicleClass"
+            ]
+          },
+          "ambiguities": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "fallbackExpected": {
+            "status": "LABELLED",
+            "value": "NOT_REQUIRED"
+          },
+          "routing": {
+            "status": "LABELLED",
+            "value": "JEV_SIMPLE"
+          },
+          "resolvedDate": {
+            "status": "LABELLED",
+            "value": "2026-10-06"
+          },
+          "resolvedTime": {
+            "status": "LABELLED",
+            "value": "03:30"
+          }
+        }
+      },
+      "reason": "Product owner P4; provider outputs are not ground truth",
+      "approvalTransferred": false,
+      "reviewDisposition": "DETERMINISTIC_POLICY_DERIVATION"
+    },
+    {
+      "caseId": "core-ambiguity-conflict-017",
+      "familyId": "weekday-next",
+      "policyVersion": "search-owner-policy-P1-P5-v1",
+      "policy": "P3",
+      "conversion": null,
+      "scheduling": null,
+      "resolutionLimitation": "CALENDAR_WEEK_ANCHOR_NOT_ESTABLISHED_BY_APPLICATION",
+      "oldTruth": {
+        "status": "PROPOSED",
+        "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+        "reviewerMetadata": null,
+        "disagreementResolved": false,
+        "derivation": "JUDGMENT_REVIEW_REQUIRED",
+        "reviewReasons": [
+          "PRODUCT_POLICY_UNRESOLVED"
+        ],
+        "unresolvedPolicies": [
+          "WEEKDAY_SEMANTICS"
+        ],
+        "expected": {
+          "queryType": {
+            "status": "LABELLED",
+            "value": "BOOKING_REQUEST"
+          },
+          "complexity": {
+            "status": "LABELLED",
+            "value": "SIMPLE"
+          },
+          "pickupSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 5,
+                "end": 16,
+                "exactText": "Amber Tower"
+              }
+            ]
+          },
+          "dropSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 20,
+                "end": 23,
+                "exactText": "IGI"
+              }
+            ]
+          },
+          "stopSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "locationSearchSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "groundingTarget": {
+            "status": "LABELLED",
+            "value": "BY_ROLE"
+          },
+          "placeSelectionRequired": {
+            "status": "LABELLED",
+            "value": true
+          },
+          "vehicle": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "timingMode": {
+            "status": "LABELLED",
+            "value": "SCHEDULED"
+          },
+          "date": {
+            "status": "LABELLED",
+            "value": {
+              "state": "RESOLVED",
+              "value": {
+                "kind": "WEEKDAY",
+                "weekday": "FRIDAY",
+                "qualifier": "NEXT"
+              }
+            }
+          },
+          "time": {
+            "status": "LABELLED",
+            "value": {
+              "state": "RESOLVED",
+              "value": {
+                "kind": "CLOCK",
+                "hour": 7,
+                "minute": 0,
+                "notation": "H12",
+                "period": "PM",
+                "precision": "EXACT"
+              }
+            }
+          },
+          "passengers": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "flags": {
+            "status": "LABELLED",
+            "value": {
+              "sharing": {
+                "state": "UNSPECIFIED"
+              },
+              "isOutstation": {
+                "state": "UNSPECIFIED"
+              },
+              "preferSafeRoute": {
+                "state": "UNSPECIFIED"
+              },
+              "needsCarrier": {
+                "state": "UNSPECIFIED"
+              }
+            }
+          },
+          "unsupportedRequests": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "missingFields": {
+            "status": "LABELLED",
+            "value": [
+              "vehicleClass"
+            ]
+          },
+          "ambiguities": {
+            "status": "LABELLED",
+            "value": [
+              "WEEKDAY_SEMANTICS"
+            ]
+          },
+          "fallbackExpected": {
+            "status": "LABELLED",
+            "value": "NOT_REQUIRED"
+          },
+          "routing": {
+            "status": "LABELLED",
+            "value": "JEV_SIMPLE"
+          },
+          "resolvedDate": {
+            "status": "NOT_LABELLED",
+            "reason": "UNRESOLVED_POLICY_OR_JUDGMENT"
+          },
+          "resolvedTime": {
+            "status": "NOT_LABELLED",
+            "reason": "COMPONENT_SCORING_ONLY_NO_TIMESTAMP_DEFAULTS"
+          }
+        }
+      },
+      "newTruth": {
+        "status": "PROPOSED",
+        "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+        "reviewerMetadata": null,
+        "disagreementResolved": false,
+        "derivation": "FROZEN_SPEC_DETERMINISTIC",
+        "reviewReasons": [],
+        "unresolvedPolicies": [],
+        "expected": {
+          "queryType": {
+            "status": "LABELLED",
+            "value": "BOOKING_REQUEST"
+          },
+          "complexity": {
+            "status": "LABELLED",
+            "value": "SIMPLE"
+          },
+          "pickupSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 5,
+                "end": 16,
+                "exactText": "Amber Tower"
+              }
+            ]
+          },
+          "dropSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 20,
+                "end": 23,
+                "exactText": "IGI"
+              }
+            ]
+          },
+          "stopSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "locationSearchSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "groundingTarget": {
+            "status": "LABELLED",
+            "value": "BY_ROLE"
+          },
+          "placeSelectionRequired": {
+            "status": "LABELLED",
+            "value": true
+          },
+          "vehicle": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "timingMode": {
+            "status": "LABELLED",
+            "value": "SCHEDULED"
+          },
+          "date": {
+            "status": "LABELLED",
+            "value": {
+              "state": "RESOLVED",
+              "value": {
+                "kind": "WEEKDAY",
+                "weekday": "FRIDAY",
+                "qualifier": "NEXT"
+              }
+            }
+          },
+          "time": {
+            "status": "LABELLED",
+            "value": {
+              "state": "RESOLVED",
+              "value": {
+                "kind": "CLOCK",
+                "hour": 7,
+                "minute": 0,
+                "notation": "H12",
+                "period": "PM",
+                "precision": "EXACT"
+              }
+            }
+          },
+          "passengers": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "flags": {
+            "status": "LABELLED",
+            "value": {
+              "sharing": {
+                "state": "UNSPECIFIED"
+              },
+              "isOutstation": {
+                "state": "UNSPECIFIED"
+              },
+              "preferSafeRoute": {
+                "state": "UNSPECIFIED"
+              },
+              "needsCarrier": {
+                "state": "UNSPECIFIED"
+              }
+            }
+          },
+          "unsupportedRequests": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "missingFields": {
+            "status": "LABELLED",
+            "value": [
+              "vehicleClass"
+            ]
+          },
+          "ambiguities": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "fallbackExpected": {
+            "status": "LABELLED",
+            "value": "NOT_REQUIRED"
+          },
+          "routing": {
+            "status": "LABELLED",
+            "value": "JEV_SIMPLE"
+          },
+          "resolvedDate": {
+            "status": "NOT_LABELLED",
+            "reason": "CALENDAR_WEEK_ANCHOR_NOT_ESTABLISHED_BY_APPLICATION"
+          },
+          "resolvedTime": {
+            "status": "NOT_LABELLED",
+            "reason": "COMPONENT_SCORING_ONLY_NO_TIMESTAMP_DEFAULTS"
+          }
+        }
+      },
+      "reason": "Product owner P3; provider outputs are not ground truth",
+      "approvalTransferred": false,
+      "reviewDisposition": "DETERMINISTIC_POLICY_DERIVATION"
+    },
+    {
+      "caseId": "core-ambiguity-conflict-018",
+      "familyId": "omitted-year",
+      "policyVersion": "search-owner-policy-P1-P5-v1",
+      "policy": "P2",
+      "conversion": null,
+      "scheduling": {
+        "error": "too_far"
+      },
+      "resolutionLimitation": null,
+      "oldTruth": {
+        "status": "PROPOSED",
+        "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+        "reviewerMetadata": null,
+        "disagreementResolved": false,
+        "derivation": "JUDGMENT_REVIEW_REQUIRED",
+        "reviewReasons": [
+          "PRODUCT_POLICY_UNRESOLVED"
+        ],
+        "unresolvedPolicies": [
+          "OMITTED_YEAR_SEMANTICS"
+        ],
+        "expected": {
+          "queryType": {
+            "status": "LABELLED",
+            "value": "BOOKING_REQUEST"
+          },
+          "complexity": {
+            "status": "LABELLED",
+            "value": "SIMPLE"
+          },
+          "pickupSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 5,
+                "end": 19,
+                "exactText": "Hilltop Clinic"
+              }
+            ]
+          },
+          "dropSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 23,
+                "end": 29,
+                "exactText": "campus"
+              }
+            ]
+          },
+          "stopSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "locationSearchSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "groundingTarget": {
+            "status": "LABELLED",
+            "value": "BY_ROLE"
+          },
+          "placeSelectionRequired": {
+            "status": "LABELLED",
+            "value": true
+          },
+          "vehicle": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "timingMode": {
+            "status": "LABELLED",
+            "value": "SCHEDULED"
+          },
+          "date": {
+            "status": "LABELLED",
+            "value": {
+              "state": "RESOLVED",
+              "value": {
+                "kind": "ABSOLUTE",
+                "day": 5,
+                "month": 12,
+                "year": null
+              }
+            }
+          },
+          "time": {
+            "status": "LABELLED",
+            "value": {
+              "state": "RESOLVED",
+              "value": {
+                "kind": "CLOCK",
+                "hour": 8,
+                "minute": 0,
+                "notation": "H12",
+                "period": "PM",
+                "precision": "EXACT"
+              }
+            }
+          },
+          "passengers": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "flags": {
+            "status": "LABELLED",
+            "value": {
+              "sharing": {
+                "state": "UNSPECIFIED"
+              },
+              "isOutstation": {
+                "state": "UNSPECIFIED"
+              },
+              "preferSafeRoute": {
+                "state": "UNSPECIFIED"
+              },
+              "needsCarrier": {
+                "state": "UNSPECIFIED"
+              }
+            }
+          },
+          "unsupportedRequests": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "missingFields": {
+            "status": "LABELLED",
+            "value": [
+              "vehicleClass"
+            ]
+          },
+          "ambiguities": {
+            "status": "LABELLED",
+            "value": [
+              "OMITTED_YEAR_SEMANTICS"
+            ]
+          },
+          "fallbackExpected": {
+            "status": "LABELLED",
+            "value": "NOT_REQUIRED"
+          },
+          "routing": {
+            "status": "LABELLED",
+            "value": "JEV_SIMPLE"
+          },
+          "resolvedDate": {
+            "status": "NOT_LABELLED",
+            "reason": "UNRESOLVED_POLICY_OR_JUDGMENT"
+          },
+          "resolvedTime": {
+            "status": "NOT_LABELLED",
+            "reason": "COMPONENT_SCORING_ONLY_NO_TIMESTAMP_DEFAULTS"
+          }
+        }
+      },
+      "newTruth": {
+        "status": "PROPOSED",
+        "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+        "reviewerMetadata": null,
+        "disagreementResolved": false,
+        "derivation": "FROZEN_SPEC_DETERMINISTIC",
+        "reviewReasons": [],
+        "unresolvedPolicies": [],
+        "expected": {
+          "queryType": {
+            "status": "LABELLED",
+            "value": "BOOKING_REQUEST"
+          },
+          "complexity": {
+            "status": "LABELLED",
+            "value": "SIMPLE"
+          },
+          "pickupSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 5,
+                "end": 19,
+                "exactText": "Hilltop Clinic"
+              }
+            ]
+          },
+          "dropSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 23,
+                "end": 29,
+                "exactText": "campus"
+              }
+            ]
+          },
+          "stopSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "locationSearchSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "groundingTarget": {
+            "status": "LABELLED",
+            "value": "BY_ROLE"
+          },
+          "placeSelectionRequired": {
+            "status": "LABELLED",
+            "value": true
+          },
+          "vehicle": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "timingMode": {
+            "status": "LABELLED",
+            "value": "SCHEDULED"
+          },
+          "date": {
+            "status": "LABELLED",
+            "value": {
+              "state": "RESOLVED",
+              "value": {
+                "kind": "ABSOLUTE",
+                "day": 5,
+                "month": 12,
+                "year": null
+              }
+            }
+          },
+          "time": {
+            "status": "LABELLED",
+            "value": {
+              "state": "RESOLVED",
+              "value": {
+                "kind": "CLOCK",
+                "hour": 8,
+                "minute": 0,
+                "notation": "H12",
+                "period": "PM",
+                "precision": "EXACT"
+              }
+            }
+          },
+          "passengers": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "flags": {
+            "status": "LABELLED",
+            "value": {
+              "sharing": {
+                "state": "UNSPECIFIED"
+              },
+              "isOutstation": {
+                "state": "UNSPECIFIED"
+              },
+              "preferSafeRoute": {
+                "state": "UNSPECIFIED"
+              },
+              "needsCarrier": {
+                "state": "UNSPECIFIED"
+              }
+            }
+          },
+          "unsupportedRequests": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "missingFields": {
+            "status": "LABELLED",
+            "value": [
+              "vehicleClass"
+            ]
+          },
+          "ambiguities": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "fallbackExpected": {
+            "status": "LABELLED",
+            "value": "NOT_REQUIRED"
+          },
+          "routing": {
+            "status": "LABELLED",
+            "value": "JEV_SIMPLE"
+          },
+          "resolvedDate": {
+            "status": "LABELLED",
+            "value": "2026-12-05"
+          },
+          "resolvedTime": {
+            "status": "LABELLED",
+            "value": "20:00"
+          }
+        }
+      },
+      "reason": "Product owner P2; provider outputs are not ground truth",
+      "approvalTransferred": false,
+      "reviewDisposition": "DETERMINISTIC_POLICY_DERIVATION"
+    },
+    {
+      "caseId": "core-ambiguity-conflict-019",
+      "familyId": "non-ist",
+      "policyVersion": "search-owner-policy-P1-P5-v1",
+      "policy": "P4",
+      "conversion": {
+        "date": "2026-10-06",
+        "time": "01:30",
+        "sourceDate": "2026-10-05",
+        "sourceTime": "21:00",
+        "sourceTimeZone": "Europe/London",
+        "source": "Intl/ICU 78.2"
+      },
+      "scheduling": {
+        "value": "2026-10-05T20:00:00.000Z",
+        "label": "6 Oct 2026, 1:30 am"
+      },
+      "resolutionLimitation": null,
+      "oldTruth": {
+        "status": "PROPOSED",
+        "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+        "reviewerMetadata": null,
+        "disagreementResolved": false,
+        "derivation": "JUDGMENT_REVIEW_REQUIRED",
+        "reviewReasons": [
+          "PRODUCT_POLICY_UNRESOLVED"
+        ],
+        "unresolvedPolicies": [
+          "NON_IST_TIMEZONE"
+        ],
+        "expected": {
+          "queryType": {
+            "status": "LABELLED",
+            "value": "BOOKING_REQUEST"
+          },
+          "complexity": {
+            "status": "LABELLED",
+            "value": "SIMPLE"
+          },
+          "pickupSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 5,
+                "end": 17,
+                "exactText": "Civic Centre"
+              }
+            ]
+          },
+          "dropSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 21,
+                "end": 26,
+                "exactText": "Delhi"
+              }
+            ]
+          },
+          "stopSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "locationSearchSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "groundingTarget": {
+            "status": "LABELLED",
+            "value": "BY_ROLE"
+          },
+          "placeSelectionRequired": {
+            "status": "LABELLED",
+            "value": true
+          },
+          "vehicle": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "timingMode": {
+            "status": "LABELLED",
+            "value": "SCHEDULED"
+          },
+          "date": {
+            "status": "LABELLED",
+            "value": {
+              "state": "RESOLVED",
+              "value": {
+                "kind": "RELATIVE",
+                "anchor": "TOMORROW"
+              }
+            }
+          },
+          "time": {
+            "status": "LABELLED",
+            "value": {
+              "state": "RESOLVED",
+              "value": {
+                "kind": "CLOCK",
+                "hour": 9,
+                "minute": 0,
+                "notation": "H12",
+                "period": "PM",
+                "precision": "EXACT"
+              }
+            }
+          },
+          "passengers": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "flags": {
+            "status": "LABELLED",
+            "value": {
+              "sharing": {
+                "state": "UNSPECIFIED"
+              },
+              "isOutstation": {
+                "state": "UNSPECIFIED"
+              },
+              "preferSafeRoute": {
+                "state": "UNSPECIFIED"
+              },
+              "needsCarrier": {
+                "state": "UNSPECIFIED"
+              }
+            }
+          },
+          "unsupportedRequests": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "missingFields": {
+            "status": "LABELLED",
+            "value": [
+              "vehicleClass"
+            ]
+          },
+          "ambiguities": {
+            "status": "LABELLED",
+            "value": [
+              "NON_IST_TIMEZONE"
+            ]
+          },
+          "fallbackExpected": {
+            "status": "LABELLED",
+            "value": "NOT_REQUIRED"
+          },
+          "routing": {
+            "status": "LABELLED",
+            "value": "JEV_SIMPLE"
+          },
+          "resolvedDate": {
+            "status": "NOT_LABELLED",
+            "reason": "UNRESOLVED_POLICY_OR_JUDGMENT"
+          },
+          "resolvedTime": {
+            "status": "NOT_LABELLED",
+            "reason": "UNRESOLVED_POLICY_OR_JUDGMENT"
+          }
+        }
+      },
+      "newTruth": {
+        "status": "PROPOSED",
+        "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+        "reviewerMetadata": null,
+        "disagreementResolved": false,
+        "derivation": "FROZEN_SPEC_DETERMINISTIC",
+        "reviewReasons": [],
+        "unresolvedPolicies": [],
+        "expected": {
+          "queryType": {
+            "status": "LABELLED",
+            "value": "BOOKING_REQUEST"
+          },
+          "complexity": {
+            "status": "LABELLED",
+            "value": "SIMPLE"
+          },
+          "pickupSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 5,
+                "end": 17,
+                "exactText": "Civic Centre"
+              }
+            ]
+          },
+          "dropSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 21,
+                "end": 26,
+                "exactText": "Delhi"
+              }
+            ]
+          },
+          "stopSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "locationSearchSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "groundingTarget": {
+            "status": "LABELLED",
+            "value": "BY_ROLE"
+          },
+          "placeSelectionRequired": {
+            "status": "LABELLED",
+            "value": true
+          },
+          "vehicle": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "timingMode": {
+            "status": "LABELLED",
+            "value": "SCHEDULED"
+          },
+          "date": {
+            "status": "LABELLED",
+            "value": {
+              "state": "RESOLVED",
+              "value": {
+                "kind": "RELATIVE",
+                "anchor": "TOMORROW"
+              }
+            }
+          },
+          "time": {
+            "status": "LABELLED",
+            "value": {
+              "state": "RESOLVED",
+              "value": {
+                "kind": "CLOCK",
+                "hour": 9,
+                "minute": 0,
+                "notation": "H12",
+                "period": "PM",
+                "precision": "EXACT"
+              }
+            }
+          },
+          "passengers": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "flags": {
+            "status": "LABELLED",
+            "value": {
+              "sharing": {
+                "state": "UNSPECIFIED"
+              },
+              "isOutstation": {
+                "state": "UNSPECIFIED"
+              },
+              "preferSafeRoute": {
+                "state": "UNSPECIFIED"
+              },
+              "needsCarrier": {
+                "state": "UNSPECIFIED"
+              }
+            }
+          },
+          "unsupportedRequests": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "missingFields": {
+            "status": "LABELLED",
+            "value": [
+              "vehicleClass"
+            ]
+          },
+          "ambiguities": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "fallbackExpected": {
+            "status": "LABELLED",
+            "value": "NOT_REQUIRED"
+          },
+          "routing": {
+            "status": "LABELLED",
+            "value": "JEV_SIMPLE"
+          },
+          "resolvedDate": {
+            "status": "LABELLED",
+            "value": "2026-10-06"
+          },
+          "resolvedTime": {
+            "status": "LABELLED",
+            "value": "01:30"
+          }
+        }
+      },
+      "reason": "Product owner P4; provider outputs are not ground truth",
+      "approvalTransferred": false,
+      "reviewDisposition": "DETERMINISTIC_POLICY_DERIVATION"
+    },
+    {
+      "caseId": "core-ambiguity-conflict-022",
+      "familyId": "weekday-next",
+      "policyVersion": "search-owner-policy-P1-P5-v1",
+      "policy": "P3",
+      "conversion": null,
+      "scheduling": null,
+      "resolutionLimitation": "CALENDAR_WEEK_ANCHOR_NOT_ESTABLISHED_BY_APPLICATION",
+      "oldTruth": {
+        "status": "PROPOSED",
+        "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+        "reviewerMetadata": null,
+        "disagreementResolved": false,
+        "derivation": "JUDGMENT_REVIEW_REQUIRED",
+        "reviewReasons": [
+          "PRODUCT_POLICY_UNRESOLVED"
+        ],
+        "unresolvedPolicies": [
+          "WEEKDAY_SEMANTICS"
+        ],
+        "expected": {
+          "queryType": {
+            "status": "LABELLED",
+            "value": "BOOKING_REQUEST"
+          },
+          "complexity": {
+            "status": "LABELLED",
+            "value": "SIMPLE"
+          },
+          "pickupSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 5,
+                "end": 35,
+                "exactText": "hostel gate near the tea stall"
+              }
+            ]
+          },
+          "dropSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 39,
+                "end": 56,
+                "exactText": "Knowledge Park II"
+              }
+            ]
+          },
+          "stopSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "locationSearchSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "groundingTarget": {
+            "status": "LABELLED",
+            "value": "BY_ROLE"
+          },
+          "placeSelectionRequired": {
+            "status": "LABELLED",
+            "value": true
+          },
+          "vehicle": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "timingMode": {
+            "status": "LABELLED",
+            "value": "SCHEDULED"
+          },
+          "date": {
+            "status": "LABELLED",
+            "value": {
+              "state": "RESOLVED",
+              "value": {
+                "kind": "WEEKDAY",
+                "weekday": "FRIDAY",
+                "qualifier": "NEXT"
+              }
+            }
+          },
+          "time": {
+            "status": "LABELLED",
+            "value": {
+              "state": "RESOLVED",
+              "value": {
+                "kind": "CLOCK",
+                "hour": 5,
+                "minute": 0,
+                "notation": "H12",
+                "period": "PM",
+                "precision": "EXACT"
+              }
+            }
+          },
+          "passengers": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "flags": {
+            "status": "LABELLED",
+            "value": {
+              "sharing": {
+                "state": "UNSPECIFIED"
+              },
+              "isOutstation": {
+                "state": "UNSPECIFIED"
+              },
+              "preferSafeRoute": {
+                "state": "UNSPECIFIED"
+              },
+              "needsCarrier": {
+                "state": "UNSPECIFIED"
+              }
+            }
+          },
+          "unsupportedRequests": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "missingFields": {
+            "status": "LABELLED",
+            "value": [
+              "vehicleClass"
+            ]
+          },
+          "ambiguities": {
+            "status": "LABELLED",
+            "value": [
+              "WEEKDAY_SEMANTICS"
+            ]
+          },
+          "fallbackExpected": {
+            "status": "LABELLED",
+            "value": "NOT_REQUIRED"
+          },
+          "routing": {
+            "status": "LABELLED",
+            "value": "JEV_SIMPLE"
+          },
+          "resolvedDate": {
+            "status": "NOT_LABELLED",
+            "reason": "UNRESOLVED_POLICY_OR_JUDGMENT"
+          },
+          "resolvedTime": {
+            "status": "NOT_LABELLED",
+            "reason": "COMPONENT_SCORING_ONLY_NO_TIMESTAMP_DEFAULTS"
+          }
+        }
+      },
+      "newTruth": {
+        "status": "PROPOSED",
+        "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+        "reviewerMetadata": null,
+        "disagreementResolved": false,
+        "derivation": "FROZEN_SPEC_DETERMINISTIC",
+        "reviewReasons": [],
+        "unresolvedPolicies": [],
+        "expected": {
+          "queryType": {
+            "status": "LABELLED",
+            "value": "BOOKING_REQUEST"
+          },
+          "complexity": {
+            "status": "LABELLED",
+            "value": "SIMPLE"
+          },
+          "pickupSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 5,
+                "end": 35,
+                "exactText": "hostel gate near the tea stall"
+              }
+            ]
+          },
+          "dropSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 39,
+                "end": 56,
+                "exactText": "Knowledge Park II"
+              }
+            ]
+          },
+          "stopSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "locationSearchSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "groundingTarget": {
+            "status": "LABELLED",
+            "value": "BY_ROLE"
+          },
+          "placeSelectionRequired": {
+            "status": "LABELLED",
+            "value": true
+          },
+          "vehicle": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "timingMode": {
+            "status": "LABELLED",
+            "value": "SCHEDULED"
+          },
+          "date": {
+            "status": "LABELLED",
+            "value": {
+              "state": "RESOLVED",
+              "value": {
+                "kind": "WEEKDAY",
+                "weekday": "FRIDAY",
+                "qualifier": "NEXT"
+              }
+            }
+          },
+          "time": {
+            "status": "LABELLED",
+            "value": {
+              "state": "RESOLVED",
+              "value": {
+                "kind": "CLOCK",
+                "hour": 5,
+                "minute": 0,
+                "notation": "H12",
+                "period": "PM",
+                "precision": "EXACT"
+              }
+            }
+          },
+          "passengers": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "flags": {
+            "status": "LABELLED",
+            "value": {
+              "sharing": {
+                "state": "UNSPECIFIED"
+              },
+              "isOutstation": {
+                "state": "UNSPECIFIED"
+              },
+              "preferSafeRoute": {
+                "state": "UNSPECIFIED"
+              },
+              "needsCarrier": {
+                "state": "UNSPECIFIED"
+              }
+            }
+          },
+          "unsupportedRequests": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "missingFields": {
+            "status": "LABELLED",
+            "value": [
+              "vehicleClass"
+            ]
+          },
+          "ambiguities": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "fallbackExpected": {
+            "status": "LABELLED",
+            "value": "NOT_REQUIRED"
+          },
+          "routing": {
+            "status": "LABELLED",
+            "value": "JEV_SIMPLE"
+          },
+          "resolvedDate": {
+            "status": "NOT_LABELLED",
+            "reason": "CALENDAR_WEEK_ANCHOR_NOT_ESTABLISHED_BY_APPLICATION"
+          },
+          "resolvedTime": {
+            "status": "NOT_LABELLED",
+            "reason": "COMPONENT_SCORING_ONLY_NO_TIMESTAMP_DEFAULTS"
+          }
+        }
+      },
+      "reason": "Product owner P3; provider outputs are not ground truth",
+      "approvalTransferred": false,
+      "reviewDisposition": "DETERMINISTIC_POLICY_DERIVATION"
+    },
+    {
+      "caseId": "core-ambiguity-conflict-023",
+      "familyId": "omitted-year",
+      "policyVersion": "search-owner-policy-P1-P5-v1",
+      "policy": "P2",
+      "conversion": null,
+      "scheduling": {
+        "error": "too_far"
+      },
+      "resolutionLimitation": null,
+      "oldTruth": {
+        "status": "PROPOSED",
+        "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+        "reviewerMetadata": null,
+        "disagreementResolved": false,
+        "derivation": "JUDGMENT_REVIEW_REQUIRED",
+        "reviewReasons": [
+          "PRODUCT_POLICY_UNRESOLVED"
+        ],
+        "unresolvedPolicies": [
+          "OMITTED_YEAR_SEMANTICS"
+        ],
+        "expected": {
+          "queryType": {
+            "status": "LABELLED",
+            "value": "BOOKING_REQUEST"
+          },
+          "complexity": {
+            "status": "LABELLED",
+            "value": "SIMPLE"
+          },
+          "pickupSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 5,
+                "end": 33,
+                "exactText": "Jaypee main gate near Gate 3"
+              }
+            ]
+          },
+          "dropSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 37,
+                "end": 48,
+                "exactText": "City Centre"
+              }
+            ]
+          },
+          "stopSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "locationSearchSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "groundingTarget": {
+            "status": "LABELLED",
+            "value": "BY_ROLE"
+          },
+          "placeSelectionRequired": {
+            "status": "LABELLED",
+            "value": true
+          },
+          "vehicle": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "timingMode": {
+            "status": "LABELLED",
+            "value": "SCHEDULED"
+          },
+          "date": {
+            "status": "LABELLED",
+            "value": {
+              "state": "RESOLVED",
+              "value": {
+                "kind": "ABSOLUTE",
+                "day": 5,
+                "month": 12,
+                "year": null
+              }
+            }
+          },
+          "time": {
+            "status": "LABELLED",
+            "value": {
+              "state": "RESOLVED",
+              "value": {
+                "kind": "CLOCK",
+                "hour": 6,
+                "minute": 0,
+                "notation": "H12",
+                "period": "PM",
+                "precision": "EXACT"
+              }
+            }
+          },
+          "passengers": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "flags": {
+            "status": "LABELLED",
+            "value": {
+              "sharing": {
+                "state": "UNSPECIFIED"
+              },
+              "isOutstation": {
+                "state": "UNSPECIFIED"
+              },
+              "preferSafeRoute": {
+                "state": "UNSPECIFIED"
+              },
+              "needsCarrier": {
+                "state": "UNSPECIFIED"
+              }
+            }
+          },
+          "unsupportedRequests": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "missingFields": {
+            "status": "LABELLED",
+            "value": [
+              "vehicleClass"
+            ]
+          },
+          "ambiguities": {
+            "status": "LABELLED",
+            "value": [
+              "OMITTED_YEAR_SEMANTICS"
+            ]
+          },
+          "fallbackExpected": {
+            "status": "LABELLED",
+            "value": "NOT_REQUIRED"
+          },
+          "routing": {
+            "status": "LABELLED",
+            "value": "JEV_SIMPLE"
+          },
+          "resolvedDate": {
+            "status": "NOT_LABELLED",
+            "reason": "UNRESOLVED_POLICY_OR_JUDGMENT"
+          },
+          "resolvedTime": {
+            "status": "NOT_LABELLED",
+            "reason": "COMPONENT_SCORING_ONLY_NO_TIMESTAMP_DEFAULTS"
+          }
+        }
+      },
+      "newTruth": {
+        "status": "PROPOSED",
+        "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+        "reviewerMetadata": null,
+        "disagreementResolved": false,
+        "derivation": "FROZEN_SPEC_DETERMINISTIC",
+        "reviewReasons": [],
+        "unresolvedPolicies": [],
+        "expected": {
+          "queryType": {
+            "status": "LABELLED",
+            "value": "BOOKING_REQUEST"
+          },
+          "complexity": {
+            "status": "LABELLED",
+            "value": "SIMPLE"
+          },
+          "pickupSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 5,
+                "end": 33,
+                "exactText": "Jaypee main gate near Gate 3"
+              }
+            ]
+          },
+          "dropSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 37,
+                "end": 48,
+                "exactText": "City Centre"
+              }
+            ]
+          },
+          "stopSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "locationSearchSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "groundingTarget": {
+            "status": "LABELLED",
+            "value": "BY_ROLE"
+          },
+          "placeSelectionRequired": {
+            "status": "LABELLED",
+            "value": true
+          },
+          "vehicle": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "timingMode": {
+            "status": "LABELLED",
+            "value": "SCHEDULED"
+          },
+          "date": {
+            "status": "LABELLED",
+            "value": {
+              "state": "RESOLVED",
+              "value": {
+                "kind": "ABSOLUTE",
+                "day": 5,
+                "month": 12,
+                "year": null
+              }
+            }
+          },
+          "time": {
+            "status": "LABELLED",
+            "value": {
+              "state": "RESOLVED",
+              "value": {
+                "kind": "CLOCK",
+                "hour": 6,
+                "minute": 0,
+                "notation": "H12",
+                "period": "PM",
+                "precision": "EXACT"
+              }
+            }
+          },
+          "passengers": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "flags": {
+            "status": "LABELLED",
+            "value": {
+              "sharing": {
+                "state": "UNSPECIFIED"
+              },
+              "isOutstation": {
+                "state": "UNSPECIFIED"
+              },
+              "preferSafeRoute": {
+                "state": "UNSPECIFIED"
+              },
+              "needsCarrier": {
+                "state": "UNSPECIFIED"
+              }
+            }
+          },
+          "unsupportedRequests": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "missingFields": {
+            "status": "LABELLED",
+            "value": [
+              "vehicleClass"
+            ]
+          },
+          "ambiguities": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "fallbackExpected": {
+            "status": "LABELLED",
+            "value": "NOT_REQUIRED"
+          },
+          "routing": {
+            "status": "LABELLED",
+            "value": "JEV_SIMPLE"
+          },
+          "resolvedDate": {
+            "status": "LABELLED",
+            "value": "2026-12-05"
+          },
+          "resolvedTime": {
+            "status": "LABELLED",
+            "value": "18:00"
+          }
+        }
+      },
+      "reason": "Product owner P2; provider outputs are not ground truth",
+      "approvalTransferred": false,
+      "reviewDisposition": "DETERMINISTIC_POLICY_DERIVATION"
+    },
+    {
+      "caseId": "core-ambiguity-conflict-024",
+      "familyId": "non-ist",
+      "policyVersion": "search-owner-policy-P1-P5-v1",
+      "policy": "P4",
+      "conversion": {
+        "date": "2026-10-05",
+        "time": "23:30",
+        "sourceDate": "2026-10-05",
+        "sourceTime": "19:00",
+        "sourceTimeZone": "Europe/London",
+        "source": "Intl/ICU 78.2"
+      },
+      "scheduling": {
+        "value": "2026-10-05T18:00:00.000Z",
+        "label": "5 Oct 2026, 11:30 pm"
+      },
+      "resolutionLimitation": null,
+      "oldTruth": {
+        "status": "PROPOSED",
+        "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+        "reviewerMetadata": null,
+        "disagreementResolved": false,
+        "derivation": "JUDGMENT_REVIEW_REQUIRED",
+        "reviewReasons": [
+          "PRODUCT_POLICY_UNRESOLVED"
+        ],
+        "unresolvedPolicies": [
+          "NON_IST_TIMEZONE"
+        ],
+        "expected": {
+          "queryType": {
+            "status": "LABELLED",
+            "value": "BOOKING_REQUEST"
+          },
+          "complexity": {
+            "status": "LABELLED",
+            "value": "SIMPLE"
+          },
+          "pickupSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 5,
+                "end": 8,
+                "exactText": "IGI"
+              }
+            ]
+          },
+          "dropSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 12,
+                "end": 22,
+                "exactText": "Pari Chowk"
+              }
+            ]
+          },
+          "stopSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "locationSearchSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "groundingTarget": {
+            "status": "LABELLED",
+            "value": "BY_ROLE"
+          },
+          "placeSelectionRequired": {
+            "status": "LABELLED",
+            "value": true
+          },
+          "vehicle": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "timingMode": {
+            "status": "LABELLED",
+            "value": "SCHEDULED"
+          },
+          "date": {
+            "status": "LABELLED",
+            "value": {
+              "state": "RESOLVED",
+              "value": {
+                "kind": "RELATIVE",
+                "anchor": "TOMORROW"
+              }
+            }
+          },
+          "time": {
+            "status": "LABELLED",
+            "value": {
+              "state": "RESOLVED",
+              "value": {
+                "kind": "CLOCK",
+                "hour": 7,
+                "minute": 0,
+                "notation": "H12",
+                "period": "PM",
+                "precision": "EXACT"
+              }
+            }
+          },
+          "passengers": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "flags": {
+            "status": "LABELLED",
+            "value": {
+              "sharing": {
+                "state": "UNSPECIFIED"
+              },
+              "isOutstation": {
+                "state": "UNSPECIFIED"
+              },
+              "preferSafeRoute": {
+                "state": "UNSPECIFIED"
+              },
+              "needsCarrier": {
+                "state": "UNSPECIFIED"
+              }
+            }
+          },
+          "unsupportedRequests": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "missingFields": {
+            "status": "LABELLED",
+            "value": [
+              "vehicleClass"
+            ]
+          },
+          "ambiguities": {
+            "status": "LABELLED",
+            "value": [
+              "NON_IST_TIMEZONE"
+            ]
+          },
+          "fallbackExpected": {
+            "status": "LABELLED",
+            "value": "NOT_REQUIRED"
+          },
+          "routing": {
+            "status": "LABELLED",
+            "value": "JEV_SIMPLE"
+          },
+          "resolvedDate": {
+            "status": "NOT_LABELLED",
+            "reason": "UNRESOLVED_POLICY_OR_JUDGMENT"
+          },
+          "resolvedTime": {
+            "status": "NOT_LABELLED",
+            "reason": "UNRESOLVED_POLICY_OR_JUDGMENT"
+          }
+        }
+      },
+      "newTruth": {
+        "status": "PROPOSED",
+        "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+        "reviewerMetadata": null,
+        "disagreementResolved": false,
+        "derivation": "FROZEN_SPEC_DETERMINISTIC",
+        "reviewReasons": [],
+        "unresolvedPolicies": [],
+        "expected": {
+          "queryType": {
+            "status": "LABELLED",
+            "value": "BOOKING_REQUEST"
+          },
+          "complexity": {
+            "status": "LABELLED",
+            "value": "SIMPLE"
+          },
+          "pickupSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 5,
+                "end": 8,
+                "exactText": "IGI"
+              }
+            ]
+          },
+          "dropSpans": {
+            "status": "LABELLED",
+            "value": [
+              {
+                "start": 12,
+                "end": 22,
+                "exactText": "Pari Chowk"
+              }
+            ]
+          },
+          "stopSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "locationSearchSpans": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "groundingTarget": {
+            "status": "LABELLED",
+            "value": "BY_ROLE"
+          },
+          "placeSelectionRequired": {
+            "status": "LABELLED",
+            "value": true
+          },
+          "vehicle": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "timingMode": {
+            "status": "LABELLED",
+            "value": "SCHEDULED"
+          },
+          "date": {
+            "status": "LABELLED",
+            "value": {
+              "state": "RESOLVED",
+              "value": {
+                "kind": "RELATIVE",
+                "anchor": "TOMORROW"
+              }
+            }
+          },
+          "time": {
+            "status": "LABELLED",
+            "value": {
+              "state": "RESOLVED",
+              "value": {
+                "kind": "CLOCK",
+                "hour": 7,
+                "minute": 0,
+                "notation": "H12",
+                "period": "PM",
+                "precision": "EXACT"
+              }
+            }
+          },
+          "passengers": {
+            "status": "LABELLED",
+            "value": {
+              "state": "UNSPECIFIED"
+            }
+          },
+          "flags": {
+            "status": "LABELLED",
+            "value": {
+              "sharing": {
+                "state": "UNSPECIFIED"
+              },
+              "isOutstation": {
+                "state": "UNSPECIFIED"
+              },
+              "preferSafeRoute": {
+                "state": "UNSPECIFIED"
+              },
+              "needsCarrier": {
+                "state": "UNSPECIFIED"
+              }
+            }
+          },
+          "unsupportedRequests": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "missingFields": {
+            "status": "LABELLED",
+            "value": [
+              "vehicleClass"
+            ]
+          },
+          "ambiguities": {
+            "status": "LABELLED",
+            "value": []
+          },
+          "fallbackExpected": {
+            "status": "LABELLED",
+            "value": "NOT_REQUIRED"
+          },
+          "routing": {
+            "status": "LABELLED",
+            "value": "JEV_SIMPLE"
+          },
+          "resolvedDate": {
+            "status": "LABELLED",
+            "value": "2026-10-05"
+          },
+          "resolvedTime": {
+            "status": "LABELLED",
+            "value": "23:30"
+          }
+        }
+      },
+      "reason": "Product owner P4; provider outputs are not ground truth",
+      "approvalTransferred": false,
+      "reviewDisposition": "DETERMINISTIC_POLICY_DERIVATION"
+    }
+  ]
+}

@@ -1,0 +1,102 @@
+[
+  {
+    "caseId": "core-ambiguity-conflict-005",
+    "policy": "P5",
+    "excludedByNegativeClause": [
+      "suv",
+      "suv_premium"
+    ],
+    "requiredByPositiveClause": "suv",
+    "currentVehicleLabel": {
+      "status": "LABELLED",
+      "value": {
+        "state": "AMBIGUOUS",
+        "alternatives": [
+          "suv"
+        ]
+      }
+    },
+    "status": "STILL_AMBIGUOUS_REVIEW_REQUIRED",
+    "reason": "Owner clarified the exclusion family; the required/excluded contradiction remains. No silent winning clause or new AMBIGUOUS contract field."
+  },
+  {
+    "caseId": "core-ambiguity-conflict-010",
+    "policy": "P5",
+    "excludedByNegativeClause": [
+      "suv",
+      "suv_premium"
+    ],
+    "requiredByPositiveClause": "suv",
+    "currentVehicleLabel": {
+      "status": "LABELLED",
+      "value": {
+        "state": "AMBIGUOUS",
+        "alternatives": [
+          "suv"
+        ]
+      }
+    },
+    "status": "STILL_AMBIGUOUS_REVIEW_REQUIRED",
+    "reason": "Owner clarified the exclusion family; the required/excluded contradiction remains. No silent winning clause or new AMBIGUOUS contract field."
+  },
+  {
+    "caseId": "core-ambiguity-conflict-015",
+    "policy": "P5",
+    "excludedByNegativeClause": [
+      "suv",
+      "suv_premium"
+    ],
+    "requiredByPositiveClause": "suv",
+    "currentVehicleLabel": {
+      "status": "LABELLED",
+      "value": {
+        "state": "AMBIGUOUS",
+        "alternatives": [
+          "suv"
+        ]
+      }
+    },
+    "status": "STILL_AMBIGUOUS_REVIEW_REQUIRED",
+    "reason": "Owner clarified the exclusion family; the required/excluded contradiction remains. No silent winning clause or new AMBIGUOUS contract field."
+  },
+  {
+    "caseId": "core-ambiguity-conflict-020",
+    "policy": "P5",
+    "excludedByNegativeClause": [
+      "suv",
+      "suv_premium"
+    ],
+    "requiredByPositiveClause": "suv",
+    "currentVehicleLabel": {
+      "status": "LABELLED",
+      "value": {
+        "state": "AMBIGUOUS",
+        "alternatives": [
+          "suv"
+        ]
+      }
+    },
+    "status": "STILL_AMBIGUOUS_REVIEW_REQUIRED",
+    "reason": "Owner clarified the exclusion family; the required/excluded contradiction remains. No silent winning clause or new AMBIGUOUS contract field."
+  },
+  {
+    "caseId": "core-ambiguity-conflict-025",
+    "policy": "P5",
+    "excludedByNegativeClause": [
+      "suv",
+      "suv_premium"
+    ],
+    "requiredByPositiveClause": "suv",
+    "currentVehicleLabel": {
+      "status": "LABELLED",
+      "value": {
+        "state": "AMBIGUOUS",
+        "alternatives": [
+          "suv"
+        ]
+      }
+    },
+    "status": "STILL_AMBIGUOUS_REVIEW_REQUIRED",
+    "reason": "Owner clarified the exclusion family; the required/excluded contradiction remains. No silent winning clause or new AMBIGUOUS contract field."
+  }
+]

@@ -1,0 +1,278 @@
+{
+  "rootCause": "BENCHMARK_FIXTURE_DERIVATION_BUG_NOT_PRODUCTION",
+  "oldProposalHash": "099c8486d9755fc7ab69d450fc1d4744ab9de3b8574a76eea297b258f6d6cb34",
+  "newProposalHash": "ac38649bef3448b14e2e23bbf341a68bdfd586c672225b81384d6655fca3ea3e",
+  "changes": [
+    {
+      "caseId": "core-ambiguity-conflict-014",
+      "oldExpected": {
+        "queryType": {
+          "status": "LABELLED",
+          "value": "BOOKING_REQUEST"
+        },
+        "complexity": {
+          "status": "LABELLED",
+          "value": "SIMPLE"
+        },
+        "pickupSpans": {
+          "status": "LABELLED",
+          "value": [
+            {
+              "start": 5,
+              "end": 17,
+              "exactText": "Lotus Circle"
+            }
+          ]
+        },
+        "dropSpans": {
+          "status": "LABELLED",
+          "value": [
+            {
+              "start": 21,
+              "end": 28,
+              "exactText": "airport"
+            }
+          ]
+        },
+        "stopSpans": {
+          "status": "LABELLED",
+          "value": []
+        },
+        "locationSearchSpans": {
+          "status": "LABELLED",
+          "value": []
+        },
+        "groundingTarget": {
+          "status": "LABELLED",
+          "value": "BY_ROLE"
+        },
+        "placeSelectionRequired": {
+          "status": "LABELLED",
+          "value": true
+        },
+        "vehicle": {
+          "status": "LABELLED",
+          "value": {
+            "state": "UNSPECIFIED"
+          }
+        },
+        "timingMode": {
+          "status": "LABELLED",
+          "value": "SCHEDULED"
+        },
+        "date": {
+          "status": "LABELLED",
+          "value": {
+            "state": "RESOLVED",
+            "value": {
+              "kind": "RELATIVE",
+              "anchor": "TOMORROW"
+            }
+          }
+        },
+        "time": {
+          "status": "LABELLED",
+          "value": {
+            "state": "RESOLVED",
+            "value": {
+              "kind": "CLOCK",
+              "hour": 11,
+              "minute": 0,
+              "notation": "H12",
+              "period": "PM",
+              "precision": "EXACT"
+            }
+          }
+        },
+        "passengers": {
+          "status": "LABELLED",
+          "value": {
+            "state": "UNSPECIFIED"
+          }
+        },
+        "flags": {
+          "status": "LABELLED",
+          "value": {
+            "sharing": {
+              "state": "UNSPECIFIED"
+            },
+            "isOutstation": {
+              "state": "UNSPECIFIED"
+            },
+            "preferSafeRoute": {
+              "state": "UNSPECIFIED"
+            },
+            "needsCarrier": {
+              "state": "UNSPECIFIED"
+            }
+          }
+        },
+        "unsupportedRequests": {
+          "status": "LABELLED",
+          "value": []
+        },
+        "missingFields": {
+          "status": "LABELLED",
+          "value": [
+            "vehicleClass"
+          ]
+        },
+        "ambiguities": {
+          "status": "LABELLED",
+          "value": []
+        },
+        "fallbackExpected": {
+          "status": "LABELLED",
+          "value": "NOT_REQUIRED"
+        },
+        "routing": {
+          "status": "LABELLED",
+          "value": "JEV_SIMPLE"
+        },
+        "resolvedDate": {
+          "status": "LABELLED",
+          "value": "2026-10-07"
+        },
+        "resolvedTime": {
+          "status": "LABELLED",
+          "value": "03:30"
+        }
+      },
+      "newExpected": {
+        "queryType": {
+          "status": "LABELLED",
+          "value": "BOOKING_REQUEST"
+        },
+        "complexity": {
+          "status": "LABELLED",
+          "value": "SIMPLE"
+        },
+        "pickupSpans": {
+          "status": "LABELLED",
+          "value": [
+            {
+              "start": 5,
+              "end": 17,
+              "exactText": "Lotus Circle"
+            }
+          ]
+        },
+        "dropSpans": {
+          "status": "LABELLED",
+          "value": [
+            {
+              "start": 21,
+              "end": 28,
+              "exactText": "airport"
+            }
+          ]
+        },
+        "stopSpans": {
+          "status": "LABELLED",
+          "value": []
+        },
+        "locationSearchSpans": {
+          "status": "LABELLED",
+          "value": []
+        },
+        "groundingTarget": {
+          "status": "LABELLED",
+          "value": "BY_ROLE"
+        },
+        "placeSelectionRequired": {
+          "status": "LABELLED",
+          "value": true
+        },
+        "vehicle": {
+          "status": "LABELLED",
+          "value": {
+            "state": "UNSPECIFIED"
+          }
+        },
+        "timingMode": {
+          "status": "LABELLED",
+          "value": "SCHEDULED"
+        },
+        "date": {
+          "status": "LABELLED",
+          "value": {
+            "state": "RESOLVED",
+            "value": {
+              "kind": "RELATIVE",
+              "anchor": "TOMORROW"
+            }
+          }
+        },
+        "time": {
+          "status": "LABELLED",
+          "value": {
+            "state": "RESOLVED",
+            "value": {
+              "kind": "CLOCK",
+              "hour": 11,
+              "minute": 0,
+              "notation": "H12",
+              "period": "PM",
+              "precision": "EXACT"
+            }
+          }
+        },
+        "passengers": {
+          "status": "LABELLED",
+          "value": {
+            "state": "UNSPECIFIED"
+          }
+        },
+        "flags": {
+          "status": "LABELLED",
+          "value": {
+            "sharing": {
+              "state": "UNSPECIFIED"
+            },
+            "isOutstation": {
+              "state": "UNSPECIFIED"
+            },
+            "preferSafeRoute": {
+              "state": "UNSPECIFIED"
+            },
+            "needsCarrier": {
+              "state": "UNSPECIFIED"
+            }
+          }
+        },
+        "unsupportedRequests": {
+          "status": "LABELLED",
+          "value": []
+        },
+        "missingFields": {
+          "status": "LABELLED",
+          "value": [
+            "vehicleClass"
+          ]
+        },
+        "ambiguities": {
+          "status": "LABELLED",
+          "value": []
+        },
+        "fallbackExpected": {
+          "status": "LABELLED",
+          "value": "NOT_REQUIRED"
+        },
+        "routing": {
+          "status": "LABELLED",
+          "value": "JEV_SIMPLE"
+        },
+        "resolvedDate": {
+          "status": "LABELLED",
+          "value": "2026-10-06"
+        },
+        "resolvedTime": {
+          "status": "LABELLED",
+          "value": "03:30"
+        }
+      },
+      "reason": "Full IANA local calendar date must participate in offset arithmetic; hour-only comparison wrapped across midnight.",
+      "originalApprovedClassAffected": false
+    }
+  ]
+}

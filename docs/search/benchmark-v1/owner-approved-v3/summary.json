@@ -1,0 +1,46 @@
+{
+  "total": 360,
+  "core": 320,
+  "exploratory": 40,
+  "development": 222,
+  "heldOut": 98,
+  "families": 56,
+  "categories": {
+    "standalone": 30,
+    "complete-simple": 30,
+    "partial": 30,
+    "immediate": 15,
+    "scheduled": 20,
+    "date-only": 20,
+    "time-only": 15,
+    "vehicle-preferences": 30,
+    "role-order": 35,
+    "multi-stop": 15,
+    "assisted-services": 20,
+    "conditional": 15,
+    "ambiguity-conflict": 25,
+    "unclear-noisy-candidates": 20,
+    "exploratory-hindi-hinglish": 40
+  },
+  "cohorts": {
+    "ORDINARY": 178,
+    "ADVERSARIAL": 142,
+    "EXPLORATORY": 40
+  },
+  "deterministicallyLabelled": 199,
+  "reviewRequired": 40,
+  "unresolvedPolicyCases": 40,
+  "datasetHash": "51c6b04c8b8dcc69f0c6b6d3a55d45403f14f014d9aa36eb4d5600e1c1d76430",
+  "validation": {
+    "records": 360,
+    "templateFamilyLeakage": 0
+  },
+  "originalDeterministicUnchanged": true,
+  "familyApproved": 121,
+  "coreHumanApproved": 320,
+  "coreReviewRemaining": 0,
+  "readyToFreeze": true,
+  "frozen": false,
+  "heldOutExecuted": false,
+  "exploratoryScored": false
+}

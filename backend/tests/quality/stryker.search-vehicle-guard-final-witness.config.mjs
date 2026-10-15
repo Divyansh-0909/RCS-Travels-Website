@@ -1,0 +1,2 @@
+import base from './stryker.search-vehicle-strength-guard.config.mjs'
+export default { ...base, commandRunner: { command: 'node --import tsx --test tests/rideSearchExtractorWitnesses.test.js tests/rideSearchRequestPrefix.test.js' }, mutate: ["services/search/extractor.ts:17-17","services/search/extractor.ts:80-80","services/search/extractor.ts:146-146","services/search/vehiclePolicy.ts:7-7","services/search/vehiclePolicy.ts:30-30"], jsonReporter: {fileName: 'coverage/search-vehicle-guard-final-witness-mutation.json'} }

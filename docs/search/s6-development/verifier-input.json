@@ -1,0 +1,526 @@
+{
+  "inventoryVersion": "search-s6-development-inventory-v2",
+  "capabilities": [
+    {
+      "id": "jev_decisions",
+      "classification": "MODEL_DECISION",
+      "modelCallable": false
+    },
+    {
+      "id": "luna_interpretation",
+      "classification": "MODEL_INTERPRETATION",
+      "modelCallable": false
+    },
+    {
+      "id": "places_autocomplete",
+      "classification": "APPLICATION_ORCHESTRATED",
+      "modelCallable": false
+    },
+    {
+      "id": "places_details",
+      "classification": "APPLICATION_ORCHESTRATED",
+      "modelCallable": false
+    },
+    {
+      "id": "candidate_generation",
+      "classification": "DETERMINISTIC",
+      "modelCallable": false
+    },
+    {
+      "id": "candidate_provenance",
+      "classification": "DETERMINISTIC",
+      "modelCallable": false
+    },
+    {
+      "id": "temporal_resolution",
+      "classification": "DETERMINISTIC",
+      "modelCallable": false
+    },
+    {
+      "id": "timezone_conversion",
+      "classification": "DETERMINISTIC",
+      "modelCallable": false
+    },
+    {
+      "id": "draft_merging",
+      "classification": "DETERMINISTIC",
+      "modelCallable": false
+    },
+    {
+      "id": "booking_validation",
+      "classification": "DETERMINISTIC",
+      "modelCallable": false
+    },
+    {
+      "id": "form_readiness",
+      "classification": "DETERMINISTIC",
+      "modelCallable": false
+    },
+    {
+      "id": "booking_payment_dispatch",
+      "classification": "NOT_SEARCH_TOOL",
+      "modelCallable": false
+    }
+  ],
+  "modelCallableTools": [],
+  "modelControlledGooglePlaces": false,
+  "oneShotFormResolution": true,
+  "traces": [
+    {
+      "id": "jev-preflight-0-batch-0",
+      "split": "DEVELOPMENT_ONLY",
+      "capabilityIds": [
+        "jev_decisions"
+      ],
+      "description": "Live bounded classification of a new synthetic development query. No benchmark labels sent.",
+      "requestCount": 1,
+      "inputTokens": 613,
+      "outputTokens": 98,
+      "latencyMs": 873
+    },
+    {
+      "id": "jev-preflight-0-batch-1",
+      "split": "DEVELOPMENT_ONLY",
+      "capabilityIds": [
+        "jev_decisions"
+      ],
+      "description": "Live bounded simple extraction; missing time remains a form requirement with no Luna fallback.",
+      "requestCount": 1,
+      "inputTokens": 2626,
+      "outputTokens": 975,
+      "latencyMs": 329
+    },
+    {
+      "id": "jev-preflight-1-batch-0",
+      "split": "DEVELOPMENT_ONLY",
+      "capabilityIds": [
+        "jev_decisions"
+      ],
+      "description": "Live bounded classification of a new synthetic development query. No benchmark labels sent.",
+      "requestCount": 1,
+      "inputTokens": 606,
+      "outputTokens": 99,
+      "latencyMs": 334
+    },
+    {
+      "id": "jev-preflight-1-batch-1",
+      "split": "DEVELOPMENT_ONLY",
+      "capabilityIds": [
+        "jev_decisions"
+      ],
+      "description": "Live bounded standalone candidate role selection; target belongs to application/form context.",
+      "requestCount": 1,
+      "inputTokens": 576,
+      "outputTokens": 83,
+      "latencyMs": 330
+    },
+    {
+      "id": "owner-policy-offline-form",
+      "split": "DEVELOPMENT_ONLY",
+      "capabilityIds": [
+        "temporal_resolution",
+        "timezone_conversion",
+        "draft_merging",
+        "form_readiness"
+      ],
+      "description": "Deterministic controlled-clock tests of Monday-Sunday, omitted year, default PM, DST folds/gaps, trusted edits and explicit review. No external calls.",
+      "requestCount": 0,
+      "inputTokens": null,
+      "outputTokens": null,
+      "latencyMs": null
+    },
+    {
+      "id": "owner-development-0-batch-0",
+      "split": "DEVELOPMENT_ONLY",
+      "capabilityIds": [
+        "jev_decisions",
+        "candidate_generation"
+      ],
+      "description": "Pre-fix synthetic development trace: approximate time was inside the generated destination span; no time question reached Jev.",
+      "requestCount": 1,
+      "inputTokens": 639,
+      "outputTokens": 98,
+      "latencyMs": 1213
+    },
+    {
+      "id": "owner-development-0-batch-1",
+      "split": "DEVELOPMENT_ONLY",
+      "capabilityIds": [
+        "jev_decisions",
+        "candidate_generation"
+      ],
+      "description": "Pre-fix synthetic development trace: approximate time was inside the generated destination span; no time question reached Jev.",
+      "requestCount": 1,
+      "inputTokens": 2725,
+      "outputTokens": 969,
+      "latencyMs": 479
+    },
+    {
+      "id": "owner-development-1-batch-0",
+      "split": "DEVELOPMENT_ONLY",
+      "capabilityIds": [
+        "jev_decisions",
+        "candidate_generation"
+      ],
+      "description": "Synthetic exclusion query: Jev returned EXPLICIT_ANY and REQUIRED strength without a positive class. The parser preserved SUV exclusions as ambiguity for form resolution.",
+      "requestCount": 1,
+      "inputTokens": 640,
+      "outputTokens": 98,
+      "latencyMs": 338
+    },
+    {
+      "id": "owner-development-1-batch-1",
+      "split": "DEVELOPMENT_ONLY",
+      "capabilityIds": [
+        "jev_decisions",
+        "candidate_generation"
+      ],
+      "description": "Synthetic exclusion query: Jev returned EXPLICIT_ANY and REQUIRED strength without a positive class. The parser preserved SUV exclusions as ambiguity for form resolution.",
+      "requestCount": 1,
+      "inputTokens": 3029,
+      "outputTokens": 1022,
+      "latencyMs": 484
+    },
+    {
+      "id": "owner-development-2-batch-0",
+      "split": "DEVELOPMENT_ONLY",
+      "capabilityIds": [
+        "jev_decisions",
+        "candidate_generation"
+      ],
+      "description": "Post-fix synthetic development trace: versioned candidate boundaries preserve approximate 7 PM and require exact-time confirmation in the form.",
+      "requestCount": 1,
+      "inputTokens": 640,
+      "outputTokens": 98,
+      "latencyMs": 665
+    },
+    {
+      "id": "owner-development-2-batch-1",
+      "split": "DEVELOPMENT_ONLY",
+      "capabilityIds": [
+        "jev_decisions",
+        "candidate_generation"
+      ],
+      "description": "Post-fix synthetic development trace: versioned candidate boundaries preserve approximate 7 PM and require exact-time confirmation in the form.",
+      "requestCount": 1,
+      "inputTokens": 2997,
+      "outputTokens": 1014,
+      "latencyMs": 375
+    },
+    {
+      "id": "authorized-response-diagnostic-0",
+      "split": "DEVELOPMENT_ONLY",
+      "capabilityIds": [
+        "jev_decisions"
+      ],
+      "description": "Actual SDK response to one new synthetic exclusion-only development query. Diagnostic retry used a new query identity; it does not erase the earlier schema failure. No benchmark labels were sent.",
+      "requestCount": 1,
+      "inputTokens": 643,
+      "outputTokens": 98,
+      "latencyMs": null
+    },
+    {
+      "id": "authorized-response-diagnostic-1",
+      "split": "DEVELOPMENT_ONLY",
+      "capabilityIds": [
+        "jev_decisions"
+      ],
+      "description": "Actual SDK response to one new synthetic exclusion-only development query. Diagnostic retry used a new query identity; it does not erase the earlier schema failure. No benchmark labels were sent.",
+      "requestCount": 1,
+      "inputTokens": 3026,
+      "outputTokens": 1006,
+      "latencyMs": null
+    },
+    {
+      "id": "authorized-luna-rate-limit",
+      "split": "DEVELOPMENT_ONLY",
+      "capabilityIds": [
+        "luna_interpretation"
+      ],
+      "description": "One revised Search adapter preflight failed on provider TPM capacity. Server retry window retained; no recovery model or held-out request was issued.",
+      "requestCount": 1,
+      "inputTokens": null,
+      "outputTokens": null,
+      "latencyMs": null
+    },
+    {
+      "id": "authorized-exclusion-source-dominance",
+      "split": "DEVELOPMENT_ONLY",
+      "capabilityIds": [
+        "jev_decisions",
+        "form_readiness"
+      ],
+      "description": "Deterministic regression: five exclusion-only phrases across four inconsistent provider choices preserve source exclusions and omit seven redundant vehicle questions. No mandatory class invented. Positive conflicts and all-class exclusion remain unresolved.",
+      "requestCount": 0,
+      "inputTokens": 0,
+      "outputTokens": 0,
+      "latencyMs": null
+    },
+    {
+      "id": "authorized-relative-clock-location-boundary",
+      "split": "DEVELOPMENT_ONLY",
+      "capabilityIds": [
+        "candidate_generation",
+        "candidate_provenance",
+        "temporal_resolution"
+      ],
+      "description": "Controlled-clock regression: bare relative-date clocks remain outside generated location spans; Gate 7 stays intact. Numeric passenger/duration/distance units are not clocks. Candidate generator version 3.",
+      "requestCount": 0,
+      "inputTokens": 0,
+      "outputTokens": 0,
+      "latencyMs": null
+    },
+    {
+      "id": "authorized-zoned-suffix",
+      "split": "DEVELOPMENT_ONLY",
+      "capabilityIds": [
+        "candidate_generation",
+        "candidate_provenance",
+        "timezone_conversion",
+        "temporal_resolution"
+      ],
+      "description": "Generator v4 uses the same timezone lexer as deterministic resolution. Clearly marked UTC/IANA clock and date/daypart suffixes remain outside endpoints. UTC Garden and Tower 7 UTC remain locations. A controlled-clock full-parser fixture resolves explicit 7 PM UTC to the authoritative instant; no provider calls.",
+      "requestCount": 0,
+      "inputTokens": 0,
+      "outputTokens": 0,
+      "latencyMs": null
+    },
+    {
+      "id": "live-dev-583b59161f6a8a61",
+      "split": "DEVELOPMENT_ONLY",
+      "capabilityIds": [
+        "jev_decisions",
+        "candidate_generation",
+        "candidate_provenance",
+        "booking_validation",
+        "places_autocomplete"
+      ],
+      "description": "Observed Jev/S3 development trace under prior source manifest: complete:LOCATION_SEARCH. No labels or original location text included. Google details and Luna were not called. Latency below covers Jev requests only.",
+      "requestCount": 2,
+      "inputTokens": 1258,
+      "outputTokens": 178,
+      "latencyMs": 901
+    },
+    {
+      "id": "live-dev-522c36dc804932fb",
+      "split": "DEVELOPMENT_ONLY",
+      "capabilityIds": [
+        "jev_decisions",
+        "candidate_generation",
+        "candidate_provenance",
+        "booking_validation",
+        "places_autocomplete"
+      ],
+      "description": "Observed Jev/S3 development trace under prior source manifest: complete:UNCLEAR_OR_UNRELATED. No labels or original location text included. Google details and Luna were not called. Latency below covers Jev requests only.",
+      "requestCount": 1,
+      "inputTokens": 645,
+      "outputTokens": 104,
+      "latencyMs": 350
+    },
+    {
+      "id": "live-dev-b46daa7092c125e2",
+      "split": "DEVELOPMENT_ONLY",
+      "capabilityIds": [
+        "jev_decisions",
+        "candidate_generation",
+        "candidate_provenance",
+        "booking_validation",
+        "places_autocomplete"
+      ],
+      "description": "Observed Jev/S3 development trace under prior source manifest: pending:LOCATION_CANDIDATE_MISSING. No labels or original location text included. Google details and Luna were not called. Latency below covers Jev requests only.",
+      "requestCount": 2,
+      "inputTokens": 1251,
+      "outputTokens": 162,
+      "latencyMs": 666
+    },
+    {
+      "id": "live-dev-89174660602a5cec",
+      "split": "DEVELOPMENT_ONLY",
+      "capabilityIds": [
+        "jev_decisions",
+        "candidate_generation",
+        "candidate_provenance",
+        "booking_validation",
+        "places_autocomplete"
+      ],
+      "description": "Observed Jev/S3 development trace under prior source manifest: pending:JEV_INVALID_RESPONSE. No labels or original location text included. Google details and Luna were not called. Latency below covers Jev requests only.",
+      "requestCount": 2,
+      "inputTokens": 3872,
+      "outputTokens": 1110,
+      "latencyMs": 763
+    },
+    {
+      "id": "live-dev-3990cc13012d4231",
+      "split": "DEVELOPMENT_ONLY",
+      "capabilityIds": [
+        "jev_decisions",
+        "candidate_generation",
+        "candidate_provenance",
+        "booking_validation",
+        "places_autocomplete"
+      ],
+      "description": "Observed Jev/S3 development trace under prior source manifest: complete:SIMPLE_COMPLETE. No labels or original location text included. Google details and Luna were not called. Latency below covers Jev requests only.",
+      "requestCount": 2,
+      "inputTokens": 3862,
+      "outputTokens": 1110,
+      "latencyMs": 824
+    },
+    {
+      "id": "live-dev-c6929e2ff4edefb0",
+      "split": "DEVELOPMENT_ONLY",
+      "capabilityIds": [
+        "jev_decisions",
+        "candidate_generation",
+        "candidate_provenance",
+        "booking_validation",
+        "places_autocomplete"
+      ],
+      "description": "Observed Jev/S3 development trace under prior source manifest: complete:SIMPLE_INCOMPLETE. No labels or original location text included. Google details and Luna were not called. Latency below covers Jev requests only.",
+      "requestCount": 2,
+      "inputTokens": 2388,
+      "outputTokens": 649,
+      "latencyMs": 735
+    },
+    {
+      "id": "live-dev-4a26195c351d8453",
+      "split": "DEVELOPMENT_ONLY",
+      "capabilityIds": [
+        "jev_decisions",
+        "candidate_generation",
+        "candidate_provenance",
+        "booking_validation",
+        "places_autocomplete"
+      ],
+      "description": "Observed Jev/S3 development trace under prior source manifest: pending:JEV_SCHEMA_ERROR. No labels or original location text included. Google details and Luna were not called. Latency below covers Jev requests only.",
+      "requestCount": 1,
+      "inputTokens": 647,
+      "outputTokens": 101,
+      "latencyMs": 316
+    },
+    {
+      "id": "live-dev-14e6ea7c1866151d",
+      "split": "DEVELOPMENT_ONLY",
+      "capabilityIds": [
+        "jev_decisions",
+        "candidate_generation",
+        "candidate_provenance",
+        "booking_validation",
+        "places_autocomplete"
+      ],
+      "description": "Observed Jev/S3 development trace under prior source manifest: pending:ROLE_CONFLICT. No labels or original location text included. Google details and Luna were not called. Latency below covers Jev requests only.",
+      "requestCount": 2,
+      "inputTokens": 2359,
+      "outputTokens": 638,
+      "latencyMs": 672
+    },
+    {
+      "id": "current-numbered-landmark-b24173489c0397ca",
+      "split": "DEVELOPMENT_ONLY",
+      "capabilityIds": [
+        "jev_decisions",
+        "candidate_generation",
+        "candidate_provenance",
+        "temporal_resolution",
+        "booking_validation"
+      ],
+      "description": "Observed current-manifest development trace 63282be570cf1f39b3271926bfcb472f3c2cdc98643716c85bdb089db50532ed: PROVIDER_PENDING_LUNA; time state UNSPECIFIED; fallback COMPLEX_QUERY. No benchmark labels or original place text included. No Luna/details call.",
+      "requestCount": 1,
+      "inputTokens": 663,
+      "outputTokens": 99,
+      "latencyMs": 316
+    },
+    {
+      "id": "current-numbered-landmark-26624cf309736f70",
+      "split": "DEVELOPMENT_ONLY",
+      "capabilityIds": [
+        "jev_decisions",
+        "candidate_generation",
+        "candidate_provenance",
+        "temporal_resolution",
+        "booking_validation"
+      ],
+      "description": "Observed current-manifest development trace 63282be570cf1f39b3271926bfcb472f3c2cdc98643716c85bdb089db50532ed: PROVIDER_PENDING_LUNA; time state AMBIGUOUS; fallback EXTRACTION_BINDING_UNRESOLVED. No benchmark labels or original place text included. No Luna/details call.",
+      "requestCount": 2,
+      "inputTokens": 3408,
+      "outputTokens": 803,
+      "latencyMs": 671
+    },
+    {
+      "id": "current-numbered-landmark-62020511bb685515",
+      "split": "DEVELOPMENT_ONLY",
+      "capabilityIds": [
+        "jev_decisions",
+        "candidate_generation",
+        "candidate_provenance",
+        "temporal_resolution",
+        "booking_validation"
+      ],
+      "description": "Observed current-manifest development trace 63282be570cf1f39b3271926bfcb472f3c2cdc98643716c85bdb089db50532ed: PROVIDER_PENDING_LUNA; time state AMBIGUOUS; fallback EXTRACTION_BINDING_UNRESOLVED. No benchmark labels or original place text included. No Luna/details call.",
+      "requestCount": 2,
+      "inputTokens": 3179,
+      "outputTokens": 756,
+      "latencyMs": 712
+    },
+    {
+      "id": "current-prefix-5e7457a8754709b9",
+      "split": "DEVELOPMENT_ONLY",
+      "capabilityIds": [
+        "jev_decisions",
+        "candidate_generation",
+        "candidate_provenance",
+        "booking_validation"
+      ],
+      "description": "Current-source live request-prefix span repair; original query ownership and unrelated supplied fields retained.",
+      "requestCount": 2,
+      "inputTokens": 2562,
+      "outputTokens": 661,
+      "latencyMs": 1039.260000000002
+    },
+    {
+      "id": "current-prefix-4a26195c351d8453",
+      "split": "DEVELOPMENT_ONLY",
+      "capabilityIds": [
+        "jev_decisions",
+        "candidate_generation",
+        "candidate_provenance",
+        "booking_validation"
+      ],
+      "description": "Current-source independent routing for an incomplete standalone vehicle request; no completion or endpoints inferred.",
+      "requestCount": 2,
+      "inputTokens": 3265,
+      "outputTokens": 866,
+      "latencyMs": 677.071100000001
+    },
+    {
+      "id": "historical-current-0c490c4111a0608f",
+      "split": "DEVELOPMENT_ONLY",
+      "capabilityIds": [
+        "jev_decisions",
+        "candidate_generation",
+        "candidate_provenance",
+        "booking_validation"
+      ],
+      "description": "Historical live flag-tail trace retained with its prior source configuration. This case is unattempted under the current manifest because Google Places quota stopped the run. Current offline tail witnesses pass; this is not a current live success.",
+      "requestCount": 2,
+      "inputTokens": 4397,
+      "outputTokens": 1222,
+      "latencyMs": 1117.7470999999787
+    },
+    {
+      "id": "current-prefix-b4aabb167482e167",
+      "split": "DEVELOPMENT_ONLY",
+      "capabilityIds": [
+        "jev_decisions",
+        "candidate_generation",
+        "candidate_provenance",
+        "booking_validation"
+      ],
+      "description": "Current-source literal positive ANY vehicle request retains exact source provenance without irrelevant model vehicle questions.",
+      "requestCount": 2,
+      "inputTokens": 2607,
+      "outputTokens": 655,
+      "latencyMs": 770.6303000000044
+    }
+  ],
+  "inputPacketHash": "447920d9b26e161579bbae7d44c2f73b91a95e8c4cf0140f8922f2f281792a7f"
+}

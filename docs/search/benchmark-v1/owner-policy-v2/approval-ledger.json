@@ -1,0 +1,904 @@
+{
+  "receipt": {
+    "receiptId": "product-owner-search-P1-P5-2026-10-05",
+    "reviewerIds": [
+      "product-owner"
+    ],
+    "reviewedAt": "2026-10-05",
+    "source": "attachment:b0a53b16-a379-42be-896a-c1cd13ba9022",
+    "originalDatasetHash": "3517a2aebdd38d2c19beb689abd0a8bfafa6ec8b8162d46da722e935936f4a6b",
+    "policyVersion": "search-owner-policy-P1-P5-v1"
+  },
+  "approval": [
+    {
+      "caseId": "core-standalone-001",
+      "approvedLabelHash": "b8b78dbc7ee14d37e5b4ceaa86f50a0dab0d07ff71cd9aeb9911cd069d757e7c",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-standalone-002",
+      "approvedLabelHash": "f35f2cf4bb32c0c8c436524378956209c9a6f79dfad9427cbaa11890f4ebb3f6",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-standalone-003",
+      "approvedLabelHash": "bde94232bb1e675ebd2003bfefcbfcbbaf8ea85f51cc23aca4c0c4658ab162ff",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-standalone-004",
+      "approvedLabelHash": "c1e7a16cda9585668f01384db13b2c6ab135463d38f26a34267023b6f091a9f5",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-standalone-005",
+      "approvedLabelHash": "acc77e6a849d6a6967acc00cfa2d3471b885c87e7b8bc8485c3b64462ccbbffa",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-standalone-006",
+      "approvedLabelHash": "37a43898b2b6105b483b0d7d6dea36688e0b440633964e32f9863ecc43cd8386",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-standalone-007",
+      "approvedLabelHash": "d2e069c93c9ed0e1391f65502855bbda72c4b37e2e82ffc92dbd7f9e76d4d7b7",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-standalone-008",
+      "approvedLabelHash": "3a9185587bc3daaa77fd0720681170dd554cc1ea6c95ec4600150d3c8e234527",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-standalone-009",
+      "approvedLabelHash": "1c9a63748380a6e3c9ab3380dc510782995da8af8d5df60d51a2f383479bb5d0",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-standalone-010",
+      "approvedLabelHash": "ec20f81acc74b060f581193c7a74ed7eba4937a4147bcea24b6459dd9de9efda",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-standalone-011",
+      "approvedLabelHash": "9967e83015e1f3a4a8519062f37cf4549f88efda9564aafec1aea2eeef2a88d8",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-standalone-012",
+      "approvedLabelHash": "e9904cddc8b75cbeef21a05476de52d8515d96e7b38bae907d4c4c3652ee3379",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-standalone-013",
+      "approvedLabelHash": "ec2223884056f0f34a505671d7fcdc1865d1cc4433ce621fa646a93d0bac9796",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-standalone-014",
+      "approvedLabelHash": "4ef802dc40eb27cdb329eb31aa7443d9cc02e10859012ef10c8b10a5c3620ca4",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-standalone-015",
+      "approvedLabelHash": "cb4748fa9569ee74535bd203e2fe9dc3402b7b25572fde4b5fcb4dbf9485af89",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-standalone-016",
+      "approvedLabelHash": "89eab0f8a050004564412e5fc04f1d21422883c95892d3248ad91dfab5e37059",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-standalone-017",
+      "approvedLabelHash": "421f37ff7a8299e41074df93ecf1c8988ad2bc8945422f607ebb8841e2b324d8",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-standalone-018",
+      "approvedLabelHash": "7fcc6f8d08cd98b9a73a94af6e13b2ceca497e17618ed3e49af9a726a8411a2c",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-standalone-019",
+      "approvedLabelHash": "48ebd272f5b3457691dffde3bb92e10c409c4259d7866121064dcf18518deff8",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-standalone-020",
+      "approvedLabelHash": "dad25c5072bbe4c5ee119c5721bc000898f87e0c033f8d09322afabbdbc1dd75",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-standalone-021",
+      "approvedLabelHash": "b49eec9e7fba1ed6b0f61c30630843c512cd3223b9cc20711f2fe69b546162f0",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-standalone-022",
+      "approvedLabelHash": "8b9ca181f2c04dac482f1a98cda0fe9ab818db3c6e37b7a0e815dc56d820a855",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-standalone-023",
+      "approvedLabelHash": "0edaef9bd754a87136eb871c3dfd4d1fbdf797b84a04e08064419a588ad2f460",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-standalone-024",
+      "approvedLabelHash": "673ff4809ccbdf5c1cb29b7120bebc302b02b8cfb63e36a9d8c24385f5fb21d3",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-standalone-025",
+      "approvedLabelHash": "db10c5b596f39cfef362c7b98ba3e2e913b04a9bd9a3e48a69290727a9855409",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-standalone-026",
+      "approvedLabelHash": "28977bc4f438e40b76d59ae79e848e553ddde9a321d488fd88e93c7bc97df3eb",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-standalone-027",
+      "approvedLabelHash": "aa1e8c30c0caf3285bb9cff00b5f25f0104dd2cae6477a39d4c970e5ce938ca5",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-standalone-028",
+      "approvedLabelHash": "dc668e9c8cd4426188c4430733debc54f1d016b92e5b91adc83470c86970af81",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-standalone-029",
+      "approvedLabelHash": "091d1272e7cfbce494b6f25a12ac78ab029ac7ea9f05a16689b555107b522971",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-standalone-030",
+      "approvedLabelHash": "bdf79b84df365363796345bab7a242a43d1897cd23a290d5ef9cd63e58bf510c",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-complete-simple-001",
+      "approvedLabelHash": "1c2298e568be7f72e26ba89f107e50076369818591b4d01a207d301c31928e6f",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-complete-simple-002",
+      "approvedLabelHash": "17bb2b71f4d7ac670989fc15bfd79b5bf3bd14983d036de76371ed224f6ef5d8",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-complete-simple-003",
+      "approvedLabelHash": "8d9d1dda6aee47a3cefc926eb5d2da6db1483faaa856b8ddf0640c50591c9d48",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-complete-simple-004",
+      "approvedLabelHash": "3ef6e4d45b6543bf03b69b82a21313964f536ad7d13331b4898f235575cdf906",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-complete-simple-005",
+      "approvedLabelHash": "5232db9a9f9b4b8b2906c13e37c6853fe581db37fcc7e06e38f015315baecd3a",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-complete-simple-006",
+      "approvedLabelHash": "0d4fcda71ef4194d14cbfd676487cbca3798690da2776a77668389c0c49c1ab2",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-complete-simple-007",
+      "approvedLabelHash": "c504b597d9e42a117e66857bd9eb43c893439a87fe4558c173058f5d7fc95f34",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-complete-simple-008",
+      "approvedLabelHash": "0afbe4a08c0607bf72e5c28ea72a67baafaa4259aff458dd8253223e49853692",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-complete-simple-009",
+      "approvedLabelHash": "ca883497fdb96386f8b8a874939ec1e0d1e7bc2efc54305ff7e7372ea0f0c302",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-complete-simple-010",
+      "approvedLabelHash": "6d39faba02251c9705db3377305f20ae0558340cce4cf325662bbbcc292abcdb",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-complete-simple-011",
+      "approvedLabelHash": "03b0539ffa118686dfa2d3f0ecd6e79cfe934d9f06ba6cd3e1e0b4d005156544",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-complete-simple-012",
+      "approvedLabelHash": "0fcb58c5da4a874a5b61beaccda3ba533f478d12d8f439c4c7cc115e0e8902f9",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-complete-simple-013",
+      "approvedLabelHash": "90310a4108a6601fa474e6936e78f2cc66b3e25a99465353c36b5112e6bfd115",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-complete-simple-014",
+      "approvedLabelHash": "92719521897ad20e519bd4b20b07db314b3dab56c4122c33b8c0da47eff6218a",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-complete-simple-015",
+      "approvedLabelHash": "12ee688de77083c54c853c5931fc365279ddead3eb9d0afdb08333903ac3fb5e",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-complete-simple-016",
+      "approvedLabelHash": "7c045c5ad9188ccaf0266269cb51059415ba1df89cdcee1c26ac63c6a2553826",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-complete-simple-017",
+      "approvedLabelHash": "6245472f7749a152e999ffffcb60568d52f6ed3bb5ec15467dcbaab3361d66d4",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-complete-simple-018",
+      "approvedLabelHash": "bb45d5cc93cdc6d3608f5cf1bf2adda1be4c7832f3be06468d7567490333dfec",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-complete-simple-019",
+      "approvedLabelHash": "cf1d27287247010421505c0eb0317413a51a3b2a95bf1fe15a40841ecae3ba9e",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-complete-simple-020",
+      "approvedLabelHash": "07436453969cc9da99eb1714a77c5e976b673871018e624a56b47bfb7dbe3b3c",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-complete-simple-021",
+      "approvedLabelHash": "7518e8c98fa0333aadf188c0b1b9938007e18410c49bc944ac2141e1a78d5287",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-complete-simple-022",
+      "approvedLabelHash": "f5f0dd3764a10ff14f5266ca37ebfa5a36c5fe1ef3ecad15ee3227f7d5085d65",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-complete-simple-023",
+      "approvedLabelHash": "cefd78be9d86e7950268ba2b649aa3bb69fd2873e11dc89b76da25ddb908a0e7",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-complete-simple-024",
+      "approvedLabelHash": "a8fe9dc1683b2ce718cf80c20928acdca15ad6ed2ef4639f5cadd582b0182bb9",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-complete-simple-025",
+      "approvedLabelHash": "16de26b533731a6dd2143136a010848f03f96a67a76633d9a0f4cc52db4a3a7e",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-complete-simple-026",
+      "approvedLabelHash": "a014323e3487f13b938d4741992af8e0f72f47bfd186fa0293e654b469b5451d",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-complete-simple-027",
+      "approvedLabelHash": "94d12e74a614dac1f4137ce9829a439f0dbfc5624134fba0c7d03e2159be9c5d",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-complete-simple-028",
+      "approvedLabelHash": "7f3eab639fcb98043da68bd9bb2eeec49d681b48a7205d3035aa172a3cb3199f",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-complete-simple-029",
+      "approvedLabelHash": "e247242614574da8391a97cf9879186820d987d813c96e840422111ffbbd3f8b",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-complete-simple-030",
+      "approvedLabelHash": "e413ccfd3c3c7a1ee72eec7a521269bbfa87201a327d050649af2b328131d8b7",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-partial-001",
+      "approvedLabelHash": "51cfa2595a893f15184ea6030142618c5c82f6ac78a1c38ff5cf932058328bdd",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-partial-002",
+      "approvedLabelHash": "7e508f8b9d620574136b034092539da389b37246a473e4707d4951c87ec43389",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-partial-004",
+      "approvedLabelHash": "12b66e6fc77edb90e1af490bd1d461800e64ead4ee49185d1cbe8da19e022250",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-partial-005",
+      "approvedLabelHash": "b6e203221c1d0904bc8e052f89f79931b241aac359f1b72a1effc5edfba1f2ab",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-partial-006",
+      "approvedLabelHash": "19dc38a7593d2e6e83972371ee58db13673a459088161dc78163a999e05f7a89",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-partial-008",
+      "approvedLabelHash": "9e66712da9d4b8b59f1bf1067fc3ed3076311e6754ccb95348f4335871ffd644",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-partial-009",
+      "approvedLabelHash": "dfd6052851851ca9a9359471bc72b482caf043e6489a07af992975d0c634510f",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-partial-010",
+      "approvedLabelHash": "c744e8bdd76af820f002c78a6f4e1b607e733d2db15af714f394a3e1b4c18e2a",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-partial-012",
+      "approvedLabelHash": "de98a56f3d611d1033446ce0be4aa1355a1915092ff9eae5ee09c832e36dc07f",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-partial-013",
+      "approvedLabelHash": "3eb3c8a00555e72b6c62b0acd391c0e6e1d11312ecc09497f633d3e3915d67fe",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-partial-014",
+      "approvedLabelHash": "d66bdc1e633a4babd8af21d32bf8256287853c4d5d7ccf3998fbb02ee6ac832e",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-partial-016",
+      "approvedLabelHash": "cc8e53c6bc3714fe3dec93f76330f937e279a1844d250b4983b43a15382413d3",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-partial-017",
+      "approvedLabelHash": "51cfa2595a893f15184ea6030142618c5c82f6ac78a1c38ff5cf932058328bdd",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-partial-018",
+      "approvedLabelHash": "6800c8357abe107d688adaf9a7e4673e3edacc93dda8d6eea8eefc99341f2672",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-partial-020",
+      "approvedLabelHash": "12b66e6fc77edb90e1af490bd1d461800e64ead4ee49185d1cbe8da19e022250",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-partial-021",
+      "approvedLabelHash": "b6e203221c1d0904bc8e052f89f79931b241aac359f1b72a1effc5edfba1f2ab",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-partial-022",
+      "approvedLabelHash": "a21ec337e3c6728a57684c105cde80f0d768a3ff8357a011a2d3bbf84c4b870c",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-partial-024",
+      "approvedLabelHash": "9e66712da9d4b8b59f1bf1067fc3ed3076311e6754ccb95348f4335871ffd644",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-partial-025",
+      "approvedLabelHash": "dfd6052851851ca9a9359471bc72b482caf043e6489a07af992975d0c634510f",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-partial-026",
+      "approvedLabelHash": "763df5e9a8e5ca3ba248142271e36a2582cf6c57fa45010d12c8dce6e5940bc1",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-partial-028",
+      "approvedLabelHash": "de98a56f3d611d1033446ce0be4aa1355a1915092ff9eae5ee09c832e36dc07f",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-partial-029",
+      "approvedLabelHash": "3eb3c8a00555e72b6c62b0acd391c0e6e1d11312ecc09497f633d3e3915d67fe",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-partial-030",
+      "approvedLabelHash": "81400b167a47a40cc4a3bf670a23c1e48c50fe035df38bca808b6eefac02a297",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-immediate-001",
+      "approvedLabelHash": "da83dd593aef6d260becb8a5546d3ffe9058371dd9f2fbb7605ac47449a9ee2b",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-immediate-002",
+      "approvedLabelHash": "0fc9465e8a10aa7d54f12425aabd354dcc6c0a8004f7d5c405a34ad17f796c06",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-immediate-003",
+      "approvedLabelHash": "f299b52f5d8f108c27772b117c397eeba543e9ea7a2d0b762fe593c668089bb5",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-immediate-004",
+      "approvedLabelHash": "760e5fab7f312678d535d85faf8d7bb622f770fc557342bda1a9f9cecd5a8298",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-immediate-005",
+      "approvedLabelHash": "290996ebf8136b3945e29565f781ba559e0a265453ab278a1e54af2faec9f369",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-immediate-006",
+      "approvedLabelHash": "6f965cffe7b325327320a3ccfede4522c413eccc738f7f4a99dfff12a932b6b3",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-immediate-007",
+      "approvedLabelHash": "0b67c47a8f8534f7cf2e2f68b9b5dba47db72cf02830280fe8e94a9b603fcf92",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-immediate-008",
+      "approvedLabelHash": "4b900996a01ddbb08ca7d1c89c37826f4a09955cf98fdb341b07d5c56c716f78",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-immediate-009",
+      "approvedLabelHash": "e0ed8788948ae9e3f719c034046caa8fba7d30a26b92c985241e835fe2870078",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-immediate-010",
+      "approvedLabelHash": "b7de572fe1e8cf02ae48332d16ac0d486ad0529d862b9352780d2d0d3194401f",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-immediate-011",
+      "approvedLabelHash": "05779a3e2a3a4ce6b41399955d3443fcc84f2b297741ef1ce601513735e7c6cd",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-immediate-012",
+      "approvedLabelHash": "73e30cab501674694bca412ca7c96336fafc65bdf10c6c45a9dcd48a701366f6",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-immediate-013",
+      "approvedLabelHash": "c48202c02744168f80fb0761f5818234038a64597eedf9de8e40143b315fe490",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-immediate-014",
+      "approvedLabelHash": "0fc9465e8a10aa7d54f12425aabd354dcc6c0a8004f7d5c405a34ad17f796c06",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-immediate-015",
+      "approvedLabelHash": "9ce2de9d1f697fcca3663c3198833fea32d29d063d4acd247daffbf404f1b883",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-scheduled-001",
+      "approvedLabelHash": "69494166c6be1d16891be8bac9da2c411a42e2a975a091a25064ba739a05e7c4",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-scheduled-002",
+      "approvedLabelHash": "1fe95cfd3d927b938cc248223afc746312c3909d8b1946fc926a627e00b2d772",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-scheduled-003",
+      "approvedLabelHash": "0304da29c9a4050cc113a4e859a160999829689d2cd2ae6649fea019180a7a80",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-scheduled-004",
+      "approvedLabelHash": "87d42b43d90f34dbaf947515e908b987ff0fbf756dd39a516ab863ef8cbf9cd9",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-scheduled-005",
+      "approvedLabelHash": "f4caeaee7d02ae4b65294d3ed844cfcbf255121786486f4ae8bdb313a697220a",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-scheduled-006",
+      "approvedLabelHash": "6ac519e8c9ed2384eddf66388f0048bfab0ca263c63a6c54833efb883d9f31e0",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-scheduled-007",
+      "approvedLabelHash": "a4a36f25f2d2a9a577dacd872ccde817f07f23e6ab70649ccf72e1f2763e8264",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-scheduled-008",
+      "approvedLabelHash": "ecfe9ffec3d69b77c278bea8ba808e83b3c215360e6ce89335e88602c30da4b9",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-scheduled-009",
+      "approvedLabelHash": "464f0fee21d139b0285927dae6a1306a06328471bc73f49eb8f16b0b0ce21b74",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-scheduled-010",
+      "approvedLabelHash": "953b7227fbfcd54afc43dfc949a9c0dea2804aa7fd1124d72c429dd658eca8a5",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-scheduled-011",
+      "approvedLabelHash": "c3af661e167e966f86214623d5543e487343945a04dbe530ea42284aa56dd51d",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-scheduled-012",
+      "approvedLabelHash": "687a4ddafd887bf471a4cfefc4417e12e88eafe988417ff8e646fdaa1cdfcc7d",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-scheduled-013",
+      "approvedLabelHash": "6f68992634c9d3880a9f584e84527a25723ef2931b6a75b529b64612c42778e6",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-scheduled-014",
+      "approvedLabelHash": "429ad6b8d1128dfa8c65f512438f7dc700d44d81bc12b8292d20be494bb03d6d",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-scheduled-015",
+      "approvedLabelHash": "8598f22415f99f852b170e1cd4e7a7cd434da5debf2bb86e46ee6e456a3c3255",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-scheduled-016",
+      "approvedLabelHash": "7306e07ad20f21c2e6b6b42960afa091503f99055198cdce5096a7d820ca751d",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-scheduled-017",
+      "approvedLabelHash": "a5dc0280a8e1fe7c0070f055f391def07b94d56940e8686509f558ea5a7e3d1f",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-scheduled-018",
+      "approvedLabelHash": "9e74f8761baf63d34674ba66fd94854f53c36d85d5b45378f6b4ab896c06b89a",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-scheduled-019",
+      "approvedLabelHash": "7e0c89c2ed1cb9c0a903dfc5c03433967d45c11a2bfb68ebb9fe6e5524849374",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-scheduled-020",
+      "approvedLabelHash": "c287259f0faa4048ea9aa5b08930eba8efb5ead7eb0887dbf5c69b3f0f2b04d7",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-date-only-001",
+      "approvedLabelHash": "b0e064584119f765fdccb0cf3a64d6841316c3a0b0df28f63fc51a5ea04f1438",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-date-only-002",
+      "approvedLabelHash": "373783919cc08d7fda033f6b6976bbcb519c57e5e7c32b01106f7305e5bb8242",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-date-only-003",
+      "approvedLabelHash": "b8635864bfb54f9457e05e3d92b70f7d1faa7b2cf78594948fe704aa4a62c4ee",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-date-only-004",
+      "approvedLabelHash": "798096d3a07e24b2a14c1619a0b80817e7bd2d3878a4c1e8a316a6f5ff4adfc3",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-date-only-005",
+      "approvedLabelHash": "50aba0c4f0bf2497488c3ee9ac9fa7015708a91f5afea79179ac3c4004914b82",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-date-only-006",
+      "approvedLabelHash": "d6fda0a14593ac429f51ee781ea7dc3eb52197235a5df721a15d3c896b020362",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-date-only-007",
+      "approvedLabelHash": "8951b2397c2667609d46cd2ca9771a547788198ed142722720b7a9a042662f15",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-date-only-008",
+      "approvedLabelHash": "c325f4c689bb53c32594e9591279cb189295487ff8eaaadacf5a7d25b305637e",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-date-only-009",
+      "approvedLabelHash": "6e3de4ac9aa462a8e766addc264b6cf98e16a62d9bcec620f94ea1f520bc5374",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-date-only-010",
+      "approvedLabelHash": "488232c89e7e50d211fd30c90e9b380e66380be5b271a8034a2e362664a8b984",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-date-only-011",
+      "approvedLabelHash": "f0e0df6d5a932d849561a6de103dacdb3e9ca249129e18fefef1b586ed860f53",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-date-only-012",
+      "approvedLabelHash": "9b38396f4eee33b548323db2953e13651c3c753247ddc44daad44e8f3b69f35b",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-date-only-013",
+      "approvedLabelHash": "3494bb02b543ef1a8570d12fb3487b714ea5d5c43932c4a11f86515bb23d780c",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-date-only-014",
+      "approvedLabelHash": "ce092901af1f2f449384c3e82ec67ba9ece1e6e95aa9cfcea2074bb21e8e4a28",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-date-only-015",
+      "approvedLabelHash": "b8635864bfb54f9457e05e3d92b70f7d1faa7b2cf78594948fe704aa4a62c4ee",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-date-only-016",
+      "approvedLabelHash": "73de56317ee44ed1b596fcf033f076367bf2c1b477b834001577537868b1499a",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-date-only-017",
+      "approvedLabelHash": "4e79fab5d9443401e29682a7bae75c4e97d179d683086d6208bddc8af24f3a6c",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-date-only-018",
+      "approvedLabelHash": "d6fda0a14593ac429f51ee781ea7dc3eb52197235a5df721a15d3c896b020362",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-date-only-019",
+      "approvedLabelHash": "a96bac8515effd0c59222da098c0b6f78c835c8b000dfb9b5f62e53446b6894d",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-date-only-020",
+      "approvedLabelHash": "177b25871292dd8bd14db9103dfc18dcfb6024d13b5f8ac1d1d8dd1c0ff76652",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-time-only-001",
+      "approvedLabelHash": "61891bf60c64b0b16aff1975b8e6ca3f822d3d88737ed67ff1594019b7838477",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-time-only-004",
+      "approvedLabelHash": "41b860c37cf2abe072799e5d5d38101866c55cf10005f5a88ecf8e6d03fafd93",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-time-only-007",
+      "approvedLabelHash": "f8403229398eac485ed7817891b4826378a435ccefb91b7aa433f7628455bd63",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-time-only-010",
+      "approvedLabelHash": "68dec89c44f39f1e0fe1547bee4cde4a58fe2c451806419d7a7ec513ac278110",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-time-only-013",
+      "approvedLabelHash": "b672434db6887930d23e356d871134896c9ef366329ca1741c1087ea46beb1a9",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-vehicle-preferences-001",
+      "approvedLabelHash": "b04d9e16f54cce1d7d0b2906d3725e3f50e12f9732f1d2dcb140ec978d5f0faa",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-vehicle-preferences-002",
+      "approvedLabelHash": "b14fbedf05678f71ebe29296db4b4f293a4b50297de4e062040483c5890ac55a",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-vehicle-preferences-003",
+      "approvedLabelHash": "e0a49f3a83e425d0bb1083e67396b78e043d80b95f0f2b66487417c079888f5f",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-vehicle-preferences-004",
+      "approvedLabelHash": "a2debf2018c9cc203b09b02f73def9edb8ee7b17c35df69cbee9a8e6e96e2c88",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-vehicle-preferences-006",
+      "approvedLabelHash": "f63d3f2b250c1567b8f01e419e5342f4c37b88a13db374cb405b8774cd349596",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-vehicle-preferences-007",
+      "approvedLabelHash": "7e73722d5194073bc761fec11248cbc7c3a093917aa616792c5328a3ee5c5179",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-vehicle-preferences-008",
+      "approvedLabelHash": "f8e8638dafad7740eae6ac6eccc7833665e46d48ff631ddcf10316a13293e28c",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-vehicle-preferences-009",
+      "approvedLabelHash": "038316a06538cab15b3e83bc72bf547ed816894341c84bf8cc4657f32fba7404",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-vehicle-preferences-011",
+      "approvedLabelHash": "2b9ce724adfc514fb15b4bb899757ed5755aa6dc30c7a314a2e07edf510d0efa",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-vehicle-preferences-012",
+      "approvedLabelHash": "3bbd67be2aa2326cedbf3b4a0a529e9bd11b8497a754734ae200a5dda7b91dcb",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-vehicle-preferences-013",
+      "approvedLabelHash": "7226620cf2c67537e83a8785f47cdb9168d177e6ffe1570a2b0ca4da04f6384b",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-vehicle-preferences-014",
+      "approvedLabelHash": "da80a1fb284111e1f703439458700c07a171fe1b1d1d91c61908745bc7032089",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-vehicle-preferences-016",
+      "approvedLabelHash": "363cf41808f0035bb41cc130a12b6f6d519b3fcc41bddb4991fd000869ac99cb",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-vehicle-preferences-017",
+      "approvedLabelHash": "832f6b70700b148484eddb9c1d3ff140e61564ee8f239a13f2ac45d2a52d7c7b",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-vehicle-preferences-018",
+      "approvedLabelHash": "c3e90ad32a17abc94635fe4fbfe247d510b28ce732393488c6dd18cb57344817",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-vehicle-preferences-019",
+      "approvedLabelHash": "fbb4bbc2c534c9e392b9a3ce46c2c94e9c9028ff4e3ece28bb0042b805dcf0c8",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-vehicle-preferences-021",
+      "approvedLabelHash": "130225d59d4b434c4a6965a1b7e8d011744f2737cf52a114cbe51d76aceffd09",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-vehicle-preferences-022",
+      "approvedLabelHash": "f00008cb146d10ec20f674a8370ba47d75c1a683d2fff4174c455354314a7465",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-vehicle-preferences-023",
+      "approvedLabelHash": "8428e6de7aeb538c214f48a6b8428cfdba08586c8152efb83d8ad315e7294abd",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-vehicle-preferences-024",
+      "approvedLabelHash": "8b0fa02902081cad20eb121be2c7cc972fe9c0f15fd190ce5ed75866b0d57659",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-vehicle-preferences-026",
+      "approvedLabelHash": "926f05ce78042682c4d073a7be61198c0b2859430b6bb776226c5432a9fba801",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-vehicle-preferences-027",
+      "approvedLabelHash": "d305a5a83cb283fef2b4e46fc2cdc3313dac4caf1dd8e14fecdbd5cbea102771",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-vehicle-preferences-028",
+      "approvedLabelHash": "42e1cd8cda679c279c3c0aa1b61210f3126c5c028bd0fc1622722a9731d55543",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-vehicle-preferences-029",
+      "approvedLabelHash": "dfb5e5cb04e82d8ca2905697ea49755b2d62ddab9f95f4c437aef98f53cab77a",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-assisted-services-003",
+      "approvedLabelHash": "c62254cd534c4ce8e01576e2b502151dea6aaa58895196461fe9b0987e42bf5f",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-assisted-services-006",
+      "approvedLabelHash": "717f19a606153bd07967237c7278c50d392b74055d43397af7689950232fe2fb",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-assisted-services-009",
+      "approvedLabelHash": "699df40382eae2ec470f2d4e2ef2ee317e34b22c499a7a0ef2c90a49e07bb9ba",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-assisted-services-012",
+      "approvedLabelHash": "4cf69a28c9a0181784a05ad6e52db285dd60a9545fe05cc341556252f063e69f",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-assisted-services-015",
+      "approvedLabelHash": "a09849136bd965c9f7b15f4c1443d39b0b799a05d0a2bd7832552f0d62f58b26",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-assisted-services-018",
+      "approvedLabelHash": "c8ca650056016a43a11f580e198185a9abba0175146f0d040912feb101c2d36e",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-unclear-noisy-candidates-001",
+      "approvedLabelHash": "936bee0d51d58d993827e2c0fffe0e01f79230c52d19b4ecd8d7152ee5bf91c1",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-unclear-noisy-candidates-005",
+      "approvedLabelHash": "936bee0d51d58d993827e2c0fffe0e01f79230c52d19b4ecd8d7152ee5bf91c1",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-unclear-noisy-candidates-009",
+      "approvedLabelHash": "936bee0d51d58d993827e2c0fffe0e01f79230c52d19b4ecd8d7152ee5bf91c1",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-unclear-noisy-candidates-013",
+      "approvedLabelHash": "936bee0d51d58d993827e2c0fffe0e01f79230c52d19b4ecd8d7152ee5bf91c1",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    },
+    {
+      "caseId": "core-unclear-noisy-candidates-017",
+      "approvedLabelHash": "936bee0d51d58d993827e2c0fffe0e01f79230c52d19b4ecd8d7152ee5bf91c1",
+      "humanApprovalStatus": "APPROVED_AS_SPEC_DERIVED_CLASS"
+    }
+  ]
+}

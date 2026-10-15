@@ -1,0 +1,3882 @@
+[
+  {
+    "id": "exploratory-001",
+    "familyId": "exploratory-0",
+    "templateFamily": "exploratory-0",
+    "category": "exploratory-hindi-hinglish",
+    "cohort": "EXPLORATORY",
+    "ordinaryOrAdversarial": "EXPLORATORY",
+    "tags": [
+      "EXPLORATORY_LANGUAGE"
+    ],
+    "split": "EXPLORATORY_ONLY",
+    "modelInput": {
+      "query": "campus se delta 2 kal 6 baje",
+      "context": {
+        "clock": "2026-10-04T12:00:00+05:30",
+        "timeZone": "Asia/Kolkata",
+        "capabilityVersion": "ride-search-s4",
+        "activeField": null
+      }
+    },
+    "truth": {
+      "status": "PROPOSED",
+      "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+      "reviewerMetadata": null,
+      "disagreementResolved": false,
+      "derivation": "JUDGMENT_REVIEW_REQUIRED",
+      "reviewReasons": [
+        "EXPLORATORY_LANGUAGE_NOT_FROZEN"
+      ],
+      "unresolvedPolicies": [
+        "EXPLORATORY_LANGUAGE"
+      ],
+      "expected": {
+        "queryType": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "complexity": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "pickupSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "dropSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "vehicle": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "timingMode": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "date": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "time": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "passengers": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "flags": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "unsupportedRequests": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "missingFields": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "ambiguities": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "fallbackExpected": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "routing": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        }
+      }
+    },
+    "evaluationDisposition": "EXPLORATORY_UNSCORED"
+  },
+  {
+    "id": "exploratory-002",
+    "familyId": "exploratory-1",
+    "templateFamily": "exploratory-1",
+    "category": "exploratory-hindi-hinglish",
+    "cohort": "EXPLORATORY",
+    "ordinaryOrAdversarial": "EXPLORATORY",
+    "tags": [
+      "EXPLORATORY_LANGUAGE"
+    ],
+    "split": "EXPLORATORY_ONLY",
+    "modelInput": {
+      "query": "pari chowk jaana hai campus se",
+      "context": {
+        "clock": "2026-10-04T12:00:00+05:30",
+        "timeZone": "Asia/Kolkata",
+        "capabilityVersion": "ride-search-s4",
+        "activeField": null
+      }
+    },
+    "truth": {
+      "status": "PROPOSED",
+      "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+      "reviewerMetadata": null,
+      "disagreementResolved": false,
+      "derivation": "JUDGMENT_REVIEW_REQUIRED",
+      "reviewReasons": [
+        "EXPLORATORY_LANGUAGE_NOT_FROZEN"
+      ],
+      "unresolvedPolicies": [
+        "EXPLORATORY_LANGUAGE"
+      ],
+      "expected": {
+        "queryType": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "complexity": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "pickupSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "dropSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "vehicle": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "timingMode": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "date": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "time": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "passengers": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "flags": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "unsupportedRequests": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "missingFields": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "ambiguities": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "fallbackExpected": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "routing": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        }
+      }
+    },
+    "evaluationDisposition": "EXPLORATORY_UNSCORED"
+  },
+  {
+    "id": "exploratory-003",
+    "familyId": "exploratory-2",
+    "templateFamily": "exploratory-2",
+    "category": "exploratory-hindi-hinglish",
+    "cohort": "EXPLORATORY",
+    "ordinaryOrAdversarial": "EXPLORATORY",
+    "tags": [
+      "EXPLORATORY_LANGUAGE"
+    ],
+    "split": "EXPLORATORY_ONLY",
+    "modelInput": {
+      "query": "metro se hostel kal",
+      "context": {
+        "clock": "2026-10-04T12:00:00+05:30",
+        "timeZone": "Asia/Kolkata",
+        "capabilityVersion": "ride-search-s4",
+        "activeField": null
+      }
+    },
+    "truth": {
+      "status": "PROPOSED",
+      "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+      "reviewerMetadata": null,
+      "disagreementResolved": false,
+      "derivation": "JUDGMENT_REVIEW_REQUIRED",
+      "reviewReasons": [
+        "EXPLORATORY_LANGUAGE_NOT_FROZEN"
+      ],
+      "unresolvedPolicies": [
+        "EXPLORATORY_LANGUAGE"
+      ],
+      "expected": {
+        "queryType": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "complexity": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "pickupSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "dropSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "vehicle": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "timingMode": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "date": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "time": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "passengers": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "flags": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "unsupportedRequests": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "missingFields": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "ambiguities": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "fallbackExpected": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "routing": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        }
+      }
+    },
+    "evaluationDisposition": "EXPLORATORY_UNSCORED"
+  },
+  {
+    "id": "exploratory-004",
+    "familyId": "exploratory-3",
+    "templateFamily": "exploratory-3",
+    "category": "exploratory-hindi-hinglish",
+    "cohort": "EXPLORATORY",
+    "ordinaryOrAdversarial": "EXPLORATORY",
+    "tags": [
+      "EXPLORATORY_LANGUAGE"
+    ],
+    "split": "EXPLORATORY_ONLY",
+    "modelInput": {
+      "query": "airport jaana hai subah",
+      "context": {
+        "clock": "2026-10-04T12:00:00+05:30",
+        "timeZone": "Asia/Kolkata",
+        "capabilityVersion": "ride-search-s4",
+        "activeField": null
+      }
+    },
+    "truth": {
+      "status": "PROPOSED",
+      "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+      "reviewerMetadata": null,
+      "disagreementResolved": false,
+      "derivation": "JUDGMENT_REVIEW_REQUIRED",
+      "reviewReasons": [
+        "EXPLORATORY_LANGUAGE_NOT_FROZEN"
+      ],
+      "unresolvedPolicies": [
+        "EXPLORATORY_LANGUAGE"
+      ],
+      "expected": {
+        "queryType": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "complexity": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "pickupSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "dropSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "vehicle": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "timingMode": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "date": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "time": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "passengers": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "flags": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "unsupportedRequests": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "missingFields": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "ambiguities": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "fallbackExpected": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "routing": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        }
+      }
+    },
+    "evaluationDisposition": "EXPLORATORY_UNSCORED"
+  },
+  {
+    "id": "exploratory-005",
+    "familyId": "exploratory-4",
+    "templateFamily": "exploratory-4",
+    "category": "exploratory-hindi-hinglish",
+    "cohort": "EXPLORATORY",
+    "ordinaryOrAdversarial": "EXPLORATORY",
+    "tags": [
+      "EXPLORATORY_LANGUAGE"
+    ],
+    "split": "EXPLORATORY_ONLY",
+    "modelInput": {
+      "query": "sector 18 se market abhi",
+      "context": {
+        "clock": "2026-10-04T12:00:00+05:30",
+        "timeZone": "Asia/Kolkata",
+        "capabilityVersion": "ride-search-s4",
+        "activeField": null
+      }
+    },
+    "truth": {
+      "status": "PROPOSED",
+      "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+      "reviewerMetadata": null,
+      "disagreementResolved": false,
+      "derivation": "JUDGMENT_REVIEW_REQUIRED",
+      "reviewReasons": [
+        "EXPLORATORY_LANGUAGE_NOT_FROZEN"
+      ],
+      "unresolvedPolicies": [
+        "EXPLORATORY_LANGUAGE"
+      ],
+      "expected": {
+        "queryType": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "complexity": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "pickupSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "dropSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "vehicle": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "timingMode": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "date": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "time": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "passengers": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "flags": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "unsupportedRequests": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "missingFields": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "ambiguities": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "fallbackExpected": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "routing": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        }
+      }
+    },
+    "evaluationDisposition": "EXPLORATORY_UNSCORED"
+  },
+  {
+    "id": "exploratory-006",
+    "familyId": "exploratory-5",
+    "templateFamily": "exploratory-5",
+    "category": "exploratory-hindi-hinglish",
+    "cohort": "EXPLORATORY",
+    "ordinaryOrAdversarial": "EXPLORATORY",
+    "tags": [
+      "EXPLORATORY_LANGUAGE"
+    ],
+    "split": "EXPLORATORY_ONLY",
+    "modelInput": {
+      "query": "kal 7 baje cab chahiye",
+      "context": {
+        "clock": "2026-10-04T12:00:00+05:30",
+        "timeZone": "Asia/Kolkata",
+        "capabilityVersion": "ride-search-s4",
+        "activeField": null
+      }
+    },
+    "truth": {
+      "status": "PROPOSED",
+      "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+      "reviewerMetadata": null,
+      "disagreementResolved": false,
+      "derivation": "JUDGMENT_REVIEW_REQUIRED",
+      "reviewReasons": [
+        "EXPLORATORY_LANGUAGE_NOT_FROZEN"
+      ],
+      "unresolvedPolicies": [
+        "EXPLORATORY_LANGUAGE"
+      ],
+      "expected": {
+        "queryType": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "complexity": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "pickupSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "dropSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "vehicle": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "timingMode": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "date": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "time": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "passengers": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "flags": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "unsupportedRequests": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "missingFields": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "ambiguities": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "fallbackExpected": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "routing": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        }
+      }
+    },
+    "evaluationDisposition": "EXPLORATORY_UNSCORED"
+  },
+  {
+    "id": "exploratory-007",
+    "familyId": "exploratory-6",
+    "templateFamily": "exploratory-6",
+    "category": "exploratory-hindi-hinglish",
+    "cohort": "EXPLORATORY",
+    "ordinaryOrAdversarial": "EXPLORATORY",
+    "tags": [
+      "EXPLORATORY_LANGUAGE"
+    ],
+    "split": "EXPLORATORY_ONLY",
+    "modelInput": {
+      "query": "suv chahiye par sedan nahi",
+      "context": {
+        "clock": "2026-10-04T12:00:00+05:30",
+        "timeZone": "Asia/Kolkata",
+        "capabilityVersion": "ride-search-s4",
+        "activeField": null
+      }
+    },
+    "truth": {
+      "status": "PROPOSED",
+      "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+      "reviewerMetadata": null,
+      "disagreementResolved": false,
+      "derivation": "JUDGMENT_REVIEW_REQUIRED",
+      "reviewReasons": [
+        "EXPLORATORY_LANGUAGE_NOT_FROZEN"
+      ],
+      "unresolvedPolicies": [
+        "EXPLORATORY_LANGUAGE"
+      ],
+      "expected": {
+        "queryType": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "complexity": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "pickupSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "dropSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "vehicle": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "timingMode": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "date": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "time": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "passengers": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "flags": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "unsupportedRequests": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "missingFields": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "ambiguities": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "fallbackExpected": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "routing": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        }
+      }
+    },
+    "evaluationDisposition": "EXPLORATORY_UNSCORED"
+  },
+  {
+    "id": "exploratory-008",
+    "familyId": "exploratory-7",
+    "templateFamily": "exploratory-7",
+    "category": "exploratory-hindi-hinglish",
+    "cohort": "EXPLORATORY",
+    "ordinaryOrAdversarial": "EXPLORATORY",
+    "tags": [
+      "EXPLORATORY_LANGUAGE"
+    ],
+    "split": "EXPLORATORY_ONLY",
+    "modelInput": {
+      "query": "station se lakeview hostel",
+      "context": {
+        "clock": "2026-10-04T12:00:00+05:30",
+        "timeZone": "Asia/Kolkata",
+        "capabilityVersion": "ride-search-s4",
+        "activeField": null
+      }
+    },
+    "truth": {
+      "status": "PROPOSED",
+      "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+      "reviewerMetadata": null,
+      "disagreementResolved": false,
+      "derivation": "JUDGMENT_REVIEW_REQUIRED",
+      "reviewReasons": [
+        "EXPLORATORY_LANGUAGE_NOT_FROZEN"
+      ],
+      "unresolvedPolicies": [
+        "EXPLORATORY_LANGUAGE"
+      ],
+      "expected": {
+        "queryType": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "complexity": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "pickupSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "dropSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "vehicle": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "timingMode": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "date": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "time": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "passengers": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "flags": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "unsupportedRequests": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "missingFields": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "ambiguities": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "fallbackExpected": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "routing": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        }
+      }
+    },
+    "evaluationDisposition": "EXPLORATORY_UNSCORED"
+  },
+  {
+    "id": "exploratory-009",
+    "familyId": "exploratory-0",
+    "templateFamily": "exploratory-0",
+    "category": "exploratory-hindi-hinglish",
+    "cohort": "EXPLORATORY",
+    "ordinaryOrAdversarial": "EXPLORATORY",
+    "tags": [
+      "EXPLORATORY_LANGUAGE"
+    ],
+    "split": "EXPLORATORY_ONLY",
+    "modelInput": {
+      "query": "campus se museum road via market",
+      "context": {
+        "clock": "2026-10-04T12:00:00+05:30",
+        "timeZone": "Asia/Kolkata",
+        "capabilityVersion": "ride-search-s4",
+        "activeField": null
+      }
+    },
+    "truth": {
+      "status": "PROPOSED",
+      "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+      "reviewerMetadata": null,
+      "disagreementResolved": false,
+      "derivation": "JUDGMENT_REVIEW_REQUIRED",
+      "reviewReasons": [
+        "EXPLORATORY_LANGUAGE_NOT_FROZEN"
+      ],
+      "unresolvedPolicies": [
+        "EXPLORATORY_LANGUAGE"
+      ],
+      "expected": {
+        "queryType": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "complexity": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "pickupSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "dropSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "vehicle": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "timingMode": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "date": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "time": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "passengers": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "flags": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "unsupportedRequests": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "missingFields": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "ambiguities": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "fallbackExpected": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "routing": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        }
+      }
+    },
+    "evaluationDisposition": "EXPLORATORY_UNSCORED"
+  },
+  {
+    "id": "exploratory-010",
+    "familyId": "exploratory-1",
+    "templateFamily": "exploratory-1",
+    "category": "exploratory-hindi-hinglish",
+    "cohort": "EXPLORATORY",
+    "ordinaryOrAdversarial": "EXPLORATORY",
+    "tags": [
+      "EXPLORATORY_LANGUAGE"
+    ],
+    "split": "EXPLORATORY_ONLY",
+    "modelInput": {
+      "query": "return cab delta 2 se",
+      "context": {
+        "clock": "2026-10-04T12:00:00+05:30",
+        "timeZone": "Asia/Kolkata",
+        "capabilityVersion": "ride-search-s4",
+        "activeField": null
+      }
+    },
+    "truth": {
+      "status": "PROPOSED",
+      "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+      "reviewerMetadata": null,
+      "disagreementResolved": false,
+      "derivation": "JUDGMENT_REVIEW_REQUIRED",
+      "reviewReasons": [
+        "EXPLORATORY_LANGUAGE_NOT_FROZEN"
+      ],
+      "unresolvedPolicies": [
+        "EXPLORATORY_LANGUAGE"
+      ],
+      "expected": {
+        "queryType": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "complexity": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "pickupSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "dropSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "vehicle": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "timingMode": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "date": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "time": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "passengers": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "flags": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "unsupportedRequests": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "missingFields": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "ambiguities": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "fallbackExpected": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "routing": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        }
+      }
+    },
+    "evaluationDisposition": "EXPLORATORY_UNSCORED"
+  },
+  {
+    "id": "exploratory-011",
+    "familyId": "exploratory-2",
+    "templateFamily": "exploratory-2",
+    "category": "exploratory-hindi-hinglish",
+    "cohort": "EXPLORATORY",
+    "ordinaryOrAdversarial": "EXPLORATORY",
+    "tags": [
+      "EXPLORATORY_LANGUAGE"
+    ],
+    "split": "EXPLORATORY_ONLY",
+    "modelInput": {
+      "query": "rent ke liye gaadi chahiye",
+      "context": {
+        "clock": "2026-10-04T12:00:00+05:30",
+        "timeZone": "Asia/Kolkata",
+        "capabilityVersion": "ride-search-s4",
+        "activeField": null
+      }
+    },
+    "truth": {
+      "status": "PROPOSED",
+      "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+      "reviewerMetadata": null,
+      "disagreementResolved": false,
+      "derivation": "JUDGMENT_REVIEW_REQUIRED",
+      "reviewReasons": [
+        "EXPLORATORY_LANGUAGE_NOT_FROZEN"
+      ],
+      "unresolvedPolicies": [
+        "EXPLORATORY_LANGUAGE"
+      ],
+      "expected": {
+        "queryType": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "complexity": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "pickupSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "dropSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "vehicle": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "timingMode": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "date": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "time": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "passengers": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "flags": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "unsupportedRequests": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "missingFields": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "ambiguities": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "fallbackExpected": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "routing": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        }
+      }
+    },
+    "evaluationDisposition": "EXPLORATORY_UNSCORED"
+  },
+  {
+    "id": "exploratory-012",
+    "familyId": "exploratory-3",
+    "templateFamily": "exploratory-3",
+    "category": "exploratory-hindi-hinglish",
+    "cohort": "EXPLORATORY",
+    "ordinaryOrAdversarial": "EXPLORATORY",
+    "tags": [
+      "EXPLORATORY_LANGUAGE"
+    ],
+    "split": "EXPLORATORY_ONLY",
+    "modelInput": {
+      "query": "ac cab mile to",
+      "context": {
+        "clock": "2026-10-04T12:00:00+05:30",
+        "timeZone": "Asia/Kolkata",
+        "capabilityVersion": "ride-search-s4",
+        "activeField": null
+      }
+    },
+    "truth": {
+      "status": "PROPOSED",
+      "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+      "reviewerMetadata": null,
+      "disagreementResolved": false,
+      "derivation": "JUDGMENT_REVIEW_REQUIRED",
+      "reviewReasons": [
+        "EXPLORATORY_LANGUAGE_NOT_FROZEN"
+      ],
+      "unresolvedPolicies": [
+        "EXPLORATORY_LANGUAGE"
+      ],
+      "expected": {
+        "queryType": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "complexity": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "pickupSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "dropSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "vehicle": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "timingMode": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "date": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "time": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "passengers": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "flags": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "unsupportedRequests": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "missingFields": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "ambiguities": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "fallbackExpected": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "routing": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        }
+      }
+    },
+    "evaluationDisposition": "EXPLORATORY_UNSCORED"
+  },
+  {
+    "id": "exploratory-013",
+    "familyId": "exploratory-4",
+    "templateFamily": "exploratory-4",
+    "category": "exploratory-hindi-hinglish",
+    "cohort": "EXPLORATORY",
+    "ordinaryOrAdversarial": "EXPLORATORY",
+    "tags": [
+      "EXPLORATORY_LANGUAGE"
+    ],
+    "split": "EXPLORATORY_ONLY",
+    "modelInput": {
+      "query": "hostel se gate 3 abhi",
+      "context": {
+        "clock": "2026-10-04T12:00:00+05:30",
+        "timeZone": "Asia/Kolkata",
+        "capabilityVersion": "ride-search-s4",
+        "activeField": null
+      }
+    },
+    "truth": {
+      "status": "PROPOSED",
+      "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+      "reviewerMetadata": null,
+      "disagreementResolved": false,
+      "derivation": "JUDGMENT_REVIEW_REQUIRED",
+      "reviewReasons": [
+        "EXPLORATORY_LANGUAGE_NOT_FROZEN"
+      ],
+      "unresolvedPolicies": [
+        "EXPLORATORY_LANGUAGE"
+      ],
+      "expected": {
+        "queryType": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "complexity": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "pickupSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "dropSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "vehicle": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "timingMode": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "date": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "time": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "passengers": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "flags": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "unsupportedRequests": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "missingFields": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "ambiguities": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "fallbackExpected": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "routing": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        }
+      }
+    },
+    "evaluationDisposition": "EXPLORATORY_UNSCORED"
+  },
+  {
+    "id": "exploratory-014",
+    "familyId": "exploratory-5",
+    "templateFamily": "exploratory-5",
+    "category": "exploratory-hindi-hinglish",
+    "cohort": "EXPLORATORY",
+    "ordinaryOrAdversarial": "EXPLORATORY",
+    "tags": [
+      "EXPLORATORY_LANGUAGE"
+    ],
+    "split": "EXPLORATORY_ONLY",
+    "modelInput": {
+      "query": "kal ya parso morning cab",
+      "context": {
+        "clock": "2026-10-04T12:00:00+05:30",
+        "timeZone": "Asia/Kolkata",
+        "capabilityVersion": "ride-search-s4",
+        "activeField": null
+      }
+    },
+    "truth": {
+      "status": "PROPOSED",
+      "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+      "reviewerMetadata": null,
+      "disagreementResolved": false,
+      "derivation": "JUDGMENT_REVIEW_REQUIRED",
+      "reviewReasons": [
+        "EXPLORATORY_LANGUAGE_NOT_FROZEN"
+      ],
+      "unresolvedPolicies": [
+        "EXPLORATORY_LANGUAGE"
+      ],
+      "expected": {
+        "queryType": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "complexity": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "pickupSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "dropSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "vehicle": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "timingMode": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "date": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "time": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "passengers": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "flags": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "unsupportedRequests": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "missingFields": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "ambiguities": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "fallbackExpected": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "routing": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        }
+      }
+    },
+    "evaluationDisposition": "EXPLORATORY_UNSCORED"
+  },
+  {
+    "id": "exploratory-015",
+    "familyId": "exploratory-6",
+    "templateFamily": "exploratory-6",
+    "category": "exploratory-hindi-hinglish",
+    "cohort": "EXPLORATORY",
+    "ordinaryOrAdversarial": "EXPLORATORY",
+    "tags": [
+      "EXPLORATORY_LANGUAGE"
+    ],
+    "split": "EXPLORATORY_ONLY",
+    "modelInput": {
+      "query": "north library se central station",
+      "context": {
+        "clock": "2026-10-04T12:00:00+05:30",
+        "timeZone": "Asia/Kolkata",
+        "capabilityVersion": "ride-search-s4",
+        "activeField": null
+      }
+    },
+    "truth": {
+      "status": "PROPOSED",
+      "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+      "reviewerMetadata": null,
+      "disagreementResolved": false,
+      "derivation": "JUDGMENT_REVIEW_REQUIRED",
+      "reviewReasons": [
+        "EXPLORATORY_LANGUAGE_NOT_FROZEN"
+      ],
+      "unresolvedPolicies": [
+        "EXPLORATORY_LANGUAGE"
+      ],
+      "expected": {
+        "queryType": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "complexity": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "pickupSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "dropSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "vehicle": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "timingMode": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "date": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "time": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "passengers": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "flags": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "unsupportedRequests": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "missingFields": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "ambiguities": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "fallbackExpected": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "routing": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        }
+      }
+    },
+    "evaluationDisposition": "EXPLORATORY_UNSCORED"
+  },
+  {
+    "id": "exploratory-016",
+    "familyId": "exploratory-7",
+    "templateFamily": "exploratory-7",
+    "category": "exploratory-hindi-hinglish",
+    "cohort": "EXPLORATORY",
+    "ordinaryOrAdversarial": "EXPLORATORY",
+    "tags": [
+      "EXPLORATORY_LANGUAGE"
+    ],
+    "split": "EXPLORATORY_ONLY",
+    "modelInput": {
+      "query": "airport se campus 8 pm",
+      "context": {
+        "clock": "2026-10-04T12:00:00+05:30",
+        "timeZone": "Asia/Kolkata",
+        "capabilityVersion": "ride-search-s4",
+        "activeField": null
+      }
+    },
+    "truth": {
+      "status": "PROPOSED",
+      "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+      "reviewerMetadata": null,
+      "disagreementResolved": false,
+      "derivation": "JUDGMENT_REVIEW_REQUIRED",
+      "reviewReasons": [
+        "EXPLORATORY_LANGUAGE_NOT_FROZEN"
+      ],
+      "unresolvedPolicies": [
+        "EXPLORATORY_LANGUAGE"
+      ],
+      "expected": {
+        "queryType": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "complexity": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "pickupSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "dropSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "vehicle": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "timingMode": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "date": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "time": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "passengers": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "flags": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "unsupportedRequests": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "missingFields": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "ambiguities": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "fallbackExpected": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "routing": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        }
+      }
+    },
+    "evaluationDisposition": "EXPLORATORY_UNSCORED"
+  },
+  {
+    "id": "exploratory-017",
+    "familyId": "exploratory-0",
+    "templateFamily": "exploratory-0",
+    "category": "exploratory-hindi-hinglish",
+    "cohort": "EXPLORATORY",
+    "ordinaryOrAdversarial": "EXPLORATORY",
+    "tags": [
+      "EXPLORATORY_LANGUAGE"
+    ],
+    "split": "EXPLORATORY_ONLY",
+    "modelInput": {
+      "query": "sector 6 se sector 6 nahi",
+      "context": {
+        "clock": "2026-10-04T12:00:00+05:30",
+        "timeZone": "Asia/Kolkata",
+        "capabilityVersion": "ride-search-s4",
+        "activeField": null
+      }
+    },
+    "truth": {
+      "status": "PROPOSED",
+      "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+      "reviewerMetadata": null,
+      "disagreementResolved": false,
+      "derivation": "JUDGMENT_REVIEW_REQUIRED",
+      "reviewReasons": [
+        "EXPLORATORY_LANGUAGE_NOT_FROZEN"
+      ],
+      "unresolvedPolicies": [
+        "EXPLORATORY_LANGUAGE"
+      ],
+      "expected": {
+        "queryType": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "complexity": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "pickupSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "dropSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "vehicle": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "timingMode": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "date": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "time": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "passengers": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "flags": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "unsupportedRequests": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "missingFields": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "ambiguities": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "fallbackExpected": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "routing": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        }
+      }
+    },
+    "evaluationDisposition": "EXPLORATORY_UNSCORED"
+  },
+  {
+    "id": "exploratory-018",
+    "familyId": "exploratory-1",
+    "templateFamily": "exploratory-1",
+    "category": "exploratory-hindi-hinglish",
+    "cohort": "EXPLORATORY",
+    "ordinaryOrAdversarial": "EXPLORATORY",
+    "tags": [
+      "EXPLORATORY_LANGUAGE"
+    ],
+    "split": "EXPLORATORY_ONLY",
+    "modelInput": {
+      "query": "cab book karni hai",
+      "context": {
+        "clock": "2026-10-04T12:00:00+05:30",
+        "timeZone": "Asia/Kolkata",
+        "capabilityVersion": "ride-search-s4",
+        "activeField": null
+      }
+    },
+    "truth": {
+      "status": "PROPOSED",
+      "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+      "reviewerMetadata": null,
+      "disagreementResolved": false,
+      "derivation": "JUDGMENT_REVIEW_REQUIRED",
+      "reviewReasons": [
+        "EXPLORATORY_LANGUAGE_NOT_FROZEN"
+      ],
+      "unresolvedPolicies": [
+        "EXPLORATORY_LANGUAGE"
+      ],
+      "expected": {
+        "queryType": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "complexity": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "pickupSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "dropSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "vehicle": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "timingMode": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "date": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "time": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "passengers": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "flags": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "unsupportedRequests": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "missingFields": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "ambiguities": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "fallbackExpected": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "routing": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        }
+      }
+    },
+    "evaluationDisposition": "EXPLORATORY_UNSCORED"
+  },
+  {
+    "id": "exploratory-019",
+    "familyId": "exploratory-2",
+    "templateFamily": "exploratory-2",
+    "category": "exploratory-hindi-hinglish",
+    "cohort": "EXPLORATORY",
+    "ordinaryOrAdversarial": "EXPLORATORY",
+    "tags": [
+      "EXPLORATORY_LANGUAGE"
+    ],
+    "split": "EXPLORATORY_ONLY",
+    "modelInput": {
+      "query": "abhi nahi kal ride",
+      "context": {
+        "clock": "2026-10-04T12:00:00+05:30",
+        "timeZone": "Asia/Kolkata",
+        "capabilityVersion": "ride-search-s4",
+        "activeField": null
+      }
+    },
+    "truth": {
+      "status": "PROPOSED",
+      "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+      "reviewerMetadata": null,
+      "disagreementResolved": false,
+      "derivation": "JUDGMENT_REVIEW_REQUIRED",
+      "reviewReasons": [
+        "EXPLORATORY_LANGUAGE_NOT_FROZEN"
+      ],
+      "unresolvedPolicies": [
+        "EXPLORATORY_LANGUAGE"
+      ],
+      "expected": {
+        "queryType": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "complexity": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "pickupSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "dropSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "vehicle": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "timingMode": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "date": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "time": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "passengers": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "flags": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "unsupportedRequests": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "missingFields": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "ambiguities": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "fallbackExpected": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "routing": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        }
+      }
+    },
+    "evaluationDisposition": "EXPLORATORY_UNSCORED"
+  },
+  {
+    "id": "exploratory-020",
+    "familyId": "exploratory-3",
+    "templateFamily": "exploratory-3",
+    "category": "exploratory-hindi-hinglish",
+    "cohort": "EXPLORATORY",
+    "ordinaryOrAdversarial": "EXPLORATORY",
+    "tags": [
+      "EXPLORATORY_LANGUAGE"
+    ],
+    "split": "EXPLORATORY_ONLY",
+    "modelInput": {
+      "query": "mall se clinic jaana hai",
+      "context": {
+        "clock": "2026-10-04T12:00:00+05:30",
+        "timeZone": "Asia/Kolkata",
+        "capabilityVersion": "ride-search-s4",
+        "activeField": null
+      }
+    },
+    "truth": {
+      "status": "PROPOSED",
+      "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+      "reviewerMetadata": null,
+      "disagreementResolved": false,
+      "derivation": "JUDGMENT_REVIEW_REQUIRED",
+      "reviewReasons": [
+        "EXPLORATORY_LANGUAGE_NOT_FROZEN"
+      ],
+      "unresolvedPolicies": [
+        "EXPLORATORY_LANGUAGE"
+      ],
+      "expected": {
+        "queryType": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "complexity": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "pickupSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "dropSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "vehicle": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "timingMode": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "date": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "time": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "passengers": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "flags": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "unsupportedRequests": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "missingFields": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "ambiguities": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "fallbackExpected": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "routing": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        }
+      }
+    },
+    "evaluationDisposition": "EXPLORATORY_UNSCORED"
+  },
+  {
+    "id": "exploratory-021",
+    "familyId": "exploratory-4",
+    "templateFamily": "exploratory-4",
+    "category": "exploratory-hindi-hinglish",
+    "cohort": "EXPLORATORY",
+    "ordinaryOrAdversarial": "EXPLORATORY",
+    "tags": [
+      "EXPLORATORY_LANGUAGE"
+    ],
+    "split": "EXPLORATORY_ONLY",
+    "modelInput": {
+      "query": "परी चौक",
+      "context": {
+        "clock": "2026-10-04T12:00:00+05:30",
+        "timeZone": "Asia/Kolkata",
+        "capabilityVersion": "ride-search-s4",
+        "activeField": null
+      }
+    },
+    "truth": {
+      "status": "PROPOSED",
+      "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+      "reviewerMetadata": null,
+      "disagreementResolved": false,
+      "derivation": "JUDGMENT_REVIEW_REQUIRED",
+      "reviewReasons": [
+        "EXPLORATORY_LANGUAGE_NOT_FROZEN"
+      ],
+      "unresolvedPolicies": [
+        "EXPLORATORY_LANGUAGE"
+      ],
+      "expected": {
+        "queryType": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "complexity": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "pickupSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "dropSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "vehicle": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "timingMode": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "date": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "time": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "passengers": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "flags": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "unsupportedRequests": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "missingFields": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "ambiguities": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "fallbackExpected": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "routing": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        }
+      }
+    },
+    "evaluationDisposition": "EXPLORATORY_UNSCORED"
+  },
+  {
+    "id": "exploratory-022",
+    "familyId": "exploratory-5",
+    "templateFamily": "exploratory-5",
+    "category": "exploratory-hindi-hinglish",
+    "cohort": "EXPLORATORY",
+    "ordinaryOrAdversarial": "EXPLORATORY",
+    "tags": [
+      "EXPLORATORY_LANGUAGE"
+    ],
+    "split": "EXPLORATORY_ONLY",
+    "modelInput": {
+      "query": "कल शाम छह बजे कॉलेज से एयरपोर्ट",
+      "context": {
+        "clock": "2026-10-04T12:00:00+05:30",
+        "timeZone": "Asia/Kolkata",
+        "capabilityVersion": "ride-search-s4",
+        "activeField": null
+      }
+    },
+    "truth": {
+      "status": "PROPOSED",
+      "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+      "reviewerMetadata": null,
+      "disagreementResolved": false,
+      "derivation": "JUDGMENT_REVIEW_REQUIRED",
+      "reviewReasons": [
+        "EXPLORATORY_LANGUAGE_NOT_FROZEN"
+      ],
+      "unresolvedPolicies": [
+        "EXPLORATORY_LANGUAGE"
+      ],
+      "expected": {
+        "queryType": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "complexity": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "pickupSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "dropSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "vehicle": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "timingMode": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "date": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "time": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "passengers": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "flags": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "unsupportedRequests": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "missingFields": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "ambiguities": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "fallbackExpected": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "routing": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        }
+      }
+    },
+    "evaluationDisposition": "EXPLORATORY_UNSCORED"
+  },
+  {
+    "id": "exploratory-023",
+    "familyId": "exploratory-6",
+    "templateFamily": "exploratory-6",
+    "category": "exploratory-hindi-hinglish",
+    "cohort": "EXPLORATORY",
+    "ordinaryOrAdversarial": "EXPLORATORY",
+    "tags": [
+      "EXPLORATORY_LANGUAGE"
+    ],
+    "split": "EXPLORATORY_ONLY",
+    "modelInput": {
+      "query": "अभी कैब चाहिए",
+      "context": {
+        "clock": "2026-10-04T12:00:00+05:30",
+        "timeZone": "Asia/Kolkata",
+        "capabilityVersion": "ride-search-s4",
+        "activeField": null
+      }
+    },
+    "truth": {
+      "status": "PROPOSED",
+      "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+      "reviewerMetadata": null,
+      "disagreementResolved": false,
+      "derivation": "JUDGMENT_REVIEW_REQUIRED",
+      "reviewReasons": [
+        "EXPLORATORY_LANGUAGE_NOT_FROZEN"
+      ],
+      "unresolvedPolicies": [
+        "EXPLORATORY_LANGUAGE"
+      ],
+      "expected": {
+        "queryType": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "complexity": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "pickupSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "dropSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "vehicle": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "timingMode": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "date": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "time": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "passengers": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "flags": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "unsupportedRequests": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "missingFields": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "ambiguities": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "fallbackExpected": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "routing": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        }
+      }
+    },
+    "evaluationDisposition": "EXPLORATORY_UNSCORED"
+  },
+  {
+    "id": "exploratory-024",
+    "familyId": "exploratory-7",
+    "templateFamily": "exploratory-7",
+    "category": "exploratory-hindi-hinglish",
+    "cohort": "EXPLORATORY",
+    "ordinaryOrAdversarial": "EXPLORATORY",
+    "tags": [
+      "EXPLORATORY_LANGUAGE"
+    ],
+    "split": "EXPLORATORY_ONLY",
+    "modelInput": {
+      "query": "सेडान मत भेजना",
+      "context": {
+        "clock": "2026-10-04T12:00:00+05:30",
+        "timeZone": "Asia/Kolkata",
+        "capabilityVersion": "ride-search-s4",
+        "activeField": null
+      }
+    },
+    "truth": {
+      "status": "PROPOSED",
+      "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+      "reviewerMetadata": null,
+      "disagreementResolved": false,
+      "derivation": "JUDGMENT_REVIEW_REQUIRED",
+      "reviewReasons": [
+        "EXPLORATORY_LANGUAGE_NOT_FROZEN"
+      ],
+      "unresolvedPolicies": [
+        "EXPLORATORY_LANGUAGE"
+      ],
+      "expected": {
+        "queryType": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "complexity": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "pickupSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "dropSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "vehicle": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "timingMode": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "date": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "time": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "passengers": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "flags": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "unsupportedRequests": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "missingFields": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "ambiguities": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "fallbackExpected": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "routing": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        }
+      }
+    },
+    "evaluationDisposition": "EXPLORATORY_UNSCORED"
+  },
+  {
+    "id": "exploratory-025",
+    "familyId": "exploratory-0",
+    "templateFamily": "exploratory-0",
+    "category": "exploratory-hindi-hinglish",
+    "cohort": "EXPLORATORY",
+    "ordinaryOrAdversarial": "EXPLORATORY",
+    "tags": [
+      "EXPLORATORY_LANGUAGE"
+    ],
+    "split": "EXPLORATORY_ONLY",
+    "modelInput": {
+      "query": "डेल्टा 1 से डेल्टा 2",
+      "context": {
+        "clock": "2026-10-04T12:00:00+05:30",
+        "timeZone": "Asia/Kolkata",
+        "capabilityVersion": "ride-search-s4",
+        "activeField": null
+      }
+    },
+    "truth": {
+      "status": "PROPOSED",
+      "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+      "reviewerMetadata": null,
+      "disagreementResolved": false,
+      "derivation": "JUDGMENT_REVIEW_REQUIRED",
+      "reviewReasons": [
+        "EXPLORATORY_LANGUAGE_NOT_FROZEN"
+      ],
+      "unresolvedPolicies": [
+        "EXPLORATORY_LANGUAGE"
+      ],
+      "expected": {
+        "queryType": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "complexity": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "pickupSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "dropSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "vehicle": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "timingMode": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "date": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "time": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "passengers": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "flags": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "unsupportedRequests": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "missingFields": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "ambiguities": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "fallbackExpected": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "routing": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        }
+      }
+    },
+    "evaluationDisposition": "EXPLORATORY_UNSCORED"
+  },
+  {
+    "id": "exploratory-026",
+    "familyId": "exploratory-1",
+    "templateFamily": "exploratory-1",
+    "category": "exploratory-hindi-hinglish",
+    "cohort": "EXPLORATORY",
+    "ordinaryOrAdversarial": "EXPLORATORY",
+    "tags": [
+      "EXPLORATORY_LANGUAGE"
+    ],
+    "split": "EXPLORATORY_ONLY",
+    "modelInput": {
+      "query": "सुबह जाना है",
+      "context": {
+        "clock": "2026-10-04T12:00:00+05:30",
+        "timeZone": "Asia/Kolkata",
+        "capabilityVersion": "ride-search-s4",
+        "activeField": null
+      }
+    },
+    "truth": {
+      "status": "PROPOSED",
+      "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+      "reviewerMetadata": null,
+      "disagreementResolved": false,
+      "derivation": "JUDGMENT_REVIEW_REQUIRED",
+      "reviewReasons": [
+        "EXPLORATORY_LANGUAGE_NOT_FROZEN"
+      ],
+      "unresolvedPolicies": [
+        "EXPLORATORY_LANGUAGE"
+      ],
+      "expected": {
+        "queryType": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "complexity": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "pickupSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "dropSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "vehicle": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "timingMode": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "date": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "time": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "passengers": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "flags": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "unsupportedRequests": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "missingFields": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "ambiguities": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "fallbackExpected": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "routing": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        }
+      }
+    },
+    "evaluationDisposition": "EXPLORATORY_UNSCORED"
+  },
+  {
+    "id": "exploratory-027",
+    "familyId": "exploratory-2",
+    "templateFamily": "exploratory-2",
+    "category": "exploratory-hindi-hinglish",
+    "cohort": "EXPLORATORY",
+    "ordinaryOrAdversarial": "EXPLORATORY",
+    "tags": [
+      "EXPLORATORY_LANGUAGE"
+    ],
+    "split": "EXPLORATORY_ONLY",
+    "modelInput": {
+      "query": "तीन लोग हैं",
+      "context": {
+        "clock": "2026-10-04T12:00:00+05:30",
+        "timeZone": "Asia/Kolkata",
+        "capabilityVersion": "ride-search-s4",
+        "activeField": null
+      }
+    },
+    "truth": {
+      "status": "PROPOSED",
+      "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+      "reviewerMetadata": null,
+      "disagreementResolved": false,
+      "derivation": "JUDGMENT_REVIEW_REQUIRED",
+      "reviewReasons": [
+        "EXPLORATORY_LANGUAGE_NOT_FROZEN"
+      ],
+      "unresolvedPolicies": [
+        "EXPLORATORY_LANGUAGE"
+      ],
+      "expected": {
+        "queryType": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "complexity": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "pickupSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "dropSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "vehicle": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "timingMode": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "date": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "time": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "passengers": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "flags": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "unsupportedRequests": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "missingFields": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "ambiguities": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "fallbackExpected": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "routing": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        }
+      }
+    },
+    "evaluationDisposition": "EXPLORATORY_UNSCORED"
+  },
+  {
+    "id": "exploratory-028",
+    "familyId": "exploratory-3",
+    "templateFamily": "exploratory-3",
+    "category": "exploratory-hindi-hinglish",
+    "cohort": "EXPLORATORY",
+    "ordinaryOrAdversarial": "EXPLORATORY",
+    "tags": [
+      "EXPLORATORY_LANGUAGE"
+    ],
+    "split": "EXPLORATORY_ONLY",
+    "modelInput": {
+      "query": "अगले शुक्रवार कैब",
+      "context": {
+        "clock": "2026-10-04T12:00:00+05:30",
+        "timeZone": "Asia/Kolkata",
+        "capabilityVersion": "ride-search-s4",
+        "activeField": null
+      }
+    },
+    "truth": {
+      "status": "PROPOSED",
+      "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+      "reviewerMetadata": null,
+      "disagreementResolved": false,
+      "derivation": "JUDGMENT_REVIEW_REQUIRED",
+      "reviewReasons": [
+        "EXPLORATORY_LANGUAGE_NOT_FROZEN"
+      ],
+      "unresolvedPolicies": [
+        "EXPLORATORY_LANGUAGE"
+      ],
+      "expected": {
+        "queryType": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "complexity": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "pickupSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "dropSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "vehicle": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "timingMode": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "date": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "time": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "passengers": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "flags": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "unsupportedRequests": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "missingFields": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "ambiguities": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "fallbackExpected": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "routing": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        }
+      }
+    },
+    "evaluationDisposition": "EXPLORATORY_UNSCORED"
+  },
+  {
+    "id": "exploratory-029",
+    "familyId": "exploratory-4",
+    "templateFamily": "exploratory-4",
+    "category": "exploratory-hindi-hinglish",
+    "cohort": "EXPLORATORY",
+    "ordinaryOrAdversarial": "EXPLORATORY",
+    "tags": [
+      "EXPLORATORY_LANGUAGE"
+    ],
+    "split": "EXPLORATORY_ONLY",
+    "modelInput": {
+      "query": "एसी गाड़ी चाहिए",
+      "context": {
+        "clock": "2026-10-04T12:00:00+05:30",
+        "timeZone": "Asia/Kolkata",
+        "capabilityVersion": "ride-search-s4",
+        "activeField": null
+      }
+    },
+    "truth": {
+      "status": "PROPOSED",
+      "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+      "reviewerMetadata": null,
+      "disagreementResolved": false,
+      "derivation": "JUDGMENT_REVIEW_REQUIRED",
+      "reviewReasons": [
+        "EXPLORATORY_LANGUAGE_NOT_FROZEN"
+      ],
+      "unresolvedPolicies": [
+        "EXPLORATORY_LANGUAGE"
+      ],
+      "expected": {
+        "queryType": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "complexity": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "pickupSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "dropSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "vehicle": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "timingMode": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "date": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "time": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "passengers": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "flags": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "unsupportedRequests": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "missingFields": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "ambiguities": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "fallbackExpected": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "routing": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        }
+      }
+    },
+    "evaluationDisposition": "EXPLORATORY_UNSCORED"
+  },
+  {
+    "id": "exploratory-030",
+    "familyId": "exploratory-5",
+    "templateFamily": "exploratory-5",
+    "category": "exploratory-hindi-hinglish",
+    "cohort": "EXPLORATORY",
+    "ordinaryOrAdversarial": "EXPLORATORY",
+    "tags": [
+      "EXPLORATORY_LANGUAGE"
+    ],
+    "split": "EXPLORATORY_ONLY",
+    "modelInput": {
+      "query": "रास्ते में दोस्त को लेना है",
+      "context": {
+        "clock": "2026-10-04T12:00:00+05:30",
+        "timeZone": "Asia/Kolkata",
+        "capabilityVersion": "ride-search-s4",
+        "activeField": null
+      }
+    },
+    "truth": {
+      "status": "PROPOSED",
+      "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+      "reviewerMetadata": null,
+      "disagreementResolved": false,
+      "derivation": "JUDGMENT_REVIEW_REQUIRED",
+      "reviewReasons": [
+        "EXPLORATORY_LANGUAGE_NOT_FROZEN"
+      ],
+      "unresolvedPolicies": [
+        "EXPLORATORY_LANGUAGE"
+      ],
+      "expected": {
+        "queryType": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "complexity": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "pickupSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "dropSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "vehicle": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "timingMode": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "date": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "time": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "passengers": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "flags": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "unsupportedRequests": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "missingFields": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "ambiguities": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "fallbackExpected": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "routing": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        }
+      }
+    },
+    "evaluationDisposition": "EXPLORATORY_UNSCORED"
+  },
+  {
+    "id": "exploratory-031",
+    "familyId": "exploratory-6",
+    "templateFamily": "exploratory-6",
+    "category": "exploratory-hindi-hinglish",
+    "cohort": "EXPLORATORY",
+    "ordinaryOrAdversarial": "EXPLORATORY",
+    "tags": [
+      "EXPLORATORY_LANGUAGE"
+    ],
+    "split": "EXPLORATORY_ONLY",
+    "modelInput": {
+      "query": "any gaadi chalegi",
+      "context": {
+        "clock": "2026-10-04T12:00:00+05:30",
+        "timeZone": "Asia/Kolkata",
+        "capabilityVersion": "ride-search-s4",
+        "activeField": null
+      }
+    },
+    "truth": {
+      "status": "PROPOSED",
+      "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+      "reviewerMetadata": null,
+      "disagreementResolved": false,
+      "derivation": "JUDGMENT_REVIEW_REQUIRED",
+      "reviewReasons": [
+        "EXPLORATORY_LANGUAGE_NOT_FROZEN"
+      ],
+      "unresolvedPolicies": [
+        "EXPLORATORY_LANGUAGE"
+      ],
+      "expected": {
+        "queryType": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "complexity": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "pickupSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "dropSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "vehicle": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "timingMode": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "date": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "time": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "passengers": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "flags": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "unsupportedRequests": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "missingFields": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "ambiguities": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "fallbackExpected": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "routing": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        }
+      }
+    },
+    "evaluationDisposition": "EXPLORATORY_UNSCORED"
+  },
+  {
+    "id": "exploratory-032",
+    "familyId": "exploratory-7",
+    "templateFamily": "exploratory-7",
+    "category": "exploratory-hindi-hinglish",
+    "cohort": "EXPLORATORY",
+    "ordinaryOrAdversarial": "EXPLORATORY",
+    "tags": [
+      "EXPLORATORY_LANGUAGE"
+    ],
+    "split": "EXPLORATORY_ONLY",
+    "modelInput": {
+      "query": "SUV only kal campus se",
+      "context": {
+        "clock": "2026-10-04T12:00:00+05:30",
+        "timeZone": "Asia/Kolkata",
+        "capabilityVersion": "ride-search-s4",
+        "activeField": null
+      }
+    },
+    "truth": {
+      "status": "PROPOSED",
+      "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+      "reviewerMetadata": null,
+      "disagreementResolved": false,
+      "derivation": "JUDGMENT_REVIEW_REQUIRED",
+      "reviewReasons": [
+        "EXPLORATORY_LANGUAGE_NOT_FROZEN"
+      ],
+      "unresolvedPolicies": [
+        "EXPLORATORY_LANGUAGE"
+      ],
+      "expected": {
+        "queryType": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "complexity": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "pickupSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "dropSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "vehicle": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "timingMode": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "date": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "time": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "passengers": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "flags": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "unsupportedRequests": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "missingFields": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "ambiguities": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "fallbackExpected": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "routing": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        }
+      }
+    },
+    "evaluationDisposition": "EXPLORATORY_UNSCORED"
+  },
+  {
+    "id": "exploratory-033",
+    "familyId": "exploratory-0",
+    "templateFamily": "exploratory-0",
+    "category": "exploratory-hindi-hinglish",
+    "cohort": "EXPLORATORY",
+    "ordinaryOrAdversarial": "EXPLORATORY",
+    "tags": [
+      "EXPLORATORY_LANGUAGE"
+    ],
+    "split": "EXPLORATORY_ONLY",
+    "modelInput": {
+      "query": "airport drop chahiye hostel se",
+      "context": {
+        "clock": "2026-10-04T12:00:00+05:30",
+        "timeZone": "Asia/Kolkata",
+        "capabilityVersion": "ride-search-s4",
+        "activeField": null
+      }
+    },
+    "truth": {
+      "status": "PROPOSED",
+      "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+      "reviewerMetadata": null,
+      "disagreementResolved": false,
+      "derivation": "JUDGMENT_REVIEW_REQUIRED",
+      "reviewReasons": [
+        "EXPLORATORY_LANGUAGE_NOT_FROZEN"
+      ],
+      "unresolvedPolicies": [
+        "EXPLORATORY_LANGUAGE"
+      ],
+      "expected": {
+        "queryType": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "complexity": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "pickupSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "dropSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "vehicle": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "timingMode": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "date": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "time": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "passengers": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "flags": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "unsupportedRequests": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "missingFields": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "ambiguities": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "fallbackExpected": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "routing": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        }
+      }
+    },
+    "evaluationDisposition": "EXPLORATORY_UNSCORED"
+  },
+  {
+    "id": "exploratory-034",
+    "familyId": "exploratory-1",
+    "templateFamily": "exploratory-1",
+    "category": "exploratory-hindi-hinglish",
+    "cohort": "EXPLORATORY",
+    "ordinaryOrAdversarial": "EXPLORATORY",
+    "tags": [
+      "EXPLORATORY_LANGUAGE"
+    ],
+    "split": "EXPLORATORY_ONLY",
+    "modelInput": {
+      "query": "5 December ko Delhi jaana hai",
+      "context": {
+        "clock": "2026-10-04T12:00:00+05:30",
+        "timeZone": "Asia/Kolkata",
+        "capabilityVersion": "ride-search-s4",
+        "activeField": null
+      }
+    },
+    "truth": {
+      "status": "PROPOSED",
+      "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+      "reviewerMetadata": null,
+      "disagreementResolved": false,
+      "derivation": "JUDGMENT_REVIEW_REQUIRED",
+      "reviewReasons": [
+        "EXPLORATORY_LANGUAGE_NOT_FROZEN"
+      ],
+      "unresolvedPolicies": [
+        "EXPLORATORY_LANGUAGE"
+      ],
+      "expected": {
+        "queryType": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "complexity": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "pickupSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "dropSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "vehicle": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "timingMode": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "date": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "time": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "passengers": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "flags": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "unsupportedRequests": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "missingFields": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "ambiguities": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "fallbackExpected": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "routing": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        }
+      }
+    },
+    "evaluationDisposition": "EXPLORATORY_UNSCORED"
+  },
+  {
+    "id": "exploratory-035",
+    "familyId": "exploratory-2",
+    "templateFamily": "exploratory-2",
+    "category": "exploratory-hindi-hinglish",
+    "cohort": "EXPLORATORY",
+    "ordinaryOrAdversarial": "EXPLORATORY",
+    "tags": [
+      "EXPLORATORY_LANGUAGE"
+    ],
+    "split": "EXPLORATORY_ONLY",
+    "modelInput": {
+      "query": "next Friday ya Saturday",
+      "context": {
+        "clock": "2026-10-04T12:00:00+05:30",
+        "timeZone": "Asia/Kolkata",
+        "capabilityVersion": "ride-search-s4",
+        "activeField": null
+      }
+    },
+    "truth": {
+      "status": "PROPOSED",
+      "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+      "reviewerMetadata": null,
+      "disagreementResolved": false,
+      "derivation": "JUDGMENT_REVIEW_REQUIRED",
+      "reviewReasons": [
+        "EXPLORATORY_LANGUAGE_NOT_FROZEN"
+      ],
+      "unresolvedPolicies": [
+        "EXPLORATORY_LANGUAGE"
+      ],
+      "expected": {
+        "queryType": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "complexity": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "pickupSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "dropSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "vehicle": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "timingMode": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "date": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "time": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "passengers": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "flags": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "unsupportedRequests": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "missingFields": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "ambiguities": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "fallbackExpected": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "routing": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        }
+      }
+    },
+    "evaluationDisposition": "EXPLORATORY_UNSCORED"
+  },
+  {
+    "id": "exploratory-036",
+    "familyId": "exploratory-3",
+    "templateFamily": "exploratory-3",
+    "category": "exploratory-hindi-hinglish",
+    "cohort": "EXPLORATORY",
+    "ordinaryOrAdversarial": "EXPLORATORY",
+    "tags": [
+      "EXPLORATORY_LANGUAGE"
+    ],
+    "split": "EXPLORATORY_ONLY",
+    "modelInput": {
+      "query": "shaam ko return bhi",
+      "context": {
+        "clock": "2026-10-04T12:00:00+05:30",
+        "timeZone": "Asia/Kolkata",
+        "capabilityVersion": "ride-search-s4",
+        "activeField": null
+      }
+    },
+    "truth": {
+      "status": "PROPOSED",
+      "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+      "reviewerMetadata": null,
+      "disagreementResolved": false,
+      "derivation": "JUDGMENT_REVIEW_REQUIRED",
+      "reviewReasons": [
+        "EXPLORATORY_LANGUAGE_NOT_FROZEN"
+      ],
+      "unresolvedPolicies": [
+        "EXPLORATORY_LANGUAGE"
+      ],
+      "expected": {
+        "queryType": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "complexity": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "pickupSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "dropSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "vehicle": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "timingMode": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "date": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "time": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "passengers": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "flags": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "unsupportedRequests": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "missingFields": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "ambiguities": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "fallbackExpected": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "routing": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        }
+      }
+    },
+    "evaluationDisposition": "EXPLORATORY_UNSCORED"
+  },
+  {
+    "id": "exploratory-037",
+    "familyId": "exploratory-4",
+    "templateFamily": "exploratory-4",
+    "category": "exploratory-hindi-hinglish",
+    "cohort": "EXPLORATORY",
+    "ordinaryOrAdversarial": "EXPLORATORY",
+    "tags": [
+      "EXPLORATORY_LANGUAGE"
+    ],
+    "split": "EXPLORATORY_ONLY",
+    "modelInput": {
+      "query": "campus se pari chowk nahi delta 2",
+      "context": {
+        "clock": "2026-10-04T12:00:00+05:30",
+        "timeZone": "Asia/Kolkata",
+        "capabilityVersion": "ride-search-s4",
+        "activeField": null
+      }
+    },
+    "truth": {
+      "status": "PROPOSED",
+      "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+      "reviewerMetadata": null,
+      "disagreementResolved": false,
+      "derivation": "JUDGMENT_REVIEW_REQUIRED",
+      "reviewReasons": [
+        "EXPLORATORY_LANGUAGE_NOT_FROZEN"
+      ],
+      "unresolvedPolicies": [
+        "EXPLORATORY_LANGUAGE"
+      ],
+      "expected": {
+        "queryType": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "complexity": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "pickupSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "dropSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "vehicle": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "timingMode": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "date": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "time": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "passengers": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "flags": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "unsupportedRequests": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "missingFields": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "ambiguities": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "fallbackExpected": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "routing": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        }
+      }
+    },
+    "evaluationDisposition": "EXPLORATORY_UNSCORED"
+  },
+  {
+    "id": "exploratory-038",
+    "familyId": "exploratory-5",
+    "templateFamily": "exploratory-5",
+    "category": "exploratory-hindi-hinglish",
+    "cohort": "EXPLORATORY",
+    "ordinaryOrAdversarial": "EXPLORATORY",
+    "tags": [
+      "EXPLORATORY_LANGUAGE"
+    ],
+    "split": "EXPLORATORY_ONLY",
+    "modelInput": {
+      "query": "safe rasta lena please",
+      "context": {
+        "clock": "2026-10-04T12:00:00+05:30",
+        "timeZone": "Asia/Kolkata",
+        "capabilityVersion": "ride-search-s4",
+        "activeField": null
+      }
+    },
+    "truth": {
+      "status": "PROPOSED",
+      "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+      "reviewerMetadata": null,
+      "disagreementResolved": false,
+      "derivation": "JUDGMENT_REVIEW_REQUIRED",
+      "reviewReasons": [
+        "EXPLORATORY_LANGUAGE_NOT_FROZEN"
+      ],
+      "unresolvedPolicies": [
+        "EXPLORATORY_LANGUAGE"
+      ],
+      "expected": {
+        "queryType": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "complexity": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "pickupSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "dropSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "vehicle": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "timingMode": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "date": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "time": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "passengers": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "flags": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "unsupportedRequests": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "missingFields": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "ambiguities": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "fallbackExpected": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "routing": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        }
+      }
+    },
+    "evaluationDisposition": "EXPLORATORY_UNSCORED"
+  },
+  {
+    "id": "exploratory-039",
+    "familyId": "exploratory-6",
+    "templateFamily": "exploratory-6",
+    "category": "exploratory-hindi-hinglish",
+    "cohort": "EXPLORATORY",
+    "ordinaryOrAdversarial": "EXPLORATORY",
+    "tags": [
+      "EXPLORATORY_LANGUAGE"
+    ],
+    "split": "EXPLORATORY_ONLY",
+    "modelInput": {
+      "query": "carrier chahiye luggage hai",
+      "context": {
+        "clock": "2026-10-04T12:00:00+05:30",
+        "timeZone": "Asia/Kolkata",
+        "capabilityVersion": "ride-search-s4",
+        "activeField": null
+      }
+    },
+    "truth": {
+      "status": "PROPOSED",
+      "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+      "reviewerMetadata": null,
+      "disagreementResolved": false,
+      "derivation": "JUDGMENT_REVIEW_REQUIRED",
+      "reviewReasons": [
+        "EXPLORATORY_LANGUAGE_NOT_FROZEN"
+      ],
+      "unresolvedPolicies": [
+        "EXPLORATORY_LANGUAGE"
+      ],
+      "expected": {
+        "queryType": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "complexity": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "pickupSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "dropSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "vehicle": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "timingMode": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "date": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "time": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "passengers": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "flags": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "unsupportedRequests": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "missingFields": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "ambiguities": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "fallbackExpected": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "routing": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        }
+      }
+    },
+    "evaluationDisposition": "EXPLORATORY_UNSCORED"
+  },
+  {
+    "id": "exploratory-040",
+    "familyId": "exploratory-7",
+    "templateFamily": "exploratory-7",
+    "category": "exploratory-hindi-hinglish",
+    "cohort": "EXPLORATORY",
+    "ordinaryOrAdversarial": "EXPLORATORY",
+    "tags": [
+      "EXPLORATORY_LANGUAGE"
+    ],
+    "split": "EXPLORATORY_ONLY",
+    "modelInput": {
+      "query": "shared cab nahi chahiye",
+      "context": {
+        "clock": "2026-10-04T12:00:00+05:30",
+        "timeZone": "Asia/Kolkata",
+        "capabilityVersion": "ride-search-s4",
+        "activeField": null
+      }
+    },
+    "truth": {
+      "status": "PROPOSED",
+      "provenance": "UNREVIEWED_PROPOSED_SYNTHETIC",
+      "reviewerMetadata": null,
+      "disagreementResolved": false,
+      "derivation": "JUDGMENT_REVIEW_REQUIRED",
+      "reviewReasons": [
+        "EXPLORATORY_LANGUAGE_NOT_FROZEN"
+      ],
+      "unresolvedPolicies": [
+        "EXPLORATORY_LANGUAGE"
+      ],
+      "expected": {
+        "queryType": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "complexity": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "pickupSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "dropSpans": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "vehicle": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "timingMode": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "date": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "time": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "passengers": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "flags": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "unsupportedRequests": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "missingFields": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "ambiguities": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "fallbackExpected": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        },
+        "routing": {
+          "status": "NOT_LABELLED",
+          "reason": "HUMAN_LANGUAGE_REVIEW_REQUIRED"
+        }
+      }
+    },
+    "evaluationDisposition": "EXPLORATORY_UNSCORED"
+  }
+]

@@ -1,0 +1,1081 @@
+[
+  {
+    "caseId": "core-ambiguity-conflict-004",
+    "templateFamily": "non-ist",
+    "query": "from Botanical Garden to Garden Gate 3 tomorrow at 8 PM London time",
+    "priority": 1,
+    "split": "DEVELOPMENT",
+    "status": "PROPOSED_REVIEW_REQUIRED",
+    "decisions": [
+      {
+        "reason": "PRODUCT_POLICY_UNRESOLVED",
+        "fields": [],
+        "decision": "Decide only the policy-specific fields listed below; other direct labels remain proposed.",
+        "recommendation": "Keep affected semantic resolution NOT_LABELLED.",
+        "alternative": "Choose one of the explicit policy options."
+      }
+    ],
+    "policies": [
+      {
+        "policy": "NON_IST_TIMEZONE",
+        "fields": [
+          "resolvedDate",
+          "resolvedTime"
+        ],
+        "decision": "Define how an explicit non-IST local time is accepted.",
+        "options": [
+          "Clarify and convert explicitly to IST",
+          "Support explicit IANA zone with date/clock confirmation",
+          "Do not support non-IST booking interpretation"
+        ],
+        "effect": "Changes UTC scheduledAt and daylight-saving ambiguity handling; no resolved timestamp metric yet."
+      }
+    ],
+    "proposedLabelsForReview": {
+      "resolvedDate": {
+        "status": "NOT_LABELLED",
+        "reason": "UNRESOLVED_POLICY_OR_JUDGMENT"
+      },
+      "resolvedTime": {
+        "status": "NOT_LABELLED",
+        "reason": "UNRESOLVED_POLICY_OR_JUDGMENT"
+      }
+    },
+    "contextOnly": {
+      "queryType": {
+        "status": "LABELLED",
+        "value": "BOOKING_REQUEST"
+      },
+      "complexity": {
+        "status": "LABELLED",
+        "value": "SIMPLE"
+      }
+    },
+    "proofFailures": []
+  },
+  {
+    "caseId": "core-ambiguity-conflict-009",
+    "templateFamily": "non-ist",
+    "query": "from Pine Avenue to Central Station tomorrow at 6 PM London time",
+    "priority": 1,
+    "split": "DEVELOPMENT",
+    "status": "PROPOSED_REVIEW_REQUIRED",
+    "decisions": [
+      {
+        "reason": "PRODUCT_POLICY_UNRESOLVED",
+        "fields": [],
+        "decision": "Decide only the policy-specific fields listed below; other direct labels remain proposed.",
+        "recommendation": "Keep affected semantic resolution NOT_LABELLED.",
+        "alternative": "Choose one of the explicit policy options."
+      }
+    ],
+    "policies": [
+      {
+        "policy": "NON_IST_TIMEZONE",
+        "fields": [
+          "resolvedDate",
+          "resolvedTime"
+        ],
+        "decision": "Define how an explicit non-IST local time is accepted.",
+        "options": [
+          "Clarify and convert explicitly to IST",
+          "Support explicit IANA zone with date/clock confirmation",
+          "Do not support non-IST booking interpretation"
+        ],
+        "effect": "Changes UTC scheduledAt and daylight-saving ambiguity handling; no resolved timestamp metric yet."
+      }
+    ],
+    "proposedLabelsForReview": {
+      "resolvedDate": {
+        "status": "NOT_LABELLED",
+        "reason": "UNRESOLVED_POLICY_OR_JUDGMENT"
+      },
+      "resolvedTime": {
+        "status": "NOT_LABELLED",
+        "reason": "UNRESOLVED_POLICY_OR_JUDGMENT"
+      }
+    },
+    "contextOnly": {
+      "queryType": {
+        "status": "LABELLED",
+        "value": "BOOKING_REQUEST"
+      },
+      "complexity": {
+        "status": "LABELLED",
+        "value": "SIMPLE"
+      }
+    },
+    "proofFailures": []
+  },
+  {
+    "caseId": "core-ambiguity-conflict-014",
+    "templateFamily": "non-ist",
+    "query": "from Lotus Circle to airport tomorrow at 11 PM London time",
+    "priority": 1,
+    "split": "DEVELOPMENT",
+    "status": "PROPOSED_REVIEW_REQUIRED",
+    "decisions": [
+      {
+        "reason": "PRODUCT_POLICY_UNRESOLVED",
+        "fields": [],
+        "decision": "Decide only the policy-specific fields listed below; other direct labels remain proposed.",
+        "recommendation": "Keep affected semantic resolution NOT_LABELLED.",
+        "alternative": "Choose one of the explicit policy options."
+      }
+    ],
+    "policies": [
+      {
+        "policy": "NON_IST_TIMEZONE",
+        "fields": [
+          "resolvedDate",
+          "resolvedTime"
+        ],
+        "decision": "Define how an explicit non-IST local time is accepted.",
+        "options": [
+          "Clarify and convert explicitly to IST",
+          "Support explicit IANA zone with date/clock confirmation",
+          "Do not support non-IST booking interpretation"
+        ],
+        "effect": "Changes UTC scheduledAt and daylight-saving ambiguity handling; no resolved timestamp metric yet."
+      }
+    ],
+    "proposedLabelsForReview": {
+      "resolvedDate": {
+        "status": "NOT_LABELLED",
+        "reason": "UNRESOLVED_POLICY_OR_JUDGMENT"
+      },
+      "resolvedTime": {
+        "status": "NOT_LABELLED",
+        "reason": "UNRESOLVED_POLICY_OR_JUDGMENT"
+      }
+    },
+    "contextOnly": {
+      "queryType": {
+        "status": "LABELLED",
+        "value": "BOOKING_REQUEST"
+      },
+      "complexity": {
+        "status": "LABELLED",
+        "value": "SIMPLE"
+      }
+    },
+    "proofFailures": []
+  },
+  {
+    "caseId": "core-ambiguity-conflict-019",
+    "templateFamily": "non-ist",
+    "query": "from Civic Centre to Delhi tomorrow at 9 PM London time",
+    "priority": 1,
+    "split": "DEVELOPMENT",
+    "status": "PROPOSED_REVIEW_REQUIRED",
+    "decisions": [
+      {
+        "reason": "PRODUCT_POLICY_UNRESOLVED",
+        "fields": [],
+        "decision": "Decide only the policy-specific fields listed below; other direct labels remain proposed.",
+        "recommendation": "Keep affected semantic resolution NOT_LABELLED.",
+        "alternative": "Choose one of the explicit policy options."
+      }
+    ],
+    "policies": [
+      {
+        "policy": "NON_IST_TIMEZONE",
+        "fields": [
+          "resolvedDate",
+          "resolvedTime"
+        ],
+        "decision": "Define how an explicit non-IST local time is accepted.",
+        "options": [
+          "Clarify and convert explicitly to IST",
+          "Support explicit IANA zone with date/clock confirmation",
+          "Do not support non-IST booking interpretation"
+        ],
+        "effect": "Changes UTC scheduledAt and daylight-saving ambiguity handling; no resolved timestamp metric yet."
+      }
+    ],
+    "proposedLabelsForReview": {
+      "resolvedDate": {
+        "status": "NOT_LABELLED",
+        "reason": "UNRESOLVED_POLICY_OR_JUDGMENT"
+      },
+      "resolvedTime": {
+        "status": "NOT_LABELLED",
+        "reason": "UNRESOLVED_POLICY_OR_JUDGMENT"
+      }
+    },
+    "contextOnly": {
+      "queryType": {
+        "status": "LABELLED",
+        "value": "BOOKING_REQUEST"
+      },
+      "complexity": {
+        "status": "LABELLED",
+        "value": "SIMPLE"
+      }
+    },
+    "proofFailures": []
+  },
+  {
+    "caseId": "core-ambiguity-conflict-024",
+    "templateFamily": "non-ist",
+    "query": "from IGI to Pari Chowk tomorrow at 7 PM London time",
+    "priority": 1,
+    "split": "DEVELOPMENT",
+    "status": "PROPOSED_REVIEW_REQUIRED",
+    "decisions": [
+      {
+        "reason": "PRODUCT_POLICY_UNRESOLVED",
+        "fields": [],
+        "decision": "Decide only the policy-specific fields listed below; other direct labels remain proposed.",
+        "recommendation": "Keep affected semantic resolution NOT_LABELLED.",
+        "alternative": "Choose one of the explicit policy options."
+      }
+    ],
+    "policies": [
+      {
+        "policy": "NON_IST_TIMEZONE",
+        "fields": [
+          "resolvedDate",
+          "resolvedTime"
+        ],
+        "decision": "Define how an explicit non-IST local time is accepted.",
+        "options": [
+          "Clarify and convert explicitly to IST",
+          "Support explicit IANA zone with date/clock confirmation",
+          "Do not support non-IST booking interpretation"
+        ],
+        "effect": "Changes UTC scheduledAt and daylight-saving ambiguity handling; no resolved timestamp metric yet."
+      }
+    ],
+    "proposedLabelsForReview": {
+      "resolvedDate": {
+        "status": "NOT_LABELLED",
+        "reason": "UNRESOLVED_POLICY_OR_JUDGMENT"
+      },
+      "resolvedTime": {
+        "status": "NOT_LABELLED",
+        "reason": "UNRESOLVED_POLICY_OR_JUDGMENT"
+      }
+    },
+    "contextOnly": {
+      "queryType": {
+        "status": "LABELLED",
+        "value": "BOOKING_REQUEST"
+      },
+      "complexity": {
+        "status": "LABELLED",
+        "value": "SIMPLE"
+      }
+    },
+    "proofFailures": []
+  },
+  {
+    "caseId": "core-ambiguity-conflict-003",
+    "templateFamily": "omitted-year",
+    "query": "from Delta 2 to Delta 1 on 5 December at 7 PM",
+    "priority": 1,
+    "split": "DEVELOPMENT",
+    "status": "PROPOSED_REVIEW_REQUIRED",
+    "decisions": [
+      {
+        "reason": "PRODUCT_POLICY_UNRESOLVED",
+        "fields": [],
+        "decision": "Decide only the policy-specific fields listed below; other direct labels remain proposed.",
+        "recommendation": "Keep affected semantic resolution NOT_LABELLED.",
+        "alternative": "Choose one of the explicit policy options."
+      }
+    ],
+    "policies": [
+      {
+        "policy": "OMITTED_YEAR_SEMANTICS",
+        "fields": [
+          "resolvedDate"
+        ],
+        "decision": "Choose an omitted-year rule; the extracted month/day remains unchanged.",
+        "options": [
+          "Always clarify the year",
+          "Current year if valid, otherwise next year",
+          "Next future occurrence"
+        ],
+        "effect": "Changes timestamp resolution and scheduling eligibility; do not score resolvedDate until frozen."
+      }
+    ],
+    "proposedLabelsForReview": {
+      "resolvedDate": {
+        "status": "NOT_LABELLED",
+        "reason": "UNRESOLVED_POLICY_OR_JUDGMENT"
+      }
+    },
+    "contextOnly": {
+      "queryType": {
+        "status": "LABELLED",
+        "value": "BOOKING_REQUEST"
+      },
+      "complexity": {
+        "status": "LABELLED",
+        "value": "SIMPLE"
+      }
+    },
+    "proofFailures": []
+  },
+  {
+    "caseId": "core-ambiguity-conflict-008",
+    "templateFamily": "omitted-year",
+    "query": "from Sunrise Metro to Museum Road on 5 December at 5 PM",
+    "priority": 1,
+    "split": "DEVELOPMENT",
+    "status": "PROPOSED_REVIEW_REQUIRED",
+    "decisions": [
+      {
+        "reason": "PRODUCT_POLICY_UNRESOLVED",
+        "fields": [],
+        "decision": "Decide only the policy-specific fields listed below; other direct labels remain proposed.",
+        "recommendation": "Keep affected semantic resolution NOT_LABELLED.",
+        "alternative": "Choose one of the explicit policy options."
+      }
+    ],
+    "policies": [
+      {
+        "policy": "OMITTED_YEAR_SEMANTICS",
+        "fields": [
+          "resolvedDate"
+        ],
+        "decision": "Choose an omitted-year rule; the extracted month/day remains unchanged.",
+        "options": [
+          "Always clarify the year",
+          "Current year if valid, otherwise next year",
+          "Next future occurrence"
+        ],
+        "effect": "Changes timestamp resolution and scheduling eligibility; do not score resolvedDate until frozen."
+      }
+    ],
+    "proposedLabelsForReview": {
+      "resolvedDate": {
+        "status": "NOT_LABELLED",
+        "reason": "UNRESOLVED_POLICY_OR_JUDGMENT"
+      }
+    },
+    "contextOnly": {
+      "queryType": {
+        "status": "LABELLED",
+        "value": "BOOKING_REQUEST"
+      },
+      "complexity": {
+        "status": "LABELLED",
+        "value": "SIMPLE"
+      }
+    },
+    "proofFailures": []
+  },
+  {
+    "caseId": "core-ambiguity-conflict-013",
+    "templateFamily": "omitted-year",
+    "query": "from Old Bus Stand to college on 5 December at 10 PM",
+    "priority": 1,
+    "split": "DEVELOPMENT",
+    "status": "PROPOSED_REVIEW_REQUIRED",
+    "decisions": [
+      {
+        "reason": "PRODUCT_POLICY_UNRESOLVED",
+        "fields": [],
+        "decision": "Decide only the policy-specific fields listed below; other direct labels remain proposed.",
+        "recommendation": "Keep affected semantic resolution NOT_LABELLED.",
+        "alternative": "Choose one of the explicit policy options."
+      }
+    ],
+    "policies": [
+      {
+        "policy": "OMITTED_YEAR_SEMANTICS",
+        "fields": [
+          "resolvedDate"
+        ],
+        "decision": "Choose an omitted-year rule; the extracted month/day remains unchanged.",
+        "options": [
+          "Always clarify the year",
+          "Current year if valid, otherwise next year",
+          "Next future occurrence"
+        ],
+        "effect": "Changes timestamp resolution and scheduling eligibility; do not score resolvedDate until frozen."
+      }
+    ],
+    "proposedLabelsForReview": {
+      "resolvedDate": {
+        "status": "NOT_LABELLED",
+        "reason": "UNRESOLVED_POLICY_OR_JUDGMENT"
+      }
+    },
+    "contextOnly": {
+      "queryType": {
+        "status": "LABELLED",
+        "value": "BOOKING_REQUEST"
+      },
+      "complexity": {
+        "status": "LABELLED",
+        "value": "SIMPLE"
+      }
+    },
+    "proofFailures": []
+  },
+  {
+    "caseId": "core-ambiguity-conflict-018",
+    "templateFamily": "omitted-year",
+    "query": "from Hilltop Clinic to campus on 5 December at 8 PM",
+    "priority": 1,
+    "split": "DEVELOPMENT",
+    "status": "PROPOSED_REVIEW_REQUIRED",
+    "decisions": [
+      {
+        "reason": "PRODUCT_POLICY_UNRESOLVED",
+        "fields": [],
+        "decision": "Decide only the policy-specific fields listed below; other direct labels remain proposed.",
+        "recommendation": "Keep affected semantic resolution NOT_LABELLED.",
+        "alternative": "Choose one of the explicit policy options."
+      }
+    ],
+    "policies": [
+      {
+        "policy": "OMITTED_YEAR_SEMANTICS",
+        "fields": [
+          "resolvedDate"
+        ],
+        "decision": "Choose an omitted-year rule; the extracted month/day remains unchanged.",
+        "options": [
+          "Always clarify the year",
+          "Current year if valid, otherwise next year",
+          "Next future occurrence"
+        ],
+        "effect": "Changes timestamp resolution and scheduling eligibility; do not score resolvedDate until frozen."
+      }
+    ],
+    "proposedLabelsForReview": {
+      "resolvedDate": {
+        "status": "NOT_LABELLED",
+        "reason": "UNRESOLVED_POLICY_OR_JUDGMENT"
+      }
+    },
+    "contextOnly": {
+      "queryType": {
+        "status": "LABELLED",
+        "value": "BOOKING_REQUEST"
+      },
+      "complexity": {
+        "status": "LABELLED",
+        "value": "SIMPLE"
+      }
+    },
+    "proofFailures": []
+  },
+  {
+    "caseId": "core-ambiguity-conflict-023",
+    "templateFamily": "omitted-year",
+    "query": "from Jaypee main gate near Gate 3 to City Centre on 5 December at 6 PM",
+    "priority": 1,
+    "split": "DEVELOPMENT",
+    "status": "PROPOSED_REVIEW_REQUIRED",
+    "decisions": [
+      {
+        "reason": "PRODUCT_POLICY_UNRESOLVED",
+        "fields": [],
+        "decision": "Decide only the policy-specific fields listed below; other direct labels remain proposed.",
+        "recommendation": "Keep affected semantic resolution NOT_LABELLED.",
+        "alternative": "Choose one of the explicit policy options."
+      }
+    ],
+    "policies": [
+      {
+        "policy": "OMITTED_YEAR_SEMANTICS",
+        "fields": [
+          "resolvedDate"
+        ],
+        "decision": "Choose an omitted-year rule; the extracted month/day remains unchanged.",
+        "options": [
+          "Always clarify the year",
+          "Current year if valid, otherwise next year",
+          "Next future occurrence"
+        ],
+        "effect": "Changes timestamp resolution and scheduling eligibility; do not score resolvedDate until frozen."
+      }
+    ],
+    "proposedLabelsForReview": {
+      "resolvedDate": {
+        "status": "NOT_LABELLED",
+        "reason": "UNRESOLVED_POLICY_OR_JUDGMENT"
+      }
+    },
+    "contextOnly": {
+      "queryType": {
+        "status": "LABELLED",
+        "value": "BOOKING_REQUEST"
+      },
+      "complexity": {
+        "status": "LABELLED",
+        "value": "SIMPLE"
+      }
+    },
+    "proofFailures": []
+  },
+  {
+    "caseId": "core-vehicle-preferences-005",
+    "templateFamily": "vehicle-negated-suv",
+    "query": "don't send an SUV from Sector 18 Market to West Campus",
+    "priority": 1,
+    "split": "DEVELOPMENT",
+    "status": "PROPOSED_REVIEW_REQUIRED",
+    "decisions": [
+      {
+        "reason": "PRODUCT_POLICY_UNRESOLVED",
+        "fields": [],
+        "decision": "Decide only the policy-specific fields listed below; other direct labels remain proposed.",
+        "recommendation": "Keep affected semantic resolution NOT_LABELLED.",
+        "alternative": "Choose one of the explicit policy options."
+      }
+    ],
+    "policies": [
+      {
+        "policy": "SUV_FAMILY_EXCLUSION_SCOPE",
+        "fields": [
+          "vehicle"
+        ],
+        "decision": "Define whether generic SUV exclusion also excludes suv_premium.",
+        "options": [
+          "Exclude only suv",
+          "Exclude suv and suv_premium",
+          "Clarify the family scope with the user"
+        ],
+        "effect": "Changes allowed vehicle classes; retain literal suv exclusion and keep family-scope metric unlabelled."
+      }
+    ],
+    "proposedLabelsForReview": {
+      "vehicle": {
+        "status": "LABELLED",
+        "value": {
+          "state": "EXCLUDED",
+          "excluded": [
+            "suv"
+          ]
+        }
+      }
+    },
+    "contextOnly": {
+      "queryType": {
+        "status": "LABELLED",
+        "value": "BOOKING_REQUEST"
+      },
+      "complexity": {
+        "status": "LABELLED",
+        "value": "SIMPLE"
+      }
+    },
+    "proofFailures": []
+  },
+  {
+    "caseId": "core-vehicle-preferences-010",
+    "templateFamily": "vehicle-negated-suv",
+    "query": "don't send an SUV from Delta 1 to Amber Tower",
+    "priority": 1,
+    "split": "DEVELOPMENT",
+    "status": "PROPOSED_REVIEW_REQUIRED",
+    "decisions": [
+      {
+        "reason": "PRODUCT_POLICY_UNRESOLVED",
+        "fields": [],
+        "decision": "Decide only the policy-specific fields listed below; other direct labels remain proposed.",
+        "recommendation": "Keep affected semantic resolution NOT_LABELLED.",
+        "alternative": "Choose one of the explicit policy options."
+      }
+    ],
+    "policies": [
+      {
+        "policy": "SUV_FAMILY_EXCLUSION_SCOPE",
+        "fields": [
+          "vehicle"
+        ],
+        "decision": "Define whether generic SUV exclusion also excludes suv_premium.",
+        "options": [
+          "Exclude only suv",
+          "Exclude suv and suv_premium",
+          "Clarify the family scope with the user"
+        ],
+        "effect": "Changes allowed vehicle classes; retain literal suv exclusion and keep family-scope metric unlabelled."
+      }
+    ],
+    "proposedLabelsForReview": {
+      "vehicle": {
+        "status": "LABELLED",
+        "value": {
+          "state": "EXCLUDED",
+          "excluded": [
+            "suv"
+          ]
+        }
+      }
+    },
+    "contextOnly": {
+      "queryType": {
+        "status": "LABELLED",
+        "value": "BOOKING_REQUEST"
+      },
+      "complexity": {
+        "status": "LABELLED",
+        "value": "SIMPLE"
+      }
+    },
+    "proofFailures": []
+  },
+  {
+    "caseId": "core-vehicle-preferences-015",
+    "templateFamily": "vehicle-negated-suv",
+    "query": "don't send an SUV from Museum Road to hostel gate near the tea stall",
+    "priority": 1,
+    "split": "DEVELOPMENT",
+    "status": "PROPOSED_REVIEW_REQUIRED",
+    "decisions": [
+      {
+        "reason": "PRODUCT_POLICY_UNRESOLVED",
+        "fields": [],
+        "decision": "Decide only the policy-specific fields listed below; other direct labels remain proposed.",
+        "recommendation": "Keep affected semantic resolution NOT_LABELLED.",
+        "alternative": "Choose one of the explicit policy options."
+      }
+    ],
+    "policies": [
+      {
+        "policy": "SUV_FAMILY_EXCLUSION_SCOPE",
+        "fields": [
+          "vehicle"
+        ],
+        "decision": "Define whether generic SUV exclusion also excludes suv_premium.",
+        "options": [
+          "Exclude only suv",
+          "Exclude suv and suv_premium",
+          "Clarify the family scope with the user"
+        ],
+        "effect": "Changes allowed vehicle classes; retain literal suv exclusion and keep family-scope metric unlabelled."
+      }
+    ],
+    "proposedLabelsForReview": {
+      "vehicle": {
+        "status": "LABELLED",
+        "value": {
+          "state": "EXCLUDED",
+          "excluded": [
+            "suv"
+          ]
+        }
+      }
+    },
+    "contextOnly": {
+      "queryType": {
+        "status": "LABELLED",
+        "value": "BOOKING_REQUEST"
+      },
+      "complexity": {
+        "status": "LABELLED",
+        "value": "SIMPLE"
+      }
+    },
+    "proofFailures": []
+  },
+  {
+    "caseId": "core-vehicle-preferences-020",
+    "templateFamily": "vehicle-negated-suv",
+    "query": "don't send an SUV from college to Greater Noida",
+    "priority": 1,
+    "split": "DEVELOPMENT",
+    "status": "PROPOSED_REVIEW_REQUIRED",
+    "decisions": [
+      {
+        "reason": "PRODUCT_POLICY_UNRESOLVED",
+        "fields": [],
+        "decision": "Decide only the policy-specific fields listed below; other direct labels remain proposed.",
+        "recommendation": "Keep affected semantic resolution NOT_LABELLED.",
+        "alternative": "Choose one of the explicit policy options."
+      }
+    ],
+    "policies": [
+      {
+        "policy": "SUV_FAMILY_EXCLUSION_SCOPE",
+        "fields": [
+          "vehicle"
+        ],
+        "decision": "Define whether generic SUV exclusion also excludes suv_premium.",
+        "options": [
+          "Exclude only suv",
+          "Exclude suv and suv_premium",
+          "Clarify the family scope with the user"
+        ],
+        "effect": "Changes allowed vehicle classes; retain literal suv exclusion and keep family-scope metric unlabelled."
+      }
+    ],
+    "proposedLabelsForReview": {
+      "vehicle": {
+        "status": "LABELLED",
+        "value": {
+          "state": "EXCLUDED",
+          "excluded": [
+            "suv"
+          ]
+        }
+      }
+    },
+    "contextOnly": {
+      "queryType": {
+        "status": "LABELLED",
+        "value": "BOOKING_REQUEST"
+      },
+      "complexity": {
+        "status": "LABELLED",
+        "value": "SIMPLE"
+      }
+    },
+    "proofFailures": []
+  },
+  {
+    "caseId": "core-vehicle-preferences-025",
+    "templateFamily": "vehicle-negated-suv",
+    "query": "don't send an SUV from campus to Jaypee main gate",
+    "priority": 1,
+    "split": "DEVELOPMENT",
+    "status": "PROPOSED_REVIEW_REQUIRED",
+    "decisions": [
+      {
+        "reason": "PRODUCT_POLICY_UNRESOLVED",
+        "fields": [],
+        "decision": "Decide only the policy-specific fields listed below; other direct labels remain proposed.",
+        "recommendation": "Keep affected semantic resolution NOT_LABELLED.",
+        "alternative": "Choose one of the explicit policy options."
+      }
+    ],
+    "policies": [
+      {
+        "policy": "SUV_FAMILY_EXCLUSION_SCOPE",
+        "fields": [
+          "vehicle"
+        ],
+        "decision": "Define whether generic SUV exclusion also excludes suv_premium.",
+        "options": [
+          "Exclude only suv",
+          "Exclude suv and suv_premium",
+          "Clarify the family scope with the user"
+        ],
+        "effect": "Changes allowed vehicle classes; retain literal suv exclusion and keep family-scope metric unlabelled."
+      }
+    ],
+    "proposedLabelsForReview": {
+      "vehicle": {
+        "status": "LABELLED",
+        "value": {
+          "state": "EXCLUDED",
+          "excluded": [
+            "suv"
+          ]
+        }
+      }
+    },
+    "contextOnly": {
+      "queryType": {
+        "status": "LABELLED",
+        "value": "BOOKING_REQUEST"
+      },
+      "complexity": {
+        "status": "LABELLED",
+        "value": "SIMPLE"
+      }
+    },
+    "proofFailures": []
+  },
+  {
+    "caseId": "core-vehicle-preferences-030",
+    "templateFamily": "vehicle-negated-suv",
+    "query": "don't send an SUV from City Centre to Lakeview Hostel",
+    "priority": 1,
+    "split": "DEVELOPMENT",
+    "status": "PROPOSED_REVIEW_REQUIRED",
+    "decisions": [
+      {
+        "reason": "PRODUCT_POLICY_UNRESOLVED",
+        "fields": [],
+        "decision": "Decide only the policy-specific fields listed below; other direct labels remain proposed.",
+        "recommendation": "Keep affected semantic resolution NOT_LABELLED.",
+        "alternative": "Choose one of the explicit policy options."
+      }
+    ],
+    "policies": [
+      {
+        "policy": "SUV_FAMILY_EXCLUSION_SCOPE",
+        "fields": [
+          "vehicle"
+        ],
+        "decision": "Define whether generic SUV exclusion also excludes suv_premium.",
+        "options": [
+          "Exclude only suv",
+          "Exclude suv and suv_premium",
+          "Clarify the family scope with the user"
+        ],
+        "effect": "Changes allowed vehicle classes; retain literal suv exclusion and keep family-scope metric unlabelled."
+      }
+    ],
+    "proposedLabelsForReview": {
+      "vehicle": {
+        "status": "LABELLED",
+        "value": {
+          "state": "EXCLUDED",
+          "excluded": [
+            "suv"
+          ]
+        }
+      }
+    },
+    "contextOnly": {
+      "queryType": {
+        "status": "LABELLED",
+        "value": "BOOKING_REQUEST"
+      },
+      "complexity": {
+        "status": "LABELLED",
+        "value": "SIMPLE"
+      }
+    },
+    "proofFailures": []
+  },
+  {
+    "caseId": "core-ambiguity-conflict-002",
+    "templateFamily": "weekday-next",
+    "query": "from Jaypee main gate to Pine Avenue next Friday at 6 PM",
+    "priority": 1,
+    "split": "HELD_OUT",
+    "status": "PROPOSED_REVIEW_REQUIRED",
+    "decisions": [
+      {
+        "reason": "PRODUCT_POLICY_UNRESOLVED",
+        "fields": [],
+        "decision": "Decide only the policy-specific fields listed below; other direct labels remain proposed.",
+        "recommendation": "Keep affected semantic resolution NOT_LABELLED.",
+        "alternative": "Choose one of the explicit policy options."
+      }
+    ],
+    "policies": [
+      {
+        "policy": "WEEKDAY_SEMANTICS",
+        "fields": [
+          "resolvedDate"
+        ],
+        "decision": "Define BARE/THIS/NEXT weekdays, including same-day handling.",
+        "options": [
+          "Clarify each qualifier",
+          "Specify occurrence rules separately for BARE/THIS/NEXT"
+        ],
+        "effect": "Changes selected calendar date and scheduling bounds; extracted weekday/qualifier is still independently scoreable."
+      }
+    ],
+    "proposedLabelsForReview": {
+      "resolvedDate": {
+        "status": "NOT_LABELLED",
+        "reason": "UNRESOLVED_POLICY_OR_JUDGMENT"
+      }
+    },
+    "contextOnly": {
+      "queryType": {
+        "status": "LABELLED",
+        "value": "BOOKING_REQUEST"
+      },
+      "complexity": {
+        "status": "LABELLED",
+        "value": "SIMPLE"
+      }
+    },
+    "proofFailures": []
+  },
+  {
+    "caseId": "core-ambiguity-conflict-007",
+    "templateFamily": "weekday-next",
+    "query": "from Lakeview Hostel to Lotus Circle next Friday at 11 PM",
+    "priority": 1,
+    "split": "HELD_OUT",
+    "status": "PROPOSED_REVIEW_REQUIRED",
+    "decisions": [
+      {
+        "reason": "PRODUCT_POLICY_UNRESOLVED",
+        "fields": [],
+        "decision": "Decide only the policy-specific fields listed below; other direct labels remain proposed.",
+        "recommendation": "Keep affected semantic resolution NOT_LABELLED.",
+        "alternative": "Choose one of the explicit policy options."
+      }
+    ],
+    "policies": [
+      {
+        "policy": "WEEKDAY_SEMANTICS",
+        "fields": [
+          "resolvedDate"
+        ],
+        "decision": "Define BARE/THIS/NEXT weekdays, including same-day handling.",
+        "options": [
+          "Clarify each qualifier",
+          "Specify occurrence rules separately for BARE/THIS/NEXT"
+        ],
+        "effect": "Changes selected calendar date and scheduling bounds; extracted weekday/qualifier is still independently scoreable."
+      }
+    ],
+    "proposedLabelsForReview": {
+      "resolvedDate": {
+        "status": "NOT_LABELLED",
+        "reason": "UNRESOLVED_POLICY_OR_JUDGMENT"
+      }
+    },
+    "contextOnly": {
+      "queryType": {
+        "status": "LABELLED",
+        "value": "BOOKING_REQUEST"
+      },
+      "complexity": {
+        "status": "LABELLED",
+        "value": "SIMPLE"
+      }
+    },
+    "proofFailures": []
+  },
+  {
+    "caseId": "core-ambiguity-conflict-012",
+    "templateFamily": "weekday-next",
+    "query": "from West Campus to Civic Centre next Friday at 9 PM",
+    "priority": 1,
+    "split": "HELD_OUT",
+    "status": "PROPOSED_REVIEW_REQUIRED",
+    "decisions": [
+      {
+        "reason": "PRODUCT_POLICY_UNRESOLVED",
+        "fields": [],
+        "decision": "Decide only the policy-specific fields listed below; other direct labels remain proposed.",
+        "recommendation": "Keep affected semantic resolution NOT_LABELLED.",
+        "alternative": "Choose one of the explicit policy options."
+      }
+    ],
+    "policies": [
+      {
+        "policy": "WEEKDAY_SEMANTICS",
+        "fields": [
+          "resolvedDate"
+        ],
+        "decision": "Define BARE/THIS/NEXT weekdays, including same-day handling.",
+        "options": [
+          "Clarify each qualifier",
+          "Specify occurrence rules separately for BARE/THIS/NEXT"
+        ],
+        "effect": "Changes selected calendar date and scheduling bounds; extracted weekday/qualifier is still independently scoreable."
+      }
+    ],
+    "proposedLabelsForReview": {
+      "resolvedDate": {
+        "status": "NOT_LABELLED",
+        "reason": "UNRESOLVED_POLICY_OR_JUDGMENT"
+      }
+    },
+    "contextOnly": {
+      "queryType": {
+        "status": "LABELLED",
+        "value": "BOOKING_REQUEST"
+      },
+      "complexity": {
+        "status": "LABELLED",
+        "value": "SIMPLE"
+      }
+    },
+    "proofFailures": []
+  },
+  {
+    "caseId": "core-ambiguity-conflict-017",
+    "templateFamily": "weekday-next",
+    "query": "from Amber Tower to IGI next Friday at 7 PM",
+    "priority": 1,
+    "split": "HELD_OUT",
+    "status": "PROPOSED_REVIEW_REQUIRED",
+    "decisions": [
+      {
+        "reason": "PRODUCT_POLICY_UNRESOLVED",
+        "fields": [],
+        "decision": "Decide only the policy-specific fields listed below; other direct labels remain proposed.",
+        "recommendation": "Keep affected semantic resolution NOT_LABELLED.",
+        "alternative": "Choose one of the explicit policy options."
+      }
+    ],
+    "policies": [
+      {
+        "policy": "WEEKDAY_SEMANTICS",
+        "fields": [
+          "resolvedDate"
+        ],
+        "decision": "Define BARE/THIS/NEXT weekdays, including same-day handling.",
+        "options": [
+          "Clarify each qualifier",
+          "Specify occurrence rules separately for BARE/THIS/NEXT"
+        ],
+        "effect": "Changes selected calendar date and scheduling bounds; extracted weekday/qualifier is still independently scoreable."
+      }
+    ],
+    "proposedLabelsForReview": {
+      "resolvedDate": {
+        "status": "NOT_LABELLED",
+        "reason": "UNRESOLVED_POLICY_OR_JUDGMENT"
+      }
+    },
+    "contextOnly": {
+      "queryType": {
+        "status": "LABELLED",
+        "value": "BOOKING_REQUEST"
+      },
+      "complexity": {
+        "status": "LABELLED",
+        "value": "SIMPLE"
+      }
+    },
+    "proofFailures": []
+  },
+  {
+    "caseId": "core-ambiguity-conflict-022",
+    "templateFamily": "weekday-next",
+    "query": "from hostel gate near the tea stall to Knowledge Park II next Friday at 5 PM",
+    "priority": 1,
+    "split": "HELD_OUT",
+    "status": "PROPOSED_REVIEW_REQUIRED",
+    "decisions": [
+      {
+        "reason": "PRODUCT_POLICY_UNRESOLVED",
+        "fields": [],
+        "decision": "Decide only the policy-specific fields listed below; other direct labels remain proposed.",
+        "recommendation": "Keep affected semantic resolution NOT_LABELLED.",
+        "alternative": "Choose one of the explicit policy options."
+      }
+    ],
+    "policies": [
+      {
+        "policy": "WEEKDAY_SEMANTICS",
+        "fields": [
+          "resolvedDate"
+        ],
+        "decision": "Define BARE/THIS/NEXT weekdays, including same-day handling.",
+        "options": [
+          "Clarify each qualifier",
+          "Specify occurrence rules separately for BARE/THIS/NEXT"
+        ],
+        "effect": "Changes selected calendar date and scheduling bounds; extracted weekday/qualifier is still independently scoreable."
+      }
+    ],
+    "proposedLabelsForReview": {
+      "resolvedDate": {
+        "status": "NOT_LABELLED",
+        "reason": "UNRESOLVED_POLICY_OR_JUDGMENT"
+      }
+    },
+    "contextOnly": {
+      "queryType": {
+        "status": "LABELLED",
+        "value": "BOOKING_REQUEST"
+      },
+      "complexity": {
+        "status": "LABELLED",
+        "value": "SIMPLE"
+      }
+    },
+    "proofFailures": []
+  }
+]

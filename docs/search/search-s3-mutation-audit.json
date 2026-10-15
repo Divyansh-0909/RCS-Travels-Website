@@ -1,0 +1,578 @@
+{
+  "schemaVersion": "search-s3-mutation-audit-v1",
+  "sourceHashes": {
+    "services/search/locations/followup.ts": "4dfa3fedb129c013ea21cec4ea7d56e296bfcdbaf0b2e5c5c69d902099519360",
+    "services/search/locations/service.ts": "044439494af87ebfd4cc88cd973bbc8197d50054e3acbb9a52f4a321ca02b57a",
+    "services/search/locations/sessionRefs.ts": "76a3a342455537999b33c3c5b015b8403b856f484ef739bbe912393883bb1838",
+    "services/search/locations/sessionTemporal.ts": "db7783ba2ade520f2d83268c5d6d05f512da6a215986cd5cada8c1f77d590068",
+    "services/search/observations.ts": "e0340bc0c14c25dd330ecda5101ef11771282caea95a3318cfd65f06168f2078",
+    "services/search/locations/candidates.ts": "205e4ffb4367f5575fd7b561a0033ce0a6e551792d1e08e3c48f8deddf0223af",
+    "routes/googleAPI.js": "a6a40a0a619ec142c16c5a3b6abc8a82a1a0e358df6636ecc61431f148488e4a",
+    "services/search/locations/places.ts": "4bf043d878cc7e0f1838ae60f70e4b9ee39de9d4462e43f2e3510c6b9ae264a0",
+    "services/search/parser.ts": "b176f803e666c7227edea8010f3eb0bceec9254b4947b1d963c71fd83530b83b",
+    "services/search/locations/session.ts": "0dd1baced394cac79aaed157af101fca232be663757264779a441dd72f849a2b",
+    "services/search/locations/grounding.ts": "0c223949eea8cbc360f1f4fd7ee5b5cca89206a83e5f3e31ad0caffd5f800e2a",
+    "services/search/locations/review.ts": "17c41d5b4267d675affcebd49b3d44150f7b8d97ea8b0aa60b80b667ecf2c757"
+  },
+  "total": 2659,
+  "counts": {
+    "Killed": 2486,
+    "Survived": 169,
+    "Timeout": 4
+  },
+  "dispositions": {
+    "EQUIVALENT": 115,
+    "NON_ACTIONABLE": 22,
+    "UNCHANGED_LEGACY": 32
+  },
+  "meaningfulSurvivors": 0,
+  "groups": [
+    {
+      "file": "services/search/locations/candidates.ts",
+      "ids": [
+        "66",
+        "67",
+        "74",
+        "75"
+      ],
+      "disposition": "EQUIVALENT",
+      "reason": "Removing a trim-loop range bound only permits an extra trim after the range is already empty; trimRange still returns undefined. No emitted UTF-16 span changes.",
+      "report": "search-s3-candidates-current-mutation.json",
+      "sourceHash": "205e4ffb4367f5575fd7b561a0033ce0a6e551792d1e08e3c48f8deddf0223af"
+    },
+    {
+      "file": "services/search/locations/candidates.ts",
+      "ids": [
+        "106",
+        "121",
+        "158",
+        "160",
+        "162",
+        "164"
+      ],
+      "disposition": "EQUIVALENT",
+      "reason": "Surplus whitespace transferred across a suffix/near capture is removed by trimRange. A near index of zero is impossible for a trimmed nonempty phrase; absent near produces no alternative even with the weakened guard.",
+      "report": "search-s3-candidates-current-mutation.json",
+      "sourceHash": "205e4ffb4367f5575fd7b561a0033ce0a6e551792d1e08e3c48f8deddf0223af"
+    },
+    {
+      "file": "services/search/locations/candidates.ts",
+      "ids": [
+        "182",
+        "187",
+        "189",
+        "191",
+        "207",
+        "209",
+        "218",
+        "223",
+        "234",
+        "239",
+        "247",
+        "252",
+        "255",
+        "260",
+        "266",
+        "271",
+        "285",
+        "289",
+        "292",
+        "307",
+        "309",
+        "327",
+        "329",
+        "373",
+        "392"
+      ],
+      "disposition": "EQUIVALENT",
+      "reason": "These particular quantifier mutations transfer only surplus boundary whitespace into/out of captures. All ranges pass through trimRange and retain the same non-whitespace span. Clock-interior whitespace mutant138 is not in this group: its concrete witness kills it.",
+      "report": "search-s3-candidates-current-mutation.json",
+      "sourceHash": "205e4ffb4367f5575fd7b561a0033ce0a6e551792d1e08e3c48f8deddf0223af"
+    },
+    {
+      "file": "services/search/locations/candidates.ts",
+      "ids": [
+        "277",
+        "346",
+        "348",
+        "349"
+      ],
+      "disposition": "EQUIVALENT",
+      "reason": "Meaningful booking-token captures already begin/end without whitespace; all-whitespace alternatives match neither bookingPrefix nor meaninglessLocation. Public spans are trimmed separately.",
+      "report": "search-s3-candidates-current-mutation.json",
+      "sourceHash": "205e4ffb4367f5575fd7b561a0033ce0a6e551792d1e08e3c48f8deddf0223af"
+    },
+    {
+      "file": "services/search/locations/candidates.ts",
+      "ids": [
+        "399"
+      ],
+      "disposition": "EQUIVALENT",
+      "reason": "Duplicate exact spans from directional grammars have the same method. Labelled spans start after their colon and cannot equal a directional span starting after a different operator; near alternatives are strictly shorter than their parents. First-write versus overwrite preserves span, method, order and ID.",
+      "report": "search-s3-candidates-current-mutation.json",
+      "sourceHash": "205e4ffb4367f5575fd7b561a0033ce0a6e551792d1e08e3c48f8deddf0223af"
+    },
+    {
+      "file": "services/search/locations/candidates.ts",
+      "ids": [
+        "440"
+      ],
+      "disposition": "NON_ACTIONABLE",
+      "reason": "Private makeCandidates failure payload is discarded: the public generated.exceeded branch independently returns an empty candidates array. Actual mutant replay and independent public-API witness confirm no sentinel escapes.",
+      "report": "search-s3-candidates-current-mutation.json",
+      "sourceHash": "205e4ffb4367f5575fd7b561a0033ce0a6e551792d1e08e3c48f8deddf0223af"
+    },
+    {
+      "file": "services/search/locations/candidates.ts",
+      "ids": [
+        "446"
+      ],
+      "disposition": "EQUIVALENT",
+      "reason": "exactText is already the output of trimRange, so trimming it before whitespace normalization is idempotent.",
+      "report": "search-s3-candidates-current-mutation.json",
+      "sourceHash": "205e4ffb4367f5575fd7b561a0033ce0a6e551792d1e08e3c48f8deddf0223af"
+    },
+    {
+      "file": "services/search/locations/candidates.ts",
+      "ids": [
+        "472",
+        "474",
+        "508"
+      ],
+      "disposition": "EQUIVALENT",
+      "reason": "UNCLEAR produces no specs or mention failure after removal of the early return. A meaningful LOCATION_SEARCH mention has a whole-query candidate or already returned for a resource failure; the final booking predicate adds no observable distinction.",
+      "report": "search-s3-candidates-current-mutation.json",
+      "sourceHash": "205e4ffb4367f5575fd7b561a0033ce0a6e551792d1e08e3c48f8deddf0223af"
+    },
+    {
+      "file": "services/search/locations/followup.ts",
+      "ids": [
+        "104"
+      ],
+      "disposition": "EQUIVALENT",
+      "reason": "The groundedRoles set can contain only pickup/drop. For any other field, the following !groundedRoles.has(field) branch returns true, preserving the same issue.",
+      "report": "search-s3-core-final-mutation.json",
+      "sourceHash": "4dfa3fedb129c013ea21cec4ea7d56e296bfcdbaf0b2e5c5c69d902099519360"
+    },
+    {
+      "file": "services/search/locations/service.ts",
+      "ids": [
+        "558",
+        "608",
+        "627",
+        "628"
+      ],
+      "disposition": "NON_ACTIONABLE",
+      "reason": "Changed empty intermediate values are either unused or unconditionally overwritten by the grounding result before the public return. No fake location/result escapes.",
+      "report": "search-s3-core-final-mutation.json",
+      "sourceHash": "044439494af87ebfd4cc88cd973bbc8197d50054e3acbb9a52f4a321ca02b57a"
+    },
+    {
+      "file": "services/search/locations/service.ts",
+      "ids": [
+        "625"
+      ],
+      "disposition": "EQUIVALENT",
+      "reason": "standaloneTarget validation also runs unconditionally in the subsequent ground/locationContexts boundary. Removing this earlier identical validation cannot admit an invalid target.",
+      "report": "search-s3-core-final-mutation.json",
+      "sourceHash": "044439494af87ebfd4cc88cd973bbc8197d50054e3acbb9a52f4a321ca02b57a"
+    },
+    {
+      "file": "services/search/locations/sessionTemporal.ts",
+      "ids": [
+        "1104",
+        "1112"
+      ],
+      "disposition": "EQUIVALENT",
+      "reason": "After the query-source branch has been ruled out, validated date refs are canonical USER_FIELD refs. Global edit revision uniqueness binds the edit to its validated field, making the individual extra predicate redundant.",
+      "report": "search-s3-core-final-mutation.json",
+      "sourceHash": "db7783ba2ade520f2d83268c5d6d05f512da6a215986cd5cada8c1f77d590068"
+    },
+    {
+      "file": "services/search/locations/sessionTemporal.ts",
+      "ids": [
+        "1154",
+        "1156",
+        "1157",
+        "1160",
+        "1162",
+        "1166"
+      ],
+      "disposition": "EQUIVALENT",
+      "reason": "The preceding relative-date guard already establishes RESOLVED. Canonical user refs are uniform for the field, making some/every equal. The private resolver copy removes user refs to avoid asking for an already trusted anchor; removing query refs or substituting a non-USER sentinel changes neither resolution nor public/history provenance.",
+      "report": "search-s3-core-final-mutation.json",
+      "sourceHash": "db7783ba2ade520f2d83268c5d6d05f512da6a215986cd5cada8c1f77d590068"
+    },
+    {
+      "file": "services/search/locations/sessionTemporal.ts",
+      "ids": [
+        "1175"
+      ],
+      "disposition": "EQUIVALENT",
+      "reason": "For validated relative dates, a missing localDate occurs only with an unresolved timezone, which also lacks localTime. The remaining localTime guard still returns; other incomplete-clock cases retain the valid localDate.",
+      "report": "search-s3-core-final-mutation.json",
+      "sourceHash": "db7783ba2ade520f2d83268c5d6d05f512da6a215986cd5cada8c1f77d590068"
+    },
+    {
+      "file": "services/search/observations.ts",
+      "ids": [
+        "1190",
+        "1323",
+        "1324",
+        "1341",
+        "1345",
+        "1368",
+        "1370",
+        "1373",
+        "1377",
+        "1400",
+        "1401",
+        "1441",
+        "1442",
+        "1462",
+        "1465",
+        "1466",
+        "1473",
+        "1474"
+      ],
+      "disposition": "EQUIVALENT",
+      "reason": "Previously audited S2 observation equivalents: complete token captures make extra anchors/trim redundant; observe creates QUERY_SPAN refs only; daypart begins strictly after clock; outer mapping uses kind/ref and discards temporary observation values. See search-s2-mutation-signoff.md. The new via detector mutations were killed.",
+      "report": "search-s3-core-final-mutation.json",
+      "sourceHash": "e0340bc0c14c25dd330ecda5101ef11771282caea95a3318cfd65f06168f2078"
+    },
+    {
+      "file": "services/search/parser.ts",
+      "ids": [
+        "26",
+        "27"
+      ],
+      "disposition": "EQUIVALENT",
+      "reason": "Private routing/location/simple question builders emit at most 28 questions, below the configured 48 cap. Neither removal nor >= can change a reachable parser batch; the defensive resource guard remains intact in source.",
+      "report": "search-s3-parser-current-mutation.json",
+      "sourceHash": "b176f803e666c7227edea8010f3eb0bceec9254b4947b1d963c71fd83530b83b"
+    },
+    {
+      "file": "services/search/parser.ts",
+      "ids": [
+        "73"
+      ],
+      "disposition": "EQUIVALENT",
+      "reason": "The output draft is initialized before entering provider calls; provider failure cannot reach this branch with an undefined draft.",
+      "report": "search-s3-parser-current-mutation.json",
+      "sourceHash": "b176f803e666c7227edea8010f3eb0bceec9254b4947b1d963c71fd83530b83b"
+    },
+    {
+      "file": "services/search/parser.ts",
+      "ids": [
+        "115",
+        "116"
+      ],
+      "disposition": "NON_ACTIONABLE",
+      "reason": "Custom schema issue-code literals vary, but the public mapping and already-validated query/candidate provenance still produce the same INVALID_INPUT issue and fail closed.",
+      "report": "search-s3-parser-current-mutation.json",
+      "sourceHash": "b176f803e666c7227edea8010f3eb0bceec9254b4947b1d963c71fd83530b83b"
+    },
+    {
+      "file": "services/search/locations/session.ts",
+      "ids": [
+        "455",
+        "457",
+        "458",
+        "461",
+        "466",
+        "468",
+        "469",
+        "472"
+      ],
+      "disposition": "EQUIVALENT",
+      "reason": "Validated snapshots, edit values and registries have no present null/undefined objects. Calling freeze on a primitive is inert, and original child guards prevent passing a primitive to Object.values when only the parent guard is changed. Nested objects remain frozen.",
+      "report": "search-s3-session-current-mutation.json",
+      "sourceHash": "0dd1baced394cac79aaed157af101fca232be663757264779a441dd72f849a2b"
+    },
+    {
+      "file": "services/search/locations/session.ts",
+      "ids": [
+        "519"
+      ],
+      "disposition": "EQUIVALENT",
+      "reason": "Among valid SessionEditValue union members, only a raw LocationRef has top-level kind. Such a value is valid only for a location field; invalid cross-field values are rejected by the final draft schema.",
+      "report": "search-s3-session-current-mutation.json",
+      "sourceHash": "0dd1baced394cac79aaed157af101fca232be663757264779a441dd72f849a2b"
+    },
+    {
+      "file": "services/search/locations/session.ts",
+      "ids": [
+        "572",
+        "574"
+      ],
+      "disposition": "EQUIVALENT",
+      "reason": "Without the early IMMEDIATE return, cloning followed by the UNSPECIFIED/SCHEDULED branches leaves the immediate value unchanged.",
+      "report": "search-s3-session-current-mutation.json",
+      "sourceHash": "0dd1baced394cac79aaed157af101fca232be663757264779a441dd72f849a2b"
+    },
+    {
+      "file": "services/search/locations/session.ts",
+      "ids": [
+        "605",
+        "607"
+      ],
+      "disposition": "EQUIVALENT",
+      "reason": "Given prior BOOKING_REQUEST, assigning that same queryType/SIMPLE complexity to a next booking snapshot is idempotent. Complex/fallback snapshots are rejected before session construction.",
+      "report": "search-s3-session-current-mutation.json",
+      "sourceHash": "0dd1baced394cac79aaed157af101fca232be663757264779a441dd72f849a2b"
+    },
+    {
+      "file": "services/search/locations/session.ts",
+      "ids": [
+        "616",
+        "620",
+        "622"
+      ],
+      "disposition": "EQUIVALENT",
+      "reason": "Different valid snapshots cannot have identical unsupported request refs because refs identify the owning query/revision. Removing exact cross-snapshot dedup therefore preserves the union. Overlaying the first snapshot onto itself is idempotent, including its original dedup. First-request every mutation619 is killed separately.",
+      "report": "search-s3-session-current-mutation.json",
+      "sourceHash": "0dd1baced394cac79aaed157af101fca232be663757264779a441dd72f849a2b"
+    },
+    {
+      "file": "services/search/locations/session.ts",
+      "ids": [
+        "644"
+      ],
+      "disposition": "EQUIVALENT",
+      "reason": "For the first occurrence of a query ID, revision <= undefined evaluates false. For subsequent occurrences prior is already defined, so the weakened predicate does not change monotonicity validation.",
+      "report": "search-s3-session-current-mutation.json",
+      "sourceHash": "0dd1baced394cac79aaed157af101fca232be663757264779a441dd72f849a2b"
+    },
+    {
+      "file": "services/search/locations/session.ts",
+      "ids": [
+        "687",
+        "691",
+        "692",
+        "697",
+        "699",
+        "700",
+        "701",
+        "702",
+        "704",
+        "708"
+      ],
+      "disposition": "EQUIVALENT",
+      "reason": "Snapshot schema/provenance validation binds all query refs and candidate IDs to their own snapshot. Projection must equal replay. Explicit edits replace every ref with canonical USER_FIELD refs, so QUERY_CANDIDATE edits still fail the remaining source checks for each individual mutant. Mixed or forged source/candidate histories are rejected earlier.",
+      "report": "search-s3-session-current-mutation.json",
+      "sourceHash": "0dd1baced394cac79aaed157af101fca232be663757264779a441dd72f849a2b"
+    },
+    {
+      "file": "services/search/locations/session.ts",
+      "ids": [
+        "722"
+      ],
+      "disposition": "NON_ACTIONABLE",
+      "reason": "UNSPECIFIED locations produce an empty internal ref list. The sentinel has no recognized kind; neither USER_SELECTION nor QUERY_CANDIDATE branch runs, so validation/output remains unchanged.",
+      "report": "search-s3-session-current-mutation.json",
+      "sourceHash": "0dd1baced394cac79aaed157af101fca232be663757264779a441dd72f849a2b"
+    },
+    {
+      "file": "services/search/locations/session.ts",
+      "ids": [
+        "802",
+        "805"
+      ],
+      "disposition": "EQUIVALENT",
+      "reason": "Every successful nonduplicate merge changes effectiveDraft.query identity/revision, so changed is necessarily true and fare/route invalidation remains true.",
+      "report": "search-s3-session-current-mutation.json",
+      "sourceHash": "0dd1baced394cac79aaed157af101fca232be663757264779a441dd72f849a2b"
+    },
+    {
+      "file": "services/search/locations/session.ts",
+      "ids": [
+        "819"
+      ],
+      "disposition": "NON_ACTIONABLE",
+      "reason": "The only difference is error origin for an invalid timestamp on a non-temporal edit: original toISOString and the earlier mutated guard both reject before returning any session. Temporal timestamp/error-category mutants are killed.",
+      "report": "search-s3-session-current-mutation.json",
+      "sourceHash": "0dd1baced394cac79aaed157af101fca232be663757264779a441dd72f849a2b"
+    },
+    {
+      "file": "services/search/locations/session.ts",
+      "ids": [
+        "875",
+        "876"
+      ],
+      "disposition": "NON_ACTIONABLE",
+      "reason": "makeSession validates the entire history and newly registered selection before returning. Removing one redundant early check never admits invalid state; it may change which input-error implementation throws first. Source keeps defense in depth.",
+      "report": "search-s3-session-current-mutation.json",
+      "sourceHash": "0dd1baced394cac79aaed157af101fca232be663757264779a441dd72f849a2b"
+    },
+    {
+      "file": "services/search/locations/review.ts",
+      "ids": [
+        "66",
+        "74"
+      ],
+      "disposition": "EQUIVALENT",
+      "reason": "A USER_SELECTION is registry-backed by session validation. A QUERY_CANDIDATE lacks selectionId, so the extra branch cannot invent a registered selection. The undefined-assignment variant does not change current endpoints or selection history.",
+      "report": "search-s3-review-current-mutation.json",
+      "sourceHash": "17c41d5b4267d675affcebd49b3d44150f7b8d97ea8b0aa60b80b667ecf2c757"
+    },
+    {
+      "file": "services/search/locations/review.ts",
+      "ids": [
+        "122"
+      ],
+      "disposition": "EQUIVALENT",
+      "reason": "QUERY_SPAN has no field under the strict source-ref union. Even without the kind predicate, field !== locationTarget rejects it; invalid refs fail sourceRefSchema first.",
+      "report": "search-s3-review-current-mutation.json",
+      "sourceHash": "17c41d5b4267d675affcebd49b3d44150f7b8d97ea8b0aa60b80b667ecf2c757"
+    },
+    {
+      "file": "services/search/locations/review.ts",
+      "ids": [
+        "193"
+      ],
+      "disposition": "EQUIVALENT",
+      "reason": "UNSPECIFIED/AMBIGUOUS state is rejected before value access. QUERY_CANDIDATE retains the ID check; USER_SELECTION has no candidateId and fails that ID check. Removing only the kind predicate admits no stale result. State/TypeError mutations188/189/190 are killed.",
+      "report": "search-s3-review-current-mutation.json",
+      "sourceHash": "17c41d5b4267d675affcebd49b3d44150f7b8d97ea8b0aa60b80b667ecf2c757"
+    },
+    {
+      "file": "services/search/locations/review.ts",
+      "ids": [
+        "220",
+        "222"
+      ],
+      "disposition": "EQUIVALENT",
+      "reason": "The same PLACES_GROUNDING_REQUIRED issue is regenerated from the current draft and deduplicated by code/field; after a trusted selection the endpoint filter removes it. Carrying the old instance changes no follow-up.",
+      "report": "search-s3-review-current-mutation.json",
+      "sourceHash": "17c41d5b4267d675affcebd49b3d44150f7b8d97ea8b0aa60b80b667ecf2c757"
+    },
+    {
+      "file": "services/search/locations/review.ts",
+      "ids": [
+        "234"
+      ],
+      "disposition": "NON_ACTIONABLE",
+      "reason": "LOCATION_REVIEW_REQUIRED is categorized as grounding from its locations field before category is considered, so the private issue-category string changes no public follow-up.",
+      "report": "search-s3-review-current-mutation.json",
+      "sourceHash": "17c41d5b4267d675affcebd49b3d44150f7b8d97ea8b0aa60b80b667ecf2c757"
+    },
+    {
+      "file": "services/search/locations/grounding.ts",
+      "ids": [
+        "24"
+      ],
+      "disposition": "NON_ACTIONABLE",
+      "reason": "Only validation explanation prose changes. A Google selection without an authoritative ID still fails the same schema rule.",
+      "report": "search-s3-session-current-mutation.json",
+      "sourceHash": "0c223949eea8cbc360f1f4fd7ee5b5cca89206a83e5f3e31ad0caffd5f800e2a"
+    },
+    {
+      "file": "services/search/locations/grounding.ts",
+      "ids": [
+        "51",
+        "52"
+      ],
+      "disposition": "NON_ACTIONABLE",
+      "reason": "The private initial issues/status values are overwritten on every success/failure/empty-match return path before exposure.",
+      "report": "search-s3-session-current-mutation.json",
+      "sourceHash": "0c223949eea8cbc360f1f4fd7ee5b5cca89206a83e5f3e31ad0caffd5f800e2a"
+    },
+    {
+      "file": "services/search/locations/places.ts",
+      "ids": [
+        "236",
+        "237",
+        "238",
+        "240",
+        "241",
+        "242",
+        "317"
+      ],
+      "disposition": "NON_ACTIONABLE",
+      "reason": "Only fixed exception name/message prose varies. Sanitized structured provider codes, timeout category, geography validation and fail-closed behavior remain identical. No provider internals become public.",
+      "report": "search-s3-places-final-mutation.json",
+      "sourceHash": "4bf043d878cc7e0f1838ae60f70e4b9ee39de9d4462e43f2e3510c6b9ae264a0"
+    },
+    {
+      "file": "services/search/locations/places.ts",
+      "ids": [
+        "254"
+      ],
+      "disposition": "EQUIVALENT",
+      "reason": "The altered default empty suggestions array contains a non-prediction sentinel, which flatMap discards. Public results still contain no matches or invented geography.",
+      "report": "search-s3-places-final-mutation.json",
+      "sourceHash": "4bf043d878cc7e0f1838ae60f70e4b9ee39de9d4462e43f2e3510c6b9ae264a0"
+    },
+    {
+      "file": "services/search/locations/places.ts",
+      "ids": [
+        "329"
+      ],
+      "disposition": "EQUIVALENT",
+      "reason": "The timeout variable is synchronously assigned in the Promise executor before finally can run. clearTimeout always receives that timer, and clearing undefined would also be harmless.",
+      "report": "search-s3-places-final-mutation.json",
+      "sourceHash": "4bf043d878cc7e0f1838ae60f70e4b9ee39de9d4462e43f2e3510c6b9ae264a0"
+    },
+    {
+      "file": "routes/googleAPI.js",
+      "ids": [
+        "13"
+      ],
+      "disposition": "EQUIVALENT",
+      "reason": "Express simple query parsing supplies token values as strings or arrays. Duplicate values stringify with a comma, which the token alphabet rejects even without the typeof predicate. Missing and malformed token cases remain rejected.",
+      "report": "search-s3-places-final-mutation.json",
+      "sourceHash": "a6a40a0a619ec142c16c5a3b6abc8a82a1a0e358df6636ecc61431f148488e4a"
+    },
+    {
+      "file": "routes/googleAPI.js",
+      "ids": [
+        "60"
+      ],
+      "disposition": "EQUIVALENT",
+      "reason": "JSON.stringify omits an undefined sessionToken property. With a token the property is unchanged; without one the exact Google wire payload remains unchanged.",
+      "report": "search-s3-places-final-mutation.json",
+      "sourceHash": "a6a40a0a619ec142c16c5a3b6abc8a82a1a0e358df6636ecc61431f148488e4a"
+    },
+    {
+      "file": "routes/googleAPI.js",
+      "ids": [
+        "1",
+        "20",
+        "27",
+        "30",
+        "31",
+        "37",
+        "50",
+        "86",
+        "87",
+        "88",
+        "123",
+        "124",
+        "161",
+        "162",
+        "176",
+        "179",
+        "183",
+        "184",
+        "187",
+        "189",
+        "190",
+        "191",
+        "192",
+        "193",
+        "208",
+        "209",
+        "212",
+        "221",
+        "224",
+        "228",
+        "232",
+        "233"
+      ],
+      "disposition": "UNCHANGED_LEGACY",
+      "reason": "These mutate pre-existing non-session proxy/cache/reverse-geocoding behavior, not S3 token/details authority or removal of raw provider logging. They are reported as legacy test debt outside the new/materially changed scope, not claimed equivalent. See the scoped git diff and mutation source locations.",
+      "report": "search-s3-places-final-mutation.json",
+      "sourceHash": "a6a40a0a619ec142c16c5a3b6abc8a82a1a0e358df6636ecc61431f148488e4a"
+    }
+  ]
+}
