@@ -86,7 +86,9 @@ test('isolated custody epochs and independently detected compromised verifier',a
     });
     await t.test('unacknowledged saturation rejects actual broker admission while STOP remains legal',async()=>{
       await f.control('RESUME');await f.b.query('UPDATE custody_export.limits SET max_unacknowledged=1');
-      const q=await f.register(1);assert.ok(q);
+      await assert.rejects(f.register(1),{code:'54000'});
+      // The first request predates pressure; it cannot start analysis either.
+      const q=(await f.b.query('SELECT id FROM broker9d.requests ORDER BY id LIMIT 1')).rows[0].id;
       await assert.rejects(f.exec.query('SELECT broker9d.reserve($1)',[q]),{code:'54000'});
       assert.ok(await f.control('STOP'));assert.equal((await f.b.query('SELECT stopped FROM broker9d.control')).rows[0].stopped,true);
       assert.equal((await f.b.query('SELECT count(*)::int n FROM broker9d.attempts')).rows[0].n,0);

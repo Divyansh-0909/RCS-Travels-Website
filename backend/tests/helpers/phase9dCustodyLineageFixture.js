@@ -2,8 +2,8 @@ import {readFile} from 'node:fs/promises';
 import {randomUUID} from 'node:crypto';
 import pg from 'pg';
 import {custodyClosureFixture} from './phase9dCustodyClosureFixture.js';
-export async function custodyLineageFixture(){
-  const f=await custodyClosureFixture(),clients=[],sources=new Map([[f.sourceIdentity,{id:f.sourceIdentity,key:f.sourceKey,service:'broker-receiver-v1'}]]),streams=[];
+export async function custodyLineageFixture(options){
+  const f=await custodyClosureFixture(options),clients=[],sources=new Map([[f.sourceIdentity,{id:f.sourceIdentity,key:f.sourceKey,service:'broker-receiver-v1'}]]),streams=[];
   try{
     const sql=await readFile(new URL('../../../tools/phase9d/closure-lineage.sql',import.meta.url),'utf8');
     await f.a.query('CREATE ROLE custody_source_sender LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS;CREATE ROLE custody_receiver_sender LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS;CREATE ROLE custody_lineage_inspector LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS;CREATE ROLE custody_lineage_verifier LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS');
@@ -23,6 +23,13 @@ export async function custodyLineageFixture(){
     await f.a.query(await readFile(new URL('../../../tools/phase9d/closure-source-lineage.sql',import.meta.url),'utf8'));
     await f.a.query('GRANT EXECUTE ON FUNCTION custody_lineage.expected_sources() TO custody_lineage_inspector;CREATE TRIGGER custody_source_outbox AFTER INSERT OR UPDATE ON outbox9d.deliveries FOR EACH ROW EXECUTE FUNCTION custody_lineage.capture();CREATE TRIGGER custody_source_audit AFTER INSERT ON audit9d.events FOR EACH ROW EXECUTE FUNCTION custody_lineage.capture()');
     await f.b.query('CREATE TRIGGER custody_receiver_receipt AFTER INSERT ON transport9d.receipts FOR EACH ROW EXECUTE FUNCTION custody_lineage.capture();CREATE TRIGGER custody_receiver_work AFTER INSERT OR UPDATE ON shadow9d.work FOR EACH ROW EXECUTE FUNCTION custody_lineage.capture();CREATE TRIGGER custody_receiver_audit AFTER INSERT ON audit9d.events FOR EACH ROW EXECUTE FUNCTION custody_lineage.capture();CREATE TRIGGER custody_receiver_retry AFTER INSERT ON custody_export.retries FOR EACH ROW EXECUTE FUNCTION custody_lineage.capture()');
+    await f.b.query(await readFile(new URL('../../../tools/phase9d/closure-transport.sql',import.meta.url),'utf8'));
+    const consistency=await readFile(new URL('../../../tools/phase9d/closure-consistency.sql',import.meta.url),'utf8');
+    for(const owner of [f.a,f.b])await owner.query(consistency);
+    // Initial committed snapshots are explicitly later observations. They do
+    // not reconstruct missing historical mutable-row transitions.
+    await f.a.query('SELECT custody_lineage.capture_committed()');
+    for(const owner of [f.a,f.b])await owner.query('SELECT custody_lineage.capture_existing()');
     return {...f,streams,sources,async close(){await Promise.allSettled(clients.map(c=>c.end()));await f.close();}};
   }catch(error){await Promise.allSettled(clients.map(c=>c.end()));await f.close();throw error;}
 }

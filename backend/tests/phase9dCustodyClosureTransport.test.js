@@ -38,19 +38,20 @@ test('service database admission rejects owner, memberships, URI overrides and p
   await assert.rejects(closureSession(uri,role,{environment:{}}));
 });
 async function raw(port,bytes,{method='POST',path='/v1/shadow/deliveries',mac=transportMac(bytes,key)}={}){
-  return new Promise((ok,fail)=>{const req=http.request({hostname:'127.0.0.1',port,path,method,agent:false,headers:{'content-length':bytes.length,'x-shadow-mac':mac}},res=>{const chunks=[];res.on('data',c=>chunks.push(c));res.on('end',()=>ok({status:res.statusCode,value:JSON.parse(Buffer.concat(chunks))}));});req.on('error',fail);req.end(bytes);});
+  return new Promise((ok,fail)=>{const req=http.request({hostname:'127.0.0.1',port,path,method,agent:false,headers:{'content-length':bytes.length,'x-shadow-mac':mac}},res=>{const chunks=[];res.on('data',c=>chunks.push(c));res.on('error',fail);res.on('end',()=>{try{ok({status:res.statusCode,value:JSON.parse(Buffer.concat(chunks))});}catch(error){fail(error);}});});const timer=setTimeout(()=>req.destroy(Error('TEST_RESPONSE_DEADLINE')),2500);req.on('error',fail);req.once('close',()=>clearTimeout(timer));req.end(bytes);});
 }
 test('bounded ingress HTTP rejects invalid requests and releases capacity after failures',async()=>{
   let calls=0,release;const server=closureHttp(key,async value=>{calls++;if(value.pause)return new Promise(ok=>{release=()=>ok({done:true});});if(value.fail)throw Error('private failure');if(value.lost)return null;return {value};});
   await new Promise(ok=>server.listen(0,'127.0.0.1',ok));const port=server.address().port,bytes=Buffer.from('{}');
   try{
     assert.equal(server.maxConnections,4);assert.equal(server.maxHeadersCount,8);assert.equal(server.headersTimeout,2000);assert.equal(server.requestTimeout,3000);assert.equal(server.keepAliveTimeout,1000);
-    assert.equal((await raw(port,bytes,{method:'GET'})).status,404);assert.equal((await raw(port,bytes,{path:'/wrong'})).status,404);
-    assert.equal((await raw(port,bytes,{mac:'bad'})).status,401);assert.equal((await raw(port,Buffer.alloc(8193))).status,413);assert.equal((await raw(port,Buffer.from('{'))).status,503);
+    assert.deepEqual(await raw(port,bytes,{method:'GET'}),{status:404,value:{error:'ROUTE'}});assert.deepEqual(await raw(port,bytes,{path:'/wrong'}),{status:404,value:{error:'ROUTE'}});
+    assert.deepEqual(await raw(port,bytes,{mac:'bad'}),{status:401,value:{error:'AUTH'}});assert.deepEqual(await raw(port,Buffer.alloc(8193)),{status:413,value:{error:'LIMIT'}});assert.deepEqual(await raw(port,Buffer.from('{')),{status:503,value:{error:'UNAVAILABLE'}});
     assert.equal((await raw(port,Buffer.from([255]))).status,503);assert.equal(calls,0);
     assert.deepEqual((await raw(port,bytes)).value,{value:{}});
-    const held=raw(port,Buffer.from('{"pause":true}'));while(!release)await new Promise(ok=>setTimeout(ok,5));assert.equal((await raw(port,bytes)).status,503);release();assert.equal((await held).status,200);
-    assert.equal((await raw(port,Buffer.from('{"fail":true}'))).status,503);assert.equal((await raw(port,bytes)).status,200);
+    assert.equal((await raw(port,Buffer.from('{}'.padEnd(8192,' ')))).status,200);
+    const held=raw(port,Buffer.from('{"pause":true}'));held.catch(()=>{});for(let i=0;i<300&&!release;i++)await new Promise(ok=>setTimeout(ok,5));assert.ok(release);assert.deepEqual(await raw(port,bytes),{status:503,value:{error:'CAPACITY'}});await new Promise(ok=>setTimeout(ok,1100));release();assert.equal((await held).status,200);
+    assert.deepEqual(await raw(port,Buffer.from('{"fail":true}')),{status:503,value:{error:'UNAVAILABLE'}});assert.equal((await raw(port,bytes)).status,200);
     await assert.rejects(raw(port,Buffer.from('{"lost":true}')));
     await new Promise((ok,fail)=>{const req=http.request({hostname:'127.0.0.1',port,path:'/v1/shadow/deliveries',method:'POST',headers:{'content-length':100}},()=>fail(Error('partial body admitted')));const timeout=setTimeout(()=>{req.destroy();fail(Error('body deadline omitted'));},1700);req.on('error',()=>{clearTimeout(timeout);ok();});req.write('{');});
   }finally{server.closeAllConnections();await new Promise(ok=>server.close(ok));}

@@ -3,8 +3,8 @@ import {randomUUID} from 'node:crypto';
 import pg from 'pg';
 import {custodyFixture} from './phase9dCustodyFixture.js';
 import {verificationRegistry} from '../../../tools/phase9d/closure-keys.mjs';
-export async function custodyClosureFixture(){
-  const f=await custodyFixture(),clients=[],credentials=new Map();
+export async function custodyClosureFixture({fixture=custodyFixture}={}){
+  const f=await fixture(),clients=[],credentials=new Map();
   try{
     const sql=name=>readFile(new URL('../../../tools/phase9d/'+name,import.meta.url),'utf8');
     await f.b.query(await sql('closure-source.sql'));await f.audit.query(await sql('closure-store.sql'));

@@ -13,7 +13,7 @@ SET search_path=pg_catalog,custody_lineage,pg_temp AS $$
 $$;
 CREATE FUNCTION custody_lineage.emit(action text,id text,owner_id text,original jsonb,actor text) RETURNS bigint LANGUAGE plpgsql SECURITY DEFINER
 SET search_path=pg_catalog,custody_lineage,pg_temp SET TimeZone='UTC' AS $$
-DECLARE c custody_lineage.control; identity_key text; e jsonb; digest text; existing bigint; original_digest text;
+DECLARE c custody_lineage.control; identity_key text; e jsonb; digest text; existing bigint; original_digest text; transport_service text;
 BEGIN
   SELECT * INTO STRICT c FROM custody_lineage.control FOR UPDATE;
   identity_key=encode(__CRYPTO__.hmac(id,c.secret,'sha256'),'hex');
@@ -30,6 +30,8 @@ BEGIN
     END IF;
     RAISE EXCEPTION 'AUDIT_HISTORY_CAPACITY' USING ERRCODE='54000';
   END IF;
+  IF c.service='source-lineage-v2' THEN SELECT service_id::text INTO transport_service FROM outbox9d.transport_configuration;
+  ELSE SELECT service_id::text INTO transport_service FROM transport9d.configuration;END IF;
   e=jsonb_build_object('schema','custody-event-v2','source',c.source::text,'service',c.service,
     'database',encode(sha256(convert_to(current_database(),'UTF8')),'hex'),'sequence',(c.seq+1)::text,'previous',c.head,
     'localId',(c.seq+1)::text,'sourceHash',digest,'identityHash',identity_key,
@@ -37,7 +39,7 @@ BEGIN
     'action',action,'actor',actor,'request',NULL,'attempt',NULL,'receipt',original->>'receipt',
     'evidenceHash',COALESCE(original->>'evidenceHash',original->>'evidence_hash',original#>>'{payload,evidenceHash}'),
     'evidenceVersion',CASE WHEN COALESCE(original->>'evidenceHash',original->>'evidence_hash',original#>>'{payload,evidenceHash}') IS NOT NULL THEN 'responsibility-evidence-v1' END,
-    'configuration',encode(sha256(convert_to('isolated-custody-lineage-v2','UTF8')),'hex'),
+    'configuration',encode(sha256(convert_to(jsonb_build_object('adapter','isolated-custody-lineage-v2','transportService',transport_service,'protocol','shadow-export-v1','projection','shadow-minimized-v1','export','inactive-isolated-export-v1')::text,'UTF8')),'hex'),
     'generation',original->>'epoch','frozen','e484afc4c7fa724ea29af6edd962c48b814dc73a10e4f4a5e33833ad26afbe75',
     'observed',to_char(c.now_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'));
   digest=encode(sha256(convert_to('custody-event-v1'||chr(10)||custody_lineage.serialize(e),'UTF8')),'hex');

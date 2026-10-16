@@ -42,7 +42,7 @@ BEGIN
       e->>'action' IN('REGISTER','RESERVE','BUDGET_DENIED','DISPATCH_ADMITTED','SEND_ATTEMPT','RESPONSE_OBSERVED','OUTCOME_UNKNOWN','RECOVER','GUARDED_RESULT_COMMITTED','USAGE_RECONCILED','USAGE_CONFLICT','UNSENT_TERMINAL_RELEASE','OPERATION_STOP','OPERATION_RESUME','OPERATION_TERMINATE','OPERATION_CLEAN');
   END IF;
   IF service='denial-observer-v2' AND e->>'schema'='custody-denial-v1' THEN
-    RETURN e->>'actor'='trusted_observer' AND COALESCE(e->>'serverIdentity','')~'^[a-f0-9]{64}$' AND
+    RETURN e->>'actor'='trusted_observer' AND e->>'database'=e->>'serverIdentity' AND COALESCE(e->>'serverIdentity','')~'^[a-f0-9]{64}$' AND
       COALESCE(e->>'logSessionHash','')~'^[a-f0-9]{64}$' AND COALESCE(e->>'authenticatedRole','')~'^[a-z][a-z0-9_]{0,62}$' AND COALESCE(e->>'logLine','')~'^[1-9][0-9]{0,14}$' AND
       COALESCE(e->>'identityHash','')~'^[a-f0-9]{64}$' AND e->'ownerHash'='null'::jsonb AND e->>'denialClass' IN('APPLICATION_WRITE','BUDGET_CONFIGURATION','AUDIT_HISTORY','ROLE_ESCALATION','AUTHENTICATION','SIGNING_SECRET','GUARD_WRITE','OPERATIONS_CONTROL','DATABASE_DENIAL') AND
       ((e->>'sqlstate'='42501' AND e->>'actorTrust'='AUTHENTICATED' AND e->>'action'='PERMISSION_DENIED') OR
@@ -78,6 +78,10 @@ BEGIN
 END $$;
 REVOKE ALL ON ALL FUNCTIONS IN SCHEMA custody FROM PUBLIC;
 RESET ROLE;
+-- Extension routines are owned by the trusted extension installer, not by
+-- custody_owner. Revoke as the installer as well; SET ROLE cannot revoke another
+-- owner's default PUBLIC grants.
+REVOKE EXECUTE ON ALL FUNCTIONS IN SCHEMA custody FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION custody.accept(jsonb,text,text),custody.active_key() FROM custody_ingest;
 GRANT EXECUTE ON FUNCTION custody.ingest(jsonb) TO custody_ingest;
 -- The original table-wide inspector grant would otherwise include the new private column.
