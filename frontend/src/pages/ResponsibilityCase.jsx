@@ -1,90 +1,80 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
-import { useApi } from '../hooks/useApi';
-import Button from '../components/ui/Button';
-import ResponsibilityReviewForm from '../components/ResponsibilityReviewForm';
-import { createCaseLoadController } from '../lib/responsibilityCaseLoad';
-import { responsibilityInspectionModel } from '../lib/responsibilityInspection';
-
-const show = value => value == null ? 'Not recorded' : String(value);
-
-function Record({ title, value, empty = 'Not recorded' }) {
-  return <section className="min-w-0 border-t border-border py-6">
-    <h2 className="mb-3 text-xl font-semibold text-ink">{title}</h2>
-    {value == null ? <p className="text-ink-muted">{empty}</p> :
-      <pre className="max-h-[32rem] overflow-auto whitespace-pre-wrap break-words rounded-xl bg-surface-muted p-4 text-sm text-ink [overflow-wrap:anywhere]">{JSON.stringify(value, null, 2)}</pre>}
-  </section>;
-}
+import {useCallback,useEffect,useLayoutEffect,useMemo,useRef,useState} from 'react';
+import {useSearchParams} from 'react-router-dom';
+import {useApi} from '../hooks/useApi';
+import {useTheme} from '../context/ThemeContext';
+import {createCaseLoadController} from '../lib/responsibilityCaseLoad';
+import {useDebouncedCaseQuery,useResponsibilityCases} from '../hooks/useResponsibilityCases';
+import {useResponsibilityPageSize} from '../hooks/useResponsibilityPageSize';
+import {ReviewTopBar,CaseHeader,ORIGINAL_REFRESH_ACTION} from '../components/responsibility/story/PageChrome';
+import {DEFAULT_FILTERS,OpenCasesTable} from '../components/responsibility/story/CaseBrowser';
+import ReviewJourney from '../components/responsibility/story/ReviewJourney';
+import {Feedback} from '../components/responsibility/story/ui/feedback';
+import {RefreshCw,ArrowLeft} from '../components/responsibility/story/ui/icons';
+import {Button} from '../components/responsibility/ui/button';
+import '../components/responsibility/appearance.css';
+import '../components/responsibility/story/story.css';
 
 export default function ResponsibilityCase() {
-  const api = useApi();
-  const [params, setParams] = useSearchParams();
-  const caseId = params.get('case')?.trim() ?? '';
-  const [draft, setDraft] = useState({ caseId, value: caseId });
-  const input = draft.caseId === caseId ? draft.value : caseId;
-  const [context, setContext] = useState(null);
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [refresh, setRefresh] = useState(0);
-  const controller = useMemo(() => createCaseLoadController(api.getResponsibilityCase, patch => {
-    if ('context' in patch) setContext(patch.context);
-    if ('error' in patch) setError(patch.error);
-    if ('loading' in patch) setLoading(patch.loading);
-  }), [api]);
-
-  useEffect(() => {
-    void controller.open(caseId);
-    return controller.dispose;
-  }, [controller, caseId, refresh]);
-
-  return <main className="min-h-screen bg-surface px-5 py-8 text-ink sm:px-12">
-    <div className="mx-auto max-w-6xl">
-      <Link className="text-primary underline-offset-4 hover:underline focus-visible:outline-2" to="/dashboard">Back to dashboard</Link>
-      <header className="mb-8 mt-8">
-        <p className="mb-2 text-sm text-ink-muted">Administration</p>
-        <h1 className="text-3xl font-semibold tracking-tight sm:text-5xl">Responsibility review</h1>
-        <p className="mt-3 max-w-2xl text-ink-muted">Inspect the recorded evidence and decisions. Model confidence does not establish responsibility or authorize a consequence.</p>
-      </header>
-      <form className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end" onSubmit={event => {
-        event.preventDefault();
-        const next = input.trim();
-        if (next === caseId) setRefresh(value => value + 1);
-        else setParams(next ? { case: next } : {});
-      }}>
-        <label className="flex min-w-0 flex-1 flex-col gap-2 font-medium">Case ID
-          <input value={input} onChange={event => setDraft({ caseId, value: event.target.value })} maxLength={200}
-            className="min-h-12 w-full rounded-xl border border-border bg-surface px-4 text-ink focus-visible:outline-2 focus-visible:outline-primary" />
-        </label>
-        <Button prop={{ type: 'submit', disabled: loading || !input.trim(), width: '160px' }}>{loading ? 'Loading…' : 'Open case'}</Button>
-        {caseId && <Button prop={{ variant: 'input', disabled: loading, width: '140px' }} onClick={() => setRefresh(value => value + 1)}>Refresh case</Button>}
-      </form>
-      {loading && <p role="status">Loading recorded case…</p>}
-      {error && <div role="alert" className="rounded-xl bg-negative/10 p-4 text-ink">{error}</div>}
-      {!caseId && <p className="py-8 text-ink-muted">Enter a case ID from an incident record to inspect it.</p>}
-      {context && <div data-testid="responsibility-context">
-        {context.shadowResult && context.shadowResult.evidenceHash !== context.case.evidenceHash &&
-          <p role="status" className="mb-4 rounded-xl bg-surface-muted p-4">This shadow result refers to a different evidence snapshot. Compare its evidence hash with the version history before reviewing the case.</p>}
-        <section className="mb-6 rounded-2xl bg-surface-muted p-5">
-          <h2 className="mb-4 text-xl font-semibold">Case record</h2>
-          <dl className="grid min-w-0 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {['id', 'state', 'caseType', 'bookingId', 'evidenceVersion', 'evidenceHash'].map(key =>
-              <div key={key} className="min-w-0"><dt className="text-sm text-ink-muted">{key}</dt><dd className="mt-1 break-words [overflow-wrap:anywhere]">{show(context.case[key])}</dd></div>)}
-          </dl>
-        </section>
-        <ResponsibilityReviewForm key={context.case.id + ':' + context.case.evidenceVersion + ':' + context.case.evidenceHash + ':' + context.case.state} context={context} api={api} onReviewed={() => setRefresh(value => value + 1)} />
-        <Record title="Evidence snapshot · chronology and provenance" value={context.evidence} />
-        <Record title="Evidence version history" value={context.evidenceVersions} />
-        <div className="grid min-w-0 gap-x-8 lg:grid-cols-2">
-          <Record title="Model analysis envelope" value={responsibilityInspectionModel(context).envelope} empty="The full model envelope was not retained for this result." />
-          <Record title="Deterministic guarded result" value={context.shadowResult} empty="No guarded shadow result recorded." />
-        </div>
-        <Record title="Production provisional decision" value={context.provisionalDecision} empty="No production provisional decision recorded." />
-        <Record title="Authorized human review" value={context.adminReview} empty="No authorized human review recorded." />
-        <Record title="Appeal and review history" value={{ appealWindow: context.appealWindow, appeal: context.appeal, appealReview: context.appealReview }} />
-        <Record title="Final authority record" value={context.finalDecision} empty="No final authority recorded." />
-        <Record title="Shadow audit history" value={context.shadowHistory} />
-        <Record title="Adjudication work and factual validation" value={{ work: context.adjudicationWork, validation: responsibilityInspectionModel(context).validation }} />
-      </div>}
+  const api=useApi(),{resolvedTheme,setTheme}=useTheme();
+  const [params,setParams]=useSearchParams(),caseId=params.get('case')?.trim()??'';
+  const [draft,setDraft]=useState({caseId,value:caseId}),[context,setContext]=useState(null);
+  const [error,setError]=useState(''),[loading,setLoading]=useState(false),[refresh,setRefresh]=useState(0);
+  const [filters,setFilters]=useState(DEFAULT_FILTERS),[direction,setDirection]=useState('desc');
+  const [receipt,setReceipt]=useState(null),[reviewBusy,setReviewBusy]=useState(false),[inputMode,setInputMode]=useState('keyboard');
+  const input=draft.caseId===caseId?draft.value:caseId;
+  const frame=useRef(null),footer=useRef(null);
+  const pageSize=useResponsibilityPageSize(frame,footer,!caseId);
+  const query=useDebouncedCaseQuery(input),queryKey=JSON.stringify({q:query,...filters,direction,pageSize});
+  const [pagination,setPagination]=useState({key:'',cursors:[undefined],index:0});
+  const page=pagination.key===queryKey?pagination:{key:queryKey,cursors:[undefined],index:0};
+  const cases=useResponsibilityCases(api,{q:query,...filters,direction,limit:pageSize,cursor:page.cursors[page.index]},!caseId,refresh);
+  const suggestions=useResponsibilityCases(api,{q:query,...filters,direction:'desc',limit:10},!!query,refresh);
+  const [drafts,setDrafts]=useState(()=>new Map());
+  const controller=useMemo(()=>createCaseLoadController(api.getResponsibilityCase,patch=>{
+    if('context'in patch)setContext(patch.context);if('loading'in patch)setLoading(patch.loading);if('error'in patch)setError(patch.error);
+  }),[api]);
+  useEffect(()=>{void controller.open(caseId);return controller.dispose;},[controller,caseId,refresh]);
+  useEffect(()=>{
+    const root=document.documentElement,previous=root.dataset.inputMode;
+    const pointer=()=>{root.dataset.inputMode='pointer';setInputMode('pointer');};
+    const keyboard=()=>{root.dataset.inputMode='keyboard';setInputMode('keyboard');};
+    root.dataset.inputMode='keyboard';document.addEventListener('pointerdown',pointer,true);document.addEventListener('keydown',keyboard,true);
+    return()=>{document.removeEventListener('pointerdown',pointer,true);document.removeEventListener('keydown',keyboard,true);if(previous)root.dataset.inputMode=previous;else delete root.dataset.inputMode;};
+  },[]);
+  useLayoutEffect(()=>{
+    const bar=footer.current,container=frame.current;if(!bar||!container)return;
+    const root=document.documentElement,previous=root.style.scrollPaddingBottom;let tick;
+    const measure=()=>{const size=Math.ceil(bar.getBoundingClientRect().height)+'px';container.style.setProperty('--review-actions-height',size);root.style.scrollPaddingBottom=`calc(${size} + 1rem)`;};
+    const observer=new ResizeObserver(()=>{cancelAnimationFrame(tick);tick=requestAnimationFrame(measure);});observer.observe(bar);measure();
+    return()=>{observer.disconnect();cancelAnimationFrame(tick);container.style.removeProperty('--review-actions-height');root.style.scrollPaddingBottom=previous;};
+  },[caseId,context,loading,receipt,queryKey,page.index]);
+  function openCase(value){
+    if(reviewBusy)return;
+    const id=typeof value==='string'?value:value.id;if(!id?.trim())return;
+    setDraft({caseId:id,value:id});setReceipt(null);
+    if(id===caseId)setRefresh(value=>value+1);
+    else{const next=new URLSearchParams(params);next.set('case',id);setParams(next);}
+  }
+  function browseCases(){if(reviewBusy)return;const next=new URLSearchParams(params);next.delete('case');setParams(next);setDraft({caseId:'',value:''});setReceipt(null);}
+  const identity=context?JSON.stringify([context.case.id,context.case.evidenceVersion,context.case.evidenceHash]):'';
+  const storeDraft=useCallback(value=>{setDrafts(previous=>{if(previous.get(identity)===value)return previous;const next=new Map(previous);next.set(identity,value);return next;});},[identity]);
+  function reviewed(value){setDrafts(previous=>{const next=new Map(previous);next.delete(identity);return next;});setReceipt({caseId,...value});setRefresh(previous=>previous+1);}
+  function revealFocusedControl(event){
+    const target=event.target;if(inputMode!=='keyboard'||!(target instanceof HTMLElement)||!target.matches(':focus-visible'))return;
+    requestAnimationFrame(()=>{const bar=footer.current;if(!bar||target.closest('.chapter-actions,.case-table-footer,[data-slot=dialog-content]'))return;
+      const overlap=target.getBoundingClientRect().bottom-bar.getBoundingClientRect().top+12;
+      if(overlap>0)window.scrollBy({top:overlap,behavior:'instant'});
+    });
+  }
+  return <main className="responsibility-page responsibility-story" data-testid="responsibility-page" data-motion-input={inputMode} onFocusCapture={revealFocusedControl}>
+    <div ref={frame} className="template-page mx-auto max-w-[1440px] space-y-6 px-4 pt-3 pb-6 sm:px-6 sm:pt-4 sm:pb-8 lg:px-8">
+      <ReviewTopBar theme={resolvedTheme} setTheme={setTheme}/>
+      <fieldset disabled={reviewBusy} className="review-header-fields"><CaseHeader input={input} setInput={value=>{if(!value&&caseId)browseCases();else setDraft({caseId,value});}} cases={suggestions.items} onSelect={openCase} onOpenId={openCase}
+        clearCase={()=>{browseCases();requestAnimationFrame(()=>document.getElementById('responsibility-case-id')?.focus());}}
+        caseOpen={!!caseId} filters={filters} onFilter={setFilters} refreshCase={()=>setRefresh(value=>value+1)} refreshing={loading||(!caseId&&cases.loading)} searchLoading={suggestions.loading||query!==input.trim()} searchError={!!suggestions.error}/></fieldset>
+      {caseId?(loading?<Feedback kind="loading">Loading case…</Feedback>:error?<div className="case-load-error"><Feedback kind="error">{error}</Feedback><div className="flex gap-3"><Button variant="outline" className={ORIGINAL_REFRESH_ACTION} onClick={()=>setRefresh(value=>value+1)}><RefreshCw/>Retry</Button><Button variant="outline" className={ORIGINAL_REFRESH_ACTION} onClick={browseCases}><ArrowLeft/>Open cases</Button></div></div>:context?<ReviewJourney key={identity} context={context} api={api} footerRef={footer} inputMode={inputMode} draft={drafts.get(identity)} onDraftChange={storeDraft} onReviewed={reviewed} onBrowse={browseCases} receipt={receipt?.caseId===caseId?receipt:null} onBusyChange={setReviewBusy} onResume={()=>setReceipt(null)}/>:null)
+        :<OpenCasesTable key={JSON.stringify([queryKey,page.index])} footerRef={footer} cases={cases.items} total={cases.total} loading={cases.loading} error={cases.error} onRetry={()=>setRefresh(value=>value+1)} onSelect={openCase} onReset={()=>{setDraft({caseId:'',value:''});setFilters(DEFAULT_FILTERS);}} actionClassName={ORIGINAL_REFRESH_ACTION} filtered={!!query || Object.values(filters).some(value=>value!=="all")} direction={direction} onDirectionChange={setDirection} pageIndex={page.index} pageSize={pageSize} hasNext={!!cases.nextCursor}
+          onPrevious={()=>setPagination({...page,index:Math.max(0,page.index-1)})} onNext={()=>{if(cases.nextCursor)setPagination({key:queryKey,cursors:[...page.cursors.slice(0,page.index+1),cases.nextCursor],index:page.index+1});}}/>}
     </div>
   </main>;
 }

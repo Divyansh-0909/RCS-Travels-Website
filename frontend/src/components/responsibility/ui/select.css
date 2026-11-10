@@ -1,0 +1,22 @@
+/* A custom select is a field: keep focus on its existing blue border. */
+.responsibility-select:is(:focus, :active) {
+  outline: none;
+  outline-offset: 0;
+}
+
+/* Long classifications still fit the viewport when text is enlarged. */
+.responsibility-select-content {
+  max-width: calc(100vw - 2rem);
+}
+
+.responsibility-select-content [data-slot="select-item"] > span:last-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+@media (forced-colors: active) {
+  .responsibility-select:focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
+}

@@ -8,6 +8,8 @@ import { reviewResponsibilityAppeal } from '../services/responsibilityAppealServ
 import { ResponsibilityLifecycleError } from '../services/responsibilityLifecycleErrors.js'
 import { responsibilityClassification } from '../services/responsibilityContracts.js'
 import { responsibilityConsequenceLevel } from '../services/responsibilityFinalizationService.js'
+import { prisma } from '../db/prisma.js'
+import { caseBrowserQuery, listResponsibilityCases } from '../services/responsibilityCaseBrowser.js'
 import {
     DriverReliabilityError,
     getDriverReliabilityState,
@@ -78,6 +80,17 @@ function answerReliabilityError(res: Response, error: DriverReliabilityError): v
     const status = error.code === 'DRIVER_NOT_FOUND' || error.code === 'BLOCK_NOT_FOUND' ? 404 : 400
     res.status(status).json({ error: error.message, code: error.code })
 }
+
+responsibilityAdminRouter.get('/cases', protect, protectAdmin, async (req, res) => {
+    const query = caseBrowserQuery.safeParse(req.query)
+    if (!query.success) return res.status(400).json({ error: 'Invalid case-list filters' })
+    try {
+        return res.json(await listResponsibilityCases(query.data, { db: prisma }))
+    } catch (error) {
+        if (error instanceof TypeError) return res.status(400).json({ error: 'Invalid case-list cursor' })
+        throw error
+    }
+})
 
 responsibilityAdminRouter.get('/cases/:caseId', protect, protectAdmin, async (req, res) => {
     const params = caseParamsSchema.safeParse(req.params)

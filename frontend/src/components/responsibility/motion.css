@@ -1,0 +1,86 @@
+/* Frequent working controls: quiet feedback, no movement of case data. */
+.responsibility-page [data-slot="button"],
+.responsibility-page [data-slot="button"] > svg {
+  transition-property: transform, opacity;
+  transition-duration: 0ms;
+  transition-timing-function: var(--ease-feedback);
+}
+
+.responsibility-page[data-motion-input="pointer"] [data-slot="button"] {
+  transition-duration: var(--duration-feedback);
+}
+
+.responsibility-page[data-motion-input="pointer"]
+  [data-slot="button"][data-motion-pressed="true"]:not(
+    :disabled,
+    [aria-disabled="true"]
+  ) {
+  transform: scale(0.97);
+}
+
+/* The record/menu changes immediately; only its small state indicator turns. */
+.responsibility-page
+  :is([data-slot="accordion-trigger"], [data-slot="select-trigger"])
+  > svg {
+  rotate: none;
+  transform: rotate(0deg);
+  transform-origin: center;
+  transition-property: transform;
+  transition-duration: 0ms;
+  transition-timing-function: var(--ease-feedback);
+}
+
+.responsibility-page[data-motion-input="pointer"]
+  :is([data-slot="accordion-trigger"], [data-slot="select-trigger"])
+  > svg {
+  transition-duration: var(--duration-feedback);
+}
+
+.responsibility-page
+  :is(
+    [data-slot="accordion-trigger"],
+    [data-slot="select-trigger"]
+  )[data-state="open"]
+  > svg {
+  transform: rotate(180deg);
+}
+
+/* Keyboard navigation has no motion, including the existing tab color tween. */
+.responsibility-page[data-motion-input="keyboard"]
+  :is(button, a, input, textarea),
+.responsibility-page[data-motion-input="keyboard"]
+  [data-slot="tabs-trigger"]::after {
+  transition-duration: 0ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .responsibility-page[data-motion-input="pointer"] [data-slot="button"],
+  .responsibility-page[data-motion-input="pointer"]
+    :is([data-slot="accordion-trigger"], [data-slot="select-trigger"])
+    > svg {
+    transition-duration: 0ms;
+  }
+
+  .responsibility-page[data-motion-input="pointer"]
+    [data-slot="button"][data-motion-pressed="true"]:not(
+      :disabled,
+      [aria-disabled="true"]
+    ) {
+    transform: none;
+  }
+
+  /* Keep a gentle acknowledgement on decorative icons without moving text. */
+  .responsibility-page[data-motion-input="pointer"] [data-slot="button"] > svg {
+    transition-property: opacity;
+    transition-duration: var(--duration-feedback);
+  }
+
+  .responsibility-page[data-motion-input="pointer"]
+    [data-slot="button"][data-motion-pressed="true"]:not(
+      :disabled,
+      [aria-disabled="true"]
+    )
+    > svg {
+    opacity: 0.65;
+  }
+}

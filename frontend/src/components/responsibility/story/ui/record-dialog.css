@@ -1,0 +1,57 @@
+/* Responsibility dialogs share the approved page surfaces, controls and spacing. */
+.responsibility-story-layer.review-dialog {
+  background: var(--canvas);
+  overflow: hidden;
+  box-shadow: var(--review-dropdown-shadow);
+  opacity: 1;
+  transform: scale(1);
+  transform-origin: center;
+  transition-property: opacity, transform;
+  transition-duration: 0ms;
+  transition-timing-function: var(--ease-feedback);
+}
+.responsibility-story-layer.review-dialog-overlay {
+  opacity: 1;
+  transition: opacity 0ms var(--ease-feedback);
+}
+.responsibility-story-layer:is(.review-dialog,.review-dialog-overlay):is([data-starting-style],[data-ending-style]) { opacity: 0; }
+.responsibility-story-layer.review-dialog:is([data-starting-style],[data-ending-style]) { transform: scale(.97); }
+.responsibility-story-layer:is(.review-dialog,.review-dialog-overlay)[data-ending-style] { pointer-events: none; }
+html[data-input-mode=pointer] .responsibility-story-layer:is(.review-dialog,.review-dialog-overlay) { transition-duration: var(--rr-duration-overlay); }
+.review-dialog [data-slot=dialog-body] { background: var(--surface-muted); scrollbar-gutter: stable; scroll-padding-block: 1rem; }
+.review-dialog-scroll { overflow: hidden; }
+.review-dialog-scrollbar { display: flex; width: .625rem; padding: .25rem .125rem; opacity: 1; background: transparent; }
+.review-dialog-scrollbar-thumb { flex: 1; min-height: 1.5rem; border-radius: 999px; background: var(--ink-muted); opacity: .65; }
+.record-details-dialog .record-trace { gap: .5rem; }
+/* Override the legacy near-black button fill only for these trace headings. */
+:root[data-theme] .responsibility-story-layer.review-dialog.record-details-dialog button.record-trace-trigger[data-slot=trace-collapsible-trigger] { align-items: center; background: transparent; padding: .5rem 0; }
+.record-details-dialog .record-trace-trigger > [data-slot=trace-icon] { color: var(--ink-muted); }
+.record-details-dialog .record-trace-branch { padding-bottom: .5rem; color: var(--ink); }
+.record-details-dialog .record-trace-card { min-width: 0; border-radius: .75rem; background: var(--responsibility-input-background); padding: 1rem; }
+.record-details-dialog .record-difference-groups { display: grid; gap: 1rem; }
+.record-details-dialog .record-difference-group { display: grid; gap: .5rem; }
+.record-details-dialog .record-difference-group > h3 { font-size: .875rem; line-height: 1.25rem; font-weight: 500; }
+.record-details-dialog .record-fields { border: 0; }
+.record-details-dialog .record-field { grid-template-columns: minmax(0,1fr) minmax(0,2fr); align-items: start; gap: .75rem; padding-block: .5rem; border: 0; }
+.record-details-dialog .record-field[data-record-layout=section] { grid-template-columns: minmax(0,1fr); gap: .75rem; }
+.record-details-dialog .record-field[data-record-layout=section] > dt { color: var(--ink); font-size: .875rem; line-height: 1.25rem; }
+.record-details-dialog .record-field:first-child { padding-top: 0; }
+.record-details-dialog .record-field:last-child { padding-bottom: 0; }
+.record-details-dialog .record-field > dt { font-size: .75rem; line-height: 1.375rem; color: var(--ink-muted); }
+.record-details-dialog .record-field > dd { font-size: .875rem; line-height: 1.375rem; }
+.record-details-dialog .record-field .record-fields { padding-left: 0; border: 0; }
+.record-details-dialog .record-entry { background: transparent; border: 0; }
+.record-details-dialog .record-entry-content { padding: 0; }
+.record-details-dialog .record-entry .record-entry { border: 0; border-radius: 0; }
+.record-details-dialog .record-entry .record-entry .record-entry-content { padding: 0; }
+.record-details-dialog [data-slot=timeline-detail-box] { background: transparent; border: 0; border-radius: 0; padding: 0; }
+.record-details-dialog [data-slot=timeline-detail-box] dt { color: var(--ink-muted); }
+.record-details-dialog .record-disclosure { margin-top: 1rem; padding-top: 0; border: 0; }
+.record-details-dialog .record-disclosure > button { min-height: 2.75rem; padding: .5rem 0; color: var(--ink-muted); font-size: .875rem; }
+.record-details-dialog .record-technical { max-height: none; overflow: visible; margin-top: .5rem; background: var(--responsibility-input-background); }
+.record-details-dialog .record-inline-values [data-slot=badge] { background: transparent; border-color: var(--responsibility-input-border); font-size: .75rem; line-height: 1rem; font-weight: 400; }
+.review-dialog .details-list > div { grid-template-columns: minmax(0,1fr) minmax(0,2fr); align-items: start; gap: .75rem; }
+@media (prefers-reduced-motion:reduce) {
+  .responsibility-story-layer.review-dialog { transform: none !important; }
+  html[data-input-mode=pointer] .responsibility-story-layer:is(.review-dialog,.review-dialog-overlay) { transition-duration: var(--duration-feedback); }
+}

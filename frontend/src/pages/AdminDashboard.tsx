@@ -1,3 +1,6 @@
+import { fieldClass, fieldGeometry, fieldSurface } from "../components/ui/fieldStyles";
+import IconButton from "../components/ui/IconButton";
+import PillControl from "../components/ui/PillControl";
 import { useTranslation as useCopyLanguage } from "react-i18next";
 import { websiteCopy as dc } from "../i18nCopy";
 import AccountLayout from "../components/ui/AccountLayout"
@@ -11,7 +14,7 @@ import AdminDashboardSkeleton from "../components/AdminDashboardSkeleton";
 import DriverReview from "../components/DriverReview";
 import DriverFinancePanel from "../components/DriverFinancePanel";
 import { vehicleLabel, statusChip, splitAddress, displayPhone, formatDateTime, CopyBtn } from "../components/ui/bookingDisplay";
-import Button from "../components/ui/Button";
+import Button, { ActionControl } from "../components/ui/Button";
 import EmptyState from "../components/ui/EmptyState";
 import FailureState from "../components/ui/FailureState";
 import { Link } from "react-router-dom";
@@ -145,14 +148,7 @@ const DetailModal = ({ title, onClose, children }: {
     >
         <div className="flex shrink-0 items-center justify-between px-4 pt-4 sm:px-5 sm:pt-5">
             <h2 className="text-2xl font-semibold tracking-[-0.02em] text-ink">{title}</h2>
-            <button
-                type="button"
-                aria-label={dc("Close")}
-                onClick={onClose}
-                className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl bg-surface text-ink-muted transition-[color,transform] duration-150 hover:text-ink active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-            >
-                <Icon path={mdiClose} size={0.9} />
-            </button>
+            <IconButton type="button" aria-label={dc("Close")} onClick={onClose} className="flex"><Icon path={mdiClose} size={0.9} /></IconButton>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto bg-surface-muted py-4 pl-4 pr-1 sm:flex-auto sm:px-5 sm:py-5">
             <div className="flex w-full flex-col gap-4">{children}</div>
@@ -460,7 +456,7 @@ const AdminDashboard = () => {
                     onChange={(e) => setPageInput(e.target.value.replace(/\D/g, ""))}
                     onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); commitPage() } }}
                     onBlur={commitPage}
-                    className="flex text-center justify-center items-center border box-border rounded-lg h-10 w-10 p-0 m-0 bg-transparent leading-none outline-none text-sm sm:text-lg"
+                    className={`${fieldClass} w-12! px-0! text-center`}
                 />
                 <h4>{dc("of")}</h4>
                 <h4 className="flex text-center justify-center items-center border box-border rounded-lg h-10 w-10 p-0 m-0 bg-transparent leading-none text-sm sm:text-lg">{totalPages}</h4>
@@ -478,7 +474,7 @@ const AdminDashboard = () => {
             onSubmit={(e) => { e.preventDefault(); clearTimeout(debounceRef.current); runSearch() }}
             className="flex items-center justify-end gap-2 max-sm:w-full max-sm:flex-wrap"
         >
-            <div className={`flex h-11 w-[min(320px,28vw)] items-center gap-2 rounded-full border-2 px-4 text-ink transition-colors duration-200 max-sm:w-full ${active ? "border-border" : "border-border/40"}`}>
+            <div className={`${fieldGeometry} ${fieldSurface} flex items-center gap-2 w-[min(320px,28vw)]! max-sm:w-full! ${active ? "border-primary" : "border-[var(--input-border)]"}`}>
                 <Icon path={mdiMagnify} size={0.85} className="shrink-0 text-ink/40" />
                 <input
                     onFocus={() => setActive(true)}
@@ -489,17 +485,17 @@ const AdminDashboard = () => {
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     placeholder={selected === 0 ? dc("Name, phone, location, ID") : selected === 1 ? "Name, phone, vehicle no." : "Name, phone, booking code"}
-                    className="min-w-0 flex-1 border-none bg-transparent text-ink outline-none"
+                    className="h-full min-w-0 flex-1 border-0 bg-transparent text-base text-[var(--text)] outline-none"
                 />
             </div>
-            <button type="button" onClick={toggleSortOrder} aria-label={order ? dc("Sort oldest first") : dc("Sort newest first")} className="flex h-11 cursor-pointer items-center justify-center gap-1.5 rounded-full bg-strong/90 px-4 text-on-strong transition-[background-color,transform] duration-150 hover:bg-strong active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
-                <Icon path={order ? mdiSortCalendarDescending : mdiSortCalendarAscending} size={1.05} />
-                <h4>{dc("Sort")}</h4>
-            </button>
-            <button type="button" onClick={() => { setDetail(null); setExpanded(!expanded) }} className="flex h-11 cursor-pointer items-center justify-center gap-1.5 rounded-full bg-strong/90 px-4 text-on-strong transition-[background-color,transform] duration-150 hover:bg-strong active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
-                <Icon path={mdiTuneVertical} size={0.95} className="rotate-[90deg]" />
-                <h4>{dc("Filter")}</h4>
-            </button>
+            <PillControl type="button" onClick={toggleSortOrder} aria-label={order ? dc("Sort oldest first") : dc("Sort newest first")} faceClassName="flex cursor-pointer items-center justify-center gap-1.5 bg-strong/90 text-on-strong hover:bg-strong ">
+                <Icon path={order ? mdiSortCalendarDescending : mdiSortCalendarAscending} size={2 / 3} />
+                <span>{dc("Sort")}</span>
+            </PillControl>
+            <PillControl type="button" onClick={() => { setDetail(null); setExpanded(!expanded) }} faceClassName="flex cursor-pointer items-center justify-center gap-1.5 bg-strong/90 text-on-strong hover:bg-strong ">
+                <Icon path={mdiTuneVertical} size={2 / 3} className="rotate-[90deg]" />
+                <span>{dc("Filter")}</span>
+            </PillControl>
         </form>
     )
 
@@ -721,12 +717,14 @@ const AdminDashboard = () => {
                 </Suspense>
             ) : (
             <>
-            {filterDropdown.mounted && (
+            {/* Match the body-level backdrop; animated page ancestors create a
+                lower stacking context even after their entrance finishes. */}
+            {filterDropdown.mounted && createPortal(
                 <section
                     role="dialog"
                     aria-modal="true"
                     aria-label={dc("Filters")}
-                    className={`${filterDropdown.closing ? "animate-datetime-out" : "animate-datetime"} z-200 flex overflow-hidden bg-surface-muted text-ink shadow-2xl motion-reduce:animate-none max-sm:fixed max-sm:inset-0 max-sm:h-dvh max-sm:w-screen max-sm:rounded-none sm:absolute sm:left-1/2 sm:top-1/2 sm:max-h-[calc(100dvh-48px)] sm:w-[680px] sm:max-w-[calc(100vw-48px)] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl sm:border sm:border-border/60`}
+                    className={`${filterDropdown.closing ? "animate-datetime-out" : "animate-datetime"} fixed z-200 flex overflow-hidden bg-surface-muted text-ink shadow-2xl motion-reduce:animate-none max-sm:inset-0 max-sm:h-dvh max-sm:w-screen max-sm:rounded-none sm:left-1/2 sm:top-1/2 sm:max-h-[calc(100dvh-48px)] sm:w-[680px] sm:max-w-[calc(100vw-48px)] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl sm:border sm:border-border/60`}
                     onClick={(e) => e.stopPropagation()}
                 >
                     <div className="flex h-full min-h-0 w-full flex-col text-left sm:h-auto">
@@ -807,11 +805,12 @@ const AdminDashboard = () => {
                             </div>
                         </div>
                         <div className="flex w-full shrink-0 gap-2 border-t border-border/50 px-3 py-3 sm:px-4 sm:py-4">
-                            <button type="button" onClick={clearFilters} className="flex flex-1 cursor-pointer items-center justify-center rounded-xl border border-border/60 bg-surface py-2.5 text-sm font-medium text-ink transition-[background-color,transform] duration-150 ease-out hover:bg-surface/70 active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">{dc("Clear")}</button>
-                            <button type="button" onClick={applyFilters} className="flex flex-1 cursor-pointer items-center justify-center rounded-xl bg-primary py-2.5 text-sm font-semibold text-on-strong transition-[opacity,transform] duration-150 ease-out hover:opacity-90 active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">{dc("Apply")}</button>
+                            <ActionControl type="button" onClick={clearFilters} className="flex flex-1 cursor-pointer items-center justify-center rounded-xl border border-border/60 bg-surface font-medium text-ink transition-[background-color,transform] duration-150 ease-out hover:bg-surface/70 active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">{dc("Clear")}</ActionControl>
+                            <ActionControl type="button" onClick={applyFilters} className="flex flex-1 cursor-pointer items-center justify-center rounded-xl bg-primary font-semibold text-on-strong transition-[opacity,transform] duration-150 ease-out hover:opacity-90 active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">{dc("Apply")}</ActionControl>
                         </div>
                     </div>
-                </section>
+                </section>,
+                document.body,
             )}
             {pagination && <div className="hidden w-full justify-end px-5 sm:flex">{pagination}</div>}
 

@@ -26,22 +26,22 @@ test('waiver forces LEVEL_0 and binds the displayed evidence without borrowing m
 });
 test('human review options match the frozen production API enum and reject unsupported classification names', () => {
   assert.deepEqual(Object.keys(reviewClassificationLabels).sort(), Object.values(responsibilityClassification).sort());
-  assert.deepEqual(reviewClassificationLabels, { DRIVER_CAUSED: 'Driver caused', PLATFORM_CAUSED: 'Platform caused',
-    VALID_WAIVED: 'Valid waiver', EXTERNAL_OR_UNCERTAIN: 'External cause or uncertain', NEEDS_REVIEW: 'Needs review' });
+  assert.deepEqual(reviewClassificationLabels, { DRIVER_CAUSED: 'Driver responsible', PLATFORM_CAUSED: 'Service or app problem',
+    VALID_WAIVED: 'Valid reason to excuse the driver', EXTERNAL_OR_UNCERTAIN: 'Outside cause or unclear', NEEDS_REVIEW: 'Needs more review' });
   for (const classification of ['UNDETERMINED', 'EXTERNAL_CAUSED', 'UNKNOWN']) {
     assert.throws(() => reviewPayload(context, { ...draft, classification }));
   }
 });
 test('invalid human drafts retain actionable feedback and reason bounds apply after trimming', () => {
   const message = expected => error => error.name === 'Error' && error.message === expected;
-  assert.throws(() => reviewPayload({ ...context, finalDecision: {} }, draft), message('This case is not awaiting a human decision.'));
-  assert.throws(() => reviewPayload(context, { ...draft, decision: '' }), message('Choose a human decision.'));
+  assert.throws(() => reviewPayload({ ...context, finalDecision: {} }, draft), message('This case is not ready for a decision.'));
+  assert.throws(() => reviewPayload(context, { ...draft, decision: '' }), message('Choose a decision.'));
   for (const reason of [null, '   ', ' a ', 'x'.repeat(2001)]) {
     assert.throws(() => reviewPayload(context, { ...draft, reason }), message('Enter a review reason between 3 and 2,000 characters.'));
   }
   assert.equal(reviewPayload(context, { ...draft, reason: '  ' + 'x'.repeat(2000) + '  ' }).reason.length, 2000);
-  assert.throws(() => reviewPayload(context, { ...draft, decision: 'UPHOLD' }), message('An upheld decision requires driver causality and a consequence level.'));
-  assert.throws(() => reviewPayload(context, { ...draft, classification: 'DRIVER_CAUSED' }), message('Choose a classification compatible with waiver.'));
+  assert.throws(() => reviewPayload(context, { ...draft, decision: 'UPHOLD' }), message('To hold the driver responsible, select Driver responsible and an action level.'));
+  assert.throws(() => reviewPayload(context, { ...draft, classification: 'DRIVER_CAUSED' }), message('Choose a cause that explains why no action should be taken.'));
 });
 test('review refuses empty decisions, reasons, causality conflicts and unselected consequence levels', () => {
   assert.throws(() => reviewPayload({ ...context, finalDecision: {} }, draft));

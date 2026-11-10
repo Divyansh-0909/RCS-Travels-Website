@@ -1,0 +1,79 @@
+/* Exact approved review colors are generated at the theme root, before this
+   page's surface overrides. Portalled details share the same border role. */
+:root {
+  --responsibility-field-background: var(--responsibility-input-background);
+  --responsibility-disabled-field-background: var(--responsibility-disabled-background);
+  --responsibility-interaction-background: var(--surface-muted);
+}
+
+:is(.responsibility-page, .responsibility-layer) {
+  --border: var(--responsibility-border);
+}
+
+.responsibility-page :is([data-slot="input"], [data-slot="textarea"], .responsibility-review-choice) {
+  background-color: var(--responsibility-field-background);
+}
+
+.responsibility-page :is([data-slot="input"], [data-slot="textarea"], .responsibility-review-choice):not([aria-invalid="true"]) {
+  border-color: var(--responsibility-input-border);
+}
+
+.responsibility-page :is([data-slot="input"], [data-slot="textarea"], .responsibility-review-choice):is(:focus, :focus-visible):not([aria-invalid="true"]) {
+  border-color: var(--responsibility-focus-border);
+}
+
+.responsibility-page :is([data-slot="input"], [data-slot="textarea"], .responsibility-review-choice):disabled {
+  background-color: var(--responsibility-disabled-field-background);
+  border-color: var(--responsibility-disabled-border);
+}
+
+.responsibility-page #responsibility-case-id {
+  background-color: var(--responsibility-lookup-background);
+}
+
+/* Dim the disabled field's content rather than its preserved background. */
+:root[data-theme="dark"] .responsibility-page
+  :is([data-slot="input"], [data-slot="textarea"], .responsibility-review-choice):disabled {
+  opacity: 1;
+  color: color-mix(in srgb, var(--ink) 50%, var(--responsibility-disabled-field-background));
+  border-color: var(--responsibility-disabled-border);
+}
+
+:root[data-theme="dark"] .responsibility-page .responsibility-review-choice:disabled > :is(span, svg),
+:root[data-theme="dark"] .responsibility-page :is(input, textarea):disabled::placeholder {
+  opacity: 0.5;
+}
+
+:root[data-theme="dark"] :is(.responsibility-page, .responsibility-layer) {
+  --surface: var(--color-near-black);
+  --surface-muted: var(--color-near-black);
+  --raised: var(--color-near-black);
+}
+
+:root[data-theme="dark"] :is(.responsibility-page, .responsibility-layer)
+  :is(button:not(.responsibility-review-choice):not(.responsibility-input-action):not([role^="menuitem"]), [data-slot="badge"], [data-slot="alert"]) {
+  background-color: var(--color-near-black);
+}
+
+/* Keep keyboard/pointer tracking visible inside the otherwise black menu. */
+:root[data-theme="dark"] .responsibility-dropdown-menu [data-checked]:not([data-highlighted]) {
+  background-color: var(--color-near-black);
+}
+
+:root[data-theme="dark"] .responsibility-dropdown-menu [data-highlighted],
+:root[data-theme="dark"] .responsibility-page [data-slot="skeleton"] {
+  background-color: var(--responsibility-interaction-background);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  :root[data-theme="dark"] .responsibility-dropdown-menu [role^="menuitem"]:hover:not([data-disabled]) {
+    background-color: var(--responsibility-interaction-background);
+  }
+}
+
+@media (forced-colors: active) {
+  :root[data-theme="dark"] .responsibility-dropdown-menu [data-highlighted] {
+    background: Highlight;
+    color: HighlightText;
+  }
+}

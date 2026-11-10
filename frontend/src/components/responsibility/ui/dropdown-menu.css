@@ -1,0 +1,47 @@
+/* shadcn menu geometry, RCS state colors and comfortable touch targets. */
+.responsibility-review-choice:is(:focus, :active),
+.responsibility-dropdown-menu:focus-visible {
+  outline: none;
+  outline-offset: 0;
+}
+
+.responsibility-dropdown-menu [data-slot="dropdown-menu-radio-item"] {
+  min-height: 44px;
+  font-size: 1rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  border: 0;
+  outline: none;
+  outline-offset: 0;
+}
+
+.responsibility-dropdown-menu [data-slot="dropdown-menu-radio-item"][data-checked] {
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+}
+
+.responsibility-dropdown-menu [data-slot="dropdown-menu-radio-item"][data-highlighted] {
+  background: var(--surface-muted);
+  color: var(--ink);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .responsibility-dropdown-menu [data-slot="dropdown-menu-radio-item"]:hover:not([data-disabled]) {
+    background: var(--surface-muted);
+    color: var(--ink);
+  }
+}
+
+@media (min-width: 768px) and (pointer: fine) {
+  .responsibility-dropdown-menu [data-slot="dropdown-menu-radio-item"] {
+    min-height: 32px;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+  }
+}
+
+@media (forced-colors: active) {
+  .responsibility-dropdown-menu [data-slot="dropdown-menu-radio-item"][data-highlighted] {
+    background: Highlight;
+    color: HighlightText;
+  }
+}
