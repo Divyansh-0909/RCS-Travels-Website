@@ -90,6 +90,7 @@ objects was performed. These retain their previously identified review needs.
 | Python syntax and backup workflow YAML | 70 Python files and 3 workflows parsed |
 | Playwright report destination contract | PASS |
 | Additional Code Atlas CI | FAIL: scanner exceeded Node's approximately 4 GiB heap limit |
+| Git whitespace review | 2,187 diagnostics retained, mostly in downloaded legal-source snapshots |
 
 The two backend failures are `rideSearchV6Executor.test.js` and
 `rideSearchV6Retry.test.js`, retaining their previously documented
@@ -104,6 +105,14 @@ The unchanged Code Atlas scanner passed its first five checks, then exhausted
 the default JavaScript heap during its repository-wide source-indexing test
 after approximately seven minutes. Its build step was consequently not run.
 No scanner assertion or memory setting was changed as part of this cleanup.
+
+Whitespace diagnostics were concentrated in captured third-party legal HTML/JS
+(2,176), existing UI verification reports (9), and two captain-app files (2).
+Captured evidence and existing development bytes were preserved rather than
+reformatted. Every staged blob was checked against the reviewed file bytes;
+the exact staged path set was checked before each commit. No configured secret
+value or credential pattern was found in the reviewed commit scope, including
+the decompressed migration metadata and source snapshot.
 
 The account-retention execution used a fresh isolated output directory and owned
 loopback PostgreSQL. It exercised the imported Prisma cleanup/hold logic and
