@@ -7,17 +7,21 @@
 
 /* Theme colors (dark is the default) */
 :root {
-    --background-muted: #262636;
-    --background-panel: #272634;
-    --background-primary: #121220;
-    --background: #0B0B14;
-    --input-background: #1d1d27;
+    --background-muted: #26262D;
+    --background-panel: #26262D;
+    --background-primary: #0A0A19;
+    --background: #0A0A19;
+    --input-background: #1D1D23;
     --input-border: rgba(255,255,255,0.3);
     --input-placeholder: rgba(255,255,255,0.42);
     --foreground: #ffffff;
     --foreground-muted: #f3f3f3;
     --text: #ffffff;
-    --text-muted: #AEAEAE;
+    --text-muted: #A1A1A1;
     --text-foreground: #000000;
-    --text-muted-foreground: #AEAEAE;
+    --text-muted-foreground: #A1A1A1;
+    --ride-background: #0A0A19;
+    --ride-foreground: #ffffff;
+    --ride-handle: rgba(255,255,255,0.3);
+    --ride-sheet-shadow: inset 0px 2px 4px rgba(255,255,255,0.25), 0px 0px 90px 25px rgba(0,0,0,0.25);
 }

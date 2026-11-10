@@ -45,8 +45,8 @@ const labelForEntry = (type: string) => ({
 
 const BalanceBox = ({ label, value, emphasis = false }: { label: string; value: number; emphasis?: boolean }) => (
   <View className={`flex-1 rounded-2xl p-4 ${emphasis ? 'bg-[var(--background-primary)]' : 'bg-surface-muted'}`}>
-    <AppText className={`text-xs ${emphasis ? 'text-[rgba(255,255,255,0.7)]' : ACCOUNT_MUTED}`}>{label}</AppText>
-    <AppText className={`mt-1 text-xl font-semibold ${emphasis ? 'text-white' : 'text-ink'}`}>{rupees(value)}</AppText>
+    <AppText className={`text-xs ${emphasis ? 'text-on-strong opacity-70' : ACCOUNT_MUTED}`}>{label}</AppText>
+    <AppText className={`mt-1 text-xl font-semibold ${emphasis ? 'text-on-strong' : 'text-ink'}`}>{rupees(value)}</AppText>
   </View>
 );
 

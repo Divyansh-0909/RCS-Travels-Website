@@ -66,8 +66,8 @@ const CustomerPaymentPanel = ({
                     </div>
                 )}
 
-                <Button onClick={onViewBooking} className="my-0! w-full" prop={{ width: "100%", disabled: !onViewBooking }}>
-                    <span className="text-base sm:text-lg">{tr("View booking")}</span>
+                <Button onClick={onViewBooking} className="my-0! w-full" prop={{ size: "action", width: "100%", disabled: !onViewBooking }}>
+                    <span className="text-base">{tr("View booking")}</span>
                 </Button>
             </div>
         );
@@ -83,8 +83,8 @@ const CustomerPaymentPanel = ({
                         {tr("We couldn't verify a payment. Your booking has not been marked paid.")}
                     </p>
                 </div>
-                <Button onClick={onPay} className="my-0! w-full" prop={{ width: "100%", disabled: !canPay }}>
-                    <span className="text-base sm:text-lg">{tr("Retry payment")}</span>
+                <Button onClick={onPay} className="my-0! w-full" prop={{ size: "action", width: "100%", disabled: !canPay }}>
+                    <span className="text-base">{tr("Retry payment")}</span>
                 </Button>
             </div>
         );
@@ -104,8 +104,8 @@ const CustomerPaymentPanel = ({
                         <AmountRow label={tr("Amount due")} value={amount} strong />
                     </div>
                 )}
-                <Button onClick={onPay} className="my-0! w-full" prop={{ width: "100%", disabled: !canPay }}>
-                    <span className="text-base sm:text-lg">{tr("Resume payment")}</span>
+                <Button onClick={onPay} className="my-0! w-full" prop={{ size: "action", width: "100%", disabled: !canPay }}>
+                    <span className="text-base">{tr("Resume payment")}</span>
                 </Button>
             </div>
         );
@@ -151,8 +151,8 @@ const CustomerPaymentPanel = ({
                 </div>
             )}
 
-            <Button onClick={onPay} className="my-0! w-full" prop={{ width: "100%", disabled: !canPay }}>
-                <span className="text-base sm:text-lg">
+            <Button onClick={onPay} className="my-0! w-full" prop={{ size: "action", width: "100%", disabled: !canPay }}>
+                <span className="text-base">
                     {busy
                         ? busyLabel(phase, tr)
                         : Number.isFinite(amount)

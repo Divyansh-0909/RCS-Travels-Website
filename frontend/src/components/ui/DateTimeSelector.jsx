@@ -1,9 +1,11 @@
+import IconButton from "./IconButton";
 "use client"
 
 import * as React from "react"
 import Icon from "@mdi/react"
 import { mdiClose } from "@mdi/js"
 import { useTranslation } from "react-i18next"
+import { ActionControl } from "./Button"
 
 function cn(...classes) { return classes.filter(Boolean).join(" ") }
 
@@ -112,17 +114,16 @@ function WheelColumn({ items, selectedIndex, onSelect, ariaLabel, className, cyc
   )
 }
 
-function getDefaultTime(initial) {
-  if (initial) {
-    return `${String(initial.getHours()).padStart(2, "0")}:${String(initial.getMinutes()).padStart(2, "0")}`
-  }
-
+function getDefaultDateTime(initial) {
+  if (initial) return new Date(initial)
   const earliest = new Date(Date.now() + (30 * 60 * 1000))
-  earliest.setSeconds(0, 0)
-  const roundedMinutes = Math.ceil(earliest.getMinutes() / 15) * 15
-  earliest.setMinutes(roundedMinutes)
-  return `${String(earliest.getHours()).padStart(2, "0")}:${String(earliest.getMinutes()).padStart(2, "0")}`
+  const rounded = new Date(earliest)
+  rounded.setMinutes(Math.ceil(earliest.getMinutes() / 15) * 15, 0, 0)
+  if (rounded < earliest) rounded.setMinutes(rounded.getMinutes() + 15)
+  return rounded
 }
+
+const timeOfDay = date => `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`
 
 function formatWheelDate(day, index, locale, todayLabel) {
   if (index === 0) return todayLabel
@@ -221,8 +222,9 @@ export function DateTimeSelector({ onClick, onChange, onConfirm, initial, page =
     day.setDate(day.getDate() + offset)
     return day
   }), [today])
-  const [date, setDate] = React.useState(() => initial ? startOfDay(initial) : today)
-  const [time, setTime] = React.useState(() => getDefaultTime(initial))
+  const [defaultDateTime] = React.useState(() => getDefaultDateTime(initial))
+  const [date, setDate] = React.useState(() => startOfDay(defaultDateTime))
+  const [time, setTime] = React.useState(() => timeOfDay(defaultDateTime))
   const emittedInitialValue = React.useRef(false)
 
   const [hour24, minute] = time.split(":").map(Number)
@@ -261,11 +263,11 @@ export function DateTimeSelector({ onClick, onChange, onConfirm, initial, page =
   }, [combined, initial, isTooSoon, onChange])
 
   return (
-    <div className={cn("flex w-full flex-col", page ? "gap-3 pb-1" : "gap-3 p-2 pt-6 pb-3")}>
+    <div className={cn("flex w-full flex-col gap-2", page ? "pb-1" : "p-2 pb-3")}>
       {showClose && (
-        <button type="button" aria-label={t("dateTime.close")} onClick={onClick} className="absolute right-3 top-3">
-          <Icon path={mdiClose} size={0.9} />
-        </button>
+        <div className="flex justify-end">
+          <IconButton aria-label={t("dateTime.close")} onClick={onClick} className=""><Icon path={mdiClose} size={0.9} aria-hidden="true" /></IconButton>
+        </div>
       )}
 
       <div className="relative isolate overflow-hidden bg-[var(--immersive)]">
@@ -296,22 +298,22 @@ export function DateTimeSelector({ onClick, onChange, onConfirm, initial, page =
         <WheelFade />
       </div>
 
-      <div className="flex flex-col gap-1">
+      <div className="flex flex-col gap-4 sm:gap-6">
         <p className="text-center text-sm tabular-nums text-[var(--text)]">
           {combined ? (isTooSoon ? t("dateTime.minimumLead") : `${formatDate(date, locale)} · ${formatTime(time, locale)}`) : t("dateTime.selectDate")}
         </p>
         {showConfirm && (
-          <button
+          <ActionControl
             type="button"
             onClick={(event) => { event.stopPropagation(); handleConfirm() }}
             disabled={!combined || isTooSoon}
             className={cn(
-              "mt-1 h-9 w-full rounded-xl text-sm font-semibold transition-colors active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--foreground)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background-panel)]",
-              combined && !isTooSoon ? "bg-[var(--foreground)] text-[var(--text-foreground)] hover:opacity-90 cursor-pointer" : "bg-[var(--background-muted)] text-[var(--text-muted)]/50 cursor-not-allowed"
+              "w-full justify-center rounded-xl font-semibold transition-colors",
+              combined && !isTooSoon ? "bg-ink text-surface hover:opacity-90 cursor-pointer" : "bg-surface-muted text-ink-muted/50 cursor-not-allowed"
             )}
           >
             {t("dateTime.confirm")}
-          </button>
+          </ActionControl>
         )}
       </div>
     </div>

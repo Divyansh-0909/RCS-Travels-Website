@@ -18,7 +18,7 @@ const NotFound = () => {
             <p className="max-w-md">
                 {tr("The link may be old, or the address slightly off. Everything still works from the home page.")}
             </p>
-            <Button prop={{}} className="mt-4" onClick={() => navigate("/")}>
+            <Button prop={{ size: "action",}} className="mt-4" onClick={() => navigate("/")}>
                 {tr("Back to home")}
             </Button>
         </div>

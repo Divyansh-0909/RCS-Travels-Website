@@ -21,6 +21,7 @@ export default function ThemeRouteSync() {
     const normalizedPath = pathname.replace(/\/+$/, "") || "/";
     const nextTheme = usesLegacyTheme(normalizedPath) ? "legacy" : resolvedTheme;
     document.documentElement.dataset.theme = nextTheme;
+    document.documentElement.dataset.appearance = resolvedTheme;
     document.documentElement.classList.toggle("dark", nextTheme === "dark");
   }, [pathname, resolvedTheme]);
 

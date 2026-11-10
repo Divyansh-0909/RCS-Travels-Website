@@ -1,3 +1,5 @@
+import { ActionControl } from "../components/ui/Button";
+import { fieldClass, textareaClass } from "../components/ui/fieldStyles";
 import { useTranslation as useCopyLanguage } from "react-i18next";
 import { websiteCopy as dc } from "../i18nCopy";
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -95,8 +97,7 @@ const roundRing = (ring) => ring.map((pos) => pos.map((n) => +n.toFixed(5)))
 const ringOf = (z) => z.layer.toGeoJSON().geometry.coordinates[0]
 
 // Shared input chrome, so the fare boxes and the notes field cannot drift apart.
-const field =
-    'w-full min-h-10 rounded-xl border border-border/80 bg-surface px-3 py-2 text-sm text-ink outline-none transition-[border-color,box-shadow] duration-150 focus-visible:border-primary focus-visible:shadow-[0_0_0_3px_rgba(36,58,251,0.10)]'
+const field = fieldClass
 const labelCls = 'block text-xs font-semibold text-ink-muted mt-4 mb-1.5'
 
 const EditFares = () => {
@@ -582,7 +583,7 @@ const EditFares = () => {
     return (
         <div className="w-full flex-1 min-h-0 flex flex-col-reverse sm:flex-row gap-4 px-5 max-sm:px-0 pb-1">
             {/* ---------- sidebar ---------- */}
-            <aside className="w-full sm:w-[380px] lg:w-[400px] sm:shrink-0 flex flex-col min-h-0 max-sm:h-[64%] rounded-2xl border border-border/50 bg-surface-muted overflow-hidden">
+            <aside className="w-full sm:w-[380px] lg:w-[400px] sm:shrink-0 flex flex-col min-h-0 max-sm:h-[64%] rounded-2xl border border-border/50 bg-surface-muted overflow-hidden max-sm:overflow-y-auto max-sm:[&>div]:flex-none max-sm:[&>div]:overflow-visible">
                 <div className="px-5 pt-5 pb-4 border-b border-border/50">
                     <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
@@ -596,18 +597,18 @@ const EditFares = () => {
                 </div>
 
                 <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] gap-2 px-5 py-3 border-b border-border/60">
-                    <button
+                    <ActionControl
                         type="button"
                         onClick={startDraw}
                         disabled={loading || !!loadError}
-                        className="min-h-10 rounded-xl border border-border bg-surface px-3 py-2 text-sm font-semibold text-ink cursor-pointer transition-[background-color,transform] duration-150 ease-out hover:bg-surface/70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
-                    >{dc("Naya area")}</button>
-                    <button
+                        className=" rounded-xl border border-border bg-surface font-semibold text-ink cursor-pointer transition-[background-color,transform] duration-150 ease-out hover:bg-surface/70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                    >{dc("Naya area")}</ActionControl>
+                    <ActionControl
                         type="button"
                         onClick={openSave}
                         disabled={loading || !!loadError}
-                        className="min-h-10 rounded-xl bg-primary px-3 py-2 text-sm font-semibold text-on-strong cursor-pointer transition-[opacity,transform] duration-150 ease-out hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
-                    >{dc("Changes live karein")}</button>
+                        className=" rounded-xl bg-primary font-semibold text-on-primary cursor-pointer transition-[opacity,transform] duration-150 ease-out hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                    >{dc("Changes live karein")}</ActionControl>
                 </div>
 
                 {/* All four customer prices remain inspectable, even though only
@@ -620,7 +621,7 @@ const EditFares = () => {
                             onClick={() => setActiveClass(c.key)}
                             className={`min-w-0 rounded-lg border px-1.5 py-2 text-[11px] font-semibold leading-tight cursor-pointer transition-[background-color,color,border-color,transform] duration-150 ease-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary active:scale-[0.97] ${
                                 c.key === activeClass
-                                    ? 'border-primary bg-primary text-on-strong'
+                                    ? 'border-primary bg-primary text-on-primary'
                                     : 'border-border/70 bg-surface text-ink-muted hover:bg-surface/70'
                             }`}
                         >
@@ -713,7 +714,7 @@ const EditFares = () => {
                         <textarea
                             id="f-notes"
                             rows={3}
-                            className={field}
+                            className={textareaClass}
                             value={selected.props.notes ?? ''}
                             onFocus={() => beginFieldEdit('notes')}
                             onBlur={endFieldEdit}
@@ -725,16 +726,16 @@ const EditFares = () => {
                         />
 
                         <div className="grid grid-cols-[1fr_auto] gap-2 mt-5">
-                            <button
+                            <ActionControl
                                 type="button"
                                 onClick={() => select(null)}
-                                className="min-h-10 rounded-xl bg-primary px-3 py-2 text-sm font-semibold text-on-strong cursor-pointer transition-[opacity,transform] duration-150 ease-out hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary active:scale-[0.98]"
-                            >{dc("Ho gaya")}</button>
-                            <button
+                                className=" rounded-xl bg-primary font-semibold text-on-primary cursor-pointer transition-[opacity,transform] duration-150 ease-out hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary active:scale-[0.98]"
+                            >{dc("Ho gaya")}</ActionControl>
+                            <ActionControl
                                 type="button"
                                 onClick={deleteZone}
-                                className="min-h-10 rounded-xl border border-border bg-surface px-3 py-2 text-sm font-semibold text-negative-light cursor-pointer transition-[border-color,background-color,transform] duration-150 ease-out hover:border-negative-light hover:bg-negative-light/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-negative-light active:scale-[0.98]"
-                            >{dc("Hata dein")}</button>
+                                className=" rounded-xl border border-border bg-surface font-semibold text-negative-light cursor-pointer transition-[border-color,background-color,transform] duration-150 ease-out hover:border-negative-light hover:bg-negative-light/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-negative-light active:scale-[0.98]"
+                            >{dc("Hata dein")}</ActionControl>
                         </div>
                     </div>
                 ) : (
@@ -799,14 +800,14 @@ const EditFares = () => {
             <main className="relative flex-1 min-h-0 max-sm:h-[36%] rounded-2xl overflow-hidden border border-border/50">
                 <div ref={mapNodeRef} className="absolute inset-0 bg-[#e8e8e8]" />
 
-                <button
+                <ActionControl
                     type="button"
                     onClick={undoLastChange}
                     disabled={!undoCount || loading || saving}
-                    className="absolute left-3 bottom-3 z-[800] min-h-10 rounded-xl border border-border/70 bg-surface/95 px-3 py-2 text-xs font-semibold text-ink shadow-[0_8px_24px_rgba(18,18,32,0.14)] backdrop-blur-sm transition-[background-color,transform,opacity] duration-150 ease-out hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 disabled:active:scale-100"
+                    className="absolute left-3 bottom-3 z-[800] rounded-xl border border-border/70 bg-surface/95 text-xs font-semibold text-ink shadow-[0_8px_24px_rgba(18,18,32,0.14)] backdrop-blur-sm transition-[background-color,transform,opacity] duration-150 ease-out hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 disabled:active:scale-100"
                 >
                     {dc("Pichla change wapas karein")}
-                </button>
+                </ActionControl>
 
                 {/* ---------- price checker ---------- */}
                 <div className="fare-probe-enter absolute right-3 top-3 z-[800] w-[228px] max-w-[calc(100%_-_24px)] rounded-xl border border-border/70 bg-surface/95 px-3.5 py-3 text-xs shadow-[0_8px_24px_rgba(18,18,32,0.16)] backdrop-blur-sm">
@@ -889,20 +890,20 @@ const EditFares = () => {
                         )}
 
                         <div className="flex gap-2">
-                            <button
+                            <ActionControl
                                 type="button"
                                 onClick={() => setModal(null)}
                                 disabled={saving}
-                                className="rounded-xl border border-border px-3 py-2 text-sm font-semibold text-ink cursor-pointer transition-colors duration-300 hover:bg-surface-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary active:opacity-[0.7] disabled:opacity-50 disabled:cursor-not-allowed"
-                            >{dc("Aur badlein")}</button>
-                            <button
+                                className="rounded-xl border border-border font-semibold text-ink cursor-pointer transition-colors duration-300 hover:bg-surface-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary active:opacity-[0.7] disabled:opacity-50 disabled:cursor-not-allowed"
+                            >{dc("Aur badlein")}</ActionControl>
+                            <ActionControl
                                 type="button"
                                 onClick={confirmSave}
                                 disabled={saving}
-                                className="flex-1 rounded-xl bg-primary px-3 py-2 text-sm font-semibold text-[var(--foreground)] cursor-pointer transition-opacity duration-300 hover:opacity-[0.9] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary active:opacity-[0.7] disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="flex-1 rounded-xl bg-primary font-semibold text-[var(--foreground)] cursor-pointer transition-opacity duration-300 hover:opacity-[0.9] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary active:opacity-[0.7] disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 {saving ? dc("Live ho raha hai…") : dc("Live karein")}
-                            </button>
+                            </ActionControl>
                         </div>
                     </div>
                 </div>

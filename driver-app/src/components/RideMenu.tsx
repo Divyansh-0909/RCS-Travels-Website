@@ -9,6 +9,7 @@ import { useLocation, useNavigate } from 'react-router-native';
 import AppText from './AppText';
 import { tabsFor } from './ui/tabs';
 import { useDriver } from '../hooks/useDriver';
+import rideChrome from '../theme/rideChrome';
 
 const asThemed = { className: { target: false, nativeStyleToProp: { color: true } } } as const;
 const Burger = cssInterop(ListIcon, asThemed);
@@ -64,11 +65,11 @@ export const RideMenuButton = () => {
             aria-label={dc("Menu")}
             onPress={() => setOpen(true)}
             hitSlop={10}
-            style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
+            style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1, backgroundColor: rideChrome.background })}
             className="flex-row items-center gap-3 rounded-full bg-strong p-3"
         >
             <View className="w-[22px] h-[22px] items-center justify-center">
-                <Burger size={20} weight="bold" className="text-on-strong" />
+                <Burger size={20} weight="bold" className="text-white" />
             </View>
         </Pressable>
     );

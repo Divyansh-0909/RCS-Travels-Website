@@ -231,7 +231,7 @@ const Marketplace = () => {
                             onPress={() => switchTo(tab.key)}
                             className="relative z-10 flex-1 items-center justify-center rounded-full bg-transparent py-2.5 px-2"
                         >
-                            <AppText className={`text-sm font-semibold ${active ? 'text-white' : MUTED}`}>
+                            <AppText className={`text-sm font-semibold ${active ? 'text-on-strong' : MUTED}`}>
                                 {tab.label}
                             </AppText>
                         </Pressable>
@@ -294,7 +294,7 @@ const Marketplace = () => {
                                 onPress={() => setPostSheetVisible(true)}
                                 className="mt-4 rounded-full bg-strong px-5 py-3"
                             >
-                                <AppText className="font-semibold text-white">{dc("Post a booking")}</AppText>
+                                <AppText className="font-semibold text-on-strong">{dc("Post a booking")}</AppText>
                             </Pressable>
                         ) : null}
                     </View>

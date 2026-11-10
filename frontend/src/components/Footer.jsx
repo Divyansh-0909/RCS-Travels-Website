@@ -1,6 +1,7 @@
 import { useTranslation as useCopyLanguage } from "react-i18next";
 import { websiteCopy as dc } from "../i18nCopy";
 import { useLocation } from "react-router-dom";
+import BrandWordmark from './ui/BrandWordmark';
 import { useViewNavigate } from "../hooks/useViewNavigate";
 import { scrollToSection, scrollToTop } from "../hooks/useSmoothScroll";
 import { callSupport, emailSupport, openSupportWhatsApp } from "../constants/support";
@@ -83,7 +84,7 @@ const Footer = () => {
                     onClick={() => navigate("/")}
                     className="self-start flex items-center cursor-pointer w-fit opacity-[1] hover:opacity-[0.85] transition-opacity duration-300"
                 >
-                    <h3 className="text-2xl sm:text-3xl"><span className="font-semibold">RCS</span> travels</h3>
+                    <BrandWordmark as="h3" size="text-3xl sm:text-4xl" />
                 </div>
 
                 {/* Link columns */}

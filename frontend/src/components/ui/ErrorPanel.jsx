@@ -33,11 +33,11 @@ const ErrorPanel = ({ prop }) => {
                             navigate(prop.setError(null))
                         }
                     }}
-                    prop={{
+                    prop={{ size: "action",
                         type: "submit",
                         disabled: prop.loading,
                     }}
-                    className="mt-4 scale-[1] sm:scale-[1.1] "
+                    className="mt-4 scale-[1]  "
                 >
                     {prop.loading ? tr("Trying again...") : tr(prop.actionLabel || "Okay")}
                 </Button>

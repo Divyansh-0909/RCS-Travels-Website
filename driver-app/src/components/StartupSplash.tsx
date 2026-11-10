@@ -66,7 +66,7 @@ const StartupSplash = ({ appReady, themeReady }: StartupSplashProps) => {
     color: interpolateColor(
       phase.get(),
       [0, 1],
-      [colors.onStrong, colors.ink],
+      [colors.onPrimary, colors.ink],
     ),
   }));
 

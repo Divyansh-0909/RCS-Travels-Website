@@ -185,9 +185,9 @@ const SharedTrip = () => {
     const supportButton = (
         <Button
             onClick={() => openSupportWhatsApp("Hi, I'm following someone's ride on a shared link and need help.")}
-            prop={{ variant: "input", width: "100%", bg: "var(--background-muted)" }}
+            prop={{ size: "action", variant: "input", width: "100%", bg: "var(--background-muted)" }}
         >
-            <span className="flex items-center justify-center gap-2 text-base sm:text-lg">
+            <span className="flex items-center justify-center gap-2 text-base">
                 <img src={waLogo} alt="WhatsApp" className="w-6 h-6" />{dc("Message support")}</span>
         </Button>
     );

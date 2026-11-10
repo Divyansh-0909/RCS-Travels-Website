@@ -1,3 +1,4 @@
+import IconButton from "./IconButton";
 import { useTranslation as useCopyLanguage } from "react-i18next";
 import { websiteCopy as dc } from "../../i18nCopy";
 import { useState, useEffect } from 'react';
@@ -6,6 +7,7 @@ import Icon from '@mdi/react';
 import { mdiClose, mdiHome, mdiMenu } from '@mdi/js';
 import { useViewNavigate } from "../../hooks/useViewNavigate";
 import { useExitAnim } from "../../hooks/useExitAnim";
+import BrandWordmark from './BrandWordmark';
 
 // Every panel these pages float over their content gets the same dim behind it
 // as Outstation's booking panel: the page recedes instead of competing with the
@@ -51,8 +53,8 @@ const AccountLayout = ({ items, selected, onSelect, title, children, headerActio
     return (
         <div className="box-border w-[100vw] max-w-full h-[100dvh] flex flex-col justify-center items-center overflow-x-hidden px-5 sm:px-10 bg-surface text-ink">
             <PanelBackdrop open={panelOpen} onClose={onPanelClose} />
-            <div className="flex w-full justify-start items-center gap-3 py-6">
-                <h3 onClick={() => navigate('/')} className="sm:block hidden cursor-pointer text-ink text-2xl pl-1 opacity-[0.85] transition-opacity duration-300 hover:opacity-[1]"><span className="font-semibold">RCS</span> travels</h3>
+            <div className="flex h-[58px] w-full shrink-0 justify-start items-center gap-3 sm:h-[90px]">
+                <BrandWordmark as="h3" onClick={() => navigate('/')} className="sm:block hidden cursor-pointer text-ink pl-1 opacity-[0.85] transition-opacity duration-300 hover:opacity-[1]" />
                 <Icon onClick={() => navigate('/')} className="sm:hidden block cursor-pointer text-ink opacity-[0.85] transition-opacity duration-300 hover:opacity-[1]" path={mdiHome} size={1.2} />
                 {title && (
                     <>
@@ -60,14 +62,7 @@ const AccountLayout = ({ items, selected, onSelect, title, children, headerActio
                         <h3 className="text-ink-muted text-xl">{title}</h3>
                     </>
                 )}
-                <button
-                    type="button"
-                    aria-label={menuOpen ? dc("Hide sections") : dc("Show sections")}
-                    onClick={() => setMenuOpen((open) => !open)}
-                    className="ml-auto sm:hidden shrink-0 cursor-pointer rounded-lg text-ink opacity-[0.85] transition-opacity duration-300 hover:opacity-[1] active:opacity-[0.7] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-                >
-                    <Icon path={menuOpen ? mdiClose : mdiMenu} size={1.2} />
-                </button>
+                <IconButton type="button" aria-label={menuOpen ? dc("Hide sections") : dc("Show sections")} onClick={() => setMenuOpen((open) => !open)} className="ml-auto sm:hidden shrink-0"><Icon path={menuOpen ? mdiClose : mdiMenu} size={1.2} /></IconButton>
             </div>
             <div className="w-full min-w-0 flex-1 min-h-0 flex gap-5 justify-center items-center">
                 <div className={`${menuOpen ? "flex animate-account-menu" : "hidden"} w-full sm:flex sm:w-[16%] justify-start items-start h-full sm:pt-2 sm:pr-6 sm:border-r sm:border-border/60`}>

@@ -59,6 +59,8 @@ import SettingsPage from "./SettingsPage";
 import SafetyPage from "./SafetyPage";
 import HelpPage from "./HelpPage";
 import Services from "./Services";
+import LandingHero from "../components/hero/LandingHero";
+import BookingStoryPreview from "../components/booking-story/BookingStoryPreview";
 import RideDetails from "../components/RideDetails";
 import BackgroundPanel from "../components/ui/BackgroundPanel";
 import GoogleMap, { MAP_LAND_COLOR } from "../components/ui/GoogleMap";
@@ -89,6 +91,8 @@ const MOCK = {
 
 // The whole flow, in the order a rider walks through it.
 const PREVIEWS = [
+    ["/dev/hero", "Landing hero: character animation"],
+    ["/dev/booking-story", "Booking story: original SVG views and scroll preview"],
     ["/dev/home", "OnBoarding: fresh booking form"],
     ["/dev/vehicle", "VehicleSelect: choose a ride"],
     ["/dev/vehicle?fare=formula", "VehicleSelect: choose a ride, per-km (tolls pill)"],
@@ -335,6 +339,21 @@ const DevPreview = () => {
     // seen without breaking a real page. Dev-only, like everything on this route.
     if (view === "crash") throw new Error("Deliberate crash from /dev/crash");
     if (view === "states") return <StatesGallery />;
+    if (view === "hero") {
+        const time = new URLSearchParams(search).get("time");
+        const fixedTime = time !== null && Number.isFinite(Number(time)) ? Number(time) : null;
+        return <LandingHero characterTime={fixedTime} />;
+    }
+    if (view === "booking-story") {
+        const params = new URLSearchParams(search);
+        const progress = params.get('progress');
+        const time = params.get('time');
+        return <BookingStoryPreview
+            key={search}
+            initialProgress={progress !== null && Number.isFinite(Number(progress)) ? Math.max(0, Math.min(1, Number(progress))) : null}
+            fixedTime={time !== null && Number.isFinite(Number(time)) ? Number(time) : null}
+        />;
+    }
     // view in the key: /dev/rides and /dev/account render the same component,
     // and without a remount the rides tab would survive the switch between them.
     if (view === "rides" || view === "account") return <ManageAccount key={view + search} />;

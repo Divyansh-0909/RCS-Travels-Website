@@ -1,3 +1,4 @@
+import IconButton from "../components/ui/IconButton";
 import { useTranslation as useCopyLanguage } from "react-i18next";
 import { websiteCopy as dc } from "../i18nCopy";
 import Icon from "@mdi/react";
@@ -97,7 +98,21 @@ const BookPanel = ({ open, onClose }) => {
 
     useEffect(() => {
         if (!open) return;
-        const onKey = (e) => { if (e.key === "Escape") onClose(); };
+        const onKey = (e) => {
+            if (e.key === "Escape") { onClose(); return; }
+            if (e.key !== "Tab") return;
+            const panel = panelRef.current;
+            if (!panel) return;
+            const controls = [...panel.querySelectorAll('button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')]
+                .filter(element => element.getClientRects().length > 0);
+            const first = controls[0], last = controls.at(-1);
+            if (!first) { e.preventDefault(); panel.focus(); return; }
+            if (!panel.contains(document.activeElement) || document.activeElement === panel ||
+                (e.shiftKey ? document.activeElement === first : document.activeElement === last)) {
+                e.preventDefault();
+                (e.shiftKey ? last : first).focus();
+            }
+        };
         window.addEventListener("keydown", onKey);
         return () => window.removeEventListener("keydown", onKey);
     }, [open, onClose]);
@@ -132,14 +147,7 @@ const BookPanel = ({ open, onClose }) => {
                 >
                     <div className="flex items-start justify-between gap-4">
                         <h2 id="book-panel-title" className="text-2xl font-semibold">{dc("Book an outstation trip")}</h2>
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            aria-label={dc("Close")}
-                            className="shrink-0 cursor-pointer rounded-full p-1 opacity-60 transition-opacity duration-300 hover:opacity-100 active:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]"
-                        >
-                            <Icon path={mdiClose} size={1} aria-hidden="true" />
-                        </button>
+                        <IconButton type="button" onClick={onClose} aria-label={dc("Close")} className="shrink-0"><Icon path={mdiClose} size={1} aria-hidden="true" /></IconButton>
                     </div>
                     <p className="text-base sm:text-lg leading-[1.6] text-[var(--text-muted)]">{dc("Send us the destination, your dates and how many of you are travelling. You'll get the full cost back before anything is confirmed.")}</p>
                     <ul className="flex flex-col gap-3">

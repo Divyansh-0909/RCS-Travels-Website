@@ -485,7 +485,7 @@ const Vehicles = () => {
                             borderColor: selected ? colors.strong : colors.borderUi,
                           }}
                         >
-                          <AppText className={`text-sm font-semibold ${selected ? 'text-white' : INK}`}>
+                          <AppText className={`text-sm font-semibold ${selected ? 'text-on-strong' : INK}`}>
                             {vehicleClassLabel(option)}
                           </AppText>
                         </Pressable>
@@ -612,7 +612,7 @@ const Vehicles = () => {
                     opacity: pressed || busy ? 0.6 : 1,
                   })}
                 >
-                  <AppText className="text-sm font-semibold text-white">{dc("Drive this one")}</AppText>
+                  <AppText className="text-sm font-semibold text-on-strong">{dc("Drive this one")}</AppText>
                 </Pressable>
 
                 {/* Not offered for the car he is driving. The server refuses it too
@@ -789,7 +789,7 @@ const Vehicles = () => {
                             borderColor: selected ? colors.strong : colors.borderUi,
                           }}
                         >
-                          <AppText className={`text-sm font-semibold ${selected ? 'text-white' : INK}`}>
+                          <AppText className={`text-sm font-semibold ${selected ? 'text-on-strong' : INK}`}>
                             {vehicleClassLabel(option)}
                           </AppText>
                         </Pressable>

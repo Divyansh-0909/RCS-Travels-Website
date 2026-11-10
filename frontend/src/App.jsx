@@ -34,8 +34,8 @@ function App() {
           <div id="smooth-content" className="flex flex-col gap-18 bg-[var(--foreground)]">
             {/* <div id="services" data-bar-tone="light" className="pt-[136px] sm:pt-[150px]"><Services/></div> */}
             <LandingHero />
-            <div id="how-it-works" data-bar-tone="light" ><HowItWorks/></div>
-            <div id="about" data-bar-tone="primary"><AboutUs/></div>
+            <div id="how-it-works" className="-mt-8" data-bar-tone="light" data-scroll-align="start"><HowItWorks/></div>
+            <div id="about" className="relative z-10 -mt-18" data-bar-tone="primary"><AboutUs/></div>
             <div id="why-us" data-bar-tone="light"><WhyUs/></div>
             <div data-bar-tone="light"><FinalCTA/></div>
             <div data-bar-tone="dark"><Footer/></div>

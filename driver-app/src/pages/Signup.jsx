@@ -27,12 +27,12 @@ import { openExternalUrl } from '../lib/externalLinks';
 
 
 const ERROR_TEXT = "#E86A6A";
-const BOX_BG = "#1d1d27";
+const BOX_BG = "#1D1D23";
 const BOX_BORDER = "rgba(255,255,255,0.3)";
 const BOX_BORDER_ERROR = "rgba(185,28,28,0.5)";
 const BOX_BORDER_ERROR_FOCUS = "rgba(185,28,28,0.8)";
 const BOX_BG_ERROR = "rgba(185,28,28,0.1)";
-const BOX_PASS = "#16A34A";
+const BOX_PASS = "#15803D";
 const BOX_FAIL = "#DC2626";
 const LEGAL_BASE_URL = 'https://www.rcstravels.co.in';
 

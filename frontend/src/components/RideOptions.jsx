@@ -1,7 +1,11 @@
-import { useEffect, useRef } from "react";
+import IconButton from "./ui/IconButton";
+import { useEffect, useLayoutEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import Icon from "@mdi/react";
 import { mdiChevronRight, mdiClose } from "@mdi/js";
 import BackgroundPanel from "./ui/BackgroundPanel";
+import { ActionControl } from "./ui/Button";
+import Toggle, { SwitchVisual } from "./ui/Toggle";
 import { useExitAnim } from "../hooks/useExitAnim";
 import { useWebsiteCopy } from "../hooks/useWebsiteCopy";
 
@@ -17,23 +21,9 @@ import { useWebsiteCopy } from "../hooks/useWebsiteCopy";
 // Two shells over one list: a popover above the trigger from sm up, a bottom
 // sheet on phones. The rows are identical in both — see OptionsBody.
 
-// The switch: a white pill riding over a coloured bar.
-//
-// The 0.9 phone scale is gone with the columns that needed it — every row here
-// is full-width, so the switch is painted at its layout size and no caller has
-// to reserve a different box than the one it draws into.
+// Match Settings. The surrounding option row remains the single switch target.
 export const SliderToggle = ({ on, onClick, className = "" }) => (
-    <div
-        onClick={onClick}
-        // Presentational when the row around it is the switch — two nested
-        // elements with role="switch" is one control too many to a screen
-        // reader, and the row is the bigger target of the two.
-        {...(onClick ? { role: "switch", "aria-checked": on } : { "aria-hidden": "true" })}
-        className={`relative w-[50px] h-[22px] flex items-center justify-center ${className}`}
-    >
-        <div className={`absolute inset-0 ${on ? "-left-2" : "left-5"} border-b-2 border-[rgba(255,255,255,0.05)] bg-white scale-[1] group-hover:scale-[1.1] cursor-pointer [transition:all_300ms,transform_300ms_150ms] bg-[linear-gradient(to_top,transparent_50%,rgba(146,146,139,0.25)_100%)] shadow-[inset_0px_2px_2px_1px_rgba(255,255,255,0.4),0px_0px_10px_rgba(0,0,0,0.6)] w-[40px] rounded-full h-[inherit]`} />
-        <div className={`${on ? "bg-green-500" : "bg-gray-500"} rounded-full w-[inherit] h-[14px]`} />
-    </div>
+    onClick ? <Toggle on={on} onClick={onClick} /> : <SwitchVisual on={on} className={className} />
 );
 
 // One row: what the option is, what it does to the fare, and the switch. The
@@ -46,20 +36,20 @@ export const SliderToggle = ({ on, onClick, className = "" }) => (
 // where a two-row panel on some trips and a three-row panel on others only
 // raises it.
 const OptionRow = ({ label, note, on, onToggle, disabled = false }) => (
-    <button
+    <ActionControl
         type="button"
         role="switch"
         aria-checked={on}
         disabled={disabled}
         onClick={onToggle}
-        className={`group w-full flex items-center justify-between gap-4 py-3.5 text-left rounded-lg outline-none transition-opacity duration-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]/70 ${disabled ? "opacity-45 cursor-not-allowed" : "cursor-pointer active:opacity-80"}`}
+        className={`group w-full justify-between gap-4 text-left rounded-lg transition-opacity duration-150 focus-visible:outline-[var(--foreground)]/70 ${disabled ? "opacity-45 cursor-not-allowed" : "cursor-pointer active:opacity-80"}`}
     >
         <span className="min-w-0 flex-1 flex flex-col gap-0.5">
-            <span className="text-base sm:text-lg font-medium leading-tight text-[var(--text)]">{label}</span>
-            <span className="text-sm sm:text-base leading-snug text-[var(--text-muted)]">{note}</span>
+            <span className="text-base font-medium leading-6 text-[var(--text)]">{label}</span>
+            <span className="text-sm leading-5 text-[var(--text-muted)]">{note}</span>
         </span>
-        <SliderToggle on={on} className="shrink-0 max-sm:mr-2.5" />
-    </button>
+        <SliderToggle on={on} className="shrink-0" />
+    </ActionControl>
 );
 
 // Everything inside the popover and the sheet, so the two shells can't drift.
@@ -71,17 +61,10 @@ const OptionsBody = ({ options, onClose, titleId, showClose = true }) => {
             sheet is a child of that page — inherited, the title and its line
             underneath each centre on their own width and stop agreeing with
             each other or with the rows below. */}
-        <div className="flex items-start justify-between gap-4 text-left">
+        <div className={`sticky top-0 z-10 flex items-start justify-between gap-4 text-left ${showClose ? "bg-[var(--background-primary)]" : "bg-immersive"}`}>
             <h3 id={titleId} className="min-w-0 flex-1 [overflow-wrap:anywhere] text-xl sm:text-2xl font-medium leading-tight text-[var(--text)]">{tr("Ride options")}</h3>
             {showClose && (
-                <button
-                    type="button"
-                    onClick={onClose}
-                    aria-label={tr("Close ride options")}
-                    className="shrink-0 cursor-pointer rounded-full p-1 opacity-60 transition-opacity duration-300 hover:opacity-100 active:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]/70"
-                >
-                    <Icon path={mdiClose} size={0.9} aria-hidden="true" />
-                </button>
+                <IconButton type="button" onClick={onClose} aria-label={tr("Close ride options")} className="shrink-0"><Icon path={mdiClose} size={0.9} aria-hidden="true" /></IconButton>
             )}
         </div>
 
@@ -119,16 +102,16 @@ export const RideOptionsTrigger = ({ options, open, onClick, buttonRef }) => {
         : options.filter(option => !option.disabled).map(option => option.short).join(", ");
 
     return (
-        <button
+        <ActionControl
             ref={buttonRef}
             type="button"
             onClick={onClick}
             aria-expanded={open}
             aria-haspopup="dialog"
-            className="group w-full flex items-center justify-between gap-3 py-1 text-left cursor-pointer rounded-lg outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]/70"
+            className="group w-full justify-between gap-3 text-left cursor-pointer rounded-xl focus-visible:outline-[var(--foreground)]/70"
         >
             <span className="min-w-0 flex flex-col gap-0.5">
-                <span className="text-sm sm:text-base font-medium leading-tight text-[var(--text)]">{tr("Ride options")}</span>
+                <span className="text-base font-medium leading-6 text-[var(--text)]">{tr("Ride options")}</span>
                 {/* truncate rather than wrap: this sits directly above the Book
                     button on phones, where a second line would push the CTA
                     down by a row every time an option is switched on. */}
@@ -141,7 +124,7 @@ export const RideOptionsTrigger = ({ options, open, onClick, buttonRef }) => {
                 className="w-5 h-5 shrink-0 text-[var(--text-muted)] transition-transform duration-300 group-hover:translate-x-0.5"
                 aria-hidden="true"
             />
-        </button>
+        </ActionControl>
     );
 };
 
@@ -154,6 +137,30 @@ export const RideOptionsPopover = ({ options, open, onClose, anchorRef }) => {
     // 300ms = the length of animate-datetime-out.
     const { mounted, closing } = useExitAnim(open, 300);
     const panelRef = useRef(null);
+    const noteKey = options.map(option => option.note).join("|");
+
+    useLayoutEffect(() => {
+        if (!mounted) return;
+        const fit = () => {
+            const anchor = anchorRef?.current?.getBoundingClientRect(), panel = panelRef.current;
+            if (!anchor || !panel) return;
+            const width = Math.min(anchor.width, window.innerWidth - 24);
+            panel.style.width = width + "px";
+            const height = Math.min(panel.scrollHeight, window.innerHeight - 24);
+            const above = anchor.top - 12 - height;
+            const below = anchor.bottom + 12;
+            const top = above >= 12 ? above : below + height <= window.innerHeight - 12 ? below : 12;
+            Object.assign(panel.style, {
+                left: Math.max(12, Math.min(anchor.left, window.innerWidth - width - 12)) + "px",
+                top: top + "px",
+                maxHeight: (window.innerHeight - 24) + "px",
+            });
+        };
+        fit();
+        window.addEventListener("resize", fit);
+        window.addEventListener("scroll", fit, true);
+        return () => { window.removeEventListener("resize", fit); window.removeEventListener("scroll", fit, true); };
+    }, [mounted, anchorRef, noteKey]);
 
     useEffect(() => {
         if (!open) return;
@@ -181,7 +188,7 @@ export const RideOptionsPopover = ({ options, open, onClose, anchorRef }) => {
 
     if (!mounted) return null;
 
-    return (
+    return createPortal(
         <div
             ref={panelRef}
             tabIndex={-1}
@@ -192,10 +199,11 @@ export const RideOptionsPopover = ({ options, open, onClose, anchorRef }) => {
             // so the panel separates from what it covers instead of dissolving
             // into it. Deeper shadow than a dropdown's — this one floats over
             // four cards rather than sitting on the page.
-            className={`absolute bottom-full inset-x-0 z-30 mb-3 flex flex-col gap-3 rounded-2xl bg-[var(--background-primary)] px-5 py-4 outline-none shadow-[0_24px_60px_rgba(0,0,0,0.65)] ${closing ? "animate-datetime-out" : "animate-datetime"} motion-reduce:animate-none`}
+            className={`fixed z-[120] flex flex-col gap-3 overflow-y-auto overscroll-contain rounded-2xl bg-[var(--background-primary)] px-5 py-4 outline-none shadow-[0_24px_60px_rgba(0,0,0,0.65)] ${closing ? "animate-datetime-out" : "animate-datetime"} motion-reduce:animate-none`}
         >
             <OptionsBody options={options} onClose={onClose} titleId="ride-options-title" />
-        </div>
+        </div>,
+        document.body,
     );
 };
 
@@ -233,17 +241,10 @@ export const RideOptionsSheet = ({ options, open, onClose }) => {
                 // -mt-4 is what eats that padding there, and it can't here.
                 // The inner content owns scrolling so the close button can sit
                 // above the sheet without being clipped by its overflow.
-                className="z-6 flex flex-col gap-4 px-[7vw] pt-1 pb-[calc(1.5rem+env(safe-area-inset-bottom))] text-left"
+                className="z-6 flex max-h-[calc(100dvh-64px)] flex-col gap-4 px-[7vw] pt-1 pb-[calc(1.5rem+env(safe-area-inset-bottom))] text-left"
             >
-                <button
-                    type="button"
-                    onClick={onClose}
-                    aria-label={tr("Close ride options")}
-                    className="absolute z-20 -top-12 right-4 h-9 my-1 w-9 rounded-full border border-[var(--foreground)]/30 bg-immersive shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)] flex items-center justify-center cursor-pointer transition-opacity duration-300 active:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]/70"
-                >
-                    <Icon path={mdiClose} size={0.8} aria-hidden="true" />
-                </button>
-                <div data-sheet-scroll className="min-h-0 flex-1 flex flex-col gap-4">
+                <IconButton type="button" onClick={onClose} aria-label={tr("Close ride options")} compact className="absolute z-20 -top-14 right-4"><Icon path={mdiClose} size={0.8} aria-hidden="true" /></IconButton>
+                <div data-sheet-scroll className="min-h-0 flex-1 flex flex-col gap-4 overflow-y-auto overscroll-contain">
                     <OptionsBody
                         options={options}
                         onClose={onClose}

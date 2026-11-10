@@ -13,7 +13,7 @@ const Wallet = cssInterop(WalletIcon, asThemed);
 
 // Ink, beside the blue month tile. The darkest surface on a white page reads first,
 // which is right: the balance is the one number here that can stop a captain working.
-const LABEL = 'text-[rgba(255,255,255,0.7)]';
+const LABEL = 'text-on-strong opacity-70';
 
 // Amber on ink, not the negative red. Red on this card reads as an error in the app;
 // this is a true balance he has to clear, and it is his to act on.
@@ -55,7 +55,7 @@ const WalletCard = ({ balance }: Props) => {
 
       <AppText
         numberOfLines={1}
-        className={`text-2xl font-semibold ${owing ? OWED : 'text-white'}`}
+        className={`text-2xl font-semibold ${owing ? OWED : 'text-on-strong'}`}
         style={FIGURE}
       >
         {rupees(balance)}
@@ -64,7 +64,7 @@ const WalletCard = ({ balance }: Props) => {
       {owing ? (
         <AppText numberOfLines={2} className={`text-xs ${OWED}`}>{dc("Negative balance blocks going online")}</AppText>
       ) : (
-        <AppText numberOfLines={2} className="text-xs text-[rgba(255,255,255,0.7)]">
+        <AppText numberOfLines={2} className="text-xs text-on-strong opacity-70">
           {dc("Available · tap for history")}
         </AppText>
       )}

@@ -16,8 +16,8 @@ export default function CancelledBookingPanel({ financials, reference, onRefresh
       <p className="mt-2 text-[var(--text-muted)]">{tr(summary.message)}</p>
     </div>}
     <div className="flex flex-col gap-2">
-      <Button onClick={onRefresh} prop={{ width: '100%', disabled: loading }}>{loading ? tr('Refreshing…') : tr('Refresh payment status')}</Button>
-      <Button onClick={onHome} prop={{ variant: 'input', width: '100%', border: false }}>{tr('Back to home')}</Button>
+      <Button onClick={onRefresh} prop={{ size: "action", width: '100%', disabled: loading }}>{loading ? tr('Refreshing…') : tr('Refresh payment status')}</Button>
+      <Button onClick={onHome} prop={{ size: "action", variant: 'input', width: '100%', border: false }}>{tr('Back to home')}</Button>
     </div>
   </section>;
 }

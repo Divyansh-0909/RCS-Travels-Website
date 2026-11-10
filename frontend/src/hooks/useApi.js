@@ -17,6 +17,7 @@ export function useApi() {
     reviewResponsibility: (caseId, action, body) => api.reviewResponsibility(caseId, action, body, getToken),
     getMe:            ()              => api.getMe(getToken),
     getResponsibilityCase: (caseId, signal) => api.getResponsibilityCase(caseId, getToken, signal),
+    getResponsibilityCases: (filters, signal) => api.getResponsibilityCases(filters, getToken, signal),
     createMe:         (name)          => api.createMe(name, getToken),
     getPreferences:   ()              => api.getPreferences(getToken),
     updatePreferences:(body)          => api.updatePreferences(body, getToken),

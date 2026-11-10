@@ -134,8 +134,8 @@ const RideAcceptedSheet = () => {
                         style={({ pressed }) => ({ opacity: pressed ? 0.75 : 1 })}
                         className="w-full h-12 rounded-xl flex flex-row gap-2 items-center justify-center bg-primary"
                     >
-                        <Phone size={22} weight="fill" className="text-on-strong" />
-                        <AppText className='font-semibold text-lg text-on-strong'>{dc("Call Rider")}</AppText>
+                        <Phone size={22} weight="fill" className="text-on-primary" />
+                        <AppText className='font-semibold text-lg text-on-primary'>{dc("Call Rider")}</AppText>
                     </Pressable>
                 </View>
                 

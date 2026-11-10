@@ -1,3 +1,4 @@
+import IconButton from "../components/ui/IconButton";
 import { useTranslation as useCopyLanguage } from "react-i18next";
 import { websiteCopy as dc } from "../i18nCopy";
 import Button from "../components/ui/Button";
@@ -51,6 +52,8 @@ import {
     paymentIsBusy,
     paymentIsSatisfied,
     paymentPhaseForError,
+    formatPaymentAmount,
+    rideReceiptBreakdown,
 } from "../lib/paymentUi";
 
 const DRIVER_CANCELLATION_SEEN_PREFIX = "driverCancellationSeen:";
@@ -197,11 +200,13 @@ const TrackingPage = () => {
         setNavigationPolyline(null);
         setBookingReference(null);
         setFinancials(null);
+        setFareCoupon(null);
         setRidePayment(null);
         setDriverCancellation(null);
         setDriverCancellationOpen(false);
     }, [routeBookingId, activeBooking?.id]);
     const isMobile = useIsMobile();
+    const completedBadgeSize = isMobile ? "clamp(64px, 12dvh, 96px)" : 140;
     // { name, phone, vehicleNumber, vehicleModel, photoUrl, latitude, longitude,
     // bearing } from the status endpoint — the whole driver card, plus the coords
     // that drive the map marker. null until the first poll lands, and null for
@@ -250,17 +255,23 @@ const TrackingPage = () => {
     const { stabilizeDriverPhoto, markDriverPhotoFailed } = useStableDriverPhoto();
     const [navigationEtaMinutes, setNavigationEtaMinutes] = useState(null);
     const [navigationPolyline, setNavigationPolyline] = useState(null);
+    const [fareCoupon, setFareCoupon] = useState(() => devParams?.get("status") === "completed" && !devParams?.get("scheduled") ? 100 : null);
     const [financials, setFinancials] = useState(() => {
-        if (!devParams?.get("scheduled") && !devParams?.get("payment")) return null;
-        const advancePaid = devParams?.get("status") === "payment_pending" ? 0 : 2900;
-        const finalPaid = devParams?.get("payment") === "success" ? 16100 : 0;
+        if (!devParams?.get("scheduled")) return null;
+        const grossFare = Number.isFinite(fare) ? Math.round(fare * 100) : 30000;
+        const coupon = 1000;
+        const finalFare = Math.max(0, grossFare - coupon);
+        const advance = Math.round(finalFare * 0.1);
+        const remaining = finalFare - advance;
+        const advancePaid = devParams?.get("status") === "payment_pending" ? 0 : advance;
+        const finalPaid = devParams?.get("payment") === "success" ? remaining : 0;
         return {
-            fare: 20000,
-            coupon: 1000,
-            finalFare: 19000,
-            advance: 2900,
+            fare: grossFare,
+            coupon,
+            finalFare,
+            advance,
             advancePaid,
-            remaining: 16100,
+            remaining,
             finalPaid,
             advanceDisposition: "paid",
             payments: [],
@@ -269,12 +280,14 @@ const TrackingPage = () => {
     const [ridePayment, setRidePayment] = useState(() => {
         if (devParams?.get("status") !== "completed") return null;
         const paid = devParams?.get("payment") === "success";
+        const amount = devParams?.get("scheduled") ? financials.remaining : Math.max(0, Math.round((fare ?? 300) * 100) - 10000);
         return {
             state: paid ? "paid" : "pending",
             method: paid ? "upi" : null,
-            amount: devParams?.get("scheduled") ? 16100 : 20000,
-            paidAmount: paid ? (devParams?.get("scheduled") ? 16100 : 20000) : 0,
+            amount,
+            paidAmount: paid ? amount : 0,
             paidAt: paid ? new Date().toISOString() : null,
+            upiAvailable: devParams?.get("upi") === "1",
         };
     });
     const [bookingScheduledAt, setBookingScheduledAt] = useState(activeBooking?.scheduledAt ?? scheduledTime ?? null);
@@ -386,6 +399,7 @@ const TrackingPage = () => {
                 setNavigationEtaMinutes(data.navigationEtaMinutes ?? null);
                 setNavigationPolyline(data.navigationPolyline ?? null);
                 setFinancials(data.financials ?? null);
+                setFareCoupon(data.coupon ?? null);
                 setRidePayment(data.ridePayment ?? null);
                 setBookingScheduledAt(data.scheduledAt ?? null);
                 setDriverDelayed(data.driverDelayed === true);
@@ -599,7 +613,8 @@ const TrackingPage = () => {
     const pickupTime = minsLabel(navigationEtaMinutes);
     // Same split as Ride details: the stored fare is the total, so the safer-route
     // add-on is backed out of it rather than added to it.
-    const baseFare = fare != null ? fare - (safeRoute ? SAFE_ROUTE_SURCHARGE : 0) : null;
+    const completedReceipt = rideReceiptBreakdown({ fare, coupon: fareCoupon, financials, ridePayment });
+    const completedBaseFare = completedReceipt.grossFare == null ? null : completedReceipt.grossFare - (safeRoute ? SAFE_ROUTE_SURCHARGE * 100 : 0);
 
     const dropTime = status === "started" ? minsLabel(navigationEtaMinutes) : minsLabel(durationMin);
 
@@ -626,23 +641,19 @@ const TrackingPage = () => {
     // would drift with the content. Desktop is unchanged, a bare glyph fixed to
     // the top-left corner.
     const backArrow = (
-        <div onClick={() => navigate('/')} className="max-sm:absolute max-sm:z-20 max-sm:-top-12 max-sm:left-4 max-sm:h-9 max-sm:my-1 max-sm:px-3 max-sm:rounded-full max-sm:border max-sm:border-[var(--foreground)]/30 max-sm:bg-[var(--background-muted)] max-sm:shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)] flex items-center justify-center cursor-pointer sm:opacity-[0.8] transition-opacity duration-300 hover:opacity-[1] text-[var(--text)] sm:fixed sm:left-6 sm:top-6">
-            <Icon path={mdiKeyboardBackspace} size={1.2} />
-        </div>
+        <IconButton onClick={() => navigate('/')} aria-label={dc("Back")} compact="mobile" className="max-sm:absolute max-sm:z-20 max-sm:-top-12 max-sm:left-4 max-sm:my-1 flex sm:fixed sm:left-6 sm:top-6"><Icon path={mdiKeyboardBackspace} size={1.2} /></IconButton>
     );
 
     // The completed screen fills the viewport — there is no map above its sheet
     // for an arrow to float over — so it keeps the in-panel placement.
     const backArrowInPanel = (
-        <div onClick={() => navigate('/')} className="absolute left-5 top-0 sm:fixed sm:left-6 sm:top-6 flex items-center justify-center cursor-pointer opacity-[0.8] transition-opacity duration-300 hover:opacity-[1] text-[var(--text)]">
-            <Icon path={mdiKeyboardBackspace} size={1.2} />
-        </div>
+        <IconButton onClick={() => navigate('/')} aria-label={dc("Back")} className="absolute left-5 top-0 sm:fixed sm:left-6 sm:top-6 flex"><Icon path={mdiKeyboardBackspace} size={1.2} /></IconButton>
     );
 
     // Only shown once a driver exists — before that there's nobody to dispute
     // a fare with.
     const extraFareNotice = (
-        <NoticePill>
+        <NoticePill className="whitespace-normal! break-words">
             {tr("Driver asking extra?")}{" "}
             <button
                 type="button"
@@ -679,7 +690,7 @@ const TrackingPage = () => {
     // fetch first and the share immediately after, never in a .then chain.
     const [shareBusy, setShareBusy] = useState(false);
     const [shareNote, setShareNote] = useState("");
-    const [shareSheetOpen, setShareSheetOpen] = useState(false);
+    const [shareSheetOpen, setShareSheetOpen] = useState(() => devParams?.get("share") === "1");
     // Same mount-through-exit treatment as the booking flow's Ride options
     // sheet, so the scrim and panel leave as one surface instead of vanishing.
     const { mounted: shareSheetMounted, closing: shareSheetClosing } = useExitAnim(shareSheetOpen, 420);
@@ -879,12 +890,17 @@ const TrackingPage = () => {
     }
 
     const completedActions = (
+        <>
         <RideSettlementPanel
             ridePayment={ridePayment}
             phase={paymentPhase}
             onPayUpi={payCompletedUpi}
             onPayCash={payCompletedCash}
+            onRefresh={bookingId ? () => setRetryTick(t => t + 1) : undefined}
+            refreshing={bookingLoading}
         />
+        {driver && extraFareNotice}
+        </>
     );
 
     // Compact variant for the completed receipt, where the driver sits inside the
@@ -932,10 +948,10 @@ const TrackingPage = () => {
     const rideDetailsPill = (
         <Button
             onClick={() => setDetialsVisibility(true)}
-            prop={{ variant: "input", bg: "var(--background-muted)", rounded: "999px", border: false }}
+            prop={{ size: "pill", variant: "input", bg: "var(--background-muted)", rounded: "999px", border: false }}
             className="cursor-pointer px-3 shrink-0"
         >
-            <p className="text-sm sm:text-base text-[var(--text)] whitespace-nowrap">{tr("Ride details")}</p>
+            <p className="text-sm text-[var(--text)] whitespace-nowrap">{tr("Ride details")}</p>
         </Button>
     );
 
@@ -964,12 +980,7 @@ const TrackingPage = () => {
     // expects the completed screen's inner `relative w-full h-full` wrapper for
     // its offset, which is why it sat flush against the top edge here.
     const stateBackArrow = (
-        <div
-            onClick={() => navigate('/')}
-            className="flex cursor-pointer justify-center items-center gap-2 sm:gap-3 absolute left-3 top-3 text-[var(--text)] sm:opacity-80 hover:opacity-100 transition-opacity duration-300"
-        >
-            <Icon path={mdiKeyboardBackspace} size={1.2} />
-        </div>
+        <IconButton onClick={() => navigate('/')} aria-label={dc("Back")} className="flex absolute left-3 top-3"><Icon path={mdiKeyboardBackspace} size={1.2} /></IconButton>
     );
 
     // Nothing to track. Reached by a direct link, a reload after the store was
@@ -1054,8 +1065,8 @@ const TrackingPage = () => {
                             <h2 className={`w-full min-w-0 [overflow-wrap:anywhere] ${TITLE}`}>{tr("No drivers nearby")}</h2>
                             <p className="w-full text-base leading-snug text-[var(--text-muted)] sm:text-lg">{dc("We couldn't find another driver. You can try booking again.")}</p>
                         </div>
-                        <Button onClick={() => navigate("/")} className="mt-2" prop={{ width: "100%" }}>
-                            <span className="text-base sm:text-lg">{tr("Book another ride")}</span>
+                        <Button onClick={() => navigate("/")} className="mt-2" prop={{ size: "action", width: "100%" }}>
+                            <span className="text-base">{tr("Book another ride")}</span>
                         </Button>
                     </div>
                 </BackgroundPanel>
@@ -1083,18 +1094,11 @@ const TrackingPage = () => {
                         duration={420}
                         className="z-1 gap-2 py-6 text-center flex flex-col justify-center items-center"
                     >
-                        <button
-                            type="button"
-                            onClick={dismissDriverCancellation}
-                            aria-label={dc("Close driver cancellation notice")}
-                            className="absolute right-4 top-4 z-20 flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-[var(--background-muted)] text-[var(--text-muted)] transition-colors duration-300 hover:text-[var(--text)] active:opacity-70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]/70"
-                        >
-                            <Icon path={mdiClose} size={0.85} aria-hidden="true" />
-                        </button>
+                        <IconButton type="button" onClick={dismissDriverCancellation} aria-label={dc("Close driver cancellation notice")} className="absolute right-4 top-4 z-20 flex"><Icon path={mdiClose} size={0.85} aria-hidden="true" /></IconButton>
                         <div role="dialog" aria-modal="true" aria-labelledby="driver-cancelled-title" className="flex w-full flex-col items-center gap-2">
                             <ErrorMark className="-mt-2 -mb-2" size={isMobile ? 120 : 140} />
                             <div className={`flex min-w-0 flex-col items-center gap-1 ${COL}`}>
-                                <h2 id="driver-cancelled-title" className={`w-full min-w-0 [overflow-wrap:anywhere] ${TITLE}`}>{tr("Driver cancelled the ride")}</h2>
+                                <h2 id="driver-cancelled-title" className={`w-full min-w-0 [overflow-wrap:anywhere] ${TITLE}`}>{tr("Driver cancelled")}</h2>
                                 <p className="w-full min-w-0 text-base leading-snug text-[var(--text-muted)] sm:text-lg">
                                     {bookingScheduledAt != null
                                         ? dc("We'll assign another driver closer to your pickup time.")
@@ -1102,8 +1106,8 @@ const TrackingPage = () => {
                                 </p>
                             </div>
                             <div className={`mt-2 ${COL}`}>
-                                <Button onClick={dismissDriverCancellation} prop={{ width: "100%" }}>
-                                    <span className="text-base sm:text-lg">
+                                <Button onClick={dismissDriverCancellation} prop={{ size: "action", width: "100%" }}>
+                                    <span className="text-base">
                                         {bookingScheduledAt != null ? dc("View booking") : dc("Continue search")}
                                     </span>
                                 </Button>
@@ -1135,14 +1139,14 @@ const TrackingPage = () => {
                                 <p className="text-base leading-snug text-[var(--text-muted)]">{tr("Call your driver to check the situation, or ask us to find another one.")}</p>
                             </div>
                             <div className="flex flex-col gap-2">
-                                <Button onClick={callDriver} prop={{ width: "100%", disabled: !driver?.phone, innerClassName: "flex gap-2 items-center justify-center text-base sm:text-lg" }}>
+                                <Button onClick={callDriver} prop={{ size: "action", width: "100%", disabled: !driver?.phone, innerClassName: "flex gap-2 items-center justify-center text-base" }}>
                                     <Icon path={mdiPhone} size={0.8} aria-hidden="true" />{dc("Call driver")}
                                 </Button>
-                                <Button onClick={openReassignmentConfirmation} className="my-0!" prop={{ variant: "input", width: "100%", bg: "var(--background-muted)", border: false }}>
-                                    <span className="text-base sm:text-lg">{tr("Find another driver")}</span>
+                                <Button onClick={openReassignmentConfirmation} className="my-0!" prop={{ size: "action", variant: "input", width: "100%", bg: "var(--background-muted)", border: false }}>
+                                    <span className="text-base">{tr("Find another driver")}</span>
                                 </Button>
-                                <Button onClick={dismissDriverDelay} className="my-0!" prop={{ variant: "input", width: "100%", bg: "transparent", border: false }}>
-                                    <span className="text-base sm:text-lg">{tr("Keep waiting")}</span>
+                                <Button onClick={dismissDriverDelay} className="my-0!" prop={{ size: "action", variant: "input", width: "100%", bg: "transparent", border: false }}>
+                                    <span className="text-base">{tr("Keep waiting")}</span>
                                 </Button>
                             </div>
                         </div>
@@ -1171,11 +1175,11 @@ const TrackingPage = () => {
                             <p className="text-base leading-snug text-[var(--text-muted)]">{tr("We'll release this driver and start searching again. This can take a few minutes.")}</p>
                         </div>
                         <div className="flex flex-col gap-2">
-                            <Button onClick={requestAnotherDriver} prop={{ width: "100%", disabled: reassignmentBusy }}>
-                                <span className="text-base sm:text-lg">{reassignmentBusy ? tr("Finding another driver…") : tr("Find another driver")}</span>
+                            <Button onClick={requestAnotherDriver} prop={{ size: "action", width: "100%", disabled: reassignmentBusy }}>
+                                <span className="text-base">{reassignmentBusy ? tr("Finding another driver…") : tr("Find another driver")}</span>
                             </Button>
-                            <Button onClick={() => setReassignmentConfirmOpen(false)} className="my-0!" prop={{ variant: "input", width: "100%", bg: "transparent", border: false, disabled: reassignmentBusy }}>
-                                <span className="text-base sm:text-lg">{tr("Go back")}</span>
+                            <Button onClick={() => setReassignmentConfirmOpen(false)} className="my-0!" prop={{ size: "action", variant: "input", width: "100%", bg: "transparent", border: false, disabled: reassignmentBusy }}>
+                                <span className="text-base">{tr("Go back")}</span>
                             </Button>
                         </div>
                     </div>
@@ -1220,9 +1224,9 @@ const TrackingPage = () => {
                                     <Button
                                         onClick={() => openSupportWhatsApp("Hi, I need help while RCS finds a new driver for my ride.")}
                                         className="my-0!"
-                                        prop={{ variant: "input", width: "100%", bg: "var(--background-muted)", border: false }}
+                                        prop={{ size: "action", variant: "input", width: "100%", bg: "var(--background-muted)", border: false }}
                                     >
-                                        <span className="flex items-center justify-center gap-2 text-base sm:text-lg">
+                                        <span className="flex items-center justify-center gap-2 text-base">
                                             <img src={waLogo} alt="WhatsApp" className="w-6 h-6" />{dc("Talk to Support")}</span>
                                     </Button>
                                 </div>
@@ -1319,9 +1323,9 @@ const TrackingPage = () => {
                                 <Button
                                     onClick={() => openSupportWhatsApp("Hi, I need help with my ride.")}
                                     className="my-0!"
-                                    prop={{ variant: "input", width: "100%", bg: "var(--background-muted)", border: false }}
+                                    prop={{ size: "action", variant: "input", width: "100%", bg: "var(--background-muted)", border: false }}
                                 >
-                                    <span className="flex items-center justify-center gap-2 text-base sm:text-lg">
+                                    <span className="flex items-center justify-center gap-2 text-base">
                                         <img src={waLogo} alt="WhatsApp" className="w-6 h-6" />{dc("Talk to Support")}</span>
                                 </Button>
                                 {/* Shown for the whole of `assigned` and merely
@@ -1331,7 +1335,7 @@ const TrackingPage = () => {
                                 <Button
                                     onClick={callDriver}
                                     className={`${status === 'assigned' ? "block" : "hidden"} my-0! w-full`}
-                                    prop={{ variant: "", width: "100%", disabled: !driver?.phone, innerClassName: "flex gap-2 items-center justify-center text-base sm:text-lg" }}
+                                    prop={{ size: "action", variant: "", width: "100%", disabled: !driver?.phone, innerClassName: "flex gap-2 items-center justify-center text-base" }}
                                 >
                                     <Icon path={mdiPhone} size={0.8} />{dc("Call driver")}</Button>
                             </div>
@@ -1341,24 +1345,22 @@ const TrackingPage = () => {
                     </BackgroundPanel>
                     : status === "completed"
                         ?
-                        <BackgroundPanel className={"max-sm:fixed max-sm:inset-0 h-[100dvh] max-sm:rounded-none max-sm:overflow-hidden py-6 flex justify-center items-center sm:px-[9%] md:px-[5%] xl:px-[13%]"}>
+                        <BackgroundPanel className={"max-sm:fixed max-sm:inset-0 h-[100dvh] max-sm:rounded-none overflow-y-auto py-4 sm:py-6 flex justify-center items-start sm:px-[9%] md:px-[5%] xl:px-[13%]"}>
                             {/* Desktop: one wide card split down the middle —
                                outcome on the left, receipt and actions on the
                                right. Mobile drops the card and stacks the two
                                halves in reading order. */}
-                            <div className="relative w-full h-full max-sm:h-auto max-sm:min-h-full flex justify-center items-center">
+                            <div className="relative w-full min-h-full shrink-0 flex justify-center items-center">
                                 {backArrowInPanel}
-                                <div className={`w-full flex flex-col items-center ${STACK} sm:w-[820px] sm:flex-row sm:items-stretch sm:gap-0`}>
-                                <div className="flex flex-col justify-center items-center sm:items-start gap-3 max-sm:w-[min(86vw,100%)] sm:w-1/2 sm:px-8 sm:py-10">
-                                    {/* -mb-2 pulls the outcome copy up under the
-                                        badge: the container gap alone left more
-                                        air here than between any other pair in
-                                        the column. */}
+                                <div className="w-full flex flex-col items-center gap-4 sm:w-[820px] sm:flex-row sm:items-stretch sm:gap-0">
+                                <div className="flex min-w-0 flex-col justify-center items-center sm:items-start gap-2 sm:gap-3 max-sm:w-[min(86vw,100%)] sm:w-1/2 sm:px-8 sm:py-10">
+                                    {/* Scale the badge with the phone's height and
+                                        keep its full bounds inside the scroll area. */}
                                     { panelState === "noDriver"
-                                        ? <ErrorMark className="-mt-2 -mb-2" size={isMobile ? 120 : 140} />
-                                        : <SuccessCheck className="-mt-2 -mb-2" size={isMobile ? 120 : 140} /> }
+                                        ? <ErrorMark className="shrink-0" size={completedBadgeSize} />
+                                        : <SuccessCheck className="shrink-0" size={completedBadgeSize} /> }
                                     <div className="flex w-full min-w-0 flex-col items-center gap-1 sm:items-start">
-                                        <h3 className={`w-full min-w-0 ${SUBTITLE}`}>{tr("Ride has been completed")}</h3>
+                                        <h3 className="w-full min-w-0 text-xl sm:text-2xl font-medium leading-snug text-[var(--text)]">{tr("Ride completed")}</h3>
                                     </div>
                                     {tollNotice}
                                     {/* Desktop keeps the actions with the outcome
@@ -1368,12 +1370,12 @@ const TrackingPage = () => {
                                     <div className="hidden sm:flex w-full flex-col gap-2 mt-2">{completedActions}</div>
                                 </div>
 
-                                <div className="flex flex-col justify-center items-start gap-3 max-sm:w-[min(86vw,100%)] sm:w-1/2 sm:px-8 sm:py-10 sm:border-l sm:border-[var(--foreground)]/10">
+                                <div className="flex min-w-0 flex-col justify-center items-start gap-3 max-sm:w-[min(86vw,100%)] sm:w-1/2 sm:px-8 sm:py-10 sm:border-l sm:border-[var(--foreground)]/10">
                                     {/* One receipt card: what it cost, broken down
                                         the same way Ride details breaks it down,
                                         and who drove. No route — the ride is over,
                                         and the addresses are still a tap away. */}
-                                    <div className="w-full rounded-2xl bg-[var(--background-muted)] p-5 text-left flex flex-col gap-3">
+                                    <div className="w-full rounded-2xl bg-[var(--background-muted)] p-4 sm:p-5 text-left flex flex-col gap-2 sm:gap-3">
                                         {(distanceKm != null || durationMin != null) && (
                                             <div className="flex items-center gap-2">
                                                 {durationMin != null && (
@@ -1389,7 +1391,7 @@ const TrackingPage = () => {
 
                                         <div className="flex items-center justify-between w-full">
                                             <h3 className={`${META} text-[var(--text-muted)]`}>{tr("Base fare")}</h3>
-                                            <h3 className={META}>₹{baseFare}</h3>
+                                            <h3 className={META}>{formatPaymentAmount(completedBaseFare)}</h3>
                                         </div>
                                         {safeRoute && (
                                             <div className="flex items-center justify-between w-full">
@@ -1397,10 +1399,16 @@ const TrackingPage = () => {
                                                 <h3 className={META}>₹{SAFE_ROUTE_SURCHARGE}</h3>
                                             </div>
                                         )}
+                                        {completedReceipt.adjustments.map(({ label, amount }) => (
+                                            <div key={label} className="flex items-center justify-between w-full">
+                                                <h3 className={`${META} text-[var(--text-muted)]`}>{tr(label)}</h3>
+                                                <h3 className={META}>{formatPaymentAmount(amount)}</h3>
+                                            </div>
+                                        ))}
                                         <div className="w-full h-px bg-[var(--foreground)]/10 my-1" />
                                         <div className="flex items-center justify-between w-full">
-                                            <h3 className="text-xl font-semibold">{tr("Total")}</h3>
-                                            <h3 className="text-xl font-semibold">₹{fare}</h3>
+                                            <h3 className="text-xl font-semibold">{tr("Total due")}</h3>
+                                            <h3 className="text-xl font-semibold">{formatPaymentAmount(completedReceipt.totalDue)}</h3>
                                         </div>
 
                                         {driverRow && (
@@ -1408,18 +1416,18 @@ const TrackingPage = () => {
                                                 {driverRow}
                                             </div>
                                         )}
+                                        <div className="w-full">
+                                            <Button
+                                                onClick={() => setDetialsVisibility(true)}
+                                                prop={{ size: "action", variant: "input", width: "100%", bg: "var(--background)", border: false, rounded: "12px" }}
+                                                className="w-full my-0!"
+                                            >
+                                                <span className="text-base font-medium text-[var(--text)]">{tr("Ride details")}</span>
+                                            </Button>
+                                        </div>
                                     </div>
 
-                                    {/* flex-wrap, not a plain row: the notice pill
-                                        is whitespace-nowrap, so at 290px the two
-                                        drop onto separate lines rather than
-                                        overflowing the column. */}
-                                    <div className="w-full flex flex-wrap items-center gap-2">
-                                        {rideDetailsPill}
-                                        {driver && extraFareNotice}
-                                    </div>
-
-                                    <div className="flex sm:hidden w-full flex-col gap-2 mt-2">{completedActions}</div>
+                                    <div className="flex sm:hidden w-full flex-col gap-2">{completedActions}</div>
                                 </div>
                                 </div>
                             </div>
@@ -1446,7 +1454,7 @@ const TrackingPage = () => {
                             {backArrow}
                             <Button
                                 onClick={() => setShareSheetOpen(true)}
-                                prop={{ variant: "input", bg: "var(--background-muted)", rounded: "999px", disabled: shareBusy || !bookingId }}
+                                prop={{ size: "pill", variant: "input", bg: "var(--ride-background)", rounded: "999px", disabled: shareBusy || !bookingId }}
                                 className='absolute z-20 -top-12 right-4 px-3 sm:hidden block shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)]'
                             >
                                 <div className="flex gap-1.5 items-center justify-center">
@@ -1483,12 +1491,12 @@ const TrackingPage = () => {
                                     )}
                                     <Button
                                         onClick={() => setShareSheetOpen(true)}
-                                        prop={{ variant: "input", bg: "var(--background-muted)", rounded: "999px", disabled: shareBusy || !bookingId }}
+                                        prop={{ size: "pill", variant: "input", bg: "var(--ride-background)", rounded: "999px", disabled: shareBusy || !bookingId }}
                                         className="mt-2 px-3 hidden sm:block"
                                     >
                                         <div className="flex gap-1.5 items-center justify-center">
                                             <Icon path={mdiShareVariant} className="text-[var(--text-muted)]" size={0.6} />
-                                            <p className="text-sm sm:text-base whitespace-nowrap">{shareNote || dc("Share")}</p>
+                                            <p className="text-sm whitespace-nowrap">{shareNote || dc("Share")}</p>
                                         </div>
                                     </Button>
                                 </div>
@@ -1546,16 +1554,16 @@ const TrackingPage = () => {
                                     <div className="flex justify-between w-full gap-2 items-center">
                                         <Button
                                             onClick={() => openSupportWhatsApp("Hi, I need help with my ride.")}
-                                            prop={{ variant: "input", width: "100%", bg: "var(--background-muted)", border: false }}
+                                            prop={{ size: "action", variant: "input", width: "100%", bg: "var(--background-muted)", border: false }}
                                             className="flex-1"
                                         >
-                                            <span className="flex items-center justify-center gap-2 text-base sm:text-lg">
+                                            <span className="flex items-center justify-center gap-2 text-base">
                                                 <img src={waLogo} alt="WhatsApp" className="w-6 h-6" />{dc("Message")}</span>
                                         </Button>
                                         <Button
                                             onClick={callDriver}
                                             className="flex-1"
-                                            prop={{ variant: "", width: "100%", disabled: !driver?.phone, innerClassName: "flex gap-2 items-center justify-center text-base sm:text-lg" }}
+                                            prop={{ size: "action", variant: "", width: "100%", disabled: !driver?.phone, innerClassName: "flex gap-2 items-center justify-center text-base" }}
                                         >
                                             <Icon path={mdiPhone} size={0.8} />{dc("Call driver")}</Button>
                                     </div>
@@ -1588,27 +1596,13 @@ const TrackingPage = () => {
                         contentKey={`${!!driver}-${shareBusy}`}
                         className="z-50 sm:!h-auto sm:!rounded-t-4xl flex flex-col gap-4 px-[7vw] sm:px-8 pt-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:pb-8 text-left"
                     >
-                        <button
-                            type="button"
-                            onClick={() => setShareSheetOpen(false)}
-                            aria-label={dc("Close share options")}
-                            className="absolute z-20 -top-12 right-4 h-9 my-1 w-9 rounded-full border border-[var(--foreground)]/30 bg-[var(--background-muted)] shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)] flex items-center justify-center cursor-pointer transition-opacity duration-300 active:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]/70 sm:hidden"
-                        >
-                            <Icon path={mdiClose} size={0.8} aria-hidden="true" />
-                        </button>
+                        <IconButton type="button" onClick={() => setShareSheetOpen(false)} aria-label={dc("Close share options")} compact className="absolute z-20 -top-12 right-4 my-1 flex sm:hidden"><Icon path={mdiClose} size={0.8} aria-hidden="true" /></IconButton>
                         <div data-sheet-scroll className="min-h-0 flex-1 flex flex-col gap-4">
                             <div className="flex items-start justify-between gap-4">
                                 <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                                     <h3 className="w-full min-w-0 [overflow-wrap:anywhere] text-xl font-medium leading-tight text-[var(--text)]">{tr("Share ride")}</h3>
                                 </div>
-                                <button
-                                    type="button"
-                                    onClick={() => setShareSheetOpen(false)}
-                                    aria-label={dc("Close share options")}
-                                    className="hidden sm:flex shrink-0 cursor-pointer rounded-full p-1 opacity-60 transition-opacity hover:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]/70"
-                                >
-                                    <Icon path={mdiClose} size={0.9} aria-hidden="true" />
-                                </button>
+                                <IconButton type="button" onClick={() => setShareSheetOpen(false)} aria-label={dc("Close share options")} className="hidden sm:flex shrink-0"><Icon path={mdiClose} size={0.9} aria-hidden="true" /></IconButton>
                             </div>
                             <div className="flex flex-col divide-y divide-[var(--foreground)]/10">
                                 <button

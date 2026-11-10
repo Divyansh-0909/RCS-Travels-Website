@@ -9,6 +9,8 @@ import AccountLayout from "../components/ui/AccountLayout";
 import SettingRow from "../components/ui/SettingRow";
 import CircleIconButton from "../components/ui/CircleIconButton";
 import Toggle from "../components/ui/Toggle";
+import IconButton from "../components/ui/IconButton";
+import { fieldGeometry, fieldSurface, fieldBorder } from "../components/ui/fieldStyles";
 import { supportTel } from "../constants/support";
 import { useRefreshNotice } from "../hooks/useRefreshNotice";
 import { useWebsiteCopy } from "../hooks/useWebsiteCopy";
@@ -138,12 +140,10 @@ const SafetyPage = () => {
                                     onChange={(e) => setContactInput(e.target.value.replace(/\D/g, "").slice(0, 10))}
                                     onKeyDown={(e) => { if (e.key === "Enter") saveContact(); if (e.key === "Escape") cancelEdit() }}
                                     placeholder={dc("XXXXX XXXXX")}
-                                    className={`w-full rounded-xl py-2 px-3 text-base text-ink bg-transparent outline-none placeholder:text-ink-muted/60 border ${contactError ? "border-negative/50" : "border-border"}`}
+                                    className={`${fieldGeometry} ${fieldSurface} ${contactError ? "border-negative/50" : fieldBorder}`}
                                 />
                                 <CircleIconButton icon={mdiCheck} size={0.9} disabled={savingContact} onClick={saveContact} />
-                                <div onClick={cancelEdit} className="cursor-pointer p-1 rounded-full text-ink-muted transition-colors duration-300 hover:text-ink">
-                                    <Icon path={mdiClose} size={0.9} />
-                                </div>
+                                <IconButton onClick={cancelEdit} aria-label={tr("Cancel editing")} className=""><Icon path={mdiClose} size={0.9} /></IconButton>
                             </div>
                             {contactError && <p className="text-sm text-negative px-2">{contactError}</p>}
                         </li>
@@ -159,7 +159,7 @@ const SafetyPage = () => {
                 )}
 
                 {selected === 1 && (
-                    <SettingRow tone={panelTones[selected]} trailing={<Toggle on={autoShare} disabled={autoShareLoading || autoShareSaving} onClick={toggleAutoShare} />}>
+                    <SettingRow tone={panelTones[selected]} trailing={<Toggle aria-label={tr("Share my live location")} on={autoShare} disabled={autoShareLoading || autoShareSaving} onClick={toggleAutoShare} />}>
                         <h4 className="text-lg font-medium">{tr("Share my live location")}</h4>
                         <p className="text-base text-ink-muted">{tr("Let your emergency contact follow your ride in real time when a trip starts.")}</p>
                     </SettingRow>

@@ -69,7 +69,6 @@ const Input = ({ prop, className = '', leading, trailing }: Props) => {
     const { colors } = useTheme();
     const [focused, setFocused] = useState(false);
     const hasError = prop.error === true;
-    const light = prop.variant === 'light';
     const type = prop.type ?? 'text';
     const plain = type !== 'email' && type !== 'password';
 
@@ -81,7 +80,7 @@ const Input = ({ prop, className = '', leading, trailing }: Props) => {
 
     const backgroundColor = hasError
         ? BG_ERROR
-        : prop.bg ?? (light ? colors.surface : focused ? colors.surfaceRaised : 'transparent');
+        : prop.bg ?? colors.inputBackground;
 
     const fieldStyle = useAnimatedStyle(() => ({
         borderColor: withTiming(borderColor, FIELD_TRANSITION),

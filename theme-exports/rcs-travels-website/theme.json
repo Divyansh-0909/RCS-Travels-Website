@@ -1,0 +1,220 @@
+{
+  "schemaVersion": 2,
+  "name": "RCS Travels Website",
+  "theme": {
+    "name": "RCS Travels Website",
+    "primaryForeground": {
+      "light": "neutral-1",
+      "dark": "neutral-10"
+    },
+    "colors": {
+      "light": {
+        "neutral-1": "#ffffff",
+        "neutral-2": "#f3f3f3",
+        "neutral-3": "#e8e8ec",
+        "neutral-4": "#d8d8de",
+        "neutral-5": "#c5c5c5",
+        "neutral-6": "#969696",
+        "neutral-7": "#4b5563",
+        "neutral-8": "#454545",
+        "neutral-9": "#121220",
+        "neutral-10": "#000000",
+        "color-1": "#243afb",
+        "color-2": "#dff3ef",
+        "color-3": "#eee8fa",
+        "color-4": "#f3eedd",
+        "success": "#166534",
+        "warning": "#92400e",
+        "error": "#b91c1c"
+      },
+      "dark": {
+        "neutral-1": "#000000",
+        "neutral-2": "#121220",
+        "neutral-3": "#1d1d27",
+        "neutral-4": "#262636",
+        "neutral-5": "#272634",
+        "neutral-6": "#323240",
+        "neutral-7": "#454552",
+        "neutral-8": "#c7c7cf",
+        "neutral-9": "#f4f4f4",
+        "neutral-10": "#ffffff",
+        "color-1": "#243afb",
+        "color-2": "#243c3b",
+        "color-3": "#353047",
+        "color-4": "#40392d",
+        "success": "#86efac",
+        "warning": "#fbbf24",
+        "error": "#e86a6a"
+      }
+    },
+    "spacing": {
+      "zero": 0,
+      "xxs": 4,
+      "xs": 8,
+      "s": 12,
+      "m": 16,
+      "l": 24,
+      "xl": 32,
+      "xxl": 48
+    },
+    "text": {
+      "xxs": {
+        "size": 10,
+        "lineHeight": 14
+      },
+      "xs": {
+        "size": 12,
+        "lineHeight": 16
+      },
+      "s": {
+        "size": 14,
+        "lineHeight": 20
+      },
+      "m": {
+        "size": 16,
+        "lineHeight": 24
+      },
+      "l": {
+        "size": 24,
+        "lineHeight": 32
+      },
+      "xl": {
+        "size": 36,
+        "lineHeight": 40
+      },
+      "xxl": {
+        "size": 48,
+        "lineHeight": 52
+      }
+    },
+    "fonts": {
+      "ui": {
+        "family": "PP Mori, Poppins, sans-serif",
+        "weights": {
+          "regular": 400,
+          "medium": 400,
+          "heavy": 600
+        }
+      },
+      "brand": {
+        "family": "PP Mori, Poppins, sans-serif",
+        "weights": {
+          "regular": 400,
+          "medium": 400,
+          "heavy": 600
+        }
+      },
+      "editorial": {
+        "family": "PP Mori, Poppins, sans-serif",
+        "weights": {
+          "regular": 400,
+          "medium": 400,
+          "heavy": 600
+        }
+      },
+      "data": {
+        "family": "PP Mori, Poppins, sans-serif",
+        "weights": {
+          "regular": 400,
+          "medium": 400,
+          "heavy": 600
+        }
+      }
+    },
+    "letterSpacing": {
+      "xs": -0.02,
+      "s": -0.01,
+      "m": 0,
+      "l": 0.01,
+      "xl": 0.02
+    },
+    "radius": {
+      "zero": 0,
+      "xs": 4,
+      "s": 8,
+      "m": 12,
+      "l": 16,
+      "xl": 24,
+      "full": 9999
+    },
+    "border": {
+      "none": 0,
+      "s": 1,
+      "m": 1,
+      "l": 2
+    },
+    "shadows": {
+      "s": {
+        "x": 0,
+        "y": 2,
+        "blur": 4,
+        "spread": 0,
+        "opacity": 0,
+        "color": {
+          "light": "neutral-10",
+          "dark": "neutral-1"
+        }
+      },
+      "m": {
+        "x": 0,
+        "y": 4,
+        "blur": 20,
+        "spread": 2,
+        "opacity": 50,
+        "color": {
+          "light": "neutral-10",
+          "dark": "neutral-1"
+        }
+      },
+      "l": {
+        "x": 0,
+        "y": 16,
+        "blur": 48,
+        "spread": 0,
+        "opacity": 20,
+        "color": {
+          "light": "neutral-10",
+          "dark": "neutral-1"
+        }
+      }
+    },
+    "animation": {
+      "duration": 280,
+      "easing": [
+        0.16,
+        1,
+        0.3,
+        1
+      ],
+      "large": {
+        "duration": 400,
+        "easing": [
+          0.16,
+          1,
+          0.3,
+          1
+        ]
+      },
+      "popupScale": 0.96,
+      "pressDistance": 1
+    },
+    "iconFamily": "Material Design Icons",
+    "iconStyle": "outlined",
+    "iconStroke": 1.7,
+    "buttonRadius": "m",
+    "primaryActionColor": "color-1",
+    "colorEmphasis": 52,
+    "neutralTone": "neutral"
+  },
+  "componentTokens": {},
+  "componentVariants": {},
+  "editor": {
+    "styleId": "base",
+    "character": {
+      "bold": 50,
+      "airy": 50
+    },
+    "motion": "Custom",
+    "fontName": "PP Mori"
+  }
+}

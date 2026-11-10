@@ -74,7 +74,7 @@ const BackgroundPanel = ({ show = true, duration = 250, className, children, she
             // may reuse this DOM node across ride statuses, and the hook needs the
             // node on that transition to clear its old inline height/transform.
             ref={sheetRef}
-            className={`${className} ${animation} absolute bottom-0 rounded-t-4xl sm:rounded-none sm:h-[100dvh] w-[100vw] bg-immersive shadow-[inset_0px_2px_4px_rgba(255,255,255,0.25),0px_0px_90px_25px_rgba(0,0,0,0.25)] ${isSheet ? "overscroll-contain" : ""}`}
+            className={`${className} ${animation} absolute bottom-0 rounded-t-4xl sm:rounded-none sm:h-[100dvh] w-[100vw] bg-immersive shadow-[var(--ride-sheet-shadow)] ${isSheet ? "overscroll-contain" : ""}`}
         >
             {isSheet && !lockExpanded && (
                 // The affordance. Its hit area is still taller than the 4px it
@@ -88,7 +88,7 @@ const BackgroundPanel = ({ show = true, duration = 250, className, children, she
                     aria-hidden="true"
                     className="sticky top-0 z-20 -mt-4 flex w-full shrink-0 cursor-grab touch-none items-center justify-center py-2 active:cursor-grabbing"
                 >
-                    <div className="h-1 w-10 rounded-full bg-[var(--foreground)]/30" />
+                    <div className="h-1 w-10 rounded-full bg-[var(--ride-handle)]" />
                 </div>
             )}
             {children}

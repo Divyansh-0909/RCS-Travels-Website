@@ -1,12 +1,12 @@
-// leading (decorative, e.g. marker dot) and trailing (interactive, e.g. clear
-// button) render inside the field. Transforms live on the wrapper so the
-// input and adornments scale together.
+import { fieldGeometry, fieldSurface, fieldBorder, fieldWidth } from "./fieldStyles";
+
+// Field dimensions stay literal at every breakpoint, including adornments.
 const Input = ({ prop, className, leading, trailing }) => {
   const hasError = prop.error === true;
   const useForeground = prop.foreground === true;
 
   return (
-    <div className={`${className} relative w-fit max-sm:w-[86vw] max-sm:max-w-full my-1 sm:scale-y-[1.3]`}>
+    <div className={`${className} relative ${fieldWidth} my-1`}>
       <input
         ref={prop.inputRef}
         id={prop.id}
@@ -20,22 +20,20 @@ const Input = ({ prop, className, leading, trailing }) => {
         type={prop.type}
         placeholder={prop.placeholder}
         readOnly={prop.readOnly}
+        disabled={prop.disabled}
         aria-busy={prop.ariaBusy ? "true" : undefined}
         required
         style={{ "--input-bg": prop.bg ?? "var(--input-background)" }}
         className={`
-          font-medium text-default
-          px-4 py-2 w-[290px] max-sm:w-full rounded-xl
+          ${fieldGeometry}
           ${leading ? "pl-9" : ""}
           ${trailing ? "pr-10" : ""}
-          border outline-none
-          transition-colors duration-300
           ${
             useForeground
-              ? "cursor-wait border-[var(--foreground)] bg-[var(--foreground)] text-[var(--text-foreground)] placeholder:text-[var(--text-foreground)]/70 hover:border-[var(--foreground)] focus:border-[var(--foreground)]"
+              ? "cursor-wait border-[var(--foreground)] bg-[var(--foreground)] text-[var(--text-foreground)] placeholder:text-[var(--text-foreground)]/70 hover:border-[var(--foreground)] focus:border-primary"
               : hasError
                 ? "border-negative/50 bg-negative/10 text-[var(--text)] placeholder:text-[var(--input-placeholder)] focus:border-negative/80"
-                : "border-[var(--input-border)] bg-[var(--input-bg)] text-[var(--text)] placeholder:text-[var(--input-placeholder)] focus:border-primary"
+                : `${fieldSurface} ${fieldBorder} bg-[var(--input-bg)]`
           }
         `}
       />

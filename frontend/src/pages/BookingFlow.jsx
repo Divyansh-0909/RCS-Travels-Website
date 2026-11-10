@@ -1,3 +1,4 @@
+import IconButton from "../components/ui/IconButton";
 import { useTranslation as useCopyLanguage } from "react-i18next";
 import { websiteCopy as dc } from "../i18nCopy";
 import { useState } from "react";
@@ -23,16 +24,9 @@ const BookingFlow = () => {
   return (
     <div className="relative h-[100dvh] overflow-hidden bg-immersive">
       {!vehicleStage && !mapPickerActive && (
-        <button
-          type="button"
-          onClick={() => timingStage
+        <IconButton type="button" onClick={() => timingStage
             ? navigate("/book", { replace: true })
-            : navigate("/")}
-          aria-label={timingStage ? dc("Back to route details") : dc("Back to home")}
-          className="fixed left-5 top-6 z-30 hidden cursor-pointer items-center justify-center text-[var(--text)] opacity-80 transition-opacity duration-300 hover:opacity-100 active:opacity-70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)] sm:flex"
-        >
-          <Icon path={mdiKeyboardBackspace} size={1.2} aria-hidden="true" />
-        </button>
+            : navigate("/")} aria-label={timingStage ? dc("Back to route details") : dc("Back to home")} className="fixed left-5 top-6 z-30 hidden sm:flex"><Icon path={mdiKeyboardBackspace} size={1.2} aria-hidden="true" /></IconButton>
       )}
       {vehicleStage
         ? <VehicleSelect />

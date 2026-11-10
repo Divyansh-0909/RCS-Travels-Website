@@ -19,7 +19,7 @@ import { useLanguage } from '../i18n';
 import { useTheme } from '../theme/ThemeContext';
 
 const ERROR_TEXT = "#E86A6A";   
-const BOX_BG = "#1d1d27";     
+const BOX_BG = "#1D1D23";
 const BOX_BORDER_ERROR = "rgba(185,28,28,0.5)";
 const BOX_BORDER_ERROR_FOCUS = "rgba(185,28,28,0.8)";
 const BOX_BG_ERROR = "rgba(185,28,28,0.1)";

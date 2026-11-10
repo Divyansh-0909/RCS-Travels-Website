@@ -1,3 +1,4 @@
+import IconButton from "./ui/IconButton";
 import { useTranslation as useCopyLanguage } from "react-i18next";
 import { websiteCopy as dc } from "../i18nCopy";
 import Icon from '@mdi/react';
@@ -112,14 +113,7 @@ const RideDetails = ({ prop }) => {
                 aria-labelledby="cancel-ride-title"
                 className="z-10 flex w-full flex-col items-center gap-6 text-left sm:order-1 sm:h-[100dvh] sm:w-auto sm:justify-center sm:overflow-y-auto sm:py-6"
             >
-                <button
-                    type="button"
-                    aria-label={dc("Back to ride details")}
-                    onClick={() => setConfirmCancel(false)}
-                    className="flex items-center justify-center text-[var(--text)] outline-none transition-colors max-sm:absolute max-sm:-top-12 max-sm:left-4 max-sm:z-20 max-sm:my-1 max-sm:h-9 max-sm:rounded-full max-sm:bg-[var(--background-muted)] max-sm:px-3 max-sm:shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)] max-sm:hover:bg-[var(--background-primary)] sm:fixed sm:top-6 sm:left-6 sm:h-9 sm:w-9 sm:rounded-xl sm:opacity-80 sm:hover:bg-[var(--foreground)]/10 sm:hover:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]/70"
-                >
-                    <Icon path={mdiKeyboardBackspace} size={1.05} />
-                </button>
+                <IconButton type="button" aria-label={dc("Back to ride details")} onClick={() => setConfirmCancel(false)} compact="mobile" className="flex max-sm:absolute max-sm:-top-12 max-sm:left-4 max-sm:z-20 max-sm:my-1 sm:fixed sm:top-6 sm:left-6"><Icon path={mdiKeyboardBackspace} size={1.05} /></IconButton>
 
                 <div className={`flex flex-col gap-2 ${COL}`}>
                     <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">{tr("Ride cancellation")}</p>
@@ -172,14 +166,14 @@ const RideDetails = ({ prop }) => {
                 </div>
 
                 <div className={`flex flex-col items-stretch gap-2 ${COL}`}>
-                    <Button onClick={handleCancel} prop={{ variant: "negative", width: "100%", disabled: !cancellationReasonChoice }}>
-                        <span className="text-base sm:text-lg">{tr("Yes, cancel ride")}</span>
+                    <Button onClick={handleCancel} prop={{ size: "action", variant: "negative", width: "100%", disabled: !cancellationReasonChoice }}>
+                        <span className="text-base">{tr("Yes, cancel ride")}</span>
                     </Button>
                     <Button
                         onClick={() => { setConfirmCancel(false); setCancellationReasonChoice(""); }}
-                        prop={{ variant: "input", width: "100%", bg: "var(--background-muted)", border: false }}
+                        prop={{ size: "action", variant: "input", width: "100%", bg: "var(--background-muted)", border: false }}
                     >
-                        <span className="text-base sm:text-lg">{tr("Keep ride")}</span>
+                        <span className="text-base">{tr("Keep ride")}</span>
                     </Button>
                 </div>
             </div>
@@ -188,14 +182,7 @@ const RideDetails = ({ prop }) => {
 
     return (
         <div className="z-10 flex w-full flex-col items-center gap-4 text-left sm:order-1 sm:h-[100dvh] sm:w-auto sm:justify-center sm:overflow-y-auto sm:py-6">
-            <button
-                type="button"
-                aria-label={dc("Back")}
-                onClick={() => prop.setDetialsVisibility(false)}
-                className="flex items-center justify-center text-[var(--text)] outline-none transition-colors max-sm:absolute max-sm:-top-12 max-sm:left-4 max-sm:z-20 max-sm:my-1 max-sm:h-9 max-sm:rounded-full max-sm:bg-[var(--background-muted)] max-sm:px-3 max-sm:shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)] max-sm:hover:bg-[var(--background-primary)] sm:fixed sm:top-6 sm:left-6 sm:h-9 sm:w-9 sm:rounded-xl sm:opacity-80 sm:hover:bg-[var(--foreground)]/10 sm:hover:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]/70"
-            >
-                <Icon path={mdiKeyboardBackspace} size={1.05} />
-            </button>
+            <IconButton type="button" aria-label={dc("Back")} onClick={() => prop.setDetialsVisibility(false)} compact="mobile" className="flex max-sm:absolute max-sm:-top-12 max-sm:left-4 max-sm:z-20 max-sm:my-1 sm:fixed sm:top-6 sm:left-6"><Icon path={mdiKeyboardBackspace} size={1.05} /></IconButton>
             <div className={`flex items-center justify-start ${COL}`}>
                 <h2 className="text-xl font-semibold leading-tight tracking-[-0.03em] sm:text-2xl">{tr("Ride Details")}</h2>
             </div>
@@ -263,9 +250,9 @@ const RideDetails = ({ prop }) => {
             <div className={`flex flex-col items-center gap-2 sm:items-start ${COL}`}>
                 <Button
                     onClick={() => openSupportWhatsApp("Hi, I need help with my ride.")}
-                    prop={{ variant: "input", width: "100%", bg: "var(--background-muted)", border: false }}
+                    prop={{ size: "action", variant: "input", width: "100%", bg: "var(--background-muted)", border: false }}
                 >
-                    <span className="flex items-center justify-center gap-2 text-base sm:text-lg">
+                    <span className="flex items-center justify-center gap-2 text-base">
                         <img src={waLogo} alt="WhatsApp" className="h-6 w-6" />{dc("Talk to support")}</span>
                 </Button>
                 {/* Once the driver verifies the OTP the status becomes
@@ -275,9 +262,9 @@ const RideDetails = ({ prop }) => {
                 {canCancel && (
                     <Button
                         onClick={() => setConfirmCancel(true)}
-                        prop={{ variant: "negative", width: "100%" }}
+                        prop={{ size: "action", variant: "negative", width: "100%" }}
                     >
-                        <span className="text-base sm:text-lg">{tr("Cancel ride")}</span>
+                        <span className="text-base">{tr("Cancel ride")}</span>
                     </Button>
                 )}
             </div>

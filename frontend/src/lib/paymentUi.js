@@ -47,6 +47,33 @@ export const ridePaymentAmount = (ridePayment) => (
     Number.isFinite(ridePayment?.amount) ? ridePayment.amount : null
 );
 
+// The booked fare is in rupees; payment summaries are in paise. Keep receipt
+// arithmetic in paise and reconcile to the server's settlement amount.
+export const rideReceiptBreakdown = ({ fare, coupon, financials, ridePayment }) => {
+    const subunits = value => Number.isFinite(value) && value >= 0 ? Math.round(value) : null;
+    const rupees = value => Number.isFinite(value) && value >= 0 ? Math.round(value * 100) : null;
+    const grossFare = rupees(fare) ?? subunits(financials?.fare);
+    const discount = subunits(financials?.coupon) ?? rupees(coupon) ?? 0;
+    const advance = subunits(financials?.advancePaid) ?? 0;
+    const settlement = subunits(ridePayment?.amount) ?? subunits(financials?.remaining)
+        ?? (grossFare == null ? null : Math.max(0, grossFare - discount - advance));
+    const adjustments = [];
+    if (grossFare != null && settlement != null) {
+        let difference = grossFare - settlement;
+        for (const [label, amount] of [["Discount", discount], ["Advance paid", advance]]) {
+            if (amount > 0 && amount <= difference) {
+                adjustments.push({ label, amount: -amount });
+                difference -= amount;
+            }
+        }
+        if (difference !== 0) adjustments.push({ label: difference > 0 ? "Deductions" : "Fare adjustment", amount: -difference });
+    }
+    if (ridePayment?.state === "paid" && settlement > 0) {
+        adjustments.push({ label: ridePayment.method === "cash" ? "Paid in cash" : ridePayment.method === "upi" ? "Paid by UPI" : "Paid", amount: -settlement });
+    }
+    return { grossFare, adjustments, totalDue: ridePayment?.state === "paid" ? 0 : settlement };
+};
+
 export const formatPaymentAmount = (paise) => {
     if (!Number.isFinite(paise)) return "₹—";
     const rupees = paise / 100;

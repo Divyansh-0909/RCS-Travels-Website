@@ -8,6 +8,7 @@ import {
     paymentNeedsRefresh,
     paymentPhaseForError,
     ridePaymentAmount,
+    rideReceiptBreakdown,
 } from "../src/lib/paymentUi.js";
 
 const financials = {
@@ -74,4 +75,41 @@ test("payment amounts are formatted from paise", () => {
     assert.equal(formatPaymentAmount(19000), "₹190");
     assert.equal(formatPaymentAmount(-1000), "-₹10");
     assert.equal(formatPaymentAmount(null), "₹—");
+});
+
+test("receipt reconciles a 300 rupee fare to 200 due using the server deduction", () => {
+    const receipt = rideReceiptBreakdown({ fare: 300, ridePayment: { state: "pending", amount: 20000 } });
+    assert.deepEqual(receipt, { grossFare: 30000, adjustments: [{ label: "Deductions", amount: -10000 }], totalDue: 20000 });
+});
+
+test("receipt distinguishes a coupon from a scheduled advance without deducting twice", () => {
+    const discounted = rideReceiptBreakdown({ fare: 300, coupon: 100, ridePayment: { amount: 20000 } });
+    assert.deepEqual(discounted.adjustments, [{ label: "Discount", amount: -10000 }]);
+    const scheduled = rideReceiptBreakdown({ fare: 300, financials: { coupon: 1000, advancePaid: 2900, remaining: 26100 }, ridePayment: { amount: 26100 } });
+    assert.deepEqual(scheduled.adjustments, [{ label: "Discount", amount: -1000 }, { label: "Advance paid", amount: -2900 }]);
+    assert.equal(scheduled.grossFare + scheduled.adjustments.reduce((sum, row) => sum + row.amount, 0), scheduled.totalDue);
+    assert.equal(scheduled.totalDue, 26100);
+});
+
+test("paid receipt leaves zero due and preserves both discount and final payment", () => {
+    const receipt = rideReceiptBreakdown({ fare: 300, coupon: 100, ridePayment: { state: "paid", method: "cash", amount: 20000, paidAmount: 20000 } });
+    assert.equal(receipt.totalDue, 0);
+    assert.deepEqual(receipt.adjustments, [{ label: "Discount", amount: -10000 }, { label: "Paid in cash", amount: -20000 }]);
+    assert.equal(receipt.grossFare + receipt.adjustments.reduce((sum, row) => sum + row.amount, 0), 0);
+});
+
+test("receipt keeps paise precision and rejects missing or negative amounts", () => {
+    assert.deepEqual(rideReceiptBreakdown({ fare: 300.55, coupon: 0.55, ridePayment: { amount: 30000 } }), {
+        grossFare: 30055, adjustments: [{ label: "Discount", amount: -55 }], totalDue: 30000,
+    });
+    assert.deepEqual(rideReceiptBreakdown({ fare: null, ridePayment: { amount: -1 } }), { grossFare: null, adjustments: [], totalDue: null });
+    assert.equal(rideReceiptBreakdown({ financials: { fare: 30000, coupon: 10000, remaining: 20000 } }).totalDue, 20000);
+});
+
+test("receipt does not invent a coupon when the server's reduction is smaller", () => {
+    const receipt = rideReceiptBreakdown({ fare: 300, coupon: 100, ridePayment: { amount: 25000 } });
+    assert.deepEqual(receipt.adjustments, [{ label: "Deductions", amount: -5000 }]);
+    assert.equal(receipt.totalDue, 25000);
+    const increased = rideReceiptBreakdown({ fare: 300, ridePayment: { amount: 35000 } });
+    assert.deepEqual(increased.adjustments, [{ label: "Fare adjustment", amount: 5000 }]);
 });

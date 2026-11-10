@@ -130,9 +130,10 @@ export function scrollToSection(id) {
     if (!el) return false;
 
     const smoother = ScrollSmoother.get();
-    // "center center" = the section's center aligned to the viewport's center.
-    if (smoother) smoother.scrollTo(el, true, "center center");
-    else el.scrollIntoView({ behavior: "smooth", block: "center" });
+    // Long story sections enter at their opening, rather than halfway through.
+    const atStart = el.dataset.scrollAlign === 'start';
+    if (smoother) smoother.scrollTo(el, true, atStart ? 'top top' : 'center center');
+    else el.scrollIntoView({ behavior: "smooth", block: atStart ? 'start' : 'center' });
     return true;
 }
 

@@ -1,7 +1,7 @@
 import { useLanguage as useCopyLanguage } from "../i18n";
 import { driverCopy as dc } from "../lib/copy";
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
-import { AppState, Image, Linking, Modal, Platform, Pressable, Share, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { AppState, Image, Linking, Modal, Platform, Pressable, ScrollView, Share, StyleSheet, View, useWindowDimensions } from 'react-native';
 import Animated, { Easing, FadeInDown, ReduceMotion } from 'react-native-reanimated';
 import { cssInterop } from 'nativewind';
 import * as Notifications from 'expo-notifications';
@@ -29,6 +29,7 @@ import Constants from 'expo-constants';
 import AppText from '../components/AppText';
 import VerifiedBadge, { BADGE_BLUE, BADGE_GOLD } from '../components/illustrations/VerifiedBadge';
 import { useHideAppBarOnScroll } from '../components/AppBarVisibility';
+import AppBarTouchGuard from '../components/AppBarTouchGuard';
 import AccountRow from '../components/ui/AccountRow';
 import MonthEarningsCard from '../components/ui/MonthEarningsCard';
 import { TILE_GAP } from '../components/ui/tile';
@@ -127,7 +128,8 @@ const Chip = ({ label, text, fill }: { label: string; text: string; fill: string
 const Account = () => {
   const { language, setLanguage, t } = useCopyLanguage();
   const { colors, preference, setPreference } = useTheme();
-  const { width: screenWidth } = useWindowDimensions();
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
+  const [settingsMenuHeight, setSettingsMenuHeight] = useState(0);
   const api = useApi();
   const navigate = useNavigate();
   const onScroll = useHideAppBarOnScroll();
@@ -252,6 +254,14 @@ const Account = () => {
     ? languageOptions
     : appearanceOptions.map((key) => ({ key, label: t(`driver.settings.${key}`) }));
   const selectedSetting = openSetting === 'language' ? language : preference;
+  // This non-translucent Modal uses the available window, excluding system bars.
+  const settingsMenuMaxHeight = Math.max(44, screenHeight - SETTINGS_MENU_GUTTER * 2);
+  const menuHeight = Math.min(settingsMenuHeight || settingsMenuOptions.length * 48 + 8, settingsMenuMaxHeight);
+  const menuMinTop = SETTINGS_MENU_GUTTER;
+  const menuMaxTop = Math.max(menuMinTop, screenHeight - SETTINGS_MENU_GUTTER - menuHeight);
+  const menuBelow = settingsMenuAnchor ? settingsMenuAnchor.y + settingsMenuAnchor.height + 8 : menuMinTop;
+  const settingsMenuTop = Math.max(menuMinTop, Math.min(menuMaxTop,
+    menuBelow <= menuMaxTop ? menuBelow : (settingsMenuAnchor?.y ?? menuMinTop) - menuHeight - 8));
   const settingsMenuWidth = Math.min(SETTINGS_MENU_WIDTH, screenWidth - SETTINGS_MENU_GUTTER * 2);
   const settingsMenuLeft = settingsMenuAnchor
     ? Math.min(
@@ -267,6 +277,7 @@ const Account = () => {
     }
 
     triggerRef.current?.measureInWindow((x, y, width, height) => {
+      setSettingsMenuHeight(0);
       setSettingsMenuAnchor({ x, y, width, height });
       setOpenSetting(setting);
     });
@@ -425,11 +436,15 @@ const Account = () => {
 
       <Animated.ScrollView
         style={{ flex: 1, width: '100%' }}
-        contentContainerStyle={{ flexGrow: 1, gap: PANEL_GAP, paddingTop: 4, paddingBottom: BAR_CLEARANCE }}
+        contentContainerStyle={{ flexGrow: 1 }}
         showsVerticalScrollIndicator={false}
         onScroll={onScroll}
         scrollEventThrottle={16}
       >
+        <AppBarTouchGuard
+          enabled={openSetting === null}
+          style={{ flexGrow: 1, gap: PANEL_GAP, paddingTop: 4, paddingBottom: BAR_CLEARANCE }}
+        >
         {/* Inside the scroller rather than instead of it, so the title and the
             pinned block above stay up whatever the network is doing and the list does
             not remount under the captain's thumb when the first load lands. Only a
@@ -593,10 +608,12 @@ const Account = () => {
                     <View
                       accessibilityViewIsModal
                       className="absolute rounded-2xl p-1"
+                      onLayout={event => setSettingsMenuHeight(event.nativeEvent.layout.height)}
                       style={{
                         left: settingsMenuLeft,
-                        top: settingsMenuAnchor.y + settingsMenuAnchor.height + 8,
+                        top: settingsMenuTop,
                         width: settingsMenuWidth,
+                        maxHeight: settingsMenuMaxHeight,
                         backgroundColor: colors.surfaceRaised,
                         borderWidth: 1,
                         borderColor: colors.borderUi,
@@ -604,6 +621,7 @@ const Account = () => {
                         elevation: 10,
                       }}
                     >
+                      <ScrollView bounces={false} keyboardShouldPersistTaps="handled">
                       {settingsMenuOptions.map((option) => {
                         const active = option.key === selectedSetting;
                         return (
@@ -631,6 +649,7 @@ const Account = () => {
                           </Pressable>
                         );
                       })}
+                      </ScrollView>
                     </View>
                   ) : null}
                 </View>
@@ -715,6 +734,7 @@ const Account = () => {
             </AppText>
           </Animated.View>
         ) : null}
+        </AppBarTouchGuard>
       </Animated.ScrollView>
     </View>
   );

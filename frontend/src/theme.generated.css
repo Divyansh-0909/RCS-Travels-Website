@@ -3,10 +3,13 @@
 
 @theme {
     --font-sans: "PP Mori", "Poppins", sans-serif;
-    --color-white-muted: #AEAEAE;
+    --color-near-black: #0A0A19;
+    --color-white-muted: #A1A1A1;
     --color-primary: #243AFB;
     --color-primary-dark: #1212B4;
     --color-primary-light: #3067FD;
+    --color-info: #1D4ED8;
+    --color-info-light: #93B4FF;
     --color-negative: #B91C1C;
     --color-negative-dark: #7A0F0F;
     --color-negative-light: #E86A6A;
@@ -14,6 +17,8 @@
     --color-pastel-teal: #DFF3EF;
     --color-pastel-violet: #EEE8FA;
     --color-pastel-sand: #F3EEDD;
+    --duration-feedback: 120ms;
+    --ease-feedback: cubic-bezier(0.23, 1, 0.32, 1);
     --text-xs: 0.75rem;
     --text-xs--line-height: 1rem;
     --text-sm: 0.875rem;
@@ -43,17 +48,91 @@
 
 /* Theme colors (dark is the default) */
 :root {
-    --background-muted: #262636;
-    --background-panel: #272634;
-    --background-primary: #121220;
-    --background: #0B0B14;
-    --input-background: #1d1d27;
+    --background-muted: #26262D;
+    --background-panel: #26262D;
+    --background-primary: #0A0A19;
+    --background: #0A0A19;
+    --input-background: #1D1D23;
     --input-border: rgba(255,255,255,0.3);
     --input-placeholder: rgba(255,255,255,0.42);
     --foreground: #ffffff;
     --foreground-muted: #f3f3f3;
     --text: #ffffff;
-    --text-muted: #AEAEAE;
+    --text-muted: #A1A1A1;
     --text-foreground: #000000;
-    --text-muted-foreground: #AEAEAE;
+    --text-muted-foreground: #A1A1A1;
+    --ride-background: #0A0A19;
+    --ride-foreground: #ffffff;
+    --ride-handle: rgba(255,255,255,0.3);
+    --ride-sheet-shadow: inset 0px 2px 4px rgba(255,255,255,0.25), 0px 0px 90px 25px rgba(0,0,0,0.25);
+}
+
+:root[data-theme="light"],
+[data-theme-scope="light"] {
+    color-scheme: light;
+    --canvas: #FFFFFF;
+    --immersive: #FFFFFF;
+    --surface: #F3F3F5;
+    --surface-muted: #F3F3F5;
+    --raised: #F3F3F5;
+    --ink: #000000;
+    --ink-muted: #737373;
+    --border: #D8D8DE;
+    --strong: #FFFFFF;
+    --on-strong: #000000;
+    --input-background: #E8E8EC;
+    --primary: #3067FD;
+    --on-primary: #FFFFFF;
+    --tone-primary: #E5E9FF;
+    --tone-teal: #DFF3EF;
+    --tone-violet: #EEE8FA;
+    --tone-sand: #F3EEDD;
+    --status-success: #166534;
+    --status-danger: #B91C1C;
+    --status-warning: #92400E;
+    --status-info: #1D4ED8;
+    --input-border: #D8D8DE;
+    --input-placeholder: #737373;
+    --responsibility-border: #D8D8DE;
+    --responsibility-input-border: #D8D8DE;
+    --responsibility-input-background: #E8E8EC;
+    --responsibility-lookup-background: #E8E8EC;
+    --responsibility-focus-border: #3067FD;
+    --responsibility-disabled-background: #E8E8EC;
+    --responsibility-disabled-border: #E1E1E5;
+}
+
+:root[data-theme="dark"],
+[data-theme-scope="dark"] {
+    color-scheme: dark;
+    --canvas: #0A0A19;
+    --immersive: #0A0A19;
+    --surface: #26262D;
+    --surface-muted: #26262D;
+    --raised: #26262D;
+    --ink: #FFFFFF;
+    --ink-muted: #A1A1A1;
+    --border: #45454B;
+    --strong: #0A0A19;
+    --on-strong: #FFFFFF;
+    --input-background: #1D1D23;
+    --primary: #243AFB;
+    --on-primary: #FFFFFF;
+    --tone-primary: #292B4B;
+    --tone-teal: #243C3B;
+    --tone-violet: #353047;
+    --tone-sand: #40392D;
+    --status-success: #86EFAC;
+    --status-danger: #E86A6A;
+    --status-warning: #FBBF24;
+    --status-info: #93B4FF;
+    --input-border: rgba(255,255,255,0.3);
+    --input-placeholder: rgba(255,255,255,0.42);
+    --responsibility-border: #454549;
+    --responsibility-input-border: #454549;
+    --responsibility-input-background: #1D1D23;
+    --responsibility-lookup-background: #27262D;
+    --responsibility-focus-border: #243AFB;
+    --responsibility-disabled-background: #1D1D23;
+    --responsibility-disabled-border: #2B2B36;
 }

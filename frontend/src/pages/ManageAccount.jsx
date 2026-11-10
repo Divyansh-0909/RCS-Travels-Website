@@ -1,15 +1,18 @@
+import { fieldClass, fieldGeometry, fieldSurface, fieldBorder } from "../components/ui/fieldStyles";
+import IconButton from "../components/ui/IconButton";
+import PillControl from "../components/ui/PillControl";
 import { useTranslation as useCopyLanguage } from "react-i18next";
 import { websiteCopy as dc } from "../i18nCopy";
 import { useState, useEffect, useRef } from "react"
 import { createPortal } from "react-dom";
 import { useLocation } from "react-router-dom";
 import Icon from '@mdi/react';
-import { mdiPlus, mdiClose, mdiLock, mdiTrayArrowDown, mdiCheck, mdiContentCopy, mdiMagnify, mdiTuneVertical, mdiSortCalendarDescending, mdiSortCalendarAscending, mdiCarOutline, mdiCalendarRange } from '@mdi/js';
+import { mdiPlus, mdiClose, mdiLock, mdiTrayArrowDown, mdiCheck, mdiContentCopy, mdiMagnify, mdiTuneVertical, mdiSortCalendarDescending, mdiSortCalendarAscending, mdiCarOutline, mdiCalendarRange, mdiChevronDown } from '@mdi/js';
 import { useViewNavigate } from "../hooks/useViewNavigate";
 import { useData } from "../hooks/useData";
 import { useApi } from "../hooks/useApi";
 import { useExitAnim } from "../hooks/useExitAnim";
-import Button from "../components/ui/Button";
+import Button, { ActionControl } from "../components/ui/Button";
 import AccountLayout from "../components/ui/AccountLayout";
 import SettingRow from "../components/ui/SettingRow";
 import CircleIconButton from "../components/ui/CircleIconButton";
@@ -49,14 +52,7 @@ const DetailModal = ({ title, onClose, children }) => createPortal(
     >
         <div className="flex shrink-0 items-center justify-between px-4 pt-4 sm:px-5 sm:pt-5">
             <h2 className="text-2xl font-semibold tracking-[-0.02em] text-ink">{title}</h2>
-            <button
-                type="button"
-                aria-label={dc("Close")}
-                onClick={onClose}
-                className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl bg-surface text-ink-muted transition-[color,transform] duration-150 hover:text-ink active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-            >
-                <Icon path={mdiClose} size={0.9} />
-            </button>
+            <IconButton type="button" aria-label={dc("Close")} onClick={onClose} className="flex"><Icon path={mdiClose} size={0.9} /></IconButton>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto bg-surface-muted py-4 pl-4 pr-1 sm:flex-auto sm:px-5 sm:py-5">
             <div className="flex w-full flex-col gap-4">{children}</div>
@@ -538,7 +534,7 @@ const ManageAccount = () => {
                     onChange={(e) => setRidePageInput(e.target.value.replace(/\D/g, ""))}
                     onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); commitRidePage() } }}
                     onBlur={commitRidePage}
-                    className="flex text-center justify-center items-center border box-border rounded-lg h-10 w-10 p-0 m-0 bg-transparent leading-none outline-none text-sm sm:text-lg"
+                    className={`${fieldClass} w-12! px-0! text-center`}
                 />
                 <h4>{tr("of")}</h4>
                 <h4 className="flex text-center justify-center items-center border box-border rounded-lg h-10 w-10 p-0 m-0 bg-transparent leading-none text-sm sm:text-lg">{totalRidePages}</h4>
@@ -658,7 +654,7 @@ const ManageAccount = () => {
                                 {activeRide.status === "completed" && (
                                     <Button
                                         onClick={() => navigate(`/booking/${activeRide.id}`)}
-                                        prop={{ width: "240px" }}
+                                        prop={{ size: "action", width: "240px" }}
                                     >
                                         {tr("View receipt & payment")}
                                     </Button>
@@ -666,7 +662,7 @@ const ManageAccount = () => {
                                 {activeRideUpcoming && customerCancellableStatuses.has(activeRide.status) && (
                                     <Button
                                         onClick={() => handleCancel(activeRide)}
-                                        prop={{
+                                        prop={{ size: "action",
                                             variant: "negative",
                                             width: "200px",
                                             disabled: cancelConfirmation?.id === activeRide.id && !cancelConfirmation.reasonChoice,
@@ -682,13 +678,9 @@ const ManageAccount = () => {
                                     </Button>
                                 )}
                                 {["completed", "cancelled"].includes(activeRide.status) && activeRide.driver && (
-                                    <button
-                                        type="button"
-                                        onClick={() => complaintRide === activeRide.id ? setComplaintRide(null) : openComplaint(activeRide)}
-                                        className="rounded-full border border-border px-4 py-2 text-sm font-semibold text-ink transition-colors hover:bg-surface-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-                                    >
+                                    <PillControl type="button" onClick={() => complaintRide === activeRide.id ? setComplaintRide(null) : openComplaint(activeRide)} faceClassName="ring-1 ring-border text-ink hover:bg-surface-muted ">
                                         {activeRide.complaint ? tr("Update complaint") : tr("Report driver")}
-                                    </button>
+                                    </PillControl>
                                 )}
                                 <p className="text-sm text-ink-muted">{tr("Need help?") + " "}<u className="cursor-pointer text-ink transition-colors duration-300 hover:text-ink-muted">{tr("Talk to us")}</u></p>
                             </div>
@@ -700,14 +692,7 @@ const ManageAccount = () => {
                                             <h4 className="font-semibold text-ink">{tr("Why are you cancelling?")}</h4>
                                             <p className="mt-0.5 text-sm text-ink-muted">{tr("Listed valid reasons waive the cancellation fee. Choose Other / none of these if none applies.")}</p>
                                         </div>
-                                        <button
-                                            type="button"
-                                            onClick={() => { setCancelConfirmation(null); setRideError(null); }}
-                                            className="rounded-full p-1 text-ink-muted transition-colors hover:bg-surface hover:text-ink"
-                                            aria-label={tr("Keep ride")}
-                                        >
-                                            <Icon path={mdiClose} size={0.9} />
-                                        </button>
+                                        <IconButton type="button" onClick={() => { setCancelConfirmation(null); setRideError(null); }} aria-label={tr("Keep ride")} className=""><Icon path={mdiClose} size={0.9} /></IconButton>
                                     </div>
                                     <div className="mt-3 grid gap-2 sm:grid-cols-2">
                                         {CUSTOMER_CANCELLATION_REASONS.map((reason) => (
@@ -746,31 +731,25 @@ const ManageAccount = () => {
                                         {COMPLAINT_OPTIONS.map((option) => {
                                             const selectedReason = complaintReasons.includes(option.value)
                                             return (
-                                                <button
-                                                    type="button"
-                                                    key={option.value}
-                                                    aria-pressed={selectedReason}
-                                                    onClick={() => toggleComplaintReason(option.value)}
-                                                    className={`${selectedReason ? "bg-primary text-on-strong border-primary" : "bg-surface text-ink border-border hover:bg-surface-muted"} rounded-full border px-3 py-2 text-sm font-medium transition-colors duration-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary`}
-                                                >
+                                                <PillControl type="button" key={option.value} aria-pressed={selectedReason} onClick={() => toggleComplaintReason(option.value)} faceClassName={`${selectedReason ? "bg-primary text-on-primary ring-primary" : "bg-surface text-ink ring-border hover:bg-surface-muted"} ring-1 `}>
                                                     {option.label}
-                                                </button>
+                                                </PillControl>
                                             )
                                         })}
                                     </div>
                                     {complaintError && <p className="mt-2 text-sm text-red-600">{complaintError}</p>}
                                     <div className="mt-4 flex gap-2">
-                                        <button
+                                        <ActionControl
                                             type="button"
                                             disabled={!complaintReasons.length || complaintBusy}
                                             onClick={() => saveComplaint(activeRide.id)}
-                                            className="rounded-full bg-primary px-4 py-2 text-sm font-semibold text-on-strong transition-opacity duration-300 hover:opacity-[0.9] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-50"
+                                            className="rounded-full bg-primary font-semibold text-on-primary transition-opacity duration-300 hover:opacity-[0.9] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-50"
                                         >
                                             {complaintBusy ? tr("Saving…") : tr("Submit complaint")}
-                                        </button>
-                                        <button type="button" onClick={() => setComplaintRide(null)} className="rounded-full px-4 py-2 text-sm font-semibold text-ink-muted transition-colors duration-300 hover:bg-surface-muted hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
+                                        </ActionControl>
+                                        <PillControl type="button" onClick={() => setComplaintRide(null)} faceClassName="text-ink-muted hover:bg-surface-muted hover:text-ink ">
                                             {tr("Cancel")}
-                                        </button>
+                                        </PillControl>
                                     </div>
                                 </div>
                             )}
@@ -778,21 +757,22 @@ const ManageAccount = () => {
                     </DetailModal>
                     )}
 
-                    {fieldPanel.mounted && (
-                    <Button
-                        className={`block ${fieldPanel.closing ? "animate-datetime-out pointer-events-none" : "animate-datetime"} z-200 py-6 flex flex-col justify-center items-center fixed left-1/2 top-1/2 -translate-x-1/2 mt-10 -translate-y-1/2 hover:opacity-[1]`}
-                        prop={{ variant: "dropdown", width: "310px" }}
+                    {/* Keep the editor above AccountLayout's body-level dim. */}
+                    {fieldPanel.mounted && createPortal(
+                    <section
+                        role="dialog" aria-modal="true" aria-labelledby="account-edit-title"
+                        className={`${fieldPanel.closing ? "animate-datetime-out pointer-events-none" : "animate-datetime"} z-200 flex w-[min(310px,calc(100vw-24px))] max-h-[calc(100dvh-96px)] flex-col items-center justify-start overflow-y-auto rounded-2xl border border-border bg-strong px-4 py-6 text-base font-medium text-on-strong shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)] fixed left-1/2 top-1/2 -translate-x-1/2 mt-10 -translate-y-1/2`}
                     >
-                        <Icon onClick={() => setExpanded(null)} className="cursor-pointer text-[var(--foreground)] w-full right-4 top-4 absolute opacity-[0.8] transition-opacity duration-300 hover:opacity-[1]" path={mdiClose} size={1} />
+                        <IconButton onClick={() => setExpanded(null)} aria-label={dc("Close")} icon={mdiClose} className="right-4 top-4 absolute" />
 
                         {isLocked
                             ? <div className="flex flex-col justify-center px-3 w-full items-center text-center">
                                 <ErrorMark className="mb-2" size={140} />
-                                <h2 className="text-2xl">{panel[2]}</h2>
+                                <h2 id="account-edit-title" className="px-8 text-2xl">{panel[2]}</h2>
                                 <p className="mt-1 text-sm text-[var(--foreground-muted)]/70">{panel[3]}</p>
                             </div>
                             : <div className="flex flex-col gap-3 w-full justify-center px-3 pt-3 items-center text-center">
-                                <h2 className="text-2xl">{panel === "deactivate" ? dc("Before you deactivate") : panel === "drivers" ? dc("What your driver sees") : dc(field)}</h2>
+                                <h2 id="account-edit-title" className="px-8 text-2xl">{panel === "deactivate" ? dc("Before you deactivate") : panel === "drivers" ? dc("What your driver sees") : dc(field)}</h2>
                                 <p className="-mt-2 mb-5 text-sm text-[var(--foreground-muted)]/70">{panel === "deactivate" ? dc("This can't be undone.") : panel === "drivers" ? dc("The details shared with a driver when they accept your ride.") : dc(fieldDescriptions[field])}</p>
 
                                 {panel === "drivers" && (
@@ -828,7 +808,7 @@ const ManageAccount = () => {
                                             value={confirmText}
                                             onChange={(e) => setConfirmText(e.target.value)}
                                             placeholder={dc("Type \"Deactivate\"", {})}
-                                            className="w-full rounded-xl py-2 px-3 text-base text-center text-[var(--text)] bg-transparent outline-none placeholder:text-[var(--foreground-muted)]/50 border border-[var(--foreground)]/30"
+                                            className={`${fieldClass} text-center`}
                                         />
                                     </div>
                                 )}
@@ -877,7 +857,7 @@ const ManageAccount = () => {
                                         value={fieldValue}
                                         onChange={field === "DOB" ? handleDobChange : handleContactChange}
                                         placeholder={field === "DOB" ? dc("DD/MM/YYYY") : dc("XXXXX XXXXX")}
-                                        className={`w-full rounded-xl py-2 px-3 text-lg text-center text-ink bg-transparent outline-none placeholder:text-ink-muted/60 border ${(field === "DOB" && fieldValue && !dobValid) || (field === "Emergency Contact" && fieldValue && fieldValue.length !== 10) ? "border-negative/50" : "border-border"}`}
+                                        className={`${fieldGeometry} ${fieldSurface} text-center ${(field === "DOB" && fieldValue && !dobValid) || (field === "Emergency Contact" && fieldValue && fieldValue.length !== 10) ? "border-negative/50" : fieldBorder}`}
                                     />
                                 )}
 
@@ -897,7 +877,7 @@ const ManageAccount = () => {
                                 )}
 
                                 <Button className={`${panel === 'deactivate' || panel === 'drivers' ? "hidden" : "block"}`} onClick={handleUpdate}
-                                    prop={{
+                                    prop={{ size: "action",
                                         variant: "",
                                         width: "240px",
                                         disabled: updateDisabled || loading,
@@ -906,7 +886,7 @@ const ManageAccount = () => {
                                     {loading ? dc("Saving…") : dc("Update")}
                                 </Button>
                                 <Button className={`${panel === 'deactivate' ? "block" : "hidden"}`} onClick={handleDeactivate}
-                                    prop={{
+                                    prop={{ size: "action",
                                         variant: "negative",
                                         width: "240px",
                                         disabled: !deactivateReady || loading,
@@ -915,22 +895,23 @@ const ManageAccount = () => {
                                     {loading ? dc("Deactivating…") : dc("Deactivate")}
                                 </Button>
                             </div>}
-                    </Button>
+                    </section>,
+                    document.body,
                     )}
             {/* "Copied to clipboard" pill for the ride history tab */}
             <div
-                className={`${copied ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"} flex justify-center items-center w-[230px] fixed z-100 left-1/2 -translate-x-1/2 bottom-8 sm:bottom-10 bg-primary text-on-strong text-sm font-semibold px-5 py-3 rounded-full shadow-lg gap-2 transition-[opacity,transform] duration-300`}
+                className={`${copied ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"} flex justify-center items-center w-[230px] fixed z-100 left-1/2 -translate-x-1/2 bottom-8 sm:bottom-10 bg-primary text-on-primary text-sm font-semibold px-5 py-3 rounded-full shadow-lg gap-2 transition-[opacity,transform] duration-300`}
             >
                 <Icon path={mdiContentCopy} size={0.7} />{dc("Copied to clipboard")}</div>
             {items[selected] === RIDE_TAB
                 ? <>
                     {/* Sectioned filter panel — same shell as the admin dashboard's; Apply refetches page 1 */}
-                    {rideFilterDropdown.mounted && (
+                    {rideFilterDropdown.mounted && createPortal(
                         <section
                             role="dialog"
                             aria-modal="true"
                             aria-label={tr("Filters")}
-                            className={`${rideFilterDropdown.closing ? "animate-datetime-out" : "animate-datetime"} z-200 flex overflow-hidden bg-surface-muted text-ink shadow-2xl motion-reduce:animate-none max-sm:fixed max-sm:inset-0 max-sm:h-dvh max-sm:w-screen max-sm:rounded-none sm:absolute sm:left-1/2 sm:top-1/2 sm:max-h-[calc(100dvh-48px)] sm:w-[680px] sm:max-w-[calc(100vw-48px)] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl sm:border sm:border-border/60`}
+                            className={`${rideFilterDropdown.closing ? "animate-datetime-out" : "animate-datetime"} fixed z-200 flex overflow-hidden bg-surface-muted text-ink shadow-2xl motion-reduce:animate-none max-sm:inset-0 max-sm:h-dvh max-sm:w-screen max-sm:rounded-none sm:left-1/2 sm:top-1/2 sm:max-h-[calc(100dvh-48px)] sm:w-[680px] sm:max-w-[calc(100vw-48px)] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl sm:border sm:border-border/60`}
                             onClick={(e) => e.stopPropagation()}
                         >
                             <div className="flex h-full min-h-0 w-full flex-col text-left sm:h-auto">
@@ -972,16 +953,17 @@ const ManageAccount = () => {
                                     </div>
                                 </div>
                                 <div className="flex w-full shrink-0 gap-2 border-t border-border/50 px-3 py-3 sm:px-4 sm:py-4">
-                                    <button type="button" onClick={clearRideFilters} className="flex flex-1 cursor-pointer items-center justify-center rounded-xl border border-border/60 bg-surface py-2.5 text-sm font-medium text-ink transition-[background-color,transform] duration-150 ease-out hover:bg-surface/70 active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">{tr("Clear")}</button>
-                                    <button type="button" onClick={applyRideFilters} className="flex flex-1 cursor-pointer items-center justify-center rounded-xl bg-primary py-2.5 text-sm font-semibold text-on-strong transition-[opacity,transform] duration-150 ease-out hover:opacity-90 active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">{tr("Apply")}</button>
+                                    <ActionControl type="button" onClick={clearRideFilters} className="flex flex-1 cursor-pointer items-center justify-center rounded-xl border border-border/60 bg-surface font-medium text-ink transition-[background-color,transform] duration-150 ease-out hover:bg-surface/70 active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">{tr("Clear")}</ActionControl>
+                                    <ActionControl type="button" onClick={applyRideFilters} className="flex flex-1 cursor-pointer items-center justify-center rounded-xl bg-primary font-semibold text-on-primary transition-[opacity,transform] duration-150 ease-out hover:opacity-90 active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">{tr("Apply")}</ActionControl>
                                 </div>
                             </div>
-                        </section>
+                        </section>,
+                        document.body,
                     )}
                     {/* Toolbar: sort order, filter panel toggle, debounced search, pagination */}
                     <form onSubmit={(e) => { e.preventDefault(); clearTimeout(rideDebounceRef.current); runRideSearch() }} className="flex w-full flex-wrap justify-between px-4 max-sm:px-0 gap-2 gap-y-3 items-center">
                         <div className="flex w-fit max-sm:w-full max-sm:flex-wrap justify-start gap-2 items-center">
-                        <div className={`flex justify-start gap-1 items-center rounded-xl py-5 px-3 w-[20vw] max-sm:w-full ${rideSearchActive ? "border-[var(--background-muted)]" : "border-[var(--background-muted)]/40"} h-[5vh] text-[var(--text-foreground)] transition-all duration-300 border-2`}>
+                        <div className={`${fieldGeometry} ${fieldSurface} flex items-center gap-2 w-[min(320px,28vw)]! max-sm:w-full! ${rideSearchActive ? "border-primary" : "border-[var(--input-border)]"}`}>
                             <Icon path={mdiMagnify} size={0.9} className="cursor-pointer text-sm sm:text-lg hover:text-[var(--text-foreground)] transition-color duration-300 text-[var(--text-foreground)]/40" />
                             <input
                                 onFocus={() => setRideSearchActive(true)}
@@ -992,17 +974,17 @@ const ManageAccount = () => {
                                 value={rideSearch}
                                 onChange={(e) => setRideSearch(e.target.value)}
                                 placeholder={dc("Location, driver, ID")}
-                                className={`w-[95%] h-[5vh] text-[var(--text-foreground)]  outline-none border-none`}
+                                className="h-full min-w-0 flex-1 border-0 bg-transparent text-base text-[var(--text)] outline-none"
                             />
                         </div>
-                        <button type="button" onClick={toggleRideSortOrder} aria-label={rideOrder ? tr("Sort oldest first") : tr("Sort newest first")} className="py-2 px-3 flex items-center justify-center gap-1 cursor-pointer text-[var(--text)] bg-[var(--background)]/90 hover:bg-[var(--background)] transition-color duration-300 rounded-xl">
-                            <Icon path={rideOrder ? mdiSortCalendarDescending : mdiSortCalendarAscending} size={1.1} />
-                            <h4>{tr("Sort")}</h4>
-                        </button>
-                        <button type="button" onClick={() => setRideFilterExpand(!rideFilterExpand)} className="py-2 px-3 flex items-center justify-center gap-1 cursor-pointer text-[var(--text)] bg-[var(--background)]/90 hover:bg-[var(--background)] transition-color duration-300 rounded-xl">
-                            <Icon path={mdiTuneVertical} size={1} className="rotate-[90deg]" />
-                            <h4>{tr("Filter")}</h4>
-                        </button>
+                        <PillControl type="button" onClick={toggleRideSortOrder} aria-label={rideOrder ? tr("Sort oldest first") : tr("Sort newest first")} faceClassName="bg-[var(--input-background)] text-[var(--text)] hover:opacity-90">
+                            <Icon path={rideOrder ? mdiSortCalendarDescending : mdiSortCalendarAscending} size={2 / 3} />
+                            <span>{tr("Sort")}</span>
+                        </PillControl>
+                        <PillControl type="button" onClick={() => setRideFilterExpand(!rideFilterExpand)} faceClassName="bg-[var(--input-background)] text-[var(--text)] hover:opacity-90">
+                            <Icon path={mdiTuneVertical} size={2 / 3} className="rotate-[90deg]" />
+                            <span>{tr("Filter")}</span>
+                        </PillControl>
                         </div>
                         {ridePagination && <div className="max-sm:hidden">{ridePagination}</div>}
                     </form>

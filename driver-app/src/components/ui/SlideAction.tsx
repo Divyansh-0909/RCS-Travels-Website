@@ -131,7 +131,7 @@ export const SlideAction = ({
             />
 
             <Animated.View pointerEvents="none" style={labelStyle} className="absolute w-full items-center">
-                <AppText className="text-base font-semibold text-on-strong">
+                <AppText className="text-base font-semibold text-on-primary">
                     {disabled && disabledHint ? disabledHint : label}
                 </AppText>
             </Animated.View>
@@ -151,7 +151,7 @@ export const SlideAction = ({
                     knobStyle,
                 ]}
             >
-                <Arrow size={24} weight="bold" className="text-on-strong" />
+                <Arrow size={24} weight="bold" className="text-on-primary" />
             </Animated.View>
         </View>
     );

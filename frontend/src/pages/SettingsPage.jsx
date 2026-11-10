@@ -8,6 +8,10 @@ import { useApi } from "../hooks/useApi";
 import AccountLayout from "../components/ui/AccountLayout";
 import SettingRow from "../components/ui/SettingRow";
 import CircleIconButton from "../components/ui/CircleIconButton";
+import IconButton from "../components/ui/IconButton";
+import SavedPlaceAddressField from "../components/ui/SavedPlaceAddressField";
+import { fieldClass } from "../components/ui/fieldStyles";
+import { PLACE_NAME_LIMIT, savedPlaceValidity } from "../lib/savedPlaceValidation";
 import Toggle from "../components/ui/Toggle";
 import LanguageSelector from "../components/LanguageSelector";
 import ThemeToggle from "../components/ThemeToggle";
@@ -21,7 +25,7 @@ const panelTones = {
     savedPlaces: "bg-surface-muted",
 }
 
-const settingsListClass = "flex flex-col items-start gap-4 justify-center w-full"
+const settingsListClass = "flex min-h-0 w-full flex-1 flex-col items-start justify-start gap-4 overflow-y-auto"
 
 const notifRows = [
     ["Ride updates", "Booking confirmations and ride status on WhatsApp.", "whatsapp"],
@@ -91,32 +95,42 @@ const SettingsPage = () => {
 
     const [editingPlace, setEditingPlace] = useState(null)
     const [placeInput, setPlaceInput] = useState("")
+    const [placeLabel, setPlaceLabel] = useState("")
     const [placeError, setPlaceError] = useState(null)
     const [savingPlace, setSavingPlace] = useState(false)
+    const [placeCoords, setPlaceCoords] = useState(null)
+    const [resolvingPlace, setResolvingPlace] = useState(false)
     // At most one unsaved custom row being typed; it only exists client-side
     // until its first save.
     const [draft, setDraft] = useState(false)
 
-    // Home and Work are fixed slots shown even before they exist server-side;
-    // custom rows follow, then the draft.
-    const byLabel = new Map(savedPlaces.map(p => [p.label, p]))
+    // Home and Work are initial suggestions. A renamed place fills the vacated
+    // position rather than creating an extra empty card above the edited row.
+    const home = savedPlaces.find(p => p.label === "Home")
+    const work = savedPlaces.find(p => p.label === "Work")
+    const otherPlaces = savedPlaces.filter(p => p !== home && p !== work)
     const places = [
-        ...["Home", "Work"].map(label => byLabel.get(label) ?? { label, address: "" }),
-        ...savedPlaces.filter(p => p.label !== "Home" && p.label !== "Work"),
+        home ?? otherPlaces.shift() ?? { label: "Home", address: "" },
+        work ?? otherPlaces.shift() ?? { label: "Work", address: "" },
+        ...otherPlaces,
         ...(draft ? [{ label: "Saved place", address: "" }] : []),
     ]
 
-    const startEdit = (i) => { setEditingPlace(i); setPlaceError(null); setPlaceInput(places[i].address) }
-    const cancelEdit = () => { setEditingPlace(null); setPlaceError(null); setPlaceInput(""); setDraft(false) }
+    const validity = savedPlaceValidity({ name: placeLabel, address: placeInput, original: places[editingPlace], coordinates: placeCoords, resolving: resolvingPlace })
+    const startEdit = (i) => { if (savingPlace) return; setEditingPlace(i); setPlaceError(null); setPlaceInput(places[i].address); setPlaceLabel(places[i].label); setPlaceCoords(null); setResolvingPlace(false) }
+    const cancelEdit = () => { if (savingPlace) return; setEditingPlace(null); setPlaceError(null); setPlaceInput(""); setPlaceLabel(""); setDraft(false); setPlaceCoords(null); setResolvingPlace(false) }
     const savePlace = async () => {
         const p = places[editingPlace]
-        if (!p || savingPlace) return
+        if (!p || savingPlace || !validity.valid) return
         const address = placeInput.trim()
+        const label = placeLabel.trim()
+        if (!label) { setPlaceError(tr("Enter a place name")); return }
         if (!address) { setPlaceError(t("settings.enterAddress")); return }
         setSavingPlace(true)
         setPlaceError(null)
         try {
-            const res = await saveSavedPlace({ id: p.id, label: p.label, address })
+            const coords = placeCoords ?? (address === p.address?.trim() ? { lat: p.lat, lng: p.lng } : {})
+            const res = await saveSavedPlace({ id: p.id, label, address, ...coords })
             if (res?.error) { setPlaceError(res.error); return }
             setSavedPlaces(p.id
                 ? savedPlaces.map(sp => sp.id === res.place.id ? res.place : sp)
@@ -124,6 +138,7 @@ const SettingsPage = () => {
             setDraft(false)
             setEditingPlace(null)
             setPlaceInput("")
+            setPlaceLabel("")
         } catch {
             setPlaceError(t("errors.tryAgain"))
         } finally {
@@ -131,13 +146,19 @@ const SettingsPage = () => {
         }
     }
     const addPlace = () => {
+        if (savingPlace) return
+        if (draft) { setEditingPlace(places.length - 1); return }
         setPlaceError(null)
         setPlaceInput("")
+        setPlaceLabel("")
+        setPlaceCoords(null)
+        setResolvingPlace(false)
         // A second tap on Add just returns to the draft that's already there.
         setEditingPlace(draft ? places.length - 1 : places.length)
         setDraft(true)
     }
     const removePlace = async (i) => {
+        if (savingPlace) return
         const p = places[i]
         if (!p) return
         if (!p.id) { // unsaved draft — nothing server-side to delete
@@ -172,7 +193,7 @@ const SettingsPage = () => {
             {selected === 2 && (
                 <ul className={settingsListClass}>
                 {notifRows.map(([title, desc, key]) => (
-                    <SettingRow key={key} tone={panelTones.notifications} trailing={<Toggle on={notifs[key]} disabled={notifsLoading || savingNotif !== null} onClick={() => toggleNotif(key)} />}>
+                    <SettingRow key={key} tone={panelTones.notifications} trailing={<Toggle aria-label={tr(title)} on={notifs[key]} disabled={notifsLoading || savingNotif !== null} onClick={() => toggleNotif(key)} />}>
                         <h4 className="break-words text-lg font-medium">{tr(title)}</h4>
                         <p className="break-words text-base text-ink-muted">{tr(desc)}</p>
                     </SettingRow>
@@ -185,22 +206,24 @@ const SettingsPage = () => {
                 <ul className={settingsListClass}>
                         {places.map((p, i) => (
                             editingPlace === i ? (
-                                <li key={i} className="account-panel-motion w-full select-none py-5 px-6 rounded-3xl flex items-center justify-between gap-3 bg-surface-muted">
-                                    <input
-                                        autoFocus
-                                        value={placeInput}
-                                        onChange={(e) => setPlaceInput(e.target.value)}
-                                        onKeyDown={(e) => { if (e.key === "Enter") savePlace(); if (e.key === "Escape") cancelEdit() }}
-                                        placeholder={t("settings.addressPlaceholder", { place: p.label })}
-                                        className="flex-1 min-w-0 rounded-xl py-2 px-3 text-base text-ink bg-transparent outline-none placeholder:text-ink-muted/60 border border-border"
-                                    />
-                                    <div className="flex items-center gap-2 shrink-0">
-                                        <CircleIconButton icon={mdiCheck} size={0.9} disabled={savingPlace} onClick={savePlace} />
-                                        <div onClick={cancelEdit} className="cursor-pointer p-1 rounded-full text-ink-muted transition-colors duration-300 hover:text-ink">
-                                            <Icon path={mdiClose} size={0.9} />
+                                <SettingRow key={i} tone={panelTones.savedPlaces} className="gap-0! items-start! [&>div:first-child]:pr-0 [&>div:last-child]:hidden" aria-busy={savingPlace}>
+                                    <div className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_auto]">
+                                        <div className="min-w-0">
+                                            <div className="mb-1 flex items-center justify-between gap-1 text-xs leading-4 text-ink-muted">
+                                                <label htmlFor="saved-place-name">{tr("Place name")}</label>
+                                                <span id="saved-place-name-limit" className="shrink-0 tabular-nums">{placeLabel.length}/{PLACE_NAME_LIMIT}</span>
+                                            </div>
+                                            <input id="saved-place-name" required minLength={1} aria-label={tr("Place name")} aria-describedby="saved-place-name-limit" aria-invalid={Boolean(placeError && !validity.nameValid)} value={placeLabel} maxLength={PLACE_NAME_LIMIT} disabled={savingPlace} onChange={(event) => setPlaceLabel(event.target.value)} onKeyDown={(event) => { if (event.nativeEvent.isComposing) return; if (event.key === "Enter") { event.preventDefault(); savePlace() } if (event.key === "Escape") cancelEdit() }} placeholder={tr("Place name")} className={fieldClass + " disabled:opacity-60"} />
+                                        </div>
+                                        <div className="col-span-2 row-start-2 min-w-0 lg:col-span-1 lg:col-start-2 lg:row-start-1">
+                                            <SavedPlaceAddressField aria-label={tr("Address")} value={placeInput} onChange={(value) => { setPlaceInput(value); setPlaceCoords(null) }} onResolve={setPlaceCoords} onResolving={setResolvingPlace} onCommit={savePlace} onCancel={cancelEdit} disabled={savingPlace} valid={validity.addressValid && validity.locationValid} placeholder={t("settings.addressPlaceholder", { place: p.label })} />
+                                        </div>
+                                        <div className="col-start-2 row-start-1 flex items-center gap-1 pt-5 lg:col-start-3">
+                                            <IconButton ariaLabel={tr("Save place")} icon={mdiCheck} size={0.9} disabled={savingPlace || !validity.valid} onClick={savePlace} faceClassName="bg-strong text-on-strong" />
+                                            <IconButton ariaLabel={tr("Cancel editing")} icon={mdiClose} size={0.9} disabled={savingPlace} onClick={cancelEdit} faceClassName="bg-white text-black" />
                                         </div>
                                     </div>
-                                </li>
+                                </SettingRow>
                             ) : (
                                 <SettingRow
                                     key={i}
@@ -213,7 +236,7 @@ const SettingsPage = () => {
                                                     <Icon path={mdiTrashCanOutline} size={0.9} />
                                                 </div>
                                             )}
-                                            <CircleIconButton icon={p.address ? mdiPencil : mdiPlus} size={p.address ? 0.8 : 1} onClick={() => startEdit(i)} />
+                                            <CircleIconButton ariaLabel={tr(p.address ? "Edit place" : "Add place") + " " + p.label} icon={p.address ? mdiPencil : mdiPlus} size={p.address ? 0.8 : 1} disabled={savingPlace} onClick={() => startEdit(i)} />
                                         </div>
                                     }
                                 >
@@ -222,9 +245,11 @@ const SettingsPage = () => {
                                 </SettingRow>
                             )
                         ))}
-                        {placeError && <li className="text-sm text-negative px-2">{placeError}</li>}
-                        <li onClick={addPlace} className="account-panel-motion font-medium text-lg w-full cursor-pointer select-none py-5 px-6 rounded-3xl flex justify-center items-center gap-2 bg-surface-muted text-ink transition-transform duration-150 ease-out active:scale-[0.99]">
-                            <Icon path={mdiPlus} size={0.9} /> {t("settings.addPlace")}
+                        {placeError && <li id="saved-place-error" role="alert" className="text-sm text-negative px-2">{placeError}</li>}
+                        <li className="account-panel-motion w-full">
+                            <button type="button" disabled={savingPlace} onClick={addPlace} className="font-medium text-lg w-full cursor-pointer select-none py-5 px-6 rounded-3xl flex justify-center items-center gap-2 bg-surface-muted text-ink transition-transform duration-150 ease-out active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-60">
+                                <Icon path={mdiPlus} size={0.9} /> {t("settings.addPlace")}
+                            </button>
                         </li>
                 </ul>
             )}

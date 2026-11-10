@@ -61,7 +61,7 @@ const EmptyState = ({
             {(action || secondaryAction) && (
                 <div className={`${a.actions} flex flex-col gap-2 mt-3`}>
                     {action && (
-                        <Button onClick={action.onClick} className="my-0!" prop={{ variant: "", width: "240px" }}>
+                        <Button onClick={action.onClick} className="my-0!" prop={{ size: "action", variant: "", width: "240px" }}>
                             <span className="text-base">{action.label}</span>
                         </Button>
                     )}

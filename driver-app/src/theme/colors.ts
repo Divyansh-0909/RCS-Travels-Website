@@ -14,9 +14,11 @@ export type ThemeColors = {
   ink: string;
   inkMuted: string;
   borderUi: string;
-  /** Deliberately invariant: it is the reliable high-contrast action surface. */
-  strong: '#121220';
-  onStrong: '#ffffff';
+  inputBackground: string;
+  strong: string;
+  onStrong: string;
+  /** Primary-colored actions keep their own white foreground in both schemes. */
+  onPrimary: '#FFFFFF';
   /** Brand blue stays constant in both schemes. */
   primary: '#243AFB';
   primaryLight: '#7A94FF';
@@ -28,8 +30,7 @@ export type ThemeColors = {
 };
 
 const invariant = {
-  strong: '#121220',
-  onStrong: '#ffffff',
+  onPrimary: '#FFFFFF',
   primary: '#243AFB',
   primaryLight: '#7A94FF',
   negative: '#B91C1C',
@@ -38,29 +39,23 @@ const invariant = {
   mapRoute: '#7A94FF',
 } as const;
 
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { schemes } = require('../../../shared/theme/tokens.cjs') as {
+  schemes: Record<ThemeScheme, Pick<ThemeColors,
+    'canvas' | 'immersive' | 'surface' | 'surfaceMuted' | 'surfaceRaised' |
+    'ink' | 'inkMuted' | 'borderUi' | 'strong' | 'onStrong' | 'inputBackground'
+  >>;
+};
+
 export const themeColors: Record<ThemeScheme, ThemeColors> = {
   light: {
     ...invariant,
-    canvas: '#F3F3F3',
-    immersive: '#F3F3F3',
-    surface: '#FFFFFF',
-    surfaceMuted: '#E8E8EC',
-    surfaceRaised: '#FFFFFF',
-    ink: '#121220',
-    inkMuted: '#4B5563',
-    borderUi: '#D8D8DE',
+    ...schemes.light,
     mapLand: '#B9B9BF',
   },
   dark: {
     ...invariant,
-    canvas: '#121220',
-    immersive: '#121220',
-    surface: '#272634',
-    surfaceMuted: '#262636',
-    surfaceRaised: '#323240',
-    ink: '#FFFFFF',
-    inkMuted: '#C7C7CF',
-    borderUi: '#454552',
+    ...schemes.dark,
     mapLand: '#2E2E38',
   },
 };
@@ -76,4 +71,5 @@ export const semanticVariableNames = [
   'border-ui',
   'strong',
   'on-strong',
+  'on-primary',
 ] as const;

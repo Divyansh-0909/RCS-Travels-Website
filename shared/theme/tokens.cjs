@@ -22,11 +22,19 @@
  * what makes the utility classes (bg-primary, text-negative, ...) exist, and
  * spread into theme.extend.colors for the app so the same classes exist there.
  */
+// Approved palette exported from the color editor on 3 November 2026.
+const approvedPalette = require('./final-palette.json').colors;
+const nearBlack = approvedPalette['brand.3'];
+
 const colors = {
-  'white-muted': '#AEAEAE',
+  'near-black': nearBlack,
+  'white-muted': approvedPalette['brand.9'],
   primary: '#243AFB',
   'primary-dark': '#1212B4',
   'primary-light': '#3067FD',
+  // Readable informational accents on light and dark content panels.
+  info: '#1D4ED8',
+  'info-light': '#93B4FF',
   negative: '#B91C1C',
   'negative-dark': '#7A0F0F',
   'negative-light': '#E86A6A',
@@ -44,21 +52,33 @@ const colors = {
  * sites on the website keep resolving unchanged.
  */
 const surfaces = {
-  'background-muted': '#262636',
-  'background-panel': '#272634',
-  'background-primary': '#121220',
-  background: '#0B0B14',
-  'input-background': '#1d1d27',
+  'background-muted': approvedPalette['foundation.2.dark'],
+  'background-panel': approvedPalette['page.0.2'],
+  'background-primary': approvedPalette['foundation.7.dark'],
+  background: nearBlack,
+  'input-background': approvedPalette['foundation.9.dark'],
   'input-border': 'rgba(255,255,255,0.3)',
   'input-placeholder': 'rgba(255,255,255,0.42)',
   foreground: '#ffffff',
   'foreground-muted': '#f3f3f3',
 
   text: '#ffffff',
-  'text-muted': '#AEAEAE',
+  'text-muted': approvedPalette['brand.9'],
   'text-foreground': '#000000',
-  'text-muted-foreground': '#AEAEAE',
+  'text-muted-foreground': approvedPalette['brand.9'],
 };
+
+// Shared semantic roles for website CSS and native component color props.
+const schemeRoles = {
+  canvas: 0, immersive: 0, surface: 1, surfaceMuted: 2, surfaceRaised: 3,
+  ink: 4, inkMuted: 5, borderUi: 6, strong: 7, onStrong: 8, inputBackground: 9,
+};
+const schemes = Object.fromEntries(['light', 'dark'].map(scheme => [
+  scheme,
+  Object.fromEntries(Object.entries(schemeRoles).map(([name, index]) => [
+    name, approvedPalette[`foundation.${index}.${scheme}`],
+  ])),
+]));
 
 /**
  * Font stacks, web only. The browser walks the list and falls back; the app has
@@ -135,4 +155,17 @@ const fontSize = {
   plate: { size: '22px', lineHeight: '26px', letterSpacing: '0.08em' },
 };
 
-module.exports = { colors, surfaces, fontFamily, fontCuts, fontSize };
+// Map-backed ride chrome uses the established website sheet language on both platforms.
+const rideChrome = {
+  background: surfaces.background,
+  foreground: surfaces.text,
+  handle: 'rgba(255,255,255,0.3)',
+  sheetShadow: 'inset 0px 2px 4px rgba(255,255,255,0.25), 0px 0px 90px 25px rgba(0,0,0,0.25)',
+};
+
+// Short, interruptible control feedback. Easing is Emil's strong UI ease-out.
+const motion = {
+  feedback: { durationMs: 120, easing: [0.23, 1, 0.32, 1] },
+};
+
+module.exports = { colors, surfaces, schemes, approvedPalette, fontFamily, fontCuts, fontSize, rideChrome, motion };

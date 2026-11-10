@@ -1,0 +1,272 @@
+{
+  "schemaVersion": 1,
+  "sourceSnapshot": "2026-11-03",
+  "exportedAt": "2026-11-03T14:53:02.282Z",
+  "description": "RCS palette draft. Applying this file to the app and website is a separate step.",
+  "colors": {
+    "brand.0": "#243AFB",
+    "brand.1": "#1212B4",
+    "brand.2": "#3067FD",
+    "brand.3": "#0A0A19",
+    "brand.4": "#1D4ED8",
+    "brand.5": "#93B4FF",
+    "brand.6": "#B91C1C",
+    "brand.7": "#7A0F0F",
+    "brand.8": "#E86A6A",
+    "brand.9": "#A1A1A1",
+    "brand.10": "#E5E9FF",
+    "brand.11": "#DFF3EF",
+    "brand.12": "#EEE8FA",
+    "brand.13": "#F3EEDD",
+    "foundation.0.light": "#FFFFFF",
+    "foundation.0.dark": "#0A0A19",
+    "foundation.1.light": "#F3F3F5",
+    "foundation.1.dark": "#26262D",
+    "foundation.2.light": "#F3F3F5",
+    "foundation.2.dark": "#26262D",
+    "foundation.3.light": "#F3F3F5",
+    "foundation.3.dark": "#26262D",
+    "foundation.4.light": "#000000",
+    "foundation.4.dark": "#FFFFFF",
+    "foundation.5.light": "#737373",
+    "foundation.5.dark": "#A1A1A1",
+    "foundation.6.light": "#D8D8DE",
+    "foundation.6.dark": "#45454B",
+    "foundation.7.light": "#FFFFFF",
+    "foundation.7.dark": "#0A0A19",
+    "foundation.8.light": "#000000",
+    "foundation.8.dark": "#FFFFFF",
+    "foundation.9.light": "#E8E8EC",
+    "foundation.9.dark": "#1D1D23",
+    "status.success": "#166534",
+    "status.success.dark": "#86EFAC",
+    "status.warning": "#92400E",
+    "status.warning.dark": "#FBBF24",
+    "app.primaryLight": "#7A94FF",
+    "tone.0.dark": "#292B4B",
+    "tone.1.dark": "#243C3B",
+    "tone.2.dark": "#353047",
+    "tone.3.dark": "#40392D",
+    "map.land.light": "#B9B9BF",
+    "map.land.dark": "#2E2E38",
+    "map.route": "#7A94FF",
+    "page.0.2": "#26262D",
+    "page.0.4": "#FFFFFF",
+    "page.1.1": "#FFFFFF",
+    "page.4.0": "#FFFDF4",
+    "page.4.1": "#B97A52",
+    "page.4.3": "#121220",
+    "page.5.0": "#FFFFFF",
+    "page.5.1": "#63C850",
+    "page.5.2": "#FF6B5F",
+    "page.5.3": "#0078FC",
+    "page.5.4": "#FFF5D5",
+    "page.5.5": "#FFCF00",
+    "page.6.0": "#2FBF71",
+    "page.6.1": "#8CC63F",
+    "page.6.2": "#E8C13F",
+    "page.6.3": "#F2913D",
+    "page.6.4": "#E0603A",
+    "page.6.5": "#C8362F",
+    "page.7.2": "#FFFFFF",
+    "page.7.3": "#16161F",
+    "page.7.4": "#DBE4ED",
+    "page.7.5": "#1D1D27",
+    "page.8.0": "#FBBF24",
+    "page.8.1": "#15803D",
+    "page.9.0": "#1D1D23",
+    "page.9.1": "#E86A6A",
+    "page.9.2": "#15803D",
+    "page.9.3": "#DC2626",
+    "responsibility-review.border.light": "#D8D8DE",
+    "responsibility-review.border.dark": "#454549",
+    "responsibility-review.input-border.light": "#D8D8DE",
+    "responsibility-review.input-border.dark": "#454549",
+    "responsibility-review.input-background.light": "#E8E8EC",
+    "responsibility-review.input-background.dark": "#1D1D23",
+    "responsibility-review.lookup-background.light": "#E8E8EC",
+    "responsibility-review.lookup-background.dark": "#27262D",
+    "responsibility-review.focus-border.light": "#3067FD",
+    "responsibility-review.focus-border.dark": "#243AFB",
+    "responsibility-review.disabled-background.light": "#E8E8EC",
+    "responsibility-review.disabled-background.dark": "#1D1D23",
+    "responsibility-review.disabled-border.light": "#E1E1E5",
+    "responsibility-review.disabled-border.dark": "#2B2B36"
+  },
+  "changes": [
+    {
+      "key": "brand.3",
+      "label": "Shared brand: Near black",
+      "original": "#0B0B14",
+      "value": "#0A0A19"
+    },
+    {
+      "key": "brand.9",
+      "label": "Shared brand: Muted white",
+      "original": "#AEAEAE",
+      "value": "#A1A1A1"
+    },
+    {
+      "key": "foundation.0.light",
+      "label": "Shared light: Canvas / page background",
+      "original": "#F3F3F3",
+      "value": "#FFFFFF"
+    },
+    {
+      "key": "foundation.0.dark",
+      "label": "Shared dark: Canvas / page background",
+      "original": "#121220",
+      "value": "#0A0A19"
+    },
+    {
+      "key": "foundation.1.light",
+      "label": "Shared light: Surface / card",
+      "original": "#FFFFFF",
+      "value": "#F3F3F5"
+    },
+    {
+      "key": "foundation.1.dark",
+      "label": "Shared dark: Surface / card",
+      "original": "#272634",
+      "value": "#26262D"
+    },
+    {
+      "key": "foundation.2.light",
+      "label": "Shared light: Muted surface",
+      "original": "#E8E8EC",
+      "value": "#F3F3F5"
+    },
+    {
+      "key": "foundation.2.dark",
+      "label": "Shared dark: Muted surface",
+      "original": "#262636",
+      "value": "#26262D"
+    },
+    {
+      "key": "foundation.3.light",
+      "label": "Shared light: Raised surface",
+      "original": "#FFFFFF",
+      "value": "#F3F3F5"
+    },
+    {
+      "key": "foundation.3.dark",
+      "label": "Shared dark: Raised surface",
+      "original": "#323240",
+      "value": "#26262D"
+    },
+    {
+      "key": "foundation.4.light",
+      "label": "Shared light: Main text",
+      "original": "#121220",
+      "value": "#000000"
+    },
+    {
+      "key": "foundation.5.light",
+      "label": "Shared light: Secondary text",
+      "original": "#4B5563",
+      "value": "#737373"
+    },
+    {
+      "key": "foundation.5.dark",
+      "label": "Shared dark: Secondary text",
+      "original": "#C7C7CF",
+      "value": "#A1A1A1"
+    },
+    {
+      "key": "foundation.6.dark",
+      "label": "Shared dark: Borders",
+      "original": "#454552",
+      "value": "#45454B"
+    },
+    {
+      "key": "foundation.7.light",
+      "label": "Shared light: Strong action surface",
+      "original": "#121220",
+      "value": "#FFFFFF"
+    },
+    {
+      "key": "foundation.7.dark",
+      "label": "Shared dark: Strong action surface",
+      "original": "#121220",
+      "value": "#0A0A19"
+    },
+    {
+      "key": "foundation.8.light",
+      "label": "Shared light: Text on strong actions",
+      "original": "#FFFFFF",
+      "value": "#000000"
+    },
+    {
+      "key": "foundation.9.light",
+      "label": "Shared light: Input background",
+      "original": "#FFFFFF",
+      "value": "#E8E8EC"
+    },
+    {
+      "key": "foundation.9.dark",
+      "label": "Shared dark: Input background",
+      "original": "#1D1D27",
+      "value": "#1D1D23"
+    },
+    {
+      "key": "page.0.2",
+      "label": "Website · home, outstation & booking: Panel",
+      "original": "#272634",
+      "value": "#26262D"
+    },
+    {
+      "key": "page.9.0",
+      "label": "Captain app · signup validation: Input",
+      "original": "#1D1D27",
+      "value": "#1D1D23"
+    },
+    {
+      "key": "page.9.2",
+      "label": "Captain app · signup validation: Pass",
+      "original": "#16A34A",
+      "value": "#15803D"
+    },
+    {
+      "key": "responsibility-review.border.dark",
+      "label": "Responsibility review dark: Card / panel border",
+      "original": "#454552",
+      "value": "#454549"
+    },
+    {
+      "key": "responsibility-review.input-border.dark",
+      "label": "Responsibility review dark: Input border",
+      "original": "#454552",
+      "value": "#454549"
+    },
+    {
+      "key": "responsibility-review.input-background.dark",
+      "label": "Responsibility review dark: Input background",
+      "original": "#272635",
+      "value": "#1D1D23"
+    },
+    {
+      "key": "responsibility-review.lookup-background.dark",
+      "label": "Responsibility review dark: Case-ID input background",
+      "original": "#272634",
+      "value": "#27262D"
+    },
+    {
+      "key": "responsibility-review.disabled-background.dark",
+      "label": "Responsibility review dark: Disabled input background",
+      "original": "#262636",
+      "value": "#1D1D23"
+    },
+    {
+      "key": "responsibility-review.disabled-border.light",
+      "label": "Responsibility review light: Disabled input border",
+      "original": "#D8D8DE",
+      "value": "#E1E1E5"
+    },
+    {
+      "key": "responsibility-review.disabled-border.dark",
+      "label": "Responsibility review dark: Disabled input border",
+      "original": "#363644",
+      "value": "#2B2B36"
+    }
+  ]
+}

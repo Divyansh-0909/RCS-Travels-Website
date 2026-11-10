@@ -268,7 +268,7 @@ export const ActionButton = ({
                     {leading}
                     <AppText
                         className={`${large ? 'text-base' : 'text-sm'} font-semibold ${
-                            solid || progress || danger ? 'text-white' : INK_TEXT
+                            progress || danger ? 'text-on-primary' : solid ? 'text-on-strong' : INK_TEXT
                         }`}
                     >
                         {label}
@@ -280,9 +280,10 @@ export const ActionButton = ({
 };
 
 /** The two marks the action buttons are fronted by, so both call sites agree on size. */
-export const PhoneMark = () => (
-    <Phone size={18} weight="fill" color="#FFFFFF" />
-);
+export const PhoneMark = () => {
+    const { colors } = useTheme();
+    return <Phone size={18} weight="fill" color={colors.onStrong} />;
+};
 
 export const WhatsappMark = () => (
     // 24 against the phone glyph's 18, which is not the mismatch it looks like: the artwork

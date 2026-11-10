@@ -1,5 +1,5 @@
-import { createContext, useContext, useEffect, useMemo, type ReactNode } from "react";
-import { Easing, ReduceMotion, useAnimatedScrollHandler, useSharedValue, type SharedValue } from "react-native-reanimated";
+import { createContext, useContext, useEffect, useMemo, useRef, type ReactNode, type RefObject } from "react";
+import { Easing, ReduceMotion, useAnimatedScrollHandler, useDerivedValue, useSharedValue, withTiming, type DerivedValue, type SharedValue } from "react-native-reanimated";
 import { useLocation } from "react-router-native";
 import { useDriver } from "../hooks/useDriver";
 
@@ -9,7 +9,11 @@ import { useDriver } from "../hooks/useDriver";
 // scroll event through React would drop frames on every drag.
 //
 // 0 = parked at the bottom, 1 = pushed off the bottom edge.
-type AppBarVisibility = { hidden: SharedValue<number> };
+type AppBarVisibility = {
+    hidden: SharedValue<number>;
+    visible: DerivedValue<number>;
+    scrimBounds: RefObject<{ top: number; bottom: number } | null>;
+};
 
 const AppBarVisibilityContext = createContext<AppBarVisibility | null>(null);
 
@@ -30,6 +34,9 @@ export const HIDE = {
     easing: Easing.bezier(0.23, 1, 0.32, 1),
     reduceMotion: ReduceMotion.System,
 } as const;
+
+// The visual fade and its content tap guard must cover exactly the same strip.
+export const APP_BAR_SCRIM_HEIGHT = 72;
 
 // "/rides" is a board and keeps the bar. "/rides/<id>" is a drill-down: it has a back
 // arrow, it owns the whole screen, and a tab bar under it would offer to leave the
@@ -118,6 +125,8 @@ export const useShellHidden = () => {
 
 export const AppBarVisibilityProvider = ({ children }: { children: ReactNode }) => {
     const hidden = useSharedValue(0);
+    const visible = useDerivedValue(() => withTiming(1 - hidden.get(), HIDE));
+    const scrimBounds = useRef<{ top: number; bottom: number } | null>(null);
     const { pathname } = useLocation();
 
     // Every route opens with the bar down. Without this, leaving a screen
@@ -126,7 +135,7 @@ export const AppBarVisibilityProvider = ({ children }: { children: ReactNode }) 
         hidden.set(0);
     }, [pathname, hidden]);
 
-    const value = useMemo(() => ({ hidden }), [hidden]);
+    const value = useMemo(() => ({ hidden, visible, scrimBounds }), [hidden, visible]);
 
     return (
         <AppBarVisibilityContext.Provider value={value}>

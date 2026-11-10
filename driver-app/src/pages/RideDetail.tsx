@@ -394,15 +394,15 @@ const RideDetail = () => {
                                 className="w-11 h-11 rounded-full items-center justify-center"
                                 style={{ backgroundColor: 'rgba(255,255,255,0.14)' }}
                             >
-                                <AppText className="text-base font-semibold text-white">
+                                <AppText className="text-base font-semibold text-on-strong">
                                     {initials(booking.user?.name ?? null)}
                                 </AppText>
                             </View>
                             <View className="flex-1">
-                                <AppText numberOfLines={1} className="text-base font-semibold text-white">
+                                <AppText numberOfLines={1} className="text-base font-semibold text-on-strong">
                                     {rider}
                                 </AppText>
-                                <AppText className="text-xs text-[rgba(255,255,255,0.7)]">{dc("Rider")}</AppText>
+                                <AppText className="text-xs text-on-strong opacity-70">{dc("Rider")}</AppText>
                             </View>
                         </View>
                     )}

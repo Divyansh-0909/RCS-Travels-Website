@@ -27,22 +27,24 @@
     --color-status-success: var(--status-success);
     --color-status-danger: var(--status-danger);
     --color-status-warning: var(--status-warning);
+    --color-status-info: var(--status-info);
 }
 
 :root,
 :root[data-theme="legacy"] {
     color-scheme: dark;
-    --canvas: #0B0B14;
-    --immersive: #0B0B14;
+    --canvas: #0A0A19;
+    --immersive: #0A0A19;
     --surface: #ffffff;
     --surface-muted: #f3f3f3;
     --raised: #ffffff;
-    --ink: #121220;
-    --ink-muted: #4B5563;
+    --ink: #000000;
+    --ink-muted: #737373;
     --border: #D8D8DE;
-    --strong: #121220;
+    --strong: #0A0A19;
     --on-strong: #ffffff;
     --primary: #243AFB;
+    --color-primary: var(--primary);
     --on-primary: #ffffff;
     --tone-primary: #E5E9FF;
     --tone-teal: #DFF3EF;
@@ -51,58 +53,15 @@
     --status-success: #166534;
     --status-danger: #B91C1C;
     --status-warning: #92400E;
+    --status-info: var(--color-info);
 }
 
-:root[data-theme="light"] {
-    color-scheme: light;
-    --canvas: #F3F3F3;
-    --immersive: #F3F3F3;
-    --surface: #ffffff;
-    --surface-muted: #E8E8EC;
-    --raised: #ffffff;
-    --ink: #121220;
-    --ink-muted: #4B5563;
-    --border: #D8D8DE;
-    --strong: #121220;
-    --on-strong: #ffffff;
-    --primary: #243AFB;
-    --on-primary: #ffffff;
-    --tone-primary: #E5E9FF;
-    --tone-teal: #DFF3EF;
-    --tone-violet: #EEE8FA;
-    --tone-sand: #F3EEDD;
-    --status-success: #166534;
-    --status-danger: #B91C1C;
-    --status-warning: #92400E;
-    --input-background: var(--surface);
-    --input-border: var(--border);
-    --input-placeholder: var(--ink-muted);
-}
+/* Light/dark role values come from the approved palette through the theme generator. */
 
-:root[data-theme="dark"] {
-    color-scheme: dark;
-    --canvas: #121220;
-    --immersive: #121220;
-    --surface: #272634;
-    --surface-muted: #262636;
-    --raised: #323240;
-    --ink: #ffffff;
-    --ink-muted: #C7C7CF;
-    --border: #454552;
-    --strong: #121220;
-    --on-strong: #ffffff;
-    --primary: #243AFB;
-    --on-primary: #ffffff;
-    --tone-primary: #292B4B;
-    --tone-teal: #243C3B;
-    --tone-violet: #353047;
-    --tone-sand: #40392D;
-    --status-success: #86EFAC;
-    --status-danger: #E86A6A;
-    --status-warning: #FBBF24;
-    --input-background: #1d1d27;
-    --input-border: rgba(255,255,255,0.3);
-    --input-placeholder: rgba(255,255,255,0.42);
+/* The landing and booking surfaces retain their legacy treatment while the
+   primary accent follows the same appearance preference as other routes. */
+:root[data-theme="legacy"][data-appearance="light"] {
+    --primary: var(--color-primary-light);
 }
 
 /* Compatibility aliases keep existing website call sites semantic until they
@@ -742,6 +701,25 @@ html[lang="hi"] body {
     h4 {
         @apply text-sm sm:text-lg;
     }
+}
+
+/* Compact segmented choices: the paint is 40px high; buttons retain 44px targets. */
+@layer components {
+    .rcs-icon-button { display: inline-flex; }
+    .rcs-pill-group { position: relative; display: inline-flex; align-items: center; gap: 2px; padding-inline: 2px; isolation: isolate; }
+    .rcs-pill-group::before { content: ""; position: absolute; inset: 2px 0; z-index: -1; border-radius: 999px; background: var(--background-muted); }
+}
+
+/* Keep keyboard focus visible even on controls with local outline resets. */
+:where(button, a[href], input, select, textarea, [tabindex]):focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+/* Text fields use their existing focus border, without a second offset ring. */
+:where(input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"], [type="button"], [type="submit"], [type="reset"]), select, textarea):is(:focus, :active) {
+    outline: none;
+    outline-offset: 0;
 }
 
 @layer utilities {

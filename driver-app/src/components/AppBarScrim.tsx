@@ -1,6 +1,8 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import Animated, { useAnimatedStyle, withTiming } from 'react-native-reanimated';
-import { HIDE, useAppBarVisibility, useShellHidden } from './AppBarVisibility';
+import { useRef } from 'react';
+import { type View } from 'react-native';
+import Animated, { useAnimatedStyle } from 'react-native-reanimated';
+import { APP_BAR_SCRIM_HEIGHT, useAppBarVisibility, useShellHidden } from './AppBarVisibility';
 import { useTheme } from '../theme/ThemeContext';
 
 /**
@@ -33,7 +35,6 @@ import { useTheme } from '../theme/ThemeContext';
 // the extra 24 was buying was a ramp starting above the bar — visible only as a haze
 // on the row above it, which at STRENGTH 0.5 was not doing enough to pay for reaching
 // that far up the screen.
-const SCRIM_HEIGHT = 72;
 
 // Under the bar (50) and over the routes, which set none. The fade is the bar's
 // backdrop; it must never be drawn on top of the thing it is backing.
@@ -59,7 +60,8 @@ const STRENGTH = 0.8;
 const SOLID_AT = 0.7;
 
 const AppBarScrim = () => {
-  const { hidden } = useAppBarVisibility();
+  const { visible, scrimBounds } = useAppBarVisibility();
+  const view = useRef<View>(null);
   const { hidden: shellHidden } = useShellHidden();
   const { colors, scheme } = useTheme();
   const scrimColor = scheme === 'dark' ? colors.canvas : colors.surface;
@@ -68,7 +70,7 @@ const AppBarScrim = () => {
   // veiling content for nothing — the whole point of the bar sliding off is to hand
   // that strip of screen back, and a fade left behind would take half of it again.
   const fade = useAnimatedStyle(() => ({
-    opacity: withTiming((1 - hidden.get()) * STRENGTH, HIDE),
+    opacity: visible.get() * STRENGTH,
   }));
 
   // And it leaves entirely where the bar never appears. This is a page-coloured fade with a
@@ -83,13 +85,18 @@ const AppBarScrim = () => {
   if (shellHidden) return null;
 
   return (
-    // pointerEvents="none" is load-bearing: this covers the bottom 160px of every
-    // screen, and without it the scrim would swallow every tap aimed at the last row
-    // of a list — including the one row a captain is most likely to be reaching for.
+    // Tap suppression belongs to the content ancestor, where native ScrollViews
+    // can still take over a drag. A touchable sibling overlay would block those
+    // scroll gestures along with taps.
     <Animated.View
+      ref={view}
       pointerEvents="none"
+      // Match GestureResponderEvent.pageY; window coordinates subtract Android insets.
+      onLayout={() => view.current?.measure((_x, _y, _width, height, _pageX, pageY) => {
+        scrimBounds.current = { top: pageY, bottom: pageY + height };
+      })}
       style={[
-        { position: 'absolute', left: 0, right: 0, bottom: 0, height: SCRIM_HEIGHT, zIndex: SCRIM_Z },
+        { position: 'absolute', left: 0, right: 0, bottom: 0, height: APP_BAR_SCRIM_HEIGHT, zIndex: SCRIM_Z },
         fade,
       ]}
     >

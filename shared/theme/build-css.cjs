@@ -21,6 +21,7 @@ const tokens = require('./tokens.cjs');
 
 const OUT = path.resolve(__dirname, '../../frontend/src/theme.generated.css');
 const APP_OUT = path.resolve(__dirname, '../../driver-app/global.css');
+const PALETTE_OUT = path.resolve(__dirname, '../../theme-exports/palette.final.js');
 
 /** Generic families are keywords and must not be quoted; real names are. */
 const GENERIC_FAMILIES = new Set([
@@ -55,6 +56,13 @@ const themeBlock = () => {
     lines.push(decl(`--color-${name}`, value));
   }
 
+  // CSS motion tokens are emitted only for the website. Native consumers can
+  // use the numeric shared values without adding CSS easing to NativeWind.
+  for (const [name, { durationMs, easing }] of Object.entries(tokens.motion)) {
+    lines.push(decl(`--duration-${name}`, `${durationMs}ms`));
+    lines.push(decl(`--ease-${name}`, `cubic-bezier(${easing.join(', ')})`));
+  }
+
   // Tailwind v4 spells a size's paired values as --text-<name>--<property>.
   // Size and line height convert to rem; letterSpacing is already relative (em).
   for (const [name, { size, lineHeight, letterSpacing }] of Object.entries(tokens.fontSize)) {
@@ -67,8 +75,40 @@ const themeBlock = () => {
 };
 
 const rootBlock = () => {
-  const lines = Object.entries(tokens.surfaces).map(([name, value]) => decl(`--${name}`, value));
+  const lines = [
+    ...Object.entries(tokens.surfaces).map(([name, value]) => decl(`--${name}`, value)),
+    ...Object.entries(tokens.rideChrome).map(([name, value]) => decl(`--ride-${name.replace(/[A-Z]/g, c => '-' + c.toLowerCase())}`, value)),
+  ];
   return `:root {\n${lines.join('\n')}\n}`;
+};
+
+const schemeBlock = (scheme) => {
+  const values = tokens.schemes[scheme];
+  const dark = scheme === 'dark';
+  const palette = tokens.approvedPalette;
+  const names = { surfaceRaised: 'raised', borderUi: 'border' };
+  const variables = Object.fromEntries(Object.entries(values).map(([key, value]) => [
+    names[key] || key.replace(/[A-Z]/g, c => '-' + c.toLowerCase()), value,
+  ]));
+  Object.assign(variables, {
+    primary: dark ? tokens.colors.primary : tokens.colors['primary-light'],
+    'on-primary': '#FFFFFF',
+    'tone-primary': palette[dark ? 'tone.0.dark' : 'brand.10'],
+    'tone-teal': palette[dark ? 'tone.1.dark' : 'brand.11'],
+    'tone-violet': palette[dark ? 'tone.2.dark' : 'brand.12'],
+    'tone-sand': palette[dark ? 'tone.3.dark' : 'brand.13'],
+    'status-success': palette[dark ? 'status.success.dark' : 'status.success'],
+    'status-danger': tokens.colors[dark ? 'negative-light' : 'negative'],
+    'status-warning': palette[dark ? 'status.warning.dark' : 'status.warning'],
+    'status-info': tokens.colors[dark ? 'info-light' : 'info'],
+    'input-border': dark ? 'rgba(255,255,255,0.3)' : values.borderUi,
+    'input-placeholder': dark ? 'rgba(255,255,255,0.42)' : values.inkMuted,
+  });
+  for (const role of ['border', 'input-border', 'input-background', 'lookup-background', 'focus-border', 'disabled-background', 'disabled-border']) {
+    variables[`responsibility-${role}`] = palette[`responsibility-review.${role}.${scheme}`];
+  }
+  // A scoped panel can follow the account theme inside a legacy marketing page.
+  return `:root[data-theme="${scheme}"],\n[data-theme-scope="${scheme}"] {\n    color-scheme: ${scheme};\n${Object.entries(variables).map(([key, value]) => decl(`--${key}`, value)).join('\n')}\n}`;
 };
 
 const BANNER = [
@@ -83,6 +123,10 @@ const css = [
   '',
   '/* Theme colors (dark is the default) */',
   rootBlock(),
+  '',
+  schemeBlock('light'),
+  '',
+  schemeBlock('dark'),
   '',
 ].join('\n');
 
@@ -102,5 +146,6 @@ const appCss = [
 
 fs.writeFileSync(OUT, css);
 fs.writeFileSync(APP_OUT, appCss);
+fs.writeFileSync(PALETTE_OUT, `/* Generated from shared/theme/final-palette.json. */\nwindow.rcsApprovedPalette = ${JSON.stringify(tokens.approvedPalette, null, 2)};\n`);
 console.log(`theme -> ${path.relative(process.cwd(), OUT)}`);
 console.log(`theme -> ${path.relative(process.cwd(), APP_OUT)}`);

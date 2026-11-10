@@ -9,7 +9,8 @@ import Button from "../components/ui/Button";
 import InlineError from "../components/ui/InlineError";
 import { useApi } from "../hooks/useApi";
 import Icon from '@mdi/react';
-import { mdiAccount, mdiKeyboardBackspace } from '@mdi/js';
+import { mdiAccount } from '@mdi/js';
+import AuthHeader from "../components/ui/AuthHeader";
 import { useData } from "../hooks/useData";
 import { useOtpClipboard } from "../hooks/useOtpClipboard";
 import { useWebsiteCopy } from "../hooks/useWebsiteCopy";
@@ -456,37 +457,26 @@ const SignUpPage = () => {
   });
 
   return (
-    <div className="relative text-center flex justify-center items-center w-[100vw] h-[100dvh] bg-immersive">
-        <div className="absolute left-3 right-3 top-3 z-10 flex h-12 items-center justify-center">
-            <button
-                type="button"
-                aria-label="Back"
-                onClick={back}
-                className="absolute left-0 flex h-12 w-12 cursor-pointer items-center justify-center rounded-full bg-[var(--input-background)] text-[var(--text)] transition-opacity duration-300 hover:opacity-80"
-            >
-                <Icon path={mdiKeyboardBackspace} size={1.2} />
-            </button>
-            <p className="pointer-events-none text-xl font-normal text-[var(--text)]">
-                <span className="font-semibold">RCS</span> travels
-            </p>
-        </div>
+    <div className="relative text-center flex justify-center items-start w-[100vw] h-[100dvh] overflow-y-auto bg-immersive">
+        <AuthHeader onBack={back} />
         {/* The session may be active while finalizing — keep the form so the
             "already logged in" screen doesn't flash mid-signup. */}
         { isSignedIn && !loading && !(isOtp && verdict === "pass")
         ?
-        <div className="flex flex-col justify-center items-center">
+        <div className="self-center flex flex-col justify-center items-center">
           <h2 className="font-bold text-[var(--text)]">{dc("You are already") + " "}<br />{" " + dc("logged in.")}</h2>
           <Button
             onClick={() => navigate('/')}
             prop={{
               type: "button",
+              size: "action",
             }}
-            className="scale-[1] sm:scale-[1.3] mt-6 sm:mt-9"
+            className="mt-6 sm:mt-9"
           >{dc("Back")}</Button>
         </div>
         :
           <form
-            className="flex flex-col justify-start sm:justify-center h-full pt-24 pb-15 items-start gap-5 sm:gap-7 max-sm:w-[86vw]"
+            className="flex shrink-0 flex-col justify-start sm:justify-center min-h-full pt-24 pb-15 items-start gap-6 sm:gap-8 max-sm:w-[86vw]"
             noValidate
             onSubmit={isUsername
               ? handleUsernameSubmit
@@ -496,7 +486,7 @@ const SignUpPage = () => {
                   ? (e) => { e.preventDefault(); continueWithExistingAccount(); }
                   : handleOTPSubmit}
           >
-            <div className={`w-full flex flex-col justify-center items-start text-left gap-1 ${isOtp ? "sm:items-start sm:text-left" : "sm:items-center sm:text-center sm:gap-3"}`}>
+            <div className={`w-full flex flex-col justify-center items-start text-left gap-2 ${isOtp ? "sm:items-start sm:text-left" : "sm:items-center sm:text-center"}`}>
               <h2 className="font-bold text-[var(--text)]">
                 {isUsername
                   ? <>{tr("Enter your name.")}</>
@@ -516,11 +506,11 @@ const SignUpPage = () => {
                   : <>{tr("Enter the 6-digit OTP we sent to")} <br/> <span className="text-[var(--text)]">{phoneDisplay}</span></>}
               </p>
             </div>
-            <div className={`flex flex-col justify-center items-start ${isOtp ? "sm:items-start" : "sm:items-center"}`}>
+            <div className={`flex max-sm:w-full flex-col justify-center items-start gap-4 sm:gap-6 ${isOtp ? "sm:items-start" : "sm:items-center"}`}>
 
               {isOtp
-                ? <div className="flex flex-col justify-center items-start">
-                  <div className="relative flex justify-center items-center gap-2">
+                ? <div className="flex flex-col justify-center items-start gap-2">
+                  <div className="relative flex w-[86vw] max-w-[328px] justify-center items-center gap-2">
                   {Array.from({ length: OTP_LENGTH }).map((_, i) => {
                     return (
                       <input
@@ -539,9 +529,9 @@ const SignUpPage = () => {
                         readOnly={loading || verdict === "pass"}
                         style={{ "--i": i, transitionDuration: otpSettled ? "600ms" : undefined }}
                         className={`
-                        relative flex justify-center text-center items-center font-medium text-2xl my-1
+                        relative flex min-w-0 justify-center text-center items-center font-medium text-2xl
                         ${otpSettled ? "text-transparent placeholder-transparent" : "text-ink"}
-                        p-0 w-[46px] h-[46px] rounded-xl transition-all duration-300 ease-in-out
+                        p-0 w-12 h-12 rounded-xl transition-all duration-300 ease-in-out
                         ${otpSettled && `animate-otp-box-in ${i === 0 && `${verdict === "fail" ? "bg-red-600!" : "bg-green-600!"}`}`}
                         ${otpFieldError
                             ? "border border-negative/50 bg-negative/10 focus:border-negative/80"
@@ -561,10 +551,10 @@ const SignUpPage = () => {
                       </span>
                     )}
                   </div>
-                  <InlineError className="mt-1 w-full">{otpFieldError ? error : null}</InlineError>
+                  <InlineError className="w-full">{otpFieldError ? error : null}</InlineError>
                   <p
                     aria-live="polite"
-                    className="text-sm text-left text-[var(--text-muted)] mt-2 mb-3"
+                    className="text-sm text-left text-[var(--text-muted)]"
                   >
                     {loading
                       ? tr("Verifying...")
@@ -590,7 +580,7 @@ const SignUpPage = () => {
                       <p className="mt-1 text-sm text-[var(--text-muted)]">{maskedPhone}</p>
                     </div>
                   </div>
-                : <div className="w-[290px] max-sm:w-full">
+                : <div className="flex w-[377px] max-w-full max-sm:w-full flex-col gap-2">
                     <Input
                       prop={{
                         type: isUsername ? "text" : "tel",
@@ -603,16 +593,19 @@ const SignUpPage = () => {
                         onChangeFn: isUsername ? handleUsernameChange : handlePhoneChange,
                         error: isUsername ? usernameFieldError : phoneFieldError,
                       }}
-                      className="scale-[1] sm:scale-[1.3] mb-2"
+                      className="my-0!"
                     />
-                    <InlineError className="mt-1">
+                    <InlineError>
                       {(usernameFieldError || phoneFieldError) ? error : null}
                     </InlineError>
                   </div>}
 
+              <div className="flex max-w-full flex-col items-start gap-2">
               <Button
                 prop={{
                   type: "submit",
+                  size: "action",
+                  loading,
                   disabled: isUsername
                     ? loading || username.trim().length < 2
                     : isPhone
@@ -621,11 +614,7 @@ const SignUpPage = () => {
                     ? loading
                     : loading || verdict === "fail" || (!otpReadyToContinue && otp.length !== OTP_LENGTH),
                 }}
-                className={isOtp
-                  ? "mt-3"
-                  : isExisting
-                  ? "scale-[1] sm:scale-[1.3] mt-4 sm:mt-6"
-                  : "scale-[1] sm:scale-[1.3] mt-1 sm:mt-5"}
+                className="my-0!"
               >
                 {isUsername
                   ? (loading ? tr("Checking...") : tr("Continue"))
@@ -635,12 +624,13 @@ const SignUpPage = () => {
                   ? (loading ? tr("Sending OTP...") : tr("Continue with this account"))
                   : (loading || verdict ? tr("Continue") : tr("Submit"))}
               </Button>
-              <InlineError className={`mt-2 ${isOtp || isExisting ? "w-full" : "w-[290px] max-sm:w-full"}`}>
+              <InlineError className={isOtp || isExisting ? "w-full" : "w-[377px] max-w-full max-sm:w-full"}>
                 {formError}
               </InlineError>
+              </div>
 
               {isExisting && (
-                <p className="mt-3 text-sm text-[var(--text-muted)]">
+                <p className="text-sm text-[var(--text-muted)]">
                   {tr("Not your account?")} {" "}
                   <button
                     type="button"
@@ -653,7 +643,7 @@ const SignUpPage = () => {
               )}
 
               {!isOtp && !isExisting && (
-                <p className="mt-3 sm:mt-6 text-sm text-[var(--text-muted)] text-left sm:text-center">
+                <p className="text-sm text-[var(--text-muted)] text-left sm:text-center">
                   <span className="text-[var(--text)]">{tr("Have an account?")}</span>{" "}
                   <button
                     type="button"
@@ -663,7 +653,7 @@ const SignUpPage = () => {
                 </p>
               )}
               {isOtp && (
-                <p className={`mt-3 text-sm text-[var(--text-muted)] text-left ${busy ? "invisible" : ""}`}>
+                <p className={`text-sm text-[var(--text-muted)] text-left ${busy ? "invisible" : ""}`}>
                   <span className="text-[var(--text-muted)]">{tr("Didn't get it or expired?")}</span>{" "}
                   {resending
                     ? tr("Sending...")
@@ -678,11 +668,11 @@ const SignUpPage = () => {
               )}
 
               {isUsername && (
-                <p className="text-[var(--text-muted)] text-sm mt-3 sm:mt-5 text-left sm:text-center">{tr("Your name can't be changed later, so we suggest using your full name.")}</p>
+                <p className="text-[var(--text-muted)] text-sm text-left sm:text-center">{tr("Your name can't be changed later, so we suggest using your full name.")}</p>
               )}
 
               {isPhone && (
-                <p className="text-[var(--text-muted)] text-sm mt-3 sm:mt-5 max-sm:max-w-[min(86vw,100%)] sm:max-w-[340px] text-left sm:text-center">
+                <p className="text-[var(--text-muted)] text-sm max-sm:max-w-[min(86vw,100%)] sm:max-w-[340px] text-left sm:text-center">
                   {tr("Your number can't be changed later. We'll send an OTP by text or WhatsApp. Please review the draft legal documents below before continuing.")}{" "}
                   <Link className="text-[var(--text)] underline underline-offset-2" to="/terms">{tr("Terms of Service")}</Link>
                   <span aria-hidden="true"> · </span>

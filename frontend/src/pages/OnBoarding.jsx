@@ -2,7 +2,9 @@ import { useTranslation as useCopyLanguage } from "react-i18next";
 import { websiteCopy as dc } from "../i18nCopy";
 import mobileBackgroundIllustration from "../assets/Mobile.webp";
 import laptopBackgroundIllustration from "../assets/Laptop.webp";
-import Button from "../components/ui/Button";
+import Button, { ActionControl } from "../components/ui/Button";
+import PillControl from "../components/ui/PillControl";
+import IconButton from "../components/ui/IconButton";
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import Icon from "@mdi/react";
@@ -19,6 +21,7 @@ import {
   mdiCarClock,
 } from "@mdi/js";
 import Input from "../components/ui/Input";
+import { fieldWidth } from "../components/ui/fieldStyles";
 import { useApi } from "../hooks/useApi";
 import { useViewNavigate } from "../hooks/useViewNavigate";
 import { DateTimeSelector } from "../components/ui/DateTimeSelector";
@@ -40,10 +43,8 @@ import { useWebsiteCopy } from "../hooks/useWebsiteCopy";
 const COL = "w-[min(86vw,100%)] sm:w-[377px]";
 const TITLE = "font-bold text-3xl sm:text-5xl leading-tight";
 const STACK = "gap-6 sm:gap-8";
-// The booking form sits just inside the page rail on phones. Marked important:
-// it has to beat the 86vw default Button and Input carry for every other
-// screen. sm+ is untouched — the components keep their fixed widths there.
-const FORM_W = "max-sm:w-[78vw]!";
+// Match the login/signup field rail at every breakpoint.
+const FORM_W = fieldWidth;
 const ROUTE_FORM_ID = "route-details-form";
 
 const firstAddressSegment = (address) => typeof address === "string"
@@ -161,9 +162,9 @@ export function useAddressSuggestions(value, setValue, setCoords, api, exclusive
     if (cached) {
       setGoogleSuggestions(cached);
       setLookupError(null);
-      open(); // open even at zero rows — the panel says "no matches" itself now
       return;
     }
+    let active = true;
     const timer = setTimeout(async () => {
       let data;
       try {
@@ -172,20 +173,21 @@ export function useAddressSuggestions(value, setValue, setCoords, api, exclusive
         // request() only maps HTTP errors to { error }; a network failure rejects
         data = { error: "network" };
       }
+      // A newer value (including a cleared or selected address) owns the field.
+      // Ignore both stale successes and failures, even after the request started.
+      if (!active) return;
       if (data.error) {
         // errors are not cached — the next keystroke should retry
         setGoogleSuggestions([]);
         setLookupError(dc("Couldn't load suggestions. You can still type the address in full."));
-        open();
         return;
       }
       const suggestions = data.suggestions ?? [];
       cacheRef.current.set(cacheKey, suggestions);
       setLookupError(null);
       setGoogleSuggestions(suggestions);
-      open();
     }, 300);
-    return () => clearTimeout(timer);
+    return () => { active = false; clearTimeout(timer); };
   }, [value]);
 
   async function select(item, keepOpen = false) {
@@ -305,7 +307,7 @@ export const SuggestionDropdown = ({ anim, items, onSelect, actions = [], above 
   const animationClass = anim.closing ? "animate-dropdown-out" : "animate-dropdown";
   const panelClass = inline
     ? `${animationClass} relative z-10 w-full max-w-full bg-transparent`
-    : `${animationClass} absolute z-10 ${above ? "bottom-13 sm:bottom-15 origin-bottom sm:origin-bottom-left" : "top-13 sm:top-15 sm:origin-top-left"} scale-[1] sm:scale-[1.3] max-sm:w-full sm:w-[290px] max-w-full bg-[var(--background-muted)] rounded-[16px] shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)]`;
+    : `${animationClass} absolute z-10 ${above ? "bottom-13 sm:bottom-15 origin-bottom sm:origin-bottom-left" : "top-13 sm:top-15 sm:origin-top-left"} max-sm:w-full sm:w-[377px] max-w-full bg-[var(--background-muted)] rounded-[16px] shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)]`;
 
   // Opening upward: start scrolled to the bottom, where the best matches sit.
   useEffect(() => {
@@ -323,6 +325,7 @@ export const SuggestionDropdown = ({ anim, items, onSelect, actions = [], above 
   return (
     <div
       ref={panelRef}
+      data-address-suggestions
       onMouseDown={(e) => e.preventDefault()}
       className={`${className} ${panelClass} ${inline ? "" : "max-h-[200px] overflow-y-auto scrollbar-inset"}`}
     >
@@ -478,28 +481,20 @@ const TimingChoiceSheet = ({ anim, timing, onSelect, onClose, isMobile }) => {
       className={`relative flex w-full flex-col ${isMobile ? "text-[var(--text)]" : "text-on-strong legacy:text-[var(--text)]"}`}
     >
       {!isMobile && (
-        <button
-          type="button"
-          data-timing-dialog-control
-          onClick={onClose}
-          aria-label={dc("Close timing options")}
-          className="absolute right-0 top-0 z-20 flex size-9 items-center justify-center rounded-full transition-opacity duration-300 hover:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/70"
-        >
-          <Icon path={mdiClose} size={0.8} aria-hidden="true" />
-        </button>
+        <IconButton type="button" data-timing-dialog-control onClick={onClose} aria-label={dc("Close timing options")} className="absolute right-0 top-0 z-20"><Icon path={mdiClose} size={0.8} aria-hidden="true" /></IconButton>
       )}
-      <h2 id="timing-sheet-title" className="mb-4 pr-12 text-xl font-semibold tracking-[-0.02em]">{dc("Choose timing")}</h2>
+      <h2 id="timing-sheet-title" className="mb-4 flex min-h-12 items-center pr-12 text-xl font-semibold tracking-[-0.02em]">{dc("Choose timing")}</h2>
       <div className="flex flex-col gap-2">
         {options.map((option) => {
           const selected = timing === option.value;
           return (
-            <button
+            <ActionControl
               key={option.value}
               type="button"
               data-timing-dialog-control
               aria-pressed={selected}
               onClick={() => onSelect(option.value)}
-              className={`flex min-h-16 w-full items-center gap-3 rounded-2xl bg-[var(--background-muted)] px-3 py-3 text-left text-[var(--text)] outline-primary transition-colors hover:bg-[var(--foreground)]/10 ${isMobile ? "focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary" : "focus-visible:outline-2 focus-visible:outline-offset-2"} ${selected ? (isMobile ? "ring-2 ring-inset ring-primary" : "outline-2") : (isMobile ? "ring-0" : "outline-0")}`}
+              className={`min-h-16 w-full gap-3 rounded-2xl bg-[var(--background-muted)] text-left text-[var(--text)] outline-primary transition-colors hover:bg-[var(--foreground)]/10 ${isMobile ? "focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary" : "focus-visible:outline-2 focus-visible:outline-offset-2"} ${selected ? (isMobile ? "ring-2 ring-inset ring-primary" : "outline-2") : (isMobile ? "ring-0" : "outline-0")}`}
             >
               <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[var(--background-primary)] text-[var(--text)]">
                 <Icon path={option.icon} size={0.95} aria-hidden="true" />
@@ -509,7 +504,7 @@ const TimingChoiceSheet = ({ anim, timing, onSelect, onClose, isMobile }) => {
                 <span className="block text-sm leading-snug text-[var(--text-muted)]">{option.description}</span>
               </span>
               <span className={`size-4 shrink-0 rounded-full border-2 border-[var(--foreground)]/30 ${selected ? "shadow-[inset_0_0_0_3px_var(--background-muted)] bg-primary" : ""}`} aria-hidden="true" />
-            </button>
+            </ActionControl>
           );
         })}
       </div>
@@ -534,19 +529,11 @@ const TimingChoiceSheet = ({ anim, timing, onSelect, onClose, isMobile }) => {
           contentKey={timing}
           className="z-50 flex flex-col px-5 pb-[calc(1.5rem+env(safe-area-inset-bottom))] pt-6 text-left"
         >
-          <button
-            type="button"
-            data-timing-dialog-control
-            onClick={onClose}
-            aria-label={dc("Close timing options")}
-            className="absolute z-20 -top-12 right-4 flex size-9 items-center justify-center rounded-full border border-[var(--foreground)]/30 bg-immersive text-[var(--text)] shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)] transition-opacity duration-300 active:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]/70"
-          >
-            <Icon path={mdiClose} size={0.8} aria-hidden="true" />
-          </button>
+          <IconButton type="button" data-timing-dialog-control onClick={onClose} aria-label={dc("Close timing options")} compact className="absolute z-20 -top-14 right-4"><Icon path={mdiClose} size={0.8} aria-hidden="true" /></IconButton>
           {dialogContent}
         </BackgroundPanel>
       ) : (
-        <div className={`absolute left-1/2 top-1/2 z-50 w-[360px] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-border bg-strong px-5 py-6 text-on-strong shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)] legacy:border-[var(--foreground)]/15 legacy:bg-[var(--background-primary)] legacy:text-[var(--text)] ${anim.closing ? "animate-datetime-out pointer-events-none" : "animate-datetime"} motion-reduce:animate-none`}>
+        <div className={`absolute left-1/2 top-1/2 z-50 max-h-[calc(100dvh-48px)] w-[min(22.5rem,calc(100vw-48px))] -translate-x-1/2 -translate-y-1/2 overflow-y-auto overscroll-contain rounded-2xl border border-border bg-strong px-5 py-6 text-on-strong shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)] legacy:border-[var(--foreground)]/15 legacy:bg-[var(--background-primary)] legacy:text-[var(--text)] ${anim.closing ? "animate-datetime-out pointer-events-none" : "animate-datetime"} motion-reduce:animate-none`}>
           {dialogContent}
         </div>
       )}
@@ -587,7 +574,7 @@ const OUTSTATION_DISTANCE_KM = 200;
 const OnBoarding = ({ bookingStage = false, timingStep = false, highlightRideNow = false, onMapPickerChange }) => {
     useCopyLanguage();
   const tr = useWebsiteCopy();
-  const formWidth = bookingStage ? "max-sm:w-full!" : FORM_W;
+  const formWidth = FORM_W;
   const timing = useData(state => state.timing);
   const setTiming = useData(state => state.setTiming);
   const [expand, setExpand] = useState(false);
@@ -738,6 +725,35 @@ const OnBoarding = ({ bookingStage = false, timingStep = false, highlightRideNow
   const dropInputRef = useRef(null);
   const dropAutoFocusedRef = useRef(false);
   const currentLocationRequested = useRef(false);
+
+  function blurAddressGroup(event, autocomplete) {
+    if (event.currentTarget.contains(event.relatedTarget)) return;
+    if (bookingStage && isMobile) return;
+    setEditingLocation(null);
+    autocomplete.onBlur();
+  }
+
+  function navigateAddressSuggestions(event, autocomplete) {
+    const input = event.currentTarget.querySelector("input");
+    const panel = event.currentTarget.querySelector("[data-address-suggestions]");
+    if (!panel) return;
+    if (event.key === "Escape") {
+      event.preventDefault();
+      input?.focus();
+      autocomplete.onBlur();
+      return;
+    }
+    if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+    const buttons = [...panel.querySelectorAll("button:not(:disabled)")]
+      .filter(button => button.getClientRects().length);
+    const index = buttons.indexOf(event.target);
+    if (!buttons.length || (event.target !== input && index < 0)) return;
+    event.preventDefault();
+    const next = event.target === input
+      ? (event.key === "ArrowDown" ? 0 : buttons.length - 1)
+      : Math.max(0, Math.min(buttons.length - 1, index + (event.key === "ArrowDown" ? 1 : -1)));
+    buttons[next].focus();
+  }
 
   useEffect(() => {
     onMapPickerChange?.(Boolean(mapPickerTarget));
@@ -910,12 +926,10 @@ const OnBoarding = ({ bookingStage = false, timingStep = false, highlightRideNow
     }
     const update = () => {
       const rect = calendarBtnRef.current?.getBoundingClientRect();
-      // Only the left edge is measured: the panel opens to the right of the
-      // button, one gap clear of it, and takes its vertical position from the
-      // viewport rather than the button. origin-left keeps the gap exact — the
-      // 1.2 scale grows rightward, away from the button, instead of straddling
-      // it as a centre origin would.
-      if (rect) setCalendarAnchor({ left: rect.right + 12 });
+      // Keep the actual-size picker inside the viewport when the form is
+      // close to its edge (including landscape tablets).
+      const width = Math.min(330, window.innerWidth - 24);
+      if (rect) setCalendarAnchor({ left: Math.max(12, Math.min(rect.right + 12, window.innerWidth - width - 12)) });
     };
     update();
     window.addEventListener("resize", update);
@@ -1068,11 +1082,13 @@ const OnBoarding = ({ bookingStage = false, timingStep = false, highlightRideNow
     })();
 
   const priceAction = (
-    <div className={`flex w-full shrink-0 flex-col gap-2 sm:items-start sm:gap-5 ${bookingStage ? "items-start" : "items-center"}`}>
+    <div className={`flex w-full shrink-0 flex-col gap-4 sm:items-start sm:gap-6 ${bookingStage ? "items-start" : "items-center"}`}>
       <Button
         onClick={timingStep ? handleTimingContinue : undefined}
         prop={{
           type: timingStep ? "button" : "submit",
+          size: "action",
+          loading,
           form: timingStep ? undefined : ROUTE_FORM_ID,
           disabled:
             loading ||
@@ -1080,7 +1096,7 @@ const OnBoarding = ({ bookingStage = false, timingStep = false, highlightRideNow
             !pickupLocation?.trim() ||
             !dropLocation?.trim(),
         }}
-        className={`scale-[1] sm:scale-[1.3] sm:origin-left ${formWidth}`}
+        className={`my-0! ${formWidth}`}
       >
         {loading ? tr("Loading...") : timingStep ? tr("See prices") : timing === "Schedule" ? tr("Set date & time") : tr("See prices")}
       </Button>
@@ -1098,7 +1114,7 @@ const OnBoarding = ({ bookingStage = false, timingStep = false, highlightRideNow
   );
 
   return (
-    <div className={`relative flex h-[100dvh] flex-col items-center sm:flex-row sm:justify-center sm:px-[9%] md:px-[5%] lg:justify-between xl:px-[13%] ${bookingStage ? "overflow-hidden bg-immersive" : "bg-[var(--background-primary)] sm:pt-16"}`}>
+    <div className={`relative flex h-[100dvh] flex-col items-center sm:flex-row sm:justify-center sm:px-[9%] md:px-[5%] lg:justify-between xl:px-[13%] ${bookingStage ? "overflow-hidden sm:overflow-y-auto bg-immersive" : "sm:overflow-y-auto bg-[var(--background-primary)] sm:pt-16"}`}>
       <RoutePanel
         key={mapPickerTarget ? `map-${mapPickerTarget}` : timingStep ? "timing" : "details"}
         sheet={bookingStage}
@@ -1109,23 +1125,16 @@ const OnBoarding = ({ bookingStage = false, timingStep = false, highlightRideNow
         expandedTopGap={0}
         lockExpanded={timingStep}
         onSnapChange={setSheetSnap}
-        className={`z-10 flex h-[inherit] w-full max-w-[500px] flex-col items-center py-8 sm:h-fit sm:justify-center lg:items-start ${bookingStage ? mapPickerTarget ? "max-sm:h-auto max-sm:items-start max-sm:justify-start max-sm:px-[7vw] max-sm:py-6" : "max-sm:items-start max-sm:justify-start max-sm:px-[7vw] max-[359px]:px-2! max-sm:py-6 max-sm:pb-0" : "justify-end"}`}
+        className={`z-10 flex h-[inherit] w-full max-w-[500px] ${!timingStep && !mapPickerTarget ? "max-sm:max-w-none" : ""} flex-col items-center py-8 sm:my-auto sm:h-fit sm:justify-center lg:items-start ${bookingStage ? mapPickerTarget ? "max-sm:h-auto max-sm:items-start max-sm:justify-start max-sm:px-[7vw] max-sm:py-6" : "max-sm:items-start max-sm:justify-start max-sm:px-[7vw] max-[359px]:px-2! max-sm:py-6 max-sm:pb-0" : "justify-end"}`}
       >
         {bookingStage && !mapPickerTarget && (!isMobile || timingStep || sheetSnap !== "expanded") && (
-          <button
-            type="button"
-            onClick={() => timingStep
+          <IconButton type="button" onClick={() => timingStep
               ? navigate("/book", { replace: true })
-              : navigate("/")}
-            aria-label={timingStep ? tr("Back to route details") : tr("Back to home")}
-            className="absolute -top-12 left-4 z-20 my-1 flex h-9 cursor-pointer items-center justify-center rounded-full border border-[var(--foreground)]/30 bg-immersive px-3 text-[var(--text)] shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)] transition-opacity duration-300 hover:opacity-100 active:opacity-70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)] sm:hidden"
-          >
-            <Icon path={mdiKeyboardBackspace} size={1.2} aria-hidden="true" />
-          </button>
+              : navigate("/")} aria-label={timingStep ? tr("Back to route details") : tr("Back to home")} compact className="absolute -top-12 left-4 z-20 my-1 flex sm:hidden"><Icon path={mdiKeyboardBackspace} size={1.2} aria-hidden="true" /></IconButton>
         )}
         {mapPickerTarget
           ? <div className={`flex w-full flex-col items-start gap-4 ${COL}`}>
-              <div className="flex w-full flex-col items-start gap-1">
+              <div className="flex w-full flex-col items-start gap-2">
                 <h1 className={`text-left ${TITLE}`}>{tr("Confirm")} {mapPickerTarget === "pickup" ? tr("pickup") : tr("drop")} {tr("location")}</h1>
                 <p className="text-left text-base leading-snug text-[var(--text-muted)] sm:text-lg">
                   {tr("Move the map until the pin is exactly where you want it.")}
@@ -1134,15 +1143,15 @@ const OnBoarding = ({ bookingStage = false, timingStep = false, highlightRideNow
               {mapPickerError && <p className="text-left text-sm leading-snug text-red-400">{mapPickerError}</p>}
               <Button
                 onClick={confirmMapPicker}
-                prop={{ type: "button", width: "100%", disabled: mapPickerLoading || !mapPickerCoords }}
+                prop={{ type: "button", size: "action", width: "100%", loading: mapPickerLoading, disabled: !mapPickerCoords }}
                 className="my-0! w-full"
               >
-                <span className="text-base sm:text-lg">{mapPickerLoading ? tr("Finding address...") : dc("{{value0}} {{value1}} {{value2}}", {value0: (tr("Confirm")), value1: (mapPickerTarget === "pickup" ? tr("pickup") : tr("drop")), value2: (tr("location"))})}</span>
+                <span>{mapPickerLoading ? tr("Finding address...") : dc("{{value0}} {{value1}} {{value2}}", {value0: (tr("Confirm")), value1: (mapPickerTarget === "pickup" ? tr("pickup") : tr("drop")), value2: (tr("location"))})}</span>
               </Button>
             </div>
-          : <div className={`flex flex-col text-center lg:text-left justify-center items-center lg:items-start gap-1 sm:gap-5 ${bookingStage ? "max-sm:min-h-0 max-sm:w-full max-sm:flex-1 max-sm:items-start max-sm:justify-start max-sm:gap-3 max-sm:text-left" : ""}`}>
+          : <div className={`flex flex-col text-center lg:text-left justify-center items-center lg:items-start gap-6 sm:gap-8 ${bookingStage ? `max-sm:min-h-0 ${timingStep ? "max-sm:w-full" : "max-sm:w-[86vw] max-sm:mx-auto"} max-sm:flex-1 max-sm:items-start max-sm:justify-start max-sm:text-left` : ""}`}>
             {timingStep ? (
-              <section className={`flex w-full min-h-0 flex-1 flex-col items-center gap-1 sm:w-[377px] sm:flex-none sm:items-start sm:gap-3`}>
+              <section className={`flex w-full min-h-0 flex-1 flex-col items-center gap-6 sm:w-[377px] sm:flex-none sm:items-start sm:gap-8`}>
                 <div className="w-full shrink-0">
                   <h1 className="text-left text-3xl font-bold leading-tight sm:text-4xl">{tr("Set date and time")}</h1>
                 </div>
@@ -1168,24 +1177,25 @@ const OnBoarding = ({ bookingStage = false, timingStep = false, highlightRideNow
               </h1>
               <form
                 id={ROUTE_FORM_ID}
-                className={`mt-1 flex flex-col items-start gap-1 sm:mt-1 sm:w-[377px] sm:justify-center sm:gap-5 ${bookingStage ? "max-sm:min-h-0 max-sm:w-full max-sm:flex-1 max-sm:items-start max-sm:overflow-clip" : "justify-center"}`}
+                data-sheet-scroll={bookingStage && isMobile ? "" : undefined}
+                className={`flex flex-col items-start gap-4 sm:w-[377px] sm:justify-center sm:gap-6 ${bookingStage ? "max-sm:min-h-0 max-sm:w-full max-sm:flex-1 max-sm:items-start max-sm:overflow-y-auto max-sm:overscroll-contain scrollbar-inset" : "justify-center"}`}
                 noValidate
                 onSubmit={handleSubmit}
               >
-                <div className="flex w-full shrink-0 flex-col items-start gap-2 sm:contents">
+                <div className="flex w-full shrink-0 flex-col items-start gap-3">
                 {error && (
                   <p className={`${error ? "opacity-[1]" : "opacity-[0]"} relative text-red-400 left-1/2 -translate-x-1/2 sm:left-0 sm:translate-x-0 text-sm`}>
                     {dc(error)}
                   </p>
                 )}
-                <div className={`flex items-center justify-start gap-1 max-[335px]:flex-wrap max-[335px]:gap-y-2 ${formWidth} sm:w-[377px]`}>
-                  <div className="-mr-5 flex shrink-0 origin-left scale-[0.9] gap-1 rounded-full bg-[var(--background-muted)] p-1.5 sm:gap-2 [&>*]:cursor-pointer [&>*]:rounded-full [&>*]:px-3 [&>*]:py-1 [&>*]:text-base [&>*]:sm:px-3 [&>*]:sm:py-2 [&>*]:sm:text-xl">
-                    <button type="button" aria-pressed={!isRoundTrip} onClick={() => setIsRoundTrip(false)} className={`transition-colors duration-300 text-[var(--text)] ${isRoundTrip ? "" : "bg-primary"}`}>
+                <div className={`flex flex-wrap items-center justify-start gap-3 ${formWidth} sm:w-[377px]`}>
+                  <div className="rcs-pill-group min-w-0 max-w-full">
+                    <PillControl type="button" aria-pressed={!isRoundTrip} onClick={() => setIsRoundTrip(false)} faceClassName={`text-[var(--text)] ${isRoundTrip ? "" : "bg-primary"}`}>
                       {tr("One way")}
-                    </button>
-                    <button type="button" aria-pressed={isRoundTrip} onClick={() => setIsRoundTrip(true)} className={`transition-colors duration-300 text-[var(--text)] ${isRoundTrip ? "bg-primary" : ""}`}>
+                    </PillControl>
+                    <PillControl type="button" aria-pressed={isRoundTrip} onClick={() => setIsRoundTrip(true)} faceClassName={`text-[var(--text)] ${isRoundTrip ? "bg-primary" : ""}`}>
                       {tr("Round trip")}
-                    </button>
+                    </PillControl>
                   </div>
 
                   <div className="relative shrink-0">
@@ -1197,6 +1207,8 @@ const OnBoarding = ({ bookingStage = false, timingStep = false, highlightRideNow
                       }}
                       prop={{
                         type: "button",
+                        size: "pill",
+                        width: "auto",
                         "aria-haspopup": "dialog",
                         "aria-expanded": expand,
                         variant: "input",
@@ -1205,19 +1217,18 @@ const OnBoarding = ({ bookingStage = false, timingStep = false, highlightRideNow
                         bg: highlightRideNow && timing === "Now"
                           ? "var(--foreground)"
                           : expand ? "var(--background-primary)" : "var(--background-muted)",
+                        faceClassName: highlightRideNow && timing === "Now" ? "text-[var(--text-foreground)]" : "text-[var(--text)]",
                       }}
-                      className={`relative my-0! origin-left scale-[0.9] rounded-full px-1.5 sm:p-1.5 sm:text-xl sm:[&>button]:py-1.5 ${highlightRideNow && timing === "Now"
-                        ? "text-[var(--text-foreground)]! hover:bg-[var(--foreground)]! active:bg-[var(--foreground)]/90!"
-                        : ""
-                      }`}
+                      className="relative my-0!"
                     >
                       <div className="flex w-full items-center justify-center gap-1.5 whitespace-nowrap">
-                        <Icon path={mdiClockTimeFourOutline} size={isMobile ? 1 : 1.1} className="ml-1"/>
+                        <Icon path={mdiClockTimeFourOutline} size={2 / 3} aria-hidden="true" />
                         {timing === "Schedule" ? tr("Later") : tr(timing)}
                         <Icon
                           className="opacity-70 transition-opacity duration-300 hover:opacity-100"
                           path={mdiChevronDown}
-                          size={isMobile ? 0.8 : 0.9}
+                          size={2 / 3}
+                          aria-hidden="true"
                           style={{ transform: expand ? "rotate(180deg)" : "rotate(0deg)" }}
                         />
                       </div>
@@ -1225,11 +1236,19 @@ const OnBoarding = ({ bookingStage = false, timingStep = false, highlightRideNow
 
                   </div>
                 </div>
-                <div className={`relative ${bookingStage ? "max-sm:w-full" : ""}`}>
+                {/* The pill target has 4px below its face: 12px here leaves a
+                    visible 16px gap. Address borders use their own 16px stack. */}
+                <div className="flex w-full flex-col gap-4">
+                <div
+                  className={`relative ${bookingStage ? "max-sm:w-full" : ""}`}
+                  onBlur={event => blurAddressGroup(event, pickupAutocomplete)}
+                  onKeyDown={event => navigateAddressSuggestions(event, pickupAutocomplete)}
+                >
                   <Input
                     prop={{
                       type: "text",
                       id: "pickup-location",
+                      bg: "var(--input-background)",
                       name: "pickup-location",
                       placeholder: tr("Pickup Location"),
                       value: pickupAutocomplete.locatingCurrentLocation
@@ -1239,6 +1258,7 @@ const OnBoarding = ({ bookingStage = false, timingStep = false, highlightRideNow
                           : firstAddressSegment(pickupLocation),
                       onChangeFn: (value) => {
                         if (pickupAutocomplete.locatingCurrentLocation) return;
+                        pickupAutocomplete.onFocus();
                         setSavedSuggestionTarget(null);
                         setPickup(value);
                         if (error === "No Pickup Location") {
@@ -1255,13 +1275,8 @@ const OnBoarding = ({ bookingStage = false, timingStep = false, highlightRideNow
                         setActiveSuggestion("pickup");
                         pickupAutocomplete.onFocus();
                       },
-                      onBlurFn: () => {
-                        if (bookingStage && isMobile) return;
-                        setEditingLocation(null);
-                        pickupAutocomplete.onBlur();
-                      },
                     }}
-                    className={`scale-[1] sm:scale-[1.3] sm:origin-left ${formWidth}`}
+                    className={`my-0! sm:w-[377px] ${formWidth}`}
                     leading={
                       pickupAutocomplete.locatingCurrentLocation ? (
                         <Icon path={mdiCrosshairs} className="-ml-0.5 text-black" size={0.75} aria-hidden="true" />
@@ -1301,17 +1316,23 @@ const OnBoarding = ({ bookingStage = false, timingStep = false, highlightRideNow
                 </div>
 
 
-                <div className={`relative ${bookingStage ? "max-sm:w-full" : ""}`}>
+                <div
+                  className={`relative ${bookingStage ? "max-sm:w-full" : ""}`}
+                  onBlur={event => blurAddressGroup(event, dropAutocomplete)}
+                  onKeyDown={event => navigateAddressSuggestions(event, dropAutocomplete)}
+                >
                   <Input
                     prop={{
                       type: "text",
                       id: "drop-location",
+                      bg: "var(--input-background)",
                       name: "drop-location",
                       placeholder: tr("Drop Location"),
                       value: editingLocation === "drop"
                         ? dropLocation
                         : firstAddressSegment(dropLocation),
                       onChangeFn: (value) => {
+                        dropAutocomplete.onFocus();
                         setSavedSuggestionTarget(null);
                         setDrop(value);
                         if (error === "No Drop Location") {
@@ -1326,13 +1347,8 @@ const OnBoarding = ({ bookingStage = false, timingStep = false, highlightRideNow
                         setActiveSuggestion("drop");
                         dropAutocomplete.onFocus();
                       },
-                      onBlurFn: () => {
-                        if (bookingStage && isMobile) return;
-                        setEditingLocation(null);
-                        dropAutocomplete.onBlur();
-                      },
                     }}
-                    className={`scale-[1] sm:scale-[1.3] sm:origin-left ${formWidth}`}
+                    className={`my-0! sm:w-[377px] ${formWidth}`}
                     leading={
                       <div className="w-3 h-3 flex justify-center items-center rounded-full bg-primary relative">
                         <div className="w-1.5 h-1.5 rounded-full bg-[var(--background)]" />
@@ -1368,7 +1384,7 @@ const OnBoarding = ({ bookingStage = false, timingStep = false, highlightRideNow
                 </div>
 
                 {!bookingStage && timing === "Schedule" && (<div className="relative flex w-full flex-col items-start">
-                  <div className={`flex items-center justify-start sm:origin-left sm:scale-[1.3] sm:w-[290px] ${formWidth}`}>
+                  <div className={`flex items-center justify-start sm:w-[377px] ${formWidth}`}>
                     <Button
                       containerRef={calendarBtnRef}
                       onClick={() => {
@@ -1379,10 +1395,12 @@ const OnBoarding = ({ bookingStage = false, timingStep = false, highlightRideNow
                       }
                       prop={{
                         variant: "input",
+                        size: "action",
+                        width: "auto",
                         bg: expandCalendar ? "var(--background-primary)" : "var(--background-muted)",
                         error: error === "No Scheduled Time",
                       }}
-                      className="relative px-2 pr-3"
+                      className="relative my-0!"
                     >
                       <div
 
@@ -1415,13 +1433,11 @@ const OnBoarding = ({ bookingStage = false, timingStep = false, highlightRideNow
                       comes from calendarAnchor: beside the button from sm up,
                       centred on the viewport on phones. */}
                   {calendarDropdown.mounted && createPortal(
-                    <Button
-                      prop={{
-                        variant: "dropdown",
-                        width: "330px",
-                      }}
-                      className={`block ${calendarDropdown.closing ? "animate-datetime-out" : "animate-datetime"
-                        } fixed scale-[1] sm:scale-[1.2] z-[105] top-1/2 -translate-y-1/2 ${calendarAnchor
+                    <section
+                      role="dialog"
+                      aria-label={tr("Choose date and time")}
+                      className={`block max-h-[calc(100dvh-24px)] w-[min(330px,calc(100vw-24px))] overflow-y-auto overscroll-contain rounded-2xl border border-border bg-surface px-4 text-ink shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)] ${calendarDropdown.closing ? "animate-datetime-out" : "animate-datetime"
+                        } motion-reduce:animate-none fixed z-[105] top-1/2 -translate-y-1/2 ${calendarAnchor
                           ? "origin-left"
                           : "left-1/2 -translate-x-1/2"
                         } active:opacity-[1] hover:opacity-[1]`}
@@ -1443,14 +1459,15 @@ const OnBoarding = ({ bookingStage = false, timingStep = false, highlightRideNow
                           onConfirm={() => setExpandCalendar(false)}
                         />
                       </div>
-                    </Button>,
+                    </section>,
                     document.body,
                   )}
                 </div>)}
                 </div>
+                </div>
 
                 {bookingStage && isMobile && (
-                  <div data-sheet-scroll className="min-h-0 w-full flex-1 overflow-y-auto overscroll-contain scrollbar-inset" aria-live="polite">
+                  <div className="w-full shrink-0" aria-live="polite">
                     {activeSuggestion === "pickup" && (
                       <SuggestionDropdown
                         inline
@@ -1522,14 +1539,7 @@ const OnBoarding = ({ bookingStage = false, timingStep = false, highlightRideNow
         </GoogleMap>
 
         {mapPickerTarget && (
-          <button
-            type="button"
-            onClick={closeMapPicker}
-            aria-label={tr("Back to location search")}
-            className="absolute left-4 top-[calc(1rem+env(safe-area-inset-top))] z-30 flex h-10 cursor-pointer items-center justify-center rounded-full border border-[var(--foreground)]/30 bg-immersive px-3 text-[var(--text)] shadow-[0_4px_20px_2px_rgba(0,0,0,0.45)] transition-opacity duration-300 hover:opacity-100 active:opacity-70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)] sm:left-8 sm:top-8"
-          >
-            <Icon path={mdiKeyboardBackspace} size={1.2} aria-hidden="true" />
-          </button>
+          <IconButton type="button" onClick={closeMapPicker} aria-label={tr("Back to location search")} className="absolute left-4 top-[calc(1rem+env(safe-area-inset-top))] z-30 flex sm:left-8 sm:top-8"><Icon path={mdiKeyboardBackspace} size={1.2} aria-hidden="true" /></IconButton>
         )}
       </> : <>
         <div className="block sm:hidden absolute z-5 inset-x-0 top-0 h-[100dvh] bg-[linear-gradient(to_top,var(--background)_30%,var(--background-primary)_45%,transparent_90%)]" />

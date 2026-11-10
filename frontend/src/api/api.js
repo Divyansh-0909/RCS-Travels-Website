@@ -5,6 +5,7 @@ const request = createRequest(BASE_URL);
 
 export const getMe             = (getToken)              => request("/api/users/me", { getToken });
 export const getResponsibilityCase = (caseId, getToken, signal) => request(`/api/admin/responsibility/cases/${encodeURIComponent(caseId)}`, { getToken, signal });
+export const getResponsibilityCases = (filters, getToken, signal) => request(`/api/admin/responsibility/cases${toQuery(filters)}`, { getToken, signal });
 export const reviewResponsibility = (caseId, action, body, getToken) => {
     if (!['review', 'appeal-review'].includes(action)) throw new Error('Unknown review action');
     return request(`/api/admin/responsibility/cases/${encodeURIComponent(caseId)}/${action}`, { method: 'POST', body, getToken });

@@ -60,7 +60,7 @@ const Chip = ({ label, strong, compact }: { label: string; strong?: boolean; com
         className={`rounded-xl ${compact ? 'px-2 py-0.5' : 'px-2.5 py-1'}`}
         style={{ backgroundColor: strong ? colors.strong : compact ? colors.surface : colors.surfaceMuted }}
     >
-        <AppText className={`${compact ? 'text-xs' : 'text-sm'} font-semibold ${strong ? 'text-white' : INK_TEXT}`}>
+        <AppText className={`${compact ? 'text-xs' : 'text-sm'} font-semibold ${strong ? 'text-on-strong' : INK_TEXT}`}>
             {label}
         </AppText>
     </View>;
@@ -179,7 +179,7 @@ export const OfferCard = ({
                         <Check
                             size={18}
                             weight="bold"
-                            className="text-on-strong"
+                            className={timerProgress ? 'text-on-primary' : 'text-on-strong'}
                         />
                     }
                     onPress={() => run(onAccept)}

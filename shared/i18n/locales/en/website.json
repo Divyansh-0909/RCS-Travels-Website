@@ -3,7 +3,7 @@
     "about": "About",
     "outstation": "Outstation",
     "help": "Help",
-    "myRides": "My rides",
+    "myRides": "My Rides",
     "scheduledRide": "Scheduled ride",
     "from": "From",
     "rideHistory": "Ride history",
@@ -467,6 +467,14 @@
     "YYYY-MM-DD": "YYYY-MM-DD"
   },
   "manual": {
+    "Total due": "Total due",
+    "Pay with cash": "Pay with cash",
+    "Discount": "Discount",
+    "Deductions": "Deductions",
+    "Advance paid": "Advance paid",
+    "Fare adjustment": "Fare adjustment",
+    "Ride completed": "Ride completed",
+    "Driver cancelled": "Driver cancelled",
     "* 99% guaranteed cab allocation": "* 99% guaranteed cab allocation",
     "* Choose a time at least 30 minutes from now": "* Choose a time at least 30 minutes from now",
     "* Subject to availability": "* Subject to availability",

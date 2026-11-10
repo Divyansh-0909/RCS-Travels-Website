@@ -1,3 +1,5 @@
+import PillControl from "./PillControl";
+import IconButton from "./IconButton";
 import { useTranslation as useCopyLanguage } from "react-i18next";
 import { websiteCopy as dc } from "../../i18nCopy";
 import Icon from '@mdi/react';
@@ -21,6 +23,7 @@ import { formatDateTime, splitAddress } from "./bookingDisplay"
 import Skeleton from './Skeleton';
 import ErrorPanel from './ErrorPanel';
 import BorderGlow from './BorderGlow';
+import BrandWordmark from './BrandWordmark';
 import { useTranslation } from 'react-i18next';
 
 
@@ -719,9 +722,18 @@ const NavBar = ({ invert = false, hideExpanded = false, hideDestinationInput = f
                 flexDirection: 'column', justifyContent: 'flex-start', overflow: 'hidden',
                 backgroundColor: invert ? 'var(--background)' : 'var(--foreground-muted)',
             } : undefined}
-            className={`${className} ${hero ? "hero-nav" : ""} flex justify-center items-center ${destinationOnly ? `mt-4 ${destinationWidth} rounded-full` : `border ${invert ? "bg-[var(--background)] border-[var(--foreground)]/20" : "bg-[var(--foreground-muted)] border-[var(--background)]/20"} ${hideDestinationInput ? "w-full px-[5.5vw] py-3 sm:px-5 sm:py-6 lg:px-[11vw]" : "w-full flex-col gap-3 px-[5.5vw] py-4 pb-6 sm:px-5 sm:pb-7 lg:px-[11vw]"}`} ${suppressNavbarTransitions ? "transition-none" : "transition-[width,padding,margin,border-radius,box-shadow,background-color]"} duration-300 motion-reduce:transition-none`}>
+            className={`${className} ${hero ? "hero-nav" : ""} flex justify-center items-center ${destinationOnly ? `mt-4 ${destinationWidth} rounded-full` : `border ${invert ? "bg-[var(--background)] border-[var(--foreground)]/20" : "bg-[var(--foreground-muted)] border-[var(--background)]/20"} ${hideDestinationInput ? "w-full px-[5.5vw] py-3 sm:px-5 sm:py-6 lg:px-[11vw]" : "w-full flex-col gap-3 px-[5.5vw] py-3 pb-6 sm:px-5 sm:pt-6 sm:pb-7 lg:px-[11vw]"}`} ${suppressNavbarTransitions ? "transition-none" : "transition-[width,padding,margin,border-radius,box-shadow,background-color]"} duration-300 motion-reduce:transition-none`}>
             <div className={`${destinationOnly && !mobileMenuActive ? "hidden" : "flex w-full justify-between px-1 sm:grid sm:grid-cols-[1fr_auto_1fr] sm:gap-6"} shrink-0 items-center ${invert ? "text-[var(--text)]" : "text-[var(--text-foreground)]"} transition-colors duration-300 motion-reduce:transition-none [&>*]:select-none`}>
-                <h3 onClick={() => mobileMenuActive ? go(goHome) : goHome()} className='shrink-0 cursor-pointer pl-1 opacity-[1] transition-opacity duration-300 hover:opacity-[1] sm:order-2 sm:justify-self-center sm:text-2xl sm:opacity-[0.85]'><span className='font-semibold'>RCS</span> travels</h3>
+                {hero ? (
+                    <BrandWordmark
+                        as="button"
+                        type="button"
+                        onClick={() => mobileMenuActive ? go(goHome) : goHome()}
+                        className={`hero-wordmark ${mobileMenuActive ? 'hero-wordmark-menu' : ''} shrink-0 cursor-pointer pl-1 sm:order-2 sm:justify-self-center`}
+                    />
+                ) : (
+                    <BrandWordmark as="h3" onClick={() => mobileMenuActive ? go(goHome) : goHome()} className='shrink-0 cursor-pointer pl-1 opacity-[1] transition-opacity duration-300 hover:opacity-[1] sm:order-2 sm:justify-self-center sm:opacity-[0.85]' />
+                )}
 
                 <div className='hidden sm:order-1 sm:block sm:justify-self-start'>
                     <ul className="flex gap-2">
@@ -770,14 +782,14 @@ const NavBar = ({ invert = false, hideExpanded = false, hideDestinationInput = f
                                     setRidesOpen(false)
                                     setExpand(!expand)
                                 }}
-                                className={`flex ${invert ? "bg-[var(--foreground)]/10 text-[var(--text)] hover:bg-[var(--foreground)]/15 active:bg-[var(--foreground)]/20" : "bg-[var(--background)]/10 text-[var(--text-foreground)] hover:bg-[var(--background)]/20 active:bg-[var(--background)]/15"} items-center rounded-xl px-1 py-1 justify-center gap-1 cursor-pointer outline-none transition-colors duration-300 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 motion-reduce:transition-none`}
+                                className={desktopSecondaryButton + " flex items-center justify-center gap-1.5 motion-reduce:transition-none"}
                             >
-                                <Avatar invert={invert} initial={user?.name?.charAt(0)} box='w-8 h-8' text='' />
+                                <Avatar invert={invert} initial={user?.name?.charAt(0)} box='w-6 h-6 scale-[1.15]' text='text-base' />
                                 <Icon path={mdiChevronDown} style={{
                                     transform: expand
                                         ? "rotate(180deg)"
                                         : "rotate(0deg)",
-                                }} size={0.8} />
+                                }} size={0.7} />
                             </button>
                         </>
                         :
@@ -867,13 +879,7 @@ const NavBar = ({ invert = false, hideExpanded = false, hideDestinationInput = f
                     )}
                 </div>
 
-                <button ref={mobileTriggerRef} type="button" onClick={toggleMobileMenu}
-                    aria-expanded={isMobile && expand} aria-controls="mobile-navigation"
-                    aria-label={expand ? t('common:actions.close') : t('nav.menu')}
-                    className='relative order-3 block shrink-0 cursor-pointer outline-none before:absolute before:-inset-3 focus-visible:ring-2 focus-visible:ring-primary sm:hidden'
-                >
-                    <Icon path={expand ? mdiClose : mdiMenu} size={0.9} />
-                </button>
+                <IconButton ref={mobileTriggerRef} type="button" onClick={toggleMobileMenu} aria-expanded={isMobile && expand} aria-controls="mobile-navigation" aria-label={expand ? t('common:actions.close') : t('nav.menu')} className="relative order-3 block shrink-0 before:absolute before:-inset-3 sm:hidden"><Icon path={expand ? mdiClose : mdiMenu} size={0.9} /></IconButton>
             </div>
 
             {!hideDestinationInput && <div ref={destinationRef} inert={mobileMenuActive && expand ? '' : undefined} aria-hidden={mobileMenuActive && expand} className={`relative order-2 flex min-w-0 shrink-0 items-center justify-center ${destinationWidth}`}>
@@ -901,15 +907,10 @@ const NavBar = ({ invert = false, hideExpanded = false, hideDestinationInput = f
                             <span className="min-w-0 flex-1 break-words px-1 text-lg leading-5">{t("nav.destination")}</span>
                         </button>
                         <div className="relative flex shrink-0 items-center">
-                            <button
-                                type="button"
-                                onClick={openRideNow}
-                                aria-label={t("nav.now")}
-                                className="mx-0.2 flex h-10 min-w-[78px] cursor-pointer items-center justify-center gap-2 rounded-full bg-[var(--background)] px-3 py-2 text-sm font-semibold text-[var(--text)] outline-none transition-opacity duration-200 hover:opacity-90 active:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary sm:text-base"
-                            >
-                                <Icon path={mdiClockTimeFourOutline} size={0.8} aria-hidden="true" />
+                            <PillControl type="button" onClick={openRideNow} aria-label={t("nav.now")} faceClassName="mx-0.2 flex h-10 min-w-[78px] cursor-pointer items-center justify-center gap-2 bg-[var(--background)] text-[var(--text)] outline-none hover:opacity-90 active:opacity-80 sm:text-base">
+                                <Icon path={mdiClockTimeFourOutline} size={2 / 3} aria-hidden="true" />
                                 {t("nav.now")}
-                            </button>
+                            </PillControl>
                         </div>
                     </div>
                 </BorderGlow>

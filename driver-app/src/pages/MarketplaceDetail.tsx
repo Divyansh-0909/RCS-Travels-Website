@@ -270,7 +270,7 @@ const MarketplaceDetail = () => {
                         listing.status !== 'open'
                             ? <WhatsappMark />
                             : listing.mine
-                                ? <PencilSimpleIcon size={18} weight="bold" color="#ffffff" />
+                                ? <PencilSimpleIcon size={18} weight="bold" color={colors.onStrong} />
                                 : null
                     }
                     solid

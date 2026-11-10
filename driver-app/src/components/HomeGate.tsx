@@ -191,7 +191,7 @@ const HomeGate = () => {
               style={({ pressed }) => ({ opacity: pressed ? 0.65 : 1 })}
             >
               <View className="rounded-xl bg-primary px-5 py-3">
-                <AppText className="text-sm font-semibold text-on-strong">{dc("Try again")}</AppText>
+                <AppText className="text-sm font-semibold text-on-primary">{dc("Try again")}</AppText>
               </View>
             </Pressable>
           </>

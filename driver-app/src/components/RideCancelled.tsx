@@ -43,7 +43,10 @@ export const RideCancelled = ({
     return (
         <View
             pointerEvents="box-none"
-            style={{ position: 'absolute', left: 0, right: 0, top, zIndex: 85, alignItems: 'center' }}
+            // Cancellation returns to the home shell, whose online controls are
+            // above the route's stacking context. Leave that rail clear so it
+            // cannot cover the notice title or its dismiss button.
+            style={{ position: 'absolute', left: 0, right: 0, top: top + 64, zIndex: 85, alignItems: 'center' }}
         >
             <Animated.View
                 entering={FadeInDown.duration(220)}

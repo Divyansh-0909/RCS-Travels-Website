@@ -61,6 +61,14 @@
     "tryAgain": "कुछ गलत हो गया। कृपया फिर कोशिश करें।"
   },
   "manual": {
+    "Total due": "कुल देय",
+    "Pay with cash": "नकद भुगतान करें",
+    "Discount": "छूट",
+    "Deductions": "कटौती",
+    "Advance paid": "अग्रिम भुगतान",
+    "Fare adjustment": "किराया समायोजन",
+    "Ride completed": "सवारी पूरी हुई",
+    "Driver cancelled": "ड्राइवर ने रद्द किया",
     "* 99% guaranteed cab allocation": "* 99% कैब मिलने की गारंटी",
     "* Choose a time at least 30 minutes from now": "* अभी से कम से कम 30 मिनट बाद का समय चुनें",
     "* Subject to availability": "* उपलब्धता के अनुसार",

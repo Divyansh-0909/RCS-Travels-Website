@@ -261,7 +261,7 @@ export const OtpEntry = ({
                                     : 'bg-primary-light'
                                 }`}
                         >
-                            <AppText className="text-base font-semibold text-on-strong">
+                            <AppText className="text-base font-semibold text-on-primary">
                                 {submitLabel}
                             </AppText>
                         </View>

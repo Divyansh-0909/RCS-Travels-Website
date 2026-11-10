@@ -11,6 +11,7 @@ import { useNavigate } from 'react-router-native';
 import AppText from '../components/AppText';
 import { OtpEntry } from '../components/OtpEntry';
 import { BottomSheet } from '../components/ui/BottomSheet';
+import rideChrome from '../theme/rideChrome';
 import { sheetSurfaceStyle } from '../components/ui/sheetSurfaceStyle';
 import MapSlot from '../components/ui/MapSlot';
 import { SlideAction } from '../components/ui/SlideAction';
@@ -81,7 +82,7 @@ const ActiveRide = ({ ride, onChanged }: { ride: UpcomingBooking; onChanged: () 
     const api = useApi();
     const { refresh: refreshDriver } = useDriver();
     const { t } = useLanguage();
-    const { colors } = useTheme();
+    const { colors, scheme } = useTheme();
     const [error, setError] = useState<string | null>(null);
 
     // The code screen opens ITSELF the moment he marks himself arrived, because
@@ -336,13 +337,13 @@ const ActiveRide = ({ ride, onChanged }: { ride: UpcomingBooking; onChanged: () 
                 opacity: pressed ? 0.85 : 1,
             })}
         >
-            <View className="w-[90%] flex-row items-center justify-center gap-2 rounded-full py-3.5 bg-[var(--background-primary)]">
+            <View className="w-[90%] flex-row items-center justify-center gap-2 rounded-full py-3.5 bg-[var(--background-primary)]" style={{ backgroundColor: rideChrome.background }}>
                 <NavArrow
                     size={18}
                     weight="fill"
-                    className="text-on-strong"
+                    className="text-white"
                 />
-                <AppText className="text-base font-semibold text-on-strong">
+                <AppText className="text-base font-semibold text-white">
                     {leg.endpoint === 'drop' ? t('driver.active.goDrop') : t('driver.active.goPickup')}
                 </AppText>
             </View>
@@ -467,7 +468,7 @@ const ActiveRide = ({ ride, onChanged }: { ride: UpcomingBooking; onChanged: () 
                     style={{ position: 'absolute', inset: 0, zIndex: 94, backgroundColor: 'rgba(0,0,0,0.45)' }}
                     className="justify-end"
                 >
-                    <View className="rounded-t-3xl px-5 pt-5 pb-8 gap-3" style={{ ...sheetSurfaceStyle, backgroundColor: colors.surface }}>
+                    <View className="rounded-t-3xl px-5 pt-5 pb-8 gap-3" style={{ ...sheetSurfaceStyle, backgroundColor: scheme === 'dark' ? rideChrome.background : colors.surface, ...(scheme === 'dark' ? { boxShadow: rideChrome.sheetShadow } : {}) }}>
                         <AppText className={`text-xl font-bold ${INK_TEXT}`}>{t('driver.active.differentDrop')}</AppText>
                         <AppText className={`text-sm ${MUTED}`}>
                             {t('driver.active.outsideDrop')}

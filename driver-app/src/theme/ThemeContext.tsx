@@ -40,6 +40,7 @@ const themeVariables = (colors: ThemeColors, scheme: ThemeScheme) => ({
   '--border-ui': colors.borderUi,
   '--strong': colors.strong,
   '--on-strong': colors.onStrong,
+  '--on-primary': colors.onPrimary,
   '--primary': colors.primary,
   // Compatibility aliases make existing NativeWind var() calls theme-aware
   // while components migrate to the concise semantic class vocabulary.
@@ -53,7 +54,7 @@ const themeVariables = (colors: ThemeColors, scheme: ThemeScheme) => ({
   '--text-muted': colors.inkMuted,
   '--text-foreground': colors.ink,
   '--text-muted-foreground': colors.inkMuted,
-  '--input-background': scheme === 'dark' ? '#1d1d27' : colors.surface,
+  '--input-background': colors.inputBackground,
   '--input-border': scheme === 'dark' ? 'rgba(255,255,255,0.3)' : colors.borderUi,
   '--input-placeholder': scheme === 'dark' ? 'rgba(255,255,255,0.42)' : colors.inkMuted,
 });

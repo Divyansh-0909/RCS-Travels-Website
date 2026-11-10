@@ -7,6 +7,7 @@ import { CrosshairSimpleIcon } from 'phosphor-react-native';
 import { decodeGooglePolyline, remainingRoutePoints } from '../../lib/polyline';
 import { MapLoadingSkeleton } from './Skeleton';
 import { useTheme } from '../../theme/ThemeContext';
+import rideChrome from '../../theme/rideChrome';
 import { mapStyleFor } from '../../theme/mapStyles';
 
 type Point = { latitude: number; longitude: number };
@@ -72,7 +73,7 @@ const EndpointPin = ({ kind }: { kind: 'pickup' | 'drop' }) => {
     useCopyLanguage();
     const { colors } = useTheme();
     const pickup = kind === 'pickup';
-    const color = pickup ? colors.onStrong : colors.primary;
+    const color = pickup ? '#FFFFFF' : colors.primary;
     return (
         <View
             collapsable={false}
@@ -438,12 +439,12 @@ const MapSlot = ({
                     borderRadius: MAP_CONTROL_SIZE / 2,
                     alignItems: 'center',
                     justifyContent: 'center',
-                    backgroundColor: colors.surface,
+                    backgroundColor: rideChrome.background,
                     opacity: recenterPressed ? 0.75 : 1,
                     elevation: 6,
                 }}
             >
-                <CrosshairSimpleIcon size={24} weight="bold" color={colors.ink} />
+                <CrosshairSimpleIcon size={24} weight="bold" color={rideChrome.foreground} />
             </Pressable>
         ) : null}
         </View>

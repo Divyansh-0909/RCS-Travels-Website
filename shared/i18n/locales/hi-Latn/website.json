@@ -61,6 +61,14 @@
     "tryAgain": "Kuch galat ho gaya. Phir se try karein."
   },
   "manual": {
+    "Total due": "Kul dena hai",
+    "Pay with cash": "Cash se pay karein",
+    "Discount": "Chhoot",
+    "Deductions": "Katoti",
+    "Advance paid": "Advance diya",
+    "Fare adjustment": "Kiraye ka adjustment",
+    "Ride completed": "Sawari poori hui",
+    "Driver cancelled": "Driver ne cancel kiya",
     "* 99% guaranteed cab allocation": "* 99% cab milne ki guarantee",
     "* Choose a time at least 30 minutes from now": "* Abhi se kam se kam 30 minute baad ka time chunein",
     "* Subject to availability": "* Availability ke hisaab se",

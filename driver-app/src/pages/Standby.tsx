@@ -203,8 +203,8 @@ const Standby = ({ next, onChanged }: { next: UpcomingBooking | null; onChanged:
                                 style={({ pressed }) => ({ opacity: pressed || busy ? 0.85 : 1 })}
                             >
                                 <View className="w-full flex-row items-center justify-center gap-2 rounded-2xl py-3.5 bg-primary">
-                                    <NavArrow size={18} weight="fill" className="text-on-strong" />
-                                    <AppText className="text-base font-semibold text-on-strong">{dc("Go to pickup point")}</AppText>
+                                    <NavArrow size={18} weight="fill" className="text-on-primary" />
+                                    <AppText className="text-base font-semibold text-on-primary">{dc("Go to pickup point")}</AppText>
                                 </View>
                             </Pressable>
                         </>

@@ -1,13 +1,13 @@
+import PillControl from "../components/ui/PillControl";
 import { Link } from 'react-router-dom';
+import BrandWordmark from '../components/ui/BrandWordmark';
 import { supportEmail, supportPhoneDisplay, emailSupport, openSupportWhatsApp } from '../constants/support';
 
 const CaptainAccountDeletion = () => (
-  <main className="min-h-[100dvh] bg-surface px-5 py-8 text-ink sm:px-10 sm:py-12">
+  <main className="min-h-[100dvh] bg-surface px-5 text-ink sm:px-10">
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
-      <div className="flex items-center gap-3">
-        <Link to="/" className="text-2xl opacity-85 transition-opacity hover:opacity-100">
-          <span className="font-semibold">RCS</span> travels
-        </Link>
+      <div className="flex h-[58px] shrink-0 items-center gap-3 sm:h-[90px]">
+        <BrandWordmark as={Link} to="/" className="opacity-85 transition-opacity hover:opacity-100" />
         <span className="text-xl text-ink-muted/50">/</span>
         <span className="text-xl text-ink-muted">RCS Captains</span>
       </div>
@@ -42,8 +42,8 @@ const CaptainAccountDeletion = () => (
         <h2 className="text-2xl font-semibold">Cannot access the app?</h2>
         <p className="mt-3 text-base leading-7 text-ink-muted">Contact RCS Travels and ask for deletion of your RCS Captains account. Include the phone number used for the captain account so we can verify the request.</p>
         <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-          <button type="button" onClick={() => openSupportWhatsApp('Hi, I want to delete my RCS Captains account.')} className="cursor-pointer rounded-full bg-strong px-5 py-3 font-semibold text-on-strong transition-opacity hover:opacity-90">WhatsApp {supportPhoneDisplay()}</button>
-          <button type="button" onClick={emailSupport} className="cursor-pointer rounded-full border border-border px-5 py-3 font-semibold transition-colors hover:bg-surface-muted">Email {supportEmail()}</button>
+          <PillControl type="button" onClick={() => openSupportWhatsApp('Hi, I want to delete my RCS Captains account.')} faceClassName="cursor-pointer bg-strong text-on-strong hover:opacity-90">WhatsApp {supportPhoneDisplay()}</PillControl>
+          <PillControl type="button" onClick={emailSupport} faceClassName="cursor-pointer ring-1 ring-border hover:bg-surface-muted">Email {supportEmail()}</PillControl>
         </div>
       </section>
 

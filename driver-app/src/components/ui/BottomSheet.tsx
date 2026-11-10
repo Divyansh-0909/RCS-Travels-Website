@@ -3,6 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { PanResponder, View, type LayoutChangeEvent } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useTheme } from '../../theme/ThemeContext';
+import rideChrome from '../../theme/rideChrome';
 
 /**
  * The panel on the map screens, as something he can push out of the way.
@@ -54,7 +55,8 @@ export const BottomSheet = ({
     onHeightChange?: (height: number) => void;
 
 }) => {
-    const { colors } = useTheme();
+    const { colors, scheme } = useTheme();
+    const dark = scheme === 'dark';
     const [height, setHeight] = useState(0);
     const y = useSharedValue(0);
 
@@ -129,14 +131,14 @@ export const BottomSheet = ({
                 style={{
                     borderTopLeftRadius: 24,
                     borderTopRightRadius: 24,
-                    borderWidth: 1,
+                    borderWidth: dark ? 0 : 1,
                     borderColor: colors.surfaceMuted,
-                    backgroundColor: colors.surface,
-                    boxShadow: SHEET_DROP_SHADOW,
+                    backgroundColor: dark ? rideChrome.background : colors.surface,
+                    boxShadow: dark ? rideChrome.sheetShadow : SHEET_DROP_SHADOW,
                 }}
             >
                 <LinearGradient
-                    colors={[colors.surface, colors.surface, colors.surfaceMuted]}
+                    colors={dark ? [rideChrome.background, rideChrome.background, rideChrome.background] : [colors.surface, colors.surface, colors.surfaceMuted]}
                     locations={[0, 0.4, 1]}
                     start={{ x: 0.5, y: 0 }}
                     end={{ x: 0.5, y: 1 }}
@@ -149,7 +151,7 @@ export const BottomSheet = ({
                     <LinearGradient
                         pointerEvents="none"
                         colors={[
-                            'rgba(146,146,139,0.24)',
+                            dark ? 'rgba(255,255,255,0.25)' : 'rgba(146,146,139,0.24)',
                             'rgba(158,158,153,0.17)',
                             'rgba(174,174,174,0.12)',
                             'rgba(174,174,174,0)',
@@ -165,7 +167,7 @@ export const BottomSheet = ({
                     />
 
                     <View {...pan.panHandlers} className="w-full items-center pt-3 pb-2">
-                        <View className="w-10 h-1 rounded-full" style={{ backgroundColor: '#c9c9d2' }} />
+                        <View className="w-10 h-1 rounded-full" style={{ backgroundColor: dark ? rideChrome.handle : 'rgba(18,18,32,0.3)' }} />
                     </View>
 
                     <View style={{ paddingBottom: bottomInset }}>

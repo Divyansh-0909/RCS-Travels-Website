@@ -33,7 +33,7 @@ export default function ThemeToggle({ className = "", tone = "bg-tone-primary" }
             onClick={() => setTheme(option.value)}
             onKeyDown={(event) => chooseWithKeyboard(event, option.value)}
             tone={tone}
-            className="outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            className="outline-none focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
             trailing={(
               <span
                 aria-hidden="true"

@@ -17,7 +17,7 @@ const clouds = [
   ['top-right-middle-cloud', 58, 20, 11.4],
   ['top-right-over-building-cloud', 72, 36, 6.8],
 ];
-export default function LandingHero() {
+export default function LandingHero({ characterTime = null }) {
   const section = useRef(null);
   const { t } = useTranslation('website');
   const navigate = useViewNavigate();
@@ -58,7 +58,7 @@ export default function LandingHero() {
     <div className="hero-scene" aria-hidden="true">
       <div className="hero-scenery"><img src={heroAsset('background')} alt="" fetchPriority="high" /></div>
       {clouds.map(([name, left, top, width]) => <img key={name} className="hero-cloud" src={heroAsset(name)} alt="" style={{ left: `${left}%`, top: `${top}%`, width: `${width}%` }} />)}
-      <AnimatedRCSCharacter />
+      <AnimatedRCSCharacter time={characterTime} />
     </div>
   </section>;
 }

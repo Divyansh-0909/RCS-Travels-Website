@@ -94,7 +94,7 @@ const EarningsPanel = ({ summary, period, periodOptions, onPeriodChange }: Props
                             className="flex-row items-center gap-1.5 rounded-full bg-[var(--background-primary)] px-3 py-1.5"
                             style={({ pressed }) => ({ opacity: pressed ? 0.78 : 1 })}
                         >
-                            <AppText className="text-sm font-semibold leading-5 text-white">{selected.label}</AppText>
+                            <AppText className="text-sm font-semibold leading-5 text-on-strong">{selected.label}</AppText>
                             <Animated.View style={[{ height: 20, justifyContent: 'center' }, caretStyle]}>
                                 <CaretDownIcon size={13} weight="bold" color={colors.onStrong} />
                             </Animated.View>

@@ -51,6 +51,7 @@ module.exports = {
                 'border-ui': 'var(--border-ui)',
                 strong: 'var(--strong)',
                 'on-strong': 'var(--on-strong)',
+                'on-primary': 'var(--on-primary)',
                 gray: { 600: 'var(--ink-muted)' },
             },
 

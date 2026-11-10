@@ -1,3 +1,22 @@
+import { forwardRef } from "react";
+import PillControl from "./PillControl";
+
+// One native control keeps primary actions, selectors and switch rows on the
+// same type/spacing/focus contract. Callers retain their own colour and shape.
+export const ActionControl = forwardRef(function ActionControl({ icon = false, loading = false, disabled = false, className = "", ...props }, ref) {
+  return (
+    <button
+      type="button"
+      {...props}
+      ref={ref}
+      disabled={disabled || loading}
+      aria-busy={loading || props["aria-busy"] || undefined}
+      data-size="action"
+      className={`inline-flex min-h-12 min-w-12 items-center gap-2 whitespace-normal break-words py-3 ${icon ? "px-3" : "px-6"} text-base leading-6 outline-none focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed motion-reduce:transition-none ${className}`}
+    />
+  );
+});
+
 /**
  * @param {object} props
  * @param {{
@@ -10,6 +29,8 @@
  *   border?: boolean,
  *   error?: boolean,
  *   disabled?: boolean,
+ *   size?: 'action' | 'pill',
+ *   loading?: boolean,
  *   innerClassName?: string,
  * }} props.prop - variant/style configuration bag
  * @param {string} [props.className]
@@ -21,12 +42,22 @@
  *   own inline style, for values only the caller can compute (e.g. a measured
  *   position); the caller wins on conflict
  */
-const Button = ({ prop, className, children, onClick, containerRef, style }) => {
+const Button = ({ prop = {}, className = "", children, onClick, containerRef, style }) => {
+  if (prop.size === "pill") return (
+    <div ref={containerRef} className={`relative w-fit max-w-full ${className}`} style={style}>
+      <PillControl type={prop.type ?? "button"} onClick={onClick} disabled={prop.disabled || prop.loading} aria-busy={prop.loading || undefined} aria-haspopup={prop["aria-haspopup"]} aria-expanded={prop["aria-expanded"]} aria-label={prop["aria-label"]} faceStyle={{ "--pill-bg": prop.bg ?? "var(--input-background)" }} faceClassName={`bg-[var(--pill-bg)] ${prop.faceClassName ?? "text-ink legacy:text-[var(--text)]"}`}>
+        {children}
+      </PillControl>
+    </div>
+  );
+  // Controls opt in; rich vehicle cards retain their content-driven geometry.
+  const isAction = prop.size === "action";
+  const Control = isAction ? ActionControl : "button";
   const isDropdown = prop.variant === "dropdown";
   const isInput = prop.variant === "input";
   const isNegative = prop.variant === "negative";
   const hasError = prop.error === true && !isDropdown;
-  const isDisabled = prop.disabled === true;
+  const isDisabled = prop.disabled === true || prop.loading === true;
   const isSolid = !prop.variant || isNegative;
 
   // Fluid below sm, fixed from sm up: default-width controls sit on an 86vw
@@ -38,7 +69,7 @@ const Button = ({ prop, className, children, onClick, containerRef, style }) => 
   // content width. 86vw contributes a real max-content size instead, so the
   // form itself widens to the rail. sm+ keeps the exact pixel value, and
   // dropdowns are absolutely positioned panels that keep their inline width.
-  const width = prop.width ?? (isInput ? undefined : "290px");
+  const width = prop.width ?? (isAction ? "377px" : isInput ? undefined : "290px");
   const mobileWidth = isDropdown ? ""
     : prop.width ? "max-sm:w-[var(--btn-w)] max-sm:max-w-full"
     : isInput ? ""
@@ -75,7 +106,7 @@ const Button = ({ prop, className, children, onClick, containerRef, style }) => 
         ...style,
       }}
     >
-      <button
+      <Control
         type={prop.type ?? "button"}
         // Lets a submit button live outside its <form> — the vehicle screen
         // pins its CTA to the viewport on mobile, where nesting it in the form
@@ -83,17 +114,22 @@ const Button = ({ prop, className, children, onClick, containerRef, style }) => 
         form={prop.form}
         aria-haspopup={prop["aria-haspopup"]}
         aria-expanded={prop["aria-expanded"]}
+        aria-pressed={prop["aria-pressed"]}
+        aria-label={prop["aria-label"]}
+        aria-busy={prop.loading || undefined}
+        aria-invalid={hasError || undefined}
+        data-size={isAction ? "action" : undefined}
         onClick={onClick}
         disabled={isDisabled}
         className={` ${prop.innerClassName}
-          flex min-h-10 items-center whitespace-normal break-words py-2.5 w-[97%] ${isDisabled ? "cursor-not-allowed" : "cursor-pointer"}
+          flex items-center whitespace-normal break-words ${isAction ? "w-full" : "min-h-10 py-2.5 w-[97%]"} ${isDisabled ? "cursor-not-allowed" : "cursor-pointer"}
           ${prop.innerClassName ? "" : (isDropdown ? "justify-start" : "justify-center")}
           rounded-[inherit] outline-none
-          focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary legacy:focus-visible:outline-[var(--foreground)]/70
+          focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary legacy:focus-visible:outline-[var(--foreground)]/70
         `}
       >
         {children}
-      </button>
+      </Control>
     </div>
   );
 };

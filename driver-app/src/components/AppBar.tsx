@@ -1,5 +1,6 @@
 import { useLanguage as useCopyLanguage } from "../i18n";
 import { themeColors } from "../theme/colors";
+import rideChrome from '../theme/rideChrome';
     import { useEffect } from "react";
     import { View, Pressable, type LayoutChangeEvent } from "react-native"
     import Animated, { Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from "react-native-reanimated";
@@ -106,6 +107,7 @@ import { themeColors } from "../theme/colors";
                     className="flex w-full py-1.5 px-1.5 justify-center items-center h-fit rounded-full bg-strong"
                     style={{
                         minHeight: BAR_HEIGHT,
+                        backgroundColor: rideChrome.background,
                         borderWidth: 1,
                         borderColor: themeColors.dark.surfaceMuted,
                     }}
@@ -130,16 +132,17 @@ import { themeColors } from "../theme/colors";
                                     key={item.name}
                                     role="button"
                                     aria-label={item.name}
+                                    accessibilityState={{ selected: isSelected }}
                                     onPress={() => navigate(item.path, { replace: true })}
                                     className="relative z-10 flex-1 gap-0 items-center justify-center h-13 rounded-full"
                                 >
                                     <View className="w-[20px] h-[22px] items-center justify-center">
                                         <item.Icon size={22} weight="regular" className="text-ink-muted" />
                                         <View className={`absolute ${isSelected ? "opacity-100" : "opacity-0"}`}>
-                                            <item.Icon size={22} weight="fill" className="text-on-strong" />
+                                            <item.Icon size={22} weight="fill" className="text-white" />
                                         </View>
                                     </View>
-                                    <AppText className={`${isSelected ? "text-on-strong" : "text-ink-muted" } text-xs font-semibold`}>
+                                    <AppText className={`${isSelected ? "text-white" : "text-ink-muted" } text-xs font-semibold`}>
                                         {item.name}
                                     </AppText>
                                 </Pressable>

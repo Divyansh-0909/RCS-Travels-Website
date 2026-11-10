@@ -14,6 +14,7 @@ import { useShellHidden } from "./AppBarVisibility";
 import { RideMenuButton } from "./RideMenu";
 import { useData } from "../hooks/useData";
 import { useTheme } from '../theme/ThemeContext';
+import rideChrome from '../theme/rideChrome';
 import { useOffers } from "../hooks/useOffers";
 
 const Bell = cssInterop(BellIcon, {
@@ -140,16 +141,16 @@ const OnlineToggle = () => {
                 swapped for another in place, which reads as the same header doing
                 a different job rather than as a different header. */}
             <View className="flex flex-row w-full justify-between items-center">
-                <View className="flex-row items-center gap-3 rounded-full bg-strong p-3">
+                <View className="flex-row items-center gap-3 rounded-full bg-strong p-3" style={{ backgroundColor: rideChrome.background }}>
                     <Pressable
                         role="button"
                         aria-label={dc("Notifications")}
                         onPress={() => navigate("/notifications")}
                         className="w-[22px] h-[22px] items-center justify-center"
                     >
-                        <Bell size={20} weight="regular" className="text-on-strong" />
+                        <Bell size={20} weight="regular" className="text-white" />
                         <View className={`absolute transition-opacity duration-200 ${hasNotifications ? "opacity-100" : "opacity-0"}`}>
-                            <Bell size={20} weight="fill" className="text-on-strong" />
+                            <Bell size={20} weight="fill" className="text-white" />
                         </View>
                         {hasNotifications ? (
                             <View
@@ -168,10 +169,10 @@ const OnlineToggle = () => {
                 </View>
 
                 {onActiveRide ? <RideMenuButton /> : (
-                <View className="flex-row items-center justify-between w-fit rounded-full bg-strong p-3 px-4 pr-6">
+                <View className="flex-row items-center justify-between w-fit rounded-full bg-strong p-3 px-4 pr-6" style={{ backgroundColor: rideChrome.background }}>
                     <AppText
                         numberOfLines={1}
-                        className="w-[70px] text-lg text-on-strong font-semibold"
+                        className="w-[70px] text-lg text-white font-semibold"
                     >
                         {online ? dc("Online") : dc("Offline")}
                     </AppText>
@@ -193,7 +194,7 @@ const OnlineToggle = () => {
                                     width: 40,
                                     height: 22,
                                     borderRadius: 999,
-                                    backgroundColor: colors.onStrong,
+                                    backgroundColor: rideChrome.foreground,
                                     borderBottomWidth: 2,
                                     borderBottomColor: "rgba(255,255,255,0.05)",
                                     boxShadow:

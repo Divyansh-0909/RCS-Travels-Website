@@ -1,3 +1,5 @@
+import { ActionControl } from "./ui/Button";
+import { textareaClass } from "./ui/fieldStyles";
 import { useTranslation as useCopyLanguage } from "react-i18next";
 import { websiteCopy as dc } from "../i18nCopy";
 import { useEffect, useState } from "react"
@@ -318,23 +320,23 @@ const DriverReview = ({ driverId, onVerificationChange, onGroupChange }: {
                             <Icon path={mdiOpenInNew} size={0.7} />{dc("Open document")}</a>
 
                         {document.status !== "approved" && (
-                            <button
+                            <ActionControl
                                 disabled={isBusy}
                                 onClick={() => review(document, "approved")}
-                                className="flex h-9 items-center gap-1.5 rounded-lg bg-primary px-3 text-sm font-semibold text-on-strong hover:opacity-90 active:scale-[0.98] disabled:opacity-50 transition-[transform,opacity] duration-150 sm:ml-auto"
+                                className="flex items-center gap-1.5 rounded-lg bg-primary font-semibold text-on-primary hover:opacity-90 active:scale-[0.98] disabled:opacity-50 transition-[transform,opacity] duration-150 sm:ml-auto"
                             >
                                 <Icon path={mdiCheck} size={0.7} />
                                 {isBusy ? dc("Saving…") : dc("Approve")}
-                            </button>
+                            </ActionControl>
                         )}
 
                         {document.status !== "rejected" && (
-                            <button
+                            <ActionControl
                                 disabled={isBusy}
                                 onClick={() => { setRejecting(rejecting === document.id ? null : document.id); setReason("") }}
-                                className={`flex h-9 items-center gap-1.5 rounded-lg bg-red-500/10 px-3 text-sm font-medium text-red-600 hover:bg-red-500/15 active:scale-[0.98] disabled:opacity-50 transition-[transform,background-color] duration-150 ${document.status === "approved" ? "sm:ml-auto" : ""}`}
+                                className={`flex items-center gap-1.5 rounded-lg bg-red-500/10 font-medium text-red-600 hover:bg-red-500/15 active:scale-[0.98] disabled:opacity-50 transition-[transform,background-color] duration-150 ${document.status === "approved" ? "sm:ml-auto" : ""}`}
                             >
-                                <Icon path={mdiClose} size={0.7} />{dc("Reject")}</button>
+                                <Icon path={mdiClose} size={0.7} />{dc("Reject")}</ActionControl>
                         )}
                     </div>
                 )}
@@ -353,20 +355,20 @@ const DriverReview = ({ driverId, onVerificationChange, onGroupChange }: {
                             rows={2}
                             maxLength={500}
                             placeholder={dc("e.g. The photo is too blurry to read the licence number")}
-                            className="w-full mt-1 p-2 text-sm rounded-xl border-2 border-border/40 focus:border-border outline-none text-ink transition-colors duration-300"
+                            className={`mt-1 ${textareaClass}`}
                         />
                         <div className="flex gap-2 mt-2">
-                            <button
+                            <ActionControl
                                 disabled={reason.trim().length < 3 || isBusy}
                                 onClick={() => review(document, "rejected")}
-                                className="text-sm px-3 py-1.5 rounded-xl bg-red-600 text-on-strong font-semibold hover:opacity-90 disabled:opacity-40 transition-opacity duration-300"
+                                className=" rounded-xl bg-red-600 text-on-primary font-semibold hover:opacity-90 disabled:opacity-40 transition-opacity duration-300"
                             >
                                 {isBusy ? dc("Saving…") : dc("Send rejection")}
-                            </button>
-                            <button
+                            </ActionControl>
+                            <ActionControl
                                 onClick={() => { setRejecting(null); setReason("") }}
-                                className="text-sm px-3 py-1.5 rounded-xl border border-border text-ink hover:bg-surface-muted transition-colors duration-300"
-                            >{dc("Cancel")}</button>
+                                className=" rounded-xl border border-border text-ink hover:bg-surface-muted transition-colors duration-300"
+                            >{dc("Cancel")}</ActionControl>
                         </div>
                     </div>
                 )}
@@ -471,17 +473,17 @@ const DriverReview = ({ driverId, onVerificationChange, onGroupChange }: {
                         {/* One click each way, and no confirmation: the move is
                             reversible by the button that replaces this one, and it
                             changes queue order rather than whether he can work. */}
-                        <button
+                        <ActionControl
                             disabled={groupBusy}
                             onClick={() => moveGroup(data.driver.group === "rcs" ? "partner" : "rcs")}
-                            className="mt-3 text-sm px-3 py-1.5 rounded-xl border border-border text-ink hover:bg-surface-muted disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 transition-colors duration-300"
+                            className="mt-3 rounded-xl border border-border text-ink hover:bg-surface-muted disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 transition-colors duration-300"
                         >
                             {groupBusy
                                 ? dc("Saving…")
                                 : data.driver.group === "rcs"
                                     ? dc("Move to partner captains")
                                     : dc("Move to RCS fleet")}
-                        </button>
+                        </ActionControl>
                     </>
                 )}
             </section>
@@ -496,13 +498,13 @@ const DriverReview = ({ driverId, onVerificationChange, onGroupChange }: {
                         {data.driver.suspensionReason && (
                             <p className="text-sm text-ink-muted mt-0.5">{data.driver.suspensionReason}</p>
                         )}
-                        <button
+                        <ActionControl
                             disabled={suspendBusy}
                             onClick={() => toggleSuspension(false)}
-                            className="mt-3 text-sm px-3 py-1.5 rounded-xl bg-primary text-on-strong font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity duration-300"
+                            className="mt-3 rounded-xl bg-primary text-on-primary font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity duration-300"
                         >
                             {suspendBusy ? dc("Saving…") : dc("Lift suspension")}
-                        </button>
+                        </ActionControl>
                     </>
                 ) : suspendOpen ? (
                     <>
@@ -514,27 +516,27 @@ const DriverReview = ({ driverId, onVerificationChange, onGroupChange }: {
                             rows={2}
                             maxLength={500}
                             placeholder={dc("e.g. Asked a rider for cash on top of the fare, 12 Aug")}
-                            className="w-full mt-1 p-2 text-sm rounded-xl border-2 border-border/40 focus:border-border outline-none text-ink transition-colors duration-300"
+                            className={`mt-1 ${textareaClass}`}
                         />
                         <div className="flex gap-2 mt-2">
-                            <button
+                            <ActionControl
                                 disabled={suspendReason.trim().length < 3 || suspendBusy}
                                 onClick={() => toggleSuspension(true)}
-                                className="text-sm px-3 py-1.5 rounded-xl bg-red-600 text-on-strong font-semibold hover:opacity-90 disabled:opacity-40 transition-opacity duration-300"
+                                className=" rounded-xl bg-red-600 text-on-primary font-semibold hover:opacity-90 disabled:opacity-40 transition-opacity duration-300"
                             >
                                 {suspendBusy ? dc("Saving…") : dc("Suspend captain")}
-                            </button>
-                            <button
+                            </ActionControl>
+                            <ActionControl
                                 onClick={() => { setSuspendOpen(false); setSuspendReason("") }}
-                                className="text-sm px-3 py-1.5 rounded-xl border border-border text-ink hover:bg-surface-muted transition-colors duration-300"
-                            >{dc("Cancel")}</button>
+                                className=" rounded-xl border border-border text-ink hover:bg-surface-muted transition-colors duration-300"
+                            >{dc("Cancel")}</ActionControl>
                         </div>
                     </>
                 ) : (
-                    <button
+                    <ActionControl
                         onClick={() => setSuspendOpen(true)}
-                        className="flex h-9 items-center gap-1.5 rounded-lg bg-red-500/10 px-3 text-sm font-medium text-red-600 hover:bg-red-500/15 active:scale-[0.98] transition-[transform,background-color] duration-150"
-                    >{dc("Suspend captain")}</button>
+                        className="flex items-center gap-1.5 rounded-lg bg-red-500/10 font-medium text-red-600 hover:bg-red-500/15 active:scale-[0.98] transition-[transform,background-color] duration-150"
+                    >{dc("Suspend captain")}</ActionControl>
                 )}
             </section>
         </div>

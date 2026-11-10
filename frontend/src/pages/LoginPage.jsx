@@ -8,8 +8,7 @@ import Button from "../components/ui/Button";
 import InlineError from "../components/ui/InlineError";
 import ErrorPanel from "../components/ui/ErrorPanel";
 import { useApi } from "../hooks/useApi";
-import Icon from '@mdi/react';
-import { mdiKeyboardBackspace } from '@mdi/js';
+import AuthHeader from "../components/ui/AuthHeader";
 import { useData } from "../hooks/useData";
 import { useOtpClipboard } from "../hooks/useOtpClipboard";
 import { useWebsiteCopy } from "../hooks/useWebsiteCopy";
@@ -382,22 +381,10 @@ const LoginPage = () => {
   });
 
   return (
-    <div className="relative text-center flex justify-center items-center w-[100vw] h-[100dvh] bg-immersive">
-      <div className="absolute left-3 right-3 top-3 z-10 flex h-12 items-center justify-center">
-        <button
-          type="button"
-          aria-label="Back"
-          onClick={back}
-          className="absolute left-0 flex h-12 w-12 cursor-pointer items-center justify-center rounded-full bg-[var(--input-background)] text-[var(--text)] transition-opacity duration-300 hover:opacity-80"
-        >
-          <Icon path={mdiKeyboardBackspace} size={1.2} />
-        </button>
-        <p className="pointer-events-none text-xl font-normal text-[var(--text)]">
-          <span className="font-semibold">RCS</span> travels
-        </p>
-      </div>
+    <div className="relative text-center flex justify-center items-start w-[100vw] h-[100dvh] overflow-y-auto bg-immersive">
+      <AuthHeader onBack={back} />
       {isSignedIn && !loading && verdict === null
-        ? <div className="flex flex-col justify-center items-center">
+        ? <div className="self-center flex flex-col justify-center items-center">
           <h2 className="font-bold text-[var(--text)]">
             {tr("You are already logged in.")}
           </h2>
@@ -405,19 +392,20 @@ const LoginPage = () => {
             onClick={() => navigate('/')}
             prop={{
               type: "button",
+              size: "action",
             }}
-            className="scale-[1] sm:scale-[1.3] mt-6 sm:mt-9"
+            className="mt-6 sm:mt-9"
           >
             {tr("Back")}
           </Button>
         </div>
 
         : <form
-          className="flex flex-col justify-start sm:justify-center h-full pt-24 pb-15 items-start gap-5 sm:gap-7"
+          className="flex shrink-0 flex-col justify-start sm:justify-center min-h-full pt-24 pb-15 items-start gap-6 sm:gap-8 max-sm:w-[86vw]"
           noValidate
           onSubmit={isPhone ? handleSubmit : handleOTPSubmit}
         >
-          <div className={`w-full flex flex-col justify-center items-start text-left gap-1 ${isPhone ? "sm:items-center sm:text-center sm:gap-3" : "sm:items-start sm:text-left"}`}>
+          <div className={`w-full flex flex-col justify-center items-start text-left gap-2 ${isPhone ? "sm:items-center sm:text-center" : "sm:items-start sm:text-left"}`}>
             <h2 className="font-bold text-[var(--text)]">
               {isPhone ? tr("Login to continue.") : tr("OTP Verification.")}
             </h2>
@@ -427,11 +415,11 @@ const LoginPage = () => {
                 : <>{tr("Enter the 6-digit OTP we sent to")} <br/> <span className="text-[var(--text)]">{phoneDisplay}</span></>}
             </p>
           </div>
-          <div className={`flex flex-col justify-center items-start ${isPhone ? "sm:items-center" : "sm:items-start"}`}>
+          <div className={`flex max-sm:w-full flex-col justify-center items-start gap-4 sm:gap-6 ${isPhone ? "sm:items-center" : "sm:items-start"}`}>
 
             {!isPhone
-              ? <div className="flex flex-col justify-center items-start">
-                <div className="relative flex justify-center items-center gap-2">
+              ? <div className="flex flex-col justify-center items-start gap-2">
+                <div className="relative flex w-[86vw] max-w-[328px] justify-center items-center gap-2">
                 {Array.from({ length: OTP_LENGTH }).map((_, i) => {
                   return (
                     <input
@@ -450,9 +438,9 @@ const LoginPage = () => {
                       readOnly={loading || verdict === "pass"}
                       style={{ "--i": i, transitionDuration: otpSettled ? "600ms" : undefined }}
                       className={`
-                      relative flex justify-center text-center items-center font-medium text-2xl my-1
+                      relative flex min-w-0 justify-center text-center items-center font-medium text-2xl
                       ${otpSettled ? "text-transparent placeholder-transparent" : "text-ink"}
-                      p-0 w-[46px] h-[46px] rounded-xl transition-all duration-300 ease-in-out
+                      p-0 w-12 h-12 rounded-xl transition-all duration-300 ease-in-out
                       ${otpSettled && `animate-otp-box-in ${i === 0 && `${verdict === "fail" ? "bg-red-600!" : "bg-green-600!"}`}`}
                       ${otpFieldError
                           ? "border border-negative/50 bg-negative/10 focus:border-negative/80"
@@ -472,10 +460,10 @@ const LoginPage = () => {
                     </span>
                   )}
                 </div>
-                <InlineError className="mt-1 w-full">{otpFieldError ? error : null}</InlineError>
+                <InlineError className="w-full">{otpFieldError ? error : null}</InlineError>
                 <p
                   aria-live="polite"
-                  className="text-sm text-left text-[var(--text-muted)] mt-2 mb-3"
+                  className="text-sm text-left text-[var(--text-muted)]"
                 >
                   {loading
                     ? tr("Verifying...")
@@ -489,7 +477,7 @@ const LoginPage = () => {
                 </p>
               </div>
               :
-              <div className="w-[290px] max-sm:w-full">
+              <div className="flex w-[377px] max-w-full max-sm:w-full flex-col gap-2">
                 <Input
                   prop={{
                     type: "tel",
@@ -502,29 +490,33 @@ const LoginPage = () => {
                     onChangeFn: handlePhoneChange,
                     error: phoneFieldError,
                   }}
-                  className="scale-[1] sm:scale-[1.3] mb-2"
+                  className="my-0!"
                 />
-                <InlineError className="mt-1">{phoneFieldError ? error : null}</InlineError>
+                <InlineError>{phoneFieldError ? error : null}</InlineError>
               </div>
             }
+            <div className="flex max-w-full flex-col items-start gap-2">
             <Button
               prop={{
                 type: "submit",
+                size: "action",
+                loading,
                 disabled: isPhone
                   ? loading || phone.length !== 10
                   : loading || verdict === "fail" || (!otpReadyToContinue && otp.length !== OTP_LENGTH),
               }}
-              className={isPhone ? "scale-[1] sm:scale-[1.3] mt-1 sm:mt-5" : "mt-3"}
+              className="my-0!"
             >
               {isPhone
                 ? (loading ? tr("Sending OTP...") : tr("Continue"))
                 : (loading || verdict ? tr("Continue") : tr("Submit"))}
             </Button>
-            <InlineError className={`mt-2 ${isPhone ? "w-[290px] max-sm:w-full" : "w-full"}`}>
+            <InlineError className={isPhone ? "w-[377px] max-w-full max-sm:w-full" : "w-full"}>
               {formError}
             </InlineError>
+            </div>
             {!isPhone && (
-              <p className={`mt-3 text-sm text-left text-[var(--text-muted)] ${busy ? "invisible" : ""}`}>
+              <p className={`text-sm text-left text-[var(--text-muted)] ${busy ? "invisible" : ""}`}>
                 <span className="text-[var(--text-muted)]">{dc("Didn't get it or expired?")}</span>{" "}
                 {resending
                   ? dc("Sending...")
@@ -538,7 +530,7 @@ const LoginPage = () => {
               </p>
             )}
 
-            <p className={`${!isPhone? "hidden" : "block"} text-[var(--text-muted)] text-sm mt-3 sm:mt-5 sm:text-center text-left`}>{dc("You consent to receive a OTP by text or") + " "}<br />{" " + dc("WhatsApp.")}</p>
+            <p className={`${!isPhone? "hidden" : "block"} text-[var(--text-muted)] text-sm sm:text-center text-left`}>{dc("You consent to receive a OTP by text or") + " "}<br />{" " + dc("WhatsApp.")}</p>
           </div>
         </form>}
     </div>

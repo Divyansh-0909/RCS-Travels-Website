@@ -104,8 +104,8 @@ const RideCancelledToast = ({ outcome: outcomeOverride, dismissAfterMs = DISMISS
                     </div>
 
                     <div className="mt-3 w-[min(86vw,100%)] sm:w-[377px]">
-                        <Button onClick={dismiss} prop={{ width: "100%" }}>
-                            <span className="text-base sm:text-lg">{dc("Okay")}</span>
+                        <Button onClick={dismiss} prop={{ size: "action", width: "100%" }}>
+                            <span className="text-base">{dc("Okay")}</span>
                         </Button>
                     </div>
                 </div>

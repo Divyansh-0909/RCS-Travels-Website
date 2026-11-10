@@ -66,7 +66,7 @@ const FailureState = ({
                         <Button
                             onClick={onRetry}
                             className="my-0!"
-                            prop={{ variant: "", width: "240px", disabled: retrying }}
+                            prop={{ size: "action", variant: "", width: "240px", disabled: retrying }}
                         >
                             <span className="text-base">{retrying ? tr("Retrying…") : tr(retryLabel)}</span>
                         </Button>

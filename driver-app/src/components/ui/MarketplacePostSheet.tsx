@@ -478,7 +478,7 @@ const MarketplacePostSheet = ({ visible, onClose, onSubmit }: Props) => {
                 {posting ? (
                   <View className="flex-row items-center gap-2">
                     <ActivityIndicator size="small" color="#FFFFFF" />
-                    <AppText className="text-base font-semibold text-on-strong">
+                    <AppText className="text-base font-semibold text-on-primary">
                       {dc("Posting...")}
                     </AppText>
                   </View>

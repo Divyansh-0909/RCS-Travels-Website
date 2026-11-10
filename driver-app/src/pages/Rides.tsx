@@ -461,7 +461,7 @@ const Rides = () => {
                             className="relative z-10 flex-1 items-center justify-center rounded-full bg-transparent py-2.5 px-3"
                         >
                             <AppText
-                                className={`text-base font-semibold ${active ? 'text-white' : MUTED}`}
+                                className={`text-base font-semibold ${active ? 'text-on-strong' : MUTED}`}
                             >
                                 {tab.label}
                             </AppText>

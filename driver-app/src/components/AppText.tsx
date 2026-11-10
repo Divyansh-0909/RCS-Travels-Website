@@ -8,7 +8,7 @@ const suppliesFont = (className: string) => /(^|\s)font-/.test(className);
 // beside one of them leaves two colour utilities on the element with nothing but
 // stylesheet order to decide the winner.
 const suppliesColor = (className: string) =>
-    /(^|\s)text-(\[|primary|negative|white|black|gray-|green-|red-|amber-|ink|on-strong)/.test(className);
+    /(^|\s)text-(\[|primary|negative|white|black|gray-|green-|red-|amber-|ink|on-strong|on-primary)/.test(className);
 const suppliesTracking = (className: string) => /(^|\s)tracking-/.test(className);
 
 const AppText = ({ className = '', ...rest }: TextProps) => {

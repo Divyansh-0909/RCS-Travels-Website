@@ -104,7 +104,7 @@ const Button = ({ prop = {}, className = '', children, onPress }: Props) => {
                 // to --text, which is #ffffff — right on a solid fill and on the dark
                 // shell the other variants live on, invisible on this one's white.
                 <AppText
-                    className={`text-base ${isSolid || isSecondary ? 'font-semibold' : 'font-medium'} ${isSolid || isDropdown ? 'text-on-strong' : 'text-ink'}`}
+                    className={`text-base ${isSolid || isSecondary ? 'font-semibold' : 'font-medium'} ${isSolid ? 'text-on-primary' : isDropdown ? 'text-on-strong' : 'text-ink'}`}
                 >
                     {children}
                 </AppText>

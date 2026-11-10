@@ -1,3 +1,4 @@
+import IconButton from "../components/ui/IconButton";
 import { useTranslation as useCopyLanguage } from "react-i18next";
 import { websiteCopy as dc } from "../i18nCopy";
 import Button from "../components/ui/Button";
@@ -1164,7 +1165,7 @@ const VehicleSelect = () => {
     // `form` attribute is what lets the phone copy submit a form it isn't nested
     // in — see Button's pass-through.
     const bookAction = (
-        <div className="w-full flex flex-col gap-2 sm:mt-3">
+        <div className="w-full flex flex-col gap-4 sm:mt-3">
             {/* The way into every option that changes the fare, immediately
                 above the button that commits to it. One line rather than the
                 two or three columns this used to be: at 377px those columns had
@@ -1178,7 +1179,7 @@ const VehicleSelect = () => {
                 columns were: these re-price the cards, and at that stop there
                 are no cards on screen to re-price. */}
             {!barCollapsed && (
-                <div className="relative w-full pt-1 pb-2">
+                <div className="relative w-full">
                     <RideOptionsTrigger
                         options={rideOptions}
                         open={optionsOpen}
@@ -1221,16 +1222,20 @@ const VehicleSelect = () => {
                 </div>
             )}
 
+            <div className="flex w-full flex-col gap-4 sm:gap-6">
             <Button
                 prop={{
                     type: "submit",
                     form: BOOK_FORM_ID,
+                    size: "action",
+                    loading,
                     width: "100%",
                     // no price yet = nothing legitimate to charge
                     disabled: !vehicleClass || fareFor(vehicleClass) == null,
                 }}
+                className="my-0!"
             >
-                <span className="text-base sm:text-lg">{loading ? tr("Booking...") : tr("Book ride")}</span>
+                <span>{loading ? tr("Booking...") : tr("Book ride")}</span>
             </Button>
             {/* Names the exact point the fee starts — "until the driver arrives"
                 was ambiguous about en_route, which is still free.
@@ -1245,6 +1250,7 @@ const VehicleSelect = () => {
                         : tr("Ride Now cancellation is free before the trip starts.")}
                 </p>
             )}
+            </div>
         </div>
     );
 
@@ -1258,6 +1264,7 @@ const VehicleSelect = () => {
                 variant: "input",
                 width: "100%",
                 bg: "var(--background-muted)",
+                "aria-pressed": vehicleClass === cls,
             }}
             className={`${vehicleClass === cls ? "outline-2" : "outline-0"} px-3 sm:px-4 outline-primary focus:outline-2`}
         >
@@ -1377,10 +1384,11 @@ const VehicleSelect = () => {
                             onClick={() => navigate('/')}
                             prop={{
                                 type: "submit",
+                                size: "action",
                                 width: "100%",
                             }}
                         >
-                            <span className="text-base sm:text-lg">{loading ? dc("Loading...") : dc("Go back")}</span>
+                            <span>{loading ? dc("Loading...") : dc("Go back")}</span>
                         </Button>
                     </div>
                 </BackgroundPanel>
@@ -1404,8 +1412,8 @@ const VehicleSelect = () => {
                                 <p className="text-left text-base sm:text-lg text-[var(--text-muted)]">{tr(searchMessages[msgIndex])}</p>
                                 {/* same pill as TrackingPage's — content-sized
                                         and fully rounded, not a fixed 110px box */}
-                                <Button onClick={() => setDetialsVisibility(true)} prop={{ variant: "input", bg: "var(--background-muted)", rounded: "999px" }} className="cursor-pointer px-3 shrink-0" >
-                                    <p className="text-sm sm:text-base text-[var(--text)] whitespace-nowrap">{tr("Ride details")}</p>
+                                <Button onClick={() => setDetialsVisibility(true)} prop={{ size: "pill", variant: "input", bg: "var(--background-muted)", rounded: "999px" }} className="cursor-pointer px-3 shrink-0" >
+                                    <p className="text-sm text-[var(--text)] whitespace-nowrap">{tr("Ride details")}</p>
                                 </Button>
                             </div>
                         </div>
@@ -1475,9 +1483,7 @@ const VehicleSelect = () => {
                         </GoogleMap>
                     )}
 
-                    <div onClick={cancelLocationAdjust} className="max-sm:-top-12 max-sm:left-4 max-sm:h-9 max-sm:my-1 max-sm:px-3 max-sm:rounded-full max-sm:border max-sm:border-[var(--foreground)]/30 max-sm:bg-immersive max-sm:shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)] flex items-center justify-center cursor-pointer sm:opacity-[0.8] transition-opacity duration-300 hover:opacity-[1] absolute z-20 sm:left-5 sm:top-6 text-[var(--text)]">
-                        <Icon path={mdiKeyboardBackspace} size={1.2} />
-                    </div>
+                    <IconButton onClick={cancelLocationAdjust} aria-label={dc("Back")} compact="mobile" className="max-sm:-top-12 max-sm:left-4 max-sm:my-1 flex absolute z-20 sm:left-5 sm:top-6"><Icon path={mdiKeyboardBackspace} size={1.2} /></IconButton>
 
                     <div className={`relative z-10 sm:order-1 flex flex-col justify-end sm:justify-center items-center sm:items-start ${STACK} w-full sm:w-auto h-full sm:h-auto py-2 sm:py-0`}>
                         <div className={`flex flex-col justify-center items-center sm:items-start ${PAIR} ${COL}`}>
@@ -1521,10 +1527,10 @@ const VehicleSelect = () => {
                             </div>
                             <Button
                                 onClick={handleConfirmLocation}
-                                prop={{ type: "button", width: "100%", disabled: loading }}
+                                prop={{ type: "button", size: "action", width: "100%", loading }}
                                 className="w-full"
                             >
-                                <span className="text-base sm:text-lg">{loading ? tr("Booking...") : bookAfterConfirm ? tr("Confirm pickup") : `${tr("Confirm")} ${confirmTarget === "pickup" ? tr("pickup") : tr("drop")} ${tr("location")}`}</span>
+                                <span>{loading ? tr("Booking...") : bookAfterConfirm ? tr("Confirm pickup") : `${tr("Confirm")} ${confirmTarget === "pickup" ? tr("pickup") : tr("drop")} ${tr("location")}`}</span>
                             </Button>
                             {/* Same wording as the booking step — this is the
                                     last screen before the ride is created, so it
@@ -1588,9 +1594,7 @@ const VehicleSelect = () => {
                     )}
 
                     {(!isMobile || sheetSnap !== "expanded") && (
-                    <div onClick={() => navigate('/')} className="max-sm:-top-12 max-sm:left-4 max-sm:h-9 max-sm:my-1 max-sm:px-3 max-sm:rounded-full max-sm:border max-sm:border-[var(--foreground)]/30 max-sm:bg-immersive max-sm:shadow-[0_4px_20px_2px_rgba(0,0,0,0.5)] flex items-center justify-center cursor-pointer sm:opacity-[0.8] transition-opacity duration-300 hover:opacity-[1] absolute z-20 sm:left-5 sm:top-6 text-[var(--text)]">
-                            <Icon path={mdiKeyboardBackspace} size={1.2} />
-                        </div>
+                    <IconButton onClick={() => navigate('/')} aria-label={dc("Back")} compact="mobile" className="max-sm:-top-12 max-sm:left-4 max-sm:my-1 flex absolute z-20 sm:left-5 sm:top-6"><Icon path={mdiKeyboardBackspace} size={1.2} /></IconButton>
                     )}
                     {/* Bounds the column to the sheet's height on phones, so the
                             scroll area inside it has something to be `flex-1` of.

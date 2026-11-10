@@ -9,7 +9,7 @@ import { signOutCurrentSession } from '../../../shared/auth/signOutCurrentSessio
 
 const backgroundIllustration = require("../../assets/app-mobile.webp");
 
-const SCRIMBOTTOM = "linear-gradient(to top, #0B0B14 5%, #121220 15%, rgba(18,18,32,0) 40%)";
+const SCRIMBOTTOM = "linear-gradient(to top, #0A0A19 5%, #0A0A19 15%, rgba(10,10,25,0) 40%)";
 
 const TITLE_TRACKING = { letterSpacing: -0.72 };
 
@@ -68,7 +68,7 @@ const OnBoarding = () => {
                         <AppText className="text-base font-semibold text-white">{t('driver.onboarding.access')}</AppText>
                     </Pressable>
 
-                    <AppText className="text-sm text-[#AEAEAE]">
+                    <AppText className="text-sm text-white-muted">
                         {t('driver.onboarding.noAccount')}{" "}
                         <AppText
                             onPress={() => navigate("/signup")}
