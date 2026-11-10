@@ -1,0 +1,67 @@
+{
+  "reviewDate": "2026-11-01",
+  "timezone": "Asia/Calcutta",
+  "entity": {
+    "name": "RAJUDDIN trading as R C S TRAVELS",
+    "type": "proprietorship",
+    "address": "G T Road Dadri, Ramgopal Enclave Colony Dadri, Gautam Buddha Nagar, Uttar Pradesh 203207",
+    "grievanceContact": "Rajuddin",
+    "email": "rcstravels.support@gmail.com",
+    "phone": "+91 85860 88085",
+    "verification": "Owner confirmed these details in this task on 2026-11-01."
+  },
+  "territory": {
+    "confirmed": [
+      "India",
+      "Uttar Pradesh",
+      "Delhi",
+      "Haryana",
+      "Punjab",
+      "Rajasthan",
+      "Uttarakhand",
+      "Himachal Pradesh",
+      "Jammu and Kashmir"
+    ],
+    "notConfirmed": [
+      "Fleet size/ownership and actual service model for each territory",
+      "All relevant interstate and local operating conditions"
+    ],
+    "researchCandidatesOnly": [],
+    "verification": "Owner confirmed these eight pickup jurisdictions during the 2026-11-01 audit."
+  },
+  "verifiedRepositoryBehaviour": [
+    {
+      "fact": "New scheduled customer advances use 10% with server rounding; a zero required advance can confirm without checkout.",
+      "code": "backend/services/scheduledPayments.js:14"
+    },
+    {
+      "fact": "A qualifying scheduled cancellation is capped at 10% of customer payment, Rs 100, and the advance actually paid; disclosed valid reasons waive the charge.",
+      "code": "backend/services/cancellationPolicy.js:21"
+    },
+    {
+      "fact": "Captain self-cancellation is supported in assigned, en_route and reached states; the booking returns to matching or confirmed for replacement.",
+      "code": "backend/services/driverRideCancellation.js:6"
+    },
+    {
+      "fact": "Current commission is 10% of eligible driving fare after coupon where that amount is at least Rs 800; code excludes specified pass-through charges.",
+      "code": "backend/services/commission.js:3"
+    },
+    {
+      "fact": "Customer deletion clears listed profile identifiers and saved places; it does not erase every related booking or payment record.",
+      "code": "backend/routes/users.js:311"
+    },
+    {
+      "fact": "Captain deletion clears listed live profile identifiers and current location; ride/wallet/audit and document history are not all erased by that route.",
+      "code": "backend/routes/driver.ts:423"
+    },
+    {
+      "fact": "Captain location code requests foreground and background permissions and starts/stops a location task. Native-device behaviour was not tested in this task.",
+      "code": "driver-app/src/hooks/useDriverLocation.ts:153"
+    }
+  ],
+  "limits": [
+    "Repository evidence is not verification of production settings, provider activation, staffing, support coverage or data residency.",
+    "No legal-status certification is made. Existing repository review findings remain unchanged.",
+    "The candidate documents are not adopted or deployed by the workbench."
+  ]
+}

@@ -1,0 +1,39 @@
+import { readFile, writeFile } from 'node:fs/promises';
+const base = 'tools/legal-workbench/data/';
+const read = async name => JSON.parse(await readFile(`${base}${name}.json`, 'utf8'));
+const save = (name, value) => writeFile(`${base}${name}.json`, `${JSON.stringify(value, null, 2)}\n`);
+const profile = await read('profile');
+profile.territory.confirmed = ['India', 'Uttar Pradesh', 'Delhi', 'Haryana', 'Punjab', 'Rajasthan', 'Uttarakhand', 'Himachal Pradesh', 'Jammu and Kashmir'];
+profile.territory.notConfirmed = ['Fleet size/ownership and actual service model for each territory', 'All relevant interstate and local operating conditions'];
+profile.territory.researchCandidatesOnly = [];
+profile.territory.verification = 'Owner confirmed these eight pickup jurisdictions during the 2026-11-01 audit.';
+await save('profile', profile);
+const sources = await read('sources');
+const amend = (id, changes) => Object.assign(sources.sources.find(source => source.id === id), changes);
+amend('IN-CONSUMER-RULES-2020', { url: 'https://consumeraffairs.gov.in/public/upload/files/E%20commerce%20rules_1732703966.pdf', readStatus: 'targeted-full-pdf-text-inspected', locator: 'Rules 4(4), 4(5), 4(8), 4(9), 4(10), PDF pages 8-9', note: 'Official PDF retrieved and hashed. The 48-hour acknowledgement and one-month redress duties already exist where the rules apply; they are not optional proposed future standards.' });
+amend('IN-CERT-2022', { url: 'https://www.cert-in.org.in/PDF/CERT-In_Directions_70B_28.04.2022.pdf', readStatus: 'directions-ii-and-iv-text-inspected', locator: 'Directions (ii) and (iv), PDF pages 2-3', note: 'Covered entities: report listed incidents within six hours; retain ICT logs 180 days within India. This is not a universal retention period for every ride record.' });
+amend('IN-SPDI-2011', { url: 'https://emb.mes.gov.in/Common/help/gsr3_10511.pdf', readStatus: 'targeted-text-inspected-government-gazette-mirror', locator: 'G.S.R. 313(E), rules 4-8 in the Gazette compilation', note: 'SPDI notification retrieved from a Government of India mirror; the compilation also contains other 2011 rules. Only the identified SPDI notification is relied on, not repealed intermediary provisions.' });
+amend('IN-DL-TRANSPORT-2023', { url: 'https://transport.delhi.gov.in/sites/default/files/Transport/circulars-orders/250308.pdf', status: 'final', readStatus: 'targeted-text-inspected', locator: 'Clause 3(1)-(2), PDF page 21', note: 'Owner confirms Delhi pickups. The scheme has its own at-least-25-vehicle scope clause; it does not waive other applicable law. Fleet counting and current amendments need territory-specific verification.' });
+const additions = [
+  { id: 'IN-UP-FINAL-2026', title: 'UP Motor Vehicles (Thirty-third Amendment) rules, notification 5/2026/470 of 22 May 2026', jurisdictions: ['IN-UP'], url: 'https://upmyfleet.com/storage/manual/ViewGOPDF.pdf', primary: true, status: 'final', readStatus: 'targeted-text-and-source-page-images-inspected', locator: 'Rules 125-I, 125-M, 125-Q, 125-R, 125-U and 125-V; PDF pages 46-63', note: 'Final order retrieved from the current transport portal, including completed consultation recitals. Replaces the earlier draft as the audit authority; no automatic conclusion about implementation or exemptions.' },
+  { id: 'IN-CONSUMER-AMENDMENT-2026', title: 'Consumer Protection (E-Commerce) (Amendment) Rules, 2026, G.S.R. 789(E)', jurisdictions: ['IN'], url: 'https://consumeraffairs.gov.in/public/upload/files/E%20Commerce%20Amendment%20Rules%202026_1789127949.pdf', primary: true, status: 'final-future', readStatus: 'text-and-source-page-image-inspected', locator: 'English PDF pages 5-7, commencement 1 January 2027', note: 'Full Gazette retrieved and visual commencement checked; adds complaint-copy and NCH convergence duties and other transparency changes. Existing 2020 grievance timing is not postponed to 2027.' },
+  { id: 'IN-RJ-RULES-2025', title: 'Rajasthan Motor Vehicles Aggregator Scheme Rules, 2025', jurisdictions: ['IN-RJ'], url: 'https://transport.rajasthan.gov.in/content/dam/transport/transport-dept/pdf/Policies/DOC-20251231-WA0026.pdf', primary: true, status: 'final', readStatus: 'targeted-text-inspected', locator: 'Rules 2(1)(vi), 3 and 5, Gazette 31 December 2025', note: 'Owner confirms Rajasthan pickups. Applicability clause has at least 25 associated vehicles; eligibility wording differs from UP. No blanket exemption conclusion.' },
+  { id: 'IN-PB-DRAFT-2023', title: 'Punjab Vehicles Aggregator draft rules, 14 December 2023', jurisdictions: ['IN-PB'], url: 'https://transport.punjab.gov.in/documents/168/Notification__regarding_Punjab_Vehicles_Aggregator_Draft_Rules__with_Notificat_ca6ISjo.pdf', primary: true, status: 'draft', readStatus: 'official-index-and-document-retrieved', locator: 'Official notification index expressly calls it draft', note: 'A final current state text was not established. Do not treat the draft as operative law or interpret an unresolved state framework as permission to disregard central law.' },
+];
+for (const added of additions) if (!sources.sources.some(source => source.id === added.id)) sources.sources.push(added);
+await save('sources', sources);
+const requirements = await read('requirements');
+for (const row of requirements.rows) {
+  if (row.topic === 'Consumer grievances') { row.sources = ['IN-CONSUMER-RULES-2020', 'IN-CONSUMER-AMENDMENT-2026']; row.status = 'current-deadlines-confirmed-operations-unverified'; row.finding = 'Applicable 2020 rules already require 48-hour acknowledgement and one-month redress. Complaint copies and mandatory NCH convergence commence 1 January 2027. Candidate wording treating current deadlines only as proposals needs correction.'; }
+  if (row.jurisdiction === 'IN-UP') { row.sources = ['IN-UP-FINAL-2026']; row.status = 'final-source-confirmed-implementation-gaps'; row.finding = 'Final rule 125-V distinguishes ordinary captain cancellation, failed reporting and rider charges. Current immediate advance retention/all-to-driver allocation differs from specified recovery/allocation. Failed-pickup finance is explicitly unsupported in current responsibility policy.'; }
+}
+await save('requirements', requirements);
+const gaps = await read('gaps');
+for (const gap of gaps.findings) {
+  if (gap.id === 'G01') { gap.issue = 'Eight pickup territories are now owner-confirmed; their fleet/model applicability and complete current operating conditions remain unverified.'; gap.nextAction = 'Use the eight-territory matrix in the project audit; resolve fleet/model and source gaps before adopting common terms.'; }
+  if (gap.id === 'G02') { gap.issue = 'Final UP, Delhi and Rajasthan texts are retrieved; latest Haryana text and complete final Punjab/HP verification remain incomplete.'; gap.nextAction = 'Use final UP rather than the consultation draft. Complete the remaining territory-specific checks.'; }
+  if (gap.id === 'G04') { gap.issue = 'Candidate grievance documents describe 48-hour/one-month timing as proposed; applicable e-commerce law already requires it. Actual response records remain unverified.'; gap.nextAction = 'Correct the characterisation and implement evidence-backed handling; owner cannot opt out of an applicable statutory deadline.'; }
+  if (gap.id === 'G11') { gap.issue = 'Consumer amendment Gazette, SPDI government mirror and CERT-In directions have now been retrieved; remaining source and implementation questions are recorded in the new audit.'; gap.nextAction = 'See legal-review/2026-11-01-audit for provenance and requirement/decision separation. Retrieval alone does not close operational compliance findings.'; gap.status = 'source-access-resolved-application-review-open'; }
+}
+await save('gaps', gaps);
+console.log('Updated only plugin research metadata; candidate legal wording remains unchanged pending owner decisions.');

@@ -1,0 +1,81 @@
+{
+  "reviewDate": "2026-11-01",
+  "assessment": "research-and-drafting-only",
+  "rows": [
+    {
+      "topic": "Adult contracting and minors",
+      "jurisdiction": "IN",
+      "sources": [
+        "IN-CONTRACT-1872",
+        "IN-DPDP-ACT-2023"
+      ],
+      "status": "policy-and-code-change-required",
+      "finding": "Candidate requires an adult account holder and adult-accompanied child travel. Existing legal copy permits rider accounts at 15; adult gating/acceptance is not established by this task."
+    },
+    {
+      "topic": "Privacy commencement",
+      "jurisdiction": "IN",
+      "sources": [
+        "IN-DPDP-COMMENCEMENT-2025",
+        "IN-DPDP-RULES-2025"
+      ],
+      "status": "phased-framework-confirmed",
+      "finding": "Separate presently applicable obligations from the one-year/eighteen-month phases; current source verification is not a DPDP readiness certification."
+    },
+    {
+      "topic": "Consumer grievances",
+      "jurisdiction": "IN",
+      "sources": [
+        "IN-CONSUMER-RULES-2020",
+        "IN-CONSUMER-AMENDMENT-2026"
+      ],
+      "status": "current-deadlines-confirmed-operations-unverified",
+      "finding": "Applicable 2020 rules already require 48-hour acknowledgement and one-month redress. Complaint copies and mandatory NCH convergence commence 1 January 2027. Candidate wording treating current deadlines only as proposals needs correction."
+    },
+    {
+      "topic": "Security and retention",
+      "jurisdiction": "IN",
+      "sources": [
+        "IN-CERT-2022",
+        "IN-DPDP-RULES-2025",
+        "IN-SPDI-2011"
+      ],
+      "status": "retention-schedule-not-approved",
+      "finding": "Separate live location, trip records, accounts, documents, tax records and logs. No universal numerical retention promise or complete-erasure claim is supported."
+    },
+    {
+      "topic": "Cancellation and service conditions",
+      "jurisdiction": "IN-UP",
+      "sources": [
+        "IN-UP-FINAL-2026"
+      ],
+      "status": "final-source-confirmed-implementation-gaps",
+      "finding": "Final rule 125-V distinguishes ordinary captain cancellation, failed reporting and rider charges. Current immediate advance retention/all-to-driver allocation differs from specified recovery/allocation. Failed-pickup finance is explicitly unsupported in current responsibility policy."
+    },
+    {
+      "topic": "Territorial transport requirements",
+      "jurisdiction": "IN-DL",
+      "sources": [
+        "IN-DL-TRANSPORT-2023"
+      ],
+      "status": "jurisdiction-and-full-text-pending",
+      "finding": "Owner confirms pickups outside UP, not which states. Verify location, service model, fleet and complete current scheme before any applicability conclusion."
+    },
+    {
+      "topic": "Territorial transport requirements",
+      "jurisdiction": "IN-HR",
+      "sources": [
+        "IN-HR-TRANSPORT-2026"
+      ],
+      "status": "jurisdiction-and-full-text-pending",
+      "finding": "Do not infer Haryana coverage or exemption from a search result. Identify all other pickup territories as well."
+    },
+    {
+      "topic": "Payments, payouts and tax",
+      "jurisdiction": "IN",
+      "sources": [],
+      "status": "code-reviewed-external-validation-pending",
+      "finding": "Code shows scheduled advances, direct captain-UPI final payments, commission, holds and payouts. Provider activation, tax/invoice classification and an adopted payout cycle remain unverified."
+    }
+  ]
+}

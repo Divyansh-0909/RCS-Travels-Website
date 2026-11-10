@@ -1,0 +1,631 @@
+{
+  "reviewDate": "2026-11-01",
+  "packageVersion": "0.1.0",
+  "documents": 8,
+  "scans": [
+    {
+      "id": "01-rider-terms",
+      "kind": "mechanical-text-review",
+      "findings": [],
+      "truncated": false,
+      "legalClearance": false,
+      "limitation": "No legal conclusion, factual verification, coverage guarantee or approval follows from these checks. Independently review law, implementation and business commitments."
+    },
+    {
+      "id": "02-rider-privacy",
+      "kind": "mechanical-text-review",
+      "findings": [],
+      "truncated": false,
+      "legalClearance": false,
+      "limitation": "No legal conclusion, factual verification, coverage guarantee or approval follows from these checks. Independently review law, implementation and business commitments."
+    },
+    {
+      "id": "03-refunds-cancellation",
+      "kind": "mechanical-text-review",
+      "findings": [],
+      "truncated": false,
+      "legalClearance": false,
+      "limitation": "No legal conclusion, factual verification, coverage guarantee or approval follows from these checks. Independently review law, implementation and business commitments."
+    },
+    {
+      "id": "04-rider-grievance",
+      "kind": "mechanical-text-review",
+      "findings": [],
+      "truncated": false,
+      "legalClearance": false,
+      "limitation": "No legal conclusion, factual verification, coverage guarantee or approval follows from these checks. Independently review law, implementation and business commitments."
+    },
+    {
+      "id": "05-captain-terms",
+      "kind": "mechanical-text-review",
+      "findings": [
+        {
+          "code": "rights-restriction",
+          "line": 97,
+          "excerpt": "unlimited indemnity"
+        }
+      ],
+      "truncated": false,
+      "legalClearance": false,
+      "limitation": "No legal conclusion, factual verification, coverage guarantee or approval follows from these checks. Independently review law, implementation and business commitments."
+    },
+    {
+      "id": "06-captain-privacy",
+      "kind": "mechanical-text-review",
+      "findings": [],
+      "truncated": false,
+      "legalClearance": false,
+      "limitation": "No legal conclusion, factual verification, coverage guarantee or approval follows from these checks. Independently review law, implementation and business commitments."
+    },
+    {
+      "id": "07-captain-payments",
+      "kind": "mechanical-text-review",
+      "findings": [],
+      "truncated": false,
+      "legalClearance": false,
+      "limitation": "No legal conclusion, factual verification, coverage guarantee or approval follows from these checks. Independently review law, implementation and business commitments."
+    },
+    {
+      "id": "08-captain-grievance",
+      "kind": "mechanical-text-review",
+      "findings": [],
+      "truncated": false,
+      "legalClearance": false,
+      "limitation": "No legal conclusion, factual verification, coverage guarantee or approval follows from these checks. Independently review law, implementation and business commitments."
+    }
+  ],
+  "contextualReview": [
+    {
+      "document": "05-captain-terms",
+      "code": "rights-restriction",
+      "line": 97,
+      "excerpt": "unlimited indemnity",
+      "disposition": "Reviewed in context: the clause explicitly rejects this obligation."
+    }
+  ],
+  "comparisons": [
+    {
+      "id": "01-rider-terms",
+      "comparedWith": "shared/i18n/locales/en/legal.json#documents.terms",
+      "removedCount": 39,
+      "addedCount": 28,
+      "removedNumericTokens": [
+        "22",
+        "500 metres",
+        "₹100"
+      ],
+      "addedNumericTokens": [
+        "1",
+        "203207",
+        "18",
+        "91",
+        "85860",
+        "88085"
+      ],
+      "semanticReview": "See RESEARCH.md and ADOPTION.md; lexical changes do not determine legal correctness."
+    },
+    {
+      "id": "02-rider-privacy",
+      "comparedWith": "shared/i18n/locales/en/legal.json#documents.privacy",
+      "removedCount": 41,
+      "addedCount": 24,
+      "removedNumericTokens": [
+        "12 hours",
+        "2023",
+        "13",
+        "2027"
+      ],
+      "addedNumericTokens": [
+        "1",
+        "203207",
+        "91",
+        "85860",
+        "88085"
+      ],
+      "semanticReview": "See RESEARCH.md and ADOPTION.md; lexical changes do not determine legal correctness."
+    },
+    {
+      "id": "03-refunds-cancellation",
+      "comparedWith": "shared/i18n/locales/en/legal.json#documents.refunds",
+      "removedCount": 19,
+      "addedCount": 22,
+      "removedNumericTokens": [],
+      "addedNumericTokens": [
+        "1",
+        "2026",
+        "₹2,000",
+        "₹200",
+        "91",
+        "85860",
+        "88085"
+      ],
+      "semanticReview": "See RESEARCH.md and ADOPTION.md; lexical changes do not determine legal correctness."
+    },
+    {
+      "id": "04-rider-grievance",
+      "comparedWith": "shared/i18n/locales/en/legal.json#documents.grievance",
+      "removedCount": 18,
+      "addedCount": 16,
+      "removedNumericTokens": [
+        "2019",
+        "2020"
+      ],
+      "addedNumericTokens": [
+        "1",
+        "2026",
+        "91",
+        "85860",
+        "88085",
+        "203207",
+        "48 hours"
+      ],
+      "semanticReview": "See RESEARCH.md and ADOPTION.md; lexical changes do not determine legal correctness."
+    },
+    {
+      "id": "05-captain-terms",
+      "comparedWith": "shared/i18n/locales/en/legal.json#documents.driver-terms",
+      "removedCount": 36,
+      "addedCount": 24,
+      "removedNumericTokens": [
+        "40",
+        "₹5",
+        "₹10",
+        "30",
+        "30 days",
+        "₹200"
+      ],
+      "addedNumericTokens": [
+        "1",
+        "2026",
+        "203207",
+        "91",
+        "85860",
+        "88085"
+      ],
+      "semanticReview": "See RESEARCH.md and ADOPTION.md; lexical changes do not determine legal correctness."
+    },
+    {
+      "id": "06-captain-privacy",
+      "comparedWith": "shared/i18n/locales/en/legal.json#documents.driver-privacy",
+      "removedCount": 29,
+      "addedCount": 23,
+      "removedNumericTokens": [
+        "2023",
+        "13",
+        "2027"
+      ],
+      "addedNumericTokens": [
+        "1",
+        "203207",
+        "91",
+        "85860",
+        "88085"
+      ],
+      "semanticReview": "See RESEARCH.md and ADOPTION.md; lexical changes do not determine legal correctness."
+    },
+    {
+      "id": "07-captain-payments",
+      "comparedWith": "shared/i18n/locales/en/legal.json#documents.driver-payments",
+      "removedCount": 15,
+      "addedCount": 20,
+      "removedNumericTokens": [
+        "12%",
+        "80%",
+        "60%"
+      ],
+      "addedNumericTokens": [
+        "1",
+        "2026",
+        "₹800",
+        "91",
+        "85860",
+        "88085"
+      ],
+      "semanticReview": "See RESEARCH.md and ADOPTION.md; lexical changes do not determine legal correctness."
+    },
+    {
+      "id": "08-captain-grievance",
+      "comparedWith": "shared/i18n/locales/en/legal.json#documents.driver-grievance",
+      "removedCount": 14,
+      "addedCount": 17,
+      "removedNumericTokens": [],
+      "addedNumericTokens": [
+        "1",
+        "2026",
+        "91",
+        "85860",
+        "88085",
+        "203207",
+        "48 hours"
+      ],
+      "semanticReview": "See RESEARCH.md and ADOPTION.md; lexical changes do not determine legal correctness."
+    }
+  ],
+  "checkedCode": [
+    {
+      "id": "customer-cancellation-cap",
+      "path": "backend/services/cancellationPolicy.js",
+      "sha256": "39992e10f7aecbadb3cdf7ec8665a7399aab2bed27ac665d3ddebe47efe3df9c",
+      "result": "scoped-assertions-matched-not-production-verification"
+    },
+    {
+      "id": "captain-cancellable-states",
+      "path": "backend/services/driverRideCancellation.js",
+      "sha256": "66e268d9480163cfc892522c76ed84fa5075144ddb14667b336b57a88e89f97b",
+      "result": "scoped-assertions-matched-not-production-verification"
+    },
+    {
+      "id": "current-commission",
+      "path": "backend/services/commission.js",
+      "sha256": "bc1b42554cbb3334528b97f22521b87e4c406d274e2f555799827adfd92714e3",
+      "result": "scoped-assertions-matched-not-production-verification"
+    },
+    {
+      "id": "scheduled-captain-hold",
+      "path": "backend/services/scheduledDeposit.js",
+      "sha256": "b6b335bc3777777694df718587957f65cd7da4747bbb97769492310d9de8197e",
+      "result": "scoped-assertions-matched-not-production-verification"
+    }
+  ],
+  "quotedEvidence": {
+    "results": [
+      {
+        "sourceId": "IN-DPDP-COMMENCEMENT-2025",
+        "sourceRegistered": true,
+        "semanticSupportVerified": false,
+        "sourceStatus": "final",
+        "url": "https://www.meity.gov.in/static/uploads/2025/11/c56ceae6c383460ca69577428d36828b.pdf",
+        "primary": true,
+        "status": "requires-applicability-review",
+        "locatorProvided": true,
+        "quotation": "exact-normalised-match",
+        "evidenceProvenance": "caller-supplied-not-authenticated"
+      },
+      {
+        "sourceId": "IN-UP-MARCH-2026-DRAFT",
+        "sourceRegistered": true,
+        "semanticSupportVerified": false,
+        "sourceStatus": "draft",
+        "url": "https://upidadv.up.gov.in/upload/PublicationRequest/183241/SachivalyaLKO130326Notification639090236220551079.pdf",
+        "primary": true,
+        "status": "draft-not-operative-authority",
+        "locatorProvided": true,
+        "quotation": "not-requested"
+      }
+    ],
+    "legalClearance": false,
+    "limitation": "A quotation match only compares caller-supplied text. It does not authenticate the evidence, check commencement, validate a URL or establish that the source supports a legal proposition."
+  },
+  "sources": {
+    "reviewDate": "2026-11-01",
+    "limitation": "Curated source records, not a live legal database. A link or text inspection does not establish current completeness, territorial applicability or compliance. Check later amendments before reuse.",
+    "sources": [
+      {
+        "id": "IN-CONTRACT-1872",
+        "title": "Indian Contract Act, 1872",
+        "jurisdictions": [
+          "IN"
+        ],
+        "url": "https://www.indiacode.nic.in/bitstream/123456789/2187/2/A187209.pdf",
+        "primary": true,
+        "status": "enacted",
+        "readStatus": "targeted-official-search-excerpt-full-retrieval-incomplete",
+        "locator": "Section 11",
+        "note": "The official indexed excerpt supplies the capacity provision; direct PDF retrieval timed out. An adult-account proposal requires a product age-policy decision, not merely revised text."
+      },
+      {
+        "id": "IN-DPDP-ACT-2023",
+        "title": "Digital Personal Data Protection Act, 2023",
+        "jurisdictions": [
+          "IN"
+        ],
+        "url": "https://www.meity.gov.in/static/uploads/2024/06/2bf1f0e9f04e6fb4f8fef35e82c42aa5.pdf",
+        "primary": true,
+        "status": "enacted-phased",
+        "readStatus": "targeted-text-inspected",
+        "locator": "Sections 1, 2, 5-9, 11-14, 16",
+        "note": "Read with the commencement notification. Publication of the Act is not commencement of every obligation."
+      },
+      {
+        "id": "IN-DPDP-COMMENCEMENT-2025",
+        "title": "G.S.R. 843(E), DPDP commencement notification",
+        "jurisdictions": [
+          "IN"
+        ],
+        "url": "https://www.meity.gov.in/static/uploads/2025/11/c56ceae6c383460ca69577428d36828b.pdf",
+        "primary": true,
+        "status": "final",
+        "readStatus": "text-inspected",
+        "locator": "Clauses (a), (b), (c), English page 2",
+        "note": "Provides immediate, one-year and eighteen-month commencement phases from Gazette publication."
+      },
+      {
+        "id": "IN-DPDP-RULES-2025",
+        "title": "Digital Personal Data Protection Rules, 2025, G.S.R. 846(E)",
+        "jurisdictions": [
+          "IN"
+        ],
+        "url": "https://www.meity.gov.in/static/uploads/2025/11/53450e6e5dc0bfa85ebd78686cadad39.pdf",
+        "primary": true,
+        "status": "final-phased",
+        "readStatus": "targeted-text-inspected",
+        "locator": "Rule 1; rules 3, 6-10 and 14",
+        "note": "Commencement varies by rule. Do not describe every duty as already operational on the review date."
+      },
+      {
+        "id": "IN-SPDI-2011",
+        "title": "Information Technology (Reasonable security practices and procedures and sensitive personal data or information) Rules, 2011",
+        "jurisdictions": [
+          "IN"
+        ],
+        "url": "https://www.meity.gov.in/writereaddata/files/GSR313E_10511%281%29_0.pdf",
+        "primary": true,
+        "status": "final",
+        "readStatus": "retrieval-incomplete",
+        "locator": "Rules 4-8",
+        "note": "Primary retrieval failed during this task. Do not treat the registered URL as fully verified authority; assess the existing IT/SPDI regime alongside phased DPDP changes."
+      },
+      {
+        "id": "IN-CONSUMER-RULES-2020",
+        "title": "Consumer Protection (E-Commerce) Rules, 2020",
+        "jurisdictions": [
+          "IN"
+        ],
+        "url": "https://consumeraffairs.nic.in/sites/default/files/E%20commerce%20rules.pdf",
+        "primary": true,
+        "status": "final",
+        "readStatus": "retrieval-incomplete",
+        "locator": "Rules 4-6",
+        "note": "Direct PDF retrieval timed out. Acknowledge/redress commitments in the candidate are proposed operational standards, not proof that every marketplace rule applies to this proprietorship."
+      },
+      {
+        "id": "IN-CONSUMER-2026-ANNOUNCEMENT",
+        "title": "Government announcement explaining the 2026 e-commerce amendments",
+        "jurisdictions": [
+          "IN"
+        ],
+        "url": "https://www.pib.gov.in/PressReleaseIframePage.aspx?PRID=2308759&lang=2&reg=48",
+        "primary": true,
+        "status": "official-announcement-future-rules",
+        "readStatus": "text-inspected",
+        "locator": "10 September 2026 release; commencement and key amendments",
+        "note": "Official release gives 1 January 2027 commencement and describes complaint copies, NCH convergence and transparency. The full amendment Gazette still needs clause-level verification."
+      },
+      {
+        "id": "IN-CERT-2022",
+        "title": "CERT-In directions under section 70B, 28 April 2022",
+        "jurisdictions": [
+          "IN"
+        ],
+        "url": "https://www.cert-in.org.in/Directions70B.jsp",
+        "primary": true,
+        "status": "final",
+        "readStatus": "index-inspected-full-text-pending",
+        "locator": "2022 directions and associated FAQ",
+        "note": "Do not infer a universal retention period for all ride data from security-log directions. Coverage and exact directions need confirmation."
+      },
+      {
+        "id": "IN-MORTH-2025",
+        "title": "Motor Vehicle Aggregator Guidelines, 2025",
+        "jurisdictions": [
+          "IN"
+        ],
+        "url": "https://morth.nic.in/sites/default/files/circulars_document/MV-Aggregators-Guidelines-2025%20-%20English%20and%20Hindi.pdf",
+        "primary": true,
+        "status": "central-guideline",
+        "readStatus": "targeted-text-inspected",
+        "locator": "Definitions; state implementation framework",
+        "note": "A central framework does not resolve the operative requirements in each pickup jurisdiction."
+      },
+      {
+        "id": "IN-UP-MARCH-2026-DRAFT",
+        "title": "UP March 2026 transport consultation draft",
+        "jurisdictions": [
+          "IN-UP"
+        ],
+        "url": "https://upidadv.up.gov.in/upload/PublicationRequest/183241/SachivalyaLKO130326Notification639090236220551079.pdf",
+        "primary": true,
+        "status": "draft",
+        "readStatus": "draft-status-inspected",
+        "locator": "13 March 2026 notification, opening page",
+        "note": "Consultation draft. Never use as proof of a final operative penalty, exemption or service condition. Final-rule reconciliation remains open."
+      },
+      {
+        "id": "IN-DL-TRANSPORT-2023",
+        "title": "Delhi 2023 transport scheme, official publication page",
+        "jurisdictions": [
+          "IN-DL"
+        ],
+        "url": "https://transport.delhi.gov.in/transport/delhi-motor-vehicle-aggregator-and-delivery-service-provider-scheme-2023-0",
+        "primary": true,
+        "status": "official-publication-page",
+        "readStatus": "landing-page-inspected",
+        "locator": "Scheme attachment",
+        "note": "Full attachment and amendments must be checked; Delhi is a research candidate, not a confirmed pickup jurisdiction in the owner response."
+      },
+      {
+        "id": "IN-HR-TRANSPORT-2026",
+        "title": "Haryana transport notification, 21 May 2026",
+        "jurisdictions": [
+          "IN-HR"
+        ],
+        "url": "https://haryanatransport.gov.in/en/content/aggregator-policy-transport-department-notification-no-13920166ti-dated-21st-may-2026",
+        "primary": true,
+        "status": "official-publication-page",
+        "readStatus": "retrieval-incomplete",
+        "locator": "Notification 13/9/2016/6T(I)",
+        "note": "Full attachment retrieval timed out. Haryana is a research candidate only; do not assert scope, thresholds or compliance from the index."
+      }
+    ]
+  },
+  "requirements": {
+    "reviewDate": "2026-11-01",
+    "assessment": "research-and-drafting-only",
+    "rows": [
+      {
+        "topic": "Adult contracting and minors",
+        "jurisdiction": "IN",
+        "sources": [
+          "IN-CONTRACT-1872",
+          "IN-DPDP-ACT-2023"
+        ],
+        "status": "policy-and-code-change-required",
+        "finding": "Candidate requires an adult account holder and adult-accompanied child travel. Existing legal copy permits rider accounts at 15; adult gating/acceptance is not established by this task."
+      },
+      {
+        "topic": "Privacy commencement",
+        "jurisdiction": "IN",
+        "sources": [
+          "IN-DPDP-COMMENCEMENT-2025",
+          "IN-DPDP-RULES-2025"
+        ],
+        "status": "phased-framework-confirmed",
+        "finding": "Separate presently applicable obligations from the one-year/eighteen-month phases; current source verification is not a DPDP readiness certification."
+      },
+      {
+        "topic": "Consumer grievances",
+        "jurisdiction": "IN",
+        "sources": [
+          "IN-CONSUMER-RULES-2020",
+          "IN-CONSUMER-2026-ANNOUNCEMENT"
+        ],
+        "status": "scope-and-operations-pending",
+        "finding": "Proposed 48-hour acknowledgement and one-month redress standards require staffing and records. Complaint-copy/NCH changes need planning for 1 January 2027 and full Gazette verification."
+      },
+      {
+        "topic": "Security and retention",
+        "jurisdiction": "IN",
+        "sources": [
+          "IN-CERT-2022",
+          "IN-DPDP-RULES-2025",
+          "IN-SPDI-2011"
+        ],
+        "status": "retention-schedule-not-approved",
+        "finding": "Separate live location, trip records, accounts, documents, tax records and logs. No universal numerical retention promise or complete-erasure claim is supported."
+      },
+      {
+        "topic": "Cancellation and service conditions",
+        "jurisdiction": "IN-UP",
+        "sources": [
+          "IN-UP-MARCH-2026-DRAFT",
+          "IN-MORTH-2025"
+        ],
+        "status": "final-state-source-unresolved",
+        "finding": "10%/Rs 100 cap and 500-metre gate are verified product behaviour, not a determination that the policy satisfies every operating jurisdiction. Keep existing adverse review findings open."
+      },
+      {
+        "topic": "Territorial transport requirements",
+        "jurisdiction": "IN-DL",
+        "sources": [
+          "IN-DL-TRANSPORT-2023"
+        ],
+        "status": "jurisdiction-and-full-text-pending",
+        "finding": "Owner confirms pickups outside UP, not which states. Verify location, service model, fleet and complete current scheme before any applicability conclusion."
+      },
+      {
+        "topic": "Territorial transport requirements",
+        "jurisdiction": "IN-HR",
+        "sources": [
+          "IN-HR-TRANSPORT-2026"
+        ],
+        "status": "jurisdiction-and-full-text-pending",
+        "finding": "Do not infer Haryana coverage or exemption from a search result. Identify all other pickup territories as well."
+      },
+      {
+        "topic": "Payments, payouts and tax",
+        "jurisdiction": "IN",
+        "sources": [],
+        "status": "code-reviewed-external-validation-pending",
+        "finding": "Code shows scheduled advances, direct captain-UPI final payments, commission, holds and payouts. Provider activation, tax/invoice classification and an adopted payout cycle remain unverified."
+      }
+    ]
+  },
+  "gaps": {
+    "reviewDate": "2026-11-01",
+    "status": "open-findings-do-not-imply-clearance",
+    "findings": [
+      {
+        "id": "G01",
+        "category": "jurisdiction",
+        "status": "open",
+        "issue": "All pickup territories and their current operating requirements have not been established.",
+        "nextAction": "Obtain the complete pickup-state list and current authoritative rules; preserve the existing repository compliance review.",
+        "existingRecord": "docs/compliance/rcs-policy-code-audit.md"
+      },
+      {
+        "id": "G02",
+        "category": "source",
+        "status": "open",
+        "issue": "UP consultation draft must not be substituted for final rules; Delhi/Haryana full texts and all later amendments remain incomplete.",
+        "nextAction": "Retrieve and reconcile final primary texts before definitive state-specific promises or legal conclusions."
+      },
+      {
+        "id": "G03",
+        "category": "product",
+        "status": "open",
+        "issue": "Adult-account candidate conflicts with the earlier 15-year rider policy and unverified age/guardian controls.",
+        "nextAction": "Adopt and implement an adult-account and child-travel policy; do not silently publish a different age rule."
+      },
+      {
+        "id": "G04",
+        "category": "operations",
+        "status": "open",
+        "issue": "48-hour acknowledgements, one-month complaint redress and complaint copies are proposed standards; actual staff coverage and records were not verified.",
+        "nextAction": "Assign responsibility, record incoming complaints and demonstrate the response process before adoption."
+      },
+      {
+        "id": "G05",
+        "category": "privacy",
+        "status": "open",
+        "issue": "No category-specific implemented retention schedule, complete vendor/location inventory or backup-erasure evidence was verified.",
+        "nextAction": "Inventory actual data/vendors/storage locations and implement deletion/retention controls. Account deletion does not delete every linked record."
+      },
+      {
+        "id": "G06",
+        "category": "payments",
+        "status": "open",
+        "issue": "No approved universal refund-credit deadline or verified payout cycle/provider activation is established.",
+        "nextAction": "Confirm provider flow, customer communications and captain settlement schedule; never promise instant refunds or daily payouts without evidence."
+      },
+      {
+        "id": "G07",
+        "category": "product",
+        "status": "open",
+        "issue": "Captain cancellation rematches a booking; terminal failed-pickup treatment and mandatory remedies are not fully established by the inspected code.",
+        "nextAction": "Verify missed-pickup handling, replacement exhaustion, refunds and any required compensation end to end."
+      },
+      {
+        "id": "G08",
+        "category": "payments",
+        "status": "open",
+        "issue": "GST/TDS, seller identity, invoicing and state fare/share requirements cannot be settled by a payment-code inspection.",
+        "nextAction": "Determine the real supply/collection model and applicable tax treatment; do not invent a GST rate or registration number."
+      },
+      {
+        "id": "G09",
+        "category": "product",
+        "status": "open",
+        "issue": "Reviewed complaint notices/appeals exist in newer code, but the adopted sanctions, actual delivery and dispute windows need an end-to-end check.",
+        "nextAction": "Reconcile current responsibility services and UI; do not carry forward stale raw-complaint strike thresholds."
+      },
+      {
+        "id": "G10",
+        "category": "publication",
+        "status": "open",
+        "issue": "Eight English candidates are separate from live English/Hindi/Hinglish pages, old PDF and RAG copies.",
+        "nextAction": "Resolve source/product/business gaps, record adoption/version date, then reconcile all publication surfaces together. Do not mark this package as deployed or independently reviewed."
+      },
+      {
+        "id": "G11",
+        "category": "source",
+        "status": "open",
+        "issue": "The full 2026 e-commerce amendment Gazette and the older consumer/SPDI/CERT-In primary texts were not all retrieved successfully.",
+        "nextAction": "Complete clause-level verification; the official future-amendment announcement is a reliable alert, not a substitute for the full operative text."
+      }
+    ]
+  },
+  "legalClearance": false,
+  "adoptionStatus": "not-adopted",
+  "productionDataAccessed": false,
+  "limitation": "Scoped repository checks, mechanical scans and source observations; not legal certification, a complete state-law review, deployed-behaviour verification or a replacement for open decisions."
+}

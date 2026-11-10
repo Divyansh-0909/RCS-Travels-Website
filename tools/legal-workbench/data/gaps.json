@@ -1,0 +1,84 @@
+{
+  "reviewDate": "2026-11-01",
+  "status": "open-findings-do-not-imply-clearance",
+  "findings": [
+    {
+      "id": "G01",
+      "category": "jurisdiction",
+      "status": "open",
+      "issue": "Eight pickup territories are now owner-confirmed; their fleet/model applicability and complete current operating conditions remain unverified.",
+      "nextAction": "Use the eight-territory matrix in the project audit; resolve fleet/model and source gaps before adopting common terms.",
+      "existingRecord": "docs/compliance/rcs-policy-code-audit.md"
+    },
+    {
+      "id": "G02",
+      "category": "source",
+      "status": "open",
+      "issue": "Final UP, Delhi and Rajasthan texts are retrieved; latest Haryana text and complete final Punjab/HP verification remain incomplete.",
+      "nextAction": "Use final UP rather than the consultation draft. Complete the remaining territory-specific checks."
+    },
+    {
+      "id": "G03",
+      "category": "product",
+      "status": "open",
+      "issue": "Adult-account candidate conflicts with the earlier 15-year rider policy and unverified age/guardian controls.",
+      "nextAction": "Adopt and implement an adult-account and child-travel policy; do not silently publish a different age rule."
+    },
+    {
+      "id": "G04",
+      "category": "operations",
+      "status": "open",
+      "issue": "Candidate grievance documents describe 48-hour/one-month timing as proposed; applicable e-commerce law already requires it. Actual response records remain unverified.",
+      "nextAction": "Correct the characterisation and implement evidence-backed handling; owner cannot opt out of an applicable statutory deadline."
+    },
+    {
+      "id": "G05",
+      "category": "privacy",
+      "status": "open",
+      "issue": "No category-specific implemented retention schedule, complete vendor/location inventory or backup-erasure evidence was verified.",
+      "nextAction": "Inventory actual data/vendors/storage locations and implement deletion/retention controls. Account deletion does not delete every linked record."
+    },
+    {
+      "id": "G06",
+      "category": "payments",
+      "status": "open",
+      "issue": "No approved universal refund-credit deadline or verified payout cycle/provider activation is established.",
+      "nextAction": "Confirm provider flow, customer communications and captain settlement schedule; never promise instant refunds or daily payouts without evidence."
+    },
+    {
+      "id": "G07",
+      "category": "product",
+      "status": "open",
+      "issue": "Captain cancellation rematches a booking; terminal failed-pickup treatment and mandatory remedies are not fully established by the inspected code.",
+      "nextAction": "Verify missed-pickup handling, replacement exhaustion, refunds and any required compensation end to end."
+    },
+    {
+      "id": "G08",
+      "category": "payments",
+      "status": "open",
+      "issue": "GST/TDS, seller identity, invoicing and state fare/share requirements cannot be settled by a payment-code inspection.",
+      "nextAction": "Determine the real supply/collection model and applicable tax treatment; do not invent a GST rate or registration number."
+    },
+    {
+      "id": "G09",
+      "category": "product",
+      "status": "open",
+      "issue": "Reviewed complaint notices/appeals exist in newer code, but the adopted sanctions, actual delivery and dispute windows need an end-to-end check.",
+      "nextAction": "Reconcile current responsibility services and UI; do not carry forward stale raw-complaint strike thresholds."
+    },
+    {
+      "id": "G10",
+      "category": "publication",
+      "status": "open",
+      "issue": "Eight English candidates are separate from live English/Hindi/Hinglish pages, old PDF and RAG copies.",
+      "nextAction": "Resolve source/product/business gaps, record adoption/version date, then reconcile all publication surfaces together. Do not mark this package as deployed or independently reviewed."
+    },
+    {
+      "id": "G11",
+      "category": "source",
+      "status": "source-access-resolved-application-review-open",
+      "issue": "Consumer amendment Gazette, SPDI government mirror and CERT-In directions have now been retrieved; remaining source and implementation questions are recorded in the new audit.",
+      "nextAction": "See legal-review/2026-11-01-audit for provenance and requirement/decision separation. Retrieval alone does not close operational compliance findings."
+    }
+  ]
+}

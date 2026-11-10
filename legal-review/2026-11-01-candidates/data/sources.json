@@ -1,0 +1,78 @@
+{
+  "reviewDate": "2026-11-01",
+  "limitation": "Curated source records, not a live legal database. A link or text inspection does not establish current completeness, territorial applicability or compliance. Check later amendments before reuse.",
+  "sources": [
+    {
+      "id": "IN-CONTRACT-1872", "title": "Indian Contract Act, 1872", "jurisdictions": ["IN"],
+      "url": "https://www.indiacode.nic.in/bitstream/123456789/2187/2/A187209.pdf", "primary": true,
+      "status": "enacted", "readStatus": "targeted-official-search-excerpt-full-retrieval-incomplete", "locator": "Section 11",
+      "note": "The official indexed excerpt supplies the capacity provision; direct PDF retrieval timed out. An adult-account proposal requires a product age-policy decision, not merely revised text."
+    },
+    {
+      "id": "IN-DPDP-ACT-2023", "title": "Digital Personal Data Protection Act, 2023", "jurisdictions": ["IN"],
+      "url": "https://www.meity.gov.in/static/uploads/2024/06/2bf1f0e9f04e6fb4f8fef35e82c42aa5.pdf", "primary": true,
+      "status": "enacted-phased", "readStatus": "targeted-text-inspected", "locator": "Sections 1, 2, 5-9, 11-14, 16",
+      "note": "Read with the commencement notification. Publication of the Act is not commencement of every obligation."
+    },
+    {
+      "id": "IN-DPDP-COMMENCEMENT-2025", "title": "G.S.R. 843(E), DPDP commencement notification", "jurisdictions": ["IN"],
+      "url": "https://www.meity.gov.in/static/uploads/2025/11/c56ceae6c383460ca69577428d36828b.pdf", "primary": true,
+      "status": "final", "readStatus": "text-inspected", "locator": "Clauses (a), (b), (c), English page 2",
+      "note": "Provides immediate, one-year and eighteen-month commencement phases from Gazette publication."
+    },
+    {
+      "id": "IN-DPDP-RULES-2025", "title": "Digital Personal Data Protection Rules, 2025, G.S.R. 846(E)", "jurisdictions": ["IN"],
+      "url": "https://www.meity.gov.in/static/uploads/2025/11/53450e6e5dc0bfa85ebd78686cadad39.pdf", "primary": true,
+      "status": "final-phased", "readStatus": "targeted-text-inspected", "locator": "Rule 1; rules 3, 6-10 and 14",
+      "note": "Commencement varies by rule. Do not describe every duty as already operational on the review date."
+    },
+    {
+      "id": "IN-SPDI-2011", "title": "Information Technology (Reasonable security practices and procedures and sensitive personal data or information) Rules, 2011", "jurisdictions": ["IN"],
+      "url": "https://www.meity.gov.in/writereaddata/files/GSR313E_10511%281%29_0.pdf", "primary": true,
+      "status": "final", "readStatus": "retrieval-incomplete", "locator": "Rules 4-8",
+      "note": "Primary retrieval failed during this task. Do not treat the registered URL as fully verified authority; assess the existing IT/SPDI regime alongside phased DPDP changes."
+    },
+    {
+      "id": "IN-CONSUMER-RULES-2020", "title": "Consumer Protection (E-Commerce) Rules, 2020", "jurisdictions": ["IN"],
+      "url": "https://consumeraffairs.nic.in/sites/default/files/E%20commerce%20rules.pdf", "primary": true,
+      "status": "final", "readStatus": "retrieval-incomplete", "locator": "Rules 4-6",
+      "note": "Direct PDF retrieval timed out. Acknowledge/redress commitments in the candidate are proposed operational standards, not proof that every marketplace rule applies to this proprietorship."
+    },
+    {
+      "id": "IN-CONSUMER-2026-ANNOUNCEMENT", "title": "Government announcement explaining the 2026 e-commerce amendments", "jurisdictions": ["IN"],
+      "url": "https://www.pib.gov.in/PressReleaseIframePage.aspx?PRID=2308759&lang=2&reg=48", "primary": true,
+      "status": "official-announcement-future-rules", "readStatus": "text-inspected", "locator": "10 September 2026 release; commencement and key amendments",
+      "note": "Official release gives 1 January 2027 commencement and describes complaint copies, NCH convergence and transparency. The full amendment Gazette still needs clause-level verification."
+    },
+    {
+      "id": "IN-CERT-2022", "title": "CERT-In directions under section 70B, 28 April 2022", "jurisdictions": ["IN"],
+      "url": "https://www.cert-in.org.in/Directions70B.jsp", "primary": true,
+      "status": "final", "readStatus": "index-inspected-full-text-pending", "locator": "2022 directions and associated FAQ",
+      "note": "Do not infer a universal retention period for all ride data from security-log directions. Coverage and exact directions need confirmation."
+    },
+    {
+      "id": "IN-MORTH-2025", "title": "Motor Vehicle Aggregator Guidelines, 2025", "jurisdictions": ["IN"],
+      "url": "https://morth.nic.in/sites/default/files/circulars_document/MV-Aggregators-Guidelines-2025%20-%20English%20and%20Hindi.pdf", "primary": true,
+      "status": "central-guideline", "readStatus": "targeted-text-inspected", "locator": "Definitions; state implementation framework",
+      "note": "A central framework does not resolve the operative requirements in each pickup jurisdiction."
+    },
+    {
+      "id": "IN-UP-MARCH-2026-DRAFT", "title": "UP March 2026 transport consultation draft", "jurisdictions": ["IN-UP"],
+      "url": "https://upidadv.up.gov.in/upload/PublicationRequest/183241/SachivalyaLKO130326Notification639090236220551079.pdf", "primary": true,
+      "status": "draft", "readStatus": "draft-status-inspected", "locator": "13 March 2026 notification, opening page",
+      "note": "Consultation draft. Never use as proof of a final operative penalty, exemption or service condition. Final-rule reconciliation remains open."
+    },
+    {
+      "id": "IN-DL-TRANSPORT-2023", "title": "Delhi 2023 transport scheme, official publication page", "jurisdictions": ["IN-DL"],
+      "url": "https://transport.delhi.gov.in/transport/delhi-motor-vehicle-aggregator-and-delivery-service-provider-scheme-2023-0", "primary": true,
+      "status": "official-publication-page", "readStatus": "landing-page-inspected", "locator": "Scheme attachment",
+      "note": "Full attachment and amendments must be checked; Delhi is a research candidate, not a confirmed pickup jurisdiction in the owner response."
+    },
+    {
+      "id": "IN-HR-TRANSPORT-2026", "title": "Haryana transport notification, 21 May 2026", "jurisdictions": ["IN-HR"],
+      "url": "https://haryanatransport.gov.in/en/content/aggregator-policy-transport-department-notification-no-13920166ti-dated-21st-may-2026", "primary": true,
+      "status": "official-publication-page", "readStatus": "retrieval-incomplete", "locator": "Notification 13/9/2016/6T(I)",
+      "note": "Full attachment retrieval timed out. Haryana is a research candidate only; do not assert scope, thresholds or compliance from the index."
+    }
+  ]
+}

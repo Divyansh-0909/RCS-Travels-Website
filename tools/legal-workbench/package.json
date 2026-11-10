@@ -1,0 +1,13 @@
+{
+  "name": "rcs-legal-workbench",
+  "version": "0.1.1",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "review": "node cli.mjs review",
+    "report": "node cli.mjs report"
+  }
+}

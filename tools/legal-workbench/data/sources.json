@@ -1,0 +1,214 @@
+{
+  "reviewDate": "2026-11-01",
+  "limitation": "Curated source records, not a live legal database. A link or text inspection does not establish current completeness, territorial applicability or compliance. Check later amendments before reuse.",
+  "sources": [
+    {
+      "id": "IN-CONTRACT-1872",
+      "title": "Indian Contract Act, 1872",
+      "jurisdictions": [
+        "IN"
+      ],
+      "url": "https://www.indiacode.nic.in/bitstream/123456789/2187/2/A187209.pdf",
+      "primary": true,
+      "status": "enacted",
+      "readStatus": "targeted-official-search-excerpt-full-retrieval-incomplete",
+      "locator": "Section 11",
+      "note": "The official indexed excerpt supplies the capacity provision; direct PDF retrieval timed out. An adult-account proposal requires a product age-policy decision, not merely revised text."
+    },
+    {
+      "id": "IN-DPDP-ACT-2023",
+      "title": "Digital Personal Data Protection Act, 2023",
+      "jurisdictions": [
+        "IN"
+      ],
+      "url": "https://www.meity.gov.in/static/uploads/2024/06/2bf1f0e9f04e6fb4f8fef35e82c42aa5.pdf",
+      "primary": true,
+      "status": "enacted-phased",
+      "readStatus": "targeted-text-inspected",
+      "locator": "Sections 1, 2, 5-9, 11-14, 16",
+      "note": "Read with the commencement notification. Publication of the Act is not commencement of every obligation."
+    },
+    {
+      "id": "IN-DPDP-COMMENCEMENT-2025",
+      "title": "G.S.R. 843(E), DPDP commencement notification",
+      "jurisdictions": [
+        "IN"
+      ],
+      "url": "https://www.meity.gov.in/static/uploads/2025/11/c56ceae6c383460ca69577428d36828b.pdf",
+      "primary": true,
+      "status": "final",
+      "readStatus": "text-inspected",
+      "locator": "Clauses (a), (b), (c), English page 2",
+      "note": "Provides immediate, one-year and eighteen-month commencement phases from Gazette publication."
+    },
+    {
+      "id": "IN-DPDP-RULES-2025",
+      "title": "Digital Personal Data Protection Rules, 2025, G.S.R. 846(E)",
+      "jurisdictions": [
+        "IN"
+      ],
+      "url": "https://www.meity.gov.in/static/uploads/2025/11/53450e6e5dc0bfa85ebd78686cadad39.pdf",
+      "primary": true,
+      "status": "final-phased",
+      "readStatus": "targeted-text-inspected",
+      "locator": "Rule 1; rules 3, 6-10 and 14",
+      "note": "Commencement varies by rule. Do not describe every duty as already operational on the review date."
+    },
+    {
+      "id": "IN-SPDI-2011",
+      "title": "Information Technology (Reasonable security practices and procedures and sensitive personal data or information) Rules, 2011",
+      "jurisdictions": [
+        "IN"
+      ],
+      "url": "https://emb.mes.gov.in/Common/help/gsr3_10511.pdf",
+      "primary": true,
+      "status": "final",
+      "readStatus": "targeted-text-inspected-government-gazette-mirror",
+      "locator": "G.S.R. 313(E), rules 4-8 in the Gazette compilation",
+      "note": "SPDI notification retrieved from a Government of India mirror; the compilation also contains other 2011 rules. Only the identified SPDI notification is relied on, not repealed intermediary provisions."
+    },
+    {
+      "id": "IN-CONSUMER-RULES-2020",
+      "title": "Consumer Protection (E-Commerce) Rules, 2020",
+      "jurisdictions": [
+        "IN"
+      ],
+      "url": "https://consumeraffairs.gov.in/public/upload/files/E%20commerce%20rules_1732703966.pdf",
+      "primary": true,
+      "status": "final",
+      "readStatus": "targeted-full-pdf-text-inspected",
+      "locator": "Rules 4(4), 4(5), 4(8), 4(9), 4(10), PDF pages 8-9",
+      "note": "Official PDF retrieved and hashed. The 48-hour acknowledgement and one-month redress duties already exist where the rules apply; they are not optional proposed future standards."
+    },
+    {
+      "id": "IN-CONSUMER-2026-ANNOUNCEMENT",
+      "title": "Government announcement explaining the 2026 e-commerce amendments",
+      "jurisdictions": [
+        "IN"
+      ],
+      "url": "https://www.pib.gov.in/PressReleaseIframePage.aspx?PRID=2308759&lang=2&reg=48",
+      "primary": true,
+      "status": "official-announcement-future-rules",
+      "readStatus": "text-inspected",
+      "locator": "10 September 2026 release; commencement and key amendments",
+      "note": "Official release gives 1 January 2027 commencement and describes complaint copies, NCH convergence and transparency. The full amendment Gazette still needs clause-level verification."
+    },
+    {
+      "id": "IN-CERT-2022",
+      "title": "CERT-In directions under section 70B, 28 April 2022",
+      "jurisdictions": [
+        "IN"
+      ],
+      "url": "https://www.cert-in.org.in/PDF/CERT-In_Directions_70B_28.04.2022.pdf",
+      "primary": true,
+      "status": "final",
+      "readStatus": "directions-ii-and-iv-text-inspected",
+      "locator": "Directions (ii) and (iv), PDF pages 2-3",
+      "note": "Covered entities: report listed incidents within six hours; retain ICT logs 180 days within India. This is not a universal retention period for every ride record."
+    },
+    {
+      "id": "IN-MORTH-2025",
+      "title": "Motor Vehicle Aggregator Guidelines, 2025",
+      "jurisdictions": [
+        "IN"
+      ],
+      "url": "https://morth.nic.in/sites/default/files/circulars_document/MV-Aggregators-Guidelines-2025%20-%20English%20and%20Hindi.pdf",
+      "primary": true,
+      "status": "central-guideline",
+      "readStatus": "targeted-text-inspected",
+      "locator": "Definitions; state implementation framework",
+      "note": "A central framework does not resolve the operative requirements in each pickup jurisdiction."
+    },
+    {
+      "id": "IN-UP-MARCH-2026-DRAFT",
+      "title": "UP March 2026 transport consultation draft",
+      "jurisdictions": [
+        "IN-UP"
+      ],
+      "url": "https://upidadv.up.gov.in/upload/PublicationRequest/183241/SachivalyaLKO130326Notification639090236220551079.pdf",
+      "primary": true,
+      "status": "draft",
+      "readStatus": "draft-status-inspected",
+      "locator": "13 March 2026 notification, opening page",
+      "note": "Consultation draft. Never use as proof of a final operative penalty, exemption or service condition. Final-rule reconciliation remains open."
+    },
+    {
+      "id": "IN-DL-TRANSPORT-2023",
+      "title": "Delhi 2023 transport scheme, official publication page",
+      "jurisdictions": [
+        "IN-DL"
+      ],
+      "url": "https://transport.delhi.gov.in/sites/default/files/Transport/circulars-orders/250308.pdf",
+      "primary": true,
+      "status": "final",
+      "readStatus": "targeted-text-inspected",
+      "locator": "Clause 3(1)-(2), PDF page 21",
+      "note": "Owner confirms Delhi pickups. The scheme has its own at-least-25-vehicle scope clause; it does not waive other applicable law. Fleet counting and current amendments need territory-specific verification."
+    },
+    {
+      "id": "IN-HR-TRANSPORT-2026",
+      "title": "Haryana transport notification, 21 May 2026",
+      "jurisdictions": [
+        "IN-HR"
+      ],
+      "url": "https://haryanatransport.gov.in/en/content/aggregator-policy-transport-department-notification-no-13920166ti-dated-21st-may-2026",
+      "primary": true,
+      "status": "official-publication-page",
+      "readStatus": "retrieval-incomplete",
+      "locator": "Notification 13/9/2016/6T(I)",
+      "note": "Full attachment retrieval timed out. Haryana is a research candidate only; do not assert scope, thresholds or compliance from the index."
+    },
+    {
+      "id": "IN-UP-FINAL-2026",
+      "title": "UP Motor Vehicles (Thirty-third Amendment) rules, notification 5/2026/470 of 22 May 2026",
+      "jurisdictions": [
+        "IN-UP"
+      ],
+      "url": "https://upmyfleet.com/storage/manual/ViewGOPDF.pdf",
+      "primary": true,
+      "status": "final",
+      "readStatus": "targeted-text-and-source-page-images-inspected",
+      "locator": "Rules 125-I, 125-M, 125-Q, 125-R, 125-U and 125-V; PDF pages 46-63",
+      "note": "Final order retrieved from the current transport portal, including completed consultation recitals. Replaces the earlier draft as the audit authority; no automatic conclusion about implementation or exemptions."
+    },
+    {
+      "id": "IN-CONSUMER-AMENDMENT-2026",
+      "title": "Consumer Protection (E-Commerce) (Amendment) Rules, 2026, G.S.R. 789(E)",
+      "jurisdictions": [
+        "IN"
+      ],
+      "url": "https://consumeraffairs.gov.in/public/upload/files/E%20Commerce%20Amendment%20Rules%202026_1789127949.pdf",
+      "primary": true,
+      "status": "final-future",
+      "readStatus": "text-and-source-page-image-inspected",
+      "locator": "English PDF pages 5-7, commencement 1 January 2027",
+      "note": "Full Gazette retrieved and visual commencement checked; adds complaint-copy and NCH convergence duties and other transparency changes. Existing 2020 grievance timing is not postponed to 2027."
+    },
+    {
+      "id": "IN-RJ-RULES-2025",
+      "title": "Rajasthan Motor Vehicles Aggregator Scheme Rules, 2025",
+      "jurisdictions": [
+        "IN-RJ"
+      ],
+      "url": "https://transport.rajasthan.gov.in/content/dam/transport/transport-dept/pdf/Policies/DOC-20251231-WA0026.pdf",
+      "primary": true,
+      "status": "final",
+      "readStatus": "targeted-text-inspected",
+      "locator": "Rules 2(1)(vi), 3 and 5, Gazette 31 December 2025",
+      "note": "Owner confirms Rajasthan pickups. Applicability clause has at least 25 associated vehicles; eligibility wording differs from UP. No blanket exemption conclusion."
+    },
+    {
+      "id": "IN-PB-DRAFT-2023",
+      "title": "Punjab Vehicles Aggregator draft rules, 14 December 2023",
+      "jurisdictions": [
+        "IN-PB"
+      ],
+      "url": "https://transport.punjab.gov.in/documents/168/Notification__regarding_Punjab_Vehicles_Aggregator_Draft_Rules__with_Notificat_ca6ISjo.pdf",
+      "primary": true,
+      "status": "draft",
+      "readStatus": "official-index-and-document-retrieved",
+      "locator": "Official notification index expressly calls it draft",
+      "note": "A final current state text was not established. Do not treat the draft as operative law or interpret an unresolved state framework as permission to disregard central law."
+    }
+  ]
+}

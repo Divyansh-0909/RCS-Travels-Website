@@ -1,0 +1,1276 @@
+[PAGE 1]
+                          राजस्‍थान‍राजपत्र         RAJASTHAN GAZETTE
+                                                        Extraordinary
+                                  विशेषाांक
+                       साधिकार‍प्रकाशशत               Published by Authority
+                          पौष 10, बुधवार, शाके 1947- दिसम्बर 31, 2025
+                         Pausa 10, Wednesday, Saka 1947- December 31, 2025
+                              भाग 4 (ग)
+                                  उप-खण्ड(II)
+    राज् य सरकार तथा अन्य राज् य प्राधधकाररयों द्वारा जारी ककये गये कानूनी आिेश तथा
+                                  अधधसूचनाएं।
+
+          TRANSPORT AND ROAD SAFETY DEPARTMENT
+                         NOTIFICATION
+                              Jaipur, December 30, 2025
+      S.O.145 .-Whereas the draft of certain rules, which the State Government proposes to
+make in exercise the powers conferred by sub-section (3) and (4) of section 67, section  93,
+95 and 96 read with section 211 of the Motor Vehicles Act, 1988 (Central Act No. 59 of
+1988) was published, as required by sub-section (1) of section 212 of the said Act, in the
+Rajasthan Gazette  extra ordinary  part 4(ga) dated 20.12.2025  inviting  objections and
+suggestions from all persons likely to be affected thereby before the expiry of 7 days from the
+date on which the copies of this notification as published in Rajasthan Gazette were made
+available to the public;
+
+     And whereas, copies of the said notification were made available to the public on
+20.12.2025;
+
+     And whereas, the objections and suggestions received on the said draft rules have
+been considered;
+
+     Now, therefore, in exercise the powers conferred by sub-section (3) and (4) of section
+67, section 93, 95 and 96 read with section 211 of the Motor Vehicles Act, 1988 (Central Act
+No. 59 of 1988), the State Government hereby makes the following rules, namely:-
+
+        1. Short title and commencement.- (1) These rules may be called the Rajasthan
+Motor Vehicles Aggregator Scheme Rules, 2025.
+
+(2) They shall come into force on and from the date of their publication in the Official
+Gazette.
+
+        2. Definitions.- (1) In these rules, unless the context otherwise requires,-
+
+              (i)  “Act” means the Motor Vehicles Act, 1988 (Central Act No. 59 of 1988);
+
+              (ii)   "Aggregator" shall have the same meaning as assigned to it under clause (1A) of
+                section 2 of the Act;
+              (iii) "App" means an electronic interface/ a digital application operated, developed
+             and maintained by the Aggregator, Delivery Service Provider or e-commerce
+
+[PAGE 2]
+374                         राजस् थान राज-पत्र, दिसम्बर 31, 2025               भाग 4(ग)
+                 entity  that may be accessed  either through a computer  resource  or a
+             communication device;
+           (iv) "Annual Fee" means fee payable by the Aggregator or Delivery Service
+               Provider on yearly basis under these rules;
+           (v)  "Appellate  Authority" means  Secretary  to  the Government  in-charge  of
+              Transport and Road safety department;
+           (vi) “Applicant” means Aggregators or Delivery Service Providers who intend to
+              apply for a licence under these rules. The applicant, seeking issuance of
+               licence to operate as an Aggregator or Delivery Service Provider, shall be any
+                entity or a person including but not limited to a company registered under the
+            Companies Act, 1956 or 2013 or a co-operative society registered under the
+              Co-operative Societies Act, 1912, Rajasthan Co-operative   Societies Act,
+             2001, as amended from time to time, or rules made thereunder or formed by
+            any group of persons including any group or association of drivers or motor
+               vehicle owners or such  other association or a limited liability partnership
+             under the Limited Liability Partnership Act, 2008 or any other general form of
+            any  association  providing  service under a common  platform  or  digital
+                interface. The applicant in the case of an individual should be a naturalised
+                citizen   of    India,   in   the   case   of   an   association/group   of
+              person/LLP/Partnership/Society or such other entities shall have a registered
+               office in India and a regional office in Rajasthan and shall be amenable to all
+             compliances and laws applicable within the Republic of India and in the State
+              of Rajasthan;
+
+            (vii) “Application fee” means the charges in respect of an application as specified in
+                  rule 8 of these rules;
+            (viii) “Apportioned Fare” means such part of the fare as is retained by the aggregator;
+
+           (ix)  "Central Government" means the Government of India;
+           (x)    "Communication device" shall have the meaning ascribed to it under the
+                Information Technology Act, 2000;
+           (xi)   "Computer resource" shall have the meaning ascribed to  it under the
+                Information Technology Act, 2000;
+            (xii)    “Compliance  Officer” means an  officer appointed/designated by  the
+                Aggregator or Delivery Service Provider who shall be a full-time employee
+                 of  the  applicant holding necessary  authorization  to  act on  behalf of
+                  applicant with delegated power of attorney by applicant management/board,
+                holding responsible position, capable of representing the Applicant with
+               Competent Authority, and  shall be the  sole point of contact  for the
+                 Transport Department, Government of Rajasthan, Transport and Road
+                 Safety Department or any other authority empowered by the Government of
+                Rajasthan (GOR);
+
+            (xiii)  "Competent Authority" means the Commissioner Transport and Road Safety
+                Rajasthan or any other authority authorised by the State Government to
+                  issue licence under section 93 of the Act;
+
+           (xiv)   "Contract" means the agreement between the aggregator/ Delivery Service
+                 provider and the driver specifying the rights and obligations of both parties
+
+[PAGE 3]
+भाग 4(ग)                       राजस् थान राज-पत्र, दिसम्बर 31, 2025                 375
+                  for providing services to a passenger or providing service of delivery
+                provided through the App of such aggregator / Delivery Service provider;
+
+          (xv)  “Designated Portal” means the portal established and notified under rule 4
+           (xvi)   “Driver Fare” means such part of the fare payable by aggregator to the driver for
+                  the services rendered to the passenger through the App in undertaking a
+                 journey, including any cost of toll(s) and parking fee(s) paid by the driver;
+            (xvii)   "Dynamic pricing" means the output of the fare algorithm of the fare of the
+                 aggregator, which raises the price of a journey when demand for trips exceeds
+                supply of;
+            (xviii) "Delivery Service Provider" shall mean any person or entity who either
+               owns, or operates/ on-boards, or manages a fleet of motor vehicle(s) either
+                through a digital or electronic facility, or any other means to connect a
+                  driver offering to deliver/pick up a product, courier, package, or parcel to
+                connect with a seller, e-commerce entity or consignor;
+           (xix)  "E-Commerce Entity" means any person or an entity that owns, operates, or
+              manages a digital or electronic facility or platform for electronic commerce,
+                 but does not include any entity or business notified otherwise by the
+              Government for the said purpose, from time to time;
+          (xx)   "Electric Vehicle" shall mean a Battery-Operated Vehicle, as defined in the
+                 Central Motor Vehicles Rules 1989, along with Retro fitment of Pure
+                  Electric System kit to in-use vehicles under rule 115-D of the Central Motor
+                Vehicles Rules 1989;
+           (xxi)  “End-user or customer” for the purpose of an Aggregator shall be referred
+                  to the consumer or  passenger availing the service(s) of an Aggregator
+                providing passenger transport service and for the purpose of a Delivery
+                 Service Provider shall be referred to the consumer or person availing the
+                  service(s) of a delivery service provider for receiving/sending any package,
+                 or goods, or parcels or couriers either directly or indirectly;
+
+           (xxii) "Fare" means the total charges payable by the passenger to the driver or the
+                 aggregator, as the case may be, pursuant to the passenger availing the
+                  transportation services on the aggregator platform through the App  for a
+                   journey, including the cost of toll(s), the tax(es) and parking fee (s), as may be
+                  applicable;
+
+            (xxiii) "Fee" means the charges in respect of a license as specified in rule 8 of these
+                   rules;
+
+          (xxiv) "Fleet" refers to the motor vehicle fleet, including battery-operated Electric
+                 Vehicles, used to carry out the services provided by the Aggregator or
+                Delivery Service Provider;
+         (xxv) "Form" means form appended to these rules;
+           (xxvi) “Grievance Redressal Officer” means a person appointed by the aggregator for
+                  redressal of grievance of any passenger or driver;
+          (xxvii)“Induction Training Program” means the induction training program referred
+                   to in rule 13;
+
+          (xxviii)“Journey” means a trip whether undertaken or not, on a specified date and time
+               from the place of departure, to the destination;
+
+[PAGE 4]
+376                         राजस् थान राज-पत्र, दिसम्बर 31, 2025               भाग 4(ग)
+          (xxix)"Licence" means the licence issued to an aggregator under section 93 of the
+                 Act;
+
+          (xxx) “Licence Fee” means the fee payable under rule 8;
+
+          (xxxi) "License Holder" or “Licensee” means an Aggregator or a Delivery Service
+                 Provider who holds valid licence issued by the Transport and Road Safety
+                Department, Rajasthan;
+
+           (xxxii) "Motor Vehicle" means a vehicle as defined in clause (28) of section 2 of
+                  the Act;
+
+           (xxxiii) "On-Board" together with its grammatical variations, means the process of
+                    registering drivers and vehicles on the digital platform by the aggregator;
+
+          (xxxiv) "Off-Board" together with its grammatical variations, means the process of
+                  deregistering  the  driver and  vehicle on  the  digital  platform by  the
+                 aggregator;
+
+         (xxxv) "Passenger" means a person who uses the app of the aggregator to undertake
+               a journey;
+
+          (xxxvi) "Platform" means an online interface in the form of any software including
+                a website or a part thereof and applications including mobile applications;
+           (xxxvii)  "Rating" means an assessment of the quality of a journey undertaken by a
+                 passenger on the basis of parameters specified by the aggregator;
+
+          (xxxviii)"Refresher Training Program and Assessment" means a training session for
+                     drivers integrated with the aggregator, for a period of at least forty eight (48)
+                 hours and for a duration of 10 hours in one continuous session, delivered in-
+                 person and in virtual training sessions;
+
+          (xxxix) “Rider” or “Passenger” means a person who books a journey through the
+                Aggregator App for availing the transportation provided by a Driver who is
+                  integrated with the Aggregator;
+
+         (xxxx) "State Government" means the Government of Rajasthan; and
+
+          (xxxxi) "Security Deposit" means the amount that is payable by an aggregator along
+                 with licence fee which shall be furnished in the form of a Demand Draft, bank
+                 guarantee or an insurance surety bond.
+
+(2) Words and expressions used but not defined in these rules shall have the same meaning as
+assigned to them in the Act, Central Motor Vehicle Rules, 1989, Rajasthan Motor Vehicle
+Rules, 1990 and any other rules made under the Act.
+
+        3. Applicability of these rules.- (1) These rules shall be applicable to any Aggregator,
+Delivery Service Provider and e-commerce entity, with at least 25 motor vehicles associated with
+such Aggregator, Delivery Service Provider or e-commerce entity, operating within the State of
+Rajasthan.
+
+(2) These rules shall in addition to the provisions of the existing applicable laws and rules and shall
+not override or substitute on any compliance(s) and applicability of any legal framework under
+which such Aggregator or Delivery Service Provider is otherwise governed.
+
+[PAGE 5]
+भाग 4(ग)                       राजस् थान राज-पत्र, दिसम्बर 31, 2025                 377
+(3) These rules shall not be applicable to entities that limit themselves to the provision of an
+interoperable network to aggregators licensed by the Competent Authority and do not directly
+undertake onboarding of drivers or motor vehicles or both.
+
+(4)These rules shall not be applicable to entities that are engaged in the sale of tickets for
+travel by public service vehicles.
+
+        4. Designated Portal.- The State Government shall develop and designate a portal to
+enable for single window clearance of application for license as aggregator including receipt of
+appropriate application fee, license fee and security deposit:
+
+       Provided  that  till such time the  portal  is developed and operationalized, the  State
+Government shall process applications for license offline. The State government can adopt the
+portal developed by the Central Government.
+
+         5. Application for grant or renewal of  license and matters connected
+therewith.- (1) An application for grant of license shall be made on the designated portal specified
+in rule 4 above, in Form I, by any person eligible under the criteria mentioned in rule 11. All new
+Aggregator, Delivery Service Provider and e-commerce entity shall obtain license under these rules
+prior to commencement of their operations in the State of Rajasthan.
+
+(2) Application shall be made by an aggregator or Delivery Service Provider or e-commerce
+entity for all or any types or classes of motor vehicles on-boarded by it along with application
+fee.
+(3) Any applicant seeking license shall have a corporate/branch office within the State of
+Rajasthan and shall also appoint and designate a ‘Compliance Officer’ (who shall be the point
+of contact) for the purpose of monitoring, compliances and operations of these rules.
+(4) License granted by the Competent Authority shall be valid   throughout the State of
+Rajasthan.
+(5) An application made for grant of license shall be decided by the Competent Authority
+within a period of ninety (90) days from the date of such application.
+(6) If the applicant does not comply with any of the conditions for grant of license specified
+under these rules, the Competent Authority may reject such application with reasons to be
+recorded in writing after giving an opportunity of hearing.
+(7) On being satisfied that the applicant has complied with all the conditions specified for
+grant of a license under these rules, the Competent Authority shall direct the applicant to pay
+the appropriate license fee and furnish security deposit as specified in rule 8 and 9 within a
+period of thirty (30) days.
+(8) On payment of the license fee and on deposition of security deposit, the Competent
+Authority shall grant a license to the applicant in Form III within the period of fifteen (15)
+days from the date of such payment.
+(9) The license issued by the Competent Authority under these rules shall be uploaded and
+updated by the Competent Authority on the designated portal.
+
+[PAGE 6]
+378                         राजस् थान राज-पत्र, दिसम्बर 31, 2025               भाग 4(ग)
+         6. Declaration of Vehicular Fleet.- (1) All such Aggregator and Delivery Service
+Provider shall declare all on-boarded vehicles in use within seven (07) days for National
+Capital Region (NCR) and forty five (45) days for rest of the State from the date of
+commencement of these rules.
+
+(2) The declaration shall include the registration certificate, vehicle category, fuel type and
+any other documents as may be specified by the State Government, from time to time. The
+subsequent declaration of all new on-boarded vehicles shall be completed within fifteen days
+of successful on-boarding.
+
+(3) All Aggregator, Delivery Service Provider and e-commerce entity shall ensure that the
+Driver and Rider partners should hold a valid driving license to drive the relevant vehicle (as
+applicable). The Driver and Vehicle shall comply with the relevant provisions of the Act,
+rules or regulations notified by the appropriate Government, from time to time, and in the
+case of a Passenger Service Vehicle, the Driver must hold Passenger Service Vehicle (PSV)
+Badge.
+
+         7. Compliances for e-Commerce Entity.- (1) E-Commerce entities shall ensure
+that the service offered by fleet operators and transport service providers associated with
+them are duly licensed as per the provisions of these rules.
+
+(2) E-Commerce entities shall ensure the compliance of the provisions of these rules, in cases they
+own/operate vehicles as aggregator for either passenger mobility or delivery services.
+
+         8. Application fee, Annual fee and licence fee.- Application fee shall be Rs.
+10,000. The aggregator/ Delivery Service Provider  shall also pay annual fee of Rs. 100 per
+vehicle per year from second year onwards from the date of issue of licence. The   licence
+fee payable by the aggregator and Delivery Service Provider shall be as follows:-
+
+
+             Sr.
+                      Particulars                      Amount in Rupees
+           No.
+           1.        Grant of Licence                   for upto 1000 Vehicles Rs. 1 lakh
+                                                          for more than 1000 and upto 2500 Vehicles Rs.
+                                                      2.5 lakh
+                                                          for more than 2500 vehicles Rs. 5 lakh
+           2.       Renewal of Licence                          Rs. 25,000
+           3.        For  change of   address of  the            Rs. 25,000
+                     licencee
+           4.        Duplicate Licence                            Rs. 10,000
+
+         9. Security Deposit.- The security deposit to be provided by the aggregator and
+Delivery Service Provider shall be as follows:-
+
+[PAGE 7]
+भाग 4(ग)                       राजस् थान राज-पत्र, दिसम्बर 31, 2025                 379
+
+                 Sr.
+                               Particulars                                Amount in Rupees
+              No.
+                1.       Upto 1000 motor vehicles                              Rs. 10,00,000
+               2.      More than 1000 and upto 10,000 motor vehicles          Rs. 25,00,000
+               3.      More than 10,000 motor vehicles                         Rs. 50,00,000
+
+        10. Validity of licence, its renewal and matters connected therewith.- (1) A
+licence granted under these rules shall be valid for a period of five (5) years from the date of
+its issue. The licencee shall have to pay annual fee of Rs. 100 per vehicle per year from
+second year onwards from the date of issue of licence.
+
+(2) On an application in Form II, licence may be renewed by the Competent Authority, for a
+period of five (05) years, subject to compliance with conditions for renewal. For the purposes of
+such renewal, the Competent Authority shall examine,-
+
+           (i) the aggregator’s/ Delivery Service Provider's records of compliance with these rules,
+           and
+
+           (ii) the punitive actions taken against the aggregator/Delivery Service Provider in the
+              State.
+
+        11. Eligibility for obtaining a Licence.- For grant of licence,-
+
+          (i)  the applicant must be an entity or a person including but not limited to a company
+            registered under the Companies Act, 1956 or 2013 or a co-operative society
+            registered under the Co-operative Societies Act, 1912, Rajasthan Co-operative
+            Societies Act, 2001, as amended from time to time, or rules made thereunder or
+          formed by any group of persons including any group or association of drivers or
+          motor vehicle owners or such other association or a limited liability partnership
+           under the Limited Liability Partnership Act, 2008 or any other general form of
+          any association providing service under a common platform or digital interface.
+         The applicant in the case of an individual should be a naturalised citizen of India,
+             in the case of an association/group of person/LLP/Partnership/Society or such
+            other entities shall have a registered office in India and a regional office in
+           Rajasthan and shall be amenable to all compliances and laws applicable within
+            the Republic of India and in the State of Rajasthan; and
+
+           (ii) the applicant shall comply with the applicable law, including but not limited to,
+            the Act or rules and regulations made under the Act, the Digital Personal Data
+            Protection Act, 2023, the Consumer Protection Act, 2019 and the Information
+          Technology Act, 2000 and intermediary rules issued thereunder.
+
+         12. Conditions for Grant of Licence.- An aggregator/ Delivery Service Provider
+submitting an application for obtaining a licence shall ensure compliance with the following,
+namely:-
+
+           (i)  The aggregator/ Delivery Service Provider shall conduct or cause to be conducted
+           an Induction Training Programme as detailed under rule 13 before on-boarding
+
+[PAGE 8]
+380                         राजस् थान राज-पत्र, दिसम्बर 31, 2025               भाग 4(ग)
+            a driver and also for those drivers on-boarded prior to commencement of these
+               rules.
+
+           (ii) The aggregator/ Delivery Service Provider shall provide a written intimation of the
+          commencement of services to the Competent Authority and the same shall be
+            updated within a period of six (6) months from the date of grant of licence,
+              failing which the licence may be cancelled by the Competent Authority.
+
+           (iii) Seventy two (72) hours prior to commencement of services, the aggregator/
+             Delivery Service Provider shall intimate the Competent Authority, and the said
+             intimation shall be uploaded on the designated portal by the Competent Authority.
+         (iv) The  guidelines,  if  any,  issued by  the  Central Government  or  the  State
+           Government in respect of health or public safety shall be followed by the
+            aggregator/ Delivery Service Provider and the on-boarded drivers.
+
+         (v) The aggregator shall ensure a term insurance (Accidental Insurance)  for not less
+             than Rs. 5 Lakh for each passenger.
+
+          (vi) The aggregator/ Delivery Service Provider shall not prohibit or restrict the on-
+            boarded drivers from operating with multiple aggregators.
+          (vii) The aggregator/ Delivery Service Provider shall develop a mechanism in the App for
+              both, the driver and the passenger, to rate the quality of overall experience of a
+             journey.
+           (viii) The aggregator/ Delivery Service Provider shall permit a 3-Wheeler and 4-Wheeler
+            motor vehicle with a valid contract carriage permit and willing to get on-boarded, to
+           be on-boarded with  the  aggregator/  Delivery Service  Provider,  subject  to
+            compliance with the relevant rules.
+          (ix) The aggregator/ Delivery Service Provider should not have had its license cancelled
+              in the past one year.
+         (x) A Grievance Redressal Officer shall be appointed by the aggregator/ Delivery
+             Service Provider who shall resolve all the grievances received and provide the
+              details of the grievances received by it, to the Competent Authority through an
+             online process. The details of the Grievance Redressal Officer i.e. the name, e-
+            mail  address, and  telephone  number(s)  shall be made  available by  the
+            aggregator/ Delivery Service Provider on its App and website.
+         (xi) The aggregator/ Delivery Service Provider  shall pay annual fee of  Rs. 100 per
+             vehicle per year from second year onwards from the date of issue of licence.
+
+         13. lnduction Training Programme.- (1) The lnduction Training Programme
+shall be of a duration of at least forty (40) hours for the drivers comprising a combination of
+in-person and virtual training sessions. The broad details of the course of this program shall
+be made available online by the aggregator/ Delivery Service Provider. The course shall train
+the drivers,-
+
+            (i) to use the App of the aggregator/ Delivery Service Provider;
+
+             (ii) with the relevant provisions of the related Acts and rules;
+
+              (iii) with the provisions of the Motor Vehicles (Driving) Regulations 2017;
+
+          (iv) with first responder training for at least six (6) hours to respond to emergencies
+           and provide assistance in case of road accidents;
+
+[PAGE 9]
+भाग 4(ग)                       राजस् थान राज-पत्र, दिसम्बर 31, 2025                 381
+          (v)  for careful driving, traffic rules, motor vehicle maintenance, fuel efficient driving,
+            conduct and behavior;
+
+          (vi) about the familiarization with the routes;
+
+          (vii) with the terms and conditions of the agreement between the driver and the
+            Aggregator/ Delivery Service Provider;
+           (viii) for gender sensitivity and Divyangjan sensitivity and mobility needs; and
+         (ix)  such other training as the State Government may require from time to time.
+
+(2) The aggregator/ Delivery Service Provider shall upload details of the induction training structure
+on the designated portal.
+
+        14. Compliances with regard to drivers.- (1) For  the purposes of on-boarding
+drivers, the aggregator/ Delivery Service Provider shall ensure that the following conditions
+are complied with, namely:-
+
+            (i) that the driver holds a valid proof of any identity on the basis of any document listed
+            under rule 4 of the Central Motor Vehicle Rules, 1989 (CMVR);
+
+            (ii) that the driver holds a valid driving licence for the concerned vehicle type or
+              class within  which the respective vehicle  falls throughout the period of
+            onboarding;
+
+            (iii) that the driver has the required experience mandated under sub-section (1) of
+             section 7 of the Act;
+
+           (iv) that the driver has a valid bank account in his name;
+
+          (v) that the driver has not been convicted within the past three (3) years, for,-
+
+                    (a) the offence of driving under the influence of drugs or alcohol, or
+                  (b) any cognizable offence including fraud, sexual offences, use of a motor
+                      vehicle to commit a cognizable offence, a crime involving property damage
+                     or theft, acts of violence, acts of terror or acts constituting nuisance or
+                   danger to public,
+            Explanation: For the purposes of this clause cognizable offence shall have the
+                    same meaning as assigned  to  it under the Bharatiya Nagarik
+                       Suraksha Sanhita, 2023.
+
+          (vi) that the driver undergoes a medical examination for fitness, including an eye
+             check-up, by a hospital or medical institution identified by the aggregator/
+              Delivery Service Provider;
+
+           (vii) that the driver undergoes a psychological analysis conducted by the aggregator/
+              Delivery Service Provider to determine whether they are fit to be on-boarded;
+            (viii) that the character and antecedents of the driver are verified by the Police at least
+            seven (7) days prior to on-boarding and the aggregator/ Delivery Service
+              Provider shall maintain a written record of such verification, and
+
+          (ix) that a valid contract  is executed between the aggregator/ Delivery Service
+             Provider and the driver in Hindi specifying the terms and conditions applicable for
+            on-boarding and operating vehicles. The standard terms and conditions shall be
+          made available online by the aggregator on its website:
+
+[PAGE 10]
+382                         राजस् थान राज-पत्र, दिसम्बर 31, 2025               भाग 4(ग)
+                 Provided that the compliance with above conditions for the entire period shall be
+            co-terminus with the licence held by the aggregator/ Delivery Service Provider.
+(2) For the welfare of drivers, the aggregator/ Delivery Service Provider shall ensure compliance
+with the following conditions, namely:-
+        (i) ensure a health insurance for not less than Rs. 5 Lakh for each driver on-boarded,
+        which shall be increased each year by such percentage as may be notified by the State
+         Government;
+
+         (ii) ensure a term insurance (Accidental Insurance)  for not less than Rs. 10 Lakh for each
+           driver on-boarded, which shall be increased each year by such percentage as may be
+           notified by the State Government;
+
+              Provided that the provisions made under Social Security Code, 2020 shall prevail
+         with respect to clause (i) and (ii) above.
+
+         (iii) conduct annual Refresher Training Programme as a combination of in-person and
+            virtual training sessions through either in-house resources or collaboration with
+           other institutions and maintaining the records of such refresher training:
+
+              Provided that the drivers whose rating falls below five percentile from amongst all
+            drivers who are placed similarly in terms of the duration of engagement with the
+          aggregator/  Delivery Service  Provider,  shall compulsorily undergo Refresher
+          Training Programme every quarter, in absence of which the driver shall not
+          continue to provide services through the aggregator/ Delivery Service Provider.
+
+        (iv) In the event a complaint registered against the driver for violation of provisions of the Act
+          and rules made thereunder including these rules, from a passenger, an inquiry shall be
+         conducted by the aggregator/ Delivery Service Provider within a period of three (3)
+         days from the day on which such complaint is made and appropriate action shall be
+           taken against the driver after completion of such inquiry. The aggregator/ Delivery
+          Service Provider shall inform the passenger of outcome of the said inquiry upon its
+          completion.
+(3) The aggregator and Delivery Service Provider shall maintain a digital record of the
+following  documents  pertaining  to  the  on-boarded  drivers,  duly  authenticated  from
+SARATHI portal and such other documents as the aggregator or Delivery Service Provider
+may deem fit:-
+
+       (i) a photograph;
+
+        (ii) copy of the Driving licence;
+
+        (iii) present residential address along-with acceptable documents for proof of address as
+          specified in Central Motor Vehicles Rules, 1989;
+
+      (iv) verified bank account details;
+
+      (v) valid registration certificate of the relevant vehicle; and
+
+      (vi) names and addresses with contact information of two emergency contacts.
+
+[PAGE 11]
+भाग 4(ग)                       राजस् थान राज-पत्र, दिसम्बर 31, 2025                 383
+         15. Permit.- The aggregator/ Delivery Service Provider shall ensure that all the
+motor vehicles attached with on- boarded drivers have an appropriate applicable permit
+under applicable provisions of the Act.
+
+         16. Compliances with regard to vehicles.- (1) An aggregator/ Delivery Service
+Provider shall ensure that the motor vehicles attached with on-boarded drivers comply with
+the following conditions, namely:-
+
+            (i) have a valid registration;
+
+              (ii) have a valid Certificate of Fitness as per the Act;
+
+              (iii)  display the registration mark as specified in the Central Motor Vehicle Rules, 1998
+           (CMVR);
+
+           (iv) have a valid third-party insurance policy;
+
+          (v)  have a valid pollution-under-control certificate required under the Central Motor
+            Vehicles Rules, 1989.
+          (vi) such emission norms as may be specified by the State Government for the State
+              or any urban area in the State, as the case may be;
+
+             (vii) city specific fuel norms;
+
+            (viii) have paid the applicable motor vehicle taxes and other dues;
+
+          (ix) does not have any unpaid challans related to offences and contraventions under
+              the Act imposed on the motor vehicle;
+
+          (x)   display a copy of driver’s licence and the motor vehicle permit (if applicable) inside
+              the motor vehicle (except motorcycles). The said display shall be on the back side of
+               the front seat next to the driver in such manner as shall be clearly visible to the
+             passengers in the motor vehicle;
+
+          (xi)  are fitted with a functional Vehicle Location Tracking Device or System,
+            compliant with AIS 140, along-with a panic button, as mandated under rule
+          125H of the Central Motor Vehicle Rules, 1998  and connected to the control
+          room of the aggregator with the electronic feed from  vehicle location
+              tracking device available at integrated command and control centre established
+           by the State Government;
+
+           (xii) have disabled child lock mechanism (except for three-wheelers, motorcycles
+            and buses) as per applicable law;
+
+
+           (xiii) have enabled manual override for the central locking system (except for three-
+             wheeled vehicles, motor cycles, buses, as per applicable law);
+
+          (xiv) have a fire extinguisher of suitable capacity placed inside the motor vehicle (except
+              for motor cycles); and
+
+         (xv) have a first-aid kid placed inside the motor vehicle.
+
+(2) An aggregator shall not onboard vehicles which have been registered for more than a period of
+eight years from the date of initial registration of the vehicle and shall ensure that all vehicles on-
+
+[PAGE 12]
+384                         राजस् थान राज-पत्र, दिसम्बर 31, 2025               भाग 4(ग)
+boarded by it should not have exceeded eight years since the date of initial registration of the
+vehicle.
+
+(3) An aggregator/ Delivery Service Provider  shall  verify and maintain  the following
+documents and records of all motor vehicles on-boarded by it and shall authenticate this data on a
+real-time basis on the VAHAN portal:-
+
+          (i)   Certificate of Registration;
+
+          (ii)  Certificate of Fitness as per the Act;
+
+         (iii) Chassis and engine numbers;
+
+        (iv) Third-party insurance policy;
+
+        (v) Pollution-under-control certificate; and
+
+       (vi) The number of pending e-challans prior to on-boarding and their clearance before
+                 on-boarding
+
+(4) The Aggregator/ Delivery Service Provider shall ensure proper parking for all its vehicles in the
+State and in NCR region.
+
+(5) The Aggregator/ Delivery Service Provider shall ensure that all 3-Wheeled  and 4-Wheeled
+Vehicle on-boarded at the time of registration shall bear commercial registrations and vehicles of all
+categories shall comply with all provision of the Act, rules and regulations made thereunder.
+
+         17. Compliance with regard to Website, App and technology.- (1  ) The
+aggregator shall develop and maintain a website disclosing details of its ownership, registered
+address, fare structure, contact information for customer services, e-mail address, services
+offered by it and other relevant details.
+
+(2) The App shall be developed in a manner that it is compliant with the applicable laws.
+(3) The App shall be accessible in English and Hindi.
+
+(4) The vulnerabilities and the cyber safety of the App of the aggregator/ Delivery Service Provider
+shall be certified  by a cyber-security firm recognised and empaneled by the Indian Computer
+Emergency Response Team (CERT-In).
+
+(5) The data, including but not limited to, the details of journey, details of passengers and the fare,
+shall be generated on the App of the aggregator and stored as per the applicable law, including the
+Digital Personal Data Protection Act, 2023.
+
+(6) The proportion of the share of the fare and incentives provided to the driver, particulars of the driver fare
+and apportioned fare and other information as may be notified by the State Government, shall be ensured
+by the aggregator through up-to-date disclosures on its website and in the App.
+
+(7) The App shall include a feature enabling the passengers to share their live location and status
+of the journey till the journey is completed where after the live location sharing feature shall be
+unavailable.
+
+(8) The App shall include special features which make it accessible for Divyangjans.
+
+(9) The App shall display a clear and high-resolution picture of the driver on- boarded on the App of
+the aggregator.
+
+[PAGE 13]
+भाग 4(ग)                       राजस् थान राज-पत्र, दिसम्बर 31, 2025                 385
+(10) The aggregator shall formulate and implement a zero-tolerance policy for use of drugs or
+alcohol for on-boarded drivers while they are on duty. The aggregator shall upload its policy and
+the procedure to report a complaint in this regard on their website and on their App. The
+aggregator shall immediately and forthwith Off-Board the driver, upon receipt of a complaint
+alleging violation of  its zero-tolerance policy,  till pending inquiry. The suspension shall
+continue during the period of investigation by the aggregator/ Delivery Service Provider.
+
+(11) The contact information of the driver undertaking journey shall be available to the
+passenger, through the App, for at least seven (7) days from the end of the journey.
+
+(12) The aggregator shall establish a control room with 24x7 operations and ensure that all the
+motor vehicles on boarded maintain an uninterrupted contact with the control room. The
+control room shall monitor the movements of motor vehicles and the on-boarded drivers. The
+control room should be able to track and monitor the movements of all the drivers and their
+vehicles on real time basis.
+
+(13) Aggregator shall establish a call centre with an active telephone number and e-mail address,
+displayed clearly on its website and on the App, which shall be operational 24x7, providing
+assistance in english and hindi. These call centres shall be responsible for,-
+           (i)   enabling the passenger and/or the driver or any other person to contact the call
+              centre regarding issues related to the journey or the on-boarded driver etc.; and
+            (ii)   ensuring redressal of the passenger grievances.
+
+(14) The aggregator shall cooperate with lawfully authorised authorities investigating an
+accident or incident involving motor vehicle or driver on-boarded by the aggregator.
+(15) Voluntary tippig for the driver:
+            (i)   the App may provide a feature for passengers to give a voluntary tip to the
+                driver, however, such feature shall only be visible after the completion of the
+               journey, and should not be available at the time of booking, before the
+           commencement of the journey or during the journey.
+            (ii)   the entire tip amount shall be credited to the driver without any deduction by
+               the aggregator.
+            (iii)  no tipping feature or mechanism shall be provided in the App that is
+              misleading, manipulative, or otherwise in violation of the Consumer
+               Protection Act, 2019 and the rules and regulations made thereunder.
+(16) The App shall include a feature to enable sub-rule (12) of rule 18 below, wherein a
+passenger may choose, where available, a driver of the same gender, including an option for
+female passengers to select a female driver for undertaking a journey.
+
+         18. Compliances to ensure safety of passengers.-  (1) The aggregator shall
+ensure compliance with the following conditions related to safety of the passengers, namely:-
+
+             (i)    that the Vehicle Location and Tracking Devices (VLTD) installed in motor vehicles, as
+                 applicable, functions properly and the feed is received by it as well as linked to the
+               integrated Command and Control Centre of the State Government.
+
+              Explanation: For the purposes of these rules, Vehicle Location Tracking
+                          Devices shall include the in-App location tracking for all motor
+                             vehicles, including motorcycles and three-wheelers, and use
+
+[PAGE 14]
+386                         राजस् थान राज-पत्र, दिसम्बर 31, 2025               भाग 4(ग)
+                           indigenous Apps and provide efficient resolution for any issues that
+                    may develop in its functioning.
+
+              (ii)   that the driver follows the route indicated in the App through an in-built mechanism
+             and in case of any deviation, the App shall signal the control room, which shall
+              then connect with the driver and the passenger immediately.
+            (iii)  that the safety of the passengers especially children, women and divyangjan
+            passengers     and compliance with the applicable law is ensured.
+
+          (iv)  that a mechanism is provided on the App to verify whether the identity of the
+             driver   undertaking a journey is same as the one registered and verified by Police
+            during the on-   boarding process.
+
+          (v)   that regular checks by personnel authorized by the aggregator of motor vehicles
+            on-     boarded       are conducted.
+
+           (vi)  Ensuring safety of women employees and Drivers by introducing mechanisms to
+                protect their rights, in compliance with the Sexual Harassment of Women at
+             Workplace (Prevention, Prohibition and Redressal) Act, 2013.
+
+(2) The following conditions shall be adhered to by the Aggregator providing passenger transport
+    service:-
+
+             (i)   The Control room should be able to access all data with regard to the Origin-
+               Destination of any trip offered through the app/website, route of the trip and panic
+                   alerts. The Aggregator shall also ensure real time integration of all panic alerts with
+               the concerned Law Enforcement Agencies.
+
+             (ii)  The Control room should be able to provide requisite data as and when desired by
+               the Transport Department, Rajasthan, with regard to  all grievances/complaints
+              lodged by the rider(s)/end user/driver/consumer(s) and the requisite action taken to
+               resolve the same.
+
+             (iii)  The Control room should be able to access all data with regard to number of
+               vehicles in operation, number of other state vehicles providing services in the state
+               of Rajasthan, trips taken from State of Rajasthan, and further analytics of the data.
+            Such data may be required by the Transport Department, Rajasthan with prior
+                written intimation.
+
+           (iv)  To ensure timely and effective redressal of the Riders' grievances on receipt of any
+              complaint concerning the ride/ the Driver/ the condition of the vehicle. The
+              concerns raised by the Rider may be reported within 24 hours of the ride availed:
+
+                     Provided that, if the complaint registered with the grievance redressal centre
+                   is criminal in nature, then the limitation period for filing such complaint shall be as
+               applicable to respective criminal law. In such scenario, the concerned Driver shall
+             be Off-boarded from the Aggregator till such issue is not resolved.
+
+                     Provided further that, in case of complaints against the Driver concerning
+                violation of the provisions under the Act, the Driver shall be Off-boarded for a
+               period of 2 days, from the day on which the complaint has been made.
+
+[PAGE 15]
+भाग 4(ग)                       राजस् थान राज-पत्र, दिसम्बर 31, 2025                 387
+(3) The Aggregator shall extend utmost cooperation with investigating authorities in relation to any
+untoward accident or incident involving jeopardizing a Rider’s safety, which may have arisen due
+to action or inaction of the Driver on a assigned trip.
+
+(4) The Aggregator shall be liable for the services provided to the end-user; except in case of
+vehicle accident, where in it shall be the sole responsibility of the Driver of the vehicle.
+
+(5) The Aggregator shall be required to take appropriate action in the form of remedial trainings and
+corrective measures to rectify the issues against the Driver partners.
+
+(6) The Aggregator shall ensure that the Driver shall have the following valid documents at the
+time of on-boarding (including all documents mandated by the Central Motor Vehicles Rules
+1989)
+
+         (i)) a valid driving license to drive the relevant vehicle (as applicable);
+
+         (ii) a valid registration certificate of the relevant vehicle (as applicable); and
+
+         (iii) a valid public service vehicle badge (as may be applicable).
+
+(7) Ensuring that the data generated on the App is stored on a server in India and that such stored
+data shall be for a minimum of 3 months and maximum of 24 months from the date on which such
+data is generated. This data shall be made available to the Transport Department, Rajasthan as per
+due process of law.
+
+(8) Ensuring transparency in its operations, including but not limited to, the functioning of the App
+algorithm, proportion of fare payable to the Driver, incentives given to the Drivers, charges
+received from the Driver, and such other information as may be notified by the State Government,
+by making disclosures on the Aggregator's Website and App and updating such disclosures, as per
+requirement.
+
+(9) Ensuring that the picture of each Driver integrated with the Aggregator is clearly visible
+on the App.
+
+(10) Especially for services provided through passenger four-wheelers, placement of a  fire
+extinguisher, disabled child lock mechanism, and enabled manual override for the central locking
+system are mandatory.
+
+(11) Display of applicable vehicle permit, Driver’s driving license, identity card (if any) along with
+the certificate issued by the Department of Transport and Road Safety shall be displayed on the
+vehicle, except on 2-wheelers. Such display shall be placed in such a manner to ensure it is clearly
+visible to the passengers/end user in the concerned vehicle.
+
+(12) That a passenger is be able to choose, where available, a driver of the same gender, including
+an option for female passengers to select female drivers by way of a feature stipulated under sub-
+rule (16) of rule 17 above.
+
+[PAGE 16]
+388                         राजस् थान राज-पत्र, दिसम्बर 31, 2025               भाग 4(ग)
+         19. Non-discrimination policy to be followed by the aggregator/ Delivery
+Service Provider.- The aggregator/ Delivery Service Provider shall treat the motor vehicles
+owned by drivers on-boarded or any third party providing motor vehicles to such on-boarded
+drivers, at parity with the motor vehicles owned by it.
+
+        20. Regulation of Fare.- (1) The  fare  notified by  the  State Government  for
+the respective category or class of motor vehicles, shall be the  base fare chargeable to
+passengers availing services from the aggregator.
+
+(2) The base fare chargeable shall be for a minimum of three (3) kilometers to compensate for
+dead mileage including the distance travelled without a passenger and the distance travelled
+and fuel utilized for picking up the passenger(s).
+
+(3) The aggregator shall be permitted to charge a minimum of 50% lower than the base fare
+and a maximum dynamic pricing of two times the base  fare  specified under  sub-rule (1)
+above.
+
+(4) The driver on boarded along-with the motor vehicle with the aggregator shall receive at
+least 80% of the fare applicable including all cost under driver’s fare and the remaining
+charges may be retained as the Apportioned Fare by the aggregator. The payment may be
+settled daily, weekly or fortnightly but  not  later  as  per  the  agreement  between  the
+driver and the aggregator.
+
+(5) With respect to motor vehicles owned by the aggregator the on-boarded driver shall
+receive at least 60% of the fare applicable, including all costs specified in Driver Fare and the
+remaining charges shall be retained as the Apportioned Fare.
+
+(6) With respect to any other scenario not covered under sub-rule (4) or (5) above, the driver
+shall receive the payment as per his agreement with the aggregator.
+
+(7) The base fare may be notified to the State Government by the aggregator for the purposes of
+fare regulation and shall be followed till such time as the State Government determines the fare.
+
+(8) No passenger shall be charged for dead mileage except when the distance for availing the
+ride is less than three (3) kilometers as mentioned under sub-rule (2) above and the fare shall be
+charged only from the point of origin of the journey to the point of destination where the passenger
+is dropped off.
+
+         21. Cancellation of Rides.- (1) On cancellation of a booking by a driver after
+accepting a journey on the App, a penalty of 10% of the Fare not exceeding Rs. 100, shall be
+imposed where such cancellation  is made without a reason identified as valid by the
+aggregator and duly and specifically mentioned on its website and App.
+
+(2) On cancellation of a booking by passenger after booking a journey on the App, a fee of 10% of
+the fare not exceeding Rs. 100, shall be collected, when such cancellation is made without a
+valid reason and duly and specifically mentioned on the website and App of the Aggregator.
+Such fare amount shall be divided between the driver and the aggregator in the same proportion
+as stated in rule 20 of these rules.
+
+[PAGE 17]
+भाग 4(ग)                       राजस् थान राज-पत्र, दिसम्बर 31, 2025                 389
+         22. Penalties on Aggregator, Delivery Service Provider or e-Commerce
+Entity for violation/non-compliances under the Act or these rules.- (1) These rules
+shall be applicable upon an Aggregator , Delivery Service Provider and e-Commerce Entity.
+These provisions shall be applicable and enforceable in addition to the compliances and
+penalties provided under the Act and shall be read in conjunction with the existing provisions
+of the Act.
+
+(2) The Aggregator, Delivery Service provider and e-Commerce  Entity  shall  also be
+responsible for due compliances with the provisions of  the Motor Vehicles Act, 1988 and
+rules made thereunder  (as amended from time  to time) by  their respective  vehicles/
+drivers/service  providers  associated with them  unequivocally and  unconditionally and
+irrespective of the terms of their association with such vehicles/drivers/service providers.
+
+(3) Penalties shall be imposed as per the Motor Vehicle Act, 1988 and rules made thereunder
+for violation or non-compliances under the Act and/or also under these rules for the following
+circumstances:-
+
+         (i)  Operating without License:
+          In appropriate cases, if the Competent Authority is of the opinion that whoever is
+         engaged in providing services as an Aggregator or Delivery Service Provider and is
+          operating without a license or otherwise has not been granted a license or whose
+          license has been expired/suspended/revoked, then the Competent Authority shall be
+            at liberty to impose appropriate penalty as per the provisions of the Act or of any
+           rules made thereunder and shall be liable to pay penalty up to one lakh rupees but
+           shall not be less than twenty-five thousand rupees in a single instance. Further,
+        whoever continues to operate as an Aggregator or Delivery Service Provider
+         without license under rules, then upon order of the Competent Authority, such
+          vehicles violating these rules shall be impounded and written notice shall be issued
+           to the Aggregator or Delivery Service Provider.
+
+        (ii) On-boarded vehicles are operated without declaration:
+          In appropriate cases, if the Competent Authority is of the opinion that the licensee
+            is operating a motor vehicle or a fleet of motor vehicles, details of which have not
+         been registered with the Transport Department, Rajasthan through the portal
+           notified as per rule 4 of these rules, then the Competent Authority shall be at liberty
+           to either suspend the license of the licensee pursuant to sub-rule (4) of rule 27
+          and/or shall impose appropriate penalty as per the provisions of the Act or of any
+           rules made thereunder, which may be upto one lakh rupees but shall not be less
+          than twenty-five thousand rupees in a single instance.
+
+        (iii) Complaints against Aggregator, Delivery Service Provider or e-Commerce Entity:
+        The Aggregator, Delivery Service Provider and e-Commerce Entity shall ensure
+           effective redressal of the end- user’s or Driver’s grievances on receipt of any
+         complaint concerning the end-user/ the driver/ the condition of the vehicle. In
+          appropriate cases,  if the Competent Authority  is convinced  that the licensee
+         (Aggregator or Delivery Service Provider) has failed to address the grievances of
+          the end-users or drivers of same/similar nature more than thrice in 30 days, the
+
+[PAGE 18]
+390                         राजस् थान राज-पत्र, दिसम्बर 31, 2025               भाग 4(ग)
+        Competent Authority  shall impose appropriate monetary  penalty, as per  the
+          provisions of the Act or of any rules made thereunder, which may be upto one lakh
+          rupees but shall not be less than twenty-five thousand rupees in a single instance.
+
+(4) The Penalty, if any, as provided under rule 21 above, imposed on the driver, the aggregator may
+deduct from the respective share of driver as specified in rule 20.
+
+         23. Sustainable Fleet Management by aggregators.- The State Government
+may direct aggregators to incrementally on an annual basis increase the percentage of
+electric, alternate fuel or zero emission vehicles in  their  fleet. According to the direction of
+Commission for Air Quality Management (CAQM), motor vehicle aggregators, delivery
+service providers and e-commerce entities shall ensure that in the National Capital Region
+(NCR) of State henceforth, only CNG/electric 3-wheeler auto-rickshaws shall be additionally
+inducted in the existing fleet of vehicles and no convectional Internal Combustion Engine
+(ICE) vehicles  running purely on diesel or petrol shall be further inducted in the existing
+fleet of 4-wheeler Light/ Commercial Vehicles (LCVs), four wheeler Light Goods Vehicles
+(LGVs) (N-1 category upto 3.5 ton) and 2-wheelers with effect from 01-01-2026. All the
+directions issued by CAQM, form time to time, shall be adhered to by aggregators/ delivery
+service providers and e-commerce entities.
+
+         24. Inclusion of Divyangjan Fleet.- The State Government shall determine an
+adequate number of Divyangjan friendly motor vehicles required in the State and direct
+aggregators to proportionately include  such vehicles within their fleet.
+
+         25. Conversion to Electric Mobility.- The aggregator shall mandatorily adhere to
+the targets fixed for inclusion of electric vehicles in their fleet. The targets shall be fixed by
+an appropriate Government organization responsible for regulating air quality or by Transport
+Department or the State Government.
+
+         26. Aggregation of non-transport motorcycles by aggregators/ Delivery
+Service Provider.- (1) The aggregation of non-transport motorcycles will be allowed in the
+State for journey by passengers as shared mobility through aggregators for reduced traffic
+congestion and vehicular pollution, along-with providing inter alia affordable passenger
+mobility, hyper-local delivery, creating livelihood opportunities.
+
+(2) The State Government may, under sub-section (3) and (4) of section 67 of the Act, impose
+fees on the aggregator/Delivery Service Provider/ e-Commerce Entity  for issuance of
+authorizations permitting non-transport motorcycles to undertake journeys through such
+aggregator/ delivery service provider, on a daily/ weekly/ fortnightly basis, as may be
+determined and specified by the State Government.
+
+(3) On-boarding of drivers by the aggregator/Delivery Service Provider under this rule shall satisfy
+the compliances stipulated under these rules.
+
+[PAGE 19]
+भाग 4(ग)                       राजस् थान राज-पत्र, दिसम्बर 31, 2025                 391
+         27. Suspension of Licence.- (1) The Licence granted under these rules to an
+aggregator or a Delivery Service Provider or e-Commerce Entity may be suspended for
+reasons in writing (Suspension Order), by the Competent Authority either on its own motion
+or on receipt of a complaint against the aggregator or a Delivery Service Provider or e-
+Commerce Entity after an inquiry conducted by the Competent Authority.
+
+(2) The period of suspension may extend upto three (3) months.
+
+(3) The Suspension Order shall be passed by the Competent Authority after providing the
+aggregator/ Delivery Service Provider a hearing within ten (10) days from receipt of such
+complaint or initiation of action.
+
+(4) The following grounds, amongst others, shall be considered as grounds for suspension of
+              License:-
+
+          (i)  Failure of Aggregator or  a Delivery Service Provider to ensure safety of the
+           passenger and/or the driver, including through by a reasoned analysis of the
+            quarterly rating parameters determined by the State Government; or
+
+          (ii)  Frequent instances with regard to the fares charged to passengers, unjustified
+            imposition of dynamic pricing, non-compliance with the  rules  for proportionate
+             division of fare between the drivers and aggregator, imposition of unsubstantiated
+           charges on drivers ; or
+
+          (iii) Failure of aggregator  or a Delivery Service Provider  to comply with  the
+            obligations contained in the contract with the drivers; or
+
+         (iv) Failure of aggregator to comply with these rules;
+
+        (v)  Jeopardizing the safety of passenger and/or well-being of drivers;
+
+        (vi) Violation of safety standards by the aggregator resulting in road accidents;
+
+         (vii) Severity of financial irregularities as obtained through audit of accounts of the
+            aggregator; and
+
+         (viii)         Any other parameters as the Competent Authority may deem fit and
+            appropriate:
+
+                Provided that if the Competent Authority is of the opinion that it would not be
+             expedient or feasible to suspend the License of the aggregator/ Delivery Service
+             Provider, it may determine and impose upon such aggregator/ Delivery Service
+             Provider, a penalty which shall be up to Rupees One (1) Crore but not be less than
+           Rupees One (1) Lakh depending upon the quantum and severity of the alleged
+              infraction.
+
+(5) When a Licence is suspended, the Aggregator or a Delivery Service Provider shall
+immediately stop all operations under the Licence till the time such suspension is revoked or
+the period of suspension ends.
+
+
+(6) Before expiry of the period of suspension, the Aggregator or of a Delivery Service
+Provider shall, by way of an undertaking in writing, undertake that the grounds for  its
+suspension, specified under the Suspension Order, stand resolved.
+
+[PAGE 20]
+392                         राजस् थान राज-पत्र, दिसम्बर 31, 2025               भाग 4(ग)
+(7) The Competent Authority shall thereafter pass another order acknowledging resolution of
+the grounds for passing of the Suspension Order and receipt of the undertaking by the
+Aggregator or a Delivery Service Provider.
+(8) Thereafter, the aggregator shall resume operations for a period that shall not be less than two (2)
+months but may extend to six (6) months, (Probationary Period) during which period, the
+aggregator shall continue operations and ensure compliance with these  rules and any
+infractions during this period that may occasion action for suspension of license may lead
+directly to cancellation of the license under rule 28.
+
+         28. Cancellation and Surrender of aggregator/ Delivery Service Provider
+Licence.- (1)Where the aggregator/ Delivery Service Provider,-
+
+            (i)   has had its Licence suspended within a duration of three financial years and has
+             committed another infraction under rule 27 that may occasion action for
+              suspension; or
+
+            (ii)  has committed or cause to be committed a violation of these rules of such a
+              grievous nature so as to endanger the safety or security of the passenger or the driver,
+
+the Competent Authority shall issue a notice to such aggregator/ delivery service provider to
+show cause as to why the Licence granted to him should not be cancelled.
+
+(2) Where the Competent Authority is of the view that there is continued defaults or non-
+compliance with the provisions of the Act or rule in its entirety, the Competent Authority in
+its discretion, may cancel the License issued to such Aggregator or Delivery Service Provider
+after providing a reasonable opportunity to be heard.
+(3) Thereafter, the Competent Authority by way of a reasoned order may cancel the licence, if
+Aggregator or Delivery Service Provider,-
+       (a)   has received more than 3 (Three) suspensions within one financial year; or
+       (b)  during the suspension period, fails to file its compliance report and undertaking
+           with the Competent Authority as per rule 27 for a continuous period of 6 (Six)
+           months; or
+       (c)   pursuant to suo moto cognizance by the Competent Authority, or pursuant to a
+           complaint filed by any person, is found to be indulging in penal or criminal
+            offences by the competent court.
+(4) The Competent Authority may, within ten (10) days of issuing the show cause notice under
+sub-rule (1) above, provide an opportunity of a hearing to the aggregator/ delivery service
+provider and thereafter take a decision on cancelling the Licence or otherwise, through a
+reasoned order and bring such cancellation to the notice of other States and the Central
+Government.
+
+(5) Where a licence is cancelled, the aggregator/ delivery service provider shall immediately stop
+all operations under the licence.
+
+(6) Without prejudice to the order of cancellation passed by the Competent Authority, the
+Security Deposit shall stand forfeited.
+(7) The aggregator may, at any time, voluntarily surrender the Licence and on such surrender,
+the Security Deposit shall be returned to the aggregator after deductions on account of
+outstanding dues, if any.
+
+[PAGE 21]
+भाग 4(ग)                       राजस् थान राज-पत्र, दिसम्बर 31, 2025                 393
+       29. Appeal.- (1)The aggregator/ delivery service provider aggrieved by any order of
+suspension or cancellation passed by the Competent Authority may, within thirty (30) days of
+receipt of such order, appeal to the appellate authority  i.e. Secretary to Government In-
+Charge of  Transport & Road Safety Department, Rajasthan or any authority designated by
+the State Government for hearing appeal against the impugned order.
+
+(2) An appeal shall be in the form of a memorandum, disclosing the grounds for appeal and shall
+be accompanied by the requisite fee of rupees 5,000 or fee as determined by the State
+Government for appeal and the copy of the order passed by the Competent Authority.
+
+(3) The appellate authority shall provide an opportunity of hearing to the aggregator/ delivery
+service provider and decide the appeal within a period of 60 days from the date of filing the
+appeal.
+
+(4) While deciding the appeal, appellate authority shall pass such orders as he deems fit.
+
+       30. Powers of the State Government.- (1) The State Government shall have power
+to call for such information documents or records from the aggregator, Delivery Service
+Provider or e-commerce entity as it deems fit to ensure compliance by the aggregator with
+these rules, through a written notice. The information sought shall also include the power to
+conduct an inquiry into the aggregator.
+
+(2) The State Government shall enable the aggregator to authenticate the details of on-boarded
+vehicles, drivers and vehicle owners through the VAHAN and SARTHI portals.
+
+       31. Repeal and Savings.- The Rajasthan On-demand Information Technology Based
+Transportation By Public Service Vehicles Rules, 2016 are hereby repealed:
+
+       Provided that the licence granted under the Rajasthan On-demand Information
+Technology Based Transportation By Public Service Vehicles Rules, 2016 shall remain valid
+till its validity period but such licencee shall have to comply with all the provisions of these
+rules except obtaining a fresh licence under these rules.
+
+[PAGE 22]
+   394                         राजस् थान राज-पत्र, दिसम्बर 31, 2025               भाग 4(ग)
+                        FORM I
+                                           [see rule 5 (1)]
+Application for the Grant of Licence for Aggregator or Delivery Service Provider under
+             the Rajasthan Motor Vehicles Aggregator Scheme Rules, 2025
+
+
+          The Competent Authority,
+             [Designation],
+             Rajasthan.
+
+
+                            I, the undersigned hereby apply for grant of a Licence for operation as an
+            Aggregator/ or Delivery Service Provider under the Rajasthan Motor Vehicles
+            Aggregator Scheme Rules, 2025 in the State of Rajasthan.
+
+
+                 1.    Full name
+
+                 2.   Address of the head office
+
+                 3.   Number of branch offices and addresses thereof, if any
+
+                 4.    a.  If a registered company, enclose a copy of certificate of
+                        incorporation/ registration along with a copy of memorandum of
+                         association.
+                        b.  If a firm, enclose a copy of certificate of registration of
+                        the firm.
+
+                 5.  Name and contact details of key managerial personnel, compliance      1.
+                      officer and authorized signatory                                            2.
+                                                                                                      3.
+
+                 6.   Telephone number, website address and E-mail address
+
+                 7.   Number of (type of vehicle) proposed to be operated.
+                   (Enclose a separate list containing vehicle numbers and permit
+                      particulars of each vehicle, as applicable)
+
+                     Details of GPS/ GPRS facility
+
+                 9.    Details of other infrastructure
+
+               10.   Details of location of servers where data is proposed to be
+                     stored
+               11.   Details of returns filed in the last three financial years.
+                   (Enclose copies of financial statements of last three years)
+
+               12.   Details of application fee paid                                        Rs.
+
+               13.   Details of Security Deposit
+
+
+                          I hereby declare that the information given above and other documents
+            enclosed herewith are true to the best of my knowledge. I understand that if any
+             information is found to be incorrect at any point of time, the Licence granted to me is
+               liable to be cancelled, besides initiating other legal action/actions against me. I have gone
+            through the provisions of the Rajasthan Motor Vehicles Aggregator Scheme Rules,
+
+[PAGE 23]
+     भाग 4(ग)                       राजस् थान राज-पत्र, दिसम्बर 31, 2025                 395
+              2025, I accept and agree to abide by the same and the reference statues and rules
+             mentioned herein.
+
+                Place:
+               Date:
+                                          Signature of the Applicant / Authorized Signatory
+                                                          (along with company seal, as applicable)
+
+
+
+                         FORM II
+                                              [see rule 10(2)]
+Application for the Renewal of Licence for Aggregator/ Delivery Service Provider under the
+                   Rajasthan Motor Vehicles Aggregator Scheme Rules, 2025
+
+
+              To,
+            The Competent Authority,
+                [Designation],
+               Rajasthan.
+
+
+                                I, the undersigned hereby apply for grant of a Licence for operation as an
+              Aggregator/  Delivery  Service  Provider  under  the  Rajasthan Motor  Vehicles
+              Aggregator Scheme Rules, 2025 in the State of Rajasthan.
+                   1.   Full name
+
+                   2.   Address of the main office
+                   3.   Number of branch offices and addresses thereof, if any
+                   4.    a.  If a registered company, enclose a copy
+                           b.  of certificate of incorporation / registration along with a copy of
+                   memorandum of association.
+                           c.  If a firm, enclose a copy of certificate of registration of the firm.
+
+
+                   5.  Name   and contact details of key managerial personnel, compliance  1.
+                          officer/ or                                                                  2.
+                      authorized signatory                                                       3.
+
+                    Telephone    number, website address and email address
+
+                   7.   Number of (type of vehicle) proposed to be operated.
+                      (Enclose a separate list containing vehicle numbers and permit
+                        particulars of each vehicle)
+
+                       Details of GPS/ GPRS facility
+
+                   9.   Details of other infrastructure
+                 10.   Details of location of servers where data is proposed to be
+                       stored
+
+[PAGE 24]
+396                         राजस् थान राज-पत्र, दिसम्बर 31, 2025               भाग 4(ग)
+
+          11.   Details of returns filed in the last three years.
+               (Enclose copies of financial statements of last three years)
+          12.   Details of Licence:
+                   a. Licence Number
+                   b. No. of suspensions, if any, and details thereof
+
+          13.   Details of fee paid                                                  Rs.
+          14.   Details of Security Deposit
+
+
+                    I hereby declare that the information given above and other documents enclosed
+         herewith are true to the best of my knowledge. I understand that if any information is
+        found to be incorrect at any point of time, the Licence granted to me is liable to be
+         cancelled, besides initiating other legal action/actions against me. I have gone through
+         the provisions of the Rajasthan Motor Vehicles Aggregator Scheme Rules, 2025, I
+         accept and agree to abide by the same and the reference statues and rules mentioned
+          herein.
+          Place:
+         Date:
+
+                                    Signature of the Applicant / Authorized Signatory
+                                           (along with company seal, as applicable)
+
+
+
+
+
+                      FORM III
+                                       [see rule 5 (8)]
+ Licence under the Rajasthan Motor Vehicles Aggregator Scheme Rules, 2025
+                     [               ] is hereby licenced to operate as an Aggregator/ service delivery provider
+         under the Motor Vehicles Act, 1988 in compliance with directions stipulated under the
+         Rajasthan Motor Vehicles Aggregator Scheme Rules, 2025.
+
+            1.   Full name of the Aggregator/ service delivery provider
+
+            2.   Address of the main office
+            3.   Number of branch offices and addresses thereof, if any
+
+            4.   Telephone number, website address and email address
+
+            5.   Number of auto rickshaw/ e- rickshaw/ motor cab/ motor
+              Cycle or bus (as per the list enclosed by the Aggregator in Form I/II,
+                as may be applicable)
+
+            6.    Particulars of the manner in which the Aggregator shall
+                function
+            7.   Details of application fee paid
+
+            8.   Details of Security Deposit
+
+[PAGE 25]
+भाग 4(ग)                       राजस् थान राज-पत्र, दिसम्बर 31, 2025                 397
+        The Licencee shall observe all the conditions contained in the Rajasthan Motor Vehicles
+         Aggregator Scheme Rules, 2025.
+
+          Place:
+
+         Date:
+
+        Valid upto  .................
+                                                              Signature of the Competent Authority
+
+                                                                     Rajasthan
+
+
+
+
+                                                  [S.No. F7(495)/pari/trans/hq/2025/16901]
+                                          By order of the Governor,
+
+                                   Om Prakash Bunkar,
+                                                    Joint Secretary to the Government.
+
+                                   ____________
+
+                     Government Central Press, Jaipur.

@@ -1,0 +1,218 @@
+[
+  {
+    "filename": "cert-directions-2022.pdf",
+    "url": "https://www.cert-in.org.in/PDF/CERT-In_Directions_70B_28.04.2022.pdf",
+    "finalUrl": "https://www.cert-in.org.in/PDF/CERT-In_Directions_70B_28.04.2022.pdf",
+    "fetchedOn": "2026-11-01",
+    "bytes": 434961,
+    "sha256": "202c2f3953d792dcfb3ecb3634fc82ab75437ee596de89b8d59a211e8e42431f",
+    "contentType": "application/pdf"
+  },
+  {
+    "filename": "consumer-amendment-2026.pdf",
+    "url": "https://consumeraffairs.gov.in/public/upload/files/E%20Commerce%20Amendment%20Rules%202026_1789127949.pdf",
+    "finalUrl": "https://consumeraffairs.gov.in/public/upload/files/E%20Commerce%20Amendment%20Rules%202026_1789127949.pdf",
+    "fetchedOn": "2026-11-01",
+    "bytes": 1428970,
+    "sha256": "78b0b8de1b6c0e9c8b9c639e4b2bc17ec65abcb807b34690529129e2a3014ab3",
+    "contentType": "application/pdf"
+  },
+  {
+    "filename": "consumer-index.html",
+    "url": "https://consumeraffairs.gov.in/pages/consumer-protection-acts",
+    "finalUrl": "https://consumeraffairs.gov.in/pages/consumer-protection-acts",
+    "fetchedOn": "2026-11-01",
+    "bytes": 194624,
+    "sha256": "17d6eb3deda5014f258fa9990d4cbeb9bd88e0f098e0240a2612850eb65c76d6",
+    "contentType": "text/html; charset=UTF-8"
+  },
+  {
+    "filename": "consumer-rules-2020.pdf",
+    "url": "https://consumeraffairs.gov.in/public/upload/files/E%20commerce%20rules_1732703966.pdf",
+    "finalUrl": "https://consumeraffairs.gov.in/public/upload/files/E%20commerce%20rules_1732703966.pdf",
+    "fetchedOn": "2026-11-01",
+    "bytes": 1281359,
+    "sha256": "3012b37f6f6dba2d29523abf10f43fbb3a503768e578ef0fa02e4b9e4593bd0c",
+    "contentType": "application/pdf"
+  },
+  {
+    "filename": "delhi-scheme-2023.pdf",
+    "url": "https://transport.delhi.gov.in/sites/default/files/Transport/circulars-orders/250308.pdf",
+    "finalUrl": "https://transport.delhi.gov.in/sites/default/files/Transport/circulars-orders/250308.pdf",
+    "fetchedOn": "2026-11-01",
+    "bytes": 1281097,
+    "sha256": "f8e098195768e3a56ec5d07fffc1b3fa5260a6caa284bda7b861395b4ac5b76b",
+    "contentType": "application/pdf"
+  },
+  {
+    "filename": "dpdp-act-2023.pdf",
+    "url": "https://www.meity.gov.in/static/uploads/2024/06/2bf1f0e9f04e6fb4f8fef35e82c42aa5.pdf",
+    "finalUrl": "https://www.meity.gov.in/static/uploads/2024/06/2bf1f0e9f04e6fb4f8fef35e82c42aa5.pdf",
+    "fetchedOn": "2026-11-01",
+    "bytes": 182082,
+    "sha256": "4deb23981d3010c8225a2ff6149e7243dc2268455b299e283afebdd7b72a7d15",
+    "contentType": "application/pdf"
+  },
+  {
+    "filename": "dpdp-commencement-2025.pdf",
+    "url": "https://www.meity.gov.in/static/uploads/2025/11/c56ceae6c383460ca69577428d36828b.pdf",
+    "finalUrl": "https://www.meity.gov.in/static/uploads/2025/11/c56ceae6c383460ca69577428d36828b.pdf",
+    "fetchedOn": "2026-11-01",
+    "bytes": 1869005,
+    "sha256": "6df25cd8c76ac8eb18cae81835d51d51128ffbf2ed13262843395efddf0998e5",
+    "contentType": "application/pdf"
+  },
+  {
+    "filename": "dpdp-library.html",
+    "url": "https://www.meity.gov.in/documents/act-and-policies/digital-personal-data-protection-rules-2025-gDOxUjMtQWa",
+    "finalUrl": "https://www.meity.gov.in/documents/act-and-policies/digital-personal-data-protection-rules-2025-gDOxUjMtQWa",
+    "fetchedOn": "2026-11-01",
+    "bytes": 3137,
+    "sha256": "60c816fb88d00c793046963f7c07c2e8b819aa4304032269bedd933250d91abd",
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "filename": "dpdp-rules-2025.pdf",
+    "url": "https://www.meity.gov.in/static/uploads/2025/11/53450e6e5dc0bfa85ebd78686cadad39.pdf",
+    "finalUrl": "https://www.meity.gov.in/static/uploads/2025/11/53450e6e5dc0bfa85ebd78686cadad39.pdf",
+    "fetchedOn": "2026-11-01",
+    "bytes": 2492944,
+    "sha256": "eabc7d05e013144615d78ddc0e8b9c9aac1920e814f4fad38ce6560951f5aa08",
+    "contentType": "application/pdf"
+  },
+  {
+    "filename": "gst-operator-2017.pdf",
+    "url": "https://cbic-gst.gov.in/hindi/pdf/central-tax-rate/Notification17-CGST.pdf",
+    "finalUrl": "https://cbic-gst.gov.in/hindi/pdf/central-tax-rate/Notification17-CGST.pdf",
+    "fetchedOn": "2026-11-01",
+    "bytes": 139652,
+    "sha256": "17527ea76fc0302c6398fbbd0c37eaa6ad42b254512b89c9b8948a22bac1364f",
+    "contentType": "application/pdf"
+  },
+  {
+    "filename": "income-tax-393.html",
+    "url": "https://wm.incometaxindia.gov.in/w/section-393-5",
+    "finalUrl": "https://wm.incometaxindia.gov.in/w/section-393-5",
+    "fetchedOn": "2026-11-01",
+    "bytes": 851812,
+    "sha256": "e148fc9db2e465d9d78842614b526f1b05df0d8f1a32479bad55d96972fe1d46",
+    "contentType": "text/html;charset=UTF-8"
+  },
+  {
+    "filename": "jk-index.html",
+    "url": "https://enyayasarathi.jk.gov.in/jk_ut_acts_rules.php?page=8",
+    "finalUrl": "https://enyayasarathi.jk.gov.in/jk_ut_acts_rules.php?page=8",
+    "fetchedOn": "2026-11-01",
+    "bytes": 158541,
+    "sha256": "91b5e5e27f281568ada8c145489eb2d91c0b1193811ab0287567b9c386a1d089",
+    "contentType": "text/html; charset=UTF-8"
+  },
+  {
+    "filename": "jk-rules-2023.pdf",
+    "url": "https://enyayasarathi.jk.gov.in/pdf_downloads/so453.pdf",
+    "finalUrl": "https://enyayasarathi.jk.gov.in/pdf_downloads/so453.pdf",
+    "fetchedOn": "2026-11-01",
+    "bytes": 9988558,
+    "sha256": "e6b9473f6ed823e111ac32f527b56aa4428dfa78ca6952eb8a3ea6a62b8f2a2c",
+    "contentType": "application/pdf"
+  },
+  {
+    "filename": "punjab-draft-2023.pdf",
+    "url": "https://transport.punjab.gov.in/documents/168/Notification__regarding_Punjab_Vehicles_Aggregator_Draft_Rules__with_Notificat_ca6ISjo.pdf",
+    "finalUrl": "https://transport.punjab.gov.in/documents/168/Notification__regarding_Punjab_Vehicles_Aggregator_Draft_Rules__with_Notificat_ca6ISjo.pdf",
+    "fetchedOn": "2026-11-01",
+    "bytes": 6449934,
+    "sha256": "bbd1752d9bd923a936669749179743d08fcae9b17d7eebbd60535b4554ac84b7",
+    "contentType": "application/pdf"
+  },
+  {
+    "filename": "punjab-index.html",
+    "url": "https://punjabtransport.org/Impnotifications.aspx",
+    "finalUrl": "https://transport.punjab.gov.in/en/notifications-orders/",
+    "fetchedOn": "2026-11-01",
+    "bytes": 180420,
+    "sha256": "e474e5f63695fd4bab6ae0be22fbbd7117a498104301b92942c8cf339703ee0e",
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "filename": "rajasthan-rules-2025.pdf",
+    "url": "https://transport.rajasthan.gov.in/content/dam/transport/transport-dept/pdf/Policies/DOC-20251231-WA0026.pdf",
+    "finalUrl": "https://transport.rajasthan.gov.in/content/dam/transport/transport-dept/pdf/Policies/DOC-20251231-WA0026.pdf",
+    "fetchedOn": "2026-11-01",
+    "bytes": 455466,
+    "sha256": "bf0f86b2bfbb703198e669019a185720c3f1b3bf79ab8a6337f242c5fa084c7f",
+    "contentType": "application/pdf"
+  },
+  {
+    "filename": "spdi-mirror-2011.pdf",
+    "url": "https://emb.mes.gov.in/Common/help/gsr3_10511.pdf",
+    "finalUrl": "https://emb.mes.gov.in/Common/help/gsr3_10511.pdf",
+    "fetchedOn": "2026-11-01",
+    "bytes": 262751,
+    "sha256": "2ab2eff32c69feafcc04ab678d4d7250aa2943c8af55c6d5e2cf1cce1b380a0e",
+    "contentType": "application/pdf"
+  },
+  {
+    "filename": "uk-amendment-2024.pdf",
+    "url": "https://cdnbbsr.s3waas.gov.in/s3250413d2982f1f83aa62a3a323cd2a87/uploads/2025/06/202506042007695446.pdf",
+    "finalUrl": "https://cdnbbsr.s3waas.gov.in/s3250413d2982f1f83aa62a3a323cd2a87/uploads/2025/06/202506042007695446.pdf",
+    "fetchedOn": "2026-11-01",
+    "bytes": 3606795,
+    "sha256": "1f2a7ac0f952b45ef45b60031aa12ecf998a4931a3190e087f6c8dfe59f07dd8",
+    "contentType": "application/pdf"
+  },
+  {
+    "filename": "uk-rules-2020.pdf",
+    "url": "https://cdnbbsr.s3waas.gov.in/s3250413d2982f1f83aa62a3a323cd2a87/uploads/2025/02/202502031969973431.pdf",
+    "finalUrl": "https://cdnbbsr.s3waas.gov.in/s3250413d2982f1f83aa62a3a323cd2a87/uploads/2025/02/202502031969973431.pdf",
+    "fetchedOn": "2026-11-01",
+    "bytes": 2050581,
+    "sha256": "55b7d43b989078af563b954282c6bd37d44c214d1529e8bbfea957a7011d8d2a",
+    "contentType": "application/pdf"
+  },
+  {
+    "filename": "uk-rules-index.html",
+    "url": "https://transport.uk.gov.in/document-category/tax-state-rules/",
+    "finalUrl": "https://transport.uk.gov.in/document-category/tax-state-rules/",
+    "fetchedOn": "2026-11-01",
+    "bytes": 182236,
+    "sha256": "c7a926bc09ac35d3c278cc16085a43a6669c28461626111e2f6519bc6a638dd8",
+    "contentType": "text/html; charset=UTF-8"
+  },
+  {
+    "filename": "up-final-order.pdf",
+    "url": "https://upmyfleet.com/storage/manual/ViewGOPDF.pdf",
+    "finalUrl": "https://upmyfleet.com/storage/manual/ViewGOPDF.pdf",
+    "fetchedOn": "2026-11-01",
+    "bytes": 725910,
+    "sha256": "0cb3217d72fce8ecfa311767d1aac184ec8d2e61ff201d0530975e90b8e17f33",
+    "contentType": "application/pdf"
+  },
+  {
+    "filename": "up-portal-guide.pdf",
+    "url": "https://upmyfleet.com/storage/manual/MV_Aggregator_License_ppt.pdf",
+    "finalUrl": "https://upmyfleet.com/storage/manual/MV_Aggregator_License_ppt.pdf",
+    "fetchedOn": "2026-11-01",
+    "bytes": 746702,
+    "sha256": "0b957742e3d7d7e7a9f4535109053f96f8f33d78b1d51562f3d56c6086615d29",
+    "contentType": "application/pdf"
+  },
+  {
+    "filename": "upmyfleet.html",
+    "url": "https://www.upmyfleet.com/",
+    "finalUrl": "https://www.upmyfleet.com/",
+    "fetchedOn": "2026-11-01",
+    "bytes": 476,
+    "sha256": "f872c00420282ec42f07522468504e5230b7f176ad3d28a25027e5ce9e8375cd",
+    "contentType": "text/html"
+  },
+  {
+    "filename": "upmyfleet.js",
+    "url": "https://www.upmyfleet.com/assets/index-iBoMF1vu.js",
+    "finalUrl": "https://www.upmyfleet.com/assets/index-iBoMF1vu.js",
+    "fetchedOn": "2026-11-01",
+    "bytes": 4336698,
+    "sha256": "024f09689a5261e54cb08c734f3e58178916a0d55b5a0cda077cd042b9c904ef",
+    "contentType": "text/javascript"
+  }
+]

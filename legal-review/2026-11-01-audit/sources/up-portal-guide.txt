@@ -1,0 +1,235 @@
+[PAGE 1]
+PROCESS
+GUIDE
+
+
+Motor Vehicle Aggregator &
+Delivery Service Provider Scheme
+
+
+
+
+License application workflow
+with portal screenshots
+
+
+
+
+Uttar Pradesh Transport Department
+
+
+
+
+                                                                                                                      Portal access →application details →documents →payment →verification
+
+
+License Application Process
+
+[PAGE 2]
+Motor Vehicle Aggregator & Delivery Service Provider Scheme                                                                                                                             OVERVIEW
+
+Application Workflow
+
+
+
+
+        1      Open Portal                  2      Login                      3      Organization                4      Compliance Officer
+
+
+
+
+
+    5       Fleet Declaration             6     Documents                   7     Payment                   8      Submit / Status
+
+
+
+
+
+                                     Each stage is completed in sequence. The portal unlocks the next stage after the current section is completed.
+
+
+
+License Application Process                                                                                                                                                                                                                                2
+
+[PAGE 3]
+Motor Vehicle Aggregator & Delivery Service Provider Scheme                                                                                                                               STEP 01
+
+Portal Landing Page
+
+                                                Open the Motor Vehicle Aggregator & Delivery Service Provider Scheme portal.
+
+
+
+
+
+                                                                                                                                                                                                                                   3
+
+[PAGE 4]
+Motor Vehicle Aggregator & Delivery Service Provider Scheme                                                                                                                               STEP 02
+
+Login to Portal
+
+                                                     Select the user type, enter official email and password, complete CAPTCHA, and sign in.
+
+
+
+
+
+                                                                                                                                                                                                                                                          4
+
+[PAGE 5]
+Motor Vehicle Aggregator & Delivery Service Provider Scheme                                                                                                                               STEP 03
+
+Licensee Dashboard
+
+                                                            After login, the dashboard shows the application status and available portal modules.
+
+
+
+
+
+                                                                                                                                                                                                                                         5
+
+[PAGE 6]
+Motor Vehicle Aggregator & Delivery Service Provider Scheme                                                                                                                               STEP 04
+
+Organization Details
+
+                                                      Enter entity, company registration, GST/PAN, address, office and service information.
+
+
+
+
+
+                                                                                                                                                                                                                                  6
+
+[PAGE 7]
+Motor Vehicle Aggregator & Delivery Service Provider Scheme                                                                                                                               STEP 05
+
+Organization Details – Continued
+
+                                             Complete the remaining organization information and proceed to the Compliance Officer section.
+
+
+
+
+
+                                                                                                                                                                                                                                                                        7
+
+[PAGE 8]
+Motor Vehicle Aggregator & Delivery Service Provider Scheme                                                                                                                               STEP 06
+
+Compliance Officer
+
+                                              Provide the designated compliance officer's name, designation, mobile number and alternate contact.
+
+
+
+
+
+                                                                                                                                                                                                                              8
+
+[PAGE 9]
+Motor Vehicle Aggregator & Delivery Service Provider Scheme                                                                                                                               STEP 07
+
+Fleet Declaration
+
+                                            Declare total fleet size, vehicle-category breakup, EV count/percentage and GPS/GPRS infrastructure.
+
+
+
+
+
+                                                                                                                                                                                                                                  9
+
+[PAGE 10]
+Motor Vehicle Aggregator & Delivery Service Provider Scheme                                                                                                                               STEP 08
+
+Fleet Declaration – Continued
+
+                                                         Review the fleet declaration fields and proceed to document upload.
+
+
+
+
+
+                                                                                                                                                                                                                                                                                                         10
+
+[PAGE 11]
+Motor Vehicle Aggregator & Delivery Service Provider Scheme                                                                                                                               STEP 09
+
+Documents Upload
+
+                                                   Upload the required registration, GST, PAN and last three years' financial documents.
+
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                11
+
+[PAGE 12]
+Motor Vehicle Aggregator & Delivery Service Provider Scheme                                                                                                                               STEP 10
+
+Payment Gateway
+
+                                                   Review the application fee and registration details before proceeding to payment.
+
+
+
+
+
+                                                                                                                                                                                                                                                                                                                              12
+
+[PAGE 13]
+Motor Vehicle Aggregator & Delivery Service Provider Scheme                                                                                                                                STEP 11
+
+SBIePay Payment
+
+                                               Complete payment using card, net banking or UPI and retain the transaction/order details.
+
+
+
+
+
+                                                                                                                                                                                                                                                                                                              13
+
+[PAGE 14]
+Motor Vehicle Aggregator & Delivery Service Provider Scheme                                                                                                                               STEP 12
+
+Application Status After Approval
+
+                                            After STA and ASTA review are completed, the applicant can track the final verification status from the dashboard.
+
+
+
+
+
+    STATUS SHOWN: VERIFIED                                              Submitted →STA Review →ASTA Review →Verified
+
+
+License Application Process                                                                                                                                                                                                                                                                                                     14
+
+[PAGE 15]
+                        Process Complete
+
+
+
+                                         The applicant completes the portal workflow by submitting the application, making payment, and tracking final verification.
+
+
+
+
+     1                  2                 3                 4                 5                 6            Portal Login                      Application Details                Compliance & Fleet                  Documents                      Payment                           Verification
+
+
+
+
+
+                                                                               Final status can be tracked from the Application Status section.
+
+
+
+
+
+License Application Process                                                                                                                                                                                                                                                                                        15

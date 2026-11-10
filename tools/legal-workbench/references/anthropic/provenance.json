@@ -1,0 +1,27 @@
+{
+    "repository":  "https://github.com/anthropics/claude-for-legal",
+    "commit":  "4a6c651889c97cc9140580363c73e0eb17379c2b",
+    "retrievedOn":  "2026-11-01",
+    "files":  [
+                  {
+                      "name":  "LICENSE.txt",
+                      "sha256":  "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+                      "bytes":  11358
+                  },
+                  {
+                      "name":  "policy-redraft.md",
+                      "sha256":  "c354b0323ba50af4e1024bfda49fd88bcad9466f2abbef170d58e40aab711f3d",
+                      "bytes":  14066
+                  },
+                  {
+                      "name":  "gap-surfacer.md",
+                      "sha256":  "56fc5441d1401d5ff21f9ccdf0e200341b823d26f8304dfd310dd0b89f706d3e",
+                      "bytes":  14877
+                  },
+                  {
+                      "name":  "privacy-profile.md",
+                      "sha256":  "e08f5dfd52fa7ceb74750a8fb453e73abf7bf1570394eb216881d7f4098d956d",
+                      "bytes":  39565
+                  }
+              ]
+}

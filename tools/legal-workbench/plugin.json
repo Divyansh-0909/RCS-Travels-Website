@@ -1,0 +1,21 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "rcs-legal-workbench",
+  "version": "0.1.1",
+  "description": "Local evidence checks and India-specific legal drafting workflows for RCS Travels.",
+  "author": { "name": "RCS Travels" },
+  "extensions": {
+    "com.openai": {
+      "requires_local_executor": true,
+      "interface": {
+        "displayName": "RCS Legal Workbench",
+        "shortDescription": "Indian legal document review",
+        "longDescription": "Check source records, quotations, jurisdictions, document changes and unresolved issues. Codex performs research and drafting; the local tools do not certify legal compliance.",
+        "developerName": "RCS Travels",
+        "category": "Productivity",
+        "capabilities": ["Read"],
+        "defaultPrompt": "Review RCS legal documents against current Indian primary sources and actual product behaviour."
+      }
+    }
+  }
+}
