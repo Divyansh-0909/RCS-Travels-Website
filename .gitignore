@@ -9,6 +9,9 @@ node_modules/
 dist/
 build/
 coverage/
+# Source-owned UI inventory tooling and its canonical tracker.
+!/tools/ui-quality/coverage/
+!/tools/ui-quality/coverage/**
 
 # =========================
 # Vite
@@ -211,3 +214,20 @@ temporary screenshots/
 !/.codex/
 /.codex/*
 !/.codex/hooks.json
+
+# Approved cleanup: local reports, export packages and Python bytecode.
+/frontend/tests/output/
+/test-results/
+/tmp-legal-*.png
+/theme-exports/*.png
+/theme-exports/*.zip
+/legal-review/RCS-Legal-Workbench-*.zip
+__pycache__/
+*.py[cod]
+
+# Reviewed Proofloop SQL source and synthetic fixtures; database dumps stay ignored.
+!/tools/backups/application_retention_gate.sql
+!/tools/backups/preflight.sql
+!/tools/backups/retention_registry.sql
+!/tools/backups/supabase_custody_crypto.sql
+!/backend/tests/helpers/phase9dSyntheticRetention.sql
