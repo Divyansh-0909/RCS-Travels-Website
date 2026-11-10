@@ -1,0 +1,11 @@
+import fs from 'node:fs';import path from 'node:path';import assert from 'node:assert/strict';
+import {Google} from '../../../handoff/google.mjs';import {config} from '../../../handoff/config.mjs';import {readJson,atomicJson,hash} from '../../../handoff/core.mjs';
+export const run=readJson('output/handoff/state.json').run,directory=path.join(run.directory,'fixes-2026-10-24'),out=path.join(directory,'artifacts'),receiptFile=path.join(directory,'publication.json');assert.equal(run.phase,'P06');
+export const original=readJson(path.join(run.directory,'publication.json')),receipt=readJson(receiptFile,{phase:'P06',continuation:'OWNER_APPROVED_FIXES_2026_10_24',runId:run.id+':approved-fixes-2026-10-24',artifacts:[]});assert(!receipt.docVerified,'Approved-fix checkpoint already published; retain verified evidence');
+export const google=new Google(config);const folder=await google.metadata(original.evidenceFolder.id);assert.equal(folder.name,'P06-evidence');assert(folder.parents.includes(config.folderId));receipt.evidenceFolder={id:folder.id,url:folder.webViewLink};atomicJson(receiptFile,receipt);
+const evidence=new Google({...config,folderId:folder.id});evidence.token=(...args)=>google.token(...args);
+const types={'.md':'text/markdown','.json':'application/json','.csv':'text/csv','.png':'image/png'},secret=/-----BEGIN (?:\w+ )?PRIVATE KEY-----|(?:access_token|refresh_token|client_secret|OPENAI_API_KEY|DATABASE_URL)\s*["']?\s*[:=]\s*["']?[^\s"'<>]{12,}|Bearer\s+[a-zA-Z0-9._-]{20,}/i;
+export async function upload(name,kind='evidence'){
+  assert.equal(path.basename(name),name);const file=path.join(out,name),bytes=fs.readFileSync(file),mime=types[path.extname(name)];assert(mime&&bytes.length<30*1024*1024);if(mime!=='image/png')assert(!secret.test(bytes.toString()),'Potential credential in '+name);
+  const client=kind==='report'?google:evidence,digest=hash(bytes),old=receipt.artifacts.find(a=>a.name===name&&a.sha256===digest&&a.kind===kind),artifact=old?await client.verifyArtifact(old.id):await client.upload(file,receipt.runId,mime);assert.equal(artifact.sha256,digest);const record={...artifact,kind};receipt.artifacts=[...receipt.artifacts.filter(a=>a.name!==name),record];atomicJson(receiptFile,receipt);console.log('Verified approved-fix '+kind+': '+name);return record;
+}

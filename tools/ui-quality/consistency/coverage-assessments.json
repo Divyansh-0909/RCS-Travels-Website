@@ -1,0 +1,46 @@
+{
+  "batch": "VC-B01-2026-10-24",
+  "dimension": "visual_consistency",
+  "evidenceUrl": "https://drive.google.com/file/d/1I6mXSbpRthpl-O2xHP6tErWwkW5is8AY/view?usp=drivesdk",
+  "entries": [
+    {
+      "screenId": "W.BOOKING.ROUTE",
+      "scope": "Only the listed component occurrences, not the whole parent/child screen",
+      "familyIds": [
+        "VC-B01-ACTIONS",
+        "VC-B01-ADDRESS",
+        "VC-B01-SELECTION"
+      ],
+      "ownerChoices": "Separate per-family registry; historical functional owner fields do not approve a visual pattern",
+      "implementationStatus": "NOT_CHANGED"
+    },
+    {
+      "screenId": "W.BOOKING.TIMING",
+      "scope": "Only the listed component occurrences, not the whole parent/child screen",
+      "familyIds": [
+        "VC-B01-ACTIONS"
+      ],
+      "ownerChoices": "Separate per-family registry; historical functional owner fields do not approve a visual pattern",
+      "implementationStatus": "NOT_CHANGED"
+    },
+    {
+      "screenId": "W.BOOKING.VEHICLES",
+      "scope": "Only the listed component occurrences, not the whole parent/child screen",
+      "familyIds": [
+        "VC-B01-ACTIONS",
+        "VC-B01-SELECTION"
+      ],
+      "ownerChoices": "Separate per-family registry; historical functional owner fields do not approve a visual pattern",
+      "implementationStatus": "NOT_CHANGED"
+    },
+    {
+      "screenId": "W.SETTINGS.SAVED-PLACES",
+      "scope": "Only the listed component occurrences, not the whole parent/child screen",
+      "familyIds": [
+        "VC-B01-ADDRESS"
+      ],
+      "ownerChoices": "Separate per-family registry; historical functional owner fields do not approve a visual pattern",
+      "implementationStatus": "NOT_CHANGED"
+    }
+  ]
+}

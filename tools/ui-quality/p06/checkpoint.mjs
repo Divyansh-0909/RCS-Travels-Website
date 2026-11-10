@@ -1,0 +1,14 @@
+import fs from 'node:fs';import path from 'node:path';import assert from 'node:assert/strict';
+import {readJson,atomicJson,alive,transition} from '../../handoff/core.mjs';import {issues} from './issues.mjs';
+const worker=readJson('output/handoff/worker.json');assert(!worker||!alive(worker.pid),'Stop watcher before checkpoint');
+const file='output/handoff/state.json',state=readJson(file),run=state.run;assert.equal(run.phase,'P06');
+const out=path.join(run.directory,'artifacts');assert.equal(readJson(path.join(out,'P06-tracker-validation.json')).status,'PASS');
+const reason='P06 prompt section 8 OWNER APPROVAL GATE: four confirmed findings require owner choice before changing booking behavior or accessibility navigation.';
+run.stage='blocked';run.pid=null;run.resultSummary='P06 bounded audit complete: four unfixed findings ready for owner review; product unchanged.';run.lastTests=readJson(path.join(run.directory,'checks.json'));
+state.phases[run.key]={...state.phases[run.key],status:'APPROVAL_REQUIRED'};
+state.approvalRequired={...state.approvalRequired,active:true,phase:'P06',at:new Date().toISOString(),reason,issues:issues.map(i=>i.id),updatedAt:new Date().toISOString()};
+state.bootstrap={...state.bootstrap,active:true,reason:'P06 owner review hold; suppress duplicate automatic dispatch'};
+transition(state,'APPROVAL_REQUIRED',reason);atomicJson(file,state);
+atomicJson(path.join(run.directory,'result.json'),{status:'approval_required',phase:'P06',summary:run.resultSummary,blocker:reason,tests:run.lastTests,artifacts:run.requiredArtifacts});
+const progressFile='output/handoff/progress.json',progress=readJson(progressFile,{});atomicJson(progressFile,{...progress,screen:'P06 booking audit',route:'/book',issue:issues.map(i=>i.id).join(', '),doing:'Owner choice needed for four real booking issues. Evidence and review board prepared; product UI and behavior unchanged.',status:'Awaiting Review',updatedAt:new Date().toISOString()});
+console.log(JSON.stringify({phase:run.phase,status:state.state,issues:state.approvalRequired.issues,productChanged:false}));

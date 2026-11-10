@@ -1,0 +1,358 @@
+{
+  "schema": 1,
+  "batch": "VC-B01-2026-10-24",
+  "catalogRevision": "76ea60bbd4151c8691d22ade91e7289a30d60d270f86786351136151a948e48e",
+  "at": "2026-10-23T22:46:12.497Z",
+  "families": [
+    {
+      "id": "VC-B01-ACTIONS",
+      "name": "Primary booking actions",
+      "classification": "NEEDS_OWNER_CHOICE",
+      "difference": "The route/timing action applies a 1.3 desktop scale to Button; the vehicle action uses an unscaled full-width Button with its own text size. Compare rendered height, text, radius and padding below.",
+      "rationale": "These are successive primary actions in the same legacy booking flow. The commit step may deliberately differ from the earlier steps; no approved reference establishes one standard.",
+      "cascade": "Button is reused outside these screens. Any future choice must be scoped to the listed booking actions; global Button or brand-token edits are excluded.",
+      "choices": [
+        {
+          "id": "A",
+          "label": "Use the route/timing proportions for these actions"
+        },
+        {
+          "id": "B",
+          "label": "Use the vehicle-action proportions for these actions"
+        },
+        {
+          "id": "VARIANTS",
+          "label": "Keep purpose-specific action proportions"
+        }
+      ],
+      "occurrences": [
+        {
+          "id": "VCB01_ROUTE_ACTION",
+          "label": "A · Route entry — Set date & time",
+          "screenId": "W.BOOKING.ROUTE",
+          "route": "/book",
+          "stage": "route",
+          "target": "route-action",
+          "source": "frontend/src/pages/OnBoarding.jsx",
+          "token": "const priceAction = (",
+          "sourceLine": 1101,
+          "sourceHash": "bb796404fd54463e3c8b24bfb027a0f62fb1c1fa029168ae8c321f6f3c8b630e",
+          "themePolicy": "LEGACY_FIXED",
+          "sampleIds": [
+            "VCB01_ROUTE_ACTION-390-light.png",
+            "VCB01_ROUTE_ACTION-390-dark.png",
+            "VCB01_ROUTE_ACTION-1440-light.png",
+            "VCB01_ROUTE_ACTION-1440-dark.png"
+          ]
+        },
+        {
+          "id": "VCB01_TIMING_ACTION",
+          "label": "A · Timing — See prices",
+          "screenId": "W.BOOKING.TIMING",
+          "route": "/book",
+          "stage": "timing",
+          "target": "timing-action",
+          "source": "frontend/src/pages/OnBoarding.jsx",
+          "token": "className={`scale-[1] sm:scale-[1.3] sm:origin-left ${formWidth}`}",
+          "sourceLine": 1114,
+          "sourceHash": "bb796404fd54463e3c8b24bfb027a0f62fb1c1fa029168ae8c321f6f3c8b630e",
+          "themePolicy": "LEGACY_FIXED",
+          "sampleIds": [
+            "VCB01_TIMING_ACTION-390-light.png",
+            "VCB01_TIMING_ACTION-390-dark.png",
+            "VCB01_TIMING_ACTION-1440-light.png",
+            "VCB01_TIMING_ACTION-1440-dark.png"
+          ]
+        },
+        {
+          "id": "VCB01_VEHICLE_ACTION",
+          "label": "B · Vehicle selection — Book ride",
+          "screenId": "W.BOOKING.VEHICLES",
+          "route": "/book",
+          "stage": "vehicle",
+          "target": "vehicle-action",
+          "source": "frontend/src/pages/VehicleSelect.jsx",
+          "token": "const bookAction = (",
+          "sourceLine": 1166,
+          "sourceHash": "81eec48eb3dc1ff6f3246839135bcfbe1f729361b46f884dcc63ee1d787a4bdd",
+          "themePolicy": "LEGACY_FIXED",
+          "sampleIds": [
+            "VCB01_VEHICLE_ACTION-390-light.png",
+            "VCB01_VEHICLE_ACTION-390-dark.png",
+            "VCB01_VEHICLE_ACTION-1440-light.png",
+            "VCB01_VEHICLE_ACTION-1440-dark.png"
+          ]
+        }
+      ],
+      "coverageDimension": "visual_consistency",
+      "ownerChoice": "NOT_SELECTED",
+      "implementationStatus": "NOT_CHANGED",
+      "aestheticAcceptance": "NOT_RECORDED",
+      "reviewUrl": "http://127.0.0.1:4317/?view=consistency&family=VC-B01-ACTIONS"
+    },
+    {
+      "id": "VC-B01-ADDRESS",
+      "name": "Address text fields",
+      "classification": "DESIGN_REFERENCE_UNCLEAR",
+      "difference": "Booking uses the shared Input with desktop vertical scaling, medium text and marker/clear adornments. Saved places uses a local unscaled input inside an account row. Measure the shared address-entry task while preserving the distinct page themes.",
+      "rationale": "Both accept a place address, but booking offers autocomplete and Settings edits a saved address. Theme and available width are deliberate context differences; the intended common control proportions need an owner choice.",
+      "cascade": "Only pickup, drop and the saved Home editor are sampled. Settings reuses its editor for Work and custom places: those variants remain unverified and need an expanded affected-controls review before any edit that would reach them. Other Input callers are excluded. Colors and autocomplete behavior are locked.",
+      "choices": [
+        {
+          "id": "A",
+          "label": "Use booking field proportions, keeping each page theme"
+        },
+        {
+          "id": "B",
+          "label": "Use saved-place field proportions, keeping each page theme"
+        },
+        {
+          "id": "VARIANTS",
+          "label": "Keep purpose-specific booking and account fields"
+        }
+      ],
+      "occurrences": [
+        {
+          "id": "VCB01_PICKUP",
+          "label": "A · Booking pickup address",
+          "screenId": "W.BOOKING.ROUTE",
+          "route": "/book",
+          "stage": "route",
+          "target": "pickup",
+          "source": "frontend/src/pages/OnBoarding.jsx",
+          "token": "<Input",
+          "sourceLine": 1264,
+          "sourceHash": "bb796404fd54463e3c8b24bfb027a0f62fb1c1fa029168ae8c321f6f3c8b630e",
+          "themePolicy": "LEGACY_FIXED",
+          "sampleIds": [
+            "VCB01_PICKUP-390-light.png",
+            "VCB01_PICKUP-390-dark.png",
+            "VCB01_PICKUP-1440-light.png",
+            "VCB01_PICKUP-1440-dark.png"
+          ]
+        },
+        {
+          "id": "VCB01_DROP",
+          "label": "A · Booking drop address",
+          "screenId": "W.BOOKING.ROUTE",
+          "route": "/book",
+          "stage": "route",
+          "target": "drop",
+          "source": "frontend/src/pages/OnBoarding.jsx",
+          "token": "id: \"drop-location\",",
+          "sourceLine": 1343,
+          "sourceHash": "bb796404fd54463e3c8b24bfb027a0f62fb1c1fa029168ae8c321f6f3c8b630e",
+          "themePolicy": "LEGACY_FIXED",
+          "sampleIds": [
+            "VCB01_DROP-390-light.png",
+            "VCB01_DROP-390-dark.png",
+            "VCB01_DROP-1440-light.png",
+            "VCB01_DROP-1440-dark.png"
+          ]
+        },
+        {
+          "id": "VCB01_SAVED_ADDRESS",
+          "label": "B · Settings — saved Home address editor",
+          "screenId": "W.SETTINGS.SAVED-PLACES",
+          "route": "/settings",
+          "stage": "saved-address",
+          "target": "saved-address",
+          "source": "frontend/src/pages/SettingsPage.jsx",
+          "token": "className=\"flex-1 min-w-0 rounded-xl py-2 px-3 text-base",
+          "sourceLine": 195,
+          "sourceHash": "311eed8f92329169ee6c496a7e64c3cf362c2bff5100d62638f7a44add64ad6a",
+          "themePolicy": "BOTH",
+          "sampleIds": [
+            "VCB01_SAVED_ADDRESS-390-light.png",
+            "VCB01_SAVED_ADDRESS-390-dark.png",
+            "VCB01_SAVED_ADDRESS-1440-light.png",
+            "VCB01_SAVED_ADDRESS-1440-dark.png"
+          ]
+        }
+      ],
+      "coverageDimension": "visual_consistency",
+      "ownerChoice": "NOT_SELECTED",
+      "implementationStatus": "NOT_CHANGED",
+      "aestheticAcceptance": "NOT_RECORDED",
+      "reviewUrl": "http://127.0.0.1:4317/?view=consistency&family=VC-B01-ADDRESS"
+    },
+    {
+      "id": "VC-B01-SELECTION",
+      "name": "Selection controls: compact modes and rich cards",
+      "classification": "INTENTIONAL_VARIANT",
+      "difference": "Trip mode uses compact pill buttons. Vehicle choice uses larger cards with a vehicle image, passenger count and sample fare. Both expose aria-pressed; their content and space requirements differ.",
+      "rationale": "Different information density justifies distinct shapes. This is an explicit exception candidate, not a confirmed visual defect. Do not turn vehicle cards into pills or trip-mode choices into fare cards.",
+      "cascade": "Preserve the P06 selected-state fix and the existing trip-mode behavior. A pattern decision here never approves a booking-rule change.",
+      "choices": [
+        {
+          "id": "VARIANTS",
+          "label": "Keep compact modes and rich vehicle cards"
+        },
+        {
+          "id": "REVIEW",
+          "label": "Leave undecided for a later comparison"
+        }
+      ],
+      "occurrences": [
+        {
+          "id": "VCB01_TRIP_MODE",
+          "label": "A · Route — One way / Round trip",
+          "screenId": "W.BOOKING.ROUTE",
+          "route": "/book",
+          "stage": "route",
+          "target": "trip-mode",
+          "source": "frontend/src/pages/OnBoarding.jsx",
+          "token": "aria-pressed={!isRoundTrip}",
+          "sourceLine": 1214,
+          "sourceHash": "bb796404fd54463e3c8b24bfb027a0f62fb1c1fa029168ae8c321f6f3c8b630e",
+          "themePolicy": "LEGACY_FIXED",
+          "sampleIds": [
+            "VCB01_TRIP_MODE-390-light.png",
+            "VCB01_TRIP_MODE-390-dark.png",
+            "VCB01_TRIP_MODE-1440-light.png",
+            "VCB01_TRIP_MODE-1440-dark.png"
+          ]
+        },
+        {
+          "id": "VCB01_VEHICLE_CARD",
+          "label": "B · Vehicle — Hatchback / Sedan / SUV",
+          "screenId": "W.BOOKING.VEHICLES",
+          "route": "/book",
+          "stage": "vehicle",
+          "target": "vehicle-card",
+          "source": "frontend/src/pages/VehicleSelect.jsx",
+          "token": "const vehicleCard = (",
+          "sourceLine": 1253,
+          "sourceHash": "81eec48eb3dc1ff6f3246839135bcfbe1f729361b46f884dcc63ee1d787a4bdd",
+          "themePolicy": "LEGACY_FIXED",
+          "sampleIds": [
+            "VCB01_VEHICLE_CARD-390-light.png",
+            "VCB01_VEHICLE_CARD-390-dark.png",
+            "VCB01_VEHICLE_CARD-1440-light.png",
+            "VCB01_VEHICLE_CARD-1440-dark.png"
+          ]
+        }
+      ],
+      "coverageDimension": "visual_consistency",
+      "ownerChoice": "NOT_SELECTED",
+      "implementationStatus": "NOT_CHANGED",
+      "aestheticAcceptance": "NOT_RECORDED",
+      "reviewUrl": "http://127.0.0.1:4317/?view=consistency&family=VC-B01-SELECTION"
+    }
+  ],
+  "occurrences": 8,
+  "screenIds": [
+    "W.BOOKING.ROUTE",
+    "W.BOOKING.TIMING",
+    "W.BOOKING.VEHICLES",
+    "W.SETTINGS.SAVED-PLACES"
+  ],
+  "reusedPrimitives": [
+    "frontend/src/components/ui/Button.jsx",
+    "frontend/src/components/ui/Input.jsx"
+  ],
+  "intent": "Two neutral owner choices and one purposeful selection-control exception; no approved visual reference was invented",
+  "excluded": [
+    "Home/Outstation locked compositions",
+    "All unlisted parent/child screens",
+    "Android UI consistency; actual device preview is unchanged",
+    "Global colors, typography tokens and shared primitive refactors"
+  ],
+  "phaseAssessments": {
+    "P07": {
+      "date": "2026-10-29",
+      "status": "APPROVAL_REQUIRED",
+      "scope": [
+        "W.TRACKING",
+        "W.SHARED.CUSTOMER-PAYMENT-PANEL",
+        "W.SHARED.RIDE-SETTLEMENT-PANEL",
+        "W.SHARED.CANCELLED-BOOKING-PANEL"
+      ],
+      "evidence": "https://drive.google.com/drive/folders/1qP4Ig18YTCtjqNGqbXWoSPbrEoTW30lz",
+      "families": [
+        {
+          "id": "VC-P07-ACTIONS",
+          "semanticRole": "primary payment or recovery action",
+          "classification": "CONSISTENT",
+          "measurement": "Normal text: 48px minimum height, 16px/24px label, 12px outer radius, 12px 24px inner padding; narrow/large text expands height. White/primary computed contrast 4.68:1 in actual legacy theme.",
+          "reference": "Existing ActionControl/Button; prior owner-selected sizing preserved",
+          "scope": "Sampled advance, settlement, refund and payment failure controls; not all Button callers"
+        },
+        {
+          "id": "VC-P07-FAILURE-FEEDBACK",
+          "semanticRole": "failed customer payment attempt",
+          "classification": "CONFIRMED_INCONSISTENCY",
+          "issue": "P07-B02-02",
+          "measurement": "Advance failure has role=alert, explanation and Retry payment; denied settlement returns to unchanged enabled methods and zero alerts.",
+          "choices": [
+            "A inline announced failure and safe refresh",
+            "B adapt existing failure card"
+          ],
+          "approval": "OWNER_REVIEW_REQUIRED"
+        },
+        {
+          "id": "VC-P07-TERMINAL-CARDS",
+          "semanticRole": "paid/refund outcome",
+          "classification": "INTENTIONAL_VARIANT",
+          "measurement": "Paid and refund cards both use background-muted; paid compact radius16/padding16, cancellation outcome radius16/padding20; heading size follows terminal vs embedded hierarchy.",
+          "rationale": "Paid receipt confirms collection; refund panel distinguishes pending from processed, and must not be converted to a payment-success claim."
+        },
+        {
+          "id": "VC-P07-RECEIPT",
+          "semanticRole": "itemized ride outcome",
+          "classification": "CONSISTENT_WITH_RESPONSIVE_DEFECT",
+          "issue": "P07-B02-04",
+          "measurement": "Read-only amount rows remain separate from action controls; completed two-column layout fails support-link reachability at 1440px/root32px.",
+          "rationale": "No fare arithmetic or policy change authorized; fix choice remains pending."
+        },
+        {
+          "id": "VC-P07-ICONS-PILLS",
+          "semanticRole": "navigation and contextual actions",
+          "classification": "INTENTIONAL_VARIANT",
+          "measurement": "Back uses circular44px control at normal text; action buttons minimum48px. Compact Share/Ride details/support contexts differ deliberately; no new global standard selected."
+        },
+        {
+          "id": "VC-P07-STALE-FEEDBACK",
+          "semanticRole": "read recovery notice",
+          "classification": "CONFIRMED_ACCESSIBILITY_INCONSISTENCY",
+          "issue": "P07-B02-03",
+          "measurement": "Normal focus outline measured primary rgb(48,103,253) solid2px; hidden recovered notice opacity0 still receives Tab. No broad redesign of feedback styles."
+        },
+        {
+          "id": "VC-P07-OTHER-THEMES",
+          "semanticRole": "whole-page light/dark reconciliation",
+          "classification": "UNVERIFIED",
+          "rationale": "Tracking is legacy fixed under both saved preferences; counterpart not forced. Item12 stays ON HOLD. No Android comparison."
+        }
+      ]
+    },
+    "P07-APPROVED-FIXES": {
+      "date": "2026-10-29",
+      "status": "PARTIAL_01_PENDING",
+      "ownerApproved": [
+        {
+          "id": "P07-B02-02",
+          "choice": "A"
+        },
+        {
+          "id": "P07-B02-03",
+          "choice": "A"
+        },
+        {
+          "id": "P07-B02-04",
+          "choice": "A"
+        }
+      ],
+      "implemented": {
+        "P07-B02-02": "Announced inline failure, GET-only refresh, busy controls, paid outcome clears failure; Hindi/Hinglish copy added.",
+        "P07-B02-03": "Inert exit, timer cleanup, unmount after300ms (immediate reduced motion), owned-focus restoration/page fallback.",
+        "P07-B02-04": "Local support wrapping, shrinkable columns and scrollable completed panel at large text."
+      },
+      "evidence": "https://drive.google.com/drive/folders/1h1mgl7VDO8yKKJH4DqWxpta-iU9O6Avk",
+      "issue01": "Transport/cost discussion; no implementation.",
+      "item12": "ON HOLD",
+      "newGlobalVisualStandards": [],
+      "aestheticAcceptance": "Owner approved the treatment; no claim that the owner has inspected the final pixels."
+    }
+  }
+}

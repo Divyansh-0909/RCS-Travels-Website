@@ -15,6 +15,7 @@ try {
     .filter(key => process.env[key]).map(key => [key,process.env[key]]));
   const childEnv = { ...inherited, NODE_ENV: 'test', PHASE9_ISOLATED: '1', TEST_DATABASE_URL: environment.connectionString,
     PHASE9_KEEP_AWAKE: process.argv.includes('--keep-awake') ? '1' : '0',
+    PHASE9_NATIVE_THEME: process.argv.includes('--theme=light') ? 'light' : 'dark',
     DATABASE_URL: PHASE9_FORBIDDEN_DATABASE, DIRECT_URL: PHASE9_FORBIDDEN_DATABASE,
     DOTENV_CONFIG_PATH: PHASE9_EMPTY_ENV, PHASE9_EMPTY_ENV_DIR: temporary,
     CLERK_SECRET_KEY: 'sk_test_phase9_synthetic_only', OPENAI_API_KEY: 'phase9-denied-synthetic-constructor-key',
@@ -23,7 +24,9 @@ try {
     JAVA_HOME: 'C:/Program Files/Java/jdk-17.0.2', ANDROID_HOME: 'C:/Android', ANDROID_SDK_ROOT: 'C:/Android',
     MAESTRO_CLI_NO_ANALYTICS: '1', MAESTRO_CLI_ANALYSIS_NOTIFICATION_DISABLED: 'true' };
   await new Promise((done, fail) => {
-    const child = spawn(process.execPath, ['--import','./tests/helpers/phase9Isolation.js','--import','tsx','tests/e2e/phase9Native.mjs'],
+    const entry = process.argv.includes('--review-preview') ? 'tests/e2e/phase9NativePreview.mjs' :
+      process.argv.includes('--acceptance-only') ? 'tests/e2e/phase9NativeAcceptance.mjs' : 'tests/e2e/phase9Native.mjs';
+    const child = spawn(process.execPath, ['--import','./tests/helpers/phase9Isolation.js','--import','tsx',entry],
       { cwd: backend, env: childEnv, windowsHide: true, stdio: 'inherit' });
     child.once('error', fail); child.once('close', code => code === 0 ? done() : fail(new Error(`Native phase9 exit ${code}`)));
   });

@@ -1,0 +1,43 @@
+appId: com.rcstravels.driver.phase9
+---
+- assertVisible: "Account"
+- tapOn:
+    point: "94%,95%"
+- assertNotVisible: "Use device setting"
+- swipe:
+    start: "94%,95%"
+    end: "94%,88%"
+    duration: 2000
+- assertNotVisible: "Home"
+- tapOn:
+    point: "94%,93%"
+- assertVisible: "Use device setting"
+- back
+- swipe:
+    start: "50%,65%"
+    end: "50%,80%"
+    duration: 1200
+- assertVisible: "Home"
+- tapOn:
+    point: "94%,95%"
+- assertNotVisible: "Use device setting"
+- tapOn:
+    text: "^Language$"
+- assertVisible: "English"
+- tapOn:
+    point: "50%,95%"
+- assertNotVisible: "Close"
+- tapOn: "Home"
+- assertVisible: "No ride scheduled"
+- tapOn: "Rides"
+- assertVisible: "Upcoming"
+- tapOn: "Account"
+- scrollUntilVisible:
+    element: "Legal"
+    direction: DOWN
+    visibilityPercentage: 100
+    centerElement: true
+- tapOn: "Legal"
+- assertVisible: "Privacy Policy"
+- back
+- assertVisible: "Account"

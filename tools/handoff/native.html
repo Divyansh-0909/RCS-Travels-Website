@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Android preview</title>
+<style>*{box-sizing:border-box}body{margin:0;background:#101010;color:#dedede;font:13px/1.5 Arial,Helvetica,sans-serif;text-align:center;height:100dvh;display:flex;flex-direction:column;overflow:hidden}header{padding:16px;flex:none}h1{margin:0 0 6px;font-size:18px;font-weight:600}p{margin:4px}#viewport{flex:1;min-height:0;display:flex;align-items:center;justify-content:center}img{max-width:100%;max-height:100%;object-fit:contain}#empty{padding:32px 20px;color:#aaa;max-width:300px}small{color:#aaa;font-size:11px}[hidden]{display:none!important}</style></head><body>
+<header><h1 id="state">Android offline</h1><p>View only · use your phone</p><small id="stamp">Checking connection…</small></header>
+<div id="viewport" role="main"><p id="empty">Connect the phone and start its preview.</p><img id="screen" hidden alt="Live screen from the isolated Android test app"></div>
+<script>
+const screen=document.getElementById('screen'),state=document.getElementById('state'),stamp=document.getElementById('stamp'),empty=document.getElementById('empty');
+let last=null,busy=false;
+async function refresh(){if(busy)return;busy=true;try{
+ const s=await fetch('/api/native/status',{cache:'no-store'}).then(r=>r.json());
+ state.textContent=s.live?'Android live':'Android offline';
+ stamp.textContent=s.live?(s.width+' × '+s.height+' · '+new Date(s.at).toLocaleTimeString()):s.status;
+ if(!s.live){screen.hidden=true;screen.removeAttribute('src');last=null;empty.hidden=false;empty.textContent=s.status==='TEST APP NOT FOREGROUND'?'Open the test app on the phone.':'Connect the phone and start its preview.';return;}
+ if(s.at!==last){last=s.at;screen.src='/native-screen.png?t='+encodeURIComponent(s.at);}
+}catch{state.textContent='Connection lost';screen.hidden=true;screen.removeAttribute('src');last=null;empty.hidden=false;empty.textContent='Reconnecting…';}finally{busy=false;}}
+screen.onload=()=>{if(!last)return;screen.hidden=false;empty.hidden=true;};
+screen.onerror=()=>{screen.hidden=true;empty.hidden=false;state.textContent='Frame unavailable';empty.textContent='Waiting for a fresh screen…';last=null;};
+refresh();setInterval(refresh,2000);
+</script></body></html>

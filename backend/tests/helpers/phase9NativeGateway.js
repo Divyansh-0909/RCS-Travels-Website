@@ -9,7 +9,14 @@ export async function createNativeGateway(harness, { acceptanceFault = 'before',
   const app = express();
   const requests = [];
   const faults = [];
+  const timeline = [];
+  const offerSnapshots = [];
   let failAcceptance = acceptanceFault;
+  app.use((req, res, next) => {
+    const startedAt = new Date().toISOString();
+    res.on('finish', () => timeline.push({ startedAt, at: new Date().toISOString(), method: req.method, path: req.path, status: res.statusCode }));
+    next();
+  });
   app.use(express.raw({ type: () => true, limit: '2mb' }));
   app.get('/phase9-health', (_req, res) => res.json({ mode: 'isolated-phase9', production: false }));
   app.use(async (req, res) => {
@@ -36,6 +43,11 @@ export async function createNativeGateway(harness, { acceptanceFault = 'before',
       }
       const observed = { method: req.method, path: req.path, status: response.status };
       if (req.path === '/api/driver/me' && response.ok) observed.actorId = JSON.parse(bytes.toString('utf8')).id;
+      if (req.path === '/api/driver/offers' && response.ok) {
+        const body = JSON.parse(bytes.toString('utf8'));
+        offerSnapshots.push({ at: new Date().toISOString(), canAccept: body.canAccept,
+          offers: (body.offers || []).map(o => ({ offerId: o.offerId, offeredAt: o.offeredAt })) });
+      }
       if (req.path.startsWith('/api/') && req.method === 'PATCH' && response.headers.get('content-type')?.includes('json')) {
         observed.response = JSON.parse(bytes.toString('utf8'));
       }
@@ -58,7 +70,7 @@ export async function createNativeGateway(harness, { acceptanceFault = 'before',
     }
   });
   const server = await new Promise(done => { const listener = app.listen(0,'127.0.0.1',() => done(listener)); });
-  return { url: `http://127.0.0.1:${server.address().port}`, requests, faults,
+  return { url: `http://127.0.0.1:${server.address().port}`, requests, faults, timeline, offerSnapshots,
     selectActor(value) {
       if (!['captain', 'replacement'].includes(value) || !harness.actors[value]) throw new Error('Unknown native actor');
       actor = value;

@@ -1,0 +1,4 @@
+import fs from 'node:fs';import path from 'node:path';
+import {chromium,createCase,out,snapshot} from './browser.mjs';
+const browser=await chromium.launch({headless:true});
+try{for(const stage of ['route','timing','vehicle']){const c=await createCase(browser,{stage});await snapshot(c.page,'probe-'+stage);const info=await c.page.evaluate(()=>({headings:[...document.querySelectorAll('h1,h2')].map(e=>e.textContent),buttons:[...document.querySelectorAll('button')].filter(e=>e.getClientRects().length).map(e=>({text:e.innerText,aria:e.getAttribute('aria-label'),disabled:e.disabled})),inputs:[...document.querySelectorAll('input')].map(e=>({id:e.id,value:e.value})),text:document.body.innerText.slice(-1200)}));fs.writeFileSync(path.join(out,'P06-probe-'+stage+'.json'),JSON.stringify({info,network:c.network,errors:c.errors},null,2));console.log(JSON.stringify({stage,...info,errors:c.errors}));await c.context.close();}}finally{await browser.close();}

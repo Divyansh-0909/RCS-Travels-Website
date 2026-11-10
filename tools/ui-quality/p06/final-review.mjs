@@ -1,0 +1,20 @@
+import fs from 'node:fs';import path from 'node:path';import assert from 'node:assert/strict';import {spawnSync} from 'node:child_process';
+import {chromium,expect,out,run,recordCheck} from './browser.mjs';import {readJson,atomicJson,hash} from '../../handoff/core.mjs';
+const proof={phase:'P06',at:new Date().toISOString(),checks:[],screenshots:[]};let exitCode=1;const browser=await chromium.launch({headless:true});
+try{
+  const state=readJson('output/handoff/state.json');assert.equal(state.state,'APPROVAL_REQUIRED');assert.deepEqual(state.approvalRequired.issues,['P06-B01-01','P06-B01-02','P06-B01-03','P06-B01-04']);
+  const context=await browser.newContext({viewport:{width:390,height:844},timezoneId:'Asia/Kolkata'}),page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.goto('http://127.0.0.1:4317/?mode=website&issue=P06-B01-01&width=390&theme=light');await expect(page.locator('#status')).toHaveText('OWNER CHOICE NEEDED - P06');await expect(page.locator('#safe-action')).toContainText('REPRODUCED:',{timeout:45000});
+  const frame=page.frameLocator('#site');await expect(frame.locator('#pickup-location')).toHaveValue('Beta');await expect(frame.getByRole('button',{name:/Alpha Synthetic Place 1/})).toBeVisible();await expect(frame.locator('html')).toHaveAttribute('data-theme','legacy');assert.deepEqual(errors,[]);
+  const screenshot='P06-final-owner-review-390.png';await page.screenshot({path:path.join(out,screenshot),fullPage:true});proof.screenshots.push(screenshot);await context.close();proof.checks.push('Fresh viewer renders the real unfixed issue with P06 OWNER CHOICE NEEDED status');
+  const coverage=await fetch('http://127.0.0.1:4317/api/coverage').then(r=>r.json());assert.equal(coverage.rows.length,351);assert.equal(coverage.rows.find(r=>r.id==='W.BOOKING').verification_status,'NOT_RUN');proof.checks.push('Current searchable coverage serves all 351 entries; W.BOOKING stays NOT_RUN');
+  const open=await fetch('http://127.0.0.1:1575/__review/open?actor=customer&to=%2Fbook',{redirect:'manual'});assert.equal(open.status,302);assert.equal(open.headers.get('location'),'/book');assert(open.headers.get('set-cookie').includes('p06_scenario=default'));
+  assert.equal((await fetch('http://127.0.0.1:1575/__review/p06?issue=P06-B01-05')).status,400);proof.checks.push('Coverage preview activates only the synthetic booking fixture; unsupported issue rejected');
+  for(const target of ['/api/bookings','/api/bookings/synthetic/payment','/api/users/me'])assert.equal((await fetch('http://127.0.0.1:1575'+target,{method:target.endsWith('/me')?'DELETE':'POST',headers:{cookie:'p06_scenario=default','content-type':'application/json'},body:'{}'})).status,409);proof.checks.push('All three mutation deny probes still return HTTP409 after developer-server restart');
+  const baseline=readJson(path.join(run.directory,'product-source-before.json'));assert(baseline.every(f=>hash(fs.readFileSync(f.file))===f.sha256));proof.checks.push('All '+baseline.length+' protected product/theme files remain unchanged');
+  const tooling=[...fs.readdirSync('tools/ui-quality/p06').filter(f=>/\.(mjs|js)$/.test(f)).map(f=>'tools/ui-quality/p06/'+f),'tools/ui-quality/serve.mjs','tools/ui-quality/review-bridge.mjs','tools/ui-quality/coverage/build.mjs','tools/handoff/viewer-client.js','tools/handoff/google.mjs'];
+  for(const file of tooling){const check=spawnSync(process.execPath,['--check',file],{encoding:'utf8'});assert.equal(check.status,0,file+': '+check.stderr);}proof.checks.push('JavaScript syntax checks pass for '+tooling.length+' audit/viewer helper files');
+  proof.status='PASS';exitCode=0;
+}catch(error){proof.status='FAIL';proof.failure=error.message;throw error;}
+finally{await browser.close();atomicJson(path.join(out,'P06-final-review-verification.json'),proof);recordCheck('node tools/ui-quality/p06/final-review.mjs',exitCode,'Final real reviewer, approval hold, coverage, mutation denials, protected sources and tooling syntax');}
+console.log(JSON.stringify({status:proof.status,checks:proof.checks.length}));

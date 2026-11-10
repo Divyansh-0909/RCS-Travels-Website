@@ -16,6 +16,7 @@ import { REQUIRED_DRIVER_OWNED_DOCUMENTS, REQUIRED_VEHICLE_OWNED_DOCUMENTS } fro
 import { createPhase9DeviceProvider } from '../helpers/phase9DeviceProvider.js';
 import { stageSyntheticLocation } from '../../../tools/phase9-native/synthetic-location-stage.mjs';
 import { stageNavigationFixture } from '../../../tools/phase9-native/navigation-fixture.mjs';
+import { fetchNativeBundle } from '../../../tools/phase9-native/bundle-preflight.mjs';
 
 export async function createNativeSession(harness, output, { acceptanceFault = false, restoreAwake = true, syntheticLocation = null, beforeRequest } = {}) {
   const repository = fileURLToPath(new URL('../../../', import.meta.url));
@@ -138,8 +139,8 @@ async function maestro(name, yaml, startupRetry = false) {
     join(runtimeApp,'node_modules/expo/bin/cli'),'start','--dev-client','--localhost','--max-workers','2','--port',String(metroPort)],
     { cwd: runtimeApp, env: metroEnv, windowsHide: true });
   metro.stdout.pipe(metroLog); metro.stderr.pipe(metroLog);
-  await untilState(async () => (await fetch(`http://127.0.0.1:${metroPort}/status`)).ok,'Metro ready');
-  const bundle=await fetch(`http://127.0.0.1:${metroPort}/index.bundle?platform=android&dev=true&minify=false`,{ signal:AbortSignal.timeout(600000) });
+  await untilState(async () => (await fetch(`http://127.0.0.1:${metroPort}/status`, { signal: AbortSignal.timeout(5000) })).ok,'Metro ready');
+  const bundle=await fetchNativeBundle(`http://127.0.0.1:${metroPort}/index.bundle?platform=android&dev=true&minify=false`);
   const bundled=await bundle.text();
   await writeFile(join(output,'bundle-preflight.json'),JSON.stringify({ status:bundle.status,bytes:Buffer.byteLength(bundled),sha256:hash(bundled) },null,2));
   if (!bundle.ok) throw new Error('Native bundle preflight failed: ' + bundled.slice(0,350));

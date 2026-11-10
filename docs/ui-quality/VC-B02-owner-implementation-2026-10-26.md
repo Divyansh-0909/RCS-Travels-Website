@@ -1,0 +1,47 @@
+# VC-B02 — owner-directed website implementation
+
+26 October 2026 IST. Implements the owner's fourteen item directions and the later approval to fix 01, 09, 12 and 13. Current implementation is technically checked in a local synthetic environment. Visual acceptance remains with the owner. This does not close a whole website or Android audit.
+
+[Review fields in Website](http://127.0.0.1:4317/?mode=website&review=VCB02&finding=12&width=390&theme=dark), [see the backdrop issue](http://127.0.0.1:4317/?mode=website&review=VCB02&finding=03&width=390&theme=light), or [open Compare](http://127.0.0.1:4317/?view=consistency&family=VC-B02-12&width=390&theme=light). Website's **Current website screenshots** selector includes 01, 03, 09, 12 and 13. Closing that section restores the live preview. Phone comparisons use two columns; laptop comparisons stack. Each image opens at its recorded resolution.
+
+## Owner directions and outcomes
+
+| Item | Result |
+| --- | --- |
+| 01 | Implemented. Keyboard focus has a solid 2px outline using the existing `--primary` token, including local controls that reset outlines. Theme and Language explicitly retain the solid focus treatment. |
+| 02 | Implemented. Imported `mdiChevronDown`. Emergency Contact and DOB editors render without the previous ReferenceError. The existing pointer-layer problem is recorded separately below. |
+| 03 | Reproduced and shown, remains open. Actual hit tests find the `z-150` backdrop at the Pending chip's centre. A pointer click leaves `aria-pressed=false`; keyboard Space changes it to true. The Website screenshots show both outcomes. Account edit panels also retain pointer interception. No layering repair was requested in the follow-up. |
+| 04 | Implemented. Shared field geometry and semantic colours across login/signup, booking, saved places, Safety, profile, filters, responsibility, document review, finance and fares. Text fields/selects are 48px high with 16px text and a 12px radius. CSS transforms no longer scale auth/booking inputs. OTP uses 48px squares and retains its larger digit type. |
+| 05 | Whole-page theme reconciliation deferred as directed. Input fill, border, placeholder and focus roles follow login/signup. Legacy booking pages retain their existing theme policy. |
+| 06 | Implemented. One way, Round trip and timing use 36px visible faces, 14px type and native targets of at least 44px. Labels can wrap or move to another row. Timing choices, date confirmation and dropdown dismissal remain functional. |
+| 07 | Implemented. Filter chips and compact pills use the same primitive. Admin and ride-history Sort/Filter are compact. The complete Ride options trigger source remains byte-identical to the pre-change copy. |
+| 08 | Implemented. Settings and ride-option switches share the 48×28px track and 20px thumb. Standalone switch targets are 44px high; the ride option row remains its single native target. Thumb movement takes 200ms; reduced motion removes transitions. |
+| 09 | Implemented. Finance primary actions pair `bg-ink` with adaptive `text-surface`. Measured contrast: 18.53:1 in Light and 14.86:1 in Dark. Secondary actions retain the inverse semantic pair. |
+| 10 | Implemented. Shared circular icon controls use the auth Back button's 40px face and a 44px native target. Floating controls immediately above sheets have 36px faces with 44px targets. Booking back controls are circular. Clear-field adornments and destructive Reject actions retain their own roles. |
+| 11 | Existing error feedback retained as directed. No general feedback redesign. Saved-place validation required by 14 is additive. |
+| 12 | Shared styling implemented; **awaiting owner visual approval**. Native selects, number fields, decimal entry and textareas share field chrome. Numeric constraints, native selection, textarea resizing and distinct multiline height remain. Website screenshots include the actual responsibility form, finance panel and fare editor. |
+| 13 | Implemented. 63 remaining action occurrences in 18 files adopt the newer action primitive/variant: at least 48px high, 16px type, 12px vertical and 24px horizontal padding. Existing handlers, disabled conditions and authority checks remain. Longer labels grow vertically. Mobile fare-editor controls scroll with their panel so larger actions do not trap the fields below them. |
+| 14 | Implemented. Saved-place Save stays disabled until a trimmed 1–40 character name, an address of at most 200 characters and an accepted location are available. New/changed addresses require an autocomplete selection followed by valid finite coordinates from Place Details. Typing again invalidates that selection. Unchanged existing addresses can be renamed without pretending they were re-verified by Google. |
+
+Saved-place lookup includes keyboard selection, IME handling, loading, retry, stale response protection, cancellation, and viewport-aware popup placement. Coordinates are sent through the existing authenticated saved-place endpoint. Home, Work and custom entries share the editor. Hindi and Hinglish copy covers the new labels and lookup states. No arbitrary typed address can enable a new save merely by being nonempty.
+
+## Design basis
+
+The shared field layout follows Apple's guidance on identifying fields and consistent alignment, and Uber's existing input treatment for normal, focused and disabled states. The exact 48px/36px/44px CSS dimensions are RCS decisions; Apple's 44-point touch guidance is a native design reference, not a claim that points and CSS pixels are identical. See [Apple text fields](https://developer.apple.com/design/human-interface-guidelines/text-fields), [Apple design tips](https://developer.apple.com/design/tips/) and [Uber Base Web input source](https://github.com/uber/baseweb/blob/main/src/input/styled-components.ts).
+
+Switches retain an obvious on/off position and respect reduced motion, informed by [Apple toggles](https://developer.apple.com/design/human-interface-guidelines/toggles) and [Apple motion](https://developer.apple.com/design/human-interface-guidelines/motion). Saved locations use address suggestions followed by place details, consistent with [Uber's saved-place flow](https://help.uber.com/en-GB/riders/article/c%C3%83%C2%B3mo-agregar-ubicaciones-guardadas-en-dispositivos-android?nodeId=4a53fa02-37c6-4487-8c0a-2e4fb3bd4ae5) and [Google Autocomplete](https://developers.google.com/maps/documentation/places/web-service/place-autocomplete). Suggestions display Google Maps attribution under [Google's policy](https://developers.google.com/maps/documentation/places/web-service/policies).
+
+## Verification and limits
+
+- Frontend production build passes; it retains the existing large bundle warning. Frontend unit tests: **77/77**. Compare/coverage tool tests: **19/19**.
+- Main browser harness: **40/40** cases at 320×640, 390×844, 768×1024, 1440×900 and 680×360, in both preferences. Covers auth/OTP, route pills, timing dropdowns, ride switches and saved places.
+- Additional harness: **13/13** groups covering account rendering/keyboard close, Safety, calendar confirmation, admin filters, responsibility entry, twelve saved entries in Hindi/Hinglish, and ordinary switch motion.
+- Current review: **4/4** viewport/theme groups. Includes actual select, textarea, decimal and native number fields, adaptive finance contrast and primary-colour focus. Saved-place and human-review scopes have **eight axe checks with zero violations**; this is not a site-wide accessibility certification.
+- Payment/settlement component harness: **8/8** viewport/theme groups, each testing ready, creating, failed, cancelled and paid presentations. These are actual components in an explicitly labelled isolated preview; their callbacks create no payment or cash record.
+- Reviewer: **3/3** host/screen configurations. All five groups load their eleven current images, use the requested column/stack layouts, and link from Compare. Current captures are additive; historical audit images and owner decision histories remain separate.
+
+Browser traffic uses synthetic actors and synthetic API responses. External calls are blocked. No real OTP, Google lookup, customer update, fare publication, review decision, payment, booking or provider write was performed. Live Google credentials/provider availability, native keyboards/maps and untested browsers are outside this evidence. Backend/native suites were not run because their implementations did not change.
+
+The initial 229-file input snapshot is retained. Forty existing frontend source files changed; shared theme tokens, their generator and generated website theme retain their initial hashes. New primitives, validation, translations, checks and current screenshots are recorded separately. Source-line references were refreshed in the canonical coverage inventory without changing IDs, statuses, historical failures or owner deferrals. Existing dirty changes remain. No commit, push or deployment occurred.
+
+Evidence is under `output/handoff/VC-B02-implementation-2026-10-26/`: `browser-results.json`, `additional-results.json`, `current-review.json`, `payment-results.json`, `reviewer-results.json`, test logs, source snapshots, action migrations and the manifest. Failed harness attempts are retained; early selector, animation-timing and incomplete synthetic-fixture mistakes do not represent accepted product failures. **03 remains an observed product defect; 12 remains pending owner visual approval.**

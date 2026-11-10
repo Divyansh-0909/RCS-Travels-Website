@@ -1,0 +1,222 @@
+[
+  {
+    "platform": "website",
+    "path": "/"
+  },
+  {
+    "platform": "website",
+    "path": "/login"
+  },
+  {
+    "platform": "website",
+    "path": "/signup"
+  },
+  {
+    "platform": "website",
+    "path": "/book"
+  },
+  {
+    "platform": "website",
+    "path": "/booking/:id"
+  },
+  {
+    "platform": "website",
+    "path": "/t/:token"
+  },
+  {
+    "platform": "website",
+    "path": "/captains/rides/:id"
+  },
+  {
+    "platform": "website",
+    "path": "/captains/delete-account"
+  },
+  {
+    "platform": "website",
+    "path": "/manage-account"
+  },
+  {
+    "platform": "website",
+    "path": "/settings"
+  },
+  {
+    "platform": "website",
+    "path": "/help"
+  },
+  {
+    "platform": "website",
+    "path": "/outstation"
+  },
+  {
+    "platform": "website",
+    "path": "/safety"
+  },
+  {
+    "platform": "website",
+    "path": "/dashboard"
+  },
+  {
+    "platform": "website",
+    "path": "/dashboard/responsibility"
+  },
+  {
+    "platform": "website",
+    "path": "/dev"
+  },
+  {
+    "platform": "website",
+    "path": "/dev/:view"
+  },
+  {
+    "platform": "website",
+    "path": "*"
+  },
+  {
+    "platform": "website",
+    "path": "/driver-grievance"
+  },
+  {
+    "platform": "website",
+    "path": "/driver-payments"
+  },
+  {
+    "platform": "website",
+    "path": "/driver-privacy"
+  },
+  {
+    "platform": "website",
+    "path": "/driver-terms"
+  },
+  {
+    "platform": "website",
+    "path": "/grievance"
+  },
+  {
+    "platform": "website",
+    "path": "/privacy"
+  },
+  {
+    "platform": "website",
+    "path": "/refunds"
+  },
+  {
+    "platform": "website",
+    "path": "/terms"
+  },
+  {
+    "platform": "android",
+    "path": "/dev/rides/:id"
+  },
+  {
+    "platform": "android",
+    "path": "/welcome"
+  },
+  {
+    "platform": "android",
+    "path": "/signup"
+  },
+  {
+    "platform": "android",
+    "path": "/document"
+  },
+  {
+    "platform": "android",
+    "path": "/document/vehicle"
+  },
+  {
+    "platform": "android",
+    "path": "/"
+  },
+  {
+    "platform": "android",
+    "path": "/available"
+  },
+  {
+    "platform": "android",
+    "path": "/available/:id"
+  },
+  {
+    "platform": "android",
+    "path": "/post"
+  },
+  {
+    "platform": "android",
+    "path": "/notifications"
+  },
+  {
+    "platform": "android",
+    "path": "/rides"
+  },
+  {
+    "platform": "android",
+    "path": "/rides/:id"
+  },
+  {
+    "platform": "android",
+    "path": "/onboarding/status"
+  },
+  {
+    "platform": "android",
+    "path": "/account"
+  },
+  {
+    "platform": "android",
+    "path": "/account/responsibility"
+  },
+  {
+    "platform": "android",
+    "path": "/account/documents"
+  },
+  {
+    "platform": "android",
+    "path": "/account/vehicles"
+  },
+  {
+    "platform": "android",
+    "path": "/account/payout"
+  },
+  {
+    "platform": "android",
+    "path": "/account/wallet"
+  },
+  {
+    "platform": "android",
+    "path": "/account/feedback"
+  },
+  {
+    "platform": "android",
+    "path": "/account/settings"
+  },
+  {
+    "platform": "android",
+    "path": "/account/manage"
+  },
+  {
+    "platform": "android",
+    "path": "/account/help"
+  },
+  {
+    "platform": "android",
+    "path": "/account/legal"
+  },
+  {
+    "platform": "android",
+    "path": "/"
+  },
+  {
+    "platform": "android",
+    "path": "/login"
+  },
+  {
+    "platform": "android",
+    "path": "/signup"
+  },
+  {
+    "platform": "android",
+    "path": "/document"
+  },
+  {
+    "platform": "android",
+    "path": "*"
+  }
+]

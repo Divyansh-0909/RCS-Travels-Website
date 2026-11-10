@@ -1,0 +1,7 @@
+{
+  "name": "rcs-local-handoff",
+  "private": true,
+  "type": "module",
+  "scripts": { "test": "node --test tests/*.test.mjs", "start": "node cli.mjs start", "status": "node cli.mjs status" },
+  "engines": { "node": ">=22" }
+}

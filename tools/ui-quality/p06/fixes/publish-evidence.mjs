@@ -1,0 +1,4 @@
+import {readJson} from '../../../handoff/core.mjs';import path from 'node:path';import assert from 'node:assert/strict';import {out,receipt,upload} from './common.mjs';
+const regression=readJson(path.join(out,'P06-fixes-regression.json')),matrix=readJson(path.join(out,'P06-responsive-accessibility-evidence.json')),controls=readJson(path.join(out,'P06-control-evidence.json')),bounds=readJson(path.join(out,'P06-boundary-evidence.json'));assert.equal(regression.status,'PASS');assert.equal(controls.status,'PASS');assert.equal(bounds.status,'PASS');assert.equal(matrix.rows.length,30);
+for(const name of ['P06-fixes-regression.json','P06-responsive-accessibility-evidence.json','P06-control-evidence.json','P06-boundary-evidence.json',...regression.screenshots,...matrix.screenshots,...controls.screenshots])await upload(name);
+console.log(JSON.stringify({verifiedEvidence:receipt.artifacts.length,evidenceFolder:receipt.evidenceFolder.url}));

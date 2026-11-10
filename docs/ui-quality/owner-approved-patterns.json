@@ -1,0 +1,40 @@
+{
+  "schema": 1,
+  "batch": "VC-B01-2026-10-24",
+  "at": "2026-10-23T22:46:12.534Z",
+  "runtimeRegistry": "output/handoff/consistency-decisions.json",
+  "revision": 0,
+  "decisions": [],
+  "history": [],
+  "implementationAuthorization": "Saving a review choice never runs product changes. Future implementation must use the exact family, affected screens and exclusions.",
+  "families": [
+    {
+      "id": "VC-B01-ACTIONS",
+      "shownScreenIds": [
+        "W.BOOKING.ROUTE",
+        "W.BOOKING.TIMING",
+        "W.BOOKING.VEHICLES"
+      ],
+      "decision": null,
+      "implementationStatus": "NOT_CHANGED"
+    },
+    {
+      "id": "VC-B01-ADDRESS",
+      "shownScreenIds": [
+        "W.BOOKING.ROUTE",
+        "W.SETTINGS.SAVED-PLACES"
+      ],
+      "decision": null,
+      "implementationStatus": "NOT_CHANGED"
+    },
+    {
+      "id": "VC-B01-SELECTION",
+      "shownScreenIds": [
+        "W.BOOKING.ROUTE",
+        "W.BOOKING.VEHICLES"
+      ],
+      "decision": null,
+      "implementationStatus": "NOT_CHANGED"
+    }
+  ]
+}

@@ -1,0 +1,82 @@
+{
+  "phase": "P05",
+  "status": "PASS",
+  "scope": "NATIVE_NAVIGATION_REACHABILITY_ONLY",
+  "at": "2026-10-23T09:58:24.016Z",
+  "package": "com.rcstravels.driver.phase9",
+  "evidence": {
+    "id": "1hFvkoZsT8qNrIyUeHgZGp_LcALr54Kwb",
+    "name": "P05-android-device-verification.json",
+    "url": "https://drive.google.com/file/d/1hFvkoZsT8qNrIyUeHgZGp_LcALr54Kwb/view?usp=drivesdk",
+    "sha256": "1138d3d92863376193ec9798c7129ec2a0d7170300b795d220326082c12b3e1a",
+    "bytes": 8013
+  },
+  "entries": [
+    {
+      "id": "A.HOME",
+      "navigation": [
+        "Use the connected isolated synthetic captain fixture",
+        "Tap Home"
+      ],
+      "source_file": "driver-app/src/components/HomeGate.tsx",
+      "source_sha256": "3326217f1772dda4da8d90f221f1197629eb1528bb3dd57942fd6964ece04d72"
+    },
+    {
+      "id": "A.MARKET",
+      "navigation": [
+        "Use the connected isolated synthetic captain fixture",
+        "Tap Market"
+      ],
+      "source_file": "driver-app/src/pages/Available.tsx",
+      "source_sha256": "7fb8dd1c49e945381ff73cf38fbf1483cbf1f40738eecb7b2934faa2fca90393"
+    },
+    {
+      "id": "A.RIDES",
+      "navigation": [
+        "Use the connected isolated synthetic captain fixture",
+        "Tap Rides"
+      ],
+      "source_file": "driver-app/src/pages/Rides.tsx",
+      "source_sha256": "51d4e9ff96ff44df54445705772dc39fe88ed5f10c03d81a4fea8d6a843c7ebc"
+    },
+    {
+      "id": "A.ACCOUNT",
+      "navigation": [
+        "Use the connected isolated synthetic captain fixture",
+        "Tap Account"
+      ],
+      "source_file": "driver-app/src/pages/Account.tsx",
+      "source_sha256": "061505a1612f1aeaf719e9856634ddb5bae2cbe743bb6001db4905b5797f3bd6"
+    },
+    {
+      "id": "A.ACCOUNT.APPEARANCE",
+      "navigation": [
+        "Tap Account",
+        "Scroll Appearance above the floating fade",
+        "Open Appearance without selecting a preference"
+      ],
+      "source_file": "driver-app/src/pages/Account.tsx",
+      "source_sha256": "061505a1612f1aeaf719e9856634ddb5bae2cbe743bb6001db4905b5797f3bd6"
+    },
+    {
+      "id": "A.ACCOUNT.LANGUAGE",
+      "navigation": [
+        "Tap Account",
+        "Scroll Language above the floating fade",
+        "Open Language without selecting a language"
+      ],
+      "source_file": "driver-app/src/pages/Account.tsx",
+      "source_sha256": "061505a1612f1aeaf719e9856634ddb5bae2cbe743bb6001db4905b5797f3bd6"
+    },
+    {
+      "id": "A.LEGAL",
+      "navigation": [
+        "Tap Account",
+        "Scroll Legal into view",
+        "Tap Legal; inspect native list only; do not open external documents"
+      ],
+      "source_file": "driver-app/src/pages/Legal.tsx",
+      "source_sha256": "16793158f10528b75dda659c263f95fb03e71f2594c1447b1def8dce11d76b4b"
+    }
+  ]
+}

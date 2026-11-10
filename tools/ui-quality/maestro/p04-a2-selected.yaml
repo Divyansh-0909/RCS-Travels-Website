@@ -1,0 +1,32 @@
+appId: com.rcstravels.driver.phase9
+---
+- tapOn: "Home"
+- assertVisible:
+    text: "Home"
+    selected: true
+- assertVisible: "No ride scheduled"
+- tapOn: "Market"
+- assertVisible:
+    text: "Market"
+    selected: true
+- tapOn: "Rides"
+- assertVisible:
+    text: "Rides"
+    selected: true
+- assertVisible: "Upcoming"
+- tapOn: "Account"
+- assertVisible:
+    text: "Account"
+    selected: true
+- assertVisible:
+    text: "Home"
+    selected: false
+- scrollUntilVisible:
+    element: "Legal"
+    direction: DOWN
+    visibilityPercentage: 100
+    centerElement: true
+- tapOn: "Legal"
+- assertVisible: "Privacy Policy"
+- back
+- assertVisible: "Account"

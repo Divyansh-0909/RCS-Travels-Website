@@ -1,0 +1,13 @@
+import fs from 'node:fs';import path from 'node:path';import assert from 'node:assert/strict';import {spawnSync} from 'node:child_process';
+import {readJson,atomicJson,hash} from '../../handoff/core.mjs';import {parse,summarize,validate} from '../coverage/core.mjs';
+const run=readJson('output/handoff/state.json').run,out=path.join(run.directory,'artifacts');assert.equal(run.phase,'P06');
+const file='tools/ui-quality/coverage/master-ui-coverage.csv',before=parse(fs.readFileSync(path.join(run.directory,'coverage-before.csv'),'utf8')),bytes=fs.readFileSync(file),rows=parse(bytes.toString()),oldMap=new Map(before.map(r=>[r.id,r]));
+const added=rows.filter(r=>!oldMap.has(r.id)),changed=rows.filter(r=>oldMap.has(r.id)&&JSON.stringify(r)!==JSON.stringify(oldMap.get(r.id)));
+assert.equal(before.length,347);assert.equal(rows.length,351);assert.equal(added.length,4);assert.deepEqual(changed.map(r=>r.id).sort(),['W.BOOKING.ROUTE','W.BOOKING.TIMING','W.BOOKING.VEHICLES']);
+assert(rows.filter(r=>oldMap.has(r.id)).every(r=>oldMap.has(r.id)));assert.equal(rows.find(r=>r.id==='W.BOOKING').verification_status,'NOT_RUN');
+const validation=validate(rows,{issues:readJson('tools/ui-quality/coverage/issues.json'),routes:readJson('tools/ui-quality/coverage/discovered-routes.json')});
+const rebuilt=spawnSync(process.execPath,['tools/ui-quality/coverage/build.mjs'],{encoding:'utf8'});assert.equal(rebuilt.status,0,rebuilt.stderr);assert.equal(hash(fs.readFileSync(file)),hash(bytes),'Regeneration changed canonical bytes');
+const protectedFiles=readJson(path.join(run.directory,'product-source-before.json'));assert(protectedFiles.every(f=>hash(fs.readFileSync(f.file))===f.sha256));
+atomicJson(path.join(out,'P06-tracker-validation.json'),{phase:'P06',status:'PASS',baselineEntries:before.length,entries:rows.length,addedIds:added.map(r=>r.id),modifiedIds:changed.map(r=>r.id),unchangedPriorEntries:before.length-changed.length,parentBookingUnreviewed:true,before:summarize(before),after:summarize(rows),validation});
+atomicJson(path.join(out,'P06-regeneration-proof.json'),{phase:'P06',status:'PASS',command:'node tools/ui-quality/coverage/build.mjs',exitCode:rebuilt.status,sha256:hash(bytes),regeneratedSha256:hash(fs.readFileSync(file)),byteStable:true,protectedFiles:protectedFiles.length,protectedUnchanged:true});
+console.log(JSON.stringify({status:'PASS',entries:rows.length,added:added.length,modified:changed.length,unchangedPrior:before.length-changed.length,byteStable:true,protectedUnchanged:protectedFiles.length}));

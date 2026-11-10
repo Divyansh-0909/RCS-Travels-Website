@@ -1,0 +1,295 @@
+[
+  {
+    "id": "VC-B02-01",
+    "family": "Focus",
+    "priority": "High",
+    "classification": "Observed defect",
+    "title": "Keyboard focus disappears in account controls",
+    "detail": "Theme and Language rows receive focus, but their outline style remains none. Safety's contact field also keeps the same border with no outline or ring when focused. Booking and auth fields visibly change their border instead.",
+    "proposal": "Use an explicit solid focus treatment for every interactive control. Keep focus distinct from selected, error and disabled states.",
+    "examples": [
+      "theme-radio",
+      "safety-contact",
+      "booking-pickup"
+    ],
+    "sources": [
+      "frontend/src/components/ThemeToggle.jsx:36",
+      "frontend/src/components/LanguageSelector.jsx:41",
+      "frontend/src/pages/SafetyPage.jsx:141"
+    ]
+  },
+  {
+    "id": "VC-B02-02",
+    "family": "Other",
+    "priority": "High",
+    "classification": "Observed blocker",
+    "title": "Account edit panels crash before their fields render",
+    "detail": "Opening the Emergency Contact editor throws 'mdiChevronDown is not defined'. The reference is missing from the icon import. The profile's contact, DOB and Gender field presentation cannot be accepted from this broken state.",
+    "proposal": "Repair this runtime blocker before comparing or standardizing the account edit panels. Their input styles are recorded as source inspection only.",
+    "examples": [],
+    "image": "images/blocked-profile-390-light.png",
+    "sources": [
+      "frontend/src/pages/ManageAccount.jsx:7",
+      "frontend/src/pages/ManageAccount.jsx:839"
+    ]
+  },
+  {
+    "id": "VC-B02-03",
+    "family": "Other",
+    "priority": "High",
+    "classification": "Observed defect",
+    "title": "Admin filters sit under their backdrop",
+    "detail": "At phone, tablet and desktop sizes, the filter panel is visibly dimmed. Pointer hit tests on its chips and date fields land on the backdrop, so pointer hover and active states cannot be exercised normally. Keyboard activation can still change filter sections.",
+    "proposal": "Fix the overlay stacking, then verify pointer and keyboard access together. Do not treat a visually rendered panel as a working control.",
+    "examples": [
+      "filter-chip",
+      "filter-date"
+    ],
+    "image": "images/blocked-admin-390-light.png",
+    "sources": [
+      "frontend/src/pages/AdminDashboard.tsx:725",
+      "frontend/src/components/ui/AccountLayout.jsx:91"
+    ]
+  },
+  {
+    "id": "VC-B02-04",
+    "family": "Inputs",
+    "priority": "Medium",
+    "classification": "Needs common rule",
+    "title": "Input height and text size change across surfaces",
+    "detail": "Auth and booking share the same base Input: 42px / 16px on phones, approximately 54.6px / 20.8px rendered on desktop because of scaling. Saved places uses a 48px labelled field with 16px text at both sizes. Safety is 42px, dense filters use 38px, and the responsibility case input is 48px.",
+    "proposal": "Consider 48px / 16px for standard fields, 40px / 14px for deliberately dense tools, and a separate OTP variant. Set actual dimensions instead of scaling the whole field.",
+    "examples": [
+      "login-phone",
+      "signup-name",
+      "booking-pickup",
+      "saved-address",
+      "safety-contact",
+      "filter-date",
+      "responsibility-case"
+    ],
+    "sources": [
+      "frontend/src/components/ui/Input.jsx:8",
+      "frontend/src/pages/LoginPage.jsx:493",
+      "frontend/src/pages/OnBoarding.jsx:1267",
+      "frontend/src/pages/SettingsPage.jsx:205"
+    ]
+  },
+  {
+    "id": "VC-B02-05",
+    "family": "Inputs",
+    "priority": "Medium",
+    "classification": "Needs common rule",
+    "title": "Input fill, border and focus styles come from different systems",
+    "detail": "Auth uses input-background/input-border; booking overrides the fill to background-muted in its deliberate legacy dark surface; saved places uses a labelled surface with an ink ring; Safety inherits the row fill through a transparent field; admin filters use foreground-based borders. A shared purpose does not currently imply a shared state contract.",
+    "proposal": "Agree on semantic fill, border, placeholder, focus, invalid and disabled roles. Preserve the booking flow's deliberate dark context and the owner's saved-place design while choosing the shared geometry.",
+    "examples": [
+      "login-phone",
+      "booking-pickup",
+      "saved-address",
+      "safety-contact",
+      "filter-date"
+    ],
+    "sources": [
+      "frontend/src/components/ui/Input.jsx:30",
+      "frontend/src/components/ui/Chips.tsx:4",
+      "frontend/src/pages/SafetyPage.jsx:141",
+      "frontend/src/pages/SettingsPage.jsx:205"
+    ]
+  },
+  {
+    "id": "VC-B02-06",
+    "family": "Pills",
+    "priority": "Medium",
+    "classification": "Owner-identified sizing issue",
+    "title": "Trip and timing pills inherit primary-action sizing",
+    "detail": "One way and Round trip use 48px-high ActionControls with 24px horizontal padding. Their group adds 6px on each side, making it 60px high. Later also uses a 48px control with 24px horizontal padding. This explains the bulk in the supplied screenshot.",
+    "proposal": "Give pills their own compact size variant. Compare 36px faces in a 40px group against 40px faces in a 44px group; retain generous pointer targets independently of the visible fill.",
+    "examples": [
+      "trip-group",
+      "trip-selected",
+      "timing-pill"
+    ],
+    "sources": [
+      "frontend/src/components/ui/Button.jsx:14",
+      "frontend/src/pages/OnBoarding.jsx:1213",
+      "frontend/src/pages/OnBoarding.jsx:1231"
+    ]
+  },
+  {
+    "id": "VC-B02-07",
+    "family": "Pills",
+    "priority": "Medium",
+    "classification": "Needs common rule",
+    "title": "Other pills have no shared role-based size scale",
+    "detail": "Filter chips are 32px high with 14px text; admin Sort/Filter pills are 44px with 16px text; booking pills are 48px with 16px text. There are also the navigation Now action, vehicle Ride details action, complaint choices, support actions, notice pills and status badges. These are different jobs, not one interchangeable component.",
+    "proposal": "Define separate variants for a segmented choice, an action/filter chip, and a noninteractive badge. Share typography, spacing and focus rules within each role; do not make every rounded item a primary button.",
+    "examples": [
+      "filter-chip",
+      "admin-sort-pill",
+      "timing-pill",
+      "ride-options-trigger"
+    ],
+    "sources": [
+      "frontend/src/components/ui/Chips.tsx:20",
+      "frontend/src/pages/AdminDashboard.tsx:495",
+      "frontend/src/components/ui/NavBar.jsx:914",
+      "frontend/src/pages/ManageAccount.jsx:749",
+      "frontend/src/components/ui/NoticePill.jsx:12"
+    ]
+  },
+  {
+    "id": "VC-B02-08",
+    "family": "Other",
+    "priority": "Medium",
+    "classification": "Needs common rule",
+    "title": "Settings and ride options use unrelated switch designs",
+    "detail": "Settings uses a flat 48×28px ink/border switch with a circular thumb. Ride options uses a 50×22px visual assembly with a 14px green/grey track, a different thumb and more elaborate motion. The ride option's full row is correctly the interactive target; it is not a 22px-high hit target.",
+    "proposal": "Use one switch visual and motion contract, keeping the full-row interaction where appropriate. Choose one active colour policy and one disabled appearance.",
+    "examples": [
+      "settings-switch",
+      "ride-option-switch"
+    ],
+    "sources": [
+      "frontend/src/components/ui/Toggle.jsx:12",
+      "frontend/src/components/RideOptions.jsx:27",
+      "frontend/src/components/RideOptions.jsx:50"
+    ]
+  },
+  {
+    "id": "VC-B02-09",
+    "family": "Other",
+    "priority": "High",
+    "classification": "Source-confirmed contrast risk",
+    "title": "Finance buttons combine adaptive ink with fixed white text",
+    "detail": "DriverFinancePanel defines its primary button as bg-ink plus text-white. In the Dark theme ink is white, which makes this combination white on white when no ancestor override applies. Finance inputs also have their own border/focus classes. These driver-detail states were not browser-exercised in this batch.",
+    "proposal": "Pair adaptive backgrounds with their matching foreground token, and verify the actual finance panel in both themes before approving a shared button/input contract.",
+    "examples": [],
+    "sources": [
+      "frontend/src/components/DriverFinancePanel.tsx:5",
+      "frontend/src/components/DriverFinancePanel.tsx:6",
+      "frontend/src/index.css:89"
+    ]
+  },
+  {
+    "id": "VC-B02-10",
+    "family": "Other",
+    "priority": "Medium",
+    "classification": "Observed and source-confirmed differences",
+    "title": "Close, back and delete actions use different shapes and semantics",
+    "detail": "Saved-place cancel is the owner's white/black 32px button; auth Back is 40px; timing and ride-option close controls are 48px. Safety cancel and saved-place delete are clickable divs; the profile close and some copy/home actions are clickable SVGs. Several CircleIconButton callers still expose the generic name Action.",
+    "proposal": "Choose a compact icon size with a larger hit area, use native named buttons, and apply one keyboard focus/disabled policy. Keep the explicitly chosen white/black cancel colours.",
+    "examples": [
+      "saved-cancel",
+      "safety-cancel",
+      "timing-close",
+      "ride-options-close"
+    ],
+    "sources": [
+      "frontend/src/components/ui/CircleIconButton.jsx:5",
+      "frontend/src/components/ui/AuthHeader.jsx:9",
+      "frontend/src/pages/SafetyPage.jsx:144",
+      "frontend/src/pages/SettingsPage.jsx:247",
+      "frontend/src/pages/ManageAccount.jsx:786",
+      "frontend/src/components/ui/bookingDisplay.jsx:39"
+    ]
+  },
+  {
+    "id": "VC-B02-11",
+    "family": "Inputs",
+    "priority": "Medium",
+    "classification": "Needs common rule",
+    "title": "Invalid-field feedback is implemented differently in each form",
+    "detail": "Auth uses a tinted field and InlineError with an alert icon. Saved places associates inputs with an alert and exposes aria-invalid, but uses a different visual invalid state. Safety changes its border and adds a plain message without the same field associations. Admin field validators have further local styles.",
+    "proposal": "Standardize invalid border/focus colours, message placement and accessible field associations. Keep form-level transport errors distinct from invalid input. OTP's verification animation remains a separate state.",
+    "examples": [
+      "login-phone-error",
+      "safety-contact-error",
+      "saved-address",
+      "login-otp-error"
+    ],
+    "sources": [
+      "frontend/src/components/ui/InlineError.jsx:8",
+      "frontend/src/pages/LoginPage.jsx:258",
+      "frontend/src/pages/SettingsPage.jsx:210",
+      "frontend/src/pages/SafetyPage.jsx:141"
+    ]
+  },
+  {
+    "id": "VC-B02-12",
+    "family": "Inputs",
+    "priority": "Medium",
+    "classification": "Source candidates",
+    "title": "Selects, numeric fields and textareas also need shared variants",
+    "detail": "Responsibility review uses native selects and a textarea with one local field class. Driver review textareas use a 2px border and a different focus border. Finance fields and fare-zone fields define two more local classes. Profile Gender builds its own dropdown with clickable options, but the current panel crash blocks its browser review.",
+    "proposal": "Include these callers in the field inventory before changing Input globally. Keep multiline height, numeric behavior, native selection and locked fields purposeful; share chrome and state roles.",
+    "examples": [],
+    "sources": [
+      "frontend/src/components/ResponsibilityReviewForm.jsx:19",
+      "frontend/src/components/DriverReview.tsx:349",
+      "frontend/src/components/DriverFinancePanel.tsx:5",
+      "frontend/src/pages/EditFares.jsx:98",
+      "frontend/src/pages/ManageAccount.jsx:850"
+    ]
+  },
+  {
+    "id": "VC-B02-13",
+    "family": "Other",
+    "priority": "Medium",
+    "classification": "Source candidates",
+    "title": "Primary-action sizing still differs outside booking and auth",
+    "detail": "The new 48px action variant is used in booking/auth and was also extended to selectors. Payment, settlement, cancellation, account and responsibility actions still include legacy Button calls or local button classes. Some of the simpler selectors now look heavier than these commit actions.",
+    "proposal": "Reserve the primary-action size for real commit actions. Add independent compact pill and icon variants, then review payment/account actions under their existing behavior and policy constraints.",
+    "examples": [
+      "trip-selected"
+    ],
+    "sources": [
+      "frontend/src/components/ui/Button.jsx:50",
+      "frontend/src/components/CustomerPaymentPanel.jsx:86",
+      "frontend/src/components/RideSettlementPanel.jsx:41",
+      "frontend/src/components/ResponsibilityReviewForm.jsx:49",
+      "frontend/src/pages/ManageAccount.jsx:894"
+    ]
+  },
+  {
+    "id": "VC-B02-14",
+    "family": "Inputs",
+    "priority": "Medium",
+    "classification": "Observed difference",
+    "title": "Loading fields do not share one interaction contract",
+    "detail": "While a synthetic OTP request is held, Login disables its submit action but leaves the phone field fully editable with no busy state. During a held saved-place request, its inputs are disabled and dimmed to 60%. The distinction is visible on both phone and desktop; it is not a claim of a backend or authentication defect.",
+    "proposal": "Agree when busy fields remain editable, become read-only, or become disabled, then provide consistent visual feedback and accessible status. Keep read-only and disabled meanings distinct.",
+    "examples": [],
+    "images": [
+      {
+        "src": "images/login-pending-390-dark.png",
+        "width": 390,
+        "theme": "dark",
+        "label": "Login while sending OTP"
+      },
+      {
+        "src": "images/saved-pending-390-dark.png",
+        "width": 390,
+        "theme": "dark",
+        "label": "Saved place while saving"
+      },
+      {
+        "src": "images/login-pending-1440-light.png",
+        "width": 1440,
+        "theme": "light",
+        "label": "Login while sending OTP"
+      },
+      {
+        "src": "images/saved-pending-1440-light.png",
+        "width": 1440,
+        "theme": "light",
+        "label": "Saved place while saving"
+      }
+    ],
+    "sources": [
+      "frontend/src/components/ui/Input.jsx:24",
+      "frontend/src/pages/LoginPage.jsx:481",
+      "frontend/src/pages/SettingsPage.jsx:214"
+    ]
+  }
+]

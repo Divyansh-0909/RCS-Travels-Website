@@ -1,0 +1,18 @@
+import fs from 'node:fs';import path from 'node:path';import assert from 'node:assert/strict';import {spawnSync} from 'node:child_process';
+import {chromium,expect,createCase,out,recordCheck} from '../browser.mjs';import {readJson,atomicJson,hash} from '../../../handoff/core.mjs';
+if(process.env.RCS_P06_FOLLOWUP!=='2026-10-24')throw Error('Use follow-up evidence scope');
+const proof={phase:'P06',scope:'Final current-source smoke: address service states, all four live replays, protected sources and helper syntax',checks:[]},browser=await chromium.launch({headless:true});let exitCode=1;
+try{
+  for(const [scenario,name]of [['empty','No matching places'],['lookup-error','Suggestions unavailable']]){const c=await createCase(browser,{scenario});await c.page.locator('#pickup-location').fill('Aster');await expect(c.page.getByRole('heading',{name,exact:true})).toBeVisible();assert.deepEqual(c.errors,[]);await c.context.close();proof.checks.push({kind:'CURRENT_SOURCE_ADDRESS_ERROR',scenario,status:'PASS'});}
+  const context=await browser.newContext({viewport:{width:1440,height:1000},timezoneId:'Asia/Kolkata'}),page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
+  for(const id of ['P06-B01-01','P06-B01-02','P06-B01-03','P06-B01-04']){await page.goto('http://127.0.0.1:4317/?mode=website&issue='+id+'&width='+(id==='P06-B01-03'?1440:390)+'&theme=light');await expect(page.locator('#decision')).toContainText('Implemented following your approval');const frame=page.frameLocator('#site');
+    if(id==='P06-B01-03'){await expect(page.locator('#safe-action')).toContainText('READY FOR MANUAL REPLAY:',{timeout:45000});await frame.locator('#pickup-location').press('Tab');await expect(frame.getByRole('button',{name:/Aster Synthetic Place 1/})).toBeVisible();}
+    else{await expect(page.locator('#safe-action')).toContainText('FIX VERIFIED:',{timeout:45000});if(id==='P06-B01-01')await expect(frame.getByRole('button',{name:/Beta Synthetic Place 1/})).toBeVisible();if(id==='P06-B01-02')await expect(frame.getByRole('button',{name:'See prices',exact:true})).toBeEnabled();if(id==='P06-B01-04')await expect(frame.getByRole('button',{name:/Sedan/})).toHaveAttribute('aria-pressed','true');}
+    proof.checks.push({kind:'CURRENT_LIVE_REPLAY',id,status:'PASS'});
+  }
+  assert.deepEqual(errors,[]);await context.close();
+  const state=readJson('output/handoff/state.json'),baseline=readJson(path.join(state.run.followup.directory,'source-before.json')),changed=baseline.filter(f=>hash(fs.readFileSync(f.file))!==f.sha256);assert.equal(changed.length,4);assert.equal(state.approvalRequired.active,false);proof.checks.push({kind:'SOURCE_PRESERVATION',changed:4,unrelatedUnchanged:baseline.length-4,status:'PASS'});
+  const files=['tools/ui-quality/p06/browser.mjs','tools/ui-quality/p06/replay.mjs','tools/ui-quality/p06/issues.mjs','tools/handoff/viewer-client.js','tools/handoff/viewer-server.mjs',...fs.readdirSync('tools/ui-quality/p06/fixes').filter(f=>f.endsWith('.mjs')).map(f=>'tools/ui-quality/p06/fixes/'+f)];for(const file of files){const r=spawnSync(process.execPath,['--check',file],{encoding:'utf8',windowsHide:true});assert.equal(r.status,0,file+': '+r.stderr);}proof.checks.push({kind:'HELPER_SYNTAX',files:files.length,status:'PASS'});proof.status='PASS';exitCode=0;
+}catch(error){proof.status='FAIL';proof.failure=error.message;throw error;}
+finally{await browser.close();atomicJson(path.join(out,'P06-fixes-final-check.json'),proof);recordCheck('node tools/ui-quality/p06/fixes/final.mjs',exitCode,proof.scope);}
+console.log(JSON.stringify({status:proof.status,checks:proof.checks.length}));

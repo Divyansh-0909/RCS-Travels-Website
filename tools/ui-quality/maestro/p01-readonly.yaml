@@ -1,0 +1,9 @@
+appId: com.rcstravels.driver.phase9
+name: P01 isolated captain navigation (requires running synthetic native harness)
+---
+- assertVisible: "Account"
+- tapOn: "Account"
+- assertVisible: "Appearance"
+- takeScreenshot: P01-native-account-theme
+- tapOn: "Rides"
+- takeScreenshot: P01-native-rides

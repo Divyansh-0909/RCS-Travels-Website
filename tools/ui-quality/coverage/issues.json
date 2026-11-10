@@ -1,0 +1,554 @@
+[
+  {
+    "id": "P04-A1",
+    "row_id": "A.ACCOUNT.FADE",
+    "severity": "UNRATED",
+    "description": "Approved visible-fade content tap guard; existing layout retained",
+    "phase": "P04",
+    "evidence_url": "https://drive.google.com/file/d/1ZtXE0kpQ6CrEcuPBshp2eHpjn1OMf-zi/view?usp=drivesdk"
+  },
+  {
+    "id": "P04-A2",
+    "row_id": "A.SHARED.TAB-SELECTION",
+    "severity": "UNRATED",
+    "description": "Approved selected accessibility metadata; no spoken TalkBack verification",
+    "phase": "P04",
+    "evidence_url": "https://drive.google.com/file/d/1ymwl1u2YyCUJ7J_KCZiXigc6oFpJvJXL/view?usp=drivesdk"
+  },
+  {
+    "id": "P03-H1",
+    "row_id": "W.HOME.P03-H1",
+    "severity": "UNRATED",
+    "description": "2.97:1 contrast; FAIL retained",
+    "phase": "P03",
+    "evidence_url": "https://drive.google.com/file/d/18xMmYSco9xEJFPnWyXSsJaYuzW9G7fZd/view?usp=drivesdk"
+  },
+  {
+    "id": "P03-H2",
+    "row_id": "W.HOME.P03-H2",
+    "severity": "UNRATED",
+    "description": "10px inactive / 12.5px active targets; FAIL retained",
+    "phase": "P03",
+    "evidence_url": "https://drive.google.com/file/d/18xMmYSco9xEJFPnWyXSsJaYuzW9G7fZd/view?usp=drivesdk"
+  },
+  {
+    "id": "P03-H3",
+    "row_id": "W.HOME.P03-H3",
+    "severity": "UNRATED",
+    "description": "360/390/768 widths retain +30px overhang; 390 -> 420",
+    "phase": "P03",
+    "evidence_url": "https://drive.google.com/file/d/18xMmYSco9xEJFPnWyXSsJaYuzW9G7fZd/view?usp=drivesdk"
+  },
+  {
+    "id": "P03-O1",
+    "row_id": "W.OUTSTATION.P03-O1",
+    "severity": "UNRATED",
+    "description": "1.24:1 destination prompt contrast; FAIL retained",
+    "phase": "P03",
+    "evidence_url": "https://drive.google.com/file/d/18xMmYSco9xEJFPnWyXSsJaYuzW9G7fZd/view?usp=drivesdk"
+  },
+  {
+    "id": "P03-O2",
+    "row_id": "W.OUTSTATION.P03-O2",
+    "severity": "UNRATED",
+    "description": "2.97:1 copyright contrast; FAIL retained",
+    "phase": "P03",
+    "evidence_url": "https://drive.google.com/file/d/18xMmYSco9xEJFPnWyXSsJaYuzW9G7fZd/view?usp=drivesdk"
+  },
+  {
+    "id": "P01-AXE-W-BOOKING-FIXTURE-DEV-HOME",
+    "row_id": "W.BOOKING.FIXTURE.DEV-HOME",
+    "severity": "UNRATED",
+    "description": "P05 stable reference to an unnamed P01 sampled axe finding: color-contrast",
+    "phase": "P01",
+    "evidence_url": "https://drive.google.com/file/d/1gsBzl1V-Gb8hCOJTFY1UZ6XSXmoLdoee/view?usp=drivesdk"
+  },
+  {
+    "id": "P01-AXE-W-SAFETY-FIXTURE-DEV-SAFETY",
+    "row_id": "W.SAFETY.FIXTURE.DEV-SAFETY",
+    "severity": "UNRATED",
+    "description": "P05 stable reference to an unnamed P01 sampled axe finding: list",
+    "phase": "P01",
+    "evidence_url": "https://drive.google.com/file/d/1gsBzl1V-Gb8hCOJTFY1UZ6XSXmoLdoee/view?usp=drivesdk"
+  },
+  {
+    "id": "P01-AXE-W-HELP-FIXTURE-DEV-HELP",
+    "row_id": "W.HELP.FIXTURE.DEV-HELP",
+    "severity": "UNRATED",
+    "description": "P05 stable reference to an unnamed P01 sampled axe finding: list",
+    "phase": "P01",
+    "evidence_url": "https://drive.google.com/file/d/1gsBzl1V-Gb8hCOJTFY1UZ6XSXmoLdoee/view?usp=drivesdk"
+  },
+  {
+    "id": "P01-AXE-W-DEV-FIXTURE-DEV-STATES",
+    "row_id": "W.DEV.FIXTURE.DEV-STATES",
+    "severity": "UNRATED",
+    "description": "P05 stable reference to an unnamed P01 sampled axe finding: color-contrast",
+    "phase": "P01",
+    "evidence_url": "https://drive.google.com/file/d/1gsBzl1V-Gb8hCOJTFY1UZ6XSXmoLdoee/view?usp=drivesdk"
+  },
+  {
+    "id": "P01-AXE-W-LEGAL-PRIVACY",
+    "row_id": "W.LEGAL.PRIVACY",
+    "severity": "UNRATED",
+    "description": "P05 stable reference to an unnamed P01 sampled axe finding: color-contrast",
+    "phase": "P01",
+    "evidence_url": "https://drive.google.com/file/d/1gsBzl1V-Gb8hCOJTFY1UZ6XSXmoLdoee/view?usp=drivesdk"
+  },
+  {
+    "id": "P01-AXE-W-LEGAL-REFUNDS",
+    "row_id": "W.LEGAL.REFUNDS",
+    "severity": "UNRATED",
+    "description": "P05 stable reference to an unnamed P01 sampled axe finding: color-contrast",
+    "phase": "P01",
+    "evidence_url": "https://drive.google.com/file/d/1gsBzl1V-Gb8hCOJTFY1UZ6XSXmoLdoee/view?usp=drivesdk"
+  },
+  {
+    "id": "P01-AXE-W-LEGAL-GRIEVANCE",
+    "row_id": "W.LEGAL.GRIEVANCE",
+    "severity": "UNRATED",
+    "description": "P05 stable reference to an unnamed P01 sampled axe finding: color-contrast",
+    "phase": "P01",
+    "evidence_url": "https://drive.google.com/file/d/1gsBzl1V-Gb8hCOJTFY1UZ6XSXmoLdoee/view?usp=drivesdk"
+  },
+  {
+    "id": "P01-AXE-W-ADMIN-FIXTURE-DEV-ADMIN",
+    "row_id": "W.ADMIN.FIXTURE.DEV-ADMIN",
+    "severity": "UNRATED",
+    "description": "P05 stable reference to an unnamed P01 sampled axe finding: color-contrast",
+    "phase": "P01",
+    "evidence_url": "https://drive.google.com/file/d/1gsBzl1V-Gb8hCOJTFY1UZ6XSXmoLdoee/view?usp=drivesdk"
+  },
+  {
+    "id": "P01-AXE-W-LEGAL-TERMS",
+    "row_id": "W.LEGAL.TERMS",
+    "severity": "UNRATED",
+    "description": "P05 stable reference to an unnamed P01 sampled axe finding: color-contrast",
+    "phase": "P01",
+    "evidence_url": "https://drive.google.com/file/d/1gsBzl1V-Gb8hCOJTFY1UZ6XSXmoLdoee/view?usp=drivesdk"
+  },
+  {
+    "id": "P06-B01-01",
+    "name": "Older suggestions replace the current query",
+    "screenId": "W.BOOKING.ROUTE",
+    "selector": "#pickup-location",
+    "scenario": "race",
+    "severity": "MEDIUM",
+    "category": "VERIFIED_UI_UX_BUG",
+    "defect": "Implemented after explicit owner approval: Ignore obsolete successful and failed autocomplete responses after a newer value, cached query or clear action. Original failure and baseline evidence are retained in the P06 audit.",
+    "baseline": "Historical baseline: 2/2: request Alpha, then Beta; Beta renders first, Alpha renders last under the unchanged Beta field. Follow-up: actual-renderer regression PASS on 24 October 2026; see P06-fixes-regression.json.",
+    "steps": [
+      "Observe Beta input and Beta suggestions after the delayed Alpha response finishes",
+      "For manual replay, type Alpha, wait 0.4 seconds, then replace it with Beta"
+    ],
+    "options": [
+      "Ignore obsolete successful and failed autocomplete responses after a newer value, cached query or clear action."
+    ],
+    "phase": "P06",
+    "surface": "website",
+    "status": "IMPLEMENTED",
+    "route": "/__review/p06?scenario=race&issue=P06-B01-01",
+    "manualEntry": "Type Alpha, wait briefly, then replace with Beta",
+    "childId": "W.BOOKING.ROUTE.ASYNC-SUGGESTIONS",
+    "description": "After Beta suggestions render, the slower Alpha response replaces them while the field still reads Beta. Reproduced at 1440px and 390px.",
+    "owner_decision": "APPROVED_FOR_FIX",
+    "implementation_status": "VERIFIED",
+    "verification_status": "VERIFIED",
+    "evidence_urls": [
+      "https://drive.google.com/file/d/14SGLS9d-Opa9CBdSUISiw2z5TC0RiQT6/view?usp=drivesdk",
+      "https://drive.google.com/file/d/1-F_FO99105JzmyJlwjmgNYJ9UdsBb99y/view?usp=drivesdk",
+      "https://drive.google.com/file/d/1s7jaDl56NyZPWVECvDdLdQpB9-eUWKrW/view?usp=drivesdk",
+      "https://drive.google.com/file/d/11uSF9Wy2KNjLDi3VnoD1rGC-Y8PXaCSd/view?usp=drivesdk",
+      "https://drive.google.com/file/d/19fQbMdsRlNZuwZju0g73CWPnLYWUms0A/view?usp=drivesdk",
+      "https://drive.google.com/file/d/12IHlbmwLvzsMmbRW6rfoFUeEEjLYUFDp/view?usp=drivesdk",
+      "https://drive.google.com/file/d/1iDW758Qcp-_BbeY8-WWI8Tfrffbr_eRo/view?usp=drivesdk",
+      "https://drive.google.com/file/d/1eNEvMOvs-s2bkdKbPUxcAjiW8YSKlJfx/view?usp=drivesdk"
+    ],
+    "verified_date": "2026-10-24",
+    "historical_verification_status": "FAIL — retained 23 October audit; superseded only for these approved fixes"
+  },
+  {
+    "id": "P06-B01-02",
+    "name": "Midnight scheduling default selects a past date/time",
+    "screenId": "W.BOOKING.TIMING",
+    "selector": "[role=\"listbox\"]",
+    "scenario": "default",
+    "severity": "LOW",
+    "category": "VERIFIED_UI_UX_BUG",
+    "defect": "Implemented after explicit owner approval: Initialize the date and time from one rounded earliest-valid instant, including day/month/year rollover and sub-minute boundaries. Original failure and baseline evidence are retained in the P06 audit.",
+    "baseline": "Historical baseline: 2/2: public booking path at fixed 23:50 IST. The 23:00 control produces a valid default. Follow-up: actual-renderer regression PASS on 24 October 2026; see P06-fixes-regression.json.",
+    "steps": [
+      "This replay uses a simulated 23:50 IST clock",
+      "Observe tomorrow / 00:30 AM with See prices enabled; no booking is submitted"
+    ],
+    "options": [
+      "Initialize the date and time from one rounded earliest-valid instant, including day/month/year rollover and sub-minute boundaries."
+    ],
+    "phase": "P06",
+    "surface": "website",
+    "status": "IMPLEMENTED",
+    "route": "/__review/p06?scenario=default&issue=P06-B01-02",
+    "manualEntry": "Click Set date & time if the timing stage is not open",
+    "childId": "W.BOOKING.TIMING.MIDNIGHT-DEFAULT",
+    "description": "At simulated 23:50 IST, the default time rolls to 00:30 but the selected day remains Today. See prices stays disabled. Selecting tomorrow recovers.",
+    "owner_decision": "APPROVED_FOR_FIX",
+    "implementation_status": "VERIFIED",
+    "verification_status": "VERIFIED",
+    "evidence_urls": [
+      "https://drive.google.com/file/d/14SGLS9d-Opa9CBdSUISiw2z5TC0RiQT6/view?usp=drivesdk",
+      "https://drive.google.com/file/d/1-F_FO99105JzmyJlwjmgNYJ9UdsBb99y/view?usp=drivesdk",
+      "https://drive.google.com/file/d/1s7jaDl56NyZPWVECvDdLdQpB9-eUWKrW/view?usp=drivesdk",
+      "https://drive.google.com/file/d/11uSF9Wy2KNjLDi3VnoD1rGC-Y8PXaCSd/view?usp=drivesdk",
+      "https://drive.google.com/file/d/19fQbMdsRlNZuwZju0g73CWPnLYWUms0A/view?usp=drivesdk",
+      "https://drive.google.com/file/d/12IHlbmwLvzsMmbRW6rfoFUeEEjLYUFDp/view?usp=drivesdk",
+      "https://drive.google.com/file/d/1iDW758Qcp-_BbeY8-WWI8Tfrffbr_eRo/view?usp=drivesdk",
+      "https://drive.google.com/file/d/1eNEvMOvs-s2bkdKbPUxcAjiW8YSKlJfx/view?usp=drivesdk"
+    ],
+    "verified_date": "2026-10-24",
+    "historical_verification_status": "FAIL — retained 23 October audit; superseded only for these approved fixes"
+  },
+  {
+    "id": "P06-B01-03",
+    "name": "Tab dismisses address suggestions before selection",
+    "screenId": "W.BOOKING.ROUTE",
+    "selector": "#pickup-location",
+    "scenario": "default",
+    "severity": "MEDIUM",
+    "category": "ACCESSIBILITY_FINDING",
+    "defect": "Implemented after explicit owner approval: Keep suggestions open while focus remains in the address group; support Tab, Shift+Tab, arrow keys, Enter and Escape. Original failure and baseline evidence are retained in the P06 audit.",
+    "baseline": "Historical baseline: 2/2 at 1440px: suggestions visible before Tab, removed after the field blur animation. Follow-up: actual-renderer regression PASS on 24 October 2026; see P06-fixes-regression.json.",
+    "steps": [
+      "Use width 1440 and focus the Aster pickup input",
+      "Press Tab through Clear pickup into the visible suggestions, or use ArrowDown then Enter",
+      "Escape returns to the field and closes suggestions; leaving the group also closes them"
+    ],
+    "options": [
+      "Keep suggestions open while focus remains in the address group; support Tab, Shift+Tab, arrow keys, Enter and Escape."
+    ],
+    "phase": "P06",
+    "surface": "website",
+    "status": "IMPLEMENTED",
+    "route": "/__review/p06?scenario=default&issue=P06-B01-03",
+    "manualEntry": "Type Aster in pickup if suggestions are not open",
+    "childId": "W.BOOKING.ROUTE.KEYBOARD-SUGGESTIONS",
+    "description": "On desktop, Tab from the pickup input closes the suggestion panel. Keyboard focus goes to Clear pickup rather than allowing entry into the suggestion list.",
+    "owner_decision": "APPROVED_FOR_FIX",
+    "implementation_status": "VERIFIED",
+    "verification_status": "VERIFIED",
+    "evidence_urls": [
+      "https://drive.google.com/file/d/14SGLS9d-Opa9CBdSUISiw2z5TC0RiQT6/view?usp=drivesdk",
+      "https://drive.google.com/file/d/1-F_FO99105JzmyJlwjmgNYJ9UdsBb99y/view?usp=drivesdk",
+      "https://drive.google.com/file/d/1s7jaDl56NyZPWVECvDdLdQpB9-eUWKrW/view?usp=drivesdk",
+      "https://drive.google.com/file/d/11uSF9Wy2KNjLDi3VnoD1rGC-Y8PXaCSd/view?usp=drivesdk",
+      "https://drive.google.com/file/d/19fQbMdsRlNZuwZju0g73CWPnLYWUms0A/view?usp=drivesdk",
+      "https://drive.google.com/file/d/12IHlbmwLvzsMmbRW6rfoFUeEEjLYUFDp/view?usp=drivesdk",
+      "https://drive.google.com/file/d/1iDW758Qcp-_BbeY8-WWI8Tfrffbr_eRo/view?usp=drivesdk",
+      "https://drive.google.com/file/d/1eNEvMOvs-s2bkdKbPUxcAjiW8YSKlJfx/view?usp=drivesdk"
+    ],
+    "verified_date": "2026-10-24",
+    "historical_verification_status": "FAIL — retained 23 October audit; superseded only for these approved fixes"
+  },
+  {
+    "id": "P06-B01-04",
+    "name": "Selected vehicle has no accessible selection state",
+    "screenId": "W.BOOKING.VEHICLES",
+    "selector": "button:has(h4)",
+    "scenario": "default",
+    "severity": "MEDIUM",
+    "category": "ACCESSIBILITY_FINDING",
+    "defect": "Implemented after explicit owner approval: Keep the existing vehicle buttons and styling; expose exactly one selected card with aria-pressed=true and the others false. Original failure and baseline evidence are retained in the P06 audit.",
+    "baseline": "Historical baseline: 2/2 at 1440px and 390px: keyboard activation works and visual selection changes; programmatic selection state stays absent. Follow-up: actual-renderer regression PASS on 24 October 2026; see P06-fixes-regression.json.",
+    "steps": [
+      "Observe Sedan selected in the actual sample-price vehicle stage",
+      "Use Space or Enter to select another vehicle",
+      "Inspect aria-pressed: exactly one card is true, matching the visual outline"
+    ],
+    "options": [
+      "Keep the existing vehicle buttons and styling; expose exactly one selected card with aria-pressed=true and the others false."
+    ],
+    "phase": "P06",
+    "surface": "website",
+    "status": "IMPLEMENTED",
+    "route": "/__review/p06?scenario=default&issue=P06-B01-04",
+    "manualEntry": "Click See prices if needed, then select Sedan",
+    "childId": "W.BOOKING.VEHICLES.SELECTED-STATE",
+    "description": "Sedan gains the selected outline after keyboard selection, but all four card buttons lack pressed, checked, current or radio state. No spoken screen-reader test is claimed.",
+    "owner_decision": "APPROVED_FOR_FIX",
+    "implementation_status": "VERIFIED",
+    "verification_status": "VERIFIED",
+    "evidence_urls": [
+      "https://drive.google.com/file/d/14SGLS9d-Opa9CBdSUISiw2z5TC0RiQT6/view?usp=drivesdk",
+      "https://drive.google.com/file/d/1-F_FO99105JzmyJlwjmgNYJ9UdsBb99y/view?usp=drivesdk",
+      "https://drive.google.com/file/d/1s7jaDl56NyZPWVECvDdLdQpB9-eUWKrW/view?usp=drivesdk",
+      "https://drive.google.com/file/d/11uSF9Wy2KNjLDi3VnoD1rGC-Y8PXaCSd/view?usp=drivesdk",
+      "https://drive.google.com/file/d/19fQbMdsRlNZuwZju0g73CWPnLYWUms0A/view?usp=drivesdk",
+      "https://drive.google.com/file/d/12IHlbmwLvzsMmbRW6rfoFUeEEjLYUFDp/view?usp=drivesdk",
+      "https://drive.google.com/file/d/1iDW758Qcp-_BbeY8-WWI8Tfrffbr_eRo/view?usp=drivesdk",
+      "https://drive.google.com/file/d/1eNEvMOvs-s2bkdKbPUxcAjiW8YSKlJfx/view?usp=drivesdk"
+    ],
+    "verified_date": "2026-10-24",
+    "historical_verification_status": "FAIL — retained 23 October audit; superseded only for these approved fixes"
+  },
+  {
+    "id": "P07-B02-01",
+    "name": "Partial refund status stops refreshing",
+    "screenIds": [
+      "W.TRACKING",
+      "W.SHARED.CANCELLED-BOOKING-PANEL"
+    ],
+    "severity": "MEDIUM",
+    "category": "FUNCTIONAL",
+    "phase": "P07",
+    "surface": "website",
+    "status": "OWNER_DEFERRED",
+    "route": "/__review/p07?case=partial-refund-pending",
+    "selector": "[data-testid=\"cancelled-booking\"]",
+    "defect": "A supported partial_refund_pending result stops automatic polling. Full refund_pending continues and observes the processed state. Manual refresh recovers the partial result. No ledger or provider result is inferred.",
+    "steps": [
+      "Open the partial-refund fixture",
+      "Wait 7 seconds: it still says Partial refund pending",
+      "Compare full refund pending, which updates after its next poll",
+      "Refresh payment status manually to observe the queued processed fixture"
+    ],
+    "reference": "/__review/p07?case=refund-pending",
+    "choices": [
+      {
+        "id": "A",
+        "label": "Continue polling for both pending refund variants (recommended)"
+      },
+      {
+        "id": "B",
+        "label": "Keep manual refresh and make that requirement explicit"
+      }
+    ],
+    "options": [
+      "A: include the already-supported partial pending state in the refresh predicate; retain backoff and stop on processed state.",
+      "B: keep the current manual-refresh behavior and approve explicit copy for it."
+    ],
+    "source": "frontend/src/lib/paymentUi.js:34; frontend/src/lib/trackingPoll.js:4; frontend/src/pages/TrackingPage.jsx:439",
+    "screenId": "W.TRACKING",
+    "childId": "W.TRACKING.PARTIAL-REFUND-REFRESH",
+    "owner_decision": "OWNER_DEFERRED",
+    "implementation_status": "OWNER_DEFERRED",
+    "verification_status": "FAIL",
+    "baseline": "Reproduced twice with actual React renderer and local synthetic reads/denied writes; see P07 evidence. No product fix applied.",
+    "evidence_urls": [
+      "https://drive.google.com/drive/folders/1qP4Ig18YTCtjqNGqbXWoSPbrEoTW30lz"
+    ],
+    "transportDiscussion": "Owner prefers exploring WebSockets and has asked about load and hosting costs. No polling or WebSocket implementation approved in this follow-up.",
+    "ownerDeferral": {
+      "date": "2026-10-29",
+      "reason": "Owner will implement the shared WebSocket channel later. Partial-refund refresh remains unresolved; no replacement polling policy was approved."
+    }
+  },
+  {
+    "id": "P07-B02-02",
+    "name": "Failed settlement confirmation has no visible feedback",
+    "screenIds": [
+      "W.TRACKING",
+      "W.SHARED.RIDE-SETTLEMENT-PANEL"
+    ],
+    "severity": "HIGH",
+    "category": "FUNCTIONAL_USABILITY",
+    "phase": "P07",
+    "surface": "website",
+    "status": "VERIFIED",
+    "route": "/__review/p07?case=completed",
+    "selector": "button[data-size=\"action\"]",
+    "defect": "Click Pay with cash in this fixture. Its write is deliberately denied. The buttons become enabled again without an alert, failure explanation or status-recovery action; the advance-payment component has an explicit failure presentation. The denial is a fixture condition, not evidence of a real payment failure.",
+    "steps": [
+      "Open completed ride",
+      "Click Pay with cash: the local fixture returns a denied request",
+      "Observe the temporary disabled state then unchanged payment choices",
+      "Compare the actual advance component in its failed state"
+    ],
+    "reference": "/__review/p07-component?mode=payment&phase=failed",
+    "choices": [
+      {
+        "id": "A",
+        "label": "Keep method choices and add an announced inline failure/recovery message (recommended)"
+      },
+      {
+        "id": "B",
+        "label": "Use the existing payment failure-card treatment for settlement"
+      }
+    ],
+    "options": [
+      "A: retain UPI/cash choices, add an announced failure and safe status refresh; approve final wording without claiming payment collection.",
+      "B: adapt the existing failure-card presentation and give an explicit way back to method choices."
+    ],
+    "source": "frontend/src/pages/TrackingPage.jsx:828-868; frontend/src/components/RideSettlementPanel.jsx:7",
+    "screenId": "W.TRACKING",
+    "childId": "W.TRACKING.SETTLEMENT-FAILURE",
+    "owner_decision": "APPROVED_FOR_FIX",
+    "implementation_status": "VERIFIED",
+    "verification_status": "VERIFIED",
+    "baseline": "Reproduced twice with actual React renderer and local synthetic reads/denied writes; see P07 evidence. No product fix applied.",
+    "evidence_urls": [
+      "https://drive.google.com/drive/folders/1qP4Ig18YTCtjqNGqbXWoSPbrEoTW30lz",
+      "https://drive.google.com/drive/folders/1h1mgl7VDO8yKKJH4DqWxpta-iU9O6Avk"
+    ],
+    "ownerChoice": "A",
+    "approval": "Owner explicitly requested the recommended02A,03A,04A changes in the current chat.",
+    "fixHistory": [
+      {
+        "phase": "P07",
+        "status": "FAIL",
+        "owner_decision": "OWNER_REVIEW_REQUIRED",
+        "implementation_status": "NOT_CHANGED",
+        "baseline": "Reproduced twice with actual React renderer and local synthetic reads/denied writes; see P07 evidence. No product fix applied.",
+        "evidence_urls": [
+          "https://drive.google.com/drive/folders/1qP4Ig18YTCtjqNGqbXWoSPbrEoTW30lz"
+        ]
+      },
+      {
+        "phase": "P07-APPROVED-FIXES",
+        "status": "VERIFIED",
+        "date": "2026-10-29",
+        "choice": "A",
+        "evidence": "https://drive.google.com/drive/folders/1h1mgl7VDO8yKKJH4DqWxpta-iU9O6Avk"
+      }
+    ],
+    "fixSource": "frontend/src/components/RideSettlementPanel.jsx:10"
+  },
+  {
+    "id": "P07-B02-03",
+    "name": "Recovered update notice leaves an invisible Tab stop",
+    "screenIds": [
+      "W.TRACKING",
+      "W.SHARED.REFRESH-NOTICE"
+    ],
+    "severity": "MEDIUM",
+    "category": "ACCESSIBILITY",
+    "phase": "P07",
+    "surface": "website",
+    "status": "VERIFIED",
+    "route": "/__review/p07?case=hidden-notice",
+    "selector": "[role=\"status\"] button[aria-label=\"Dismiss\"]",
+    "defect": "After a stale read recovers, the old notice has opacity 0 but remains mounted. Its Dismiss button still receives keyboard Tab focus. The shared notice is used outside tracking too; any shared fix needs that cascade reviewed.",
+    "steps": [
+      "Open and wait for two 5-second poll cycles",
+      "The middle fixture read fails; the next succeeds",
+      "The notice disappears visually",
+      "Use Tab to reach its invisible Dismiss control; Locate marks its actual bounds"
+    ],
+    "reference": "/__review/p07?case=assigned",
+    "choices": [
+      {
+        "id": "A",
+        "label": "Unmount after the exit transition and manage focus (recommended)"
+      },
+      {
+        "id": "B",
+        "label": "Keep the element but make the hidden state inert and hidden from accessibility"
+      }
+    ],
+    "options": [
+      "A: preserve the exit animation, remove the hidden notice afterwards and restore focus if it held focus.",
+      "B: retain mounting but remove hidden descendants from focus/accessibility while leaving visible notices usable."
+    ],
+    "source": "frontend/src/components/ui/RefreshNotice.jsx:50-98",
+    "screenId": "W.TRACKING",
+    "childId": "W.TRACKING.RECOVERED-NOTICE-FOCUS",
+    "owner_decision": "APPROVED_FOR_FIX",
+    "implementation_status": "VERIFIED",
+    "verification_status": "VERIFIED",
+    "baseline": "Reproduced twice with actual React renderer and local synthetic reads/denied writes; see P07 evidence. No product fix applied.",
+    "evidence_urls": [
+      "https://drive.google.com/drive/folders/1qP4Ig18YTCtjqNGqbXWoSPbrEoTW30lz",
+      "https://drive.google.com/drive/folders/1h1mgl7VDO8yKKJH4DqWxpta-iU9O6Avk"
+    ],
+    "ownerChoice": "A",
+    "approval": "Owner explicitly requested the recommended02A,03A,04A changes in the current chat.",
+    "fixHistory": [
+      {
+        "phase": "P07",
+        "status": "FAIL",
+        "owner_decision": "OWNER_REVIEW_REQUIRED",
+        "implementation_status": "NOT_CHANGED",
+        "baseline": "Reproduced twice with actual React renderer and local synthetic reads/denied writes; see P07 evidence. No product fix applied.",
+        "evidence_urls": [
+          "https://drive.google.com/drive/folders/1qP4Ig18YTCtjqNGqbXWoSPbrEoTW30lz"
+        ]
+      },
+      {
+        "phase": "P07-APPROVED-FIXES",
+        "status": "VERIFIED",
+        "date": "2026-10-29",
+        "choice": "A",
+        "evidence": "https://drive.google.com/drive/folders/1h1mgl7VDO8yKKJH4DqWxpta-iU9O6Avk"
+      }
+    ],
+    "fixSource": "frontend/src/components/ui/RefreshNotice.jsx:60"
+  },
+  {
+    "id": "P07-B02-04",
+    "name": "Large text puts Contact support under the receipt",
+    "screenIds": [
+      "W.TRACKING"
+    ],
+    "severity": "MEDIUM",
+    "category": "RESPONSIVE",
+    "phase": "P07",
+    "surface": "website",
+    "status": "VERIFIED",
+    "route": "/booking/p07-completed--large-text?p07-text=200",
+    "selector": "button",
+    "viewport": 1440,
+    "defect": "At 1440px with 200% root text, the completed-ride support notice extends into the receipt column. The receipt intercepts the Contact support click. This was reproduced twice; it is separate from the already-fixed account backdrop issue.",
+    "steps": [
+      "Choose Laptop 1440px",
+      "The observed example applies 200% text; the reference uses normal text",
+      "In the completed ride, inspect Contact support in the left column",
+      "Its centre is covered by the receipt; the normal-text control remains usable"
+    ],
+    "reference": "/booking/p07-completed--normal-text",
+    "choices": [
+      {
+        "id": "A",
+        "label": "Wrap the support notice within its column and keep the two-column receipt (recommended)"
+      },
+      {
+        "id": "B",
+        "label": "Stack the completed-ride columns when enlarged text needs more space"
+      }
+    ],
+    "options": [
+      "A: constrain/wrap the existing support row without changing its copy or action.",
+      "B: approve an adaptive stacked terminal layout at enlarged text sizes, preserving receipt and action order."
+    ],
+    "source": "frontend/src/pages/TrackingPage.jsx:655-670,1344-1429",
+    "screenId": "W.TRACKING",
+    "childId": "W.TRACKING.TERMINAL-LARGE-TEXT",
+    "owner_decision": "APPROVED_FOR_FIX",
+    "implementation_status": "VERIFIED",
+    "verification_status": "VERIFIED",
+    "baseline": "Reproduced twice with actual React renderer and local synthetic reads/denied writes; see P07 evidence. No product fix applied.",
+    "evidence_urls": [
+      "https://drive.google.com/drive/folders/1qP4Ig18YTCtjqNGqbXWoSPbrEoTW30lz",
+      "https://drive.google.com/drive/folders/1h1mgl7VDO8yKKJH4DqWxpta-iU9O6Avk"
+    ],
+    "ownerChoice": "A",
+    "approval": "Owner explicitly requested the recommended02A,03A,04A changes in the current chat.",
+    "fixHistory": [
+      {
+        "phase": "P07",
+        "status": "FAIL",
+        "owner_decision": "OWNER_REVIEW_REQUIRED",
+        "implementation_status": "NOT_CHANGED",
+        "baseline": "Reproduced twice with actual React renderer and local synthetic reads/denied writes; see P07 evidence. No product fix applied.",
+        "evidence_urls": [
+          "https://drive.google.com/drive/folders/1qP4Ig18YTCtjqNGqbXWoSPbrEoTW30lz"
+        ]
+      },
+      {
+        "phase": "P07-APPROVED-FIXES",
+        "status": "VERIFIED",
+        "date": "2026-10-29",
+        "choice": "A",
+        "evidence": "https://drive.google.com/drive/folders/1h1mgl7VDO8yKKJH4DqWxpta-iU9O6Avk"
+      }
+    ],
+    "fixSource": "frontend/src/pages/TrackingPage.jsx:657"
+  }
+]

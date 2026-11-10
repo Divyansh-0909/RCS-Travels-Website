@@ -1,0 +1,14 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import { config } from '../handoff/config.mjs';
+import { Google } from '../handoff/google.mjs';
+import { readJson, atomicJson } from '../handoff/core.mjs';
+const state = readJson(path.join(config.runtime, 'state.json'));
+const proof = readJson(path.join(config.runtime, 'native-verification.json'));
+if (!state.bootstrap?.active || !/^\d{17}-[a-f0-9-]{36}$/.test(proof.run)) throw new Error('Expected this session’s isolated native evidence');
+const source = path.join(config.root, 'output/phase9-native-device-2026-10-10', proof.run, 'maestro-artifacts/2026-10-21_130307/accept-failure-and-retry/screenshots/step-005-assertCondition-Controlled_acceptance_ou.png');
+const name = 'P01-native-controlled-acceptance-failure.png';
+const dest = path.join(state.run.directory, 'artifacts', name); fs.copyFileSync(source, dest);
+const uploaded = await new Google(config).upload(dest, state.run.id, 'image/png', 'P01');
+const file = path.join(config.runtime, 'evidence-links.json'), mapping = readJson(file, {}); mapping[name] = uploaded; atomicJson(file, mapping);
+console.log(JSON.stringify(uploaded));

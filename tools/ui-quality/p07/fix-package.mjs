@@ -1,0 +1,14 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import crypto from 'node:crypto';
+import assert from 'node:assert/strict';
+import{spawnSync}from'node:child_process';
+const out='output/handoff/P07-fixes-2026-10-29';
+const walk=d=>fs.readdirSync(d,{withFileTypes:true}).flatMap(e=>e.isDirectory()?walk(path.join(d,e.name)):[path.join(d,e.name).replaceAll('\\','/')]);
+const sha=f=>crypto.createHash('sha256').update(fs.readFileSync(f)).digest('hex');
+const names=['fixes.mjs','fix-focus.mjs','fix-record.mjs','fix-board.mjs','fix-report.mjs','fix-package.mjs','sync-board.mjs','board.html','serve.mjs','cases.mjs','prelude.js','components.jsx','fixture.test.mjs'];
+const files=[...new Set([...fs.readdirSync(out).filter(f=>/\.(json|txt|patch)$/.test(f)&&!['package-inputs.json','uploaded-files.json','upload-metadata.json','manifest.json','publication.json'].includes(f)).map(f=>out+'/'+f),...walk(out+'/before'),...walk(out+'/screenshots'),...names.map(f=>'tools/ui-quality/p07/'+f),'docs/ui-quality/P07-approved-fixes-02-04-2026-10-29.md','tools/ui-quality/coverage/master-ui-coverage.csv','tools/ui-quality/coverage/issues.json','tools/ui-quality/coverage/registered-surfaces.json','docs/ui-quality/component-consistency-inventory.json'])].sort();
+const manifest={files:files.map(file=>({file,sha256:sha(file),bytes:fs.statSync(file).size})),scope:'Synthetic evidence and scoped approved source diff; originals retained for review. No caches/env files or real data.',phase:'P07 approved02A/03A/04A;01 pending'};
+fs.writeFileSync(out+'/package-inputs.json',JSON.stringify(manifest,null,2));
+const zip=spawnSync('python',['-c','import json,sys,zipfile; d=json.load(open(sys.argv[1],encoding="utf-8")); z=zipfile.ZipFile(sys.argv[2],"w",compression=zipfile.ZIP_DEFLATED); [z.write(x["file"],x["file"]) for x in d["files"]]; z.write(sys.argv[1],sys.argv[1]); z.close()',out+'/package-inputs.json',out+'/P07-approved-02-04-evidence.zip'],{encoding:'utf8'});assert.equal(zip.status,0,zip.stderr);
+console.log(JSON.stringify({files:files.length,zipBytes:fs.statSync(out+'/P07-approved-02-04-evidence.zip').size,sha256:sha(out+'/P07-approved-02-04-evidence.zip')}));
