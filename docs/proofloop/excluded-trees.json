@@ -1,0 +1,646 @@
+[
+  {
+    "path": "output/codex-luna-2026-10-08/coverage/tmp",
+    "kind": "generated-tree"
+  },
+  {
+    "path": "output/hindi-temporal-casefold-2026-10-09/coverage/tmp",
+    "kind": "generated-tree"
+  },
+  {
+    "path": "output/hindi-temporal-v1-2026-10-08/coverage-current/tmp",
+    "kind": "generated-tree"
+  },
+  {
+    "path": "output/hindi-temporal-v1-2026-10-08/coverage/tmp",
+    "kind": "generated-tree"
+  },
+  {
+    "path": "output/hindi-temporal-v2-2026-10-08/coverage/tmp",
+    "kind": "generated-tree"
+  },
+  {
+    "path": "output/phase9-native-device-2026-10-10/coverage-source-final/tmp",
+    "kind": "generated-tree"
+  },
+  {
+    "path": "output/phase9-native-device-2026-10-10/coverage-final-nine/tmp",
+    "kind": "generated-tree"
+  },
+  {
+    "path": "output/phase9-native-device-2026-10-10/coverage-final/tmp",
+    "kind": "generated-tree"
+  },
+  {
+    "path": "output/phase9-native-device-2026-10-10/coverage-current-eight/tmp",
+    "kind": "generated-tree"
+  },
+  {
+    "path": "output/phase9-native-device-2026-10-10/coverage-current/tmp",
+    "kind": "generated-tree"
+  },
+  {
+    "path": "output/phase9-native-device-2026-10-10/coverage-closure/tmp",
+    "kind": "generated-tree"
+  },
+  {
+    "path": "output/phase9-native-device-2026-10-10/coverage/tmp",
+    "kind": "generated-tree"
+  },
+  {
+    "path": "output/phase9-ui-2026-10-10/frontend-coverage-final/tmp",
+    "kind": "generated-tree"
+  },
+  {
+    "path": "output/phase9-ui-2026-10-10/frontend-coverage/tmp",
+    "kind": "generated-tree"
+  },
+  {
+    "path": "output/phase9-ui-2026-10-10/backend-coverage/tmp",
+    "kind": "generated-tree"
+  },
+  {
+    "path": "output/phase9-ui-2026-10-10/artifact-coverage-final/tmp",
+    "kind": "generated-tree"
+  },
+  {
+    "path": "output/phase9-ui-2026-10-10/artifact-coverage/tmp",
+    "kind": "generated-tree"
+  },
+  {
+    "path": "output/phase9d-1-continuation-2026-10-13/capsule-1791861236843-0669507f-f7e4-48df-a43e-cba56dcc3318/build",
+    "kind": "generated-tree"
+  },
+  {
+    "path": "output/phase9d-1-continuation-2026-10-13/capsule-1791857999171-2a39a3a5-fce5-4526-b6e9-fca2ed94b483/build",
+    "kind": "generated-tree"
+  },
+  {
+    "path": "output/phase9d-1-continuation-2026-10-13/capsule-1791857859988-7b3cdeee-6f4b-401f-a80f-8632b9df1b27/build",
+    "kind": "generated-tree"
+  },
+  {
+    "path": "output/phase9d-1-continuation-2026-10-13/capsule-1791838222193-db7c3902-4c9b-4223-99fe-df511eaa3ed5/build",
+    "kind": "generated-tree"
+  },
+  {
+    "path": "output/phase9d-1-continuation-2026-10-13/capsule-1791838091540-037b25fd-1d61-4009-ae6e-cc8b33961349/build",
+    "kind": "generated-tree"
+  },
+  {
+    "path": "output/phase9d-1-continuation-2026-10-13/capsule-1791837921420-3756e3ac-1d00-4156-9761-a90980de4be1/build",
+    "kind": "generated-tree"
+  },
+  {
+    "path": "output/phase9d-1-continuation-2026-10-13/capsule-1791837690246-8ccbeae3-636b-45de-9a69-fd9fef6da7ea/build",
+    "kind": "generated-tree"
+  },
+  {
+    "path": "output/phase9d-1-continuation-2026-10-13/capsule-1791837409759-c6de0d11-005c-40fc-904f-45c431817b65/build",
+    "kind": "generated-tree"
+  },
+  {
+    "path": "output/phase9d-1-continuation-2026-10-13/capsule-1791837070547-2a5edc0a-aeef-4927-b86a-f0ad77b0cab3/build",
+    "kind": "generated-tree"
+  },
+  {
+    "path": "output/phase9d-1-continuation-2026-10-13/capsule-1791837004600-d54432c6-46b6-4d50-83d2-af07af9b8f77/build",
+    "kind": "generated-tree"
+  },
+  {
+    "path": "output/phase9d-broker-2026-10-13/capsule-1791906533657-417495ee-5357-40b3-b8e7-fd7e12df9f3c/build",
+    "kind": "generated-tree"
+  },
+  {
+    "path": "output/phase9d-broker-2026-10-13/capsule-1791905746328-081b23d5-2b71-440c-baf3-8c9851434a1a/build",
+    "kind": "generated-tree"
+  },
+  {
+    "path": "output/phase9d-broker-recovery-2026-10-14/capsule-1791924115893-145a47ad-b344-41c8-a6ef-f1ecdd5ad7a2/build",
+    "kind": "generated-tree"
+  },
+  {
+    "path": "output/phase9d-broker-recovery-2026-10-14/capsule-1791923359114-c7e01942-85b3-499f-a154-2ecf5baaaf73/build",
+    "kind": "generated-tree"
+  },
+  {
+    "path": "output/phase9d-broker-recovery-2026-10-14/capsule-1791922730907-56f8ac90-06cc-4fdd-ae55-42b54b162845/build",
+    "kind": "generated-tree"
+  },
+  {
+    "path": "output/phase9d-broker-recovery-2026-10-14/capsule-1791922031352-964ba885-e60b-4d62-be01-79c5c1d085e8/build",
+    "kind": "generated-tree"
+  },
+  {
+    "path": "output/phase9d-broker-recovery-2026-10-14/capsule-1791921964669-865ed89c-a3c7-4717-ac22-7f2a2e7d305f/build",
+    "kind": "generated-tree"
+  },
+  {
+    "path": "output/phase9d-broker-recovery-2026-10-14/capsule-1791919429417-3bac009c-5f10-474d-9750-71d52f6c15f0/build",
+    "kind": "generated-tree"
+  },
+  {
+    "path": "output/phase9d-broker-recovery-2026-10-14/capsule-1791918597090-40f25aac-9cea-4d45-bc48-40d415feb8c9/build",
+    "kind": "generated-tree"
+  },
+  {
+    "path": "output/phase9d-broker-recovery-2026-10-14/capsule-1791917343987-caface71-32aa-4d81-8503-ac716b9d012c/build",
+    "kind": "generated-tree"
+  },
+  {
+    "path": "output/phase9d-custody-closure-2026-10-15/capsule-1792094122336-69f76679-3fb2-43f5-8151-42426510e2dc/build",
+    "kind": "generated-tree"
+  },
+  {
+    "path": "output/phase9d-custody-closure-2026-10-15/capsule-1792078250658-e4ee6118-e10b-466a-b18c-7e2f479a1595/build",
+    "kind": "generated-tree"
+  },
+  {
+    "path": "output/phase9d-custody-closure-2026-10-15/capsule-1792050106726-f0e90029-bf83-4ae5-aeea-2195f7866ce0/build",
+    "kind": "generated-tree"
+  },
+  {
+    "path": "output/phase9d-custody-closure-2026-10-15/capsule-1792050022084-d2ad3c92-bed5-491b-9481-ace7fb6d85ca/build",
+    "kind": "generated-tree"
+  },
+  {
+    "path": "output/phase9d-custody-closure-2026-10-15/capsule-1792049739782-2c64d791-16bf-42eb-8870-7071bac3203b/build",
+    "kind": "generated-tree"
+  },
+  {
+    "path": "output/phase9d-custody-closure-2026-10-15/capsule-1792049685413-762ea846-0f13-4d28-8fa5-3b15b96729f7/build",
+    "kind": "generated-tree"
+  },
+  {
+    "path": "output/phase9d-custody-closure-2026-10-15/capsule-1792049639176-9576c421-205f-489c-860f-9eac154e8d78/build",
+    "kind": "generated-tree"
+  },
+  {
+    "path": "output/phase9d-outbox-broker-2026-10-13/capsule-1791880847610-b038b7f4-386b-4314-a097-ea5a1f0f970d/build",
+    "kind": "generated-tree"
+  },
+  {
+    "path": "output/phase9d-outbox-broker-2026-10-13/capsule-1791880400761-a2a588ad-f962-449d-819c-caa602dfed38/build",
+    "kind": "generated-tree"
+  },
+  {
+    "path": "output/phase9d-transport-2026-10-13/capsule-1791899669017-e9ef58af-081c-4d32-9bea-7afa0aab3e9c/build",
+    "kind": "generated-tree"
+  },
+  {
+    "path": "output/proofloop-phase1-7-verification-2026-10-09/phase6d-current-coverage/tmp",
+    "kind": "generated-tree"
+  },
+  {
+    "path": "output/provider-resume-2026-10-07/stage-coverage/tmp",
+    "kind": "generated-tree"
+  },
+  {
+    "path": "output/responsibility-guard-audit-2026-10-08/coverage-prepared/tmp",
+    "kind": "generated-tree"
+  },
+  {
+    "path": "output/responsibility-guard-audit-2026-10-08/coverage-final/tmp",
+    "kind": "generated-tree"
+  },
+  {
+    "path": "output/responsibility-guard-audit-2026-10-08/coverage-current-prepared/tmp",
+    "kind": "generated-tree"
+  },
+  {
+    "path": "output/responsibility-guard-audit-2026-10-08/coverage-current/tmp",
+    "kind": "generated-tree"
+  },
+  {
+    "path": "output/responsibility-guard-audit-2026-10-08/coverage-complete-prepared/tmp",
+    "kind": "generated-tree"
+  },
+  {
+    "path": "output/responsibility-guard-audit-2026-10-08/coverage-complete/tmp",
+    "kind": "generated-tree"
+  },
+  {
+    "path": "output/responsibility-guard-audit-2026-10-08/coverage-audited/tmp",
+    "kind": "generated-tree"
+  },
+  {
+    "path": "output/responsibility-guard-audit-2026-10-08/coverage/tmp",
+    "kind": "generated-tree"
+  },
+  {
+    "path": "output/responsibility-v5-freeze-2026-10-08/coverage/tmp",
+    "kind": "generated-tree"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-ff7a78ff-3d2b-4e09-a064-672afda22926/shared",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-ff7a78ff-3d2b-4e09-a064-672afda22926/slot2/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-ff7a78ff-3d2b-4e09-a064-672afda22926/slot1/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-ff7a78ff-3d2b-4e09-a064-672afda22926/slot0/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-eab05045-e8a9-4581-bd9b-e0b742dfeef5/shared",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-eab05045-e8a9-4581-bd9b-e0b742dfeef5/slot3/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-eab05045-e8a9-4581-bd9b-e0b742dfeef5/slot2/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-eab05045-e8a9-4581-bd9b-e0b742dfeef5/slot1/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-eab05045-e8a9-4581-bd9b-e0b742dfeef5/slot0/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-e5d4e367-be63-4f2e-af0a-36350462c1d9/shared",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-e5d4e367-be63-4f2e-af0a-36350462c1d9/slot1/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-e5d4e367-be63-4f2e-af0a-36350462c1d9/slot0/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-e52e07d3-d6b0-4ffb-9e34-e26045052cd5/shared",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-e52e07d3-d6b0-4ffb-9e34-e26045052cd5/slot1/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-e52e07d3-d6b0-4ffb-9e34-e26045052cd5/slot0/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-df10031b-5e76-4c64-a027-c78f8f618d62/shared",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-df10031b-5e76-4c64-a027-c78f8f618d62/slot1/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-df10031b-5e76-4c64-a027-c78f8f618d62/slot0/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-c55d3602-af1b-49a9-8fe0-05dbfe4699b6/shared",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-c55d3602-af1b-49a9-8fe0-05dbfe4699b6/slot1/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-c55d3602-af1b-49a9-8fe0-05dbfe4699b6/slot0/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-babbf62e-7835-44ae-8771-27bcd0cbb3f0/shared",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-babbf62e-7835-44ae-8771-27bcd0cbb3f0/slot1/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-babbf62e-7835-44ae-8771-27bcd0cbb3f0/slot0/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-b636d179-9023-4284-8784-dac684e16f17/shared",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-b636d179-9023-4284-8784-dac684e16f17/slot1/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-b636d179-9023-4284-8784-dac684e16f17/slot0/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-a7f039cd-d999-4bc6-88ce-afab69cc0c0a/shared",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-a7f039cd-d999-4bc6-88ce-afab69cc0c0a/slot1/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-a7f039cd-d999-4bc6-88ce-afab69cc0c0a/slot0/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-9468fc20-580b-476a-ad03-8778cd5494ad/shared",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-9468fc20-580b-476a-ad03-8778cd5494ad/slot1/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-9468fc20-580b-476a-ad03-8778cd5494ad/slot0/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-70fc1e9b-c91b-4ddd-b226-0a6337db66d2/shared",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-70fc1e9b-c91b-4ddd-b226-0a6337db66d2/slot3/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-70fc1e9b-c91b-4ddd-b226-0a6337db66d2/slot2/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-70fc1e9b-c91b-4ddd-b226-0a6337db66d2/slot1/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-70fc1e9b-c91b-4ddd-b226-0a6337db66d2/slot0/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-65dd7618-55c4-4b02-981d-4f7030a6d2a0/shared",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-65dd7618-55c4-4b02-981d-4f7030a6d2a0/slot1/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-65dd7618-55c4-4b02-981d-4f7030a6d2a0/slot0/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-5dc29b9b-3177-4fa1-a82d-91e94c75b339/shared",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-5dc29b9b-3177-4fa1-a82d-91e94c75b339/slot1/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-5dc29b9b-3177-4fa1-a82d-91e94c75b339/slot0/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-572ccfee-55d5-49fc-ae00-5c24fb3c496f/shared",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-572ccfee-55d5-49fc-ae00-5c24fb3c496f/slot3/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-572ccfee-55d5-49fc-ae00-5c24fb3c496f/slot2/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-572ccfee-55d5-49fc-ae00-5c24fb3c496f/slot1/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-572ccfee-55d5-49fc-ae00-5c24fb3c496f/slot0/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-53a64e07-3227-4b5c-b2e3-d3e394be4875/shared",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-53a64e07-3227-4b5c-b2e3-d3e394be4875/slot3/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-53a64e07-3227-4b5c-b2e3-d3e394be4875/slot2/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-53a64e07-3227-4b5c-b2e3-d3e394be4875/slot1/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-53a64e07-3227-4b5c-b2e3-d3e394be4875/slot0/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-5366255b-aa84-47ac-9219-b84613f0a37d/shared",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-5366255b-aa84-47ac-9219-b84613f0a37d/slot1/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-5366255b-aa84-47ac-9219-b84613f0a37d/slot0/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-4b5cfaa0-d4ea-4afd-b18f-72ea03762f55/shared",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-4b5cfaa0-d4ea-4afd-b18f-72ea03762f55/slot1/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-4b5cfaa0-d4ea-4afd-b18f-72ea03762f55/slot0/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-41f2fc83-8122-447d-9efb-da4440be5cf2/shared",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-41f2fc83-8122-447d-9efb-da4440be5cf2/slot1/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-41f2fc83-8122-447d-9efb-da4440be5cf2/slot0/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-41714a85-3635-479e-87e8-debae44b3b3c/shared",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-41714a85-3635-479e-87e8-debae44b3b3c/slot1/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-41714a85-3635-479e-87e8-debae44b3b3c/slot0/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-133ac9e7-172b-4a43-b494-6301836f6b92/shared",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-133ac9e7-172b-4a43-b494-6301836f6b92/slot1/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-133ac9e7-172b-4a43-b494-6301836f6b92/slot0/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-0200aed7-cdbf-42ac-9a09-203a8249989d/shared",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-0200aed7-cdbf-42ac-9a09-203a8249989d/slot1/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/s3-recheck-0200aed7-cdbf-42ac-9a09-203a8249989d/slot0/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/candidate-witness-406db7fe-166e-4d2f-b8b4-9a9976b8eed6/shared",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s3-validation-scratch/candidate-witness-406db7fe-166e-4d2f-b8b4-9a9976b8eed6/backend/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s4-validation-scratch/s4-replay-yrsbU4/worker-3/backend/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s4-validation-scratch/s4-replay-yrsbU4/worker-2/backend/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s4-validation-scratch/s4-replay-yrsbU4/worker-1/backend/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s4-validation-scratch/s4-replay-yrsbU4/worker-0/backend/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s4-validation-scratch/s4-replay-XxFWbU/worker-0/backend/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s4-validation-scratch/s4-replay-XvItIW/worker-3/backend/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s4-validation-scratch/s4-replay-XvItIW/worker-2/backend/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s4-validation-scratch/s4-replay-XvItIW/worker-1/backend/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s4-validation-scratch/s4-replay-XvItIW/worker-0/backend/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s4-validation-scratch/s4-replay-fkdore/worker-3/backend/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s4-validation-scratch/s4-replay-fkdore/worker-2/backend/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s4-validation-scratch/s4-replay-fkdore/worker-1/backend/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s4-validation-scratch/s4-replay-fkdore/worker-0/backend/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s4-validation-scratch/s4-replay-fCCGLa/worker-3/backend/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s4-validation-scratch/s4-replay-fCCGLa/worker-2/backend/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s4-validation-scratch/s4-replay-fCCGLa/worker-1/backend/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s4-validation-scratch/s4-replay-fCCGLa/worker-0/backend/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s4-validation-scratch/s4-replay-elE0pA/worker-3/backend/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s4-validation-scratch/s4-replay-elE0pA/worker-2/backend/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s4-validation-scratch/s4-replay-elE0pA/worker-1/backend/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s4-validation-scratch/s4-replay-elE0pA/worker-0/backend/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s4-validation-scratch/s4-replay-9jKOvG/worker-3/backend/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s4-validation-scratch/s4-replay-9jKOvG/worker-2/backend/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s4-validation-scratch/s4-replay-9jKOvG/worker-1/backend/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s4-validation-scratch/s4-replay-9jKOvG/worker-0/backend/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s4-validation-scratch/s4-replay-1jziP5/worker-3/backend/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s4-validation-scratch/s4-replay-1jziP5/worker-2/backend/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s4-validation-scratch/s4-replay-1jziP5/worker-1/backend/node_modules",
+    "kind": "link"
+  },
+  {
+    "path": "output/search-s4-validation-scratch/s4-replay-1jziP5/worker-0/backend/node_modules",
+    "kind": "link"
+  }
+]

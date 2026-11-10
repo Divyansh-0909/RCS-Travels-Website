@@ -1,0 +1,1486 @@
+[
+  {
+    "path": "output/resume/Resume_Evidence_and_Interview_Notes.md",
+    "headings": [
+      "Resume decisions and evidence",
+      "1. Strong work absent from the original resume",
+      "2. Original bullets worth keeping",
+      "3. Rewrite decisions",
+      "4. User-requested claims retained without repository verification",
+      "5. Metrics to confirm",
+      "6. Evidence for the final resume",
+      "7. Interview story bank",
+      "8. Targeted resume variant",
+      "Latest layout and skills revision"
+    ],
+    "bytes": 10842
+  },
+  {
+    "path": "output/proofloop-phase1-7-verification-2026-10-09/history/SPEC-VM.md",
+    "headings": [
+      "A. Final contradiction check",
+      "B. Final updated decisions incorporated",
+      "Compensation entitlement lifecycle",
+      "Compensation reservation and consumption",
+      "RCS funding and recovery",
+      "Scheduled advance and completing driver",
+      "Appeal timing",
+      "Review SLA",
+      "Mandatory payout account",
+      "Payout replacement",
+      "Outstanding-liability lock",
+      "Exceptional reversal",
+      "C. Product freeze status",
+      "D. Full verification matrix",
+      "E. Existing tests that can be reused",
+      "F. Missing verification infrastructure",
+      "G. Scenarios requiring simulator",
+      "H. Production monitoring requirements",
+      "I. Recommended order to build verification infrastructure"
+    ],
+    "bytes": 34385
+  },
+  {
+    "path": "output/proofloop-phase1-7-verification-2026-10-09/history/SPEC-ARCH.md",
+    "headings": [
+      "A. Updated authoritative specification sections",
+      "1. Operational recovery and responsibility are separate processes",
+      "2. Responsibility cases",
+      "3. Fact and evidence engine",
+      "4. AI case analyst",
+      "5. Deterministic decision engine",
+      "6. Responsibility-case lifecycle",
+      "7. Appeals",
+      "8. Final driver consequences",
+      "9. Customer compensation",
+      "10. Liability recovery from future earnings",
+      "11. Driver and payment-method UX",
+      "12. Replacement-driver invariant",
+      "13. Final-state immutability and exceptional correction",
+      "14. Idempotency invariants",
+      "15. Verification requirements added",
+      "B. Repository gap analysis",
+      "C. Contradiction-check results",
+      "D. Remaining genuine product decisions",
+      "E. Remaining engineering unknowns"
+    ],
+    "bytes": 23587
+  },
+  {
+    "path": "output/proofloop-phase1-7-verification-2026-10-09/history/P7-ORIGINAL.md",
+    "headings": [],
+    "bytes": 26645
+  },
+  {
+    "path": "output/proofloop-phase1-7-verification-2026-10-09/history/P7-FINAL.md",
+    "headings": [
+      "A. Production orchestration architecture",
+      "B. Shadow safety",
+      "C. Production incident matrix",
+      "D. Durable work model",
+      "E. Evidence/version model",
+      "F. Analyst integration",
+      "G. Policy gate",
+      "H. Shadow persistence",
+      "I. Human comparison linkage",
+      "J. Kill switch",
+      "K. Provider outage behavior",
+      "L. Observability",
+      "M. PostgreSQL concurrency",
+      "N. Migration results",
+      "O. Tests",
+      "P. Coverage",
+      "Q. Mutation testing",
+      "R. Quality gates",
+      "S. Phase 7 files",
+      "T. Production defects discovered",
+      "U. Remaining blockers",
+      "V. Jev",
+      "W. Final readiness"
+    ],
+    "bytes": 8979
+  },
+  {
+    "path": "output/proofloop-phase1-7-verification-2026-10-09/history/P6D-QUALITY-FINAL.md",
+    "headings": [
+      "A. Reliability consequence architecture",
+      "B. Consequence-level semantics",
+      "C. Strike ledger",
+      "D. Strike thresholds",
+      "E. Temporary block",
+      "F. Indefinite block",
+      "G. Financial/reliability separation",
+      "H. Operational eligibility",
+      "I. Existing scheduled commitments",
+      "J. Independent moderation",
+      "K. Concurrency / idempotency",
+      "L. Database integrity",
+      "M. Files changed",
+      "N. Tests added/strengthened",
+      "O. Validation results",
+      "P. Quality gates",
+      "Q. Production defects discovered",
+      "R. Remaining blockers",
+      "Phase 6D real-database verification",
+      "Existing future scheduled commitments",
+      "S. Jev",
+      "T. Readiness"
+    ],
+    "bytes": 9055
+  },
+  {
+    "path": "output/proofloop-phase1-7-verification-2026-10-09/history/P6D-DB-STDOUT.md",
+    "headings": [],
+    "bytes": 1747
+  },
+  {
+    "path": "output/proofloop-phase1-7-verification-2026-10-09/history/P6D-DB-FINAL.md",
+    "headings": [
+      "A. Database environment used",
+      "B. Environment remediation",
+      "C. Fresh migration chain",
+      "D. Phase 6D real-DB integration",
+      "E. Concurrency",
+      "F. Database integrity",
+      "G. Crash/retry and rollback",
+      "H. Defects",
+      "I. Repository files changed",
+      "J. Regression actually executed",
+      "K. Cleanup / remaining blockers"
+    ],
+    "bytes": 3927
+  },
+  {
+    "path": "output/proofloop-phase1-7-verification-2026-10-09/history/P6D-COVERAGE-STDOUT.md",
+    "headings": [],
+    "bytes": 5163
+  },
+  {
+    "path": "output/proofloop-phase1-7-verification-2026-10-09/history/P6C-FINAL.md",
+    "headings": [
+      "A. Phase 6C blocker resolution",
+      "B. Compensation eligibility semantics",
+      "C. Scheduled advance",
+      "D. Responsibility incident financial matrix",
+      "E. Financial executor gate",
+      "F. Existing liability and recovery behavior",
+      "G. Coverage",
+      "H. Mutation testing",
+      "I. Real PostgreSQL validation",
+      "J. Full regression",
+      "K. Quality gates",
+      "L. Files changed",
+      "M. Production defects discovered",
+      "N. Remaining blockers",
+      "O. Jev",
+      "P. Final readiness"
+    ],
+    "bytes": 7173
+  },
+  {
+    "path": "output/proofloop-phase1-7-verification-2026-10-09/history/P6B-ORIGINAL.md",
+    "headings": [],
+    "bytes": 20793
+  },
+  {
+    "path": "output/proofloop-phase1-7-verification-2026-10-09/history/P6B-FINAL.md",
+    "headings": [],
+    "bytes": 4377
+  },
+  {
+    "path": "output/proofloop-phase1-7-verification-2026-10-09/history/P6A-ORIGINAL.md",
+    "headings": [],
+    "bytes": 18375
+  },
+  {
+    "path": "output/proofloop-phase1-7-verification-2026-10-09/history/P6A-FINAL.md",
+    "headings": [],
+    "bytes": 6505
+  },
+  {
+    "path": "output/proofloop-phase1-7-verification-2026-10-09/history/P5-ORIGINAL.md",
+    "headings": [],
+    "bytes": 18692
+  },
+  {
+    "path": "output/proofloop-phase1-7-verification-2026-10-09/history/P5-FINAL.md",
+    "headings": [
+      "A. AI analyst contract implemented",
+      "B. Deterministic policy gate implemented",
+      "C. Case-state/provisional routing model",
+      "D. AI fake and failure handling",
+      "E. Evidence-reference validation",
+      "F. Files changed",
+      "G. Tests added",
+      "H. Validation results",
+      "I. Quality-gate results",
+      "J. Verification matrix rules now enabled/verified",
+      "K. Production defects discovered",
+      "L. Remaining blockers",
+      "M. Recommended Phase 6"
+    ],
+    "bytes": 8728
+  },
+  {
+    "path": "output/proofloop-phase1-7-verification-2026-10-09/history/P5-DB-FINAL.md",
+    "headings": [
+      "A. Docker/Testcontainers status",
+      "B. Disposable PostGIS prerequisite result",
+      "C. Complete Prisma migration result",
+      "D. Phase 5 persistence result",
+      "E. Idempotency/concurrency result",
+      "F. Crash/retry result",
+      "G. Transaction/relationship result",
+      "H. Existing DB regression result",
+      "I. Defects discovered",
+      "J. Files changed",
+      "K. Remaining validation blockers",
+      "L. Updated readiness"
+    ],
+    "bytes": 4615
+  },
+  {
+    "path": "output/proofloop-phase1-7-verification-2026-10-09/history/P3-ORIGINAL.md",
+    "headings": [],
+    "bytes": 15169
+  },
+  {
+    "path": "output/proofloop-phase1-7-verification-2026-10-09/history/P3-FINAL.md",
+    "headings": [
+      "A\u2013E. Phase 3 infrastructure and boundaries",
+      "F\u2013G. Files and tests",
+      "H\u2013I. Validation and quality gates",
+      "J. Verification IDs",
+      "K\u2013L. Production gaps and blockers",
+      "M. Recommended Phase 4"
+    ],
+    "bytes": 4696
+  },
+  {
+    "path": "output/proofloop-phase1-7-verification-2026-10-09/history/P1-ORIGINAL.md",
+    "headings": [],
+    "bytes": 8646
+  },
+  {
+    "path": "output/proofloop-phase1-7-verification-2026-10-09/prior-complete-phase-audit.md",
+    "headings": [
+      "Proofloop \u2014 complete historical phase and subphase audit",
+      "Summary",
+      "Audit method and confidence boundary",
+      "A. Reconstructed original roadmap",
+      "Source index",
+      "Chronological reconstruction and changes",
+      "Direct current-code invocation checks",
+      "Hidden-work and false-completion checks",
+      "B. Requirement-level traceability matrix",
+      "Responsibility 1",
+      "Responsibility 2A",
+      "Responsibility 2B",
+      "Responsibility 2.5",
+      "Responsibility 3",
+      "Responsibility 4",
+      "Responsibility 4.5",
+      "Responsibility 5",
+      "Responsibility 6A",
+      "Responsibility 6B",
+      "Responsibility 6C",
+      "Responsibility 6D",
+      "Responsibility 7",
+      "Responsibility 8",
+      "Responsibility 8.1",
+      "Responsibility 8.2",
+      "Responsibility 9",
+      "Search S1",
+      "Search S2",
+      "Search S3",
+      "Search S4",
+      "Search S5",
+      "Search S6",
+      "Search S7",
+      "Hindi/Hinglish",
+      "Cross-phase frozen policy / future rollout",
+      "Project-wide Proofloop",
+      "Public Proofloop generalization",
+      "Optional developer evaluation",
+      "C. Phase-by-phase completion table",
+      "D. Original Phase 8.2 investigation",
+      "E. Unfinished requirement register",
+      "A \u2014 Before Phase 9",
+      "B \u2014 Legitimate Phase 9 work",
+      "C \u2014 Independent Search / Hindi-Hinglish",
+      "D \u2014 Later roadmap / gated financial rollout",
+      "E \u2014 Optional or historical provenance",
+      "Counting and deferral interpretation",
+      "F. Phase 9 readiness",
+      "Frozen V5 and dataset reconciliation",
+      "Quality-report cautions",
+      "Search and language acceptance limits",
+      "G. PROPOSED corrected roadmap \u2014 no new approvals",
+      "Evidence pack index",
+      "Final status"
+    ],
+    "bytes": 297707
+  },
+  {
+    "path": "output/phase9d-broker-recovery-2026-10-14/historical-source/pre-acceptance-closure-1791922173663/phase9d-broker-recovery-checkpoint-2026-10-14.md",
+    "headings": [
+      "Phase 9D-1 \u2014 authenticated accounting, manual operations and broker recovery",
+      "Implementation and accounting authority",
+      "Manual interface and retained history",
+      "Executed recovery boundaries",
+      "Replay, containment and quality",
+      "Remaining acceptance and readiness gates"
+    ],
+    "bytes": 15069
+  },
+  {
+    "path": "output/phase9-vertical-slice-2026-10-09/historical-audit-before-owner-disposition.md",
+    "headings": [
+      "Proofloop \u2014 complete historical phase and subphase audit",
+      "Summary",
+      "Audit method and confidence boundary",
+      "A. Reconstructed original roadmap",
+      "Source index",
+      "Chronological reconstruction and changes",
+      "Direct current-code invocation checks",
+      "Hidden-work and false-completion checks",
+      "B. Requirement-level traceability matrix",
+      "Responsibility 1",
+      "Responsibility 2A",
+      "Responsibility 2B",
+      "Responsibility 2.5",
+      "Responsibility 3",
+      "Responsibility 4",
+      "Responsibility 4.5",
+      "Responsibility 5",
+      "Responsibility 6A",
+      "Responsibility 6B",
+      "Responsibility 6C",
+      "Responsibility 6D",
+      "Responsibility 7",
+      "Responsibility 8",
+      "Responsibility 8.1",
+      "Responsibility 8.2",
+      "Responsibility 9",
+      "Search S1",
+      "Search S2",
+      "Search S3",
+      "Search S4",
+      "Search S5",
+      "Search S6",
+      "Search S7",
+      "Hindi/Hinglish",
+      "Cross-phase frozen policy / future rollout",
+      "Project-wide Proofloop",
+      "Public Proofloop generalization",
+      "Optional developer evaluation",
+      "C. Phase-by-phase completion table",
+      "D. Original Phase 8.2 investigation",
+      "E. Unfinished requirement register",
+      "A \u2014 Before Phase 9",
+      "B \u2014 Legitimate Phase 9 work",
+      "C \u2014 Independent Search / Hindi-Hinglish",
+      "D \u2014 Later roadmap / gated financial rollout",
+      "E \u2014 Optional or historical provenance",
+      "Counting and deferral interpretation",
+      "F. Phase 9 readiness",
+      "Frozen V5 and dataset reconciliation",
+      "Quality-report cautions",
+      "Search and language acceptance limits",
+      "G. PROPOSED corrected roadmap \u2014 no new approvals",
+      "Evidence pack index",
+      "Final status"
+    ],
+    "bytes": 364724
+  },
+  {
+    "path": "docs/search/search-s6-tool-audit-preparation.md",
+    "headings": [
+      "Search S6 \u2014 tool audit preparation",
+      "Current inventory",
+      "Google Places control",
+      "Boundary, naming and schema review",
+      "Response / error / efficiency review",
+      "Explicit AI verifier design",
+      "Readiness"
+    ],
+    "bytes": 10064
+  },
+  {
+    "path": "docs/search/search-s6-development-audit.md",
+    "headings": [
+      "Search S6 development audit \u2014 2026-10-07"
+    ],
+    "bytes": 3667
+  },
+  {
+    "path": "docs/search/search-s4-validation.md",
+    "headings": [
+      "Search S4 \u2014 Luna fallback",
+      "Architecture",
+      "Model and transport",
+      "Fallback eligibility",
+      "Provenance and trusted state",
+      "Geography, follow-ups and unsupported requests",
+      "Telemetry and S5 boundary",
+      "Live preflight",
+      "Validation status",
+      "Files changed",
+      "Unchanged decisions and blockers"
+    ],
+    "bytes": 11103
+  },
+  {
+    "path": "docs/search/search-s3-validation.md",
+    "headings": [
+      "Search S3 \u2014 location grounding and follow-up validation",
+      "A. Architecture",
+      "B\u2013D. Candidates and role integrity",
+      "E\u2013H. Places and standalone targeting",
+      "I\u2013M. Draft updates and follow-ups",
+      "N\u2013U. Wiring and verification checkpoints",
+      "V\u2013X. Remaining dependencies and scope"
+    ],
+    "bytes": 13316
+  },
+  {
+    "path": "docs/search/search-s3-mutation-signoff.md",
+    "headings": [
+      "Search S3 mutation signoff",
+      "Measured results",
+      "Same-source campaigns",
+      "Regression witnesses",
+      "Reproduction"
+    ],
+    "bytes": 4387
+  },
+  {
+    "path": "docs/search/search-s2-validation.md",
+    "headings": [
+      "Search S2 implementation and signoff",
+      "A. Architecture",
+      "B. Files changed",
+      "C. BookingDraft",
+      "D\u2013E. Provider abstraction and actual SDK",
+      "F. Routing fixtures",
+      "G. Extraction coverage",
+      "H\u2013I. Vehicle and temporal semantics",
+      "J. Locations",
+      "K\u2013M. Unsupported requests, fallback and failure",
+      "N. Tests and regression",
+      "O\u2013Q. Coverage, mutation and quality",
+      "R\u2013U. Prototype, production behavior and unresolved decisions",
+      "V. Remaining blockers/dependencies",
+      "W. Readiness"
+    ],
+    "bytes": 14382
+  },
+  {
+    "path": "docs/search/search-s2-observation-mutation-audit.md",
+    "headings": [
+      "Search S2 observation and question mutation audit \u2014 final report review",
+      "Actionable gaps closed \u2014 pending rerun",
+      "Proven equivalent or nonactionable survivors",
+      "Deliberate exclusions"
+    ],
+    "bytes": 5600
+  },
+  {
+    "path": "docs/search/search-s2-mutation-signoff.md",
+    "headings": [
+      "Search S2 mutation signoff",
+      "Campaign identity",
+      "Contract, provenance and provider survivors",
+      "Remaining observation and question survivors",
+      "Remaining extraction/orchestration/validation survivors",
+      "Behavioral review coverage"
+    ],
+    "bytes": 10243
+  },
+  {
+    "path": "docs/search/search-s2-implementation.md",
+    "headings": [
+      "Search S2: bounded routing and extraction",
+      "Service boundary",
+      "Contract and provenance",
+      "Provider and request plan",
+      "Extraction ownership",
+      "Temporal resolution",
+      "Failure and future fallback",
+      "Legacy prototype and next phases",
+      "Validation commands"
+    ],
+    "bytes": 11874
+  },
+  {
+    "path": "docs/search/search-s2-contract-mutation-audit.md",
+    "headings": [
+      "Search S2 contract and provenance mutation audit",
+      "Final campaign: IDs, source identity, and remaining survivors",
+      "Final contracts: diagnostic-only changes (61 IDs)",
+      "Final contracts: acceptance-equivalent/redundant changes (9 IDs)",
+      "Final provenance: acceptance-equivalent/unreachable changes (11 IDs)",
+      "Final follow-up status",
+      "Initial campaign history",
+      "Behavioral survivors: initial contracts (40 IDs)",
+      "Diagnostic-only survivors: contracts (61 IDs)",
+      "Equivalent/redundant survivors: initial contracts (9 IDs)",
+      "Behavioral survivors: provenance (35 IDs)",
+      "Equivalent/redundant survivors: provenance (7 IDs)",
+      "Current-source fixes and follow-up"
+    ],
+    "bytes": 24059
+  },
+  {
+    "path": "docs/search/search-s1-architecture.md",
+    "headings": [
+      "Search S1: architecture, contracts and verification design",
+      "A. Current repository behavior and evidence",
+      "B. Actual source-of-truth terminology",
+      "C. Routing and provider boundaries",
+      "D. One shared BookingDraft contract (proposed TypeScript shape)",
+      "E. Location candidates and conservative generation",
+      "F. Ownership of extraction/enrichment",
+      "G. Proposed Jev questions",
+      "H. Date/time extraction and deterministic resolution",
+      "I. Location grounding and reversal safeguards",
+      "J. Future Luna contract and deterministic fallback plan",
+      "K. Shared validation and actual requirement matrix",
+      "L. Follow-up and review behavior",
+      "M. Search Benchmark V1 design (before S2)",
+      "N. Gaps and decisions (no fixes in S1)",
+      "O. Implementation sequence and P. likely future files",
+      "Q. Responsibility separation and R. S1 acceptance"
+    ],
+    "bytes": 49678
+  },
+  {
+    "path": "docs/search/s5-phase81-review-status.md",
+    "headings": [
+      "Search S5 / Responsibility Phase 8.1 review checkpoint",
+      "Part I - Search S5",
+      "A. Dataset and review",
+      "B. Live provider preflights",
+      "C-H. Routing, fields, reversals, follow-up, fallback and Places metrics",
+      "I-K. Latency, cost and failures",
+      "L. Verification and mutation",
+      "M-N. Blockers and conclusion",
+      "Part II - Responsibility Phase 8.1",
+      "O. OpenAI access re-check",
+      "P-Q. Responsibility Benchmark V2",
+      "R-S. Candidate configuration",
+      "T. Decisions API",
+      "U-X. Live development sample (not held-out)",
+      "Y-Z. Consistency, usage and latency",
+      "AA. Human-final cohort",
+      "AB. Mutation signoff",
+      "AC. Candidate conclusions",
+      "Part III - Isolation / next steps",
+      "AD-AF. Shared infrastructure and production behavior",
+      "AG. Files and review checkpoint"
+    ],
+    "bytes": 16828
+  },
+  {
+    "path": "docs/search/multi-stop-product-backlog.md",
+    "headings": [
+      "Future product workstream: multi-stop rides"
+    ],
+    "bytes": 2545
+  },
+  {
+    "path": "docs/search/hindi-hinglish-normalization-ab-plan-2026-10-09.md",
+    "headings": [
+      "Hindi/Hinglish normalization decision and development A/B plan \u2014 9 October 2026",
+      "Decision",
+      "Frozen development experiment",
+      "Measurements and lock conditions"
+    ],
+    "bytes": 5399
+  },
+  {
+    "path": "docs/search/benchmark-v1/README.md",
+    "headings": [
+      "Product-owner review workflow"
+    ],
+    "bytes": 3361
+  },
+  {
+    "path": "docs/compliance/rcs-requirement-traceability.md",
+    "headings": [
+      "RCS requirement traceability"
+    ],
+    "bytes": 21405
+  },
+  {
+    "path": "docs/compliance/rcs-policy-code-audit.md",
+    "headings": [
+      "RCS Travels policy, code, database, API and UI alignment audit",
+      "Scope, source precedence and limits",
+      "Findings",
+      "Actual state transitions and accounting",
+      "Reviewed complaint workflow proposal",
+      "Validation and external research boundaries",
+      "Substantive policy-statement register",
+      "Expanded control inventory \u2014 FOR LEGAL SIGN-OFF",
+      "Onboarding/document requirement and expiry matrix",
+      "Canonical fare and authoritative amounts",
+      "Refund trigger and outcome matrix (K/L coverage)",
+      "Location lifecycle and exposure",
+      "Grievance/support/appeal capability table"
+    ],
+    "bytes": 84185
+  },
+  {
+    "path": "docs/compliance/rcs-compliance-scenarios.md",
+    "headings": [
+      "RCS compliance adversarial scenarios",
+      "Commission and fare boundaries",
+      "Scheduled advances, cancellation and provider operations",
+      "Dispatch, scheduling and holds",
+      "Causality, complaints and usable review",
+      "Documents and live privacy",
+      "Grievance, legal identity, tax and geography",
+      "Coverage and release discipline"
+    ],
+    "bytes": 32432
+  },
+  {
+    "path": "docs/compliance/rcs-compliance-fix-plan.md",
+    "headings": [
+      "RCS proposed compliance fix plan \u2014 Phase 4 approval required",
+      "Safe to implement now after Phase 4 approval",
+      "Requires business decision",
+      "Requires lawyer confirmation",
+      "Requires CA/tax professional",
+      "Recommended execution order"
+    ],
+    "bytes": 31320
+  },
+  {
+    "path": "docs/benchmarks/session-revocation-checkpoint-2026-10-12.md",
+    "headings": [
+      "Uniform human session revocation checkpoint",
+      "Before and after, with real signed tokens",
+      "Shared implementation and route coverage",
+      "Denials, service failures and logout",
+      "Authorization time and races",
+      "Actual performance and provider limits",
+      "Executed tests and source epochs",
+      "Rollout recommendation and preservation"
+    ],
+    "bytes": 21669
+  },
+  {
+    "path": "docs/benchmarks/s5-phase81-owner-policy-checkpoint.md",
+    "headings": [
+      "Search S5 / Responsibility 8.1 / Search S6 preparation checkpoint",
+      "Search S5",
+      "Responsibility Phase 8.1",
+      "Comparable development cohort: 35 successful cases for all three candidates",
+      "Search S6 preparation",
+      "Validation / signoff limitations",
+      "Remaining work"
+    ],
+    "bytes": 12872
+  },
+  {
+    "path": "docs/benchmarks/s5-phase81-owner-family-checkpoint.md",
+    "headings": [
+      "Search S5 / Responsibility Phase 8.1 / Search S6 checkpoint",
+      "Part I \u2014 Search S5 owner decisions",
+      "Part II \u2014 Search S5 implementation",
+      "Development provider evidence and defects",
+      "Part III \u2014 Responsibility Phase 8.1",
+      "A. Original two unsafe pre-guard cases",
+      "B. Revised development criteria",
+      "C\u2013D. Luna coverage and rate limit",
+      "E. Identical-case comparison",
+      "F\u2013H. Consistency, freeze and access",
+      "I\u2013J. Mutation and held-out readiness",
+      "Part IV \u2014 Search S6 development preparation",
+      "Validation evidence",
+      "Changed-file scope"
+    ],
+    "bytes": 14910
+  },
+  {
+    "path": "docs/benchmarks/s5-phase81-mutation-audit.md",
+    "headings": [
+      "Two-track mutation audit \u2014 global signoff pending",
+      "Responsibility strengthened witness",
+      "Search strengthened witness",
+      "Remaining full-scope work"
+    ],
+    "bytes": 4852
+  },
+  {
+    "path": "docs/benchmarks/s5-phase81-development-checkpoint.md",
+    "headings": [
+      "Search review preparation and responsibility development checkpoint",
+      "Search review preparation",
+      "Google identity investigation",
+      "Responsibility Phase 8.1",
+      "Four original false LEVEL_2 predictions",
+      "Expanded development experiment",
+      "Providers, quota and capabilities",
+      "Validation and remaining work"
+    ],
+    "bytes": 15844
+  },
+  {
+    "path": "docs/benchmarks/s5-phase81-current-development-checkpoint.md",
+    "headings": [
+      "Search S5/S6 and Responsibility Phase 8.1 development checkpoint",
+      "Part I \u2014 Responsibility Phase 8.1",
+      "Part II \u2014 Search S5",
+      "Part III \u2014 Search S6",
+      "Part IV \u2014 Pipeline status and continuation"
+    ],
+    "bytes": 12190
+  },
+  {
+    "path": "docs/benchmarks/s5-phase81-authorized-freeze-checkpoint.md",
+    "headings": [
+      "Authorized Search / Responsibility checkpoint \u2014 6 October 2026",
+      "Part I \u2014 Search S5",
+      "Part II \u2014 Search S6",
+      "Part III \u2014 Responsibility Phase 8.1",
+      "Part IV \u2014 Validation and readiness"
+    ],
+    "bytes": 11566
+  },
+  {
+    "path": "docs/benchmarks/responsibility-v5-hinglish-search-checkpoint-2026-10-09.md",
+    "headings": [
+      "Responsibility V5 final freeze, Hindi/Hinglish temporal V2 and Search continuation \u2014 9 October 2026",
+      "Part I \u2014 Responsibility",
+      "Part II \u2014 Phase 8",
+      "Part III \u2014 Hindi/Hinglish",
+      "Part IV \u2014 Search S5/S6",
+      "Part V \u2014 Validation",
+      "Final statuses"
+    ],
+    "bytes": 16309
+  },
+  {
+    "path": "docs/benchmarks/responsibility-v5-gate-amendment-v1-2026-10-08.md",
+    "headings": [
+      "Responsibility Phase 8.1 gate amendment v1",
+      "Original and amended requirement",
+      "Engineering evidence",
+      "Comparator limits retained",
+      "Gates retained"
+    ],
+    "bytes": 2263
+  },
+  {
+    "path": "docs/benchmarks/responsibility-v5-final-freeze-2026-10-08.md",
+    "headings": [
+      "Responsibility V5 final freeze and one-time held-out"
+    ],
+    "bytes": 2495
+  },
+  {
+    "path": "docs/benchmarks/responsibility-resume-checkpoint-2026-10-08.md",
+    "headings": [
+      "Responsibility-priority continuation \u2014 8 October 2026",
+      "Part I \u2014 Responsibility Luna",
+      "Part II \u2014 Responsibility comparison and selection",
+      "Part III \u2014 Responsibility phase status",
+      "Part IV \u2014 Search V1 / S6",
+      "Part V \u2014 Hindi/Hinglish robustness",
+      "Part VI \u2014 Validation and project state"
+    ],
+    "bytes": 12249
+  },
+  {
+    "path": "docs/benchmarks/responsibility-phase81-severity-failures.md",
+    "headings": [
+      "Responsibility Phase 8.1 \u2014 four Jev severity failures"
+    ],
+    "bytes": 2102
+  },
+  {
+    "path": "docs/benchmarks/responsibility-guard-closure-checkpoint-2026-10-08.md",
+    "headings": [
+      "Responsibility guard audit and Hindi/Hinglish Jev baseline \u2014 8 October 2026",
+      "Part I \u2014 Six unsafe waivers",
+      "Independent correction",
+      "Part II \u2014 Immutable cache replay",
+      "Part III \u2014 Direct API Luna",
+      "Part IV \u2014 Search and Hindi/Hinglish",
+      "Part V \u2014 Quality and phase status"
+    ],
+    "bytes": 12584
+  },
+  {
+    "path": "docs/benchmarks/provider-resume-checkpoint-2026-10-07.md",
+    "headings": [
+      "Responsibility and Search provider-stage checkpoint \u2014 7 October 2026",
+      "Part I \u2014 Responsibility development",
+      "Part II \u2014 Responsibility phase status",
+      "Part III \u2014 Search S5",
+      "Three metric layers",
+      "Cache/state and targeted mutation",
+      "Part IV \u2014 Search S6",
+      "Part V \u2014 Validation and final state"
+    ],
+    "bytes": 13593
+  },
+  {
+    "path": "docs/benchmarks/provider-light-checkpoint-2026-10-07.md",
+    "headings": [
+      "Provider-light continuation checkpoint \u2014 7 October 2026",
+      "Part I \u2014 Responsibility",
+      "Safety strata",
+      "Part II \u2014 Search",
+      "Explicit metric layers",
+      "Part III \u2014 Search S6",
+      "Part IV \u2014 Provider resume manifest and validation"
+    ],
+    "bytes": 11972
+  },
+  {
+    "path": "docs/benchmarks/phase9d-transport-checkpoint-2026-10-13.md",
+    "headings": [
+      "Phase 9D-1 \u2014 separate HTTP transport and independent receipt persistence",
+      "Source-grounded implementation map",
+      "Delivery, receipts and cleanup",
+      "Stop and authorization linearization",
+      "Executed verification",
+      "Remaining gates and next checkpoint"
+    ],
+    "bytes": 17346
+  },
+  {
+    "path": "docs/benchmarks/phase9d-outbox-checkpoint-2026-10-13.md",
+    "headings": [
+      "Phase 9D-1 \u2014 committed-journal outbox and interruption recovery",
+      "Implemented source-to-result slice",
+      "Failures and permanent regressions",
+      "Replay and containment",
+      "Executed verification",
+      "Next implementation checkpoint"
+    ],
+    "bytes": 13985
+  },
+  {
+    "path": "docs/benchmarks/phase9d-custody-closure-progress-2026-10-15.md",
+    "headings": [
+      "Phase 9D-1 custody closure - implementation progress, runtime blocked",
+      "Preserved baseline",
+      "New source awaiting execution",
+      "Runtime blocker",
+      "Resume order",
+      "Resumed execution \u2014 15 October 2026, evening IST"
+    ],
+    "bytes": 9223
+  },
+  {
+    "path": "docs/benchmarks/phase9d-cloud-handoff.md",
+    "headings": [
+      "Phase 9D-1 cloud handoff",
+      "Repository and source preservation",
+      "Last accepted checkpoint",
+      "Continuation source and observed executions",
+      "Cloud evidence availability and resume commands",
+      "Production restrictions",
+      "Preservation checks"
+    ],
+    "bytes": 10160
+  },
+  {
+    "path": "docs/benchmarks/phase9d-broker-recovery-checkpoint-2026-10-14.md",
+    "headings": [
+      "Phase 9D-1 \u2014 authenticated accounting, manual operations and broker recovery",
+      "Implementation and accounting authority",
+      "Manual interface and retained history",
+      "Executed recovery boundaries",
+      "Replay, containment and quality",
+      "Completed requested acceptance and subsequent readiness gates"
+    ],
+    "bytes": 18661
+  },
+  {
+    "path": "docs/benchmarks/phase9d-broker-checkpoint-2026-10-13.md",
+    "headings": [
+      "Phase 9D-1 \u2014 standalone offline broker and conservative durable budgets",
+      "Architecture and trust boundaries",
+      "Durable accounting",
+      "Dispatch and result fencing",
+      "Executed process, SQL and container witnesses",
+      "Saved-input replay",
+      "Verification and evidence boundaries",
+      "Remaining gates"
+    ],
+    "bytes": 16444
+  },
+  {
+    "path": "docs/benchmarks/phase9d-1-sql-certification-checkpoint-2026-10-13.md",
+    "headings": [
+      "Phase 9D-1 \u2014 native SQL verification and historical regression reconciliation",
+      "I. SQL source, execution and numerical boundaries",
+      "II. Actual adversarial tests and two corrections",
+      "III. Historical Phase 5/7 reconciliation and erratum",
+      "IV. Verification and source epochs",
+      "V. Remaining implementation and readiness"
+    ],
+    "bytes": 16906
+  },
+  {
+    "path": "docs/benchmarks/phase9d-1-privacy-calibration-2026-10-12.md",
+    "headings": [
+      "Phase 9D-1 privacy and independent calibration preparation",
+      "Independent review protocol proposal"
+    ],
+    "bytes": 8513
+  },
+  {
+    "path": "docs/benchmarks/phase9d-1-operations-2026-10-12.md",
+    "headings": [
+      "Phase 9D-1 operational and deployment gates",
+      "Metrics contract",
+      "Authentication and in-flight authority",
+      "Rollout sequence proposal"
+    ],
+    "bytes": 10321
+  },
+  {
+    "path": "docs/benchmarks/phase9d-1-continuation-checkpoint-2026-10-13.md",
+    "headings": [
+      "Phase 9D-1 \u2014 worker admission, database authentication and process containment",
+      "Corrections with executable witnesses",
+      "Actual restricted worker execution",
+      "Executed verification and scope",
+      "Authentication and historical database findings",
+      "Remaining blockers and next implementation"
+    ],
+    "bytes": 12968
+  },
+  {
+    "path": "docs/benchmarks/phase9d-1-checkpoint-2026-10-12.md",
+    "headings": [
+      "Responsibility Phase 9D-1 isolated shadow readiness checkpoint",
+      "Actual shadow execution and authority map",
+      "Implemented isolated boundary and executable proofs",
+      "Privacy, calibration and authentication carry-forward",
+      "Historical failures and quality scope",
+      "Readiness decision and every outstanding gate"
+    ],
+    "bytes": 17745
+  },
+  {
+    "path": "docs/benchmarks/phase9d-1-audit-custody-checkpoint-2026-10-14.md",
+    "headings": [
+      "Phase 9D-1 \u2014 separate audit custody for committed broker events",
+      "Architecture and trust",
+      "Integrity, delivery and privacy",
+      "Executed verification",
+      "Retained corrections and reliability debt",
+      "Remaining implementation and readiness"
+    ],
+    "bytes": 15384
+  },
+  {
+    "path": "docs/benchmarks/phase9c-cross-application-checkpoint-2026-10-11.md",
+    "headings": [
+      "Phase 9C \u2014 cross-application journeys, SDK maps and native completion",
+      "Completed cross-application journey",
+      "Corrections and executable witnesses",
+      "Google Cloud CLI and physical maps",
+      "Native GPS and completion continuation",
+      "Mobile customer failure and recovery coverage",
+      "Native rejection and priority escalation extension",
+      "Executed verification",
+      "Reproduction and remaining scope"
+    ],
+    "bytes": 17367
+  },
+  {
+    "path": "docs/benchmarks/phase9c-authenticated-ui-checkpoint-2026-10-10.md",
+    "headings": [
+      "Phase 9C \u2014 authenticated customer and admin browser slice",
+      "A. Customer UI",
+      "Corrections and permanent regressions",
+      "B. Captain app",
+      "C. Admin Responsibility UI",
+      "D. Cross-layer receipts and repeat execution",
+      "E. Safety and quality",
+      "F. Status and next implementation"
+    ],
+    "bytes": 17562
+  },
+  {
+    "path": "docs/benchmarks/phase9c-android-device-checkpoint-2026-10-10.md",
+    "headings": [
+      "Phase 9C \u2014 physical Android setup and native captain journey",
+      "I \u2014 Actual Windows/device setup",
+      "II \u2014 Executed native journey",
+      "III \u2014 Failures corrected and permanent witnesses",
+      "IV \u2014 Isolation, replay and phone cleanup",
+      "V \u2014 Verification closure",
+      "VI \u2014 Remaining scope and status"
+    ],
+    "bytes": 12509
+  },
+  {
+    "path": "docs/benchmarks/phase9c-adversarial-checkpoint-2026-10-12.md",
+    "headings": [
+      "Phase 9C \u2014 adversarial verification and acceptance closure",
+      "Implemented corrections",
+      "Executed evidence",
+      "Reproduction and backend verification",
+      "Scoped quality",
+      "Device and safety boundaries",
+      "Live Clerk and session boundary",
+      "Final review and limitations"
+    ],
+    "bytes": 14833
+  },
+  {
+    "path": "docs/benchmarks/phase9c-adversarial-acceptance-2026-10-11.md",
+    "headings": [
+      "Phase 9C \u2014 adversarial acceptance matrix",
+      "Final review"
+    ],
+    "bytes": 17298
+  },
+  {
+    "path": "docs/benchmarks/phase9-vertical-slice-checkpoint-2026-10-09.md",
+    "headings": [
+      "Phase 9A/9B \u2014 isolated backend lifecycle checkpoint",
+      "Executable functionality",
+      "Verification",
+      "Defects and permanent regressions",
+      "Remaining integration and next steps",
+      "Final status"
+    ],
+    "bytes": 7385
+  },
+  {
+    "path": "docs/benchmarks/phase9-infrastructure-inventory-2026-10-09.md",
+    "headings": [
+      "Phase 9A \u2014 existing infrastructure and integration inventory",
+      "Integration gaps remaining after this inventory"
+    ],
+    "bytes": 6071
+  },
+  {
+    "path": "docs/benchmarks/phase9-financial-lifecycle-checkpoint-2026-10-09.md",
+    "headings": [
+      "Phase 9B \u2014 replacement reservations, refunds and terminal settlement",
+      "I. Replacement lifecycle",
+      "II. Financial closure",
+      "III. Responsibility integration and isolation",
+      "IV. Verification and reproducible evidence",
+      "V. Remaining work and browser handoff"
+    ],
+    "bytes": 11894
+  },
+  {
+    "path": "docs/benchmarks/phase9-final-integration-checkpoint-2026-10-10.md",
+    "headings": [
+      "Phase 9B \u2014 incident integration, executable replay and recovery closure",
+      "I \u2014 Incident coverage",
+      "II \u2014 Device and routing evidence",
+      "III \u2014 Executable replay",
+      "IV \u2014 Safety and isolation",
+      "V \u2014 Quality and execution evidence",
+      "VI \u2014 Acceptance and next implementation"
+    ],
+    "bytes": 14463
+  },
+  {
+    "path": "docs/benchmarks/phase81-provider-light-diagnostics.md",
+    "headings": [
+      "Responsibility provider-light diagnostics \u2014 7 October 2026",
+      "Evidence-sufficiency disagreements",
+      "Safety strata",
+      "Minimality and bounded ablation"
+    ],
+    "bytes": 13148
+  },
+  {
+    "path": "docs/benchmarks/native-luna-110-case-checkpoint-2026-10-08.md",
+    "headings": [
+      "Responsibility native development: 110/113 \u2014 8 October 2026",
+      "PART I \u2014 Responsibility model evaluation",
+      "Observed metrics \u2014 different cohorts",
+      "Native unsafe waiver diagnosis",
+      "Per-class metrics on the identical 110-case cohort",
+      "Consistency and API status",
+      "PART II \u2014 Phase 8",
+      "PART III \u2014 Hindi/Hinglish",
+      "PART IV \u2014 Search",
+      "PART V \u2014 Validation / roadmap"
+    ],
+    "bytes": 12306
+  },
+  {
+    "path": "docs/benchmarks/codex-luna-verified-api-stop-checkpoint-2026-10-08.md",
+    "headings": [
+      "Native Codex Luna verified / Responsibility API stop \u2014 8 October 2026",
+      "I. Native Codex Luna",
+      "II. Responsibility",
+      "API continuation and stop",
+      "III. Search",
+      "IV. Hindi/Hinglish",
+      "V. Verification and roadmap"
+    ],
+    "bytes": 10156
+  },
+  {
+    "path": "docs/benchmarks/codex-luna-development-checkpoint-2026-10-08.md",
+    "headings": [
+      "Responsibility / Search \u2014 Codex Luna development checkpoint, 8 October 2026",
+      "PART I \u2014 Codex Luna adapter",
+      "PART II \u2014 Responsibility three-way comparison",
+      "PART III \u2014 Responsibility phase status",
+      "PART IV \u2014 Search",
+      "PART V \u2014 Hindi/Hinglish",
+      "PART VI \u2014 Final status"
+    ],
+    "bytes": 9050
+  },
+  {
+    "path": "docs/audits/recovered-history/scheduled-ride-spec-v1-and-vm-2026-09-23.md",
+    "headings": [
+      "Recovered historical Product Spec V1 and verification matrix",
+      "A. Final contradiction check",
+      "B. Final updated decisions incorporated",
+      "Compensation entitlement lifecycle",
+      "Compensation reservation and consumption",
+      "RCS funding and recovery",
+      "Scheduled advance and completing driver",
+      "Appeal timing",
+      "Review SLA",
+      "Mandatory payout account",
+      "Payout replacement",
+      "Outstanding-liability lock",
+      "Exceptional reversal",
+      "C. Product freeze status",
+      "D. Full verification matrix",
+      "E. Existing tests that can be reused",
+      "F. Missing verification infrastructure",
+      "G. Scenarios requiring simulator",
+      "H. Production monitoring requirements",
+      "I. Recommended order to build verification infrastructure"
+    ],
+    "bytes": 34948
+  },
+  {
+    "path": "docs/audits/proofloop-project-wide/unverified-requirements.md",
+    "headings": [
+      "Unverified requirements, policy contradictions and open findings",
+      "Confirmed current enforcement gaps",
+      "Authority and scope decisions still required",
+      "Cross-cutting failure hypotheses",
+      "Historical findings: current disposition",
+      "Concurrent changes and evidence discrepancies"
+    ],
+    "bytes": 8875
+  },
+  {
+    "path": "docs/audits/proofloop-project-wide/proofloop-applicability-report.md",
+    "headings": [
+      "Applicability and risk classification",
+      "Classification rule",
+      "Invariant groups",
+      "Ordinal rubric",
+      "Current verification limits"
+    ],
+    "bytes": 8775
+  },
+  {
+    "path": "docs/audits/proofloop-project-wide/methodology.md",
+    "headings": [
+      "Audit boundary, discovery methods and reproduction",
+      "Reproduction",
+      "Explicit limits"
+    ],
+    "bytes": 5613
+  },
+  {
+    "path": "docs/audits/proofloop-project-wide/interaction-dependency-map.md",
+    "headings": [
+      "Interactions, state machines and transaction boundaries",
+      "Booking edges",
+      "Important commit boundaries"
+    ],
+    "bytes": 12409
+  },
+  {
+    "path": "docs/audits/proofloop-project-wide/executive-summary.md",
+    "headings": [
+      "Project-wide Proofloop discovery audit \u2014 11 October 2026 (IST)",
+      "Actual inventory denominators",
+      "Primary treatment counts",
+      "Highest-risk findings",
+      "Recommended first three workstreams",
+      "Source/evidence continuity",
+      "Audit status",
+      "Full artifacts"
+    ],
+    "bytes": 14416
+  },
+  {
+    "path": "docs/audits/proofloop-project-wide/adoption-roadmap.md",
+    "headings": [
+      "Proposed adoption roadmap \u2014 implementation not authorized by this audit",
+      "Execution strategy"
+    ],
+    "bytes": 9354
+  },
+  {
+    "path": "docs/audits/proofloop-project-wide/README.md",
+    "headings": [
+      "Project-wide Proofloop audit"
+    ],
+    "bytes": 1406
+  },
+  {
+    "path": "docs/audits/proofloop-phase1-7-verification-2026-10-09.md",
+    "headings": [
+      "Responsibility Phases 1\u20137 \u2014 code and chat-history verification",
+      "Phase and subphase results",
+      "Corrections to the previous audit",
+      "Fresh verification and source binding",
+      "Confidence and remaining work"
+    ],
+    "bytes": 12530
+  },
+  {
+    "path": "docs/audits/proofloop-complete-phase-audit-2026-10-09.md",
+    "headings": [
+      "Proofloop \u2014 complete historical phase and subphase audit",
+      "Summary",
+      "Audit method and confidence boundary",
+      "A. Reconstructed original roadmap",
+      "Source index",
+      "Chronological reconstruction and changes",
+      "Direct current-code invocation checks",
+      "Hidden-work and false-completion checks",
+      "B. Requirement-level traceability matrix",
+      "Responsibility 1",
+      "Responsibility 2A",
+      "Responsibility 2B",
+      "Responsibility 2.5",
+      "Responsibility 3",
+      "Responsibility 4",
+      "Responsibility 4.5",
+      "Responsibility 5",
+      "Responsibility 6A",
+      "Responsibility 6B",
+      "Responsibility 6C",
+      "Responsibility 6D",
+      "Responsibility 7",
+      "Responsibility 8",
+      "Responsibility 8.1",
+      "Responsibility 8.2",
+      "Responsibility 9",
+      "Search S1",
+      "Search S2",
+      "Search S3",
+      "Search S4",
+      "Search S5",
+      "Search S6",
+      "Search S7",
+      "Hindi/Hinglish",
+      "Cross-phase frozen policy / future rollout",
+      "Project-wide Proofloop",
+      "Public Proofloop generalization",
+      "Optional developer evaluation",
+      "C. Phase-by-phase completion table",
+      "D. Original Phase 8.2 investigation",
+      "E. Unfinished requirement register",
+      "A \u2014 Before Phase 9",
+      "B \u2014 Legitimate Phase 9 work",
+      "C \u2014 Independent Search / Hindi-Hinglish",
+      "D \u2014 Later roadmap / gated financial rollout",
+      "E \u2014 Optional or historical provenance",
+      "Counting and deferral interpretation",
+      "F. Phase 9 readiness",
+      "Frozen V5 and dataset reconciliation",
+      "Quality-report cautions",
+      "Search and language acceptance limits",
+      "G. PROPOSED corrected roadmap \u2014 no new approvals",
+      "Evidence pack index",
+      "Final status"
+    ],
+    "bytes": 365199
+  },
+  {
+    "path": "docs/audits/phase82-owner-retirement-2026-10-09.md",
+    "headings": [
+      "Owner disposition \u2014 historical Phase 8.2"
+    ],
+    "bytes": 1156
+  },
+  {
+    "path": "backend/tests/quality/PHASE7_MUTATION_SIGNOFF.md",
+    "headings": [
+      "Phase 7 shadow-adjudication sign-off",
+      "Functional validation",
+      "Coverage",
+      "Mutation result",
+      "Structural quality",
+      "Scope"
+    ],
+    "bytes": 4280
+  },
+  {
+    "path": "backend/tests/quality/PHASE4_MUTATION_SIGNOFF.md",
+    "headings": [
+      "Phase 4 responsibility-evidence sign-off",
+      "Functional validation",
+      "Mutation result",
+      "Structural quality",
+      "Scope"
+    ],
+    "bytes": 2644
+  },
+  {
+    "path": "backend/tests/README.md",
+    "headings": [
+      "Scheduled-ride verification foundation \u2014 Phase 1",
+      "Existing architecture and boundaries",
+      "Commands",
+      "Starts and destroys a pinned PostgreSQL 17 + PostGIS 3.5 container.",
+      "Dedicated sanitized child + network fence + first real backend lifecycle slice.",
+      "This suite is intentionally separate from the general DB runner below.",
+      "Expert-only path for a dedicated disposable cluster; never an application URL.",
+      "Clock",
+      "Fixtures and real transactions",
+      "Financial assertions",
+      "Matrix enablement (not product verification)",
+      "LEGACY BEHAVIOR \u2014 TO BE MIGRATED",
+      "Phase 1 handoff",
+      "Phase 2B provider fakes",
+      "Phase 3 evidence fixtures",
+      "Phase 4 responsibility evidence fixture engine"
+    ],
+    "bytes": 14430
+  },
+  {
+    "path": "backend/rcs-rag/documents/scheduled-rides.md",
+    "headings": [
+      "Scheduled ride policy",
+      "Scheduled pickup booking window",
+      "Scheduled customer advance",
+      "Scheduled final customer payment",
+      "Scheduled driver assignment",
+      "Scheduled offer priority",
+      "Scheduled captain acceptance deposit",
+      "Pending scheduled failure automation"
+    ],
+    "bytes": 3017
+  },
+  {
+    "path": "backend/rcs-rag/documents/driver-wallet-and-payouts.md",
+    "headings": [
+      "Captain wallet, commission, and payout policy",
+      "Commission on completed platform rides",
+      "Commission floor and rate",
+      "Pass-through charges and commission",
+      "Captain wallet settlement",
+      "Scheduled wallet reservations",
+      "Wallet debt repayment",
+      "Payout eligibility and processing",
+      "Verified destination and available balance",
+      "Pending payout service schedule",
+      "Responsibility deductions"
+    ],
+    "bytes": 3147
+  },
+  {
+    "path": "backend/rcs-rag/documents/complaints-and-account-actions.md",
+    "headings": [
+      "Complaints, responsibility review, and account actions",
+      "Customer complaint reporting",
+      "Complaint financial and conduct consequences",
+      "Captain cancellation incident review",
+      "Pending launch conduct-strike policy",
+      "Responsibility analysis and human authority",
+      "Disputes and existing restrictions"
+    ],
+    "bytes": 2775
+  },
+  {
+    "path": "backend/rcs-rag/documents/compensation-policy.md",
+    "headings": [
+      "Compensation and booking credit policy",
+      "Existing authorized compensation",
+      "Applying compensation to a booking",
+      "Coupon and compensation order",
+      "Compensation reservation and completion",
+      "Compensation when the customer cancels",
+      "Pending compensation awards and penalties",
+      "Compensation disputes"
+    ],
+    "bytes": 2671
+  },
+  {
+    "path": "backend/benchmarks/responsibility/README.md",
+    "headings": [
+      "Responsibility benchmark (Phase 8)",
+      "Run",
+      "Evidence and reference outcomes",
+      "Reproducibility and limitations",
+      "Current unresolved validation"
+    ],
+    "bytes": 6428
+  },
+  {
+    "path": "backend/benchmarks/codex/README.md",
+    "headings": [
+      "Codex Luna development evaluation",
+      "Execution",
+      "Persistence and accounting",
+      "Latest stop",
+      "Standalone terminal commands"
+    ],
+    "bytes": 4828
+  },
+  {
+    "path": "backend/DEPLOY.md",
+    "headings": [
+      "Deploying the API to Cloud Run",
+      "1. One-time project setup \u2014 DONE",
+      "Artifact Registry, with a cleanup policy",
+      "2. Service accounts \u2014 DONE",
+      "2b. The document bucket \u2014 DONE",
+      "Scoped to this ONE bucket, not the project.",
+      "The grant everybody forgets",
+      "3. Secrets",
+      "Source the values from Render, not from your laptop",
+      "Razorpay activation",
+      "4. Deploy",
+      "First, a one-time IAM grant that is not optional",
+      "5. Cloud Scheduler",
+      "Let Scheduler invoke the service.",
+      "dispatch \u2014 offer unfilled scheduled rides. Every 5 minutes.",
+      "document-scan \u2014 verify uploads nothing settled. Every 5 minutes.",
+      "document-expiry \u2014 lapse and remind. Hourly.",
+      "customer-coupons \u2014 idempotently issue the previous month's coupons. Daily.",
+      "responsibility-finalization \u2014 first process Phase 7 shadow adjudication work,",
+      "then finalize expired delivered adverse decisions, retry the durable Phase 6A",
+      "consequence-authorization handoff, and apply eligible Phase 6C/6D consequences.",
+      "Shadow processing never crosses those finalized consequence boundaries. Every minute.",
+      "6. Migrations",
+      "7. Verify"
+    ],
+    "bytes": 15398
+  },
+  {
+    "path": "CONTEXT.md",
+    "headings": [
+      "Latest Phase 9D-1 audit custody checkpoint ? 14 October 2026",
+      "Confirmed marketplace model",
+      "Confirmed customer cancellation model",
+      "Confirmed ride geofences",
+      "Confirmed driver cancellation and complaint model"
+    ],
+    "bytes": 21353
+  }
+]

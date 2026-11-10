@@ -1,0 +1,178 @@
+{
+  "date": "2026-10-16",
+  "branch": "codex/proofloop-evidence-migration-20261016",
+  "head": "2ff51e7d9dade932cd21dfe5d836488d4b9a700a",
+  "baseline": "2ff51e7d9dade932cd21dfe5d836488d4b9a700a",
+  "cloud_head": "8cb24fd359ecd17573897fab5fb702daa7e3aef3",
+  "classification": {
+    "SAFE_GIT": {
+      "files": 9038,
+      "bytes": 167974847,
+      "tracked": 1869,
+      "ignored": 7159,
+      "untracked": 10
+    },
+    "NOT_NEEDED": {
+      "files": 6,
+      "bytes": 7579,
+      "tracked": 0,
+      "ignored": 3,
+      "untracked": 0
+    },
+    "PRIVATE_ARTIFACT": {
+      "files": 1123,
+      "bytes": 63127402,
+      "tracked": 9,
+      "ignored": 1113,
+      "untracked": 0
+    },
+    "LARGE_ARTIFACT": {
+      "files": 8549,
+      "bytes": 6197805045,
+      "tracked": 0,
+      "ignored": 8549,
+      "untracked": 0
+    },
+    "GENERATED_REBUILDABLE": {
+      "files": 294,
+      "bytes": 498340195,
+      "tracked": 0,
+      "ignored": 75,
+      "untracked": 0
+    },
+    "MISSING": {
+      "files": 180,
+      "bytes": 0,
+      "tracked": 0,
+      "ignored": 0,
+      "untracked": 0
+    }
+  },
+  "six_baselines": [
+    {
+      "path": "output/session-revocation-2026-10-12/manifest.json",
+      "size": 24361,
+      "sha256": "13b77d527076c3293ae9e5fc4a8493d3eb0cdead5f883d8333b9ae3482130a94",
+      "classification": "SAFE_GIT",
+      "git": "IGNORED",
+      "security_flags": []
+    },
+    {
+      "path": "output/responsibility-v5-freeze-2026-10-08/freeze-manifest.json",
+      "size": 17277,
+      "sha256": "db5cc243d7ceeffc0e71bca33f4ac71c6d8b8b55220aca690ef82fb4183085e9",
+      "classification": "SAFE_GIT",
+      "git": "IGNORED",
+      "security_flags": []
+    },
+    {
+      "path": "output/phase9c-adversarial-2026-10-11/execution-manifest.json",
+      "size": 629064,
+      "sha256": "713414e09744040a5291781e7ddfea7f7b87efb4bea03868a0bcd408bac544bb",
+      "classification": "SAFE_GIT",
+      "git": "IGNORED",
+      "security_flags": []
+    },
+    {
+      "path": "output/phase9d-audit-custody-2026-10-14/manifest.json",
+      "size": 43243,
+      "sha256": "5b14a6b9dda1781abfdc906a6b0d3fbbd7c0f0c326db02f33e2f677ed1eeec28",
+      "classification": "SAFE_GIT",
+      "git": "IGNORED",
+      "security_flags": []
+    },
+    {
+      "path": "output/phase9d-audit-custody-2026-10-14/audit-coverage-matrix-current.json",
+      "size": 24419,
+      "sha256": "58d323144e41bf4c9a9e5545ca4a62d6d76c1a7f839b18ce3488ae92c9479e8a",
+      "classification": "SAFE_GIT",
+      "git": "IGNORED",
+      "security_flags": []
+    },
+    {
+      "path": "output/phase9d-audit-custody-2026-10-14/readiness-gates.json",
+      "size": 93786,
+      "sha256": "39561946059e5ff3287bb3ce39d36404791af535d7afca13857ec24a9b734209",
+      "classification": "SAFE_GIT",
+      "git": "IGNORED",
+      "security_flags": []
+    }
+  ],
+  "source_checks": [
+    {
+      "manifest": "output/session-revocation-2026-10-12/manifest.json",
+      "sources": 3,
+      "current_source_drift": []
+    },
+    {
+      "manifest": "output/responsibility-v5-freeze-2026-10-08/freeze-manifest.json",
+      "sources": 22,
+      "current_source_drift": []
+    },
+    {
+      "manifest": "output/phase9d-audit-custody-2026-10-14/manifest.json",
+      "sources": 28,
+      "current_source_drift": []
+    }
+  ],
+  "documentation_files": 104,
+  "referenced_files": 13682,
+  "unresolved_edges": 177,
+  "unresolved_unique_paths": 180,
+  "cloud_only_unresolved_paths": 2,
+  "identity_issue_files": 2386,
+  "security_flag_counts": {
+    "PROVIDER_SECRET": 4,
+    "CREDENTIAL_URL": 3,
+    "LOCAL_CREDENTIAL_MATCH": 2,
+    "PRIVATE_CONFIGURATION_OR_KEY": 8,
+    "AUTH_TOKEN": 3,
+    "OPAQUE_ARCHIVE_REQUIRES_CONTROLLED_STORAGE": 15,
+    "SECRET_FIELD": 1017
+  },
+  "excluded_file_count": 27800,
+  "excluded_file_bytes": 20232256661,
+  "excluded_tree_count": 161,
+  "scope_limit": "Generated trees are boundary records. excluded-output entries are metadata-only optional/excluded outputs, not transfer-ready reviewed files. Every relevant indexed available file has a full SHA-256. No raw evidence modified.",
+  "safe_git_new_ignored_files": 7159,
+  "safe_git_new_ignored_bytes": 109754000,
+  "strict_review_changes": {
+    "generated_payloads": 2
+  },
+  "unresolved_by_disposition": {
+    "CLOUD_ONLY_NOT_LOCAL": 5,
+    "EXTERNAL_ORIGINAL_HISTORY_UNAVAILABLE": 174,
+    "INCOMPLETE_COMPARATOR_OUTPUT_NOT_PRODUCED": 1
+  },
+  "artifact_hash_mismatch_paths": 1,
+  "source_epoch_drift_paths": 210,
+  "contextual_reference_review": {
+    "claims_checked": 226588,
+    "claim_status_counts": {
+      "MATCH": 220980,
+      "SOURCE_EPOCH_DRIFT": 5607,
+      "ARTIFACT_HASH_MISMATCH": 1
+    },
+    "literal_boundary_counts": {
+      "RESOLVED_SOURCE_RELATIVE_OR_ALIAS_REFERENCE": 130531,
+      "GENERATED_OR_SOURCE_MAP_LOCATION": 11409,
+      "SOURCE_PACKAGE_TEST_OR_DOCUMENTATION_LITERAL": 5030,
+      "STATIC_AUDIT_DISCOVERY_REFERENCE": 253
+    },
+    "additional_raw_files": 2202,
+    "additional_raw_bytes": 2612846281,
+    "unresolved_unique_paths": 817
+  },
+  "private_artifact_transfer": {
+    "files": 1114,
+    "logical_bytes": 63090090,
+    "unique_content_bytes": 63060955
+  },
+  "large_artifact_transfer": {
+    "files": 8549,
+    "logical_bytes": 6197805045,
+    "unique_content_bytes": 6162015332
+  },
+  "full_available_index_files": 18788,
+  "metadata_format": "Deterministic gzip of JSON/JSONL; compression changes migration metadata only, never historical evidence."
+}

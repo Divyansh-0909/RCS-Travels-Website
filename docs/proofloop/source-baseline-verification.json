@@ -1,0 +1,25 @@
+{
+  "checks": [
+    {
+      "manifest": "output/session-revocation-2026-10-12/manifest.json",
+      "sources": 3,
+      "local_mismatch": [],
+      "cloud_mismatch": []
+    },
+    {
+      "manifest": "output/responsibility-v5-freeze-2026-10-08/freeze-manifest.json",
+      "sources": 22,
+      "local_mismatch": [],
+      "cloud_mismatch": []
+    },
+    {
+      "manifest": "output/phase9d-audit-custody-2026-10-14/manifest.json",
+      "sources": 28,
+      "local_mismatch": [],
+      "cloud_mismatch": []
+    }
+  ],
+  "freeze_hash_declared": "e484afc4c7fa724ea29af6edd962c48b814dc73a10e4f4a5e33833ad26afbe75",
+  "freeze_hash_compact_json_matches": true,
+  "cloud_parent": "2ff51e7d9dade932cd21dfe5d836488d4b9a700a"
+}

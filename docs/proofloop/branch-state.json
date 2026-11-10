@@ -1,0 +1,149 @@
+{
+  "base": "2ff51e7d9dade932cd21dfe5d836488d4b9a700a",
+  "cloud_head": "8cb24fd359ecd17573897fab5fb702daa7e3aef3",
+  "cloud_branch": "work/phase9d1-custody-closure",
+  "migration_branch": "codex/proofloop-evidence-migration-20261016",
+  "local_uncommitted": [
+    {
+      "status": " M",
+      "path": "backend/tests/phase9dCustodyClosure.test.js",
+      "sha256": "5cb51f56dd073dd614ad13911b82f35614f04e1b69d6a432977d63680e3edf08"
+    },
+    {
+      "status": " M",
+      "path": "backend/tests/phase9dCustodyClosureTransport.test.js",
+      "sha256": "1717024a8c59724a75fa94614f15fce4d1252a9dc6b0440ca0d461b0daeeb57a"
+    },
+    {
+      "status": " M",
+      "path": "backend/tests/phase9dCustodyObserver.test.js",
+      "sha256": "b91764d9a561aeb5cdc13f02e7ee6c3918f84cc3ff021c891d0b8d90621e11f0"
+    },
+    {
+      "status": " M",
+      "path": "docs/benchmarks/phase9d-custody-closure-progress-2026-10-15.md",
+      "sha256": "88e8c1a87523f41b3d8b8993d13c4e743c81b994916bdfd1da750caa18bd74f3"
+    },
+    {
+      "status": " M",
+      "path": "tools/phase9d/closure-capsule.mjs",
+      "sha256": "4e1ede52d6dd648878cf3dcb04e77fb67fff708827f2d13c04910a0750f4952d"
+    },
+    {
+      "status": " M",
+      "path": "tools/phase9d/closure-contract.mjs",
+      "sha256": "d8d7473ba78e45620ec28be68618dc224612e48ebec03e671485d129af3fa28f"
+    },
+    {
+      "status": " M",
+      "path": "tools/phase9d/closure-http.mjs",
+      "sha256": "d8bd4e78cf0e6d3e162a58cee5c28b99518194f3bd5dee9376dd7c179f93b8f5"
+    },
+    {
+      "status": " M",
+      "path": "tools/phase9d/closure-ingress.mjs",
+      "sha256": "12c8aa7494c1186f670cfac9d54230afc46e6ba9a05eea9568cbeddbd95856b7"
+    },
+    {
+      "status": " M",
+      "path": "tools/phase9d/closure-observer.mjs",
+      "sha256": "4a2a0ff79dddc978f55f22d26809f3ebb9f13b6383f52d1d927702824f94a1c4"
+    },
+    {
+      "status": " M",
+      "path": "tools/phase9d/closure-run.mjs",
+      "sha256": "79ed0967e2e4c104ada5c2c9d9a36b787af3b4d25bb4afdf169a78939e44a416"
+    },
+    {
+      "status": "??",
+      "path": "backend/tests/helpers/phase9dClosureIngressCrash.mjs",
+      "sha256": "255a928fe49dff748030bc9be78532158f2c71e54174a9a187df67a9f794ff8b"
+    },
+    {
+      "status": "??",
+      "path": "backend/tests/phase9dCustodyReplayInput.test.js",
+      "sha256": "92d525af964023c22848ecb2eab3629a9b6dc562848a5a239e1db24cde00cb75"
+    },
+    {
+      "status": "??",
+      "path": "tools/phase9d/closure-denial-contract.mjs",
+      "sha256": "a5813ead2022db8d6dbc5d7586382eef0890289561928b8cad388dc9be45ce3d"
+    },
+    {
+      "status": "??",
+      "path": "tools/phase9d/closure-eslint.config.mjs",
+      "sha256": "f30a7e34e99445f3bbfc643133ed6914292af225ede89495e3bb6aa88e856962"
+    },
+    {
+      "status": "??",
+      "path": "tools/phase9d/closure-progress.mjs",
+      "sha256": "3ed5c7c827ecc90f1f993d98b5ecd51365e7676aa919927e7423d693259f46a7"
+    },
+    {
+      "status": "??",
+      "path": "tools/phase9d/closure-quality.mjs",
+      "sha256": "9d27f93b92852abe8a565199e6c9cdf4af54a60ab6e868a05d48692a3283a2b3"
+    },
+    {
+      "status": "??",
+      "path": "tools/phase9d/closure-replay-input.mjs",
+      "sha256": "f1c590a88a4323510a08073575e9fd82d458db5b020b43a67b68e51c53ebe372"
+    },
+    {
+      "status": "??",
+      "path": "tools/phase9d/closure-scope.mjs",
+      "sha256": "16805350cea1d3c56a484177cf417a9676219d736c988a2f06ba4f59285c625d"
+    },
+    {
+      "status": "??",
+      "path": "tools/phase9d/closure-stryker.config.mjs",
+      "sha256": "91cbdb6fe7f60db1a9f34944e8c627f0ba16f63c88a7f1e784fb7a86fc304d38"
+    }
+  ],
+  "cloud_changed": [
+    "backend/tests/helpers/phase9dCustodyClosureFixture.js",
+    "backend/tests/helpers/phase9dCustodyLineageFixture.js",
+    "backend/tests/helpers/phase9dCustodyReplayFixture.js",
+    "backend/tests/helpers/phase9dCustodyReplaySender.mjs",
+    "backend/tests/helpers/phase9dTransportProcesses.js",
+    "backend/tests/integration/phase9dCustodyClosure.test.js",
+    "backend/tests/integration/phase9dCustodyLineage.test.js",
+    "backend/tests/integration/phase9dCustodyReplay.test.js",
+    "backend/tests/integration/phase9dCustodySafety.test.js",
+    "backend/tests/integration/phase9dCustodySql.test.js",
+    "backend/tests/phase9dCustodyAdversarial.test.js",
+    "backend/tests/phase9dCustodyBoundary.test.js",
+    "backend/tests/phase9dCustodyClosureTransport.test.js",
+    "docs/benchmarks/phase9d-1-audit-custody-cloud-report-2026-10-16.md",
+    "docs/benchmarks/phase9d-1-cloud-preservation-2026-10-16.md",
+    "tools/phase9d/audit-cloud-matrix.mjs",
+    "tools/phase9d/audit-diagnostics.mjs",
+    "tools/phase9d/audit-eslint.config.mjs",
+    "tools/phase9d/audit-focus.mjs",
+    "tools/phase9d/audit-focus2-stryker.config.mjs",
+    "tools/phase9d/audit-replay-compare.mjs",
+    "tools/phase9d/audit-replay.mjs",
+    "tools/phase9d/audit-stryker.config.mjs",
+    "tools/phase9d/closure-admission.sql",
+    "tools/phase9d/closure-baseline.mjs",
+    "tools/phase9d/closure-capsule-controller.mjs",
+    "tools/phase9d/closure-capsule-entry.mjs",
+    "tools/phase9d/closure-capsule.mjs",
+    "tools/phase9d/closure-client.mjs",
+    "tools/phase9d/closure-consistency.sql",
+    "tools/phase9d/closure-ingress.mjs",
+    "tools/phase9d/closure-lineage.sql",
+    "tools/phase9d/closure-network-canary.mjs",
+    "tools/phase9d/closure-postgres.Dockerfile",
+    "tools/phase9d/closure-run.mjs",
+    "tools/phase9d/closure-source.sql",
+    "tools/phase9d/closure-transport.sql"
+  ],
+  "overlapping_paths": [
+    "backend/tests/phase9dCustodyClosureTransport.test.js",
+    "tools/phase9d/closure-capsule.mjs",
+    "tools/phase9d/closure-ingress.mjs",
+    "tools/phase9d/closure-run.mjs"
+  ],
+  "scope": "No merge, reset, clean, rebase, commit or push. Cloud inspected through fetched remote-tracking ref."
+}
