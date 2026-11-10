@@ -4,7 +4,7 @@ import { validateDraftProvenance, validateParseInputProvenance } from './provena
 import { collectObservations } from './observations.ts';
 import { extractionRequest, locationRequest, routingRequest } from './questions.ts';
 import { answer, extractSimple, locationField, unsupportedRequests } from './extractor.ts';
-import { SearchProviderError, type DecisionBatch, type DecisionRequest, type SearchDecisionProvider } from './provider.ts';
+import { SearchProviderError, SearchQuestionContractError, validateDecisionRequest, type DecisionBatch, type DecisionRequest, type SearchDecisionProvider } from './provider.ts';
 import { issue, type ParseIssue } from './fields.ts';
 import { resolveTemporal, type TemporalResolution } from './temporal.ts';
 import { missingFields, observationLimit, preserveUserFields, validateRoles, validateEndpoints } from './validation.ts';
@@ -38,6 +38,7 @@ async function decide(provider: SearchDecisionProvider, request: DecisionRequest
   if (request.state.length > SEARCH_LIMITS.providerContext || Object.keys(request.questions).length > SEARCH_LIMITS.questionsPerBatch) {
     throw new SearchLimitError();
   }
+  validateDecisionRequest(request);
   output.providerMetadata.attemptedRequests += 1;
   const batch = await provider.decide(request);
   output.providerMetadata.completedRequests += 1;
@@ -67,7 +68,7 @@ function inputFailure(output: RideSearchParseResult, codes: string[]): RideSearc
 
 function providerFailure(output: RideSearchParseResult, failure: Error | object): RideSearchParseResult {
   const code = failure instanceof SearchProviderError ? failure.code : 'JEV_PROVIDER_ERROR';
-  output.issues.push(issue(code, 'provider', 'INVALID'));
+  output.issues.push(issue(code, failure instanceof SearchQuestionContractError ? 'questions' : 'provider', 'INVALID'));
   addFallback(output, code);
   if (output.draft !== undefined) {
     const safe = emptyDraft(output.draft.query);

@@ -1,6 +1,8 @@
 import type { DateExpression, LocationCandidate, SourceRef, TimeExpression, VehiclePreference } from './contracts.ts';
 import { queryRef, resolved, unspecified } from './fields.ts';
 import { observeHindiDates, observeHindiTimes, observeHindiNow } from './hindiTemporal.ts';
+import { conditionalVehicleEnd, insideQuote } from './negation.ts';
+import { excludedMention } from './vehiclePolicy.ts';
 
 export type QueryIdentity = { id: string; revision: number; text: string };
 export type Observed<T> = { id: string; value: T; ref: Extract<SourceRef, { kind: 'QUERY_SPAN' }>; text: string };
@@ -90,7 +92,7 @@ export function observeTimes(query: QueryIdentity, locations: LocationCandidate[
 }
 
 const FLAG_PATTERNS: Record<Flag, RegExp> = {
-  sharing: /\b(?:(no|not)\s+)?(sharing|shared|pooling|solo|private)\b/gi,
+  sharing: /(?<![\p{L}\p{M}\p{N}_])(?:(no|not)\s+)?(sharing|shared|pooling|solo|private|साझा|शेयरिंग)(?![\p{L}\p{M}\p{N}_])(?:(?:\s+(?:cab|car|कैब))?\s+(nahi|nhi|नहीं)(?:\s+(?:chahiye|karni|चाहिए|करनी))?)?/giu,
   isOutstation: /\b(?:(no|not)\s+)?(outstation|local)\b/gi,
   preferSafeRoute: /\b(?:(no|not)\s+)?(safer? route|fastest route|standard route)\b/gi,
   needsCarrier: /\b(?:(no|not|without)\s+)?(?:(?:roof|luggage)\s+)?(carrier)\b/gi,
@@ -98,21 +100,39 @@ const FLAG_PATTERNS: Record<Flag, RegExp> = {
 const NEGATIVE_FLAGS = /^(solo|private|local|fastest route|standard route)$/i;
 const UNSUPPORTED_PATTERNS: [UnsupportedKind, RegExp][] = [
   ['STOP', /\b(?:via|stop\s+(?:at|by)|pick\s+(?:up\s+)?(?:my|a)\s+friend)[^,;.]*/gi],
-  ['RETURN_JOURNEY', /\b(?:return|round\s+trip|come\s+back)[^,;.]*/gi],
+  ['RETURN_JOURNEY', /(?<![\p{L}\p{M}\p{N}_])(?:return|round\s+trip|come\s+back|wapas|वापस)(?![\p{L}\p{M}\p{N}_])[^,;.]*/giu],
   ['RENTAL', /\b(?:rent|rental)\b[^,;.]*/gi],
-  ['AC_PREFERENCE', /\bAC(?:\s+car)?\b/g],
+  ['AC_PREFERENCE', /\b(?:[Nn]on[ -]?)?AC(?:\s+car)?\b/g],
   ['CONDITIONAL_PREFERENCE', /\b(?:if|unless|provided|depending)\b[^,;.]*/gi],
+  ['CONDITIONAL_PREFERENCE', /(?<![\p{L}\p{M}\p{N}_])(?:agar|yadi|अगर|यदि|(?:nahi|नहीं)\s+toh?)(?![\p{L}\p{M}\p{N}_])[^,;.]*/giu],
 ];
 
+function hindiRental(query: QueryIdentity, locations: LocationCandidate[]): Observations['unsupported'] {
+  // A complete affirmative rental phrase, not a substring of a place name,
+  // quoted business name, negated request, or an invented rental duration field.
+  return observe(query, /(?<![\p{L}\p{M}\p{N}_])(?:गाड़ी|कार|कैब)\s+किरा(?:ये|ए)\s+पर\s+चाहिए(?![\p{L}\p{M}\p{N}_])/gu,
+    () => 'RENTAL' as const, locations)
+    .filter(value => !insideQuote(query.text, value.ref.start, value.ref.end))
+    .map(value => ({ kind: value.value, ref: value.ref }));
+}
+
+function vehicleConditions(query: QueryIdentity, vehicles: Observed<VehicleClass>[]): Observations['unsupported'] {
+  return vehicles.flatMap(vehicle => {
+    const end = conditionalVehicleEnd(query.text, vehicle.ref.end);
+    if (end === undefined || insideQuote(query.text, vehicle.ref.start, end) || excludedMention({ query }, vehicle)) return [];
+    return [{ kind: 'CONDITIONAL_PREFERENCE', ref: queryRef(query, vehicle.ref.start, end) }];
+  });
+}
+
 export function collectObservations(query: QueryIdentity, locations: LocationCandidate[]): Observations {
-  const vehicles = observe<VehicleClass>(query, /\b(premium\s+suv|suv_premium|regular\s+suv|hatchback|sedan|suv|XL)\b/gi,
-    m => /^(premium\s+suv|suv_premium)$/i.test(m[0]) ? 'suv_premium' : /^(regular\s+suv|XL)$/i.test(m[0]) ? 'suv' : m[0].toLowerCase() as VehicleClass, locations);
+  const vehicles = observe<VehicleClass>(query, /(?<![\p{L}\p{M}\p{N}_])(premium\s+suv|suv_premium|regular\s+suv|hatchback|sedan|suv|XL|सेडान|एसयूवी)(?![\p{L}\p{M}\p{N}_])/giu,
+    m => /^(premium\s+suv|suv_premium)$/i.test(m[0]) ? 'suv_premium' : /^(regular\s+suv|XL|एसयूवी)$/i.test(m[0]) ? 'suv' : m[0] === 'सेडान' ? 'sedan' : m[0].toLowerCase() as VehicleClass, locations);
   const flags = Object.fromEntries(Object.entries(FLAG_PATTERNS).map(([field, pattern]) =>
-    [field, observe(query, pattern, m => m[1] === undefined && !NEGATIVE_FLAGS.test(m[2]), locations)])) as Observations['flags'];
+    [field, observe(query, pattern, m => m[1] === undefined && m[3] === undefined && !NEGATIVE_FLAGS.test(m[2]), locations)])) as Observations['flags'];
   return { vehicles, dates: observeDates(query, locations), times: observeTimes(query, locations), flags,
     passengers: observe(query, /(?<![\w.,])(-?\d+(?:\.\d+)?)\s+(?:people|passengers?|persons?)\b/gi, m => Number(m[1]), locations),
-    unsupported: UNSUPPORTED_PATTERNS.flatMap(([kind, pattern]) => observe(query, pattern, () => kind, locations)
-      .map(candidate => ({ kind, ref: candidate.ref }))),
+    unsupported: [...UNSUPPORTED_PATTERNS.flatMap(([kind, pattern]) => observe(query, pattern, () => kind, locations)
+      .map(candidate => ({ kind, ref: candidate.ref }))), ...hindiRental(query, locations), ...vehicleConditions(query, vehicles)],
     now: observe(query, /\b(?:now|right now|immediately|asap)\b/gi, () => true, locations).map(candidate => candidate.ref).concat(observeHindiNow(query, locations)),
     anyVehicle: observe(query, /\b(?:any\s+(?:car|cab|vehicle)|anything(?:\s+except)?)\b/gi,
       () => true, locations).map(candidate => candidate.ref) };

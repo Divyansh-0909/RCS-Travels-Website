@@ -32,7 +32,8 @@ test('provider classifications and candidate IDs cannot bypass consistency or me
     assert.equal(result.draft.complexity, 'NOT_APPLICABLE');
   }
   for (const field of ['pickup_candidate', 'drop_candidate', 'passenger_candidate']) {
-    const { result } = await run('3 people from campus to airport', { [field]: 'invented' });
+    const { result } = await run('3 people from campus to airport', { [field]: 'invented' }, input => ({ ...input,
+      candidates: [candidateFor(input, 'campus', 'A'), candidateFor(input, 'airport', 'B')] }));
     assert.deepEqual(result.fallbackReasons, ['JEV_INVALID_RESPONSE']);
     assert.equal(result.draft.passengers.state, 'UNSPECIFIED');
   }

@@ -23,7 +23,7 @@ async function seedReview() {
 test('Jev authentication and permission failures remain operational auth issues, not language fallback', async () => {
   for (const ErrorType of [AuthenticationError, PermissionDeniedError]) {
     const provider = createJevSearchProvider({ client: { systemOne: async () => { throw new ErrorType(401, {}, new Headers(), 'private'); } } });
-    await assert.rejects(provider.decide({ state: 'a ride', questions: { q: { kind: 'choice', instructions: 'route', choices: { A: 'A' } } } }), error => error.code === 'JEV_AUTH_ERROR');
+    await assert.rejects(provider.decide({ state: 'a ride', questions: { q: { kind: 'choice', instructions: 'route', choices: { A: 'A', B: 'B' } } } }), error => error.code === 'JEV_AUTH_ERROR');
   }
 });
 

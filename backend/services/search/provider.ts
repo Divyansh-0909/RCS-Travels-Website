@@ -57,6 +57,12 @@ export class SearchProviderError extends Error {
   }
 }
 
+export class SearchQuestionContractError extends SearchProviderError {
+  constructor() {
+    super('JEV_SCHEMA_ERROR')
+  }
+}
+
 type SearchClock = { now(): Date }
 type SearchSdkClient = Pick<TypeSafeClient, 'systemOne'>
 
@@ -95,25 +101,25 @@ function sameKeys(actual: Record<string, JsonValue>, expected: string[]): boolea
   return keys.length === expected.length && keys.every(key => expected.includes(key))
 }
 
-function validateRequest(request: DecisionRequest): void {
-  if (typeof request.state !== 'string' || !recordOf(request.questions)) throw new SearchProviderError('JEV_SCHEMA_ERROR')
-  if (request.state.length > SEARCH_LIMITS.providerContext) throw new SearchProviderError('JEV_SCHEMA_ERROR')
+export function validateDecisionRequest(request: DecisionRequest): void {
+  if (typeof request.state !== 'string' || !recordOf(request.questions)) throw new SearchQuestionContractError()
+  if (request.state.length > SEARCH_LIMITS.providerContext) throw new SearchQuestionContractError()
   const keys = Object.keys(request.questions)
   if (keys.length === 0 || keys.length > SEARCH_LIMITS.questionsPerBatch || keys.some(key => key.length === 0)) {
-    throw new SearchProviderError('JEV_SCHEMA_ERROR')
+    throw new SearchQuestionContractError()
   }
   for (const question of Object.values(request.questions)) {
     const rawQuestion = recordOf(question)
     if (!rawQuestion || typeof rawQuestion.instructions !== 'string' || rawQuestion.instructions.length === 0) {
-      throw new SearchProviderError('JEV_SCHEMA_ERROR')
+      throw new SearchQuestionContractError()
     }
     if (rawQuestion.kind === 'noul') continue
     const choices = recordOf(rawQuestion.choices)
-    if (rawQuestion.kind !== 'choice' || !choices || Object.keys(choices).length === 0 || Object.keys(choices).length > MAX_CHOICE_OPTIONS) {
-      throw new SearchProviderError('JEV_SCHEMA_ERROR')
+    if (rawQuestion.kind !== 'choice' || !choices || Object.keys(choices).length < 2 || Object.keys(choices).length > MAX_CHOICE_OPTIONS) {
+      throw new SearchQuestionContractError()
     }
     if (Object.entries(choices).some(([key, value]) => key.length === 0 || typeof value !== 'string')) {
-      throw new SearchProviderError('JEV_SCHEMA_ERROR')
+      throw new SearchQuestionContractError()
     }
   }
 }
@@ -202,7 +208,7 @@ export function createJevSearchProvider({
   const sdkClient: SearchSdkClient = client ?? new TypeSafeClient({ timeout: timeoutMs, retry: { maxRetries: 0 } })
   return {
     async decide(request) {
-      validateRequest(request)
+      validateDecisionRequest(request)
       const startedAt = clock.now().getTime()
       try {
         const response = await sdkClient.systemOne(

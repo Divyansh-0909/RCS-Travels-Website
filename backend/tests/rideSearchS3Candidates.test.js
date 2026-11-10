@@ -14,7 +14,7 @@ test('candidate normalization preserves original spacing and stable versioned id
   assert.equal(generated.candidates[0].normalizedText, 'Jaypee main gate');
   for (const candidate of generated.candidates) {
     assert.match(candidate.candidateId, /^loc_[a-f0-9]{24}$/);
-    assert.equal(candidate.generatorVersion, 'ride-search-location-candidates-v4');
+    assert.equal(candidate.generatorVersion, 'ride-search-location-candidates-v5-b1');
     assert.equal(candidate.exactText, input.text.slice(candidate.start, candidate.end));
   }
 });

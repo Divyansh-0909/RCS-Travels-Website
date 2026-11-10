@@ -162,7 +162,7 @@ test('critical prompt contracts prevent omission from becoming complexity, thres
 test('extraction only asks observation-gated questions and creates supported unsupported diagnostics', () => {
   const bare = extractionRequest(inputFor('from campus to airport'), '2026-10-02T06:30:00.000Z', collectObservations(query('from campus to airport'), []));
   assert.deepEqual(Object.keys(bare.questions), [
-    'pickup_candidate', 'drop_candidate', 'pickup_presence', 'drop_presence', 'pickup_mentioned', 'drop_mentioned',
+    'pickup_presence', 'drop_presence', 'pickup_mentioned', 'drop_mentioned',
     'role_consistency', 'unsupported_service', 'timing_mode',
   ]);
   const input = inputFor('stop at Sector 18');

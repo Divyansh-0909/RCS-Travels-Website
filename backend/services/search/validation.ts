@@ -2,6 +2,7 @@ import type { BookingDraft, ParseInput } from './contracts.ts';
 import { answer } from './extractor.ts';
 import type { DecisionBatch } from './provider.ts';
 import { issue, type ParseIssue } from './fields.ts';
+import { sourceHindiRole } from './locations/hindiRoutes.ts';
 
 export function validateRoles(draft: BookingDraft, batch: DecisionBatch, issues: ParseIssue[]): void {
   for (const role of ['pickup', 'drop'] as const) {
@@ -31,7 +32,8 @@ export function validateDirection(draft: BookingDraft, issues: ParseIssue[]): vo
     const after = draft.query.text.slice(candidate.end);
     const explicitPickup = /\b(?:from|pick(?:up|\s+me(?:\s+up)?)\s+(?:at|from))\s*$/i.test(before) || /^\s+se\b/i.test(after);
     const explicitDrop = /\b(?:to|drop(?:\s+me)?(?:\s+off)?\s+at)\s*$/i.test(before);
-    if ((role === 'pickup' && explicitDrop) || (role === 'drop' && explicitPickup)) {
+    const hindiRole = sourceHindiRole(draft.query.text, candidate.start, candidate.end);
+    if ((role === 'pickup' && explicitDrop) || (role === 'drop' && explicitPickup) || (hindiRole !== undefined && hindiRole !== role)) {
       issues.push(issue('ROLE_CONFLICT', role, 'INVALID', field.refs));
     }
   }

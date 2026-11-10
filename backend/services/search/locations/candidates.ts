@@ -5,8 +5,9 @@ import { timeZoneTokens } from '../timezonePolicy.ts';
 import { explicitTemporalSuffixBoundary } from './temporalSuffix.ts';
 import { locationPrefixEnd } from './requestPrefix.ts';
 import { hindiTemporalSuffixStart } from '../hindiTemporal.ts';
+import { hindiRouteSpans } from './hindiRoutes.ts';
 
-const GENERATOR_VERSION = 'ride-search-location-candidates-v4';
+const GENERATOR_VERSION = 'ride-search-location-candidates-v5-b1';
 const MAX_CANDIDATE_TEXT = SEARCH_LIMITS.aggregateCandidateText;
 const MAX_SINGLE_CANDIDATE_TEXT = 500;
 const directionalMethod = 'DIRECTIONAL_CLAUSE' as const;
@@ -83,8 +84,10 @@ function addDirectionalCandidates(specs: CandidateSpec[], text: string): void {
   addDelimited(specs, text, /\bdrop(?:\s+me)?\s+at\s+(.+?)(?=$|\s+(?:and\s+)?\b(?:from|via)\b)/gi, directionalMethod);
   addDelimited(specs, text, /\bgo\s+to\s+(.+?)(?=$|\s+\b(?:from|via|pickup|pick|drop)\b)/gi, directionalMethod);
   addDelimited(specs, text, /\bvia\s+(.+?)(?=$|\s+\b(?:to|from|pickup|pick|drop|go)\b)/gi, directionalMethod);
-  addHinglishCandidates(specs, text);
-  addForwardHinglishCandidates(specs, text);
+  for (const span of hindiRouteSpans(text)) {
+    // The Hindi grammar already owns its exact boundaries, including quoted names.
+    specs.push({ start: span.start, end: span.end, method: directionalMethod });
+  }
   addSimpleToCandidates(specs, text);
 }
 
@@ -95,28 +98,6 @@ function addToCandidates(specs: CandidateSpec[], text: string): void {
     const start = matched.index + matched[0].lastIndexOf(phrase);
     addRange(specs, text, start, start + phrase.length, directionalMethod);
   }
-}
-
-function addHinglishCandidates(specs: CandidateSpec[], text: string): void {
-  for (const matched of text.matchAll(/(?:^|\s)(.+?)\s+jaana\s+hai\s+(.+?)\s+se\b/gi)) {
-    const destination = matched[1]!;
-    const origin = matched[2]!;
-    const destinationStart = matched.index + matched[0].indexOf(destination);
-    const originStart = matched.index + matched[0].lastIndexOf(origin);
-    addRange(specs, text, destinationStart, destinationStart + destination.length, directionalMethod);
-    addRange(specs, text, originStart, originStart + origin.length, directionalMethod);
-  }
-}
-
-function addForwardHinglishCandidates(specs: CandidateSpec[], text: string): void {
-  const matched = /^\s*(.+?)\s+se\s+(.+?)\s*$/i.exec(text);
-  if (!matched) return;
-  const origin = matched[1]!;
-  const destination = matched[2]!;
-  const originStart = matched[0].indexOf(origin);
-  const destinationStart = matched[0].lastIndexOf(destination);
-  addRange(specs, text, originStart, originStart + origin.length, directionalMethod);
-  addRange(specs, text, destinationStart, destinationStart + destination.length, directionalMethod);
 }
 
 function addSimpleToCandidates(specs: CandidateSpec[], text: string): void {

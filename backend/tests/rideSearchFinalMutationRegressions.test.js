@@ -174,7 +174,7 @@ test('directional guards reject reversal across explicit role forms, whitespace 
       const issues = [];
       validateRoles(draft, batchOf({ pickup_presence: 'PRESENT', drop_presence: 'PRESENT', role_consistency: 'CONSISTENT' }), issues);
       assert.equal(issues.length > 0, swapped, text);
-      const conflicted = text.includes(' se ') ? ['drop'] : ['pickup', 'drop'];
+      const conflicted = ['pickup', 'drop'];
       assert.deepEqual(issues, swapped ? conflicted.map(role => issue('ROLE_CONFLICT', role, 'INVALID', draft[role].refs)) : [], text);
     }
   }

@@ -1,6 +1,7 @@
 import type { BookingDraft, SourceRef, VehiclePreference } from './contracts.ts';
 import type { Observed, VehicleClass } from './observations.ts';
 import { issue, type ParseIssue } from './fields.ts';
+import { negativeRequirementAfter, insideQuote } from './negation.ts';
 
 export function statedAnyAcceptance(draft: Pick<BookingDraft, 'query'>, refs: SourceRef[]): boolean {
   return refs.length > 0 && refs.every(ref => ref.kind === 'QUERY_SPAN'
@@ -15,8 +16,10 @@ export function sourceOnlyAnyPreference(draft: Pick<BookingDraft, 'query'>, ment
 }
 
 export function excludedMention(draft: Pick<BookingDraft, 'query'>, candidate: Observed<VehicleClass>): boolean {
+  if (insideQuote(draft.query.text, candidate.ref.start, candidate.ref.end)) return false;
   const prefix = draft.query.text.slice(Math.max(0, candidate.ref.start - 40), candidate.ref.start);
-  return /\b(?:no|not|except|without|don't(?:\s+send)?|do\s+not(?:\s+send)?)\s*(?:an?\s+)?$/i.test(prefix);
+  return /\b(?:no|not|except|without|don't(?:\s+send)?|do\s+not(?:\s+send)?)\s*(?:an?\s+)?$/i.test(prefix)
+    || negativeRequirementAfter(draft.query.text, candidate.ref.end);
 }
 
 export function statedVehicleExclusions(draft: Pick<BookingDraft, 'query'>, candidates: Observed<VehicleClass>[]): VehicleClass[] {

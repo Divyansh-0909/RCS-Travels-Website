@@ -4,6 +4,7 @@ import { SearchProviderError } from './provider.ts';
 import type { Observations, Observed, VehicleClass, Flag } from './observations.ts';
 import { ambiguous, issue, resolved, unspecified, type ParseIssue } from './fields.ts';
 import { excludedMention, statedVehicleExclusions, exclusionOnlyPreference, sourceOnlyAnyPreference, statedAnyAcceptance } from './vehiclePolicy.ts';
+import { conditionalVehicleAfter } from './negation.ts';
 
 export function answer(batch: DecisionBatch, name: string, allowed: string[]): string {
   const value = batch.choices[name]?.choice;
@@ -24,6 +25,11 @@ export function selectObserved<T>(batch: DecisionBatch, name: string, candidates
 }
 
 export function locationField(batch: DecisionBatch, name: string, candidates: LocationCandidate[]): BookingDraft['pickup'] {
+  if (!candidates.length) {
+    const selected = batch.choices[name]?.choice;
+    if (selected !== undefined && selected !== 'NONE_OR_UNCLEAR') throw new SearchProviderError('JEV_INVALID_RESPONSE');
+    return unspecified();
+  }
   const selected = answer(batch, name, [...candidates.map(candidate => candidate.candidateId), 'NONE_OR_UNCLEAR']);
   if (selected === 'NONE_OR_UNCLEAR') return unspecified();
   const candidate = candidates.find(value => value.candidateId === selected)!;
@@ -51,7 +57,8 @@ function statedStrength(draft: BookingDraft, candidate: Observed<VehicleClass>):
   const before = draft.query.text.slice(Math.max(0, candidate.ref.start - 20), candidate.ref.start);
   const after = draft.query.text.slice(candidate.ref.end, candidate.ref.end + 20);
   if (/^\s+only\b/i.test(after) || /\bonly\s*$/i.test(before)) return 'REQUIRED';
-  if (/\b(?:prefer(?:red)?|ideally)\s*$/i.test(before) || /^\s+(?:preferred|if\s+(?:available|possible))\b/i.test(after)) return 'PREFERRED';
+  if (/\b(?:prefer(?:red)?|ideally)\s*$/i.test(before) || /^\s+(?:preferred|if\s+(?:available|possible))\b/i.test(after)
+    || conditionalVehicleAfter(draft.query.text, candidate.ref.end)) return 'PREFERRED';
   return 'REQUIRED';
 }
 

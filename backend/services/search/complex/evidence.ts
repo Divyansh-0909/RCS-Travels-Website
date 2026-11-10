@@ -6,6 +6,7 @@ import { unsupportedRequests } from '../extractor.ts';
 import { sourceRefs } from '../locations/sessionRefs.ts';
 import { excludedMention, statedVehicleExclusions } from '../vehiclePolicy.ts';
 import { preserveOwnerConflicts } from './ownerConflicts.ts';
+import { conditionalVehicleAfter } from '../negation.ts';
 
 function semantic(value: object): string {
   return JSON.stringify(value, (key, child) => key === 'refs' ? undefined : child);
@@ -33,7 +34,8 @@ function vehicleEvidence(draft: BookingDraft, observations: ReturnType<typeof co
       const before = draft.query.text.slice(Math.max(0, value.ref.start - 20), value.ref.start);
       const after = draft.query.text.slice(value.ref.end, value.ref.end + 20);
       const required = /\bonly\s*$/i.test(before) || /^\s+only\b/i.test(after);
-      const preferred = /\bprefer(?:red)?\s*$/i.test(before) || /^\s+preferred\b/i.test(after);
+      const preferred = /\bprefer(?:red)?\s*$/i.test(before) || /^\s+preferred\b/i.test(after)
+        || conditionalVehicleAfter(draft.query.text, value.ref.end);
       if (required && field.strength !== 'REQUIRED' || preferred && field.strength !== 'PREFERRED') {
         issues.push(issue('LUNA_UNSUPPORTED_FACT', 'vehicleClass', 'INVALID'));
       }
