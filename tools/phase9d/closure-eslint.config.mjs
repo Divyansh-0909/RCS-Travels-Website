@@ -1,0 +1,4 @@
+import base from './eslint.config.mjs';
+import {closureCoreScope,closureCapsuleScope} from './closure-scope.mjs';
+const all=['tools/phase9d/closure-*.mjs','tools/phase9d/audit-replay.mjs','backend/tests/phase9dCustodyClosure*.test.js','backend/tests/phase9dCustodyReplayInput.test.js','backend/tests/phase9dCustodyObserver.test.js','backend/tests/integration/phase9dCustodyClosure.test.js','backend/tests/integration/phase9dCustodyLineage.test.js','backend/tests/helpers/phase9dCustodyClosureFixture.js','backend/tests/helpers/phase9dCustodyLineageFixture.js','backend/tests/helpers/phase9dClosureIngressCrash.mjs'];
+export default [...base.map(config=>({...config,files:all,rules:{...config.rules,complexity:'off'}})),...base.map(config=>({...config,files:[...closureCoreScope,...closureCapsuleScope]}))];

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {timingSafeEqual} from 'node:crypto';
 import {validateEvent,validateFrame,sourceMac} from './custody-protocol.mjs';
-import {denialClasses} from './closure-observer.mjs';
+import {validateDenialRecord} from './closure-denial-contract.mjs';
 const actions={
   'source-lineage-v2':['SOURCE_LINEAGE','OUTBOX_CREATED','OUTBOX_CHANGED','LOCAL_AUDIT','RECOVERY_AUTHORIZED'],
   'receiver-lineage-v2':['RECEIPT_ACCEPTED','WORK_ADMITTED','WORK_CHANGED','LOCAL_AUDIT','RECOVERY_AUTHORIZED'],
@@ -13,9 +13,8 @@ export function validateClosureEvent(event){
   if(event.schema==='custody-denial-v1'){
     const {serverIdentity,authenticatedRole,actorTrust,sqlstate,logSessionHash,logLine,denialClass,...base}=event;
     assert.equal(base.service,'denial-observer-v2');assert.equal(base.actor,'trusted_observer');assert.equal(base.ownerHash,null);assert.equal(base.database,serverIdentity);
-    assert.match(serverIdentity,/^[a-f0-9]{64}$/);assert.match(logSessionHash,/^[a-f0-9]{64}$/);assert.match(authenticatedRole,/^[a-z][a-z0-9_]{0,62}$/);assert.match(logLine,/^[1-9][0-9]{0,14}$/);
-    assert.ok(['42501','28P01'].includes(sqlstate));assert.equal(actorTrust,sqlstate==='42501'?'AUTHENTICATED':'CLAIMED_UNAUTHENTICATED');
-    assert.ok(denialClasses.includes(denialClass));assert.equal(base.action,sqlstate==='42501'?'PERMISSION_DENIED':'AUTHENTICATION_FAILED');
+    validateDenialRecord({serverIdentity,authenticatedRole,actorTrust,sqlstate,logSessionHash,logLine,denialClass,observed:base.observed});
+    assert.equal(base.action,sqlstate==='42501'?'PERMISSION_DENIED':'AUTHENTICATION_FAILED');
     validateClosureEvent({...base,schema:'custody-event-v2'});return event;
   }
   const {identityHash,ownerHash,...base}=event;

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {generateKeyPairSync,randomUUID} from 'node:crypto';
-import {keyIdentity,commitment} from '../../../tools/phase9d/custody-protocol.mjs';
+import {randomUUID} from 'node:crypto';
+import {commitment} from '../../../tools/phase9d/custody-protocol.mjs';
 import {durableReceipt,historicalVerification} from '../../../tools/phase9d/closure-keys.mjs';
 import {custodyLineageFixture} from '../helpers/phase9dCustodyLineageFixture.js';
 import {validateClosureFrame} from '../../../tools/phase9d/closure-contract.mjs';
@@ -38,6 +38,13 @@ test('committed source lineage and actual outbox/receiver transitions reach inde
       transport=await transportProcess({mode:'receiver',connectionString:f.uri(f.receiver.name,'shadow9d_capture'),requestKey});
       const sender=await transportProcess({mode:'sender',connectionString:f.uri(f.source.name,'shadow9d_exporter'),privacyKey:EXPORT_TEST_KEY,requestKey,endpoint:`http://127.0.0.1:${transport.result.port}/v1/shadow/deliveries`});
       assert.equal(sender.result.status,'ACKED');await sender.exited;
+      const last=(await f.a.query('SELECT payload FROM outbox9d.deliveries ORDER BY id DESC LIMIT 1')).rows[0].payload,conflict={...last,originalCommitment:'f'.repeat(64)};
+      await assert.rejects(sendShadowDelivery(`http://127.0.0.1:${transport.result.port}/v1/shadow/deliveries`,requestKey,conflict));
+      assert.equal((await f.b.query("SELECT count(*)::int n FROM audit9d.events WHERE action='TRANSPORT_BINDING_REJECTED'")).rows[0].n,1);
+      const rejection=(await f.b.query("SELECT encode(sha256(convert_to(to_jsonb(e)::text,'UTF8')),'hex') hash FROM audit9d.events e WHERE action='TRANSPORT_BINDING_REJECTED'")).rows[0].hash;
+      assert.equal((await f.b.query("SELECT count(*)::int n FROM custody_lineage.events WHERE event->>'sourceHash'=$1",[rejection])).rows[0].n,1);
+      const capture=new (await import('pg')).Client({connectionString:f.uri(f.receiver.name,'shadow9d_capture')});await capture.connect();
+      try{await assert.rejects(capture.query('SELECT transport9d.receive_committed($1)',[conflict]),{code:'42501'});}finally{await capture.end();}
       const actions=[];for(const stream of f.streams)actions.push(...(await stream.inspector.query('SELECT event FROM custody_lineage.events ORDER BY seq')).rows.map(r=>r.event.action));
       for(const action of ['SOURCE_LINEAGE','OUTBOX_CREATED','OUTBOX_CHANGED','WORK_ADMITTED','RECEIPT_ACCEPTED','LOCAL_AUDIT'])assert.ok(actions.includes(action),action);
       witness.groups.push('actual-outbox-transport-receiver');
@@ -73,6 +80,21 @@ test('committed source lineage and actual outbox/receiver transitions reach inde
     await t.test('capture forgery and history changes are denied to actual senders',async()=>{
       for(const stream of f.streams)for(const statement of ["SELECT custody_lineage.emit('SOURCE_LINEAGE','fake',NULL,'{}','application_transaction')",'SELECT secret FROM custody_lineage.control','UPDATE custody_lineage.events SET hash=repeat(\'0\',64)','DELETE FROM custody_lineage.events','TRUNCATE custody_lineage.events'])await assert.rejects(stream.sender.query(statement),{code:'42501'});
       assert.deepEqual(await consequenceState(f.source.client),witness.financialBefore);witness.groups.push('producer-and-financial-isolation');
+    });
+    await t.test('independent committed-row comparison detects omission without inventing a missing business event',async()=>{
+      for(const stream of f.streams){
+        assert.equal((await stream.inspector.query('SELECT custody_lineage.capture_status() state')).rows[0].state.status,'CONSISTENCY_SNAPSHOT_REQUIRED');
+        await stream.inspector.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
+        try{assert.equal((await stream.inspector.query('SELECT custody_lineage.capture_status() state')).rows[0].state.status,'CAPTURE_CONSISTENT');}
+        finally{await stream.inspector.query('ROLLBACK');}
+        const before=(await stream.inspector.query('SELECT count(*)::int n FROM custody_lineage.events')).rows[0].n;
+        await stream.owner.query('BEGIN ISOLATION LEVEL REPEATABLE READ');
+        try{
+          await stream.owner.query('DELETE FROM custody_lineage.events WHERE seq=(SELECT min(seq) FROM custody_lineage.events)');
+          assert.equal((await stream.owner.query('SELECT custody_lineage.capture_status() state')).rows[0].state.status,'CAPTURE_GAP');
+        }finally{await stream.owner.query('ROLLBACK');}
+        assert.equal((await stream.inspector.query('SELECT count(*)::int n FROM custody_lineage.events')).rows[0].n,before);
+      }
     });
     assert.deepEqual(witness.groups,['committed-source-lineage','actual-outbox-transport-receiver','offline-broker-guard-usage-stop-cleanup','independent-lineage-custody','producer-and-financial-isolation']);
     witness.receipts=receipts;witness.verificationKeys=(await f.inspector.query('SELECT key_id,public_key,status,epoch FROM custody.keys ORDER BY epoch')).rows;

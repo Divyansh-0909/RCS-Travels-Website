@@ -62,6 +62,9 @@ END $$;
 REVOKE ALL ON ALL FUNCTIONS IN SCHEMA custody_export FROM PUBLIC;
 RESET ROLE;
 CREATE TRIGGER custody_analysis_reservation BEFORE INSERT ON broker9d.attempts FOR EACH ROW EXECUTE FUNCTION custody_export.admit_analysis();
+-- Registration also creates retained audit history. Closing only reservation
+-- left an unbounded registration path during a custodian outage.
+CREATE TRIGGER custody_analysis_registration BEFORE INSERT ON broker9d.requests FOR EACH ROW EXECUTE FUNCTION custody_export.admit_analysis();
 CREATE TRIGGER custody_analysis_dispatch BEFORE UPDATE OF status ON broker9d.requests FOR EACH ROW
   WHEN(NEW.status='DISPATCH_ADMITTED' AND OLD.status IS DISTINCT FROM NEW.status) EXECUTE FUNCTION custody_export.admit_analysis();
 CREATE TRIGGER custody_analysis_send BEFORE UPDATE OF send_at ON broker9d.attempts FOR EACH ROW

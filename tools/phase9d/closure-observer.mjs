@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {canonical,commitment,sourceMac,FROZEN} from './custody-protocol.mjs';
-export const denialClasses=['APPLICATION_WRITE','BUDGET_CONFIGURATION','AUDIT_HISTORY','ROLE_ESCALATION','AUTHENTICATION','SIGNING_SECRET','GUARD_WRITE','OPERATIONS_CONTROL','DATABASE_DENIAL'];
+import {denialClasses,validateDenialRecord} from './closure-denial-contract.mjs';
+import {validateClosureFrame} from './closure-contract.mjs';
 const digest=value=>createHash('sha256').update(value).digest('hex');
 // Input must come from the trusted server-log channel, never an actor's stdout.
 export function minimizeServerDenials(bytes,{serverIdentity,roles,correlations=[]}){
@@ -22,8 +23,17 @@ export function minimizeServerDenials(bytes,{serverIdentity,roles,correlations=[
 }
 export function appendDenialObservations(state,records,{source,key,maxRecords=1000,maxBytes=1048576}){
   assert.ok(Number.isSafeInteger(maxRecords)&&maxRecords>0&&maxRecords<=10000);assert.ok(Number.isSafeInteger(maxBytes)&&maxBytes>0&&maxBytes<=10485760);
-  const next=structuredClone(state),seen=new Map(next.frames.map(f=>[f.event.identityHash,f]));
+  assert.deepEqual(Object.keys(state),['frames']);assert.ok(Array.isArray(state.frames)&&state.frames.length<=maxRecords);
+  assert.ok(Buffer.byteLength(JSON.stringify(state))<=maxBytes,'OBSERVER_STORAGE_LIMIT');
+  assert.ok(Array.isArray(records)&&records.length<=10000);
+  const sources=new Map([[source,{id:source,key,service:'denial-observer-v2'}]]),seen=new Map();let previous='0'.repeat(64);
+  for(const [index,frame]of state.frames.entries()){
+    validateClosureFrame(frame,sources);assert.equal(frame.event.schema,'custody-denial-v1');assert.equal(frame.event.sequence,String(index+1));assert.equal(frame.event.previous,previous);
+    assert.ok(!seen.has(frame.event.identityHash),'OBSERVER_DUPLICATE_IDENTITY');seen.set(frame.event.identityHash,frame);previous=commitment(frame.event);
+  }
+  const next=structuredClone(state);
   for(const record of records){
+    validateDenialRecord(record);
     const identity=digest(canonical({serverIdentity:record.serverIdentity,logSessionHash:record.logSessionHash,logLine:record.logLine}));
     const sourceHash=digest(canonical(record));
     if(seen.has(identity)){assert.equal(seen.get(identity).event.sourceHash,sourceHash,'OBSERVER_CONFLICT');continue;}

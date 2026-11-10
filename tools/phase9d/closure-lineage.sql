@@ -13,7 +13,7 @@ SET search_path=pg_catalog,custody_lineage,pg_temp AS $$
 $$;
 CREATE FUNCTION custody_lineage.emit(action text,id text,owner_id text,original jsonb,actor text) RETURNS bigint LANGUAGE plpgsql SECURITY DEFINER
 SET search_path=pg_catalog,custody_lineage,pg_temp SET TimeZone='UTC' AS $$
-DECLARE c custody_lineage.control; identity_key text; e jsonb; digest text; existing bigint; original_digest text;
+DECLARE c custody_lineage.control; identity_key text; e jsonb; digest text; existing bigint; original_digest text; transport_service text;
 BEGIN
   SELECT * INTO STRICT c FROM custody_lineage.control FOR UPDATE;
   identity_key=encode(__CRYPTO__.hmac(id,c.secret,'sha256'),'hex');
@@ -30,6 +30,8 @@ BEGIN
     END IF;
     RAISE EXCEPTION 'AUDIT_HISTORY_CAPACITY' USING ERRCODE='54000';
   END IF;
+  IF c.service='source-lineage-v2' THEN SELECT service_id::text INTO transport_service FROM outbox9d.transport_configuration;
+  ELSE SELECT service_id::text INTO transport_service FROM transport9d.configuration;END IF;
   e=jsonb_build_object('schema','custody-event-v2','source',c.source::text,'service',c.service,
     'database',encode(sha256(convert_to(current_database(),'UTF8')),'hex'),'sequence',(c.seq+1)::text,'previous',c.head,
     'localId',(c.seq+1)::text,'sourceHash',digest,'identityHash',identity_key,
@@ -37,7 +39,7 @@ BEGIN
     'action',action,'actor',actor,'request',NULL,'attempt',NULL,'receipt',original->>'receipt',
     'evidenceHash',COALESCE(original->>'evidenceHash',original->>'evidence_hash',original#>>'{payload,evidenceHash}'),
     'evidenceVersion',CASE WHEN COALESCE(original->>'evidenceHash',original->>'evidence_hash',original#>>'{payload,evidenceHash}') IS NOT NULL THEN 'responsibility-evidence-v1' END,
-    'configuration',encode(sha256(convert_to('isolated-custody-lineage-v2','UTF8')),'hex'),
+    'configuration',encode(sha256(convert_to(jsonb_build_object('adapter','isolated-custody-lineage-v2','transportService',transport_service,'protocol','shadow-export-v1','projection','shadow-minimized-v1','export','inactive-isolated-export-v1')::text,'UTF8')),'hex'),
     'generation',original->>'epoch','frozen','e484afc4c7fa724ea29af6edd962c48b814dc73a10e4f4a5e33833ad26afbe75',
     'observed',to_char(c.now_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'));
   digest=encode(sha256(convert_to('custody-event-v1'||chr(10)||custody_lineage.serialize(e),'UTF8')),'hex');
@@ -80,11 +82,22 @@ BEGIN
 END $$;
 CREATE FUNCTION custody_lineage.ack(n bigint,h text,r jsonb) RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER
 SET search_path=pg_catalog,custody_lineage,pg_temp AS $$
+DECLARE b jsonb;
 BEGIN
+  -- Match the existing receipt protocol. Cryptographic/key-registry verification
+  -- remains the authorized verifier's separate check, not a SQL trust claim.
+  IF jsonb_typeof(r) IS DISTINCT FROM 'object' OR r-ARRAY['body','signature']<>'{}'::jsonb OR
+    jsonb_typeof(r->'body') IS DISTINCT FROM 'object' OR jsonb_typeof(r->'signature') IS DISTINCT FROM 'string' THEN RETURN false; END IF;
+  b=r->'body';
+  IF b-ARRAY['schema','custodian','source','sequence','hash','custodySequence','receipt','keyId','outcome']<>'{}'::jsonb OR
+    NOT (b ?& ARRAY['schema','custodian','source','sequence','hash','custodySequence','receipt','keyId','outcome']) OR
+    EXISTS(SELECT 1 FROM jsonb_each(b) WHERE jsonb_typeof(value) IS DISTINCT FROM 'string') OR
+    b->>'schema' IS DISTINCT FROM 'custody-receipt-v1' OR b->>'custodian' IS DISTINCT FROM 'isolated-custody-v1' OR
+    b->>'outcome' IS DISTINCT FROM 'COMMITTED' OR COALESCE(b->>'custodySequence','')!~'^[1-9][0-9]{0,14}$' OR
+    COALESCE(b->>'receipt','')!~'^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$' OR
+    COALESCE(b->>'keyId','')!~'^[a-f0-9]{64}$' OR COALESCE(r->>'signature','')!~'^[A-Za-z0-9+/]{86}==$' THEN RETURN false; END IF;
   UPDATE custody_lineage.events SET status='ACKED',receipt=r WHERE seq=n AND hash=h AND
-    r#>>'{body,hash}'=h AND r#>>'{body,sequence}'=n::text AND r#>>'{body,source}'=event->>'source' AND
-    r#>>'{body,custodian}'='isolated-custody-v1' AND r#>>'{body,outcome}'='COMMITTED' AND
-    COALESCE(r->>'signature','')~'^[A-Za-z0-9+/]{86}==$' AND (receipt IS NULL OR receipt=r);
+    b->>'hash'=h AND b->>'sequence'=n::text AND b->>'source'=event->>'source' AND (receipt IS NULL OR receipt=r);
   RETURN FOUND;
 END $$;
 REVOKE ALL ON ALL FUNCTIONS IN SCHEMA custody_lineage FROM PUBLIC;

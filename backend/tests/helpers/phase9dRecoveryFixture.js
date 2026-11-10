@@ -64,6 +64,13 @@ export async function recoveryFixture(count=3){
     const reset=async()=>{await b.query('TRUNCATE broker9d.usage_receipts,broker9d.operations,broker9d.results,broker9d.events,broker9d.attempts,broker9d.requests');await b.query('UPDATE broker9d.control SET stopped=false,generation=generation+1,now_at=$1',[EXPORT_TEST_AT]);for(const payload of payloads)await b.query("UPDATE shadow9d.work SET snapshot=$1,status='PENDING' WHERE id=$2",[payload.payload.snapshot,payload.receipt.body.workId]);};
     const run=async(config)=>{const child=await brokerProcess({...config,connectionString:uri(receiver.name,config.mode==='guard'?'broker9d_guard':'broker9d_exec')});children.push(child);return child;};
     return {source,receiver,a,b,exec,guard,ops,reconciler,connect,uri,message,register,row,receipt,reset,run,close,baseline,payloads,
+      async suspendOwnedConnectionsForRestart(){
+        // Own the deliberate shutdown: terminate our children and end all
+        // persistent controller/admin clients before stopping PostgreSQL.
+        for(const child of children)await child.kill();
+        await Promise.all([...clients,a,b].map(client=>client.end()));
+        await receiver.suspendForRestart();await source.suspendForRestart();
+      },
       unchanged:async()=>assert.deepEqual(await consequenceState(source.client),baseline),
       advance:seconds=>b.query('UPDATE broker9d.control SET now_at=now_at+make_interval(secs=>$1)',[seconds]),
       control:async(action)=>{const c=(await b.query('SELECT generation FROM broker9d.control')).rows[0];return brokerCall(ops,'operate',[randomUUID(),null,action,c.generation,action==='STOP'?'OPERATOR_STOP':'OPERATOR_RESUME']);}};

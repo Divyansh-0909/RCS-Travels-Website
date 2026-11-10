@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "enabled": false,
+  "productionDeletion": false,
+  "totalBytes": 1073741824,
+  "reserveBytes": 134217728,
+  "staleSeconds": 60,
+  "backupDeadlineSeconds": 108000,
+  "restoreDeadlineSeconds": 604800,
+  "maxOperations": 1000,
+  "budgets": {
+    "history": 402653184,
+    "wal": 134217728,
+    "temp": 16777216,
+    "logs": 16777216,
+    "archive": 134217728,
+    "backups": 268435456,
+    "artifacts": 16777216
+  }
+}

@@ -1,0 +1,47 @@
+# Phase 9D-1 — storage safeguards and recovery handoff
+
+23 October 2026 IST. The evidence directory retains the task's 22 October start date; receipts preserve actual UTC times. Continues [finite-volume acceptance](phase9d-1-finite-volume-recovery-checkpoint-2026-10-22.md) and [retention integration](phase9d-1-retention-integration-checkpoint-2026-10-22.md). **Selected storage engineering: VERIFIED_IN_ISOLATION. Universal/deployed storage limits, real operational alert delivery and off-host acceptance: PARTIAL/PENDING. Production OFF. P8 NOT_STARTED.**
+
+Evidence: [manifest](../../output/phase9d-storage-safeguards-2026-10-22/manifest.json), [selected executions](../../output/phase9d-storage-safeguards-2026-10-22/selected-executions.json), [quality](../../output/phase9d-storage-safeguards-2026-10-22/quality.json), [preservation](../../output/phase9d-storage-safeguards-2026-10-22/preservation.json), [readiness](../../output/phase9d-storage-safeguards-2026-10-22/readiness-current.json).
+
+## Implemented scope
+
+All implementation files are additions; existing SQL, application/financial/authentication/signing behavior and the accepted backup implementation remain unchanged. No application migration, provider configuration, scheduler, paid resource or production deletion was enabled.
+
+| Component | Actual implementation and boundary |
+| --- | --- |
+| Overall/category admission | `storage_safeguards.py` budgets history, WAL, temp, logs, archive, backups and artifacts. Complete fresh disjoint observations, backup/restore deadlines and control evidence are required. Reservations serialize through SQLite and survive disconnect/restart; operation reuse cannot authorize a second write. Cooperating writers only, not a universal disk quota. |
+| Database/storage observation | `storage_probe.py` reads whole-database sizes, cluster WAL/temp across tablespaces, slot retention, archiver counters, old transactions and actual settings. External directory scans reject links/overlap/limits. Index/TOAST bytes are not added twice. Unknown coverage and unsupported privileges fail closed. |
+| Bounded output | The optional owned-directory writer caps bytes and file count for enrolled logs/archive/backups/artifacts, preserves existing files and refuses full storage. It does not intercept native/provider log writers. No pruning/deletion policy was invented. |
+| Backup admission | `guarded_backup.py` wraps the unchanged encrypted backup. It reserves conservative scratch/ciphertext before work, checks scratch disk headroom and caps uploads to encrypted files. Reservations stay until explicit reconciliation even after success/lost acknowledgement. Hard worker/volume quota is not established. |
+| Durable operations | `storage_controller.py` persists bounded condition transitions and offers explicit opt-in sending through `storage_alerts.py`. Three attempts, token/destination/lease binding and recurrence generation are tested. Default sends nothing. Main state has a 16 MiB cap plus bounded record/report counts; rollback journal/metadata needs additional headroom. |
+| Second-host handoff | `offhost_recovery.py` prepares/verifies encrypted synthetic packets, separately confirmed hashes and separately stored synthetic keys. Same-machine attempts are rejected unless explicitly marked local rehearsal; restored traffic stays quarantined. Actual second-host run is owner-deferred. |
+
+The [operator runbook](../operations/phase9d-storage-safeguards.md) documents commands, non-overlapping accounting, per-resource controls, alert ownership, safe pressure response and the remaining activation requirements. The example policy is disabled and illustrative. Deadlines are monitoring targets, not approved retention periods. Rajuddin's earlier **section 2 hold procedure only** remains approved; category schedules and production deletion remain unapproved.
+
+## Actual results
+
+- **Native PostgreSQL storage fixture: 30/30 PASS.** Local PostgreSQL 18.4, loopback SCRAM, eight maximum connections, 32 MiB shared buffers, 1 MiB work memory. Runtime `temp_file_limit=1024 kB` and `max_slot_wal_keep_size=32 MB` are read back. A deterministic bounded sort is refused with SQLSTATE **53400**; the original row and subsequent query survive. The unchanged optional capacity trigger on a synthetic history table permits an initial INSERT, refuses the next at the configured boundary with **54000**, retains exactly the original rows/reservation, allows a separate STOP reservation and refuses an unverified quota assertion. These are fixture controls, not deployed application changes.
+- The same native fixture checks database/WAL accounting, unknown-inventory/log refusal, explicitly labelled trusted synthetic positive attestation, retained reservation, stale backup and four bounded output kinds. Its actual archive mode is **off**, logging collector **off**, and log truncation **off**. No archive/log bound is falsely inferred from that configuration.
+- **Guarded encrypted handoff/local restore: 17/17 PASS.** Real `pg_dump`/`pg_restore`, age encryption and a fixture-only local file store. Both backup/scratch reservations persist. Only encrypted data and a public synthetic manifest enter the packet; password/private key exclusion is asserted. Same-host normal verification refuses. Explicit local rehearsal restores the committed payload and catalog, keeps custom roles NOLOGIN/current-authority quarantine and stops the owned server. **Off-host acceptance is false.** The local restore interval was **9.961 seconds**, not a production RTO or end-to-end transfer/key/operator timing.
+- **Storage units: 30/30 PASS; existing alert tests: 15/15; archive tests: 10/10; freshness tests: 16/16.** Ruff, syntax and Git/new-file whitespace also pass; checks are recorded individually in quality.json. No backend typecheck/full suite is claimed; application JS/TS did not change.
+
+The initial unit attempt found that a SQLite context manager did not close the connection, causing Windows cleanup failures. The connection lifecycle was corrected with explicit closing; the failed 24-test receipt and executed source copies remain. Earlier passing native/handoff runs are preserved at their own epochs. The final native/handoff selection includes the observer CLI and guarded-backup integration at current hashes. No earlier PASS is silently substituted for changed code.
+
+## Reused acceptance and remaining hard boundaries
+
+The earlier **12/12** local physical archive/base-backup/named-target recovery and **9/9** actual finite-volume ENOSPC/restart results are reused at their recorded definitions/epochs. They were not repeated. The current 30/30 is an assertion count, not a whole-SQL/native branch metric. Existing P6 cache-OFF 16/16 behavioral/native and P7 14/14 behavioral/native evidence remain separate. Default-cache signal-11 stays OPEN; signal-9 stays SEPARATE/UNATTRIBUTED.
+
+PostgreSQL's WAL target is soft, slot-retention caps apply at checkpoints, temporary-file limits are per process and exclude explicit temp tables, and file rotation is not aggregate log retention. These boundaries and primary links are in the runbook. Actual provider/volume quotas, per-cluster topology, all writers and operational state/filesystem headroom still need verified enrollment. No active WAL, held history or old backup was removed to manufacture a pass.
+
+The owner explicitly deferred actual second-host execution: **“It will be available but not right now so mark it undone with google and R2.”** Genuine off-host recovery, Google/R2 roundtrip and real email delivery therefore remain NOT_RUN/PENDING. The prepared packet is only a synthetic logical smoke drill; full off-host application/custody/archive/external-object acceptance is still required. No account was queried during this batch.
+
+## Preservation, monitoring and decisions
+
+The prior **186 manifest entries**, **103 SQL/migration inputs**, HEAD and staging index are rechecked unchanged. [Exact new file hashes](../../output/phase9d-storage-safeguards-2026-10-22/changed-code.json), selected source graphs, all failed/passing receipts, current readiness and the runbook are bound in the new manifest. Original criteria/audit rows are retained; no production gate is closed merely by local tests.
+
+Database jobs run sequentially under the existing owner rule: RAM admission/abort thresholds disabled, deadlines and same-host RAM/commit/disk/taskbar sampling retained. Source and fresh restore servers coexist only inside one bounded restore job. Their GUCs are not hard memory quotas. [Monitoring](../../output/phase9d-storage-safeguards-2026-10-22/host-monitoring-summary.json) and [cleanup](../../output/phase9d-storage-safeguards-2026-10-22/cleanup-readback.json) retain actual observations; sampling cannot exclude an OS freeze. No Docker startup, VHD reattachment, unrelated process/service change or global cleanup occurred.
+
+Before declaring storage safeguards complete: approve actual per-environment budgets/topology, verify hard quotas/reserve and every writer/log sink, bind provider-supported controls and independent monitor routing/heartbeat, measure full off-host recovery on the later second computer, and reconcile retention/hold obligations. Technical components are ready for that enrollment; live operational acceptance is not silently waived.
+
+No real customer record, production account, financial authority, Clerk, frozen V5, accepted custody/signing code, commit, push, merge, deployment or P8 work changed. **Production stays OFF.**

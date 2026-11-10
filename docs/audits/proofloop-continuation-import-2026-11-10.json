@@ -1,0 +1,1233 @@
+{
+  "date": "2026-11-10",
+  "sourceWorktree": "RCS-proofloop-local-20261016",
+  "sourceHead": "8cb24fd359ecd17573897fab5fb702daa7e3aef3",
+  "websiteBase": "2ff51e7d9dade932cd21dfe5d836488d4b9a700a",
+  "scope": "Committed and uncommitted continuation imported without modifying the source worktree. Raw output is preserved separately under ignored output/. Generated Python bytecode is excluded from source.",
+  "reconciliation": "All 19 website custody continuation files exactly matched the preserved 2026-10-16 source snapshot. The 12 differing shared paths therefore advance that preserved continuation; no later website custody edits were discarded.",
+  "files": [
+    {
+      "path": ".github/workflows/database-backup-watchdog.yml",
+      "sha256": "ddd09a9090dafe2bdb4440b257e0a5e8f3c7a92ab28b83f3ce06c26504104103",
+      "bytes": 1981
+    },
+    {
+      "path": ".github/workflows/database-backup.yml",
+      "sha256": "cac829f6645c3d707fb37bd7c585794bc79095bd4fa3c8926c8de10d58c19692",
+      "bytes": 2500
+    },
+    {
+      "path": ".github/workflows/database-restore-validation.yml",
+      "sha256": "3dcfcb0b18a2b425ae4bfb15c164de2dec469ba2ee92739d1f67d86877490e29",
+      "bytes": 2056
+    },
+    {
+      "path": "backend/services/accountRetention.js",
+      "sha256": "b8b337a5ec3cb31069fa69f64e507bbead0d644d5fce98e941646fe6b308b958",
+      "bytes": 3090
+    },
+    {
+      "path": "backend/tests/helpers/phase9dManagementFixture.js",
+      "sha256": "a6cd88d345287a13490573ae94a3d87f8b5a88117bc044ec133b9a44ecf360a8",
+      "bytes": 3831
+    },
+    {
+      "path": "backend/tests/helpers/phase9dP2Profile.js",
+      "sha256": "4c285a156b6271265309817f7710c673e57f7a3e533651015d2003013f78faf7",
+      "bytes": 3782
+    },
+    {
+      "path": "backend/tests/helpers/phase9dP3Profile.js",
+      "sha256": "cd382108b5722692d60b9586f1816672a8b71595d8ddef9f1f5b88937ba2fe9c",
+      "bytes": 2732
+    },
+    {
+      "path": "backend/tests/helpers/phase9dP3Sender.mjs",
+      "sha256": "c4ff22b9035c50a3eb370e8f806d4e6ed008259bd72c910c055e2adca8c534ae",
+      "bytes": 846
+    },
+    {
+      "path": "backend/tests/helpers/phase9dP4Profile.js",
+      "sha256": "1727348fc7832868309e2ad189976233eb1e8e3bfa19ff63c206ed2f8afdf60e",
+      "bytes": 3683
+    },
+    {
+      "path": "backend/tests/helpers/phase9dP5Profile.js",
+      "sha256": "16135449482bdbe0a81fcaa58cb4d89ad40ee232283879e3dfb7759c33004b24",
+      "bytes": 4421
+    },
+    {
+      "path": "backend/tests/helpers/phase9dP6Profile.js",
+      "sha256": "3eac8aca6fffd8705ed402fc0d3011ae966bc29b02c84b9f4cd13c33055680dd",
+      "bytes": 4315
+    },
+    {
+      "path": "backend/tests/helpers/phase9dP6Signer.mjs",
+      "sha256": "fdf576f5c2d2134b415524a1099374559afc0b69d93864173b207bd9e45722e3",
+      "bytes": 1765
+    },
+    {
+      "path": "backend/tests/helpers/phase9dP7Catalog.js",
+      "sha256": "f17c308e03c6820dc9980298dbbfb62c26540d278081c8efe4f38761b3d5b779",
+      "bytes": 3244
+    },
+    {
+      "path": "backend/tests/helpers/phase9dP7Profile.js",
+      "sha256": "07b62a1168f34a434ff4f232d0f88078102207087a20fbea6548e467d3d52a12",
+      "bytes": 3258
+    },
+    {
+      "path": "backend/tests/helpers/phase9dStorageMetrics.js",
+      "sha256": "9cb0d783b7d512603b771175593af671d2d339a19db229a10d61bd483069a465",
+      "bytes": 2234
+    },
+    {
+      "path": "backend/tests/helpers/retentionAccountAction.mjs",
+      "sha256": "158eca39061beabc5899fe00b6bd8e163bcd609e8ad2ddc53e7d87de5ab68b1b",
+      "bytes": 2383
+    },
+    {
+      "path": "backend/tests/integration/phase9dCustodyLineageAck.test.js",
+      "sha256": "e8936ec17cb18d7d91050d4c0f7b0af5a3a35bf03c74c4a658fe743969fbc806",
+      "bytes": 13568
+    },
+    {
+      "path": "backend/tests/integration/phase9dCustodyP2.test.js",
+      "sha256": "2fee76fb8419c192e2206428c70de3704d6a4867f26c8307a922fc753f0f434c",
+      "bytes": 17940
+    },
+    {
+      "path": "backend/tests/integration/phase9dCustodyP3.test.js",
+      "sha256": "b7bcc67815e471aad30a2c8e5b94d9b708785d7ab315cd50692b7542811d3dbd",
+      "bytes": 15134
+    },
+    {
+      "path": "backend/tests/integration/phase9dCustodyP4.test.js",
+      "sha256": "7afad91494e5ce16e049e7082a89b01bcf5ccd6c548bda1601550b2853a41477",
+      "bytes": 20419
+    },
+    {
+      "path": "backend/tests/integration/phase9dCustodyP5.test.js",
+      "sha256": "26663e4c3b590cdae2b2f2a2ff5971afa0863b386553667ba9f6ce5ca9c63903",
+      "bytes": 20094
+    },
+    {
+      "path": "backend/tests/integration/phase9dCustodyP6.test.js",
+      "sha256": "0821373d7816fc5871863d131b518df4a4ef91a8b03939d83a1d1b87f7c5b6ab",
+      "bytes": 23878
+    },
+    {
+      "path": "backend/tests/integration/phase9dCustodyP7.test.js",
+      "sha256": "7511f3bfa78ffc7987d66dbca32f227ab9fd3bfd7ab4330036cd01b55b362337",
+      "bytes": 23353
+    },
+    {
+      "path": "backend/tests/integration/phase9dManagement.test.js",
+      "sha256": "70c6deda775c0e99a531c0ee8a7ccce94344c2b435d3a70e005eeb1480a870c9",
+      "bytes": 27096
+    },
+    {
+      "path": "backend/tests/integration/phase9dManagementCompletion.test.js",
+      "sha256": "f15e08abcf025ab6702e6ba1359b76ad6d46940b6da94ca079ebb2511b3a9717",
+      "bytes": 20563
+    },
+    {
+      "path": "backend/tests/integration/phase9dManagementNative.test.js",
+      "sha256": "54d75cfa947c14896e6caca5ce32c311d48ec67ea75f95ff0a9a4cec35ea4c84",
+      "bytes": 6910
+    },
+    {
+      "path": "backend/tests/integration/phase9dManagementRemaining.test.js",
+      "sha256": "b27e64ab22c01d033ce41800e557cbab0f698337d490f83f9cda74ab37eb6ada",
+      "bytes": 23591
+    },
+    {
+      "path": "backend/tests/integration/phase9dStorageRetention.test.js",
+      "sha256": "8d78b2c82c0a043151b4a4ecf7c5d78e9f0b152791ea307463fe247dbd9ddcba",
+      "bytes": 17735
+    },
+    {
+      "path": "docs/benchmarks/phase9d-1-audit-custody-local-checkpoint-2026-10-16.md",
+      "sha256": "cacb82d61637ce2f37d88640105d655aed156020071e25991dc82515d1210d2d",
+      "bytes": 12197
+    },
+    {
+      "path": "docs/benchmarks/phase9d-1-audit-custody-local-checkpoint-2026-10-17.md",
+      "sha256": "266091522bd7b6df0a547cfa65a59e79c7e223ec62f37bcd7e731f8c0daf2104",
+      "bytes": 5036
+    },
+    {
+      "path": "docs/benchmarks/phase9d-1-chatgpt-handoff-2026-10-23.md",
+      "sha256": "5fe6ca325719c674c1e52138ac82e8b5e261dc94c633624b1d59c049258227d9",
+      "bytes": 23244
+    },
+    {
+      "path": "docs/benchmarks/phase9d-1-custody-verification-checkpoint-2026-10-18.md",
+      "sha256": "092212e6e086f580a8432e81bd2c5b95a5226e14ea7843da0e487d688fb5d657",
+      "bytes": 11599
+    },
+    {
+      "path": "docs/benchmarks/phase9d-1-database-container-preflight-checkpoint-2026-10-17.md",
+      "sha256": "961a5e2a770fb41569d6a4f754cac1fc8757baced4204fa319363541e14834cd",
+      "bytes": 4294
+    },
+    {
+      "path": "docs/benchmarks/phase9d-1-database-verification-checkpoint-2026-10-17.md",
+      "sha256": "f29b73dca3f1281f6d51544791ecdd2721692b4ee083d45fad237c57cecdac09",
+      "bytes": 7577
+    },
+    {
+      "path": "docs/benchmarks/phase9d-1-development-cloud-key-handoff-2026-10-21.md",
+      "sha256": "a3772d6868bdb2826e445b0fbb126654dbb4d46c1dc4f7fb15928eb0fb281042",
+      "bytes": 7411
+    },
+    {
+      "path": "docs/benchmarks/phase9d-1-encrypted-backup-checkpoint-2026-10-20.md",
+      "sha256": "785913ca528d3a648f4abba51f7bb293c06ec116f5ab8cde0f4414d9d24cabd8",
+      "bytes": 11512
+    },
+    {
+      "path": "docs/benchmarks/phase9d-1-finite-volume-recovery-checkpoint-2026-10-22.md",
+      "sha256": "5d82b769c361fa17966fc057b76d319206aeb29d1957e72aa9f1905068009064",
+      "bytes": 8793
+    },
+    {
+      "path": "docs/benchmarks/phase9d-1-gmail-alert-handoff-2026-10-21.md",
+      "sha256": "11c01db055624777e6292812106b4b3927b3fe7dfe703bb4e4f3c58af5ee0930",
+      "bytes": 4472
+    },
+    {
+      "path": "docs/benchmarks/phase9d-1-hosted-setup-checklist-2026-10-21.md",
+      "sha256": "84aaae989a4ba556bc7607c531aae2296f071f71c1063d126dcc7772f988c5ed",
+      "bytes": 4346
+    },
+    {
+      "path": "docs/benchmarks/phase9d-1-key-alert-recovery-handoff-2026-10-21.md",
+      "sha256": "078d84f4a9be4304975e3b433133d612d1b1eb1c0dc9f9234a2988ce50cb9498",
+      "bytes": 6810
+    },
+    {
+      "path": "docs/benchmarks/phase9d-1-lineage-ack-checkpoint-2026-10-18.md",
+      "sha256": "462b1bcc1794768c90761ca938e68d038ef3275e15cf2d4a1dc381c6a427fbce",
+      "bytes": 9220
+    },
+    {
+      "path": "docs/benchmarks/phase9d-1-native-sql-storage-checkpoint-2026-10-31.md",
+      "sha256": "652c2af0b8cb4f5851820205f1ad9baa86cd72140556ef0468d7ad952ff09e16",
+      "bytes": 12604
+    },
+    {
+      "path": "docs/benchmarks/phase9d-1-no-docker-closure-2026-10-21.md",
+      "sha256": "69b117048d2245a93a26fdc143b05fd56c863ba9947e6bdfb92090e01919171e",
+      "bytes": 16229
+    },
+    {
+      "path": "docs/benchmarks/phase9d-1-offline-closure-checkpoint-2026-10-20.md",
+      "sha256": "90be9e600e07a619fbbf656195566f5e5b82101c1c5de858351b34e301a5a84a",
+      "bytes": 7646
+    },
+    {
+      "path": "docs/benchmarks/phase9d-1-offline-sql-audit-reconciliation-2026-10-20.md",
+      "sha256": "965dfb0ae5f660b16aa6baf8ac8acc96540bc2dc969111cd330876d4a25d0c18",
+      "bytes": 18535
+    },
+    {
+      "path": "docs/benchmarks/phase9d-1-offline-storage-retention-recovery-plan-2026-10-20.md",
+      "sha256": "9891cdb6520fd132014cb5779051d9a75472b62f033ee0b4143d8ae04f7f52a3",
+      "bytes": 14724
+    },
+    {
+      "path": "docs/benchmarks/phase9d-1-open-gates-continuation-2026-10-22.md",
+      "sha256": "e6f2c5d9c2cdbf27b9dc71ad58445aba88032d264754820109b5422d887b55fd",
+      "bytes": 12681
+    },
+    {
+      "path": "docs/benchmarks/phase9d-1-p2-capture-consistency-checkpoint-2026-10-18.md",
+      "sha256": "41d5d5306288499a9b7a4fa6152cd24b1a422a3f10b231813746a089a6b21aca",
+      "bytes": 17264
+    },
+    {
+      "path": "docs/benchmarks/phase9d-1-p3-delivery-recovery-checkpoint-2026-10-18.md",
+      "sha256": "5652de4bc1afbd7cd7dd1287f14d8db028dcb17fc62dc6fd35f182df657467ae",
+      "bytes": 17173
+    },
+    {
+      "path": "docs/benchmarks/phase9d-1-p4-transport-acceptance-checkpoint-2026-10-18.md",
+      "sha256": "b1826f229de9a634a01a686ec3e67797c2ac0c83cdc6a9506012409e41542146",
+      "bytes": 18469
+    },
+    {
+      "path": "docs/benchmarks/phase9d-1-p5-broker-accounting-checkpoint-2026-10-18.md",
+      "sha256": "10ff0e8849ad19563265254a90d7bda54e506901e7cf69e46d38e8e0e008be60",
+      "bytes": 23738
+    },
+    {
+      "path": "docs/benchmarks/phase9d-1-p6-key-epoch-checkpoint-2026-10-18.md",
+      "sha256": "1ab6971662240885f2242e95250f15028ed62c3c3e252050fb50237adf2cc306",
+      "bytes": 22626
+    },
+    {
+      "path": "docs/benchmarks/phase9d-1-p6-p7-storage-retention-closure-2026-10-18.md",
+      "sha256": "14b43c63351e2aae8a431c00e6d46e9a8660b033d9dae1b4ab3663e5235b9167",
+      "bytes": 31394
+    },
+    {
+      "path": "docs/benchmarks/phase9d-1-p6-profiler-crash-diagnostic-2026-10-18.md",
+      "sha256": "ec3204d74b47d40b219cee40bd498d9f125ed4921f958e7103353820651dc736",
+      "bytes": 22390
+    },
+    {
+      "path": "docs/benchmarks/phase9d-1-p6-profiler-crash-retry-2-2026-10-19.md",
+      "sha256": "8778267161715d19922a7a96d257904fccbf54f331a45098c260ce0917e591cd",
+      "bytes": 7006
+    },
+    {
+      "path": "docs/benchmarks/phase9d-1-p6-profiler-crash-retry-2026-10-19.md",
+      "sha256": "c327dfe439482ee5a4d3c303419cca6bb95c9c22170ef1140b4f1a9d95ca17d9",
+      "bytes": 3632
+    },
+    {
+      "path": "docs/benchmarks/phase9d-1-p7-cleanup-pressure-metadata-checkpoint-2026-10-18.md",
+      "sha256": "6ea4b872f4cf892f29eff1b39637a08e6e1e5f3457ad4b045549d8c4d1d60c94",
+      "bytes": 21400
+    },
+    {
+      "path": "docs/benchmarks/phase9d-1-p8-ack-survivor-review-2026-10-31.md",
+      "sha256": "7908521731675bba3ebfd808a1f47783d1b283a261e3d21b26aa1b33a65cd619",
+      "bytes": 10794
+    },
+    {
+      "path": "docs/benchmarks/phase9d-1-p8-batch2-ack-guards-checkpoint-2026-10-29.md",
+      "sha256": "979442529389c7e29e95a988a8735cdb82cb5fa80f7a79324f1e177ee6e2cc86",
+      "bytes": 15368
+    },
+    {
+      "path": "docs/benchmarks/phase9d-1-p8-batch3-ack-protocol-checkpoint-2026-10-30.md",
+      "sha256": "80b80bf2a4d9575e5ccd6537582886f4ab65a8b8c0b390b390cb5d3b7153ab96",
+      "bytes": 12713
+    },
+    {
+      "path": "docs/benchmarks/phase9d-1-p8-batch4-ack-row-bindings-checkpoint-2026-10-31.md",
+      "sha256": "36f571c92a7d9845910a87200fbe22cfec067b750eea85ec12d4ff3f8b93955d",
+      "bytes": 9650
+    },
+    {
+      "path": "docs/benchmarks/phase9d-1-p8-final-register-2026-10-31.md",
+      "sha256": "24bf10c18e0c46a6eb708d7d152dd0e2bd501f378309488922b8f5ce443ddfde",
+      "bytes": 15267
+    },
+    {
+      "path": "docs/benchmarks/phase9d-1-p8-lineage-mutation-checkpoint-2026-10-23.md",
+      "sha256": "5a35ea676f8c01d150f3e33aab33dffbb8adc5f6453a46cbc0b689f2d29b8b3b",
+      "bytes": 14682
+    },
+    {
+      "path": "docs/benchmarks/phase9d-1-phone-recovery-sql-followup-2026-10-21.md",
+      "sha256": "2adc5babe15de72399d95016fe06209343c92d2a25f0e8a71e7733aa3d43b438",
+      "bytes": 15624
+    },
+    {
+      "path": "docs/benchmarks/phase9d-1-policy-neutral-completion-checkpoint-2026-10-20.md",
+      "sha256": "d440f5b3a33e3781ce585cdb42639566ee26a266c93bddb28823f379243e2d30",
+      "bytes": 6036
+    },
+    {
+      "path": "docs/benchmarks/phase9d-1-pre-p8-reconciled-checklist-2026-10-20.md",
+      "sha256": "e86165d04b55f9d67b3a78e1687d15472cddb7f46a630416e436a8e3c5887f9e",
+      "bytes": 30672
+    },
+    {
+      "path": "docs/benchmarks/phase9d-1-profiler-reliability-pause-2026-10-23.md",
+      "sha256": "aeab6a68d230ee507f9345f8ab3703334245a75903ae8a3f802b53310602746c",
+      "bytes": 3485
+    },
+    {
+      "path": "docs/benchmarks/phase9d-1-r2-cli-setup-checkpoint-2026-10-20.md",
+      "sha256": "9796cbcd7bc8f0e3c0855f3c3293812a2e5acbebfbee4709a73b71e7cfd0a310",
+      "bytes": 5589
+    },
+    {
+      "path": "docs/benchmarks/phase9d-1-remaining-storage-retention-engineering-checkpoint-2026-10-19.md",
+      "sha256": "75c4390e6bb7c75f4a7458b8b57404090253a1326b97f8d4a305a923d86fc32d",
+      "bytes": 13821
+    },
+    {
+      "path": "docs/benchmarks/phase9d-1-restore-sql-storage-retention-checkpoint-2026-10-22.md",
+      "sha256": "2419c02c5fdbd4cc1d55f2dce600d037c94054225bf5b876e55e2cff91f37937",
+      "bytes": 18739
+    },
+    {
+      "path": "docs/benchmarks/phase9d-1-retention-enforcement-checkpoint-2026-10-31.md",
+      "sha256": "ad7c4af9ceeaec812ef52d804a9b23545c42a762e062ca2806c11c490ff568db",
+      "bytes": 12195
+    },
+    {
+      "path": "docs/benchmarks/phase9d-1-retention-hold-policy-review-2026-10-22.md",
+      "sha256": "d3c84ce47d196d2a63525949958423e6eff1836ad063466f929303868cf58726",
+      "bytes": 12004
+    },
+    {
+      "path": "docs/benchmarks/phase9d-1-retention-integration-checkpoint-2026-10-22.md",
+      "sha256": "2515314e2d5ac9be8e8c777be45be8408ea37eef612dc5914013d21bec0b2f92",
+      "bytes": 14919
+    },
+    {
+      "path": "docs/benchmarks/phase9d-1-retention-owner-decisions-2026-10-31.md",
+      "sha256": "d3061e8554ff3babcc5eb73d29971d8182b386b72c5d3a30c651acfa6abbf069",
+      "bytes": 14555
+    },
+    {
+      "path": "docs/benchmarks/phase9d-1-retention-readiness-checkpoint-2026-10-31.md",
+      "sha256": "c0b75c1bce955ca34397d4e4507179e65cca8e0995a38192f260a31e206e4948",
+      "bytes": 12467
+    },
+    {
+      "path": "docs/benchmarks/phase9d-1-retention-schedule-candidates-2026-10-22.md",
+      "sha256": "57a69974bff0cf5f1d14442cb4563b6c1ff47c21f008388eb428e8f47f5395aa",
+      "bytes": 8223
+    },
+    {
+      "path": "docs/benchmarks/phase9d-1-signal9-attribution-review-2026-10-19.md",
+      "sha256": "8299c5222f99590c3c68d1670e458d8db37cbd20960f07e6860cf1bee0652ce8",
+      "bytes": 11497
+    },
+    {
+      "path": "docs/benchmarks/phase9d-1-sql-conditions-metadata-checkpoint-2026-10-23.md",
+      "sha256": "f5b9ffb1a1b000d6be7567980d67851d257d79a5557a56016964782af7625a78",
+      "bytes": 12184
+    },
+    {
+      "path": "docs/benchmarks/phase9d-1-sql-coverage-plan.md",
+      "sha256": "f2b9dc2db291e5136eb2a2d9fa0739b04b1c7c97ceb406873de92e18a2a91a6a",
+      "bytes": 71729
+    },
+    {
+      "path": "docs/benchmarks/phase9d-1-storage-retention-engineering-checkpoint-2026-10-19.md",
+      "sha256": "21c78be3990776ae81883702c1a68161c0ce7e79f7b50003ad86099240143e60",
+      "bytes": 19824
+    },
+    {
+      "path": "docs/benchmarks/phase9d-1-storage-retention-runtime-checkpoint-2026-10-19.md",
+      "sha256": "095c5e424358350c271f7779da9872f3f03cef2a0b42df80e226575475b473ae",
+      "bytes": 16047
+    },
+    {
+      "path": "docs/benchmarks/phase9d-1-storage-safeguards-checkpoint-2026-10-23.md",
+      "sha256": "74dcbfeb7001dd92ad49ba1e4f777d055df8972693e1bbacd82cba96d9a77046",
+      "bytes": 9538
+    },
+    {
+      "path": "docs/benchmarks/phase9d-1-supabase-backup-design-2026-10-20.md",
+      "sha256": "ba4015187ea4265331c50c316e2c27c9ebf500be0c1bbcbf250350a43db2985a",
+      "bytes": 22501
+    },
+    {
+      "path": "docs/benchmarks/phase9d-1-supabase-dev-backup-migration-checkpoint-2026-10-21.md",
+      "sha256": "afcff527aebbb109aebfedc6548054441eb6133decba342ac0d8c64f29d48e75",
+      "bytes": 10292
+    },
+    {
+      "path": "docs/benchmarks/phase9d-1-supabase-dev-readonly-checkpoint-2026-10-20.md",
+      "sha256": "fd4097cd93d72d39e17271473157e629b9b9f74ba4427c755718e1897ef75bf7",
+      "bytes": 9482
+    },
+    {
+      "path": "docs/operations/phase9d-native-sql-storage.md",
+      "sha256": "ee5c327fa5b533f8a9b952c40818a4965db0856220cd9eca0ed4956bb1351330",
+      "bytes": 4757
+    },
+    {
+      "path": "docs/operations/phase9d-retention-and-review-decisions.md",
+      "sha256": "453c0a3bbfb6ad74d417da87c1a0dfbb43f6d9717437c87f357fd4c5bef5145d",
+      "bytes": 13925
+    },
+    {
+      "path": "docs/operations/phase9d-retention-enforcement.md",
+      "sha256": "17980f74af92d68d190b063a22a2ce22c83a0986fc4ab574f17f4b4a0e2ca0f8",
+      "bytes": 7140
+    },
+    {
+      "path": "docs/operations/phase9d-storage-safeguards.md",
+      "sha256": "52236b615fe1104ed288d48bc4d8646bb2a663daf5c8317fdba4d3b5f2c77926",
+      "bytes": 10632
+    },
+    {
+      "path": "tools/backups/Start-SyntheticReview.ps1",
+      "sha256": "48b8b190fdc8797a3eb3852eec96195e92e17b73833d483dd5665a80a4365f7d",
+      "bytes": 3024
+    },
+    {
+      "path": "tools/backups/alert_routes.py",
+      "sha256": "03dde08ccf89d06f0923928c659cc49da379d8517885214fb012b744dcc84b03",
+      "bytes": 5007
+    },
+    {
+      "path": "tools/backups/archive_spool.py",
+      "sha256": "adb796b5d3418b68529b2fefaf654cd95c1a2e6d65cd5bafc396288ae42e3cd4",
+      "bytes": 4394
+    },
+    {
+      "path": "tools/backups/backup.py",
+      "sha256": "0045634db0a46f5bcb09b500d48bde0669e90c6ac686acb74bdd6e113232f1d3",
+      "bytes": 23708
+    },
+    {
+      "path": "tools/backups/config.example.json",
+      "sha256": "4b28622c2e4e944ee63d3d7d4ede2cc0971548c05d3715d4c04b8f2ef6127720",
+      "bytes": 843
+    },
+    {
+      "path": "tools/backups/custodian_public_verification_probe.mjs",
+      "sha256": "82c2936407ff81954382c18c14fbf7b77b74823be1278b31c0a2a64217b59f44",
+      "bytes": 604
+    },
+    {
+      "path": "tools/backups/custodian_signing_probe.mjs",
+      "sha256": "f853334ead1b2d24de50302f44c673ef946bbd491375137304a523c80cf8128b",
+      "bytes": 1359
+    },
+    {
+      "path": "tools/backups/gmail-alert.env.example",
+      "sha256": "baa87c21e8f8c4cab8f761bd6a2d8b0a410f89e01ddcdfb36a3ceea89a49fa9f",
+      "bytes": 433
+    },
+    {
+      "path": "tools/backups/guarded_backup.py",
+      "sha256": "3da2609139ccefdcb61c2725d0970233a92fdd1ce03847f6e0d8deb488b14734",
+      "bytes": 2198
+    },
+    {
+      "path": "tools/backups/install-tools.sh",
+      "sha256": "bdf56403945b31903c2082acc780a5a0d52c919c02412dd63f9e2f87d8aa4880",
+      "bytes": 1230
+    },
+    {
+      "path": "tools/backups/isolated_volume.ps1",
+      "sha256": "d80cea424146c3ad38a10c2f2c7728d5aaa169ac4c41789b58722601eea0748b",
+      "bytes": 7998
+    },
+    {
+      "path": "tools/backups/native_account_retention_checks.py",
+      "sha256": "74cda27e747fee560cb582aec341287c4d12cc769781c232d5c8d0a5dcb07205",
+      "bytes": 25957
+    },
+    {
+      "path": "tools/backups/native_archive_recovery.py",
+      "sha256": "905157e10dc47a795501db1f99e86c619e0a0db1d9060a9745c9046b5e247b23",
+      "bytes": 10161
+    },
+    {
+      "path": "tools/backups/native_offhost_packet_test.py",
+      "sha256": "d6796e47f3cd782451916c54e5f0fc76eecd351f223d6d020037405a4732828f",
+      "bytes": 8337
+    },
+    {
+      "path": "tools/backups/native_postgres.py",
+      "sha256": "fa89697e5888ba8c1b370a6282f969de68f2a91011147d90c9f674de068073a9",
+      "bytes": 7779
+    },
+    {
+      "path": "tools/backups/native_retention_backup_test.py",
+      "sha256": "08819005ed5132183ef8be72586c3f60d9d912be3f260cb1f8a9621341f7f0ad",
+      "bytes": 9431
+    },
+    {
+      "path": "tools/backups/native_retention_copy_barrier.py",
+      "sha256": "fad6c642dc6bccebcc73303da2cbf890ce8f5408a3bb5800b1868c006c0159bf",
+      "bytes": 8019
+    },
+    {
+      "path": "tools/backups/native_retention_integration.py",
+      "sha256": "7c75b5f7ad28924912bcc113727f66b5566e7e02ceb97f0d1e53c28220464bde",
+      "bytes": 13053
+    },
+    {
+      "path": "tools/backups/native_retention_readiness_checks.py",
+      "sha256": "8dd5407c0ce72d419d92dd03a1909429a8048018a854f151d158ab054a0e09e7",
+      "bytes": 16822
+    },
+    {
+      "path": "tools/backups/native_retention_registry_test.py",
+      "sha256": "610127863ce206236f311c45f1131a6ce0cb9301661484e51088afe92a928618",
+      "bytes": 11374
+    },
+    {
+      "path": "tools/backups/native_retention_scope_test.py",
+      "sha256": "0a98aabc04e69c280877d622dd0282798a657495a4d0034992da987b6d310c21",
+      "bytes": 9058
+    },
+    {
+      "path": "tools/backups/native_storage_alert_checks.py",
+      "sha256": "771bb413c6222ed361b61d640ab471e7c9917d038eb7ef9a193fae0262c00011",
+      "bytes": 14014
+    },
+    {
+      "path": "tools/backups/native_storage_safeguards_test.py",
+      "sha256": "2e9b2c616ae4ff13185b9c805914609a97096cb0eaab3cbd246388717c787e53",
+      "bytes": 9462
+    },
+    {
+      "path": "tools/backups/native_volume_enospc.py",
+      "sha256": "15caebf4d40123f60bb39f36bee9c2d4ee61476934a6f6c229da3b34f061018f",
+      "bytes": 8021
+    },
+    {
+      "path": "tools/backups/notify.py",
+      "sha256": "3fceee7a8aaeed92f3cce597138b06cfd4dab71b3d51cb24dcfbe9f61887b531",
+      "bytes": 939
+    },
+    {
+      "path": "tools/backups/offhost_recovery.py",
+      "sha256": "902cff6fa0005fea34f2c42883441cb7727b5238489a0cc4eea4e84bd1d8c580",
+      "bytes": 5690
+    },
+    {
+      "path": "tools/backups/owned_postgres.py",
+      "sha256": "b4ccc75a2ec7261a499119bed7f6c6e3b77314deaff8428a5b5c592cfbccf984",
+      "bytes": 5027
+    },
+    {
+      "path": "tools/backups/phone_recovery.py",
+      "sha256": "c258e9bfa3723a76f10638ccea00be7c4dff910f1d868e3de244f2237950c395",
+      "bytes": 11994
+    },
+    {
+      "path": "tools/backups/requirements-test.txt",
+      "sha256": "8f9681df5dbb0ecc482a7b8b39c8bb575a3cb76bec0058e032a3728a82153c58",
+      "bytes": 55
+    },
+    {
+      "path": "tools/backups/requirements.txt",
+      "sha256": "a38f302e081baffc42791e61fece8b3953771621e98279f031ba51c234165570",
+      "bytes": 39
+    },
+    {
+      "path": "tools/backups/restore_job.py",
+      "sha256": "b357d69b3a4efe21df0e6c5c932ea9e3f78b89af3084b435035d8f1ac3a62110",
+      "bytes": 1465
+    },
+    {
+      "path": "tools/backups/retention_backup_index.py",
+      "sha256": "83b2afb1afa3e9626f2732a536f6760efa3e00276dd6955625e59b4132fa1675",
+      "bytes": 4197
+    },
+    {
+      "path": "tools/backups/retention_copy_barrier.py",
+      "sha256": "a42489c3aa4dc754f0d51e0726f23fffb0e91ff84c6b3d39189e31be56719b8d",
+      "bytes": 3262
+    },
+    {
+      "path": "tools/backups/retention_copy_plan.py",
+      "sha256": "23743c14e12b6bc7293f648eea72852bd865a3cf6c32a6a7201a12540127a06c",
+      "bytes": 3662
+    },
+    {
+      "path": "tools/backups/retention_policy.py",
+      "sha256": "a2b4ddee13743313e48247ede60095fa7db8a5c759d6a93ecefaa6ac23d2b326",
+      "bytes": 2866
+    },
+    {
+      "path": "tools/backups/retention_provider_inventory.py",
+      "sha256": "d75b4b7e4afc1cc1cd46397cdbf3f652f794a2ee15adb2c4c4a37089f3fd5f71",
+      "bytes": 8164
+    },
+    {
+      "path": "tools/backups/retention_row_manifest.py",
+      "sha256": "4c49e88acf621b7080ea23b5c045292467ee7df30a611403e173427c96039af6",
+      "bytes": 7342
+    },
+    {
+      "path": "tools/backups/retention_scope_manifest.py",
+      "sha256": "1aa98afca7207029277b8130d1d4c83f67391598f5483836ce2db9cc806318ca",
+      "bytes": 6978
+    },
+    {
+      "path": "tools/backups/review_readiness.py",
+      "sha256": "2a0f593bca89d247bfed3c0bad52ca85b252b5f86fe3365fb0be05e8175f5c9d",
+      "bytes": 6232
+    },
+    {
+      "path": "tools/backups/save_gmail_credential.ps1",
+      "sha256": "c567f08912c48ea929d1b3c3920a3075bb90f54f1f7cbf59dc5cc149038c291e",
+      "bytes": 4750
+    },
+    {
+      "path": "tools/backups/storage-policy.example.json",
+      "sha256": "634068a4d9faff24b6d095740cbf4c368fcdba8cf3970f8e852a94dc4ee1fc7a",
+      "bytes": 435
+    },
+    {
+      "path": "tools/backups/storage_alerts.py",
+      "sha256": "7339cc124e449c48d9509182b07a9676ad8e1984f12a7674bcf2cf6217ef491d",
+      "bytes": 2145
+    },
+    {
+      "path": "tools/backups/storage_controller.py",
+      "sha256": "f1bad447022f5d9bbc99173d9457ca762f1ecd3fdb86bb73fe7b3aad98150560",
+      "bytes": 2330
+    },
+    {
+      "path": "tools/backups/storage_probe.py",
+      "sha256": "27d22383201e2dd7d223586b66c2496c8cf7692df16b0d6b78e0e0d17ebd3f24",
+      "bytes": 6609
+    },
+    {
+      "path": "tools/backups/storage_safeguards.py",
+      "sha256": "741c6500efc7f97085c9cd5e11cfd114865ee3ea401370a71e92af40583d5baa",
+      "bytes": 13103
+    },
+    {
+      "path": "tools/backups/supabase_restore_scope.py",
+      "sha256": "0dcd63c20647dc79e46bb61ee649567d8c45e247ac874ad06ca7838ca0e2c5ad",
+      "bytes": 2373
+    },
+    {
+      "path": "tools/backups/synthetic_fixture.mjs",
+      "sha256": "f7272200c66ef537b86e74a0d4b2aa665435de5b939894180e1ee826f0ac96b1",
+      "bytes": 1329
+    },
+    {
+      "path": "tools/backups/test_alert_routes.py",
+      "sha256": "0a2463e9d2ae939a473a7bbd6ff9c824909686d45ad47de639f1b4e3a9d05a0a",
+      "bytes": 7123
+    },
+    {
+      "path": "tools/backups/test_archive_spool.py",
+      "sha256": "3da2b19b610bc577ca82bdd04135d826f26d67be0fccad5843b304ff5a624ca8",
+      "bytes": 4258
+    },
+    {
+      "path": "tools/backups/test_freshness_offline.py",
+      "sha256": "f4d1f95ec57f5542af09d3e1e2ba7b9cf5d8cdb7753a2c98d2904a49788ca01e",
+      "bytes": 5075
+    },
+    {
+      "path": "tools/backups/test_retention_backup_index.py",
+      "sha256": "ce96f6e40f6ca1eec213e0c23118edb21e26f2b95b3dfdc42bbabe6fe6b2e4bc",
+      "bytes": 2538
+    },
+    {
+      "path": "tools/backups/test_retention_copy_plan.py",
+      "sha256": "51383e515b25483970f477de60262d1e875aea6792cc2c30cc0c9e82f9795941",
+      "bytes": 4527
+    },
+    {
+      "path": "tools/backups/test_retention_policy.py",
+      "sha256": "a905951d344662343e413955ecc7c1daabafb1c6e411675fe7292efb8bb7cc24",
+      "bytes": 3250
+    },
+    {
+      "path": "tools/backups/test_retention_provider_inventory.py",
+      "sha256": "eac667c7aa970d120251a633e9a2036087fe565200b62c91418a7d002d7fbdf6",
+      "bytes": 7348
+    },
+    {
+      "path": "tools/backups/test_review_readiness.py",
+      "sha256": "c63f437cfec8d437f22c470dbb2913ab23d3c394200ab1a2fdf5514177203cc3",
+      "bytes": 4941
+    },
+    {
+      "path": "tools/backups/test_storage_safeguards.py",
+      "sha256": "0fc7cfe119ca8dd4b4f048e68d489f48f5a3a3554e90f924b83a2978d7f3681f",
+      "bytes": 15677
+    },
+    {
+      "path": "tools/backups/test_supabase_restore_scope.py",
+      "sha256": "e6c10a0c76c70115c12c63a92b843a4499507df00f180bd5882ef9f6eddb83df",
+      "bytes": 2047
+    },
+    {
+      "path": "tools/backups/test_synthetic.py",
+      "sha256": "0d2a4918a82fd2af0d3b147e6be2fd10667c83aa523dac24b3c31163c79ae4b2",
+      "bytes": 17882
+    },
+    {
+      "path": "tools/backups/wrap_phone_recovery_key.ps1",
+      "sha256": "4f3cc206810df1e8461f8336f873bdeeecbf73a20072bb4c9be96d78f6407f89",
+      "bytes": 2674
+    },
+    {
+      "path": "tools/local/repair-docker-startup.ps1",
+      "sha256": "28ad5eb5762783d58e7cb6e4a0bf9001c4baef1bd5ce9365fdccbb9471dd8c3a",
+      "bytes": 10262
+    },
+    {
+      "path": "tools/local/test-docker-repair-process.ps1",
+      "sha256": "f98dd710ca1da7391b918d91a7edd594c118b93755a72b17fdaf70b8c62f85fd",
+      "bytes": 2246
+    },
+    {
+      "path": "tools/phase9d/closure-equivalence-contract.mjs",
+      "sha256": "a5d258823bac2e089a70f0ae7d2844f568430d5fef4a8c56c546319e7d8e98f7",
+      "bytes": 5221
+    },
+    {
+      "path": "tools/phase9d/closure-equivalence-http.mjs",
+      "sha256": "c38fe5cd6e48da884715218d9a4b402b532deac9fe3d49c048ec70730efac04d",
+      "bytes": 6316
+    },
+    {
+      "path": "tools/phase9d/closure-equivalence-observer.mjs",
+      "sha256": "b5ced701201b16526835089a7fca3d8ac491b7e0f562d964642c94c21efed90e",
+      "bytes": 2757
+    },
+    {
+      "path": "tools/phase9d/closure-equivalences.mjs",
+      "sha256": "3c862a293cb00c802e5ceb95ace83c4f5117831c64ec94e108c9b59d9b786ffb",
+      "bytes": 6477
+    },
+    {
+      "path": "tools/phase9d/management-adapters.mjs",
+      "sha256": "889b613f5475885f23c5bd891d04872b1a286086101ada5ef834dd147963b82c",
+      "bytes": 6084
+    },
+    {
+      "path": "tools/phase9d/management-backup.mjs",
+      "sha256": "77a14bd745ef58346a78fafe185f5c167b97a8f2703581e0e3c948a96f4bbe4a",
+      "bytes": 4401
+    },
+    {
+      "path": "tools/phase9d/management-capacity.sql",
+      "sha256": "71de17d31e498ac22976e42e508e3bd139a47a8314d2a21292bc02c9adefc605",
+      "bytes": 12882
+    },
+    {
+      "path": "tools/phase9d/management-completion.mjs",
+      "sha256": "750c298d58f6b1a9ca2a281c91481967975284c1b048a771ddfb0a0ea40c4083",
+      "bytes": 3291
+    },
+    {
+      "path": "tools/phase9d/management-completion.sql",
+      "sha256": "08f2c928923b47a1d2728a114f3529a8654d0eed7f310669f5e8e43df15f8099",
+      "bytes": 6706
+    },
+    {
+      "path": "tools/phase9d/management-hold-guards.sql",
+      "sha256": "0dcb42680281e6840059d72616c776cd7b04950980ef8a881560cdd4cee27227",
+      "bytes": 3577
+    },
+    {
+      "path": "tools/phase9d/management-native.mjs",
+      "sha256": "084e61f257e698496f36d187dbc18ea6f901eaa15983364e8a7d28e4691d048a",
+      "bytes": 2912
+    },
+    {
+      "path": "tools/phase9d/management-observation.sql",
+      "sha256": "6dc9a2e717c12d76813776b2b4340cfebc6c4309b242799ced6d6e6b145097d3",
+      "bytes": 5606
+    },
+    {
+      "path": "tools/phase9d/management-remaining.mjs",
+      "sha256": "7363c4997bb9c92d4df48a2854c83c25f838f1b8eeaafbb2d2e069559554b492",
+      "bytes": 2749
+    },
+    {
+      "path": "tools/phase9d/management-retention.mjs",
+      "sha256": "eb41020baa3cb76ebb667490da67d3e444aca59760657f924f76b3c6f0f2e2dd",
+      "bytes": 3861
+    },
+    {
+      "path": "tools/phase9d/management-retention.sql",
+      "sha256": "d77b5fad6c55c5b53d7851b03dc28f277ad2ff14fbe87a2d52ce473dd6c8c754",
+      "bytes": 16807
+    },
+    {
+      "path": "tools/phase9d/management-storage.mjs",
+      "sha256": "47a67ed8ee029217f476e44f3404afbb32e8ab31d42a905bdaabdc7dbd1b2299",
+      "bytes": 1757
+    },
+    {
+      "path": "tools/phase9d/native_broker_predicates.py",
+      "sha256": "fe93579560d7c5dd3225c70f76b97f430dd8253945028d39b7d0edfe5806c477",
+      "bytes": 11330
+    },
+    {
+      "path": "tools/phase9d/native_capacity_conditions.py",
+      "sha256": "a306126074677d3f89e66ba4a02dfc77ac83ce147af7078bb00237380cb338d5",
+      "bytes": 11607
+    },
+    {
+      "path": "tools/phase9d/native_contract_cases.py",
+      "sha256": "b72e89ffc31cb472632c61df6ec37674791611be40f8c55c984fa655e9c76b62",
+      "bytes": 13843
+    },
+    {
+      "path": "tools/phase9d/native_expression_cases.py",
+      "sha256": "71949d60c95c01675f34f8b42d156d66e2a9e8640715e7a9233a6d1fe29334c9",
+      "bytes": 13981
+    },
+    {
+      "path": "tools/phase9d/native_p8_ack_batch2.py",
+      "sha256": "389675a1c3db557231cc0c74465fc077ae01809c8591042bb49079ba52018d74",
+      "bytes": 15186
+    },
+    {
+      "path": "tools/phase9d/native_p8_ack_batch3.py",
+      "sha256": "0148700d84144a445264cf59b79f360072f8fbf3e2a16f68a952c56e1de0a73b",
+      "bytes": 15591
+    },
+    {
+      "path": "tools/phase9d/native_p8_ack_batch4.py",
+      "sha256": "cc8d856b45c785bd3223b2d44fa2db816c8d51c0ee9a4f69430a71c481aa0874",
+      "bytes": 17416
+    },
+    {
+      "path": "tools/phase9d/native_p8_ack_survivor_review.py",
+      "sha256": "5b5aa68c2fcf8796425d54531f367f1b450a51c1f4ed0ca78f90afa87b247408",
+      "bytes": 15987
+    },
+    {
+      "path": "tools/phase9d/native_p8_highrisk_mutations.py",
+      "sha256": "9c10414a78539599ae32a80cbf4aed8e94e7eca258be970695725007501dd86a",
+      "bytes": 27999
+    },
+    {
+      "path": "tools/phase9d/native_p8_lineage_mutations.py",
+      "sha256": "3eb927463d83556d19eeaca8269f217820975ca65d70daf84f11e456454c620d",
+      "bytes": 14281
+    },
+    {
+      "path": "tools/phase9d/native_remaining_cases.py",
+      "sha256": "bf41072a4d05e48da755dbb7083b65f382a19976ae42561d2924ad22927ddb4c",
+      "bytes": 13220
+    },
+    {
+      "path": "tools/phase9d/native_source_lineage_cases.py",
+      "sha256": "7482fc6a861ea55f7438302c47e7c615636515016cbb43b8cb6a272f0d7ae560",
+      "bytes": 12764
+    },
+    {
+      "path": "tools/phase9d/native_sql_condition_followup.py",
+      "sha256": "3b5435b4ca9a31b114dec370f58dfb426eceb2022d19c36cda3d51e952e316ca",
+      "bytes": 21204
+    },
+    {
+      "path": "tools/phase9d/native_sql_metadata_cases.py",
+      "sha256": "c2109bd9af2af6ad1ceec72a405eb4c1f423184a723f0609de7b5dcca15b0238",
+      "bytes": 14621
+    },
+    {
+      "path": "tools/phase9d/native_sql_metadata_fixture.py",
+      "sha256": "25d9d7a1fcfb0fc1368211e60da4e8ec08585115a7ead35cbfc7af1f9800b473",
+      "bytes": 8386
+    },
+    {
+      "path": "tools/phase9d/native_sql_storage_checks.py",
+      "sha256": "5b9821dd29ca43b09c333c800fa533899bdddb36b5a5abf84531daab9436390c",
+      "bytes": 11557
+    },
+    {
+      "path": "tools/phase9d/native_sql_storage_regressions.py",
+      "sha256": "bb58c277c788d48b8970e0dc99507011d22931cfe8bc718ef9efa48cc6e5d016",
+      "bytes": 1306
+    },
+    {
+      "path": "tools/phase9d/p8_ack_batch2_cases.py",
+      "sha256": "0924fe74c41d27e0e017952d45abadcaa4adf021af109ada4d75070a54c36ab2",
+      "bytes": 6807
+    },
+    {
+      "path": "tools/phase9d/p8_ack_batch3_cases.py",
+      "sha256": "b4f96822cf3ad2e201c0bd7bfeaf18136e6bd1fc43a33297a6b7a8afa1fefbeb",
+      "bytes": 3307
+    },
+    {
+      "path": "tools/phase9d/p8_ack_batch4_cases.py",
+      "sha256": "c7bf237664aed29ee20860ecd2f53ed520b9b70b62e65c52cc5083a898b6e0c0",
+      "bytes": 2655
+    },
+    {
+      "path": "tools/phase9d/p8_ack_survivor_cases.py",
+      "sha256": "d2ee5b04f5fc5d692ece060c23e9380e948f81880d6fb8ece0300ae6b6abbf1e",
+      "bytes": 3164
+    },
+    {
+      "path": "tools/phase9d/p8_highrisk_cases.py",
+      "sha256": "36b70ff7d36892ec115dd871d22e902776cc565be5970c16c8818b989cc001b2",
+      "bytes": 3098
+    },
+    {
+      "path": "tools/phase9d/pre-p8-offline-review.py",
+      "sha256": "18a788eb0e53373364db8169feeb2df357cf3773c70d3189ab12ce0c0ae76fe7",
+      "bytes": 8179
+    },
+    {
+      "path": "tools/phase9d/reconcile_no_docker.py",
+      "sha256": "52ec60667a869463ccd076d6c49d555b426bea84c50b90fc4757d9f4aa764439",
+      "bytes": 10592
+    },
+    {
+      "path": "backend/tests/helpers/phase9dCustodyReplayFixture.js",
+      "sha256": "5bb6ba2b4e8ac82a267599d02ad1b570f12e63e89e7ec487256bc3ac126906a1",
+      "bytes": 6341
+    },
+    {
+      "path": "backend/tests/helpers/phase9dCustodyReplaySender.mjs",
+      "sha256": "a4f45d6fa7b3e052e438379e9c404bc8462b3aa5d6bde7e8d940692bc52d9bda",
+      "bytes": 699
+    },
+    {
+      "path": "backend/tests/integration/phase9dCustodyReplay.test.js",
+      "sha256": "54cc0e271762fd7daad0dff50390d337c8e74cdfdc5cd9e408b3fbe5218688ae",
+      "bytes": 14682
+    },
+    {
+      "path": "backend/tests/integration/phase9dCustodySafety.test.js",
+      "sha256": "58d460ca8bf40ed69175f174dfeca1d4988ce7c159d39b32ee29cdc962be1b28",
+      "bytes": 11997
+    },
+    {
+      "path": "backend/tests/integration/phase9dCustodySql.test.js",
+      "sha256": "3f93c4fe84abf59da226a60ad388e1eb5b791be7bb9ada11b070df7d42f65516",
+      "bytes": 9517
+    },
+    {
+      "path": "backend/tests/phase9dCustodyAdversarial.test.js",
+      "sha256": "be29d269ef7f6d21cff2843e2e5e529bd36d6e66c7a2cfd4a9aa51692c193c73",
+      "bytes": 12412
+    },
+    {
+      "path": "backend/tests/phase9dCustodyBoundary.test.js",
+      "sha256": "0a52dc548e798dda6827592f5dc11d50f50c962484c11aa1a33a4682875eaa8e",
+      "bytes": 7735
+    },
+    {
+      "path": "docs/benchmarks/phase9d-1-audit-custody-cloud-report-2026-10-16.md",
+      "sha256": "506010d1ef33dfac1ccfc0406fec4f1a94da4b1c47534137250ddbce02e69962",
+      "bytes": 29430
+    },
+    {
+      "path": "docs/benchmarks/phase9d-1-cloud-preservation-2026-10-16.md",
+      "sha256": "691c6e1e58b02ab6083e60eeaad999dd4a93c5d1b7e6f5f6ce3b845ad5e58b39",
+      "bytes": 2969
+    },
+    {
+      "path": "tools/phase9d/audit-cloud-matrix.mjs",
+      "sha256": "7b9722f63c39f32d3acafc19c61704ef94eea22645b8e5f0f6e5886251fea812",
+      "bytes": 10242
+    },
+    {
+      "path": "tools/phase9d/audit-diagnostics.mjs",
+      "sha256": "460a82d018f6c5e735a48dcbba7afecefa64065de6b6465a867d457c4d01939f",
+      "bytes": 957
+    },
+    {
+      "path": "tools/phase9d/audit-eslint.config.mjs",
+      "sha256": "135646627911479ead819be7089ee8ca703b49a2a1b5a2c3869cd56d44570356",
+      "bytes": 740
+    },
+    {
+      "path": "tools/phase9d/audit-focus.mjs",
+      "sha256": "4ccacdc9b9bd55418dd4da6ec1a5c0d90edf4dc886ccc084e48f20fba1c5e86f",
+      "bytes": 1330
+    },
+    {
+      "path": "tools/phase9d/audit-focus2-stryker.config.mjs",
+      "sha256": "a1824acfb48595a6c88134b1fd5864f94a708b30aeff83d6c0b7e051aea7c8c6",
+      "bytes": 7385
+    },
+    {
+      "path": "tools/phase9d/audit-replay-compare.mjs",
+      "sha256": "1410254af234fda9369412281d12c3e333d67c6857d4ad7e4876ffc0fab0df9b",
+      "bytes": 3785
+    },
+    {
+      "path": "tools/phase9d/audit-replay.mjs",
+      "sha256": "65caaa502d3c7b5c9d28d8146f62bbd6deb4362e0b795bda77171d32da25f83c",
+      "bytes": 2554
+    },
+    {
+      "path": "tools/phase9d/audit-stryker.config.mjs",
+      "sha256": "c70ab1a091a065531fa8fed8d83c07a68c90d1745f846f63451da8297501ba74",
+      "bytes": 1041
+    },
+    {
+      "path": "tools/phase9d/closure-baseline.mjs",
+      "sha256": "5f6f342eb924746bab61870d6ed3032e4b566023ac384d592f6d44698193563a",
+      "bytes": 1419
+    },
+    {
+      "path": "tools/phase9d/closure-client.mjs",
+      "sha256": "cb001fb8546502af9696da563aca9a73d02ea5122b4276bdf305bb3540831bb9",
+      "bytes": 1450
+    },
+    {
+      "path": "tools/phase9d/closure-consistency.sql",
+      "sha256": "077fc931a57f0ec3dd5233cf33a84151230958a24b80955199b906c32faf30de",
+      "bytes": 5309
+    },
+    {
+      "path": "tools/phase9d/closure-network-canary.mjs",
+      "sha256": "a92efc5d7fbf338bfc2b7c03d5922ddd2902742f3140420ca4746c7065b83042",
+      "bytes": 341
+    },
+    {
+      "path": "tools/phase9d/closure-postgres.Dockerfile",
+      "sha256": "6807f360a63de1732434cd71119e60e7d440d48478191b1c60854d1892dd3843",
+      "bytes": 2039
+    },
+    {
+      "path": "tools/phase9d/closure-transport.sql",
+      "sha256": "a664e8c620e20dd4728582c5270e8b0541158e93626405f98426b74c74d44a90",
+      "bytes": 1397
+    },
+    {
+      "path": "backend/routes/users.js",
+      "sha256": "dcfbe965b88448d5b3a6d699ebc8c330f00816c8fccfa1983e2077a4b111c3d8",
+      "bytes": 16654
+    },
+    {
+      "path": "backend/tests/helpers/database.js",
+      "sha256": "49e61ac9d26dcd7ed494d2f915cdf3f1baf6dcc6276ae66ab1c45342aac51d7f",
+      "bytes": 8312
+    },
+    {
+      "path": "backend/tests/helpers/phase9dCustodyClosureFixture.js",
+      "sha256": "9c6d48ced0fc3cea37319ecd9e2f6208f2925063c6c78f4f9ddc03ee34bff30b",
+      "bytes": 2598
+    },
+    {
+      "path": "backend/tests/helpers/phase9dCustodyLineageFixture.js",
+      "sha256": "24bb650ab83205ce761ae3f31946c77a7d52e199e0471a475bbddbeea025cb33",
+      "bytes": 5328
+    },
+    {
+      "path": "backend/tests/helpers/phase9dRecoveryFixture.js",
+      "sha256": "038df7951489077ae7040df1d9cc44c6e53ce44b8fe9868acdc4b0c9d95209b2",
+      "bytes": 8540
+    },
+    {
+      "path": "backend/tests/helpers/phase9dTransportProcesses.js",
+      "sha256": "4ae69bec1ba06bcdb6a0f1833eb680d7134096a40b0e8b139531af885e1cbfde",
+      "bytes": 2063
+    },
+    {
+      "path": "backend/tests/integration/phase9dCustodyClosure.test.js",
+      "sha256": "0f87afa3dcc8b6db5938424b072cc1c7aca6cbc9ddd6a5e6bbe2f2b8c786a952",
+      "bytes": 11079
+    },
+    {
+      "path": "backend/tests/integration/phase9dCustodyLineage.test.js",
+      "sha256": "0e19946f9d9719d71390d70a7144f7a83c195fa7241d1d9da6ad9ec1a26aee4b",
+      "bytes": 11640
+    },
+    {
+      "path": "tools/phase9d/closure-admission.sql",
+      "sha256": "c3873a8085dca77483f2d821bb48f5350a0c641de62ddfeb38fd6eb6f25fa4fc",
+      "bytes": 7558
+    },
+    {
+      "path": "tools/phase9d/closure-capsule-controller.mjs",
+      "sha256": "32b2996afd1298249d0a9ed759060e0d99d7ef91553da52af4595934311facd9",
+      "bytes": 9892
+    },
+    {
+      "path": "tools/phase9d/closure-capsule-entry.mjs",
+      "sha256": "e955476e0b3fdb0f11b1955c728e5359bf887e41f5b9a273b3a8fa67e06a864b",
+      "bytes": 8507
+    },
+    {
+      "path": "tools/phase9d/closure-lineage.sql",
+      "sha256": "9e5f62b7f851a8e9c4b37d40105594b91258131e1d896206a7b63662408e38a7",
+      "bytes": 8785
+    },
+    {
+      "path": "tools/phase9d/closure-source.sql",
+      "sha256": "ecaf91b56f91ac2371f67b54b400ff28f666696fa22c51812f66a12e5775def1",
+      "bytes": 5658
+    },
+    {
+      "path": "backend/tests/phase9dCustodyClosure.test.js",
+      "sha256": "9b523d6b388da23b4fd182e6e632c4d1c63ba14f1116114d380c5d2fcb994c95",
+      "bytes": 10013
+    },
+    {
+      "path": "backend/tests/phase9dCustodyClosureTransport.test.js",
+      "sha256": "1447acb044448dc842d6d264f28180dc027bf5725ba36e5763b413d8906306be",
+      "bytes": 18616
+    },
+    {
+      "path": "backend/tests/phase9dCustodyObserver.test.js",
+      "sha256": "7957b39eebc37cfd846fbace7c7c0ed65c2a135767b731f574d5613e6a960258",
+      "bytes": 6104
+    },
+    {
+      "path": "tools/phase9d/closure-capsule.mjs",
+      "sha256": "b2fca0b81dd7f0b473c80e2b1fb9be374dc38773ac19881f73f198f5594b801b",
+      "bytes": 28727
+    },
+    {
+      "path": "tools/phase9d/closure-ingress.mjs",
+      "sha256": "f8c7a786777205e86c6e24f77d9b3c6244daf3c252d37945b3e63a58f8a8cfec",
+      "bytes": 759
+    },
+    {
+      "path": "tools/phase9d/closure-run.mjs",
+      "sha256": "c2e4b2f07e49ffc04feea7faa32875049ff440685900d3b36267b78213bcd7d9",
+      "bytes": 26624
+    },
+    {
+      "path": "backend/tests/helpers/phase9dClosureIngressCrash.mjs",
+      "sha256": "c378d48ca09528aef39b1910ccda62359f4cc00301ddf31c7160668abded29e5",
+      "bytes": 1050
+    },
+    {
+      "path": "backend/tests/phase9dCustodyReplayInput.test.js",
+      "sha256": "d7df7eb7782c17f8bc866101cd1a56e5b427512ca79d2d19e52fe19701dc34a4",
+      "bytes": 5527
+    },
+    {
+      "path": "tools/phase9d/closure-eslint.config.mjs",
+      "sha256": "ce8c9f09598d04b0e71703ed80d3aa263e4971bcb023eed792431eea87dbe137",
+      "bytes": 807
+    },
+    {
+      "path": "tools/phase9d/closure-quality.mjs",
+      "sha256": "2dfff18d745d9d9355194e3115bd9dee80e2b323ac251358651ca14001de0bd9",
+      "bytes": 4234
+    },
+    {
+      "path": "tools/phase9d/closure-scope.mjs",
+      "sha256": "0ac8e09bfb54c45b33d6f582c0daaa4c08c0567034ba866fccb0d7853c6e5790",
+      "bytes": 292
+    },
+    {
+      "path": "tools/phase9d/closure-stryker.config.mjs",
+      "sha256": "eaf358491be8e0e91ced992fbe979cfbf00a2289246306e21eb936ea69f97a6b",
+      "bytes": 2296
+    },
+    {
+      "path": "tools/backups/application_retention_gate.sql",
+      "sha256": "adf0b27fe7d3726b8d7ee8acb746f2614e16755e726c6129fe7a3c6f1553c795",
+      "bytes": 11016
+    },
+    {
+      "path": "tools/backups/preflight.sql",
+      "sha256": "e2763226747f6764bdd30f01a9bf659236c997030e022cf2251bf6cec18f9e69",
+      "bytes": 1508
+    },
+    {
+      "path": "tools/backups/retention_registry.sql",
+      "sha256": "80788f15bcfb09923bb7fa377b544dd77e0ffc0ee3f57170c24288cc2ddd23be",
+      "bytes": 9585
+    },
+    {
+      "path": "tools/backups/supabase_custody_crypto.sql",
+      "sha256": "c1e1efee34c2a058f57c63ea577700512a729cc3d048a75a19eeb4a2ca30baa6",
+      "bytes": 1273
+    },
+    {
+      "path": "backend/tests/helpers/phase9dSyntheticRetention.sql",
+      "sha256": "bd5939c1582d7158d740e523b400309f9923d181d53af40583b7caf5e0848b9b",
+      "bytes": 4985
+    }
+  ],
+  "evidenceTransfer": {
+    "copiedFiles": 9297,
+    "identicalExistingFiles": 3059,
+    "preservedConflictingVariants": 0,
+    "dependencyLinkBoundariesPreservedInOriginal": 1,
+    "copiedMiB": 3958.2,
+    "excludedFromGit": true
+  }
+}

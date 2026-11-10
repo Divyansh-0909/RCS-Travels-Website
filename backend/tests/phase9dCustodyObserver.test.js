@@ -1,18 +1,38 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {randomUUID} from 'node:crypto';
+import {randomUUID,createHash} from 'node:crypto';
 import {minimizeServerDenials,appendDenialObservations} from '../../tools/phase9d/closure-observer.mjs';
 import {validateClosureFrame} from '../../tools/phase9d/closure-contract.mjs';
+import {sourceMac} from '../../tools/phase9d/custody-protocol.mjs';
 const serverIdentity='a'.repeat(64),role='custody_sender',key='synthetic-observer-secret-at-least-thirty-two';
 const log=overrides=>({timestamp:'2026-10-15 12:00:00.000 UTC',user:role,pid:123,session_id:'123.abc',line_num:2,state_code:'42501',error_severity:'ERROR',message:'private SQL\n{"state_code":"28P01"}',statement:'never exported',...overrides});
 const options={serverIdentity,roles:[role],correlations:[{pid:123,role,sqlstate:'42501',denialClass:'SIGNING_SECRET'}]};
 test('server JSON denial minimization excludes raw SQL and distinguishes claimed authentication actors',()=>{
   const records=minimizeServerDenials([log(),log({line_num:3,state_code:'28P01',error_severity:'FATAL'}),log({state_code:'00000'})].map(JSON.stringify).join('\n')+'\n',options);
   assert.equal(records.length,2);assert.equal(records[0].denialClass,'SIGNING_SECRET');assert.equal(records[1].actorTrust,'CLAIMED_UNAUTHENTICATED');assert.equal(records[1].denialClass,'AUTHENTICATION');
+  assert.equal(records[0].logSessionHash,createHash('sha256').update(serverIdentity+'\n123.abc').digest('hex'));
   assert.ok(!JSON.stringify(records).includes('never exported'));assert.ok(!JSON.stringify(records).includes('private'));
   assert.equal(minimizeServerDenials(JSON.stringify(log()),{...options,correlations:[]})[0].denialClass,'DATABASE_DENIAL');
   for(const change of [{pid:0},{line_num:1.5},{session_id:'invalid'},{timestamp:'invalid'},{user:'unknown'}])assert.throws(()=>minimizeServerDenials(JSON.stringify(log(change)),options));
   assert.throws(()=>minimizeServerDenials('x'.repeat(1048577),options));assert.throws(()=>minimizeServerDenials(JSON.stringify(log({message:'x'.repeat(16384)})),options));assert.throws(()=>minimizeServerDenials('not json',options));
+});
+
+test('observer spool independently checks loaded bounds, duplicate bursts and final append size',()=>{
+  const records=minimizeServerDenials(JSON.stringify(log()),options),configuration={source:randomUUID(),key},initial={frames:[]};
+  const first=appendDenialObservations(initial,records,configuration),size=Buffer.byteLength(JSON.stringify(first));
+  const second=appendDenialObservations(first,[{...records[0],logLine:'3'}],configuration);
+  assert.equal(first.frames[0].event.configuration,createHash('sha256').update('jsonlog-denial-observer-v1').digest('hex'));
+  assert.throws(()=>appendDenialObservations(first,[],{...configuration,maxBytes:size+0.5}),{code:'ERR_ASSERTION'});
+  assert.throws(()=>appendDenialObservations(second,[],{...configuration,maxRecords:1}),{code:'ERR_ASSERTION'});
+  assert.throws(()=>appendDenialObservations(first,[],{...configuration,maxBytes:size-1}),/OBSERVER_STORAGE_LIMIT/);
+  assert.deepEqual(appendDenialObservations(first,[],{...configuration,maxBytes:size}),first);
+  assert.throws(()=>appendDenialObservations(initial,records,{...configuration,maxBytes:size-1}),/OBSERVER_STORAGE_LIMIT/);
+  assert.throws(()=>appendDenialObservations(first,'',configuration),{code:'ERR_ASSERTION'});
+  assert.throws(()=>appendDenialObservations(first,Array(10001).fill(records[0]),configuration),{code:'ERR_ASSERTION'});
+  assert.deepEqual(appendDenialObservations(first,Array(10000).fill(records[0]),configuration),first);
+  const collision=structuredClone(second.frames[1]);collision.event.identityHash=first.frames[0].event.identityHash;
+  collision.mac=sourceMac(collision.event,key);
+  assert.throws(()=>appendDenialObservations({frames:[first.frames[0],collision]},[],configuration),/OBSERVER_DUPLICATE_IDENTITY/);
 });
 test('bounded observer spool reuses duplicates, detects conflicting logs and preserves ordered signed inputs across restart',()=>{
   const source=randomUUID(),records=minimizeServerDenials(JSON.stringify(log()),options),configuration={source,key};
@@ -21,7 +41,11 @@ test('bounded observer spool reuses duplicates, detects conflicting logs and pre
   const sources=new Map([[source,{id:source,key,service:'denial-observer-v2'}]]);validateClosureFrame(first.frames[0],sources);
   assert.throws(()=>appendDenialObservations(first,[{...records[0],denialClass:'ROLE_ESCALATION'}],configuration),/OBSERVER_CONFLICT/);
   const nextRecord={...records[0],logLine:'3'},second=appendDenialObservations(first,[nextRecord],configuration);assert.equal(second.frames[1].event.sequence,'2');validateClosureFrame(second.frames[1],sources);
+  const authentication={...records[0],logLine:'4',sqlstate:'28P01',actorTrust:'CLAIMED_UNAUTHENTICATED',denialClass:'AUTHENTICATION'};
+  validateClosureFrame(appendDenialObservations(second,[authentication],configuration).frames[2],sources);
   assert.throws(()=>appendDenialObservations(first,[nextRecord],{...configuration,maxRecords:1}),/OBSERVER_STORAGE_LIMIT/);
   assert.throws(()=>appendDenialObservations(initial,records,{...configuration,maxBytes:1}),/OBSERVER_STORAGE_LIMIT/);
+  for(const state of [{frames:first.frames,extra:true},{frames:null},{frames:[{...first.frames[0],mac:'0'.repeat(64)}]},{frames:[first.frames[0],first.frames[0]]}])assert.throws(()=>appendDenialObservations(state,[],configuration));
+  for(const patch of [{source:randomUUID()},{extra:'forbidden'},{observed:'invalid'},{sqlstate:'00000'}])assert.throws(()=>appendDenialObservations(initial,[{...records[0],...patch}],configuration));
   for(const change of [{sqlstate:'00000'},{actorTrust:'CLAIMED_UNAUTHENTICATED'},{denialClass:'unknown'},{authenticatedRole:'private@user'},{serverIdentity:'x'},{logLine:'0'},{ownerHash:'b'.repeat(64)},{extra:'forbidden'}])assert.throws(()=>validateClosureFrame({event:{...first.frames[0].event,...change},mac:first.frames[0].mac},sources));
 });

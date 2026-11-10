@@ -1,0 +1,56 @@
+name: Encrypted application database backup (disabled until configured)
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 3 * * *'
+permissions:
+  contents: read
+concurrency:
+  group: database-backup-and-validation
+  cancel-in-progress: false
+jobs:
+  backup:
+    if: vars.BACKUP_WORKFLOWS_ENABLED == 'true'
+    runs-on: ubuntu-24.04
+    environment: backup
+    timeout-minutes: 20
+    env:
+      BACKUP_DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+      R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+      R2_ACCESS_KEY_ID: ${{ secrets.R2_WRITE_ACCESS_KEY_ID }}
+      R2_SECRET_ACCESS_KEY: ${{ secrets.R2_WRITE_SECRET_ACCESS_KEY }}
+      BACKUP_CONFIG_JSON: ${{ vars.BACKUP_CONFIG_JSON }}
+      BACKUP_ALERT_WEBHOOK: ${{ secrets.BACKUP_ALERT_WEBHOOK }}
+      BACKUP_ALERT_TRANSPORT: ${{ vars.BACKUP_ALERT_TRANSPORT }}
+      BACKUP_ALERT_KIND: 'BACKUP_FAILED'
+      BACKUP_EMAIL_ALERTS_ENABLED: ${{ vars.BACKUP_EMAIL_ALERTS_ENABLED }}
+      BACKUP_SMTP_HOST: ${{ vars.BACKUP_SMTP_HOST }}
+      BACKUP_SMTP_PORT: ${{ vars.BACKUP_SMTP_PORT }}
+      BACKUP_SMTP_USERNAME: ${{ secrets.BACKUP_SMTP_USERNAME }}
+      BACKUP_SMTP_PASSWORD: ${{ secrets.BACKUP_SMTP_PASSWORD }}
+      BACKUP_ALERT_FROM: ${{ vars.BACKUP_ALERT_FROM }}
+      BACKUP_ALERT_TO: ${{ vars.BACKUP_ALERT_TO }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@7f4fc3e22c37d6ff65e88745f38bd3157c663f7c # v4
+        with:
+          python-version: '3.13'
+      - name: Install verified tools
+        run: bash tools/backups/install-tools.sh
+      - name: Check alert route without sending
+        run: python tools/backups/notify.py --check
+      - name: Write non-secret scope configuration
+        run: |
+          python -c 'import os,pathlib; pathlib.Path(os.environ["RUNNER_TEMP"],"scope.json").write_text(os.environ["BACKUP_CONFIG_JSON"],encoding="utf-8")'
+      - name: Export, encrypt, upload and verify readback
+        run: python tools/backups/backup.py backup --config "$RUNNER_TEMP/scope.json"
+      - name: Verify latest backup freshness and integrity
+        run: python tools/backups/backup.py verify --config "$RUNNER_TEMP/scope.json"
+      - name: Alert operator
+        if: failure()
+        run: python tools/backups/notify.py
+      - name: Remove transient configuration
+        if: always()
+        run: rm -f "$RUNNER_TEMP/scope.json"

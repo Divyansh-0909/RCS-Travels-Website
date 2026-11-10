@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "enabled": false,
+  "scope": "source",
+  "schemas": ["public", "extensions", "audit9d", "shadow9d", "outbox9d", "custody_lineage"],
+  "roles": ["shadow9d_owner", "shadow9d_auditor", "shadow9d_worker", "shadow9d_capture", "shadow9d_ops", "shadow9d_inspector", "shadow9d_recorder", "shadow9d_exporter", "custody_source_sender", "custody_lineage_inspector", "custody_lineage_verifier"],
+  "extensions": ["plpgsql", "pgcrypto", "postgis", "vector"],
+  "excluded_schemas_reviewed": [],
+  "recipient": "REPLACE_WITH_AGE_PUBLIC_RECIPIENT",
+  "bucket": "REPLACE_WITH_PRIVATE_R2_BUCKET",
+  "prefix": "rcs-backups/source",
+  "private_bucket_confirmed": false,
+  "hosting_compatibility_approved": false,
+  "retention_days": null,
+  "production_deletion_approved": false,
+  "max_archive_bytes": 1073741824,
+  "stale_after_hours": 30
+}

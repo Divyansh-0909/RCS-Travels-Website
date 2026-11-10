@@ -1,0 +1,47 @@
+name: Isolated synthetic backup restore validation (manual, disabled)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: database-backup-and-validation
+  cancel-in-progress: false
+jobs:
+  restore:
+    if: vars.BACKUP_RESTORE_VALIDATION_ENABLED == 'true'
+    runs-on: ubuntu-24.04
+    environment: backup-restore-synthetic
+    timeout-minutes: 20
+    env:
+      R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+      R2_ACCESS_KEY_ID: ${{ secrets.R2_READ_ACCESS_KEY_ID }}
+      R2_SECRET_ACCESS_KEY: ${{ secrets.R2_READ_SECRET_ACCESS_KEY }}
+      BACKUP_CONFIG_JSON: ${{ vars.BACKUP_CONFIG_JSON }}
+      AGE_SYNTHETIC_RESTORE_IDENTITY: ${{ secrets.AGE_SYNTHETIC_RESTORE_IDENTITY }}
+      BACKUP_ALERT_WEBHOOK: ${{ secrets.BACKUP_ALERT_WEBHOOK }}
+      BACKUP_ALERT_TRANSPORT: ${{ vars.BACKUP_ALERT_TRANSPORT }}
+      BACKUP_ALERT_KIND: 'RESTORE_FAILED'
+      BACKUP_EMAIL_ALERTS_ENABLED: ${{ vars.BACKUP_EMAIL_ALERTS_ENABLED }}
+      BACKUP_SMTP_HOST: ${{ vars.BACKUP_SMTP_HOST }}
+      BACKUP_SMTP_PORT: ${{ vars.BACKUP_SMTP_PORT }}
+      BACKUP_SMTP_USERNAME: ${{ secrets.BACKUP_SMTP_USERNAME }}
+      BACKUP_SMTP_PASSWORD: ${{ secrets.BACKUP_SMTP_PASSWORD }}
+      BACKUP_ALERT_FROM: ${{ vars.BACKUP_ALERT_FROM }}
+      BACKUP_ALERT_TO: ${{ vars.BACKUP_ALERT_TO }}
+      RCS_DISPOSABLE_RESTORE: 'yes'
+      BACKUP_RESTORE_IMAGE: ${{ vars.BACKUP_RESTORE_IMAGE }}
+      BACKUP_RESTORE_ENVIRONMENT_APPROVED: ${{ vars.BACKUP_RESTORE_ENVIRONMENT_APPROVED }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@7f4fc3e22c37d6ff65e88745f38bd3157c663f7c
+        with:
+          python-version: '3.13'
+      - name: Check alert route without sending
+        run: python tools/backups/notify.py --check
+      - run: bash tools/backups/install-tools.sh
+      - name: Create owned, finite, quarantined restore server
+        run: python tools/backups/restore_job.py
+      - if: failure()
+        run: python tools/backups/notify.py

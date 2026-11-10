@@ -1,7 +1,7 @@
 // Trusted disposable-fixture controller. Never a least-privilege service.
 import assert from 'node:assert/strict';
 import readline from 'node:readline';
-import {generateKeyPairSync,randomUUID} from 'node:crypto';
+import {generateKeyPairSync,randomUUID,createHash} from 'node:crypto';
 import {keyIdentity} from './custody-protocol.mjs';
 import {rotateCustodyKey} from './closure-rotation.mjs';
 import {brokerCall} from './broker-execution.mjs';
@@ -27,6 +27,13 @@ try{
         const execution=await f.run({mode:'execute',requestId,fixture:'valid'});await execution.exited;assert.equal(execution.result.calls,1);
         const work=execution.result;assert.equal(await brokerCall(f.reconciler,'reconcile',[JSON.stringify(await f.receipt(work.id,{outcome:'SUCCESS',input:128,output:32,minor:2}))]),'ACCEPTED');
         const guard=await f.run({mode:'guard',id:work.id,token:work.token});await guard.exited;assert.equal(guard.result.route,'NEEDS_ADMIN_REVIEW');
+        for(const [owner,allowed]of [[f.a,new Map([[f.source.name,['shadow9d_exporter','custody_source_sender','custody_lineage_inspector','custody_lineage_verifier']],[f.receiver.name,['shadow9d_capture','broker9d_exec','broker9d_guard','broker9d_ops','broker9d_reconciler','custody_sender','custody_verifier','custody_operator','custody_source_inspector','custody_receiver_sender','custody_lineage_inspector','custody_lineage_verifier']]])],[f.audit,new Map([[new URL(cfg.auditUri).pathname.slice(1),['custody_ingest','custody_signer','custody_inspector']]])]]){
+          for(const {datname}of (await owner.query('SELECT datname FROM pg_database WHERE datallowconn')).rows){
+            const quoted=(await owner.query('SELECT quote_ident($1) name',[datname])).rows[0].name;
+            await owner.query('REVOKE CONNECT ON DATABASE '+quoted+' FROM PUBLIC');
+            for(const role of allowed.get(datname)??[])await owner.query('GRANT CONNECT ON DATABASE '+quoted+' TO '+role);
+          }
+        }
         emit(id,{status:'READY',route:guard.result.route,calls:execution.result.calls,source:f.source.name,receiver:f.receiver.name});
       }else if(action==='register-observer'){
         const source=randomUUID(),key=randomUUID()+randomUUID();
@@ -38,6 +45,8 @@ try{
           ['source','shadow9d_exporter','APPLICATION_WRITE','UPDATE public.bookings SET id=id'],
           ['source','broker9d_exec','BUDGET_CONFIGURATION','UPDATE broker9d.configuration SET max_requests=max_requests'],
           ['audit','custody_ingest','AUDIT_HISTORY','DELETE FROM custody.events'],
+          ['audit','custody_ingest','AUDIT_HISTORY',"UPDATE custody.events SET hash=repeat('0',64)"],
+          ['audit','custody_ingest','AUDIT_HISTORY','TRUNCATE custody.events'],
           ['source','custody_sender','ROLE_ESCALATION','SET ROLE custody_source_owner'],
           ['source','custody_sender','SIGNING_SECRET','SELECT secret FROM custody_export.control'],
           ['source','broker9d_exec','GUARD_WRITE','INSERT INTO broker9d.results SELECT * FROM broker9d.results'],
@@ -59,7 +68,11 @@ try{
           const stream=cfg.stream==='broker'?null:f.streams.find(s=>s.service===cfg.stream);assert.ok(cfg.stream==='broker'||stream);
           const role=cfg.mode==='sender'?(stream?.role??'custody_sender'):(stream?'custody_lineage_verifier':'custody_verifier');
           value={...common,uri:stream?stream.sandboxUri(role):f.sandboxUri(role),role,...(cfg.mode==='sender'?{ingressKey:f.ingressKey}:{auditUri:f.sandboxUri('custody_inspector')})};
-        }else if(cfg.mode==='attack')value={...common,uri:f.sandboxUri(cfg.role),role:cfg.role};
+        }else if(cfg.mode==='attack'){
+          const stream=f.streams.find(s=>s.role===cfg.role),uri=stream?stream.sandboxUri(cfg.role):f.sandboxUri(cfg.role),forbidden=new URL(uri);
+          forbidden.pathname=stream?'/'+(stream.service==='source-lineage-v2'?f.receiver.name:f.source.name):cfg.role==='custody_sender'||cfg.role==='custody_verifier'?'/'+f.source.name:'/rcs_container_test';
+          value={...common,uri,forbiddenUri:forbidden.toString(),role:cfg.role,frame:await f.frame(1)};
+        }
         else throw Error('UNKNOWN_CONFIG');
         emit(id,value); // Private IPC only; parent must never retain/print configurations.
       }else if(action==='rotate'){
@@ -69,6 +82,12 @@ try{
         await f.b.query("UPDATE custody_export.keys SET status='RETIRED' WHERE status='ACTIVE'");
         await f.b.query("INSERT INTO custody_export.keys VALUES($1,$2,$3,'ACTIVE')",[keyId,publicKey,Number(epoch)+1]);
         privateKeys.set(keyId,keys.privateKey.export({type:'pkcs8',format:'pem'}));f.currentKey=keyId;emit(id,{keyId,epoch:Number(epoch)+1});
+      }else if(action==='integrity'){
+        const events=[];
+        for(const stream of f.streams)events.push((await stream.inspector.query('SELECT event,hash,status,receipt FROM custody_lineage.events ORDER BY seq')).rows);
+        events.push((await f.sourceInspector.query('SELECT event,hash,status,receipt FROM custody_export.events ORDER BY seq')).rows);
+        events.push(await f.custodyState(),(await f.inspector.query('SELECT * FROM custody.signatures ORDER BY receipt')).rows);
+        emit(id,{sha256:createHash('sha256').update(JSON.stringify(events)).digest('hex')});
       }else if(action==='state'){
         assert.deepEqual(await consequenceState(f.source.client),baseline);
         const sources=[];for(const s of f.streams)sources.push({service:s.service,rows:(await s.inspector.query('SELECT event,hash,status,receipt FROM custody_lineage.events ORDER BY seq')).rows});

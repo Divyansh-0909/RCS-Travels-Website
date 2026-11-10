@@ -63,10 +63,13 @@ export async function createTestDatabase({ url = process.env.TEST_DATABASE_URL, 
   const name = `rcs_verify_${randomUUID().replaceAll('-', '')}`
   const target = new URL(adminUrl)
   target.pathname = `/${name}`
-  const admin = new pg.Client({ connectionString: adminUrl.toString(), connectionTimeoutMillis: 5_000 })
+  const newAdmin = () => new pg.Client({ connectionString: adminUrl.toString(), connectionTimeoutMillis: 5_000 })
+  let admin = newAdmin()
   const clients = new Set()
   let created = false
   let closed = false
+  let suspended = false
+  let primary
   const close = async () => {
     if (closed) return
     closed = true
@@ -74,14 +77,16 @@ export async function createTestDatabase({ url = process.env.TEST_DATABASE_URL, 
       const results = await Promise.allSettled([...clients].map(client => client.$disconnect()))
       if (created) {
         if (!OWNED_DATABASE.test(name)) throw new Error('Refusing cleanup of a non-owned database')
+        if (!admin) { admin = newAdmin(); await admin.connect() }
         await admin.query(`DROP DATABASE "${name}" WITH (FORCE)`)
       }
       const failure = results.find(result => result.status === 'rejected')
       if (failure) throw failure.reason
-    } finally { await admin.end() }
+    } finally { if (admin) await admin.end() }
   }
   const connect = () => {
     if (closed) throw new Error('Test database is closed')
+    if (suspended) throw new Error('Test database is suspended for owned restart')
     const client = new PrismaClient({ adapter: new PrismaPg({
       connectionString: target.toString(), max: 4, connectionTimeoutMillis: 5_000,
       statement_timeout: 10_000, idle_in_transaction_session_timeout: 15_000,
@@ -94,7 +99,27 @@ export async function createTestDatabase({ url = process.env.TEST_DATABASE_URL, 
     await admin.query(`CREATE DATABASE "${name}" TEMPLATE template0`)
     created = true
     if (migrations) await migrate(target.toString())
-    return { name, client: connect(), connect, close }
+    primary = connect()
+    return {
+      name, get client() { return primary }, connect, close,
+      // Explicit lifecycle, not a global error handler: close idle admin/Prisma
+      // connections before the owner deliberately stops this disposable server.
+      async suspendForRestart() {
+        if (closed) throw new Error('Test database is closed')
+        if (suspended) return
+        await Promise.all([...clients].map(client => client.$disconnect()))
+        await admin.end(); admin = null; suspended = true
+      },
+      async resumeAfterRestart(port) {
+        if (closed || !suspended) throw new Error('Owned restart was not prepared')
+        if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('Invalid owned restart port')
+        // Identity/credentials/database are fixed. Only the inspected mapped
+        // port may change; this method cannot redirect to a runtime database.
+        adminUrl.port = String(port); target.port = String(port)
+        admin = newAdmin(); await admin.connect(); suspended = false
+        primary = connect()
+      },
+    }
   } catch (error) {
     try { await close() } catch (cleanupError) {
       throw new AggregateError([error, cleanupError], 'Test database setup and cleanup failed')

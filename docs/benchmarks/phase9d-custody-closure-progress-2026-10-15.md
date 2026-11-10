@@ -45,3 +45,29 @@ PRODUCTION_READY: NO
 PHASE 9D-2: NOT_STARTED
 
 PRODUCTION SHADOW / AUTO-ADJUDICATION / CONSEQUENCES / SEARCH ROLLOUT: OFF
+
+## Resumed execution — 15 October 2026, evening IST
+
+The earlier unverified/runtime-blocked statements above describe the first interrupted attempt. Node execution recovered. This appended record preserves those observations; **the complete custody-closure request is still incomplete**.
+
+Current progress evidence: `output/phase9d-custody-closure-2026-10-15/progress-1792077637686-2f3bce42-834c-43f3-bd8b-8b67c38941c9.json`. It verifies all **28 accepted custody**, **three accepted authentication** and **22 frozen V5** source identities. It is a progress manifest, not an acceptance certificate.
+
+Executed results:
+
+- Current continuation units: **14/14 PASS**, unchanged source epoch, `unit-1792077537210-6c25a448-e086-48f0-9f7d-6b32913c1d24.json`.
+- Full backend: **1,845/1,845 PASS**, `full-1792076606512-67be6797-c3fc-4f2b-9dfc-dd3b5940fab8.json`. Later continuation edits and tests have distinct identities; this result is not a fresh full-suite execution of those edits.
+- Backend typecheck and scoped lint: **PASS**. The typecheck execution is `typecheck-1792076394642-12e6bee8-f216-4652-83a3-1d39dec9e4cb.json`; later source epochs remain distinguishable.
+- Nine core helpers: **100% statements/branches/functions/lines**; **217 statement/line counters, 145 branches, 19 functions**. Structural maxima: cyclomatic **15**, cognitive **12**, Halstead Difficulty **33.967**, CRAP **15**, source **50 physical lines**. Scoped clones: **0**. Measurement: `quality-1792077398709-e6a23fc1-b421-4f41-909b-460d1705d42f/`. Capsule entry/proxy execution, the prepared replay-input validator and new SQL are not certified by these nine-module figures.
+- Framework mutation audit: **593 instrumented**, running at this progress snapshot. No passing mutation closure is claimed.
+
+Earlier source-stable executions passed **8/8 custody DB** and **6/6 lineage** tests (`1792009618471`). They execute actual source cancellation, outbox/transport, offline analysis, independent guard, accounting and minimized custody delivery at their recorded epochs. Subsequent fixture, admission, rotation and denial changes require new DB execution. Failed and source-drift trials remain retained.
+
+Independent review found a direct database-ingress bypass. The new `custody.ingest(frame)` independently validates the closed frame, source/service, HMAC, event commitment and selected active key; the ingestion principal cannot call the old bare acceptance entry point or read source secrets. A second finding identified key-ID/public-material mismatch during rotation. SQL now binds the ID to decoded SPKI bytes; the trusted operator additionally validates Ed25519 material before mutation. The direct migration owner remains a trusted root. Reviews and their exact source hashes are retained separately.
+
+The continuation also adds committed source/receiver lineage capture, read-only false-acknowledgement detection, signing epochs with durable historical signatures, analysis admission pressure gates and bounded structured-log denial projection. Saved observer state is validated before extension. Signal probes terminate real Node children around an explicitly synthetic DB adapter; they do not replace real database crash-window verification. The replay-input loader has permanent integrity/path/order/state tests; **executable saved-input custody replay is still NOT_IMPLEMENTED**.
+
+Restricted capsule trials remain **FAILED**, with owned resources removed in their recorded cleanup. Missing runtime data, an incorrect working directory and omitted dynamically forked entry files were identified in the fixture and corrected. The corrected capsule and real denial-delivery recipe have not passed. No earlier container evidence is relabelled as custody capsule acceptance.
+
+Docker Desktop currently cannot start its engine: its startup log reports failure renaming `sailor-ingest.sock` to `sailor-ingest.sock.stale`. Normal CLI stop also failed. The owner was asked to quit/reopen Docker Desktop while preserving data; no factory reset, socket deletion, hook modification or rejected cache-cleanup bypass was attempted. This observed startup condition is not a full root-cause diagnosis. Real DB/capsule verification requires engine recovery.
+
+Remaining approved work includes current real-server denial delivery, restricted capsules, complete rotation/restart/storage/race witnesses, executable saved-input reconstruction, changed-SQL verification, mutation reconciliation, final independent review and the complete acceptance/readiness manifest. Production readiness remains **NO**; production switches remain **OFF**.

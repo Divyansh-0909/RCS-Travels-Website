@@ -51,6 +51,9 @@ test('independent read-only status detects false acknowledgements without trusti
   let local={seq:'1',event:e,hash:commitment(e),status:'ACKED',receipt},remote={event:e,hash:commitment(e),receipt:receipt.body.receipt,key_id:receipt.body.keyId,signature:receipt.signature};
   const reads=[],source={query:async(sql,args)=>{reads.push({sql,args});return {rows:local?[local]:[]};}},audit={query:async(sql,args)=>{reads.push({sql,args});return {rows:remote?[remote]:[]};}};
   assert.equal((await custodyStatus(source,audit,1,registry)).status,'INDEPENDENTLY_VERIFIED');
+  assert.equal((await custodyStatus(source,audit,1,registry,{lineage:true})).status,'INDEPENDENTLY_VERIFIED');
+  assert.equal(reads[0].sql,'SELECT seq,event,hash,status,receipt FROM custody_export.events WHERE seq=$1');
+  assert.equal(reads[2].sql,'SELECT seq,event,hash,status,receipt FROM custody_lineage.events WHERE seq=$1');
   assert.deepEqual(reads[0].args,[1]);assert.deepEqual(reads[1].args,[e.source,'1']);assert.ok(reads.every(r=>r.sql.startsWith('SELECT ')));
   assert.equal((await custodyStatus(source,audit,1,verificationRegistry([row(key,'RETIRED')]))).remotelyVerified,true);
   assert.equal((await custodyStatus(source,audit,1,verificationRegistry([row(key,'COMPROMISED')]))).status,'SIGNER_COMPROMISED');

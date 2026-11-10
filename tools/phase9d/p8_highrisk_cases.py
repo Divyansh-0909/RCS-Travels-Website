@@ -1,0 +1,28 @@
+"""Selected omissions absent from the saved P/O/T/B/R/Q campaigns."""
+
+CANDIDATES = [
+    {"id": "KEY01-public-material-binding", "family": "S17", "installation": "custodian", "schema": "custody", "name": "rotate",
+     "guard": "next_id<>encode(sha256(decode(replace(replace(public_material,'-----BEGIN PUBLIC KEY-----',''),'-----END PUBLIC KEY-----',''),'base64')),'hex')",
+     "replacement": "false", "role": "fixture_owner", "contract": "Key identifier must commit to the supplied public SPKI bytes."},
+    {"id": "KEY02-unsigned-retirement", "family": "S17", "installation": "custodian", "schema": "custody", "name": "rotate",
+     "guard": "current_key.status='ACTIVE' AND EXISTS(SELECT 1 FROM custody.events e LEFT JOIN custody.signatures s ON s.receipt=e.receipt WHERE e.key_id=current_key.key_id AND s.receipt IS NULL)",
+     "replacement": "false", "role": "fixture_owner", "contract": "An active key with an unsigned committed receipt cannot be retired."},
+    {"id": "KEY03-expected-epoch", "family": "S17", "installation": "custodian", "schema": "custody", "name": "rotate",
+     "guard": "current_key.epoch IS DISTINCT FROM expected_epoch", "replacement": "false", "role": "fixture_owner",
+     "contract": "A stale expected epoch cannot advance key history."},
+    {"id": "ACCEPT01-enrolled-service", "family": "S16", "installation": "custodian", "schema": "custody", "name": "valid_event",
+     "guard": "e->>'service' IS DISTINCT FROM service", "replacement": "false", "role": "custody_ingest",
+     "contract": "Even an authenticated source MAC cannot substitute another service identity."},
+    {"id": "EXPORT01-compromised-key", "family": "S18", "installation": "receiver", "schema": "custody_export", "name": "ack",
+     "guard": "NOT EXISTS(SELECT 1 FROM custody_export.keys WHERE key_id=r#>>'{body,keyId}' AND status IN('ACTIVE','RETIRED'))",
+     "replacement": "false", "role": "custody_verifier", "contract": "A compromised registry key cannot authorize a local export ACK."},
+    {"id": "CLEAN01-delegation-rollback", "family": "S15", "installation": "receiver", "schema": "broker9d", "name": "operate",
+     "guard": "shadow9d.broker_payload_cleanup(target) IS NOT TRUE", "replacement": "false", "role": "broker9d_ops",
+     "contract": "A missing linked receiver row causes CLEAN to roll back, retaining the broker payload and operation history."},
+    {"id": "JOURNAL01-rejected-binding", "family": "S10", "installation": "receiver", "schema": "transport9d", "name": "receive",
+     "guard": "r.logical_key IS NOT NULL AND r.payload_binding<>attempted", "replacement": "false", "role": "shadow9d_capture",
+     "contract": "A rejected changed payload at a retained key has a durable rejection journal without changing the accepted binding."},
+    {"id": "RETRY01-attempt-cas", "family": "S09", "installation": "receiver", "schema": "custody_export", "name": "retry",
+     "guard": "e.attempts<>expected", "replacement": "false", "role": "custody_operator",
+     "contract": "A stale expected attempt count cannot reset a REVIEW event or append recovery history."},
+]

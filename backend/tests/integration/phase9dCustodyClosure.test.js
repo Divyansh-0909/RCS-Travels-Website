@@ -85,8 +85,19 @@ test('isolated custody epochs and independently detected compromised verifier',a
       assert.deepEqual((await f.ingest.query('SELECT custody.ingest($1) receipt',[frame])).rows[0].receipt,body);
     });
     await t.test('unacknowledged saturation rejects actual broker admission while STOP remains legal',async()=>{
-      await f.control('RESUME');await f.b.query('UPDATE custody_export.limits SET max_unacknowledged=1');
+      await f.control('RESUME');
+      // Roll back only the registration pressure fixture before preparing a
+      // current-generation request. Earlier STOP/resume invalidated request 0.
+      await f.b.query('BEGIN');
+      try{
+        await f.b.query('UPDATE custody_export.limits SET max_unacknowledged=1');
+        await f.b.query('SET LOCAL ROLE broker9d_exec');
+        await assert.rejects(f.register(1,f.b),{code:'54000'});
+      }finally{await f.b.query('ROLLBACK');}
       const q=await f.register(1);assert.ok(q);
+      const pending=(await f.b.query('SELECT q.status,q.generation,c.generation current_generation,c.stopped FROM broker9d.requests q CROSS JOIN broker9d.control c WHERE q.id=$1',[q])).rows[0];
+      assert.equal(pending.status,'PENDING');assert.equal(pending.generation,pending.current_generation);assert.equal(pending.stopped,false);
+      await f.b.query('UPDATE custody_export.limits SET max_unacknowledged=1');
       await assert.rejects(f.exec.query('SELECT broker9d.reserve($1)',[q]),{code:'54000'});
       assert.ok(await f.control('STOP'));assert.equal((await f.b.query('SELECT stopped FROM broker9d.control')).rows[0].stopped,true);
       assert.equal((await f.b.query('SELECT count(*)::int n FROM broker9d.attempts')).rows[0].n,0);

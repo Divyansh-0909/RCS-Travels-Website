@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { protect } from '../middleware/auth.js'
 import { prisma } from '../db/prisma.js'
 import { clerkClient } from '@clerk/express'
+import { AccountRetentionError, deleteAccountRecords, deleteSavedPlaceRecords } from '../services/accountRetention.js'
 import crypto from 'crypto'
 import { ACTIVE_STATUSES } from './bookings.js'
 import PDFDocument from "pdfkit";
@@ -229,13 +230,12 @@ usersRouter.put('/me/saved-places', protect, async (req, res) => {
 })
 
 usersRouter.delete('/me/saved-places/:id', protect, async (req, res) => {
-  const user = await prisma.user.findUnique({ where: { clerkId: req.auth.userId } })
-  if (!user) return res.status(404).json({ error: 'User has not signed up' })
-
-  // deleteMany so the userId scope rides along; count 0 = not yours / gone.
-  const { count } = await prisma.savedPlace.deleteMany({ where: { id: req.params.id, userId: user.id } })
-  if (!count) return res.status(404).json({ error: 'Saved place not found' })
-  return res.json({ ok: true })
+  try {
+    return res.json(await deleteSavedPlaceRecords(prisma, req.auth.userId, req.params.id))
+  } catch (error) {
+    if (error instanceof AccountRetentionError) return res.status(error.status).json({ error: error.message, code: error.code })
+    return res.status(503).json({ error: 'Cleanup could not be verified. No completion is claimed.', code: 'RETENTION_UNAVAILABLE' })
+  }
 })
 
 usersRouter.get('/me/download', protect, async (req, res) => {
@@ -309,43 +309,14 @@ usersRouter.get('/me/download', protect, async (req, res) => {
 })
 
 usersRouter.delete('/me', protect, async (req, res) => {
-  const user = await prisma.user.findUnique({ where: { clerkId: req.auth.userId } })
-  if (!user) return res.status(404).json({ error: 'User has not signed up' })
-
-  // Don't let someone delete their account while a ride is still live
-  const liveBooking = await prisma.booking.findFirst({
-    where: { userId: user.id, status: { in: ACTIVE_STATUSES } },
-    select: { id: true },
-  })
-  if (liveBooking)
-    return res.status(409).json({ error: 'You have an active ride. Cancel or complete it before deleting your account.' })
-
-  // Saved addresses are personal data — erased with the rest of the profile.
-  await prisma.savedPlace.deleteMany({ where: { userId: user.id } })
-
-  const sentinel = `deleted:${user.id}`
-  await prisma.user.update({
-    where: { id: user.id },
-    data: {
-      deletedAt: new Date(),
-      name: null,
-      gender: null,
-      dob: null,
-      emergencyContact: null,
-      whatsappNumber: null,
-      phone: sentinel,
-      clerkId: sentinel,
-      bookingCode: sentinel,
-    },
-  })
-
   try {
-    await clerkClient.users.deleteUser(req.auth.userId)
-  } catch (e) {
-    console.error('Clerk user cleanup failed after account deletion:', e)
+    const result = await deleteAccountRecords(prisma, req.auth.userId, ACTIVE_STATUSES)
+    // Local completion does not claim Clerk/provider erasure. No remote worker is enabled.
+    return res.status(202).json(result)
+  } catch (error) {
+    if (error instanceof AccountRetentionError) return res.status(error.status).json({ error: error.message, code: error.code })
+    return res.status(503).json({ error: 'Cleanup could not be verified. No completion is claimed.', code: 'RETENTION_UNAVAILABLE' })
   }
-
-  return res.json({ ok: true })
 })
 
 usersRouter.post('/me/updateGender', protect, async (req, res) => {
